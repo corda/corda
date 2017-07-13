@@ -6,13 +6,13 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.NotaryError
-import net.corda.flows.NotaryException
 import org.slf4j.Logger
 
 abstract class NotaryService : SingletonSerializeAsToken() {

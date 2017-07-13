@@ -6,6 +6,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.NonEmptySet
 
 /**
  * Information for an advertised service including the service specific identity information.
@@ -21,7 +22,7 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
 @CordaSerializable
 data class NodeInfo(val addresses: List<NetworkHostAndPort>,
                     val legalIdentityAndCert: PartyAndCertificate, //TODO This field will be removed in future PR which gets rid of services.
-                    val legalIdentitiesAndCerts: Set<PartyAndCertificate>,
+                    val legalIdentitiesAndCerts: NonEmptySet<PartyAndCertificate>,
                     val platformVersion: Int,
                     var advertisedServices: List<ServiceEntry> = emptyList(),
                     val worldMapLocation: WorldMapLocation? = null) {

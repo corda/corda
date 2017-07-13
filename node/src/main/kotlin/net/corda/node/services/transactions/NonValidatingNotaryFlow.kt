@@ -1,12 +1,12 @@
 package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.TransactionParts
 import net.corda.core.identity.Party
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.unwrap
-import net.corda.flows.NotaryFlow
-import net.corda.flows.TransactionParts
 
 class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSide, service) {
     /**

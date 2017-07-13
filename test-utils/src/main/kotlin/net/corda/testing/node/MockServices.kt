@@ -11,6 +11,7 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NonEmptySet
 import net.corda.flows.AnonymisedIdentity
 import net.corda.node.VersionInfo
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
@@ -75,7 +76,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo get() {
         val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
-        return NodeInfo(emptyList(), identity, setOf(identity), 1)
+        return NodeInfo(emptyList(), identity, NonEmptySet.of(identity), 1)
     }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 

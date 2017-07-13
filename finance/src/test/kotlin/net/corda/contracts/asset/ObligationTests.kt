@@ -4,15 +4,15 @@ import net.corda.contracts.Commodity
 import net.corda.contracts.NetType
 import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyState
 import net.corda.core.crypto.SecureHash
-import net.corda.core.hours
 import net.corda.core.crypto.testing.NULL_PARTY
+import net.corda.core.hours
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.*
 import net.corda.testing.*
+import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
 import org.junit.Test
 import java.time.Duration
@@ -28,9 +28,9 @@ class ObligationTests {
     val defaultRef = OpaqueBytes.of(1)
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
     val oneMillionDollars = 1000000.DOLLARS `issued by` defaultIssuer
-    val trustedCashContract = nonEmptySetOf(SecureHash.randomSHA256() as SecureHash)
-    val megaIssuedDollars = nonEmptySetOf(Issued(defaultIssuer, USD))
-    val megaIssuedPounds = nonEmptySetOf(Issued(defaultIssuer, GBP))
+    val trustedCashContract = NonEmptySet.of(SecureHash.randomSHA256() as SecureHash)
+    val megaIssuedDollars = NonEmptySet.of(Issued(defaultIssuer, USD))
+    val megaIssuedPounds = NonEmptySet.of(Issued(defaultIssuer, GBP))
     val fivePm: Instant = TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS) + 17.hours
     val sixPm: Instant = fivePm + 1.hours
     val megaCorpDollarSettlement = Obligation.Terms(trustedCashContract, megaIssuedDollars, fivePm)
@@ -500,7 +500,7 @@ class ObligationTests {
     fun `commodity settlement`() {
         val defaultFcoj = Issued(defaultIssuer, Commodity.getInstance("FCOJ")!!)
         val oneUnitFcoj = Amount(1, defaultFcoj)
-        val obligationDef = Obligation.Terms(nonEmptySetOf(CommodityContract().legalContractReference), nonEmptySetOf(defaultFcoj), TEST_TX_TIME)
+        val obligationDef = Obligation.Terms(NonEmptySet.of(CommodityContract().legalContractReference), NonEmptySet.of(defaultFcoj), TEST_TX_TIME)
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
                 obligationDef, oneUnitFcoj.quantity, NULL_PARTY)
         // Try settling a simple commodity obligation
@@ -755,10 +755,10 @@ class ObligationTests {
 
         // States must not be nettable if the cash contract differs
         assertNotEquals(fiveKDollarsFromMegaToMega.bilateralNetState,
-                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableContracts = nonEmptySetOf(SecureHash.randomSHA256()))).bilateralNetState)
+                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableContracts = NonEmptySet.of(SecureHash.randomSHA256()))).bilateralNetState)
 
         // States must not be nettable if the trusted issuers differ
-        val miniCorpIssuer = nonEmptySetOf(Issued(MINI_CORP.ref(1), USD))
+        val miniCorpIssuer = NonEmptySet.of(Issued(MINI_CORP.ref(1), USD))
         assertNotEquals(fiveKDollarsFromMegaToMega.bilateralNetState,
                 fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableIssuedProducts = miniCorpIssuer)).bilateralNetState)
     }
@@ -875,7 +875,7 @@ class ObligationTests {
     }
 
     val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
-        get() = Obligation.Terms(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)
+        get() = Obligation.Terms(NonEmptySet.of(Cash().legalContractReference), NonEmptySet.of(this), TEST_TX_TIME)
     val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
         get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NULL_PARTY)
 }

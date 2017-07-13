@@ -5,8 +5,6 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionType.General
 import net.corda.core.contracts.TransactionType.NotaryChange
-import net.corda.testing.contracts.DummyContract
-import net.corda.testing.contracts.DummyState
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
@@ -19,15 +17,13 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_PUBKEY_1
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
-import net.corda.flows.CollectSignaturesFlow
-import net.corda.flows.FinalityFlow
-import net.corda.flows.ResolveTransactionsFlow
-import net.corda.flows.SignTransactionFlow
+import net.corda.testing.DUMMY_PUBKEY_1
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyState
 import org.bouncycastle.asn1.x500.X500Name
 import java.security.PublicKey
 import java.time.Duration

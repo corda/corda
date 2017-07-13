@@ -7,10 +7,11 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.crypto.keys
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.toNonEmptySet
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
@@ -50,11 +51,8 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     override val id: SecureHash get() = tx.id
 
     @CordaSerializable
-    class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
-        override fun toString(): String {
-            return "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"
-        }
-    }
+    class SignaturesMissingException(val missing: NonEmptySet<PublicKey>, val descriptions: List<String>, override val id: SecureHash)
+        : NamedByHash, SignatureException("Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}")
 
     /**
      * Verifies the signatures on this transaction and throws if any are missing which aren't passed as parameters.
@@ -80,7 +78,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
             val allowed = allowedToBeMissing.toSet()
             val needed = missing - allowed
             if (needed.isNotEmpty())
-                throw SignaturesMissingException(needed, getMissingKeyDescriptions(needed), id)
+                throw SignaturesMissingException(needed.toNonEmptySet(), getMissingKeyDescriptions(needed), id)
         }
         check(tx.id == id)
         return tx

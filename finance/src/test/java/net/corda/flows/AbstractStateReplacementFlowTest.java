@@ -1,6 +1,6 @@
 package net.corda.flows;
 
-import net.corda.core.identity.Party;
+import net.corda.core.flows.AbstractStateReplacementFlow;
 import net.corda.core.identity.Party;
 import net.corda.core.utilities.*;
 import org.jetbrains.annotations.*;

@@ -16,6 +16,7 @@ import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
@@ -470,7 +471,7 @@ class VaultQueryTests {
         database.transaction {
 
             val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 3, 3, Random(0L))
-            vaultSvc.softLockReserve(UUID.randomUUID(), setOf(issuedStates.states.first().ref, issuedStates.states.last().ref))
+            vaultSvc.softLockReserve(UUID.randomUUID(), NonEmptySet.of(issuedStates.states.first().ref, issuedStates.states.last().ref))
 
             val criteria = VaultQueryCriteria(includeSoftlockedStates = false)
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)

@@ -5,10 +5,12 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.TransactionKeyFlow
 import net.corda.core.identity.Party
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
 
@@ -45,7 +47,7 @@ class CashIssueFlow(val amount: Amount<Currency>,
         } else {
             emptyMap<Party, AnonymisedIdentity>()
         }
-        val anonymousRecipient = txIdentities.get(recipient)?.identity ?: recipient
+        val anonymousRecipient = txIdentities[recipient]?.identity ?: recipient
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = notary)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)

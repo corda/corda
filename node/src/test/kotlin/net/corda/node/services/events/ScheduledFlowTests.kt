@@ -2,22 +2,18 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.containsAny
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.flows.SchedulableFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.flows.FinalityFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.transaction
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Assert.assertTrue

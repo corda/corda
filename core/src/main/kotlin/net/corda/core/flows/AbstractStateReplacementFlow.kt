@@ -1,4 +1,4 @@
-package net.corda.flows
+package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
@@ -6,10 +6,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -56,7 +52,7 @@ abstract class AbstractStateReplacementFlow {
     abstract class Instigator<out S : ContractState, out T : ContractState, out M>(
             val originalState: StateAndRef<S>,
             val modification: M,
-            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<StateAndRef<T>>() {
+            override val progressTracker: ProgressTracker = Instigator.tracker()) : FlowLogic<StateAndRef<T>>() {
         companion object {
             object SIGNING : ProgressTracker.Step("Requesting signatures from other parties")
             object NOTARY : ProgressTracker.Step("Requesting notary signature")
@@ -133,7 +129,7 @@ abstract class AbstractStateReplacementFlow {
     // Type parameter should ideally be Unit but that prevents Java code from subclassing it (https://youtrack.jetbrains.com/issue/KT-15964).
     // We use Void? instead of Unit? as that's what you'd use in Java.
     abstract class Acceptor<in T>(val otherSide: Party,
-                                  override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Void?>() {
+                                  override val progressTracker: ProgressTracker = Acceptor.tracker()) : FlowLogic<Void?>() {
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
             object APPROVING : ProgressTracker.Step("State replacement approved")

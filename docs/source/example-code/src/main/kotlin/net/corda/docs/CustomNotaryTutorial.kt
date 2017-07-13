@@ -1,8 +1,8 @@
-package net.corda.notarydemo
+package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.CordaService
@@ -12,7 +12,6 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.unwrap
-import net.corda.flows.*
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.ValidatingNotaryService
 import java.security.SignatureException

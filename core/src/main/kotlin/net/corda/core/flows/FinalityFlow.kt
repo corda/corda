@@ -1,16 +1,16 @@
-package net.corda.flows
+package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.toNonEmptySet
 
 /**
  * Verifies the given transactions, then sends them to the named notary. If the notary agrees that the transactions
@@ -65,7 +65,10 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         progressTracker.currentStep = BROADCASTING
         val me = serviceHub.myInfo.legalIdentity
         for ((stx, parties) in notarisedTxns) {
-            subFlow(BroadcastTransactionFlow(stx, parties + extraRecipients - me))
+            val participants = parties + extraRecipients - me
+            if (participants.isNotEmpty()) {
+                subFlow(BroadcastTransactionFlow(stx, participants.toNonEmptySet()))
+            }
         }
         return notarisedTxns.map { it.first }
     }
