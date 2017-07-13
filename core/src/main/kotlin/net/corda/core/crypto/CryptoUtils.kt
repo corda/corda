@@ -3,7 +3,6 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
 import java.math.BigInteger
 import java.security.*
@@ -36,17 +35,6 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignat
 @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: ByteArray) = private.sign(bytesToSign, public)
 fun KeyPair.sign(bytesToSign: OpaqueBytes) = private.sign(bytesToSign.bytes, public)
-fun KeyPair.sign(bytesToSign: OpaqueBytes, party: Party) = sign(bytesToSign.bytes, party)
-
-// TODO This case will need more careful thinking, as party owningKey can be a CompositeKey. One way of doing that is
-//  implementation of CompositeSignature.
-@Throws(InvalidKeyException::class)
-fun KeyPair.sign(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
-    // Quick workaround when we have CompositeKey as Party owningKey.
-    if (party.owningKey is CompositeKey) throw InvalidKeyException("Signing for parties with CompositeKey not supported.")
-    val sig = sign(bytesToSign)
-    return DigitalSignature.LegallyIdentifiable(party, sig.bytes)
-}
 
 /**
  * Utility to simplify the act of verifying a signature.
