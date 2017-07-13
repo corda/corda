@@ -69,15 +69,16 @@ import rx.Observable
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier.*
-import java.math.BigInteger
 import java.net.JarURLConnection
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
-import java.security.KeyStore
 import java.security.KeyStoreException
-import java.security.cert.*
+import java.security.PublicKey
+import java.security.cert.CertPath
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.time.Clock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -707,63 +708,57 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
         // the public key. Obviously in a real system this would need to be a certificate chain of some kind to ensure
         // the legal name is actually validated in some way.
-
         // TODO: Integrate with Key management service?
-        val certFactory = CertificateFactory.getInstance("X509")
         val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
-        val privKeyFile = configuration.baseDirectory / privateKeyAlias
-        val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
-        val certificateAndKeyPair = keyStore.certificateAndKeyPair(privateKeyAlias)
-        val identityCertPathAndKey: Pair<PartyAndCertificate, KeyPair> = if (certificateAndKeyPair != null) {
-            val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
-            val (cert, keyPair) = certificateAndKeyPair
+        val compositeKeyAlias = "$serviceId-composite-key"
+
+        if (!keyStore.containsAlias(privateKeyAlias)) {
+            val privKeyFile = configuration.baseDirectory / privateKeyAlias
+            val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
+            // TODO: this is here to smooth out the key storage transition, remove this in future release.
+            // TODO: Remove use of [ServiceIdentityGenerator.generateToDisk].
+            // Get keys from key file.
+            if (privKeyFile.exists()) {
+                log.info("Migrating $privateKeyAlias from file to keystore.")
+                val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
+                // Check that the identity in the config file matches the identity file we have stored to disk.
+                // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
+                // things up for us.
+                if (myIdentity.name != serviceName)
+                    throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:$serviceName vs ${myIdentity.name}")
+                // Load the private key.
+                val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
+                keyStore.saveNewKeyPair(serviceName, privateKeyAlias, keyPair)
+                // Store composite key separately.
+                if (myIdentity.owningKey is CompositeKey) {
+                    keyStore.savePublicKey(serviceName, compositeKeyAlias, myIdentity.owningKey)
+                }
+                log.info("Finish migrating $privateKeyAlias from file to keystore.")
+            } else {
+                log.info("$privateKeyAlias not found in keystore ${configuration.nodeKeystore}, generating fresh key!")
+                keyStore.saveNewKeyPair(serviceName, privateKeyAlias, generateKeyPair())
+            }
+        }
+
+        val identityCertPathAndKey = keyStore.certificateAndKeyPair(privateKeyAlias)!!.let { (cert, keyPair) ->
+            val clientCertPath = keyStore.getCertificateChain(privateKeyAlias)
             // Get keys from keystore.
             val loadedServiceName = cert.subject
-            if (loadedServiceName != serviceName) {
-                throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:" +
-                        "$serviceName vs $loadedServiceName")
+            if (loadedServiceName != serviceName)
+                throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:$serviceName vs $loadedServiceName")
+
+            val certPath = CertificateFactory.getInstance("X509").generateCertPath(clientCertPath.toList())
+            // Use composite key instead if exists
+            // TODO: Use configuration to indicate composite key should be used for the identity.
+            val publicKey = if (keyStore.containsAlias(compositeKeyAlias)) {
+                Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
+            } else {
+                keyPair.public
             }
-            val certPath = certFactory.generateCertPath(listOf(cert.cert) + clientCertPath)
-            Pair(PartyAndCertificate(loadedServiceName, keyPair.public, cert, certPath), keyPair)
-        } else if (privKeyFile.exists()) {
-            // Get keys from key file.
-            // TODO: this is here to smooth out the key storage transition, remove this in future release.
-            // Check that the identity in the config file matches the identity file we have stored to disk.
-            // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
-            // things up for us.
-            val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
-            if (myIdentity.name != serviceName)
-                throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
-                        "$serviceName vs ${myIdentity.name}")
-            // Load the private key.
-            val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
-            if (myIdentity.owningKey !is CompositeKey) { // TODO: Support case where owningKey is a composite key.
-                keyStore.save(serviceName, privateKeyAlias, keyPair)
-            }
-            val dummyCaKey = entropyToKeyPair(BigInteger.valueOf(111))
-            val dummyCa = CertificateAndKeyPair(
-                    X509Utilities.createSelfSignedCACertificate(X500Name("CN=Dummy CA,OU=Corda,O=R3 Ltd,L=London,C=GB"), dummyCaKey),
-                    dummyCaKey)
-            val partyAndCertificate = getTestPartyAndCertificate(myIdentity, dummyCa)
-            // Sanity check the certificate and path
-            val validatorParameters = PKIXParameters(setOf(TrustAnchor(dummyCa.certificate.cert, null)))
-            val validator = CertPathValidator.getInstance("PKIX")
-            validatorParameters.isRevocationEnabled = false
-            validator.validate(partyAndCertificate.certPath, validatorParameters) as PKIXCertPathValidatorResult
-            Pair(partyAndCertificate, keyPair)
-        } else {
-            val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
-            val clientCA = keyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)!!
-            // Create new keys and store in keystore.
-            log.info("Identity key not found, generating fresh key!")
-            val keyPair: KeyPair = generateKeyPair()
-            val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public)
-            val certPath = certFactory.generateCertPath(listOf(cert.cert) + clientCertPath)
-            keyStore.save(serviceName, privateKeyAlias, keyPair)
-            require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
-            Pair(PartyAndCertificate(serviceName, keyPair.public, cert, certPath), keyPair)
+            Pair(PartyAndCertificate(loadedServiceName, publicKey, cert, certPath), keyPair)
         }
+
         partyKeys += identityCertPathAndKey.second
         return identityCertPathAndKey
     }
@@ -801,10 +796,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val keyManagementService by lazy { makeKeyManagementService(identityService) }
         override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch) }
         override val identityService by lazy {
-            val keyStoreWrapper = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
+            val keystore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
             makeIdentityService(
-                    keyStoreWrapper.keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)!! as X509Certificate,
-                    keyStoreWrapper.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
+                    keystore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).cert,
+                    keystore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
                     info.legalIdentityAndCert)
         }
         override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
@@ -835,19 +830,4 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-}
-
-private class KeyStoreWrapper(val keyStore: KeyStore, val storePath: Path, private val storePassword: String) {
-    constructor(storePath: Path, storePassword: String) : this(loadKeyStore(storePath, storePassword), storePath, storePassword)
-
-    fun certificateAndKeyPair(alias: String): CertificateAndKeyPair? {
-        return if (keyStore.containsAlias(alias)) keyStore.getCertificateAndKeyPair(alias, storePassword) else null
-    }
-
-    fun save(serviceName: X500Name, privateKeyAlias: String, keyPair: KeyPair) {
-        val clientCA = keyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, storePassword)
-        val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public).cert
-        keyStore.addOrReplaceKey(privateKeyAlias, keyPair.private, storePassword.toCharArray(), arrayOf(cert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
-        keyStore.save(storePath, storePassword)
-    }
 }
