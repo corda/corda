@@ -17,8 +17,11 @@ import javafx.scene.layout.StackPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.util.Duration
+import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.commonName
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.vaultTrackBy
+import net.corda.core.node.services.vault.PageSpecification
 import net.corda.demobench.explorer.ExplorerController
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeController
@@ -34,6 +37,10 @@ import tornadofx.*
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
+
+    private companion object {
+        val pageSpecification = PageSpecification(1, 1)
+    }
 
     private val nodeController by inject<NodeController>()
     private val explorerController by inject<ExplorerController>()
@@ -51,7 +58,7 @@ class NodeTerminalView : Fragment() {
 
     private val subscriptions: MutableList<Subscription> = mutableListOf()
     private var txCount: Int = 0
-    private var stateCount: Int = 0
+    private var stateCount: Long = 0
     private var isDestroyed: Boolean = false
     private val explorer = explorerController.explorer()
     private val webServer = webServerController.webServer()
@@ -180,11 +187,11 @@ class NodeTerminalView : Fragment() {
 
     private fun initialise(config: NodeConfig, ops: CordaRPCOps) {
         try {
-            val (txInit, txNext) = ops.verifiedTransactions()
-            val (stateInit, stateNext) = ops.vaultAndUpdates()
+            val (txInit, txNext) = ops.verifiedTransactionsFeed()
+            val (stateInit, stateNext) = ops.vaultTrackBy<ContractState>(paging = pageSpecification)
 
             txCount = txInit.size
-            stateCount = stateInit.size
+            stateCount = stateInit.totalStatesAvailable
 
             Platform.runLater {
                 logo.opacityProperty().animate(1.0, Duration.seconds(2.5))
@@ -192,7 +199,7 @@ class NodeTerminalView : Fragment() {
                 states.value = stateCount.toString()
             }
 
-            val fxScheduler = Schedulers.from({ Platform.runLater(it) })
+            val fxScheduler = Schedulers.from(Platform::runLater)
             subscriptions.add(txNext.observeOn(fxScheduler).subscribe {
                 transactions.value = (++txCount).toString()
             })
