@@ -70,7 +70,9 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
     val clazz = (kotlinConstructor.returnType.classifier as KClass<*>).javaObjectType
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
     val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.groupBy { it.name }.mapValues { it.value[0] }
+
     val rc: MutableList<PropertySerializer> = ArrayList(kotlinConstructor.parameters.size)
+
     for (param in kotlinConstructor.parameters) {
         val name = param.name ?: throw NotSerializableException("Constructor parameter of $clazz has no name.")
         val matchingProperty = properties[name] ?: throw NotSerializableException("No property matching constructor parameter named $name of $clazz." +
@@ -85,6 +87,14 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
             throw NotSerializableException("Property type $returnType for $name of $clazz differs from constructor parameter type ${param.type.javaType}")
         }
     }
+
+    /* include within the schema all properties not set by the constructor as they may be usful to the carpenter */
+    val constructorParameters = kotlinConstructor.parameters.map {it.name}
+    properties.filter { it.key !in constructorParameters }.forEach {
+        val returnType = resolveTypeVariables(it.value.readMethod.genericReturnType, type)
+        rc += PropertySerializer.make(it.key, it.value.readMethod, returnType, factory)
+    }
+
     return rc
 }
 
