@@ -71,7 +71,7 @@ class ResolveTransactionsFlowTest {
         val p = ResolveTransactionsFlow(setOf(stx.id), a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
         mockNet.runNetwork()
-        assertFailsWith(SignatureException::class) { future.getOrThrow() }
+        assertFailsWith(SignedTransaction.SignaturesMissingException::class) { future.getOrThrow() }
     }
 
     @Test
