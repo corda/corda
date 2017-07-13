@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.Fix
 import net.corda.contracts.FixOf
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.keys
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
@@ -117,7 +117,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         override fun call(): DigitalSignature.WithKey {
             val resp = sendAndReceive<DigitalSignature.WithKey>(oracle, SignRequest(partialMerkleTx))
             return resp.unwrap { sig ->
-                check(sig.by in oracle.owningKey.keys)
+                check(oracle.owningKey.isFulfilledBy(listOf(sig.by)))
                 tx.toWireTransaction().checkSignature(sig)
                 sig
             }
