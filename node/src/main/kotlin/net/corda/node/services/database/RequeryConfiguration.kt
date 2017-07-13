@@ -46,9 +46,5 @@ class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Bo
     }
 
     // TODO: remove once Requery supports QUERY WITH COMPOSITE_KEY IN
-    fun jdbcSession(): Connection {
-        val ctx = DatabaseTransactionManager.currentOrNull()
-        return ctx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
-    }
+    fun jdbcSession(): Connection = DatabaseTransactionManager.current().connection
 }
-

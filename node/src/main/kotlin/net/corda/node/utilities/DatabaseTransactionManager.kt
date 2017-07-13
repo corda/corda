@@ -43,11 +43,9 @@ class DatabaseTransaction(isolation: Int, val threadLocal: ThreadLocal<DatabaseT
     }
 }
 
-
 class DatabaseTransactionManager(initDataSource: CordaPersistence) {
 
     companion object {
-
         private val threadLocalDb = ThreadLocal<CordaPersistence>()
         private val threadLocalTx = ThreadLocal<DatabaseTransaction>()
         private val databaseToInstance = ConcurrentHashMap<CordaPersistence, DatabaseTransactionManager>()
@@ -101,13 +99,10 @@ class DatabaseTransactionManager(initDataSource: CordaPersistence) {
         databaseToInstance[dataSource] = this
     }
 
-    private fun newTransaction(isolation: Int): DatabaseTransaction {
-        val tx = DatabaseTransaction(isolation, threadLocalTx, transactionBoundaries, dataSource)
-        tx.apply {
-            threadLocalTx.set(this)
-        }
-        return tx
-    }
+    private fun newTransaction(isolation: Int) =
+            DatabaseTransaction(isolation, threadLocalTx, transactionBoundaries, dataSource).apply {
+                threadLocalTx.set(this)
+            }
 
     private fun currentOrNull(): DatabaseTransaction? = threadLocalTx.get()
 }

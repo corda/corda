@@ -93,17 +93,15 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
     // during schema creation / update.
     class NodeDatabaseConnectionProvider : ConnectionProvider {
         override fun closeConnection(conn: Connection) {
-            val tx = DatabaseTransactionManager.currentOrNull()
-            tx?.commit() ?: throw IllegalStateException("Was expecting to find database connection.")
+            val tx = DatabaseTransactionManager.current()
+            tx.commit()
             tx.close()
         }
 
         override fun supportsAggressiveRelease(): Boolean = true
 
-        override fun getConnection(): Connection {
-            val tx = DatabaseTransactionManager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
-            return tx.connection
-        }
+        override fun getConnection(): Connection =
+                DatabaseTransactionManager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ).connection
 
         override fun <T : Any?> unwrap(unwrapType: Class<T>): T {
             try {

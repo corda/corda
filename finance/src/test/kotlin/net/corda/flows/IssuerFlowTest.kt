@@ -14,7 +14,6 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.IssuerFlow.IssuanceRequester
-import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.testing.node.MockNetwork

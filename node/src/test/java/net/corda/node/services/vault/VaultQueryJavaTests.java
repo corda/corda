@@ -35,6 +35,7 @@ import java.util.stream.*;
 import static net.corda.contracts.asset.CashKt.*;
 import static net.corda.core.contracts.ContractsDSL.*;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
+import static net.corda.node.utilities.CordaPersistenceKt.configureDatabase;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.node.MockServicesKt.*;
 import static net.corda.core.utilities.ByteArrays.toHexString;
@@ -116,7 +117,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void unconsumedStatesForStateRefsSortedByTxnId() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             VaultFiller.fillWithSomeTestLinearStates(services, 8);
             Vault<LinearState> issuedStates = VaultFiller.fillWithSomeTestLinearStates(services, 2);

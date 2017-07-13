@@ -34,9 +34,6 @@ class CordaPersistence(var dataSource: HikariDataSource): Closeable {
         return DatabaseTransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
     }
 
-    @Deprecated("Use CordaPersistence.transaction instead")
-    fun <T> databaseTransaction(db: CordaPersistence, statement: DatabaseTransaction.() -> T) = db.transaction(statement)
-
     fun <T> isolatedTransaction(block: DatabaseTransaction.() -> T): T {
         val context = DatabaseTransactionManager.setThreadLocalTx(null)
         return try {
@@ -64,11 +61,8 @@ class CordaPersistence(var dataSource: HikariDataSource): Closeable {
 
     private fun <T> inTopLevelTransaction(transactionIsolation: Int, repetitionAttempts: Int, statement: DatabaseTransaction.() -> T): T {
         var repetitions = 0
-
         while (true) {
-
             val transaction = DatabaseTransactionManager.currentOrNew(transactionIsolation)
-
             try {
                 val answer = transaction.statement()
                 transaction.commit()
@@ -107,7 +101,9 @@ fun configureDatabase(props: Properties): CordaPersistence {
 
     // Check not in read-only mode.
     persistence.transaction {
-        check(!database.metadata.isReadOnly) { "Database should not be readonly." }
+        persistence.dataSource.connection.use {
+            check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
+        }
     }
     return persistence
 }
@@ -143,21 +139,13 @@ private class DatabaseTransactionWrappingSubscriber<U>(val db: CordaPersistence?
         }
     }
 
-    override fun onCompleted() {
-        forEachSubscriberWithDbTx { onCompleted() }
-    }
+    override fun onCompleted() = forEachSubscriberWithDbTx { onCompleted() }
 
-    override fun onError(e: Throwable?) {
-        forEachSubscriberWithDbTx { onError(e) }
-    }
+    override fun onError(e: Throwable?) = forEachSubscriberWithDbTx { onError(e) }
 
-    override fun onNext(s: U) {
-        forEachSubscriberWithDbTx { onNext(s) }
-    }
+    override fun onNext(s: U) = forEachSubscriberWithDbTx { onNext(s) }
 
-    override fun onStart() {
-        forEachSubscriberWithDbTx { onStart() }
-    }
+    override fun onStart() = forEachSubscriberWithDbTx { onStart() }
 
     fun cleanUp() {
         if (delegates.removeIf { it.isUnsubscribed }) {
@@ -186,7 +174,7 @@ private class NoOpSubscriber<U>(t: Subscriber<in U>) : Subscriber<U>(t) {
  * that might be in place.
  */
 fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence? = null): rx.Observable<T> {
-    val wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
+    var wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
     // Use lift to add subscribers to a special subscriber that wraps a database transaction around observations.
     // Each subscriber will be passed to this lambda when they subscribe, at which point we add them to wrapping subscriber.
     return this.lift { toBeWrappedInDbTx: Subscriber<in T> ->
@@ -195,5 +183,11 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
         // If we are the first subscriber, return the shared subscriber, otherwise return a subscriber that does nothing.
         if (wrappingSubscriber.delegates.size == 1) wrappingSubscriber else NoOpSubscriber(toBeWrappedInDbTx)
         // Clean up the shared list of subscribers when they unsubscribe.
-    }.doOnUnsubscribe { wrappingSubscriber.cleanUp() }
+    }.doOnUnsubscribe {
+        wrappingSubscriber.cleanUp()
+        // If cleanup removed the last subscriber reset the system, as future subscribers might need the stream again
+        if (wrappingSubscriber.delegates.isEmpty()) {
+            wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
+        }
+    }
 }

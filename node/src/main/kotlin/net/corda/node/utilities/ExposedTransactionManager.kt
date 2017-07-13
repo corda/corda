@@ -13,7 +13,7 @@ import java.sql.Connection
 class ExposedTransaction(override val db: Database, val databaseTransaction: DatabaseTransaction): TransactionInterface {
 
     override val outerTransaction: Transaction?
-        get() = TODO("not supported")
+        get() = throw UnsupportedOperationException()
 
     override val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
         databaseTransaction.connection

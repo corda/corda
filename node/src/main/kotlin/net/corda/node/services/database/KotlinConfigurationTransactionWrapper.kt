@@ -128,12 +128,7 @@ class KotlinConfigurationTransactionWrapper(private val model: EntityModel,
     }
 
     class CordaDataSourceConnectionProvider(val dataSource: DataSource) : ConnectionProvider {
-        override fun getConnection(): Connection {
-            val tx = DatabaseTransactionManager.currentOrNull()
-            return CordaConnection(
-                    tx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
-            )
-        }
+        override fun getConnection(): Connection = CordaConnection(DatabaseTransactionManager.current().connection)
     }
 
     class CordaConnection(val connection: Connection) : Connection by connection {
