@@ -3,11 +3,9 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flatMap
@@ -19,8 +17,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.queryBy
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
