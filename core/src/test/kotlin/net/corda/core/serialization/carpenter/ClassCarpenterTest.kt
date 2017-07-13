@@ -1,12 +1,11 @@
 package net.corda.core.serialization.carpenter
 
-
 import org.junit.Test
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-
+import java.beans.Introspector
+import kotlin.test.assertNotEquals
 
 class ClassCarpenterTest {
     interface DummyInterface {
@@ -489,6 +488,19 @@ class ClassCarpenterTest {
 
         assertEquals (1, clazz.getMethod("getB").annotations.size)
         assertEquals (javax.annotation.Nonnull::class.java, clazz.getMethod("getB").annotations[0].annotationClass.java)
+    }
+
+    @Test
+    fun beanTest() {
+        val schema = ClassCarpenter.ClassSchema(
+                "pantsPantsPants",
+                mapOf("a" to ClassCarpenter.NonNullableField(Integer::class.java)))
+        val clazz = cc.build(schema)
+        val descriptors = Introspector.getBeanInfo(clazz).propertyDescriptors
+
+        assertEquals(2, descriptors.size)
+        assertNotEquals(null, descriptors.find { it.name == "a" })
+        assertNotEquals(null, descriptors.find { it.name == "class" })
     }
 
 }
