@@ -1,8 +1,9 @@
-package net.corda.node.services.vault.schemas.jpa
+package net.corda.node.services.vault
 
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
+import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.utilities.OpaqueBytes

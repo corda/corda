@@ -1,10 +1,8 @@
 package net.corda.schemas
 
-import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
-import net.corda.node.services.vault.schemas.jpa.CommonSchemaV1
-import java.security.PublicKey
+import net.corda.core.schemas.CommonSchemaV1
 import java.time.Instant
 import javax.persistence.Column
 import javax.persistence.Entity

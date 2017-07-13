@@ -1,5 +1,6 @@
-package net.corda.contracts
+package net.corda.testing.contracts
 
+import net.corda.contracts.DealState
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionForContract
 import net.corda.core.contracts.UniqueIdentifier
@@ -10,7 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
-import net.corda.core.schemas.testing.DummyDealStateSchemaV1
+import net.corda.testing.schemas.DummyDealStateSchemaV1
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 

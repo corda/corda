@@ -10,8 +10,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
-import net.corda.core.schemas.testing.DummyLinearStateSchemaV1
-import net.corda.core.schemas.testing.DummyLinearStateSchemaV2
+import net.corda.testing.schemas.DummyLinearStateSchemaV1
+import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import java.time.LocalDateTime
 import java.time.ZoneOffset.UTC
 

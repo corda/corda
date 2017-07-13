@@ -1,4 +1,4 @@
-package net.corda.core.schemas.testing
+package net.corda.testing.schemas
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState

@@ -19,7 +19,6 @@ import net.corda.core.serialization.storageKryo
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.database.HibernateConfiguration
-import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.subjects.PublishSubject
 import java.lang.Exception
@@ -45,7 +44,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
         var totalStates = -1L
         if (!paging.isDefault) {
             val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
-            val countCriteria = VaultCustomQueryCriteria(count)
+            val countCriteria = VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
             val results = queryBy(contractType, criteria.and(countCriteria))
             totalStates = results.otherResults[0] as Long
         }
