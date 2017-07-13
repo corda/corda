@@ -1,15 +1,14 @@
 package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.concurrent.shutdownAndAwaitTermination
 import net.corda.core.createDirectories
 import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.testing.ProjectStructure.projectRootDir
 import net.corda.testing.establishRpc
 import net.corda.testing.pollProcessDeath
+import net.corda.testing.shutdownAndAwaitTermination
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -44,7 +43,7 @@ class NodeProcess(
     }
 
     class Factory(val buildDirectory: Path = Paths.get("build"),
-                  val cordaJar: Path = projectRootDir / "node" / "build" / "resources" / "smokeTest" / "corda.jar") {
+                  val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())) {
         val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).apply { createDirectories() }
 
         fun baseDirectory(config: NodeConfig) = nodesDirectory / config.commonName
@@ -53,18 +52,23 @@ class NodeProcess(
             val nodeDir = baseDirectory(config).createDirectories()
             log.info("Node directory: {}", nodeDir)
             nodeDir.resolve("node.conf").toFile().writeText(config.toText())
-            val process = startNode(nodeDir)
             val rpcAddress = NetworkHostAndPort("localhost", config.rpcPort)
             val user = config.users[0]
-            val setupExecutor = Executors.newSingleThreadScheduledExecutor()
-            return try {
-                val processDeathFuture = setupExecutor.pollProcessDeath(process, rpcAddress)
-                val (client, connection) = setupExecutor.establishRpc(rpcAddress, null, user.username, user.password, processDeathFuture).getOrThrow()
-                processDeathFuture.cancel(false)
-                connection.close()
-                NodeProcess(config, nodeDir, process, client)
-            } finally {
-                setupExecutor.shutdownAndAwaitTermination()
+            val process = startNode(nodeDir)
+            try {
+                val setupExecutor = Executors.newSingleThreadScheduledExecutor()
+                try {
+                    val processDeathFuture = setupExecutor.pollProcessDeath(process, rpcAddress)
+                    val (client, connection) = setupExecutor.establishRpc(rpcAddress, null, user.username, user.password, processDeathFuture).getOrThrow()
+                    processDeathFuture.cancel(false)
+                    connection.close()
+                    return NodeProcess(config, nodeDir, process, client)
+                } finally {
+                    setupExecutor.shutdownAndAwaitTermination()
+                }
+            } catch (t: Throwable) {
+                process.destroyForcibly()
+                throw t
             }
         }
 

@@ -11,6 +11,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.SSLConfiguration
 import org.slf4j.LoggerFactory
 import java.time.Duration
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -68,5 +69,13 @@ fun ScheduledExecutorService.establishRpc(nodeAddress: NetworkHostAndPort, sslCo
     return firstOf(connectionFuture, processDeathFuture) {
         if (it == processDeathFuture) throw processDeathFuture.getOrThrow()
         Pair(client, connectionFuture.getOrThrow())
+    }
+}
+
+/** Does not use interrupt, which is unreliable in general as most tasks don't interrupt well. Effectively we assert this executor is idle. */
+fun ExecutorService.shutdownAndAwaitTermination() {
+    shutdown()
+    while (!awaitTermination(1, TimeUnit.SECONDS)) {
+        // Do nothing.
     }
 }

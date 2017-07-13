@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.same
 import com.nhaarman.mockito_kotlin.verify
-import net.corda.core.concurrent.shutdownAndAwaitTermination
+import net.corda.testing.shutdownAndAwaitTermination
 import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyString
@@ -13,7 +13,6 @@ import rx.subjects.PublishSubject
 import java.util.*
 import java.util.concurrent.CancellationException
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 class UtilsTest {
     @Test
