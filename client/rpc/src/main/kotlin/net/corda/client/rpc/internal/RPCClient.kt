@@ -47,7 +47,7 @@ data class RPCClientConfiguration(
          * See the implementation of [com.google.common.cache.LocalCache] for details.
          */
         val cacheConcurrencyLevel: Int,
-        /** The retry interval of artemis connections in milliseconds */
+        /** The retry interval of artemis connections */
         val connectionRetryInterval: Duration,
         /** The retry interval multiplier for exponential backoff */
         val connectionRetryIntervalMultiplier: Double,
