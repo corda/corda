@@ -21,6 +21,8 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
+import net.corda.node.utilities.getX509Certificate
+import net.corda.node.utilities.loadKeyStore
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
@@ -265,8 +267,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
     @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        val keyStore = KeyStoreUtilities.loadKeyStore(config.sslKeystore, config.keyStorePassword)
-        val trustStore = KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
+        val keyStore = loadKeyStore(config.sslKeystore, config.keyStorePassword)
+        val trustStore = loadKeyStore(config.trustStoreFile, config.trustStorePassword)
         val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_TLS)
 
         // This is a sanity check and should not fail unless things have been misconfigured

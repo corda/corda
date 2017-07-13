@@ -59,10 +59,8 @@ import net.corda.node.services.vault.CashBalanceAsMetricsObserver
 import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
+import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
@@ -520,8 +518,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun validateKeystore() {
         val containCorrectKeys = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            val sslKeystore = KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
-            val identitiesKeystore = KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
+            val sslKeystore = loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
+            val identitiesKeystore = loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
             sslKeystore.containsAlias(X509Utilities.CORDA_CLIENT_TLS) && identitiesKeystore.containsAlias(X509Utilities.CORDA_CLIENT_CA)
         } catch (e: KeyStoreException) {
             log.warn("Certificate key store found but key store password does not match configuration.")
@@ -535,7 +533,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
                     "Read more at: https://docs.corda.net/permissioning.html"
         }
-        val identitiesKeystore = KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
+        val identitiesKeystore = loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
         val tlsIdentity = identitiesKeystore.getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject
 
         require(tlsIdentity == configuration.myLegalName) {
@@ -839,7 +837,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 }
 
 private class KeyStoreWrapper(val keyStore: KeyStore, val storePath: Path, private val storePassword: String) {
-    constructor(storePath: Path, storePassword: String) : this(KeyStoreUtilities.loadKeyStore(storePath, storePassword), storePath, storePassword)
+    constructor(storePath: Path, storePassword: String) : this(loadKeyStore(storePath, storePassword), storePath, storePassword)
 
     fun certificateAndKeyPair(alias: String): CertificateAndKeyPair? {
         return if (keyStore.containsAlias(alias)) keyStore.getCertificateAndKeyPair(alias, storePassword) else null

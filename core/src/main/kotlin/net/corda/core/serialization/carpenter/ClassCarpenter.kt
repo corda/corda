@@ -216,7 +216,7 @@ class ClassCarpenter {
      * Generate bytecode for the given schema and load into the JVM. The returned class object can be used to
      * construct instances of the generated class.
      *
-     * @throws DuplicateName if the schema's name is already taken in this namespace (you can create a new ClassCarpenter if you're OK with ambiguous names)
+     * @throws DuplicateNameException if the schema's name is already taken in this namespace (you can create a new ClassCarpenter if you're OK with ambiguous names)
      */
     fun build(schema: Schema): Class<*> {
         validateSchema(schema)
@@ -291,7 +291,7 @@ class ClassCarpenter {
 
     private fun ClassWriter.generateToString(schema: Schema) {
         val toStringHelper = "com/google/common/base/MoreObjects\$ToStringHelper"
-        with(visitMethod(ACC_PUBLIC, "toString", "()Ljava/lang/String;", "", null)) {
+        with(visitMethod(ACC_PUBLIC, "toString", "()Ljava/lang/String;", null, null)) {
             visitCode()
             // com.google.common.base.MoreObjects.toStringHelper("TypeName")
             visitLdcInsn(schema.name.split('.').last())
