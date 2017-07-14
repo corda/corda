@@ -23,24 +23,17 @@ class PublishTasks implements Plugin<Project> {
 
     void apply(Project project) {
         this.project = project
+        this.publishName = project.name
 
         createTasks()
         createExtensions()
         createConfigurations()
-
-        project.afterEvaluate {
-            configurePublishingName()
-            checkAndConfigurePublishing()
-        }
     }
 
-    void configurePublishingName() {
-        if(publishConfig.name != null) {
-            project.logger.info("Changing publishing name for ${project.name} to ${publishConfig.name}")
-            publishName = publishConfig.name
-        } else {
-            publishName = project.name
-        }
+    void setPublishName(String publishName) {
+        project.logger.info("Changing publishing name for ${project.name} to ${publishName}")
+        this.publishName = publishName
+        checkAndConfigurePublishing()
     }
 
     void checkAndConfigurePublishing() {
@@ -71,10 +64,8 @@ class PublishTasks implements Plugin<Project> {
                 delegate.artifact it
             }
 
-            if (!publishConfig.disableDefaultJar && !publishConfig.publishWar) {
+            if(!publishConfig.disableDefaultJar) {
                 from project.components.java
-            } else if (publishConfig.publishWar) {
-                from project.components.web
             }
 
             extendPomForMavenCentral(pom, bintrayConfig)
@@ -157,6 +148,7 @@ class PublishTasks implements Plugin<Project> {
             project.extensions.create("bintrayConfig", BintrayConfigExtension)
         }
         publishConfig = project.extensions.create("publish", ProjectPublishExtension)
+        publishConfig.setPublishTask(this)
     }
 
     void createConfigurations() {

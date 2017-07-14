@@ -30,10 +30,8 @@ sourceSets {
 
 dependencies {
     compile project(':test-common')
-    compile project(':finance')
     compile project(':core')
     compile project(':node')
-    compile project(':webserver')
     compile project(':client:mock')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
@@ -67,5 +65,5 @@ jar {
 }
 
 publish {
-    name = jar.baseName
+    name jar.baseName
 }
