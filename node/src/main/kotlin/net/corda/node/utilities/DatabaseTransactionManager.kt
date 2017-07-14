@@ -44,7 +44,6 @@ class DatabaseTransaction(isolation: Int, val threadLocal: ThreadLocal<DatabaseT
 }
 
 class DatabaseTransactionManager(initDataSource: CordaPersistence) {
-
     companion object {
         private val threadLocalDb = ThreadLocal<CordaPersistence>()
         private val threadLocalTx = ThreadLocal<DatabaseTransaction>()

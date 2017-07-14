@@ -102,7 +102,7 @@ fun configureDatabase(props: Properties): CordaPersistence {
     // Check not in read-only mode.
     persistence.transaction {
         persistence.dataSource.connection.use {
-            check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
+            check(!it.metaData.isReadOnly) { "Database should not be readonly." }
         }
     }
     return persistence

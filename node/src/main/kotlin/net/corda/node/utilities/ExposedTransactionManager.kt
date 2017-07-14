@@ -37,7 +37,6 @@ class ExposedTransaction(override val db: Database, val databaseTransaction: Dat
  * The class will obsolete when Exposed library is phased out.
  */
 class ExposedTransactionManager: TransactionManager {
-
     companion object {
        val database: Database
             get() =  DatabaseTransactionManager.dataSource.database
