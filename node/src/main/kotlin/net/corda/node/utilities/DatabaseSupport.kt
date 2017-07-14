@@ -16,7 +16,6 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
 
-
 /**
  * Table prefix for all tables owned by the node module.
  */
