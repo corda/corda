@@ -227,10 +227,16 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun myAddresses() = emptyList<NetworkHostAndPort>()
 
-        override fun start(): MockNode {
+        /** Use [startMockNode] if you created the node with start = false. */
+        override fun start() {
             super.start()
             mockNet.identities.add(info.legalIdentityAndCert)
-            return this
+        }
+
+        fun startMockNode() {
+            configuration.baseDirectory.createDirectories()
+            start()
+            if (mockNet.threadPerNode && networkMapAddress != null) networkMapRegistrationFuture.getOrThrow()
         }
 
         // Allow unit tests to modify the plugin list before the node start,
@@ -274,6 +280,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     /**
      * Returns a node, optionally created by the passed factory method.
+     * @param start whether [startMockNode] is invoked at the end, which does a bit more than [start].
      * @param overrideServices a set of service entries to use in place of the node's default service entries,
      * for example where a node's service is part of a cluster.
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
@@ -287,25 +294,18 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                    configOverrides: (NodeConfiguration) -> Any? = {}): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) _nextNodeId++ else forcedID
-
         val path = baseDirectory(id)
-        if (newNode)
-            (path / "attachments").createDirectories()
-
+        if (newNode) (path / "attachments").createDirectories()
         val config = testNodeConfiguration(
                 baseDirectory = path,
                 myLegalName = legalName ?: getTestX509Name("Mock Company $id")).also {
             whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
             configOverrides(it)
         }
-        val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
-        if (start) {
-            node.setup().start()
-            if (threadPerNode && networkMapAddress != null)
-                node.networkMapRegistrationFuture.getOrThrow()   // Block and wait for the node to register in the net map.
+        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot).also {
+            _nodes.add(it)
+            if (start) it.startMockNode()
         }
-        _nodes.add(node)
-        return node
     }
 
     fun baseDirectory(nodeId: Int): Path = filesystem.getPath("/nodes/$nodeId")

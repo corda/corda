@@ -160,7 +160,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
     }
 
-    open fun start(): AbstractNode {
+    open fun start() {
         require(!started) { "Node has already been started" }
 
         if (configuration.devMode) {
@@ -221,7 +221,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             _services.schedulerService.start()
         }
         started = true
-        return this
     }
 
     private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
@@ -564,14 +563,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         } else {
             throw DatabaseConfigurationException("There must be a database configured.")
         }
-    }
-
-    /**
-     * Run any tasks that are needed to ensure the node is in a correct state before running start().
-     */
-    open fun setup(): AbstractNode {
-        configuration.baseDirectory.createDirectories()
-        return this
     }
 
     private fun makeAdvertisedServices(tokenizableServices: MutableList<Any>) {
