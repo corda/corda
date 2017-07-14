@@ -41,7 +41,7 @@ interface Verifies {
             false
         } catch (exception: Exception) {
             if (expectedMessage != null) {
-                val exceptionMessage = exception.cause?.message ?: exception.message
+                val exceptionMessage = exception.message
                 if (exceptionMessage == null) {
                     throw AssertionError(
                             "Expected exception containing '$expectedMessage' but raised exception had no message",
