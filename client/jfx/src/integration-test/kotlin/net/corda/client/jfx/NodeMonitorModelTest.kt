@@ -19,12 +19,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.CHARLIE
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -32,11 +28,9 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.*
 import net.corda.testing.driver.driver
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
 import net.corda.testing.node.DriverBasedTest
-import net.corda.testing.sequence
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import rx.Observable
@@ -148,7 +142,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
         var moveSmId: StateMachineRunId? = null
         var issueTx: SignedTransaction? = null
         var moveTx: SignedTransaction? = null
-        stateMachineUpdates.expectEvents {
+        stateMachineUpdates.expectEvents(isStrict = false) {
             sequence(
                     // ISSUE
                     expect { add: StateMachineUpdate.Added ->
@@ -159,14 +153,13 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
                     },
-                    // MOVE
-                    expect { add: StateMachineUpdate.Added ->
+                    // MOVE - N.B. There are other framework flows that happen in parallel for the remote resolve transactions flow
+                    expect(match = { it is StateMachineUpdate.Added && it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
                         val initiator = add.stateMachineInfo.initiator
                         require(initiator is FlowInitiator.RPC && initiator.username == "user1")
                     },
-                    expect { remove: StateMachineUpdate.Removed ->
-                        require(remove.id == moveSmId)
+                    expect(match = { it is StateMachineUpdate.Removed && it.id == moveSmId }) {
                     }
             )
         }

@@ -37,8 +37,6 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
 
         // This invokes the trading flow and out pops our finished transaction.
         val tradeTX: SignedTransaction = subFlow(buyer)
-        // TODO: This should be moved into the flow itself.
-        serviceHub.recordTransactions(tradeTX)
 
         println("Purchase complete - we are a happy customer! Final transaction is: " +
                 "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
