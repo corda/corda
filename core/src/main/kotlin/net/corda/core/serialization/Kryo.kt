@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -42,6 +43,7 @@ import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KParameter
+import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaType
@@ -605,6 +607,30 @@ object ClassSerializer : Serializer<Class<*>>() {
 
     override fun write(kryo: Kryo, output: Output, clazz: Class<*>) {
         output.writeString(clazz.name)
+    }
+}
+
+object FieldSerializer : Serializer<Field>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<Field>): Field {
+        val declaringClass = kryo.readClass(input).type
+        val name = input.readString()
+        return declaringClass.declaredFields.single { it.name.equals(name) }
+    }
+
+    override fun write(kryo: Kryo, output: Output, field: Field) {
+        kryo.writeClass(output, field.declaringClass)
+        output.writeString(field.name)
+    }
+}
+
+object KPropertySerializer : Serializer<KProperty1<*,*>>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<KProperty1<*,*>>): KProperty1<*,*> {
+        val declaringClass = kryo.readClass(input).type
+        return declaringClass.newInstance() as KProperty1<*, *>
+    }
+
+    override fun write(kryo: Kryo, output: Output, property: KProperty1<*,*>) {
+        kryo.writeClass(output, property.javaClass)
     }
 }
 

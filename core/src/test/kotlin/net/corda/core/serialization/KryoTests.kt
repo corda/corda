@@ -42,6 +42,18 @@ class KryoTests {
     }
 
     @Test
+    fun reflection() {
+        // kotlin
+        val kProperty = Person::birthday
+        val kbits = kProperty.serialize(kryo)
+        assertThat(kbits.deserialize(kryo)).isEqualTo(kProperty)
+        // java
+        val jField = Person::class.java.getDeclaredField("name")
+        val jbits = jField.serialize(kryo)
+        assertThat(jbits.deserialize(kryo)).isEqualTo(jField)
+    }
+
+    @Test
     fun nullables() {
         val bob = Person("bob", null)
         val bits = bob.serialize(kryo)

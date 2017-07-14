@@ -14,6 +14,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import java.util.*
+import kotlin.reflect.KProperty1
 
 fun Kryo.addToWhitelist(type: Class<*>) {
     ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassWhitelist)?.add(type)
@@ -64,6 +65,9 @@ class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean
             // Specialised enum entry, so just resolve the parent Enum type since cannot annotate the specialised entry.
             return checkClass(type.superclass)
         }
+        // allow Kotlin KProperty type (resolved by custom KPropertySerializer)
+        if (KProperty1::class.java.isAssignableFrom(type))
+            return null
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         // If we use a whitelist with blacklisting capabilities, whitelist.hasListed(type) may throw an IllegalStateException if input class is blacklisted.
         // Thus, blacklisting precedes annotation checking.

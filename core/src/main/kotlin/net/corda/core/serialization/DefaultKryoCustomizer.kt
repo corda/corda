@@ -36,10 +36,12 @@ import sun.security.provider.certpath.X509CertPath
 import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.InputStream
+import java.lang.reflect.Field
 import java.lang.reflect.Modifier.isPublic
 import java.security.cert.CertPath
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.reflect.KProperty1
 
 object DefaultKryoCustomizer {
     private val pluginRegistries: List<CordaPluginRegistry> by lazy {
@@ -95,6 +97,10 @@ object DefaultKryoCustomizer {
             register(MetaData::class.java, MetaDataSerializer)
             register(BitSet::class.java, BitSetSerializer())
             register(Class::class.java, ClassSerializer)
+
+            // required by Vault Query criteria DSL when used over RPC (see ``QueryCriteriaUtils``)
+            register(Field::class.java, FieldSerializer)
+            addDefaultSerializer(KProperty1::class.java, KPropertySerializer)
 
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
 
