@@ -11,7 +11,7 @@ Corda provides a number of flexible query mechanisms for accessing the Vault:
 
 The majority of query requirements can be satisfied by using the Vault Query API, which is exposed via the ``VaultQueryService`` for use directly by flows:
 
-.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/Services.kt
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/VaultQueryService.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryAPI
     :end-before: DOCEND VaultQueryAPI

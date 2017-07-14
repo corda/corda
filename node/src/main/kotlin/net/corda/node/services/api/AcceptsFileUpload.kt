@@ -1,7 +1,5 @@
 package net.corda.node.services.api
 
-import net.corda.core.node.services.FileUploader
-
 /**
  * A service that implements AcceptsFileUpload can have new binary data provided to it via an HTTP upload.
  */
