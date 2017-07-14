@@ -12,7 +12,9 @@ dependencies {
     // Requery: SQL based query & persistence for Kotlin
     kapt "io.requery:requery-processor:$requery_version"
 
-    testCompile project(':test-utils')
+    // WARNING: Do not add test-utils to this project - due to the order in while gradle resolves modules this
+    // module gets resolved too early and the publication name does not get updated by the publish plugin and breaks
+    // the generated POM files.
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
