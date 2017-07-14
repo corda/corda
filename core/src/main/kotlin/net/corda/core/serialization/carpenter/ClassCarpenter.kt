@@ -201,8 +201,7 @@ class ClassCarpenter {
 
     private fun ClassWriter.generateGetters(schema: Schema) {
         for ((name, type) in schema.fields) {
-            val opcodes    = ACC_PUBLIC
-            with(visitMethod(opcodes, "get" + name.capitalize(), "()" + type.descriptor, null, null)) {
+            with(visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + type.descriptor, null, null)) {
                 type.addNullabilityAnnotation(this)
                 visitCode()
                 visitVarInsn(ALOAD, 0)  // Load 'this'

@@ -483,9 +483,9 @@ class ClassCarpenterTest {
 
     @Test
     fun beanTest() {
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "pantsPantsPants",
-                mapOf("a" to ClassCarpenter.NonNullableField(Integer::class.java)))
+                mapOf("a" to NonNullableField(Integer::class.java)))
         val clazz = cc.build(schema)
         val descriptors = Introspector.getBeanInfo(clazz).propertyDescriptors
 

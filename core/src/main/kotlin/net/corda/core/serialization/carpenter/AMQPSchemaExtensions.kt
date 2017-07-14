@@ -19,7 +19,7 @@ fun AMQPSchema.carpenterSchema(
 /**
  * if we can load the class then we MUST know about all of it's composite elements
  */
-private fun CompositeType.validateKnown (
+private fun CompositeType.validatePropertyTypes(
         classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())){
     fields.forEach {
         if (!it.validateType(classLoaders)) throw UncarpentableException (name, it.name, it.type)
@@ -44,7 +44,7 @@ fun CompositeType.carpenterSchema(
         carpenterSchemas : CarpenterSchemas,
         force : Boolean = false) {
     if (classLoaders.exists(name)) {
-        validateKnown(classLoaders)
+        validatePropertyTypes(classLoaders)
         if (!force) return
     }
 

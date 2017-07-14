@@ -89,7 +89,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         val b = B(A(testA), testB)
 
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
-        val amqpSchema = obj.envelope.schema.mangleName(listOf (classTestName ("A")))
+        val amqpSchema = obj.envelope.schema.mangleNames(listOf (classTestName ("A")))
 
         assert(obj.obj is B)
 
@@ -112,7 +112,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         assert(obj.obj is B)
 
-        val amqpSchema = obj.envelope.schema.mangleName(listOf(classTestName("B")))
+        val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("B")))
         val carpenterSchema = amqpSchema.carpenterSchema()
 
         assertEquals(1, carpenterSchema.size)
@@ -140,7 +140,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         assert(obj.obj is B)
 
-        val amqpSchema = obj.envelope.schema.mangleName(listOf(classTestName("A"), classTestName("B")))
+        val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         val carpenterSchema = amqpSchema.carpenterSchema()
 
         // just verify we're in the expected initial state, A is carpentable, B is not because
@@ -180,7 +180,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
     @Test(expected = UncarpentableException::class)
     @Suppress("UNUSED")
-    fun nestedIsUnkownInherited() {
+    fun nestedIsUnknownInherited() {
         val testA = 10
         val testB = 20
         val testC = 30
@@ -199,7 +199,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         assert(obj.obj is C)
 
-        val amqpSchema = obj.envelope.schema.mangleName(listOf(classTestName("A"), classTestName("B")))
+        val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
 
         amqpSchema.carpenterSchema()
     }
@@ -225,7 +225,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         assert(obj.obj is C)
 
-        val amqpSchema = obj.envelope.schema.mangleName(listOf(classTestName("A"), classTestName("B")))
+        val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
 
         amqpSchema.carpenterSchema()
     }
@@ -251,7 +251,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         assert(obj.obj is C)
 
-        val carpenterSchema = obj.envelope.schema.mangleName(listOf(classTestName("A"), classTestName("B")))
+        val carpenterSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         TestMetaCarpenter(carpenterSchema.carpenterSchema())
     }
 
@@ -273,13 +273,13 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         assert(obj.obj is B)
 
-        val carpenterSchema = obj.envelope.schema.mangleName(listOf(classTestName("A"), classTestName("B")))
+        val carpenterSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         val metaCarpenter = TestMetaCarpenter(carpenterSchema.carpenterSchema())
 
         assertEquals(1, metaCarpenter.schemas.carpenterSchemas.size)
-        assertEquals(mangleName(classTestName("B")), metaCarpenter.schemas.carpenterSchemas.first().name)
+        assertEquals(mangleNames(classTestName("B")), metaCarpenter.schemas.carpenterSchemas.first().name)
         assertEquals(1, metaCarpenter.schemas.dependencies.size)
-        assertTrue(mangleName(classTestName("A")) in metaCarpenter.schemas.dependencies)
+        assertTrue(mangleNames(classTestName("A")) in metaCarpenter.schemas.dependencies)
     }
     */
 }

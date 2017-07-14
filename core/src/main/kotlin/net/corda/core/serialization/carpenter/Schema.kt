@@ -8,8 +8,6 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
 import java.util.LinkedHashMap
 
-/**********************************************************************************************************************/
-
 /**
  * A Schema represents a desired class.
  */
@@ -36,8 +34,6 @@ abstract class Schema(
         get() = name.replace(".", "/")
 }
 
-/**********************************************************************************************************************/
-
 class ClassSchema(
     name: String,
     fields: Map<String, Field>,
@@ -45,16 +41,12 @@ class ClassSchema(
     interfaces: List<Class<*>> = emptyList()
 ) : Schema (name, fields, superclass, interfaces)
 
-/**********************************************************************************************************************/
-
 class InterfaceSchema(
     name: String,
     fields: Map<String, Field>,
     superclass: Schema? = null,
     interfaces: List<Class<*>> = emptyList()
 ) : Schema (name, fields, superclass, interfaces)
-
-/**********************************************************************************************************************/
 
 object CarpenterSchemaFactory {
     fun newInstance (
@@ -67,8 +59,6 @@ object CarpenterSchemaFactory {
             if (isInterface) InterfaceSchema (name, fields, superclass, interfaces)
             else ClassSchema (name, fields, superclass, interfaces)
 }
-
-/**********************************************************************************************************************/
 
 abstract class Field(val field: Class<out Any?>) {
     companion object {
@@ -107,8 +97,6 @@ abstract class Field(val field: Class<out Any?>) {
     abstract fun nullTest(mv: MethodVisitor, slot: Int)
 }
 
-/**********************************************************************************************************************/
-
 class NonNullableField(field: Class<out Any?>) : Field(field) {
     override val nullabilityAnnotation = "Ljavax/annotation/Nonnull;"
 
@@ -136,8 +124,6 @@ class NonNullableField(field: Class<out Any?>) : Field(field) {
     }
 }
 
-/**********************************************************************************************************************/
-
 class NullableField(field: Class<out Any?>) : Field(field) {
     override val nullabilityAnnotation = "Ljavax/annotation/Nullable;"
 
@@ -157,12 +143,8 @@ class NullableField(field: Class<out Any?>) : Field(field) {
     }
 }
 
-/**********************************************************************************************************************/
-
 object FieldFactory {
     fun newInstance (mandatory: Boolean, name: String, field: Class<out Any?>) =
             if (mandatory) NonNullableField (name, field) else NullableField (name, field)
 
 }
-
-/**********************************************************************************************************************/
