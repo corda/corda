@@ -8,6 +8,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
@@ -185,6 +186,9 @@ class TwoPartyTradeFlowTests {
             val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
             val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
             var bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+
+            aliceNode.services.identityService.registerIdentity(bobNode.info.legalIdentityAndCert)
+            bobNode.services.identityService.registerIdentity(aliceNode.info.legalIdentityAndCert)
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
@@ -494,11 +498,12 @@ class TwoPartyTradeFlowTests {
                                   sellerNode: MockNetwork.MockNode,
                                   buyerNode: MockNetwork.MockNode,
                                   assetToSell: StateAndRef<OwnableState>): RunResult {
-        sellerNode.services.identityService.registerIdentity(buyerNode.info.legalIdentityAndCert)
-        buyerNode.services.identityService.registerIdentity(sellerNode.info.legalIdentityAndCert)
+        val anonymousSeller = sellerNode.services.let { serviceHub ->
+            serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, false)
+        }
         val buyerFlows: Observable<BuyerAcceptor> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
-        val seller = SellerInitiator(buyerNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS)
+        val seller = SellerInitiator(buyerNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, anonymousSeller.identity)
         val sellerResult = sellerNode.services.startFlow(seller).resultFuture
         return RunResult(firstBuyerFiber, sellerResult, seller.stateMachine.id)
     }
@@ -507,17 +512,17 @@ class TwoPartyTradeFlowTests {
     class SellerInitiator(val buyer: Party,
                           val notary: NodeInfo,
                           val assetToSell: StateAndRef<OwnableState>,
-                          val price: Amount<Currency>) : FlowLogic<SignedTransaction>() {
+                          val price: Amount<Currency>,
+                          val me: AbstractParty) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             send(buyer, Pair(notary.notaryIdentity, price))
-            val key = serviceHub.keyManagementService.freshKey()
             return subFlow(Seller(
                 buyer,
                 notary,
                 assetToSell,
                 price,
-                AnonymousParty(key)))
+                me))
         }
     }
 
