@@ -3,6 +3,8 @@ package net.corda.node.services.transactions
 import bftsmart.communication.ServerCommunicationSystem
 import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemClientSide
 import bftsmart.communication.client.netty.NettyClientServerSession
+import bftsmart.statemanagement.SMMessage
+import bftsmart.statemanagement.strategy.StandardStateManager
 import bftsmart.tom.MessageContext
 import bftsmart.tom.ServiceProxy
 import bftsmart.tom.ServiceReplica
@@ -175,6 +177,23 @@ object BFTSMaRt {
             private val log = loggerFor<Replica>()
         }
 
+        private val stateManagerOverride = run {
+            // Mock framework shutdown is not in reverse order, and we need to stop the faulty replicas first:
+            val exposeStartupRace = config.exposeRaces && replicaId < maxFaultyReplicas(config.clusterSize)
+            object : StandardStateManager() {
+                override fun askCurrentConsensusId() {
+                    if (exposeStartupRace) Thread.sleep(10000)
+                    super.askCurrentConsensusId()
+                }
+
+                override fun currentConsensusIdReceived(smsg: SMMessage?) = synchronized(this) {
+                    super.currentConsensusIdReceived(smsg)
+                    waitingCID = -1 // Allow super.currentConsensusIdReceived to process the response. XXX: Is this safe?
+                }
+            }
+        }
+
+        override fun getStateManager() = stateManagerOverride
         // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
         private val commitLog = services.database.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
