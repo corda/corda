@@ -14,6 +14,7 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
 import java.util.*
+
 import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterField
 import net.corda.nodeapi.internal.serialization.carpenter.Schema as CarpenterSchema
 
@@ -170,8 +171,6 @@ data class Field(val name: String, val type: String, val requires: List<String>,
         sb.append("/>")
         return sb.toString()
     }
-
-    fun typeAsString() = if (type =="*") requires[0] else type
 }
 
 sealed class TypeNotation : DescribedType {

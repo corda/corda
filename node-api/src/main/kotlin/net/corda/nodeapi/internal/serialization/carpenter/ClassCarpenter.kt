@@ -297,10 +297,8 @@ class ClassCarpenter {
         // fact that we didn't implement the interface we said we would at the moment the missing method is
         // actually called, which is a bit too dynamic for my tastes.
         val allFields = schema.fieldsIncludingSuperclasses()
-        println ("  interfaces = ${schema.interfaces}")
         for (itf in schema.interfaces) {
             itf.methods.forEach {
-                println (" param ${it.name}")
                 val fieldNameFromItf = when {
                     it.name.startsWith("get") -> it.name.substring(3).decapitalize()
                     else -> throw InterfaceMismatchException(
@@ -311,6 +309,7 @@ class ClassCarpenter {
                 // If we're trying to carpent a class that prior to serialisation / deserialisation
                 // was made by a carpenter then we can ignore this (it will implement a plain get
                 // method from SimpleFieldAccess).
+                // method from SimpleFieldAccess)
                 if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) return@forEach
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields))

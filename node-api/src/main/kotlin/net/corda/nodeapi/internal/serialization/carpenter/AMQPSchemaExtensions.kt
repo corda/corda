@@ -26,6 +26,8 @@ private fun CompositeType.validatePropertyTypes(
     }
 }
 
+fun AMQPField.typeAsString() = if (type =="*") requires[0] else type
+
 /**
  * based upon this AMQP schema either
  *  a) add the corresponding carpenter schema to the [carpenterSchemas] param
