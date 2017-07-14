@@ -193,6 +193,7 @@ class NodeTerminalView : Fragment() {
             val (stateInit, stateNext) = ops.vaultTrackBy<ContractState>(paging = pageSpecification)
 
             txCount = txInit.size
+            // This is the total number of states in the vault, regardless of pagination.
             stateCount = stateInit.totalStatesAvailable
 
             Platform.runLater {
