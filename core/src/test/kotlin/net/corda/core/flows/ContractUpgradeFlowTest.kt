@@ -71,7 +71,7 @@ class ContractUpgradeFlowTest {
         // The request is expected to be rejected because party B hasn't authorised the upgrade yet.
         val rejectedFuture = a.services.startFlow(ContractUpgradeFlow(atx!!.tx.outRef(0), DummyContractV2::class.java)).resultFuture
         mockNet.runNetwork()
-        assertFailsWith(FlowSessionException::class) { rejectedFuture.getOrThrow() }
+        assertFailsWith(UnexpectedFlowEndException::class) { rejectedFuture.getOrThrow() }
 
         // Party B authorise the contract state upgrade.
         b.services.vaultService.authoriseContractUpgrade(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)
@@ -141,7 +141,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(FlowSessionException::class) { rejectedFuture.getOrThrow() }
+            assertFailsWith(UnexpectedFlowEndException::class) { rejectedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade.
             rpcB.authoriseContractUpgrade(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)
