@@ -93,35 +93,32 @@ data class TransactionForContract(val inputs: List<ContractState>,
     // DOCEND 3
 }
 
-class TransactionResolutionException(val hash: SecureHash) : FlowException() {
-    override fun toString(): String = "Transaction resolution failure for $hash"
-}
+class TransactionResolutionException(val hash: SecureHash) : FlowException("Transaction resolution failure for $hash")
+class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attachment resolution failure for $hash")
 
-class AttachmentResolutionException(val hash: SecureHash) : FlowException() {
-    override fun toString(): String = "Attachment resolution failure for $hash"
-}
+sealed class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
+    : FlowException("$message, transaction: $txId", cause) {
 
-sealed class TransactionVerificationException(val txId: SecureHash, cause: Throwable?) : FlowException(cause) {
-    class ContractRejection(txId: SecureHash, val contract: Contract, cause: Throwable?) : TransactionVerificationException(txId, cause)
-    class MoreThanOneNotary(txId: SecureHash) : TransactionVerificationException(txId, null)
-    class SignersMissing(txId: SecureHash, val missing: List<PublicKey>) : TransactionVerificationException(txId, null) {
-        override fun toString(): String = "Signers missing: ${missing.joinToString()}"
-    }
+    class ContractRejection(txId: SecureHash, contract: Contract, cause: Throwable)
+        : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, contract: $contract", cause)
 
-    class DuplicateInputStates(txId: SecureHash, val duplicates: NonEmptySet<StateRef>) : TransactionVerificationException(txId, null) {
-        override fun toString(): String = "Duplicate inputs: ${duplicates.joinToString()}"
-    }
+    class MoreThanOneNotary(txId: SecureHash)
+        : TransactionVerificationException(txId, "More than one notary", null)
 
-    class InvalidNotaryChange(txId: SecureHash) : TransactionVerificationException(txId, null)
-    class NotaryChangeInWrongTransactionType(txId: SecureHash, val txNotary: Party, val outputNotary: Party) : TransactionVerificationException(txId, null) {
-        override fun toString(): String {
-            return "Found unexpected notary change in transaction. Tx notary: $txNotary, found: $outputNotary"
-        }
-    }
+    class SignersMissing(txId: SecureHash, missing: List<PublicKey>)
+        : TransactionVerificationException(txId, "Signers missing: ${missing.joinToString()}", null)
 
-    class TransactionMissingEncumbranceException(txId: SecureHash, val missing: Int, val inOut: Direction) : TransactionVerificationException(txId, null) {
-        override val message: String get() = "Missing required encumbrance $missing in $inOut"
-    }
+    class DuplicateInputStates(txId: SecureHash, val duplicates: NonEmptySet<StateRef>)
+        : TransactionVerificationException(txId, "Duplicate inputs: ${duplicates.joinToString()}", null)
+
+    class InvalidNotaryChange(txId: SecureHash)
+        : TransactionVerificationException(txId, "Detected a notary change. Outputs must use the same notary as inputs", null)
+
+    class NotaryChangeInWrongTransactionType(txId: SecureHash, txNotary: Party, outputNotary: Party)
+        : TransactionVerificationException(txId, "Found unexpected notary change in transaction. Tx notary: $txNotary, found: $outputNotary", null)
+
+    class TransactionMissingEncumbranceException(txId: SecureHash, missing: Int, inOut: Direction)
+        : TransactionVerificationException(txId, "Missing required encumbrance $missing in $inOut", null)
 
     @CordaSerializable
     enum class Direction {
