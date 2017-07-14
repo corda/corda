@@ -67,7 +67,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: DatabaseTransaction? = null
 
-     /**
+    /**
      * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
      * is not necessary.
      */
