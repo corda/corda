@@ -15,16 +15,16 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
+import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.MOCK_IDENTITY_SERVICE
 import net.corda.testing.node.MockAttachmentStorage
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStateMachineRecordedTransactionMappingStorage
 import net.corda.testing.node.MockTransactionStorage
-import org.jetbrains.exposed.sql.Database
 import java.time.Clock
 
 open class MockServiceHubInternal(
-        override val database: Database,
+        override val database: CordaPersistence,
         override val configuration: NodeConfiguration,
         val customVault: VaultService? = null,
         val customVaultQuery: VaultQueryService? = null,

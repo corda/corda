@@ -33,7 +33,6 @@ import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -90,6 +89,7 @@ class FlowFrameworkTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        sessionTransfers.clear()
     }
 
     @Test

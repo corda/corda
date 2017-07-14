@@ -17,19 +17,17 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.LogHelper
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.flows.RatesFixFlow
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.math.BigDecimal
 import java.util.function.Predicate
 import kotlin.test.assertEquals
@@ -50,8 +48,7 @@ class NodeInterestRatesTest {
     val DUMMY_CASH_ISSUER = Party(X500Name("CN=Cash issuer,O=R3,OU=corda,L=London,C=GB"), DUMMY_CASH_ISSUER_KEY.public)
 
     lateinit var oracle: NodeInterestRates.Oracle
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
 
     fun fixCmdFilter(elem: Any): Boolean {
         return when (elem) {
@@ -64,9 +61,7 @@ class NodeInterestRatesTest {
 
     @Before
     fun setUp() {
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(makeTestDataSourceProperties())
         database.transaction {
             oracle = NodeInterestRates.Oracle(
                     MEGA_CORP,
@@ -78,7 +73,7 @@ class NodeInterestRatesTest {
 
     @After
     fun tearDown() {
-        dataSource.close()
+        database.close()
     }
 
     @Test

@@ -18,9 +18,7 @@ import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
+import net.corda.node.utilities.*
 import net.corda.testing.getTestX509Name
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
@@ -29,11 +27,9 @@ import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Clock
@@ -54,8 +50,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     lateinit var scheduler: NodeSchedulerService
     lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var countDown: CountDownLatch
     lateinit var smmHasRemovedAllFlows: CountDownLatch
 
@@ -76,9 +71,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProps)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProps)
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
@@ -120,7 +113,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         }
         smmExecutor.shutdown()
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
-        dataSource.close()
+        database.close()
     }
 
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {

@@ -5,7 +5,6 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Test

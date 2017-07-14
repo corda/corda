@@ -13,16 +13,13 @@ import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.makeTestDataSourceProperties
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.Closeable
 import java.math.BigInteger
 import java.security.KeyPair
 import java.util.jar.JarOutputStream
@@ -32,8 +29,6 @@ import kotlin.test.assertFailsWith
 
 class AttachmentTests {
     lateinit var mockNet: MockNetwork
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
     lateinit var configuration: RequeryConfiguration
 
     @Before
