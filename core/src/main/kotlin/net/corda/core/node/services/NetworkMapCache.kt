@@ -119,6 +119,20 @@ interface NetworkMapCache {
         return nodes.randomOrNull()?.notaryIdentity
     }
 
+    /**
+     * Returns a service identity advertised by one of the nodes on the network
+     * @param type Specifies the type of the service
+     */
+    fun getServiceOf(type: ServiceType): Party? {
+        for (node in partyNodes) {
+            val serviceIdentities = node.serviceIdentities(type)
+            if (serviceIdentities.isNotEmpty()) {
+                return serviceIdentities.randomOrNull()
+            }
+        }
+        return null;
+    }
+
     /** Checks whether a given party is an advertised notary identity */
     fun isNotary(party: Party): Boolean = notaryNodes.any { it.notaryIdentity == party }
 
