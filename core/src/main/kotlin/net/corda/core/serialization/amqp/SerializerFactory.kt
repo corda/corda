@@ -174,21 +174,16 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private fun processSchema(
             schema: Schema,
             cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
-        println ("processSchema cl ${cl::class.java}")
 
-        val retry = cl != DeserializedParameterizedType::class.java.classLoader
         val carpenterSchemas = CarpenterSchemas.newInstance()
         for (typeNotation in schema.types) {
             try {
                 processSchemaEntry(typeNotation, cl)
             }
             catch (e: java.lang.ClassNotFoundException) {
-                println ("  CLASS NOT FOUND - $retry")
-                if (retry) {
-                    throw e
-                }
-                println ("add schema ${typeNotation.name}")
-                (typeNotation as CompositeType).carpenterSchema(carpenterSchemas = carpenterSchemas)
+                if ((cl != DeserializedParameterizedType::class.java.classLoader)
+                        || (typeNotation !is CompositeType)) throw e
+                typeNotation.carpenterSchema(carpenterSchemas = carpenterSchemas)
             }
         }
 
@@ -217,9 +212,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
     private fun processCompositeType(typeNotation: CompositeType,
                 cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
-        println ("processCompositeType ${typeNotation.name}")
         serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
-            println ("  no such type")
             // TODO: class loader logic, and compare the schema.
             val type = typeForName(typeNotation.name, cl)
             get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
@@ -361,7 +354,6 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                     else -> throw NotSerializableException("Not able to deserialize array type: $name")
                 }
             } else {
-                println ("typeForName: name = $name")
                 DeserializedParameterizedType.make(name, cl)
             }
         }

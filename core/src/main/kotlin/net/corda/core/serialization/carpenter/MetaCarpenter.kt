@@ -60,7 +60,6 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
     val objects = mutableMapOf<String, Class<*>>()
 
     fun step (newObject : Schema) {
-        println ("MetaCarpenter: ${newObject.name}")
         objects[newObject.name] = cc.build (newObject)
 
         // go over the list of everything that had a dependency on the newly

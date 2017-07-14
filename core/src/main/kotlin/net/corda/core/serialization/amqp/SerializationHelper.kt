@@ -69,7 +69,6 @@ private fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifi
 private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructor: KFunction<T>, type: Type, factory: SerializerFactory): Collection<PropertySerializer> {
     val clazz = (kotlinConstructor.returnType.classifier as KClass<*>).javaObjectType
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
-    println (Introspector.getBeanInfo(clazz).propertyDescriptors)
     val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.groupBy { it.name }.mapValues { it.value[0] }
     val rc: MutableList<PropertySerializer> = ArrayList(kotlinConstructor.parameters.size)
     for (param in kotlinConstructor.parameters) {

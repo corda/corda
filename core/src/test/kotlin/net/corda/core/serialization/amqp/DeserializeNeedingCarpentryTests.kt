@@ -4,19 +4,24 @@ import org.junit.Test
 import kotlin.test.*
 import net.corda.core.serialization.carpenter.ClassCarpenter
 import net.corda.core.serialization.carpenter.ClassSchema
+import net.corda.core.serialization.carpenter.InterfaceSchema
 import net.corda.core.serialization.carpenter.NonNullableField
 
 interface I {
     fun getName() : String
 }
 
+/**
+ * These tests work by having the class carpenter build the classes we serialise and then deserialise. Because
+ * those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
+ * versions of them up using its own internal class carpenter (each carpenter houses it's own loader). This
+ * replicates the situation where a reciever doesn't have some or all elements of a schema present on it's classpath
+ */
 class DeserializeNeedingCarpentryTests {
     @Test
     fun verySimpleType() {
         val testVal = 10
-        val cc = ClassCarpenter()
-        val schema = ClassSchema("oneType", mapOf("a" to NonNullableField(Int::class.java)))
-        val clazz = cc.build (schema)
+        val clazz = ClassCarpenter().build(ClassSchema("oneType", mapOf("a" to NonNullableField(Int::class.java))))
         val classInstance = clazz.constructors[0].newInstance(testVal)
 
         val serialisedBytes = SerializationOutput().serialize(classInstance)
@@ -27,11 +32,10 @@ class DeserializeNeedingCarpentryTests {
 
     @Test
     fun simpleTypeKnownInterface() {
-        val cc = ClassCarpenter()
-        val schema = ClassSchema("oneType", mapOf("name" to NonNullableField(String::class.java)),
-                interfaces = listOf (I::class.java))
-        val clazz = cc.build (schema)
-        val testVal = "Andrew Person"
+        val clazz = ClassCarpenter().build (ClassSchema(
+                "oneType", mapOf("name" to NonNullableField(String::class.java)),
+                interfaces = listOf (I::class.java)))
+        val testVal = "Some Person"
         val classInstance = clazz.constructors[0].newInstance(testVal)
 
         val serialisedBytes = SerializationOutput().serialize(classInstance)
@@ -44,13 +48,11 @@ class DeserializeNeedingCarpentryTests {
     @Test
     fun nestedTypes() {
         val cc = ClassCarpenter()
-        val nestedClass = cc.build (
-                ClassSchema("nestedType",
-                        mapOf("name" to NonNullableField(String::class.java))))
+        val nestedClass = cc.build (ClassSchema("nestedType",
+                mapOf("name" to NonNullableField(String::class.java))))
 
-        val outerClass = cc.build (
-                ClassSchema("outerType",
-                        mapOf("inner" to NonNullableField(nestedClass))))
+        val outerClass = cc.build (ClassSchema("outerType",
+                mapOf("inner" to NonNullableField(nestedClass))))
 
         val classInstance = outerClass.constructors.first().newInstance(nestedClass.constructors.first().newInstance("name"))
         val serialisedBytes = SerializationOutput().serialize(classInstance)
@@ -63,9 +65,8 @@ class DeserializeNeedingCarpentryTests {
     @Test
     fun repeatedNestedTypes() {
         val cc = ClassCarpenter()
-        val nestedClass = cc.build (
-                ClassSchema("nestedType",
-                        mapOf("name" to NonNullableField(String::class.java))))
+        val nestedClass = cc.build (ClassSchema("nestedType",
+                mapOf("name" to NonNullableField(String::class.java))))
 
         data class outer(val a: Any, val b: Any)
 
@@ -82,8 +83,7 @@ class DeserializeNeedingCarpentryTests {
 
     @Test
     fun listOfType() {
-        val cc = ClassCarpenter()
-        val unknownClass = cc.build (ClassSchema("unknownClass", mapOf(
+        val unknownClass = ClassCarpenter().build (ClassSchema("unknownClass", mapOf(
                 "v1" to NonNullableField(Int::class.java),
                 "v2" to NonNullableField(Int::class.java))))
 
@@ -101,5 +101,28 @@ class DeserializeNeedingCarpentryTests {
             assertEquals(sentinel++, it::class.java.getMethod("getV1").invoke(it))
             assertEquals(sentinel++, it::class.java.getMethod("getV2").invoke(it))
         }
+    }
+
+    @Test
+    fun unknownInterface() {
+        val cc = ClassCarpenter()
+
+        val interfaceClass = cc.build (InterfaceSchema(
+                "gen.Interface",
+                mapOf("age" to NonNullableField (Int::class.java))))
+
+        val concreteClass = cc.build (ClassSchema ("gen.Class", mapOf(
+                "age" to NonNullableField (Int::class.java),
+                "name" to NonNullableField(String::class.java)),
+                interfaces = listOf (I::class.java, interfaceClass)))
+
+        val serialisedBytes = SerializationOutput().serialize(
+                concreteClass.constructors.first().newInstance(12, "timmy"))
+        val deserializedObj = DeserializationInput().deserialize(serialisedBytes)
+
+        assertTrue(deserializedObj is I)
+        assertEquals("timmy", (deserializedObj as I).getName())
+        assertEquals("timmy", deserializedObj::class.java.getMethod("getName").invoke(deserializedObj))
+        assertEquals(12, deserializedObj::class.java.getMethod("getAge").invoke(deserializedObj))
     }
 }
