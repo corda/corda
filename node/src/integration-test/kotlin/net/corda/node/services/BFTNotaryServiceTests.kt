@@ -26,11 +26,14 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Files
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Ignore("Replica 6 constructor goes around the loop in BaseStateManager.askCurrentConsensusId forever, so stop hangs when getting the Replica instance to dispose it."
+        + "Happens frequently on Windows and has happened on Linux.")
 class BFTNotaryServiceTests {
     companion object {
         private val clusterName = X500Name("CN=BFT,O=R3,OU=corda,L=Zurich,C=CH")
