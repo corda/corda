@@ -51,12 +51,11 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
                 ?: throw IllegalStateException("Unable to locate notary node in network map cache")
         val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
-        val anonymous = false
         rpc.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
         // Pay random amounts of currency up to the requested amount
         amounts.forEach { pennies ->
             // TODO This can't be done in parallel, perhaps due to soft-locking issues?
-            rpc.startFlow(::CashPaymentFlow, amount.copy(quantity = pennies), buyer, anonymous).returnValue.getOrThrow()
+            rpc.startFlow(::CashPaymentFlow, amount.copy(quantity = pennies), buyer).returnValue.getOrThrow()
         }
         println("Cash issued to buyer")
 

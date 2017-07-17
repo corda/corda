@@ -17,14 +17,13 @@ fun generateIssue(
         max: Long,
         currency: Currency,
         notary: Party,
-        possibleRecipients: List<Party>,
-        anonymous: Boolean
+        possibleRecipients: List<Party>
 ): Generator<IssueAndPaymentRequest> {
     return generateAmount(1, max, Generator.pure(currency)).combine(
             Generator.pure(OpaqueBytes.of(0)),
             Generator.pickOne(possibleRecipients)
     ) { amount, ref, recipient ->
-        IssueAndPaymentRequest(amount, ref, recipient, notary, anonymous)
+        IssueAndPaymentRequest(amount, ref, recipient, notary, true)
     }
 }
 
@@ -32,13 +31,12 @@ fun generateMove(
         max: Long,
         currency: Currency,
         issuer: Party,
-        possibleRecipients: List<Party>,
-        anonymous: Boolean
+        possibleRecipients: List<Party>
 ): Generator<PaymentRequest> {
     return generateAmount(1, max, Generator.pure(Issued(PartyAndReference(issuer, OpaqueBytes.of(0)), currency))).combine(
             Generator.pickOne(possibleRecipients)
     ) { amount, recipient ->
-        PaymentRequest(amount.withoutIssuer(), recipient, anonymous, setOf(issuer))
+        PaymentRequest(amount.withoutIssuer(), recipient, true, setOf(issuer))
     }
 }
 

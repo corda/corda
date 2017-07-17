@@ -219,6 +219,7 @@ class ContractUpgradeFlowTest {
         val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx
+        val anonymisedRecipient = result.get().recipient!!
         val stateAndRef = stx.tx.outRef<Cash.State>(0)
         val baseState = a.database.transaction { a.services.vaultQueryService.queryBy<ContractState>().states.single() }
         assertTrue(baseState.state.data is Cash.State, "Contract state is old version.")
@@ -230,7 +231,7 @@ class ContractUpgradeFlowTest {
         val firstState = a.database.transaction { a.services.vaultQueryService.queryBy<ContractState>().states.single() }
         assertTrue(firstState.state.data is CashV2.State, "Contract state is upgraded to the new version.")
         assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (firstState.state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
-        assertEquals<Collection<AbstractParty>>(listOf(a.info.legalIdentity), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
+        assertEquals<Collection<AbstractParty>>(listOf(anonymisedRecipient), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
     }
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
