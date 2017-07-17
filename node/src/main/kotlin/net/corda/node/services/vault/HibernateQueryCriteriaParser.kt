@@ -74,8 +74,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             val timeCondition = criteria.timeCondition
             val timeInstantType = timeCondition!!.type
             val timeColumn = when (timeInstantType) {
-                QueryCriteria.TimeInstantType.RECORDED -> Column.Kotlin(VaultSchemaV1.VaultStates::recordedTime)
-                QueryCriteria.TimeInstantType.CONSUMED -> Column.Kotlin(VaultSchemaV1.VaultStates::consumedTime)
+                QueryCriteria.TimeInstantType.RECORDED -> Column(VaultSchemaV1.VaultStates::recordedTime)
+                QueryCriteria.TimeInstantType.CONSUMED -> Column(VaultSchemaV1.VaultStates::consumedTime)
             }
             val expression = CriteriaExpression.ColumnPredicateExpression(timeColumn, timeCondition.predicate)
             predicateSet.add(parseExpression(vaultStates, expression) as Predicate)
