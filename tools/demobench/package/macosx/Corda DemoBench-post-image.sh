@@ -13,6 +13,12 @@ function signApplication() {
         echo "**** Failed to re-sign the embedded JVM"
         return 1
     fi
+
+    # Resign the application because we've deleted the bugfixes
+    if ! (codesign --force --sign "$IDENTITY" --preserve-metadata=identifier,entitlements,requirements --verbose "$APPDIR"); then
+        echo "*** Failed to resign DemoBench application"
+        return 1
+    fi
 }
 
 # Switch to folder containing application.
