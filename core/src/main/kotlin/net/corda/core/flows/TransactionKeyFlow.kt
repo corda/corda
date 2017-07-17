@@ -31,7 +31,6 @@ class TransactionKeyFlow(val otherSide: Party,
     override fun call(): LinkedHashMap<Party, AnonymisedIdentity> {
         progressTracker.currentStep = AWAITING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
-        serviceHub.identityService.registerAnonymousIdentity(legalIdentityAnonymous.identity, serviceHub.myInfo.legalIdentity, legalIdentityAnonymous.certPath)
 
         // Special case that if we're both parties, a single identity is generated
         val identities = LinkedHashMap<Party, AnonymisedIdentity>()
@@ -39,6 +38,7 @@ class TransactionKeyFlow(val otherSide: Party,
             identities.put(otherSide, legalIdentityAnonymous)
         } else {
             val otherSideAnonymous = sendAndReceive<AnonymisedIdentity>(otherSide, legalIdentityAnonymous).unwrap { validateIdentity(otherSide, it) }
+            serviceHub.identityService.registerAnonymousIdentity(otherSideAnonymous.identity, otherSide, otherSideAnonymous.certPath)
             identities.put(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous)
             identities.put(otherSide, otherSideAnonymous)
         }
