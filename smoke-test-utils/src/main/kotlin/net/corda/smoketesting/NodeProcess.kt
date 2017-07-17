@@ -44,7 +44,7 @@ class NodeProcess(
 
     class Factory(val buildDirectory: Path = Paths.get("build"),
                   val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())) {
-        val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).apply { createDirectories() }
+        val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).createDirectories()
 
         fun baseDirectory(config: NodeConfig) = nodesDirectory / config.commonName
 
