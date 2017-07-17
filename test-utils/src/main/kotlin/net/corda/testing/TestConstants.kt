@@ -2,7 +2,7 @@
 
 package net.corda.testing
 
-import com.google.common.util.concurrent.Futures
+import net.corda.core.concurrent.transpose
 import net.corda.core.crypto.*
 import net.corda.core.crypto.testing.DummyPublicKey
 import net.corda.core.identity.Party
@@ -117,6 +117,6 @@ fun DriverDSLExposedInterface.aliceBobAndNotary(): List<PredefinedTestNode> {
     val alice = alice()
     val bob = bob()
     val notary = notary()
-    Futures.allAsList(alice.nodeFuture, bob.nodeFuture, notary.nodeFuture).get()
+    listOf(alice.nodeFuture, bob.nodeFuture, notary.nodeFuture).transpose().get()
     return listOf(alice, bob, notary)
 }
