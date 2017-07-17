@@ -3,7 +3,7 @@ package net.corda.core.crypto
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.composite.CompositeSignature
 import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.utilities.loadKeyStore

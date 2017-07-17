@@ -2,6 +2,7 @@ package net.corda.schemas
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import net.corda.core.serialization.CordaSerializable
 import java.time.Instant
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -17,6 +18,7 @@ object CommercialPaperSchema
  * First version of a commercial paper contract ORM schema that maps all fields of the [CommercialPaper] contract state
  * as it stood at the time of writing.
  */
+@CordaSerializable
 object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
     @Entity
     @Table(name = "cp_states",

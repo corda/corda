@@ -32,8 +32,8 @@ import com.opengamma.strata.product.common.BuySell
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
 import com.opengamma.strata.report.ReportCalculationResults
 import com.opengamma.strata.report.trade.TradeReport
-import net.corda.core.div
-import net.corda.core.exists
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDate

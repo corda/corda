@@ -17,7 +17,7 @@ These states are effectively soft locked until flow termination (exit or error) 
 In addition, the ``VaultService`` exposes a number of functions a developer may use to explicitly reserve, release and
 query soft locks associated with states as required by their CorDapp application logic:
 
-.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/Services.kt
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/VaultService.kt
     :language: kotlin
     :start-after: DOCSTART SoftLockAPI
     :end-before: DOCEND SoftLockAPI
@@ -25,7 +25,7 @@ query soft locks associated with states as required by their CorDapp application
 You can also control whether soft locked states are retrieved in general vault queries by setting an optional boolean
 `includeSoftLockedStates` flag (which is set to *true* by default)
 
-.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/Services.kt
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/VaultService.kt
     :language: kotlin
     :start-after: DOCSTART VaultStatesQuery
     :end-before: DOCEND VaultStatesQuery

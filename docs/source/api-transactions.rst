@@ -382,10 +382,11 @@ A ``SignedTransaction`` is a combination of:
        :start-after: DOCSTART 1
        :end-before: DOCEND 1
 
-Before adding our signature to the transaction, we'll want to verify both the transaction itself and its signatures.
+Before adding our signature to the transaction, we'll want to verify both the transaction's contents and the
+transaction's signatures.
 
-Verifying the transaction
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Verifying the transaction's contents
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To verify a transaction, we need to retrieve any states in the transaction chain that our node doesn't
 currently have in its local storage from the proposer(s) of the transaction. This process is handled by a built-in flow
 called ``ResolveTransactionsFlow``. See :doc:`api-flows` for more details.
@@ -460,10 +461,10 @@ the contract. Here's an example of how we might do this:
        :end-before: DOCEND 34
        :dedent: 12
 
-Verifying the signatures
-^^^^^^^^^^^^^^^^^^^^^^^^
-We also need to verify the signatures over the transaction to prevent tampering. We do this using
-``SignedTransaction.verifySignatures``:
+Verifying the transaction's signatures
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+We also need to verify that the transaction has all the required signatures, and that these signatures are valid, to
+prevent tampering. We do this using ``SignedTransaction.verifyRequiredSignatures``:
 
 .. container:: codeset
 
@@ -479,8 +480,8 @@ We also need to verify the signatures over the transaction to prevent tampering.
        :end-before: DOCEND 35
        :dedent: 12
 
-Optionally, we can pass ``verifySignatures`` a ``vararg`` of the public keys for which the signatures are allowed
-to be missing:
+Alternatively, we can use ``SignedTransaction.verifySignaturesExcept``, which takes a ``vararg`` of the public keys for
+which the signatures are allowed to be missing:
 
 .. container:: codeset
 

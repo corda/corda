@@ -5,7 +5,6 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.node.AttachmentClassLoaderTests
-import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.testing.node.MockAttachmentStorage
 import org.junit.Rule

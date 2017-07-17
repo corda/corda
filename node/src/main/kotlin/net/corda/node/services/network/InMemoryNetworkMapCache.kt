@@ -11,14 +11,13 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.DEFAULT_SESSION_ID
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.api.NetworkCacheError
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.messaging.MessagingService

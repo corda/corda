@@ -3,45 +3,22 @@ package net.corda.core.node.services
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
-import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
-import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.flows.AnonymisedIdentity
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.io.InputStream
 import java.security.PublicKey
-import java.security.cert.X509Certificate
 import java.time.Instant
 import java.util.*
-
-/**
- * Session ID to use for services listening for the first message in a session (before a
- * specific session ID has been established).
- */
-val DEFAULT_SESSION_ID = 0L
-
-/**
- * This file defines various 'services' which are not currently fleshed out. A service is a module that provides
- * immutable snapshots of data that may be changing in response to user or network events.
- */
 
 /**
  * A vault (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
@@ -345,206 +322,4 @@ inline fun <reified T : LinearState> VaultService.linearHeadsOfType() =
 
 class StatesNotAvailableException(override val message: String?, override val cause: Throwable? = null) : FlowException(message, cause) {
     override fun toString() = "Soft locking error: $message"
-}
-
-interface VaultQueryService {
-
-    // DOCSTART VaultQueryAPI
-    /**
-     * Generic vault query function which takes a [QueryCriteria] object to define filters,
-     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
-     * and returns a [Vault.Page] object containing the following:
-     *  1. states as a List of <StateAndRef> (page number and size defined by [PageSpecification])
-     *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
-     *  3. total number of results available if [PageSpecification] supplied (otherwise returns -1)
-     *  4. status types used in this query: UNCONSUMED, CONSUMED, ALL
-     *  5. other results (aggregate functions with/without using value groups)
-     *
-     * @throws VaultQueryException if the query cannot be executed for any reason
-     *        (missing criteria or parsing error, paging errors, unsupported query, underlying database error)
-     *
-     * Notes
-     *   If no [PageSpecification] is provided, a maximum of [DEFAULT_PAGE_SIZE] results will be returned.
-     *   API users must specify a [PageSpecification] if they are expecting more than [DEFAULT_PAGE_SIZE] results,
-     *   otherwise a [VaultQueryException] will be thrown alerting to this condition.
-     *   It is the responsibility of the API user to request further pages and/or specify a more suitable [PageSpecification].
-     */
-    @Throws(VaultQueryException::class)
-    fun <T : ContractState> _queryBy(criteria: QueryCriteria,
-                                     paging: PageSpecification,
-                                     sorting: Sort,
-                                     contractType: Class<out T>): Vault.Page<T>
-    /**
-     * Generic vault query function which takes a [QueryCriteria] object to define filters,
-     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
-     * and returns a [Vault.PageAndUpdates] object containing
-     * 1) a snapshot as a [Vault.Page] (described previously in [queryBy])
-     * 2) an [Observable] of [Vault.Update]
-     *
-     * @throws VaultQueryException if the query cannot be executed for any reason
-     *
-     * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
-     *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
-     */
-    @Throws(VaultQueryException::class)
-    fun <T : ContractState> _trackBy(criteria: QueryCriteria,
-                                     paging: PageSpecification,
-                                     sorting: Sort,
-                                     contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update>
-    // DOCEND VaultQueryAPI
-
-    // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
-    // Java Helpers
-    fun <T : ContractState> queryBy(contractType: Class<out T>): Vault.Page<T> {
-        return _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
-    }
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria): Vault.Page<T> {
-        return _queryBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
-    }
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
-        return _queryBy(criteria, paging, Sort(emptySet()), contractType)
-    }
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
-        return _queryBy(criteria, PageSpecification(), sorting, contractType)
-    }
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> {
-        return _queryBy(criteria, paging, sorting, contractType)
-    }
-
-    fun <T : ContractState> trackBy(contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update> {
-        return _trackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
-    }
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update> {
-        return _trackBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
-    }
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update> {
-        return _trackBy(criteria, paging, Sort(emptySet()), contractType)
-    }
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
-        return _trackBy(criteria, PageSpecification(), sorting, contractType)
-    }
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
-        return _trackBy(criteria, paging, sorting, contractType)
-    }
-}
-
-inline fun <reified T : ContractState> VaultQueryService.queryBy(): Vault.Page<T> {
-    return _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), T::class.java)
-}
-
-inline fun <reified T : ContractState> VaultQueryService.queryBy(criteria: QueryCriteria): Vault.Page<T> {
-    return _queryBy(criteria, PageSpecification(), Sort(emptySet()), T::class.java)
-}
-
-inline fun <reified T : ContractState> VaultQueryService.queryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
-    return _queryBy(criteria, paging, Sort(emptySet()), T::class.java)
-}
-
-inline fun <reified T : ContractState> VaultQueryService.queryBy(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
-    return _queryBy(criteria, PageSpecification(), sorting, T::class.java)
-}
-
-inline fun <reified T : ContractState> VaultQueryService.queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> {
-    return _queryBy(criteria, paging, sorting, T::class.java)
-}
-
-inline fun <reified T : ContractState> VaultQueryService.trackBy(): DataFeed<Vault.Page<T>, Vault.Update> {
-    return _trackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), T::class.java)
-}
-
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update> {
-    return _trackBy(criteria, PageSpecification(), Sort(emptySet()), T::class.java)
-}
-
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update> {
-    return _trackBy(criteria, paging, Sort(emptySet()), T::class.java)
-}
-
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
-    return _trackBy(criteria, PageSpecification(), sorting, T::class.java)
-}
-
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
-    return _trackBy(criteria, paging, sorting, T::class.java)
-}
-
-class VaultQueryException(description: String) : FlowException("$description")
-
-/**
- * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
- * call out to a hardware security module that enforces various auditing and frequency-of-use requirements.
- */
-
-interface KeyManagementService {
-    /**
-     * Returns a snapshot of the current signing [PublicKey]s.
-     * For each of these keys a [PrivateKey] is available, that can be used later for signing.
-     */
-    val keys: Set<PublicKey>
-
-    /**
-     * Generates a new random [KeyPair] and adds it to the internal key storage. Returns the public part of the pair.
-     */
-    @Suspendable
-    fun freshKey(): PublicKey
-
-    /**
-     * Generates a new random [KeyPair], adds it to the internal key storage, then generates a corresponding
-     * [X509Certificate] and adds it to the identity service.
-     *
-     * @param identity identity to generate a key and certificate for. Must be an identity this node has CA privileges for.
-     * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
-     * @return X.509 certificate and path to the trust root.
-     */
-    @Suspendable
-    fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity
-
-    /**
-     * Filter some keys down to the set that this node owns (has private keys for).
-     *
-     * @param candidateKeys keys which this node may own.
-     */
-    fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey>
-
-    /**
-     * Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
-     * @param bytes The data to sign over using the chosen key.
-     * @param publicKey The [PublicKey] partner to an internally held [PrivateKey], either derived from the node's primary identity,
-     * or previously generated via the [freshKey] method.
-     * If the [PublicKey] is actually a [CompositeKey] the first leaf signing key hosted by the node is used.
-     * @throws IllegalArgumentException if the input key is not a member of [keys].
-     * TODO A full [KeyManagementService] implementation needs to record activity to the [AuditService] and to limit signing to
-     * appropriately authorised contexts and initiating users.
-     */
-    @Suspendable
-    fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey
-}
-
-/**
- * An interface that denotes a service that can accept file uploads.
- */
-// TODO This is no longer used and can be removed
-interface FileUploader {
-    /**
-     * Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
-     * back to the user in the response.
-     */
-    fun upload(file: InputStream): String
-
-    /**
-     * Check if this service accepts this type of upload. For example if you are uploading interest rates this could
-     * be "my-service-interest-rates". Type here does not refer to file extentions or MIME types.
-     */
-    fun accepts(type: String): Boolean
-}
-
-/**
- * Provides verification service. The implementation may be a simple in-memory verify() call or perhaps an IPC/RPC.
- */
-interface TransactionVerifierService {
-    /**
-     * @param transaction The transaction to be verified.
-     * @return A future that completes successfully if the transaction verified, or sets an exception the verifier threw.
-     */
-    fun verify(transaction: LedgerTransaction): ListenableFuture<*>
 }
