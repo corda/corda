@@ -6,7 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow

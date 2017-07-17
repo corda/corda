@@ -8,6 +8,7 @@ import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.crypto.cert
+import net.corda.core.internal.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.*
 import org.bouncycastle.cert.path.CertPath

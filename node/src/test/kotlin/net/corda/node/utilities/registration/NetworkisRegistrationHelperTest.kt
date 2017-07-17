@@ -4,7 +4,7 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.*
-import net.corda.core.exists
+import net.corda.core.internal.exists
 import net.corda.core.toTypedArray
 import net.corda.node.utilities.loadKeyStore
 import net.corda.testing.ALICE

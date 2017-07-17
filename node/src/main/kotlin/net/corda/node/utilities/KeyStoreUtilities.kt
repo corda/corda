@@ -3,9 +3,9 @@ package net.corda.node.utilities
 import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.cert
-import net.corda.core.exists
-import net.corda.core.read
-import net.corda.core.write
+import net.corda.core.internal.exists
+import net.corda.core.internal.read
+import net.corda.core.internal.write
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.path.CertPath
 import java.io.IOException

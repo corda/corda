@@ -1,6 +1,6 @@
 package net.corda.explorer.model
 
-import net.corda.core.div
+import net.corda.core.internal.div
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder

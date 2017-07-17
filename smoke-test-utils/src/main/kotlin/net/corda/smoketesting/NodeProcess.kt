@@ -2,8 +2,8 @@ package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.createDirectories
-import net.corda.core.div
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import java.nio.file.Path

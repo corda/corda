@@ -1,8 +1,8 @@
 package net.corda.node
 
-import net.corda.core.copyToDirectory
-import net.corda.core.createDirectories
-import net.corda.core.div
+import net.corda.core.internal.copyToDirectory
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess

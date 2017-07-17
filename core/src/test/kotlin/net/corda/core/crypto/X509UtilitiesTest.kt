@@ -4,7 +4,7 @@ import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.core.crypto.X509Utilities.createSelfSignedCACertificate
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.toTypedArray
 import net.corda.node.services.config.createKeystoreForCordaNode
 import net.corda.node.utilities.*

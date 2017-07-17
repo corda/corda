@@ -7,7 +7,7 @@ import net.corda.client.mock.int
 import net.corda.client.mock.string
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.map
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
