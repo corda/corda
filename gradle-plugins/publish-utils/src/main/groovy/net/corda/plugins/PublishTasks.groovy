@@ -31,7 +31,7 @@ class PublishTasks implements Plugin<Project> {
     }
 
     void setPublishName(String publishName) {
-        project.logger.info("Changing publishing name for ${project.name} to ${publishName}")
+        project.logger.info("Changing publishing name from ${project.name} to ${publishName}")
         this.publishName = publishName
         checkAndConfigurePublishing()
     }
@@ -64,8 +64,10 @@ class PublishTasks implements Plugin<Project> {
                 delegate.artifact it
             }
 
-            if(!publishConfig.disableDefaultJar) {
+            if (!publishConfig.disableDefaultJar && !publishConfig.publishWar) {
                 from project.components.java
+            } else if (publishConfig.publishWar) {
+                from project.components.web
             }
 
             extendPomForMavenCentral(pom, bintrayConfig)
