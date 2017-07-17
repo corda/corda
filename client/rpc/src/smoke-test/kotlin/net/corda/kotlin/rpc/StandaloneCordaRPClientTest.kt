@@ -197,7 +197,7 @@ class StandaloneCordaRPClientTest {
 
         val balance = getBalance(USD)
         println("Balance: " + balance)
-        assertEquals(629.POUNDS, balance)
+        assertEquals(629.DOLLARS, balance)
     }
 
     private fun getBalance(currency: Currency): Amount<Currency> {
