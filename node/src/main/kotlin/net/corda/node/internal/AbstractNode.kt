@@ -64,8 +64,6 @@ import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.createSession
-import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
