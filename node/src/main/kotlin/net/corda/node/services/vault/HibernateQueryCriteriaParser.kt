@@ -93,9 +93,10 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 }
             }
             is ColumnPredicate.BinaryComparison -> {
-                column as Path<Comparable<Any?>?>
                 @Suppress("UNCHECKED_CAST")
                 val literal = columnPredicate.rightLiteral as Comparable<Any?>?
+                @Suppress("UNCHECKED_CAST")
+                column as Path<Comparable<Any?>?>
                 when (columnPredicate.operator) {
                     BinaryComparisonOperator.GREATER_THAN -> criteriaBuilder.greaterThan(column, literal)
                     BinaryComparisonOperator.GREATER_THAN_OR_EQUAL -> criteriaBuilder.greaterThanOrEqualTo(column, literal)
@@ -104,6 +105,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 }
             }
             is ColumnPredicate.Likeness -> {
+                @Suppress("UNCHECKED_CAST")
                 column as Path<String?>
                 when (columnPredicate.operator) {
                     LikenessOperator.LIKE -> criteriaBuilder.like(column, columnPredicate.rightLiteral)
@@ -190,8 +192,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 // add optional group by clauses
                 expression.groupByColumns?.let { columns ->
                     val groupByExpressions =
-                            columns.map { column ->
-                                val path = root.get<Any?>(getColumnName(column))
+                            columns.map { _column ->
+                                val path = root.get<Any?>(getColumnName(_column))
                                 aggregateExpressions.add(path)
                                 path
                             }

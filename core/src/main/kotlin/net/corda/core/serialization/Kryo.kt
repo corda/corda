@@ -46,6 +46,7 @@ import kotlin.reflect.KParameter
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.javaGetter
 import kotlin.reflect.jvm.javaType
 
 /**
@@ -614,7 +615,7 @@ object FieldSerializer : Serializer<Field>() {
     override fun read(kryo: Kryo, input: Input, type: Class<Field>): Field {
         val declaringClass = kryo.readClass(input).type
         val name = input.readString()
-        return declaringClass.declaredFields.single { it.name.equals(name) }
+        return declaringClass.declaredFields.single { it.name == name }
     }
 
     override fun write(kryo: Kryo, output: Output, field: Field) {
@@ -626,11 +627,13 @@ object FieldSerializer : Serializer<Field>() {
 object KPropertySerializer : Serializer<KProperty1<*,*>>() {
     override fun read(kryo: Kryo, input: Input, type: Class<KProperty1<*,*>>): KProperty1<*,*> {
         val declaringClass = kryo.readClass(input).type
-        return declaringClass.newInstance() as KProperty1<*, *>
+        val name = input.readString()
+        return declaringClass.kotlin.memberProperties.single { it.name == name }
     }
 
     override fun write(kryo: Kryo, output: Output, property: KProperty1<*,*>) {
-        kryo.writeClass(output, property.javaClass)
+        kryo.writeClass(output, property.javaGetter!!.declaringClass)
+        output.writeString(property.name)
     }
 }
 

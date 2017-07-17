@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class StandaloneCordaRPClientTest {
     private companion object {
@@ -176,15 +177,31 @@ class StandaloneCordaRPClientTest {
         assertEquals(3, moreResults.totalStatesAvailable)   // 629 - 100 + 100
 
         // Check that this cash exists in the vault
-        val cashBalance = getBalance(GBP)
         val cashBalances = rpcProxy.getCashBalances()
         log.info("Cash Balances: $cashBalances")
         assertEquals(1, cashBalances.size)
         assertEquals(629.POUNDS, cashBalances[Currency.getInstance("GBP")])
     }
 
+    @Test
+    fun `test cash balances`() {
+        val startCash = rpcProxy.getCashBalances()
+        assertTrue(startCash.isEmpty(), "Should not start with any cash")
+
+        val flowHandle = rpcProxy.startFlow(::CashIssueFlow,
+                629.DOLLARS, OpaqueBytes.of(0),
+                notaryNode.legalIdentity, notaryNode.legalIdentity
+        )
+        println("Started issuing cash, waiting on result")
+        flowHandle.returnValue.get()
+
+        val balance = getBalance(USD)
+        println("Balance: " + balance)
+        assertEquals(629.POUNDS, balance)
+    }
+
     private fun getBalance(currency: Currency): Amount<Currency> {
-        val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+        val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum() }
         val sumCriteria = QueryCriteria.VaultCustomQueryCriteria(sum)
 
         val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(currency.currencyCode) }
@@ -199,6 +216,7 @@ class StandaloneCordaRPClientTest {
             return Amount(quantity, currency)
         }
     }
+
     private fun fetchNotaryIdentity(): NodeInfo {
         val (nodeInfo, nodeUpdates) = rpcProxy.networkMapFeed()
         nodeUpdates.notUsed()
