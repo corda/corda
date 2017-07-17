@@ -40,8 +40,7 @@ object IRSTradeFlow {
 
             return subFlow(TwoPartyDealFlow.Instigator(
                     otherParty,
-                    TwoPartyDealFlow.AutoOffer(notary, offer),
-                    serviceHub.legalIdentityKey))
+                    TwoPartyDealFlow.AutoOffer(notary, offer)))
         }
 
     }

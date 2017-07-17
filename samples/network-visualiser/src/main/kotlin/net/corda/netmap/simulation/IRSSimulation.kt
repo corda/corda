@@ -42,6 +42,11 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): CordaFuture<Unit> {
+        // TODO: Determine why this isn't happening via the network map
+        mockNet.nodes.map { it.services.identityService }.forEach { service ->
+            mockNet.nodes.forEach { node -> service.registerIdentity(node.info.legalIdentityAndCert) }
+        }
+
         val future = openFuture<Unit>()
         om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap).map { it.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
 
@@ -122,10 +127,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,
-                            val payload: AutoOffer,
-                            val myKey: PublicKey) : FlowLogic<SignedTransaction>() {
+                            val payload: AutoOffer) : FlowLogic<SignedTransaction>() {
             @Suspendable
-            override fun call(): SignedTransaction = subFlow(Instigator(otherParty, payload, myKey))
+            override fun call(): SignedTransaction = subFlow(Instigator(otherParty, payload))
         }
 
         @InitiatedBy(StartDealFlow::class)
@@ -143,8 +147,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val instigator = StartDealFlow(
                 node2.info.legalIdentity,
-                AutoOffer(notary.info.notaryIdentity, irs),
-                node1.services.legalIdentityKey)
+                AutoOffer(notary.info.notaryIdentity, irs))
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
         return listOf(instigatorTxFuture, acceptorTxFuture).transpose().flatMap { instigatorTxFuture }

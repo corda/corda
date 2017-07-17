@@ -52,11 +52,9 @@ object AutoOfferFlow {
             // need to pick which ever party is not us
             val otherParty = notUs(dealToBeOffered.participants).map { serviceHub.identityService.partyFromAnonymous(it) }.requireNoNulls().single()
             progressTracker.currentStep = DEALING
-            val myKey = serviceHub.legalIdentityKey
             val instigator = Instigator(
                     otherParty,
                     AutoOffer(notary, dealToBeOffered),
-                    myKey,
                     progressTracker.getChildProgressTracker(DEALING)!!
             )
             val stx = subFlow(instigator)

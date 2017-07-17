@@ -99,8 +99,7 @@ class NewTransaction : Fragment() {
                         command.recipient,
                         command.issueRef,
                         myIdentity.value!!.legalIdentity,
-                        command.notary,
-                        command.anonymous)
+                        command.notary)
             } else {
                 command.startFlow(rpcProxy.value!!)
             }
@@ -149,16 +148,14 @@ class NewTransaction : Fragment() {
         dialogPane = root
         initOwner(window)
         setResultConverter {
-            // TODO: Enable confidential identities
-            val anonymous = false
             val defaultRef = OpaqueBytes.of(1)
             val issueRef = if (issueRef.value != null) OpaqueBytes.of(issueRef.value) else defaultRef
             when (it) {
                 executeButton -> when (transactionTypeCB.value) {
                     CashTransaction.Issue -> {
-                        CashFlowCommand.IssueCash(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity, anonymous)
+                        CashFlowCommand.IssueCash(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity)
                     }
-                    CashTransaction.Pay -> CashFlowCommand.PayCash(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.legalIdentity, anonymous = anonymous)
+                    CashTransaction.Pay -> CashFlowCommand.PayCash(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.legalIdentity)
                     CashTransaction.Exit -> CashFlowCommand.ExitCash(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef)
                     else -> null
                 }

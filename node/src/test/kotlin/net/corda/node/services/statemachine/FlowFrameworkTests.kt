@@ -330,11 +330,10 @@ class FlowFrameworkTests {
                 2000.DOLLARS,
                 OpaqueBytes.of(0x01),
                 node1.info.legalIdentity,
-                notary1.info.notaryIdentity,
-                anonymous = false))
+                notary1.info.notaryIdentity)).resultFuture.getOrThrow()
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1..3) {
-            val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity, anonymous = false))
+            val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity))
             mockNet.runNetwork()
             flow.resultFuture.getOrThrow()
         }

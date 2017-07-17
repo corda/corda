@@ -26,7 +26,7 @@ open class EventGenerator(val parties: List<Party>, val currencies: List<Currenc
 
     protected val issueCashGenerator = amountGenerator.combine(partyGenerator, issueRefGenerator, currencyGenerator) { amount, to, issueRef, ccy ->
         addToMap(ccy, amount)
-        CashFlowCommand.IssueCash(Amount(amount, ccy), issueRef, to, notary, anonymous = true)
+        CashFlowCommand.IssueCash(Amount(amount, ccy), issueRef, to, notary)
     }
 
     protected val exitCashGenerator = amountGenerator.combine(issueRefGenerator, currencyGenerator) { amount, issueRef, ccy ->
@@ -35,7 +35,7 @@ open class EventGenerator(val parties: List<Party>, val currencies: List<Currenc
     }
 
     open val moveCashGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
-        CashFlowCommand.PayCash(Amount(amountIssued, currency), recipient, anonymous = true)
+        CashFlowCommand.PayCash(Amount(amountIssued, currency), recipient)
     }
 
     open val issuerGenerator = Generator.frequency(listOf(
@@ -71,11 +71,11 @@ class ErrorFlowsEventGenerator(parties: List<Party>, currencies: List<Currency>,
     }
 
     val normalMoveGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
-        CashFlowCommand.PayCash(Amount(amountIssued, currency), recipient, anonymous = true)
+        CashFlowCommand.PayCash(Amount(amountIssued, currency), recipient)
     }
 
     val errorMoveGenerator = partyGenerator.combine(currencyGenerator) { recipient, currency ->
-        CashFlowCommand.PayCash(Amount(currencyMap[currency]!! * 2, currency), recipient, anonymous = true)
+        CashFlowCommand.PayCash(Amount(currencyMap[currency]!! * 2, currency), recipient)
     }
 
     override val moveCashGenerator = Generator.frequency(listOf(

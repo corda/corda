@@ -8,7 +8,9 @@ import net.corda.core.contracts.*;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.crypto.TransactionSignature;
 import net.corda.core.flows.*;
+import net.corda.core.identity.AnonymousPartyAndPath;
 import net.corda.core.identity.Party;
+import net.corda.core.identity.PartyAndCertificate;
 import net.corda.core.internal.FetchDataFlow;
 import net.corda.core.node.services.ServiceType;
 import net.corda.core.node.services.Vault;
@@ -30,8 +32,9 @@ import java.security.PublicKey;
 import java.security.SignatureException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.testing.TestConstants.getDUMMY_PUBKEY_1;
 
@@ -358,7 +361,8 @@ public class FlowCookbookJava {
             // DOCEND 29
             // We can also sign the transaction using a different public key:
             // DOCSTART 30
-            PublicKey otherKey = getServiceHub().getKeyManagementService().freshKey();
+            AnonymousPartyAndPath otherIdentity = getServiceHub().getKeyManagementService().freshKeyAndCert(getServiceHub().getMyInfo().getLegalIdentityAndCert(), false);
+            PublicKey otherKey = otherIdentity.getParty().getOwningKey();
             SignedTransaction onceSignedTx2 = getServiceHub().signInitialTransaction(txBuilder, otherKey);
             // DOCEND 30
 
@@ -369,7 +373,8 @@ public class FlowCookbookJava {
             SignedTransaction twiceSignedTx = getServiceHub().addSignature(onceSignedTx);
             // DOCEND 38
             // Or, if we wanted to use a different public key:
-            PublicKey otherKey2 = getServiceHub().getKeyManagementService().freshKey();
+            AnonymousPartyAndPath otherIdentity2 = getServiceHub().getKeyManagementService().freshKeyAndCert(getServiceHub().getMyInfo().getLegalIdentityAndCert(), false);
+            PublicKey otherKey2 = otherIdentity2.getParty().getOwningKey();
             // DOCSTART 39
             SignedTransaction twiceSignedTx2 = getServiceHub().addSignature(onceSignedTx, otherKey2);
             // DOCEND 39
@@ -470,13 +475,17 @@ public class FlowCookbookJava {
             ------------------------*/
             progressTracker.setCurrentStep(SIGS_GATHERING);
 
+            // TODO: Use actual anonymous identities
+            final List<PartyAndCertificate> nodes = Arrays.asList(getServiceHub().getMyInfo().getLegalIdentityAndCert(),
+                    getServiceHub().getIdentityService().certificateFromParty(counterparty));
+            final Map<Party, AnonymousPartyAndPath> identities = nodes.stream().collect(Collectors.toMap(PartyAndCertificate::getParty, PartyAndCertificate::toAnonymous));
             // The list of parties who need to sign a transaction is dictated
             // by the transaction's commands. Once we've signed a transaction
             // ourselves, we can automatically gather the signatures of the
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()));
+            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, identities, Collections.singleton(otherKey), SIGS_GATHERING.childProgressTracker()));
             // DOCEND 15
 
             /*------------------------

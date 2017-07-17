@@ -8,6 +8,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
+import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.node.services.ServiceType
@@ -340,7 +341,8 @@ object FlowCookbook {
             // DOCEND 29
             // We can also sign the transaction using a different public key:
             // DOCSTART 30
-            val otherKey: PublicKey = serviceHub.keyManagementService.freshKey()
+            val otherIdentity: AnonymousPartyAndPath = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, false)
+            val otherKey: PublicKey = otherIdentity.party.owningKey
             val onceSignedTx2: SignedTransaction = serviceHub.signInitialTransaction(txBuilder, otherKey)
             // DOCEND 30
 
@@ -351,7 +353,8 @@ object FlowCookbook {
             val twiceSignedTx: SignedTransaction = serviceHub.addSignature(onceSignedTx)
             // DOCEND 38
             // Or, if we wanted to use a different public key:
-            val otherKey2: PublicKey = serviceHub.keyManagementService.freshKey()
+            val otherIdentity2: AnonymousPartyAndPath = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, false)
+            val otherKey2: PublicKey = otherIdentity.party.owningKey
             // DOCSTART 39
             val twiceSignedTx2: SignedTransaction = serviceHub.addSignature(onceSignedTx, otherKey2)
             // DOCEND 39
@@ -455,13 +458,18 @@ object FlowCookbook {
             -----------------------**/
             progressTracker.currentStep = SIGS_GATHERING
 
+            // TODO: Use actual anonymous identities
+            val identities = listOf(serviceHub.myInfo.legalIdentityAndCert, serviceHub.identityService.certificateFromParty(counterparty)!!)
+                    .map { node ->
+                        Pair(node.party, node.toAnonymous())
+                    }.toMap()
             // The list of parties who need to sign a transaction is dictated
             // by the transaction's commands. Once we've signed a transaction
             // ourselves, we can automatically gather the signatures of the
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()))
+            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, identities, setOf(otherKey), SIGS_GATHERING.childProgressTracker()))
             // DOCEND 15
 
             /**-----------------------

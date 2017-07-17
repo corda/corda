@@ -2,7 +2,9 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap

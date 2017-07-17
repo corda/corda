@@ -5,19 +5,18 @@ import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.days
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.days
+import net.corda.core.utilities.seconds
 import net.corda.flows.TwoPartyTradeFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
@@ -50,7 +49,7 @@ class SellerFlow(val otherParty: Party,
         progressTracker.currentStep = SELF_ISSUING
 
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
-        val cpOwnerKey = serviceHub.keyManagementService.freshKey()
+        val paperOwner = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, false)
         val commercialPaper = selfIssueSomeCommercialPaper(serviceHub.myInfo.legalIdentity, notary)
 
         progressTracker.currentStep = TRADING
@@ -62,7 +61,7 @@ class SellerFlow(val otherParty: Party,
                 notary,
                 commercialPaper,
                 amount,
-                AnonymousParty(cpOwnerKey),
+                paperOwner,
                 progressTracker.getChildProgressTracker(TRADING)!!)
         return subFlow(seller)
     }

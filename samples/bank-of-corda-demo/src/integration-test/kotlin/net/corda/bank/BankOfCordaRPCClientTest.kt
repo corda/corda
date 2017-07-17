@@ -44,15 +44,13 @@ class BankOfCordaRPCClientTest {
             val vaultUpdatesBigCorp = bigCorpProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria).updates
 
             // Kick-off actual Issuer Flow
-            val anonymous = true
             bocProxy.startFlow(
                     ::IssuanceRequester,
                     1000.DOLLARS,
                     nodeBigCorporation.nodeInfo.legalIdentity,
                     BIG_CORP_PARTY_REF,
                     nodeBankOfCorda.nodeInfo.legalIdentity,
-                    nodeBankOfCorda.nodeInfo.notaryIdentity,
-                    anonymous).returnValue.getOrThrow()
+                    nodeBankOfCorda.nodeInfo.notaryIdentity).returnValue.getOrThrow()
 
             // Check Bank of Corda Vault Updates
             vaultUpdatesBoc.expectEvents {

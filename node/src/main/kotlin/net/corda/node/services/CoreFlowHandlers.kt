@@ -90,6 +90,6 @@ class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean
         val otherSideAnonymous = sendAndReceive<AnonymousPartyAndPath>(otherSide, legalIdentityAnonymous).unwrap { TransactionKeyFlow.validateIdentity(otherSide, it) }
         // Validate then store their identity so that we can prove the key in the transaction is owned by the
         // counterparty.
-        serviceHub.identityService.registerAnonymousIdentity(otherSideAnonymous, otherSide)
+        serviceHub.identityService.verifyAndRegisterAnonymousIdentity(otherSideAnonymous, otherSide)
     }
 }

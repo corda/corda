@@ -7,12 +7,14 @@ import net.corda.core.contracts.Issued
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.testing.ALICE
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class FinalityFlowTests {
     lateinit var mockNet: MockNetwork
@@ -51,5 +53,19 @@ class FinalityFlowTests {
             nodeB.services.validatedTransactions.getTransaction(notarisedTx.id)
         }
         assertEquals(notarisedTx, transactionSeenByB)
+    }
+
+    @Test
+    fun `reject a transaction with unknown parties`() {
+        val amount = Amount(1000, Issued(nodeA.info.legalIdentity.ref(0), GBP))
+        val fakeIdentity = ALICE // Alice isn't part of this network, so node A won't recognise them
+        val builder = TransactionBuilder(notary)
+        Cash().generateIssue(builder, amount, fakeIdentity, notary)
+        val stx = nodeA.services.signInitialTransaction(builder)
+        val flow = nodeA.services.startFlow(FinalityFlow(stx))
+        mockNet.runNetwork()
+        assertFailsWith<IllegalArgumentException> {
+            flow.resultFuture.getOrThrow()
+        }
     }
 }

@@ -161,8 +161,7 @@ class IssuerFlowTest(val anonymous: Boolean) {
                                            ref: OpaqueBytes,
                                            notaryParty: Party): CordaFuture<AbstractCashFlow.Result> {
         val issueToPartyAndRef = issueToParty.ref(ref)
-        val issueRequest = IssuanceRequester(amount, issueToParty, issueToPartyAndRef.reference, issuerNode.info.legalIdentity, notaryParty,
-                anonymous)
+        val issueRequest = IssuanceRequester(amount, issueToParty, issueToPartyAndRef.reference, issuerNode.info.legalIdentity, notaryParty)
         return issueToNode.services.startFlow(issueRequest).resultFuture
     }
 }

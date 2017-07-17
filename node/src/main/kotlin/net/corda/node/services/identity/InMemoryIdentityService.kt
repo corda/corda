@@ -46,6 +46,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     private val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val principalToParties = ConcurrentHashMap<X500Name, PartyAndCertificate>()
+    /** Mapping from party (well known or confidential) to their certificate and path */
     private val partyToPath = ConcurrentHashMap<AbstractParty, Pair<CertPath, X509CertificateHolder>>()
 
     init {
@@ -141,12 +142,13 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
 
         partyToPath[anonymousIdentity.party] = Pair(anonymousIdentity.certPath, certificate)
         keyToParties[anonymousIdentity.party.owningKey] = fullParty
+        principalToParties[fullParty.name] = fullParty
         return fullParty
     }
 
-    override fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate {
+    override fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party): PartyAndCertificate {
         val (anonymousParty, path) = anonymousIdentity
-        val fullParty = certificateFromParty(party) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
+        val fullParty = certificateFromParty(wellKnownIdentity) ?: throw IllegalArgumentException("Unknown identity ${wellKnownIdentity.name}")
         require(path.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         // Validate the chain first, before we do anything clever with it
         validateCertificatePath(anonymousParty, path)
