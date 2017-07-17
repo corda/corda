@@ -5,11 +5,11 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.read
-import net.corda.core.readAll
+import net.corda.core.internal.read
+import net.corda.core.internal.readAll
 import net.corda.testing.LogHelper
-import net.corda.core.write
-import net.corda.core.writeLines
+import net.corda.core.internal.write
+import net.corda.core.internal.writeLines
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.transactions.PersistentUniquenessProvider

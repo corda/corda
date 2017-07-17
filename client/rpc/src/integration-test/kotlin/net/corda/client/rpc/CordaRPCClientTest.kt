@@ -1,12 +1,16 @@
 package net.corda.client.rpc
 
+import net.corda.contracts.asset.Cash
+import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
+import net.corda.core.contracts.USD
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.crypto.random63BitValue
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.testing.ALICE
 import net.corda.flows.CashException
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -14,10 +18,13 @@ import net.corda.node.internal.Node
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
+import net.corda.schemas.CashSchemaV1
+import net.corda.testing.ALICE
 import net.corda.testing.node.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import java.util.*
@@ -116,10 +123,23 @@ class CordaRPCClientTest : NodeBasedTest() {
         println("Started issuing cash, waiting on result")
         flowHandle.returnValue.get()
 
-        val finishCash = proxy.getCashBalances()
-        println("Cash Balances: $finishCash")
-        assertEquals(1, finishCash.size)
-        assertEquals(123.DOLLARS, finishCash.get(Currency.getInstance("USD")))
+        val cashDollars = getBalance(USD, proxy)
+        println("Balance: $cashDollars")
+        assertEquals(123.DOLLARS, cashDollars)
+    }
+
+    private fun getBalance(currency: Currency, proxy: CordaRPCOps): Amount<Currency> {
+        val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum() }
+        val sumCriteria = QueryCriteria.VaultCustomQueryCriteria(sum)
+
+        val results = proxy.vaultQueryBy<Cash.State>(sumCriteria)
+        if (results.otherResults.isEmpty()) {
+            return Amount(0L, currency)
+        } else {
+            Assert.assertNotNull(results.otherResults)
+            val quantity = results.otherResults[0] as Long
+            return Amount(quantity, currency)
+        }
     }
 
     @Test

@@ -1,6 +1,6 @@
 package net.corda.attachmentdemo
 
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B

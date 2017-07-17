@@ -2,7 +2,7 @@ package net.corda.node
 
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.config.parseAs
