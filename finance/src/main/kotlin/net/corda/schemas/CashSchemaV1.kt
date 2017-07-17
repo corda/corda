@@ -2,6 +2,7 @@ package net.corda.schemas
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import net.corda.core.serialization.CordaSerializable
 import javax.persistence.*
 
 /**
@@ -13,6 +14,7 @@ object CashSchema
  * First version of a cash contract ORM schema that maps all fields of the [Cash] contract state as it stood
  * at the time of writing.
  */
+@CordaSerializable
 object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
     @Entity
     @Table(name = "contract_cash_states",
