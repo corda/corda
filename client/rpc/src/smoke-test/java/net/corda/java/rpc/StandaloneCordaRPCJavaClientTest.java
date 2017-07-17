@@ -25,7 +25,7 @@ import static kotlin.test.AssertionsKt.assertEquals;
 public class StandaloneCordaRPCJavaClientTest {
 
     private List<String> perms = Collections.singletonList("ALL");
-    private Set<String> permSet = new HashSet(perms);
+    private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
 
     private AtomicInteger port = new AtomicInteger(15000);
@@ -85,15 +85,16 @@ public class StandaloneCordaRPCJavaClientTest {
 
     private Amount<Currency> getBalance(Currency currency) throws NoSuchFieldException {
         Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
+        @SuppressWarnings("unchecked")
         QueryCriteria sumCriteria = new QueryCriteria.VaultCustomQueryCriteria(Builder.sum(pennies));
 
         Vault.Page<Cash.State> results = rpcProxy.vaultQueryByCriteria(sumCriteria, Cash.State.class);
         if (results.getOtherResults().isEmpty()) {
-            return new Amount(0L, currency);
+            return new Amount<>(0L, currency);
         } else {
             Assert.assertNotNull(results.getOtherResults());
             Long quantity = (Long) results.getOtherResults().get(0);
-            return new Amount(quantity, currency);
+            return new Amount<>(quantity, currency);
         }
     }
 }

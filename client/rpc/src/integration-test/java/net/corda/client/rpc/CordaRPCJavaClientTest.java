@@ -29,7 +29,7 @@ import static net.corda.testing.TestConstants.*;
 public class CordaRPCJavaClientTest extends NodeBasedTest {
 
     private List<String> perms = Arrays.asList(startFlowPermission(CashPaymentFlow.class), startFlowPermission(CashIssueFlow.class));
-    private Set<String> permSet = new HashSet(perms);
+    private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
 
     private Node node;
@@ -44,7 +44,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
     @Before
     public void setUp() throws ExecutionException, InterruptedException {
-        Set services = new HashSet(Collections.singletonList(new ServiceInfo(ValidatingNotaryService.Companion.getType(), null)));
+        Set<ServiceInfo> services = new HashSet<>(Collections.singletonList(new ServiceInfo(ValidatingNotaryService.Companion.getType(), null)));
         ListenableFuture<Node> nodeFuture = startNode(getALICE().getName(), 1, services, Arrays.asList(rpcUser), Collections.emptyMap());
         node = nodeFuture.get();
         client = new CordaRPCClient(node.getConfiguration().getRpcAddress(), null, getDefault());
@@ -82,15 +82,16 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     private Amount<Currency> getBalance(Currency currency) throws NoSuchFieldException {
 
         Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
+        @SuppressWarnings("unchecked")
         QueryCriteria sumCriteria = new QueryCriteria.VaultCustomQueryCriteria(Builder.sum(pennies));
 
         Vault.Page<Cash.State> results = rpcProxy.vaultQueryByCriteria(sumCriteria, Cash.State.class);
         if (results.getOtherResults().isEmpty()) {
-            return new Amount(0L, currency);
+            return new Amount<>(0L, currency);
         } else {
             Assert.assertNotNull(results.getOtherResults());
             Long quantity = (Long) results.getOtherResults().get(0);
-            return new Amount(quantity, currency);
+            return new Amount<>(quantity, currency);
         }
     }
 }
