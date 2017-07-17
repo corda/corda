@@ -98,6 +98,29 @@ class InMemoryIdentityServiceTests {
      * Also checks that incorrect associations are rejected.
      */
     @Test
+    fun `get anonymous identity by key`() {
+        val trustRoot = DUMMY_CA
+        val (alice, aliceTxIdentity) = createParty(ALICE.name, trustRoot)
+        val (bob, bobTxIdentity) = createParty(ALICE.name, trustRoot)
+
+        // Now we have identities, construct the service and let it know about both
+        val service = InMemoryIdentityService(setOf(alice), emptyMap(), trustRoot.certificate.cert)
+        service.registerAnonymousIdentity(aliceTxIdentity, alice.party)
+
+        var actual = service.anonymousFromKey(aliceTxIdentity.identity.owningKey)
+        assertEquals<AnonymisedIdentity>(aliceTxIdentity, actual!!)
+
+        assertNull(service.anonymousFromKey(bobTxIdentity.identity.owningKey))
+        service.registerAnonymousIdentity(bobTxIdentity, bob.party)
+        actual = service.anonymousFromKey(bobTxIdentity.identity.owningKey)
+        assertEquals<AnonymisedIdentity>(bobTxIdentity, actual!!)
+    }
+
+    /**
+     * Generate a pair of certificate paths from a root CA, down to a transaction key, store and verify the associations.
+     * Also checks that incorrect associations are rejected.
+     */
+    @Test
     fun `assert ownership`() {
         val trustRoot = DUMMY_CA
         val (alice, aliceTxIdentity) = createParty(ALICE.name, trustRoot)
@@ -113,16 +136,16 @@ class InMemoryIdentityServiceTests {
 
         // Now we have identities, construct the service and let it know about both
         val service = InMemoryIdentityService(setOf(alice, bob), emptyMap(), trustRoot.certificate.cert)
-        service.registerAnonymousIdentity(aliceTxIdentity.identity, alice.party, aliceTxIdentity.certPath)
+        service.registerAnonymousIdentity(aliceTxIdentity, alice.party)
 
-        val anonymousBob = AnonymousParty(bobTxKey.public)
-        service.registerAnonymousIdentity(anonymousBob, bob.party, bobCertPath)
+        val anonymousBob = AnonymisedIdentity(bobCertPath, bobTxCert, AnonymousParty(bobTxKey.public))
+        service.registerAnonymousIdentity(anonymousBob, bob.party)
 
         // Verify that paths are verified
         service.assertOwnership(alice.party, aliceTxIdentity.identity)
-        service.assertOwnership(bob.party, anonymousBob)
+        service.assertOwnership(bob.party, anonymousBob.identity)
         assertFailsWith<IllegalArgumentException> {
-            service.assertOwnership(alice.party, anonymousBob)
+            service.assertOwnership(alice.party, anonymousBob.identity)
         }
         assertFailsWith<IllegalArgumentException> {
             service.assertOwnership(bob.party, aliceTxIdentity.identity)

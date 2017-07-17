@@ -1,6 +1,7 @@
 package net.corda.core.identity
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.flows.AnonymisedIdentity
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.PublicKey
@@ -29,5 +30,12 @@ data class PartyAndCertificate(val party: Party,
     }
 
     override fun hashCode(): Int = party.hashCode()
+    /**
+     * Convert this party and certificate into an anomymised identity. This exists primarily for example cases which
+     * want to use well known identities as if they're anonymous identities.
+     */
+    fun toAnonymisedIdentity(): AnonymisedIdentity {
+        return AnonymisedIdentity(certPath, certificate, party.owningKey)
+    }
     override fun toString(): String = party.toString()
 }

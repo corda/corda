@@ -13,6 +13,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.flows.AnonymisedIdentity
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -50,14 +51,16 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     private val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val principalToParties = ConcurrentHashMap<X500Name, PartyAndCertificate>()
-    private val partyToPath = ConcurrentHashMap<AbstractParty, CertPath>()
+    private val partyToPath = ConcurrentHashMap<AbstractParty, Pair<CertPath, X509CertificateHolder>>()
 
     init {
         val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
         caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
         keyToParties.putAll(identities.associateBy { it.owningKey } )
         principalToParties.putAll(identities.associateBy { it.name })
-        partyToPath.putAll(certPaths)
+        certPaths.forEach { (party, path) ->
+            partyToPath.put(party, Pair(path, X509CertificateHolder(path.certificates.first().encoded)))
+        }
     }
 
     // TODO: Check the certificate validation logic
@@ -70,11 +73,19 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         log.trace { "Registering identity $party" }
         require(Arrays.equals(party.certificate.subjectPublicKeyInfo.encoded, party.owningKey.encoded)) { "Party certificate must end with party's public key" }
 
-        partyToPath[party.party] = party.certPath
+        partyToPath[party.party] = Pair(party.certPath, party.certificate)
         keyToParties[party.owningKey] = party
         principalToParties[party.name] = party
     }
 
+    override fun anonymousFromKey(owningKey: PublicKey): AnonymisedIdentity? {
+        val anonymousParty = AnonymousParty(owningKey)
+        val path = partyToPath[anonymousParty]
+        return path?.let { it ->
+            AnonymisedIdentity(it.first, it.second, anonymousParty)
+        }
+    }
+    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[owningKey]
     override fun certificateFromParty(party: Party): PartyAndCertificate? = principalToParties[party.name]
 
     // We give the caller a copy of the data set to avoid any locking problems
@@ -115,7 +126,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
 
     @Throws(IdentityService.UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
-        val path = partyToPath[anonymousParty] ?: throw IdentityService.UnknownAnonymousPartyException("Unknown anonymous party ${anonymousParty.owningKey.toStringShort()}")
+        val path = partyToPath[anonymousParty]?.first ?: throw IdentityService.UnknownAnonymousPartyException("Unknown anonymous party ${anonymousParty.owningKey.toStringShort()}")
         require(path.certificates.size > 1) { "Certificate path must contain at least two certificates" }
         val actual = path.certificates[1]
         require(actual is X509Certificate && actual.publicKey == party.owningKey) { "Next certificate in the path must match the party key ${party.owningKey.toStringShort()}." }
@@ -123,22 +134,28 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         require(target is X509Certificate && target.publicKey == anonymousParty.owningKey) { "Certificate path starts with a certificate for the anonymous party" }
     }
 
-    override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = partyToPath[anonymousParty]
+    override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = partyToPath[anonymousParty]?.first
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun registerAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath) {
+    override fun registerAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party) {
+        val (path, _, anonymousParty) = anonymousIdentity
+        val fullParty = verifyAnonymousIdentity(anonymousParty, party, path)
+        val certificate = X509CertificateHolder(path.certificates.first().encoded)
+        log.trace { "Registering identity $fullParty" }
+
+        partyToPath[anonymousParty] = Pair(path, certificate)
+        keyToParties[anonymousParty.owningKey] = fullParty
+        principalToParties[fullParty.name] = fullParty
+    }
+
+    override fun verifyAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath): PartyAndCertificate {
         val fullParty = certificateFromParty(party) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
         require(path.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         // Validate the chain first, before we do anything clever with it
         validateCertificatePath(anonymousParty, path)
         val subjectCertificate = path.certificates.first()
         require(subjectCertificate is X509Certificate && subjectCertificate.subject == fullParty.name) { "Subject of the transaction certificate must match the well known identity" }
-
-        log.trace { "Registering identity $fullParty" }
-
-        partyToPath[anonymousParty] = path
-        keyToParties[anonymousParty.owningKey] = fullParty
-        principalToParties[fullParty.name] = fullParty
+        return fullParty
     }
 
     /**

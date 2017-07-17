@@ -35,10 +35,10 @@ fun freshCertificate(identityService: IdentityService,
     val ourCertificate = Crypto.createCertificate(CertificateType.IDENTITY, issuerCertificate.subject, issuerSigner, issuer.name, subjectPublicKey, window)
     val certFactory = CertificateFactory.getInstance("X509")
     val ourCertPath = certFactory.generateCertPath(listOf(ourCertificate.cert) + issuer.certPath.certificates)
-    identityService.registerAnonymousIdentity(AnonymousParty(subjectPublicKey),
-            issuer.party,
-            ourCertPath)
-    return AnonymisedIdentity(ourCertPath, issuerCertificate, subjectPublicKey)
+    val anonymisedIdentity = AnonymisedIdentity(ourCertPath, issuerCertificate, subjectPublicKey)
+    identityService.registerAnonymousIdentity(anonymisedIdentity,
+            issuer.party)
+    return anonymisedIdentity
 }
 
 fun getSigner(issuerKeyPair: KeyPair): ContentSigner {

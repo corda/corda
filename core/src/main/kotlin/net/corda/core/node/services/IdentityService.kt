@@ -2,6 +2,7 @@ package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
+import net.corda.flows.AnonymisedIdentity
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -29,15 +30,27 @@ interface IdentityService {
     fun registerIdentity(party: PartyAndCertificate)
 
     /**
-     * Verify and then store an identity.
+     * Verify and then store an anonymous identity.
      *
-     * @param anonymousParty a party representing a legal entity in a transaction.
-     * @param path certificate path from the trusted root to the party.
+     * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
+     * @param party well known party the anonymised party must represent.
      * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun registerAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath)
+    fun registerAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party)
+
+    /**
+     * Verify an anonymous identity.
+     *
+     * @param anonymousParty a party representing a legal entity in a transaction.
+     * @param party well known party the anonymised party must represent.
+     * @param path certificate path from the trusted root to the party.
+     * @return the full well known identity.
+     * @throws IllegalArgumentException if the certificate path is invalid.
+     */
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun verifyAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath): PartyAndCertificate
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
@@ -53,6 +66,19 @@ interface IdentityService {
      * used in preference where possible.
      */
     fun getAllIdentities(): Iterable<PartyAndCertificate>
+
+    /**
+     * Get the certificate and path for a previously registered anonymous identity. These are used to prove an anonmyous
+     * identity is owned by a well known identity.
+     */
+    fun anonymousFromKey(owningKey: PublicKey): AnonymisedIdentity?
+
+    /**
+     * Get the certificate and path for a well known identity's owning key.
+     *
+     * @return the party and certificate, or null if unknown.
+     */
+    fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate?
 
     /**
      * Get the certificate and path for a well known identity.
@@ -98,6 +124,7 @@ interface IdentityService {
     /**
      * Get the certificate chain showing an anonymous party is owned by the given party.
      */
+    @Deprecated("Use anonymousFromKey instead, which provides more detail and takes in a more relevant input", replaceWith = ReplaceWith("anonymousFromKey(anonymousParty.owningKey)"))
     fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath?
 
     /**
