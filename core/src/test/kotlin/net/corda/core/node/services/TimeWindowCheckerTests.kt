@@ -1,7 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.seconds
+import net.corda.core.utilities.seconds
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant

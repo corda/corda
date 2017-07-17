@@ -10,15 +10,15 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.crypto.testing.NULL_PARTY
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.seconds
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
@@ -202,7 +202,7 @@ class Obligation<P : Any> : Contract {
                     "amount in settle command ${command.value.amount} matches settled total $totalAmountSettled" using (command.value.amount == totalAmountSettled)
                     "signatures are present from all obligors" using command.signers.containsAll(requiredSigners)
                     "there are no zero sized inputs" using inputs.none { it.amount.quantity == 0L }
-                    "at obligor ${obligor} the obligations after settlement balance" using
+                    "at obligor $obligor the obligations after settlement balance" using
                             (inputAmount == outputAmount + Amount(totalPenniesSettled, groupingKey))
                 }
                 return setOf(command.value)
@@ -264,7 +264,7 @@ class Obligation<P : Any> : Contract {
 
             /** When the contract must be settled by. */
             val dueBefore: Instant,
-            val timeTolerance: Duration = Duration.ofSeconds(30)
+            val timeTolerance: Duration = 30.seconds
     ) {
         val product: P
             get() = acceptableIssuedProducts.map { it.product }.toSet().single()
