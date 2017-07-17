@@ -5,6 +5,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
@@ -32,9 +33,10 @@ import net.corda.core.utilities.toNonEmptySet
  * @param transactions What to commit.
  * @param extraRecipients A list of additional participants to inform of the transaction.
  */
-class FinalityFlow(val transactions: Iterable<SignedTransaction>,
+open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
                    val extraRecipients: Set<Party>,
                    override val progressTracker: ProgressTracker) : FlowLogic<List<SignedTransaction>>() {
+    val extraParticipants: Set<Participant> = extraRecipients.map { it -> Participant(it, it) }.toSet()
     constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(listOf(transaction), extraParticipants, tracker())
     constructor(transaction: SignedTransaction) : this(listOf(transaction), emptySet(), tracker())
     constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(listOf(transaction), emptySet(), progressTracker)
@@ -50,6 +52,9 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         fun tracker() = ProgressTracker(NOTARISING, BROADCASTING)
     }
 
+    open protected val me
+        get() = serviceHub.myInfo.legalIdentity
+
     @Suspendable
     @Throws(NotaryException::class)
     override fun call(): List<SignedTransaction> {
@@ -59,34 +64,43 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         // Lookup the resolved transactions and use them to map each signed transaction to the list of participants.
         // Then send to the notary if needed, record locally and distribute.
         progressTracker.currentStep = NOTARISING
-        val notarisedTxns = notariseAndRecord(lookupParties(resolveDependenciesOf(transactions)))
+        val notarisedTxns: List<Pair<SignedTransaction, Set<Participant>>> = resolveDependenciesOf(transactions)
+                .map { (stx, ltx) -> Pair(notariseAndRecord(stx), lookupParties(ltx)) }
 
         // Each transaction has its own set of recipients, but extra recipients get them all.
         progressTracker.currentStep = BROADCASTING
-        val me = serviceHub.myInfo.legalIdentity
         for ((stx, parties) in notarisedTxns) {
-            val participants = parties + extraRecipients - me
-            if (participants.isNotEmpty()) {
-                subFlow(BroadcastTransactionFlow(stx, participants.toNonEmptySet()))
-            }
+            broadcastTransaction(stx, (parties + extraParticipants).filter { it.wellKnown != me })
         }
         return notarisedTxns.map { it.first }
     }
 
-    // TODO: API: Make some of these protected?
+    /**
+     * Broadcast a transaction to the participants. By default calls [BroadcastTransactionFlow], however can be
+     * overridden for more complex transaction delivery protocols (for example where not all parties know each other).
+     * This implementation will filter out any participants for who there is no well known identity.
+     *
+     * @param participants the participants to send the transaction to. This is expected to include extra participants
+     * and exclude the local node.
+     */
+    @Suspendable
+    open protected fun broadcastTransaction(stx: SignedTransaction, participants: Iterable<Participant>) {
+        val wellKnownParticipants = participants.map { it.wellKnown }.filterNotNull()
+        if (wellKnownParticipants.isNotEmpty()) {
+            subFlow(BroadcastTransactionFlow(stx, wellKnownParticipants.toNonEmptySet()))
+        }
+    }
 
     @Suspendable
-    private fun notariseAndRecord(stxnsAndParties: List<Pair<SignedTransaction, Set<Party>>>): List<Pair<SignedTransaction, Set<Party>>> {
-        return stxnsAndParties.map { (stx, parties) ->
-            val notarised = if (needsNotarySignature(stx)) {
-                val notarySignatures = subFlow(NotaryFlow.Client(stx))
-                stx + notarySignatures
-            } else {
-                stx
-            }
-            serviceHub.recordTransactions(notarised)
-            Pair(notarised, parties)
+    private fun notariseAndRecord(stx: SignedTransaction): SignedTransaction {
+        val notarised = if (needsNotarySignature(stx)) {
+            val notarySignatures = subFlow(NotaryFlow.Client(stx))
+            stx + notarySignatures
+        } else {
+            stx
         }
+        serviceHub.recordTransactions(notarised)
+        return notarised
     }
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {
@@ -102,14 +116,31 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         return !(notaryKey?.isFulfilledBy(signers) ?: false)
     }
 
-    private fun lookupParties(ltxns: List<Pair<SignedTransaction, LedgerTransaction>>): List<Pair<SignedTransaction, Set<Party>>> {
-        return ltxns.map { (stx, ltx) ->
-            // Calculate who is meant to see the results based on the participants involved.
-            val keys = ltx.outputs.flatMap { it.data.participants } + ltx.inputs.flatMap { it.state.data.participants }
-            // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them count as a reason to fail?
-            val parties = keys.mapNotNull { serviceHub.identityService.partyFromAnonymous(it) }.toSet()
-            Pair(stx, parties)
-        }
+    /**
+     * Resolve the parties involved in a transaction.
+     *
+     * @return the set of participants and their resolved well known identities (where known).
+     */
+    open protected fun lookupParties(ltx: LedgerTransaction): Set<Participant> {
+        // Calculate who is meant to see the results based on the participants involved.
+        return extractParticipants(ltx)
+                .map(this::partyFromAnonymous)
+                .toSet()
+    }
+
+    /**
+     * Helper function to extract all participants from a ledger transaction. Intended to help implement [lookupParties]
+     * overriding functions.
+     */
+    protected fun extractParticipants(ltx: LedgerTransaction): List<AbstractParty> {
+        return ltx.outputs.flatMap { it.data.participants } + ltx.inputs.flatMap { it.state.data.participants }
+    }
+
+    /**
+     * Helper function which wraps [IdentityService.partyFromAnonymous] so it can be called as a lambda function.
+     */
+    protected fun partyFromAnonymous(anon: AbstractParty): Participant {
+        return Participant(anon, serviceHub.identityService.partyFromAnonymous(anon))
     }
 
     private fun resolveDependenciesOf(signedTransactions: Iterable<SignedTransaction>): List<Pair<SignedTransaction, LedgerTransaction>> {
@@ -134,4 +165,6 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
             stx to ltx
         }
     }
+
+    data class Participant(val participant: AbstractParty, val wellKnown: Party?)
 }

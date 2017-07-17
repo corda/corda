@@ -7,7 +7,6 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.opaque
 import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MINI_CORP
@@ -71,7 +70,7 @@ class ResolveTransactionsFlowTest {
         val p = ResolveTransactionsFlow(setOf(stx.id), a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
         mockNet.runNetwork()
-        assertFailsWith(SignatureException::class) { future.getOrThrow() }
+        assertFailsWith(SignedTransaction.SignaturesMissingException::class) { future.getOrThrow() }
     }
 
     @Test

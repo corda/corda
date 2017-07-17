@@ -27,9 +27,10 @@ import java.util.*
  * @param T The ultimate type of the data being fetched.
  * @param W The wire type of the data being fetched, for when it isn't the same as the ultimate type.
  */
-abstract class FetchDataFlow<T : NamedByHash, in W : Any>(
+abstract class FetchDataFlow<T : NamedByHash, W : Any>(
         protected val requests: Set<SecureHash>,
-        protected val otherSide: Party) : FlowLogic<FetchDataFlow.Result<T>>() {
+        protected val otherSide: Party,
+        protected val wrapperType: Class<W>) : FlowLogic<FetchDataFlow.Result<T>>() {
 
     @CordaSerializable
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : IllegalArgumentException()
@@ -54,12 +55,25 @@ abstract class FetchDataFlow<T : NamedByHash, in W : Any>(
         return if (toFetch.isEmpty()) {
             Result(fromDisk, emptyList())
         } else {
-            logger.trace("Requesting ${toFetch.size} dependency(s) for verification")
+            logger.info("Requesting ${toFetch.size} dependency(s) for verification from ${otherSide.name}")
 
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
-            val maybeItems = sendAndReceive<ArrayList<W>>(otherSide, Request(toFetch))
+            // We can then switch to requesting items in large batches to minimise the latency penalty.
+            // This is blocked by bugs ARTEMIS-1278 and ARTEMIS-1279. For now we limit attachments and txns to 10mb each
+            // and don't request items in batch, which is a performance loss, but works around the issue. We have
+            // configured Artemis to not fragment messages up to 10mb so we can send 10mb messages without problems.
+            // Above that, we start losing authentication data on the message fragments and take exceptions in the
+            // network layer.
+            val maybeItems = ArrayList<W>(toFetch.size)
+            send(otherSide, Request(toFetch))
+            for (hash in toFetch) {
+                // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
+                // The only thing checked is the object type. It is a protocol violation to send results out of order.
+                maybeItems += receive(wrapperType, otherSide).unwrap { it }
+            }
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
-            val downloaded = validateFetchResponse(maybeItems, toFetch)
+            val downloaded = validateFetchResponse(UntrustworthyData(maybeItems), toFetch)
+            logger.info("Fetched ${downloaded.size} elements from ${otherSide.name}")
             maybeWriteToDisk(downloaded)
             Result(fromDisk, downloaded)
         }

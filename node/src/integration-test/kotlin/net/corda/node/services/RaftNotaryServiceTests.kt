@@ -11,7 +11,6 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.map
 import net.corda.node.internal.AbstractNode
-import net.corda.node.utilities.transaction
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.NodeBasedTest

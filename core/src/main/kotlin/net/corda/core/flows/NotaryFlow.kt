@@ -13,6 +13,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
+import java.security.SignatureException
 import java.util.function.Predicate
 
 object NotaryFlow {
@@ -51,8 +52,8 @@ object NotaryFlow {
             }
             try {
                 stx.verifySignatures(notaryParty.owningKey)
-            } catch (ex: SignedTransaction.SignaturesMissingException) {
-                throw NotaryException(NotaryError.SignaturesMissing(ex))
+            } catch (ex: SignatureException) {
+                throw NotaryException(NotaryError.TransactionInvalid(ex))
             }
 
             val payload: Any = if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
@@ -134,10 +135,7 @@ sealed class NotaryError {
     /** Thrown if the time specified in the [TimeWindow] command is outside the allowed tolerance. */
     object TimeWindowInvalid : NotaryError()
 
-    data class TransactionInvalid(val msg: String) : NotaryError()
-    data class SignaturesInvalid(val msg: String) : NotaryError()
-
-    data class SignaturesMissing(val cause: SignedTransaction.SignaturesMissingException) : NotaryError() {
+    data class TransactionInvalid(val cause: Throwable) : NotaryError() {
         override fun toString() = cause.toString()
     }
 }

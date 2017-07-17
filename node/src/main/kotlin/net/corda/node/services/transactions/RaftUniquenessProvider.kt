@@ -23,8 +23,8 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.utilities.CordaPersistence
 import net.corda.nodeapi.config.SSLConfiguration
-import org.jetbrains.exposed.sql.Database
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import javax.annotation.concurrent.ThreadSafe
@@ -55,7 +55,7 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
      */
     private val clusterAddresses = services.configuration.notaryClusterAddresses
     /** The database to store the state machine state in */
-    private val db: Database = services.database
+    private val db: CordaPersistence = services.database
     /** SSL configuration */
     private val transportConfiguration: SSLConfiguration = services.configuration
 

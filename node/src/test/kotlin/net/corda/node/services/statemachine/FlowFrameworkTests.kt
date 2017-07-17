@@ -33,7 +33,6 @@ import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -90,6 +89,7 @@ class FlowFrameworkTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        sessionTransfers.clear()
     }
 
     @Test
@@ -377,7 +377,7 @@ class FlowFrameworkTests {
         node2.registerFlowFactory(ReceiveFlow::class) { NoOpFlow() }
         val resultFuture = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
         mockNet.runNetwork()
-        assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             resultFuture.getOrThrow()
         }.withMessageContaining(String::class.java.name)  // Make sure the exception message mentions the type the flow was expecting to receive
     }
@@ -400,7 +400,7 @@ class FlowFrameworkTests {
                 Notification.createOnError(erroringFlowFuture.get().exceptionThrown)
         )
 
-        val receiveFlowException = assertFailsWith(FlowSessionException::class) {
+        val receiveFlowException = assertFailsWith(UnexpectedFlowEndException::class) {
             receiveFlowResult.getOrThrow()
         }
         assertThat(receiveFlowException.message).doesNotContain("evil bug!")
@@ -486,7 +486,7 @@ class FlowFrameworkTests {
             node1Fiber.resultFuture.getOrThrow()
         }
         val node2ResultFuture = node2Fiber.getOrThrow().resultFuture
-        assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             node2ResultFuture.getOrThrow()
         }
 
@@ -539,7 +539,7 @@ class FlowFrameworkTests {
         node2.registerFlowFactory(ReceiveFlow::class) { SendFlow(NonSerialisableData(1), it) }
         val result = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
         mockNet.runNetwork()
-        assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             result.getOrThrow()
         }
     }
@@ -581,7 +581,7 @@ class FlowFrameworkTests {
         }
         val waiter = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.legalIdentity)).resultFuture
         mockNet.runNetwork()
-        assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             waiter.getOrThrow()
         }
     }
@@ -643,7 +643,7 @@ class FlowFrameworkTests {
                 track = false)
         val result = node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity)).resultFuture
         mockNet.runNetwork()
-        assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             result.getOrThrow()
         }.withMessageContaining("Version")
     }
