@@ -291,7 +291,7 @@ class ObligationTests {
 
         assertEquals(1, stx.tx.outputs.size)
         assertEquals(stateAndRef.state.data.copy(lifecycle = Lifecycle.DEFAULTED), stx.tx.outputs[0].data)
-        stx.verifySignatures()
+        stx.verifyRequiredSignatures()
 
         // And set it back
         stateAndRef = stx.tx.outRef<Obligation.State<Currency>>(0)
@@ -302,7 +302,7 @@ class ObligationTests {
         stx = notaryServices.addSignature(ptx)
         assertEquals(1, stx.tx.outputs.size)
         assertEquals(stateAndRef.state.data.copy(lifecycle = Lifecycle.NORMAL), stx.tx.outputs[0].data)
-        stx.verifySignatures()
+        stx.verifyRequiredSignatures()
     }
 
     /** Test generating a transaction to settle an obligation. */

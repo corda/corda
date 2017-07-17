@@ -269,6 +269,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
 
         private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
+                Character::class.java to "char",
                 Boolean::class.java to "boolean",
                 Byte::class.java to "byte",
                 UnsignedByte::class.java to "ubyte",

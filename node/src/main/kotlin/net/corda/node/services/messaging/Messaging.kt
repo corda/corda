@@ -5,11 +5,11 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.catch
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.node.services.api.DEFAULT_SESSION_ID
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
