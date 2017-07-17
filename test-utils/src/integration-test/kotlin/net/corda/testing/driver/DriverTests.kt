@@ -1,11 +1,11 @@
 package net.corda.testing.driver
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.getOrThrow
-import net.corda.core.list
+import net.corda.core.internal.list
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.readLines
+import net.corda.core.internal.readLines
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR

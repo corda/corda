@@ -1,6 +1,6 @@
 package net.corda.kotlin.rpc
 
-import net.corda.core.div
+import net.corda.core.internal.div
 import org.junit.Test
 import java.io.File
 import java.nio.file.Path
