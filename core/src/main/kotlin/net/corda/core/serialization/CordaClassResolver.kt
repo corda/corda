@@ -6,7 +6,6 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
-import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.utilities.loggerFor
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
