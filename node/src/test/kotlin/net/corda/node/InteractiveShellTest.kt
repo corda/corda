@@ -7,6 +7,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowContext
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StackDump
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
@@ -91,6 +93,10 @@ class InteractiveShellTest {
         override val id: StateMachineRunId get() = throw UnsupportedOperationException()
         override val resultFuture: CordaFuture<Any?> get() = throw UnsupportedOperationException()
         override val flowInitiator: FlowInitiator get() = throw UnsupportedOperationException()
+
+        override fun debugStackDump(): StackDump {
+            throw UnsupportedOperationException("not implemented")
+        }
 
         override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
             // Do nothing

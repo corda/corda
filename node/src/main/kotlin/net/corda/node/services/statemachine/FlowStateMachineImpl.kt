@@ -254,6 +254,21 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         serviceHub.auditService.recordAuditEvent(flowAuditEvent)
     }
 
+    @Suspendable
+    override fun debugStackDump(): StackDump {
+        var dump: StackDump? = null
+        val stackTrace = currentFiber().stackTrace
+        Fiber.parkAndSerialize { fiber, _ ->
+            dump = StackDump.extractFromFiber(fiber, stackTrace.toList())
+            Fiber.unparkDeserialized(fiber, fiber.scheduler)
+        }
+        // This is because the dump itself is on the stack, which means it creates a loop in the object graph, we set
+        // it to null to break the loop
+        val temporaryDump = dump
+        dump = null
+        return temporaryDump!!
+    }
+
     /**
      * This method will suspend the state machine and wait for incoming session init response from other party.
      */

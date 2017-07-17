@@ -235,6 +235,13 @@ abstract class FlowLogic<out T> {
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash): SignedTransaction = stateMachine.waitForLedgerCommit(hash, this)
 
+    /**
+     * Returns a shallow copy of the Quasar stack frames at the time of call to [debugStackDump]. Use this to inspect
+     * what objects would be serialised at the time of call to a suspending action (e.g. send/receive).
+     */
+    @Suspendable
+    fun debugStackDump(): StackDump = stateMachine.debugStackDump()
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private var _stateMachine: FlowStateMachine<*>? = null
