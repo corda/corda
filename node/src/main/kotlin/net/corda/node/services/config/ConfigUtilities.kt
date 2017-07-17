@@ -4,11 +4,11 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigRenderOptions
-import net.corda.core.copyTo
-import net.corda.core.createDirectories
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.createDirectories
 import net.corda.core.crypto.*
-import net.corda.core.div
-import net.corda.core.exists
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.*
 import net.corda.nodeapi.config.SSLConfiguration

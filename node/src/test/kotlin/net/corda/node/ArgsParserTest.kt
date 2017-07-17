@@ -1,7 +1,7 @@
 package net.corda.node
 
 import joptsimple.OptionException
-import net.corda.core.div
+import net.corda.core.internal.div
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test

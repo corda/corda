@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigRenderOptions
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.utilities.loggerFor
 import org.slf4j.event.Level
 import java.io.PrintStream

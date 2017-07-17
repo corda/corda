@@ -1,6 +1,6 @@
 package net.corda.nodeapi.config
 
-import net.corda.core.div
+import net.corda.core.internal.div
 import java.nio.file.Path
 
 interface SSLConfiguration {

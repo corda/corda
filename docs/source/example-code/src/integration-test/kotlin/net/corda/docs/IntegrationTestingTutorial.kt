@@ -8,6 +8,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
@@ -57,8 +58,9 @@ class IntegrationTestingTutorial {
             // END 2
 
             // START 3
-            val bobVaultUpdates = bobProxy.vaultAndUpdates().second
-            val aliceVaultUpdates = aliceProxy.vaultAndUpdates().second
+            val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val (_, bobVaultUpdates) = bobProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria)
+            val (_, aliceVaultUpdates) = aliceProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria)
             // END 3
 
             // START 4
@@ -70,8 +72,7 @@ class IntegrationTestingTutorial {
                             i.DOLLARS,
                             issueRef,
                             bob.nodeInfo.legalIdentity,
-                            notary.nodeInfo.notaryIdentity,
-                            false // Not anonymised
+                            notary.nodeInfo.notaryIdentity
                     ).returnValue)
                 }
             }.forEach(Thread::join) // Ensure the stack of futures is populated.
@@ -94,7 +95,7 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1..10) {
-                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity, false).returnValue.getOrThrow()
+                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

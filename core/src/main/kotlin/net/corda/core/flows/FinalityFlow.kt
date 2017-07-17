@@ -78,7 +78,7 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
     /**
      * Broadcast a transaction to the participants. By default calls [BroadcastTransactionFlow], however can be
      * overridden for more complex transaction delivery protocols (for example where not all parties know each other).
-     * This implementation will filter out any participants for who there is no well known identity.
+     * This implementation will filter out any participants for whom there is no well known identity.
      *
      * @param participants the participants to send the transaction to. This is expected to include extra participants
      * and exclude the local node.
@@ -159,7 +159,7 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         return sorted.map { stx ->
             val notary = stx.tx.notary
             // The notary signature(s) are allowed to be missing but no others.
-            val wtx = if (notary != null) stx.verifySignatures(notary.owningKey) else stx.verifySignatures()
+            val wtx = if (notary != null) stx.verifySignaturesExcept(notary.owningKey) else stx.verifyRequiredSignatures()
             val ltx = wtx.toLedgerTransaction(augmentedLookup)
             ltx.verify()
             stx to ltx

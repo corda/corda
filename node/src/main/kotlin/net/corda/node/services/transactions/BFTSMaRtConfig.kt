@@ -1,6 +1,6 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor

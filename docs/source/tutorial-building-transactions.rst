@@ -270,8 +270,8 @@ apply any new signatures to its original proposal to ensure the contents
 of the transaction has not been altered by the remote parties.
 
 The typical code therefore checks the received ``SignedTransaction`` 
-using the ``verifySignatures`` method, but excluding itself, the notary 
-and any other parties yet to apply their signature. The contents of the 
+using the ``verifySignaturesExcept`` method, excluding itself, the
+notary and any other parties yet to apply their signature. The contents of the
 ``WireTransaction`` inside the ``SignedTransaction`` should be fully 
 verified further by expanding with ``toLedgerTransaction`` and calling 
 ``verify``. Further context specific and business checks should then be 

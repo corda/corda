@@ -145,7 +145,7 @@ object TwoPartyTradeFlow {
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
-            return subFlow(FinalityFlow(twiceSignedTx, setOf(otherParty, serviceHub.myInfo.legalIdentity))).single()
+            return subFlow(FinalityFlow(twiceSignedTx)).single()
         }
 
         @Suspendable

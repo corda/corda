@@ -1,6 +1,5 @@
 package net.corda.node.services.api
 
-import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
