@@ -18,9 +18,16 @@ function signApplication() {
 # Switch to folder containing application.
 cd ../images/image-*/Corda\ DemoBench.app
 
-INSTALL_HOME=Contents/PlugIns/Java.runtime/Contents/Home/jre/bin
-if (mkdir -p $INSTALL_HOME); then
-    cp $JAVA_HOME/bin/java $INSTALL_HOME
+JRE_HOME=Contents/PlugIns/Java.runtime/Contents/Home/jre
+if (mkdir -p $JRE_HOME/bin); then
+    cp $JAVA_HOME/bin/java $JRE_HOME/bin
+fi
+
+BUGFIX_HOME=Contents/Java/bugfixes
+if [ -f $BUGFIX_HOME/apply.sh ]; then
+    chmod ugo+x $BUGFIX_HOME/apply.sh
+    $BUGFIX_HOME/apply.sh $JRE_HOME/lib/rt.jar
+    rm -rf $BUGFIX_HOME
 fi
 
 # Switch to image directory in order to sign it.
