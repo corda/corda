@@ -12,3 +12,7 @@ dependencies {
     compile gradleApi()
     compile localGroovy()
 }
+
+publish {
+    name project.name
+}
