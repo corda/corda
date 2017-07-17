@@ -137,18 +137,19 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = partyToPath[anonymousParty]?.first
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun registerAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party) {
-        val (path, _, anonymousParty) = anonymousIdentity
-        val fullParty = verifyAnonymousIdentity(anonymousParty, party, path)
-        val certificate = X509CertificateHolder(path.certificates.first().encoded)
+    override fun registerAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party): PartyAndCertificate {
+        val fullParty = verifyAnonymousIdentity(anonymousIdentity, party)
+        val certificate = X509CertificateHolder(anonymousIdentity.certPath.certificates.first().encoded)
         log.trace { "Registering identity $fullParty" }
 
-        partyToPath[anonymousParty] = Pair(path, certificate)
-        keyToParties[anonymousParty.owningKey] = fullParty
+        partyToPath[anonymousIdentity.identity] = Pair(anonymousIdentity.certPath, certificate)
+        keyToParties[anonymousIdentity.identity.owningKey] = fullParty
         principalToParties[fullParty.name] = fullParty
+        return fullParty
     }
 
-    override fun verifyAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath): PartyAndCertificate {
+    override fun verifyAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party): PartyAndCertificate {
+        val (path, _, anonymousParty) = anonymousIdentity
         val fullParty = certificateFromParty(party) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
         require(path.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         // Validate the chain first, before we do anything clever with it

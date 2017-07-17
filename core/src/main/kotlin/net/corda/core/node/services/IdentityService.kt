@@ -38,7 +38,7 @@ interface IdentityService {
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun registerAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party)
+    fun registerAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party): PartyAndCertificate
 
     /**
      * Verify an anonymous identity.
@@ -50,7 +50,7 @@ interface IdentityService {
      * @throws IllegalArgumentException if the certificate path is invalid.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath): PartyAndCertificate
+    fun verifyAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party): PartyAndCertificate
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
