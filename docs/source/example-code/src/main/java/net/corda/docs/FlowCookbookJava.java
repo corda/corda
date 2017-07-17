@@ -30,6 +30,7 @@ import net.corda.flows.SignTransactionFlow;
 import org.bouncycastle.asn1.x500.X500Name;
 
 import java.security.PublicKey;
+import java.security.SignatureException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -83,6 +84,7 @@ public class FlowCookbookJava {
                 return CollectSignaturesFlow.Companion.tracker();
             }
         };
+        private static final Step SIGS_VERIFICATION = new Step("Verifying a transaction's signatures.");
         private static final Step FINALISATION = new Step("Finalising a transaction.") {
             @Override public ProgressTracker childProgressTracker() {
                 return FinalityFlow.Companion.tracker();
@@ -389,6 +391,29 @@ public class FlowCookbookJava {
             // DOCSTART 15
             SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()));
             // DOCEND 15
+
+            /**-----------------------
+             * VERIFYING SIGNATURES *
+             -----------------------**/
+            progressTracker.setCurrentStep(SIGS_VERIFICATION);
+
+            try {
+                // Once we have gathered all the signatures, we should check
+                // they are valid.
+                fullySignedTx.verifyAllSignatures();
+
+                // If the transaction is only partially signed, we can choose
+                // to allow certain signatures to be missing:
+                fullySignedTx.verifySignaturesExcept(dummyPubKey);
+
+                // Or we can choose to only verify those signatures that are
+                // present:
+                fullySignedTx.checkSignaturesAreValid();
+
+            } catch (SignatureException ignored) {}
+
+
+
 
             /*------------------------------
              * FINALISING THE TRANSACTION *

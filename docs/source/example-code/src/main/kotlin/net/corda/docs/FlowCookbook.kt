@@ -66,6 +66,7 @@ object FlowCookbook {
                 // subflow's progress steps in our flow's progress tracker.
                 override fun childProgressTracker() = CollectSignaturesFlow.tracker()
             }
+            object SIGS_VERIFICATION : Step("Verifying a transaction's signatures.")
             object FINALISATION : Step("Finalising a transaction.") {
                 override fun childProgressTracker() = FinalityFlow.tracker()
             }
@@ -380,6 +381,23 @@ object FlowCookbook {
             // DOCSTART 15
             val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()))
             // DOCEND 15
+
+            /**-----------------------
+             * VERIFYING SIGNATURES *
+            -----------------------**/
+            progressTracker.currentStep = SIGS_VERIFICATION
+
+            // Once we have gathered all the signatures, we should check
+            // they are valid.
+            fullySignedTx.verifyAllSignatures()
+
+            // If the transaction is only partially signed, we can choose
+            // to allow certain signatures to be missing:
+            fullySignedTx.verifySignaturesExcept(dummyPubKey)
+
+            // Or we can choose to only verify those signatures that are
+            // present:
+            fullySignedTx.checkSignaturesAreValid()
 
             /**-----------------------------
              * FINALISING THE TRANSACTION *

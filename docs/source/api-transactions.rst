@@ -189,7 +189,7 @@ transaction:
 Verifying the signatures
 ^^^^^^^^^^^^^^^^^^^^^^^^
 The signatures on a ``SignedTransaction`` have not necessarily been checked for validity. We check them using
-``SignedTransaction.verifySignatures``:
+``SignedTransaction.verifyAllSignatures``:
 
 .. container:: codeset
 
@@ -198,9 +198,9 @@ The signatures on a ``SignedTransaction`` have not necessarily been checked for 
        :start-after: DOCSTART 2
        :end-before: DOCEND 2
 
-``verifySignatures`` takes a ``vararg`` of the public keys for which the signatures are allowed to be missing. If the
-transaction is missing any signatures without the corresponding public keys being passed in, a
-``SignaturesMissingException`` is thrown.
+We can also use ``SignedTransaction.verifySignaturesExcept``, which takes a ``vararg`` of the public keys for which the
+signatures are allowed to be missing. If the transaction is missing any signatures without the corresponding public
+keys being passed in, a ``SignaturesMissingException`` is thrown.
 
 Verifying the transaction
 ^^^^^^^^^^^^^^^^^^^^^^^^^

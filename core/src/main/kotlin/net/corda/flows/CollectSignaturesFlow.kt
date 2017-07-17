@@ -107,7 +107,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
         progressTracker.currentStep = VERIFYING
-        if (notaryKey != null) stx.verifySignaturesExcept(notaryKey) else stx.verifySignatures()
+        if (notaryKey != null) stx.verifySignaturesExcept(notaryKey) else stx.verifyAllSignatures()
 
         return stx
     }

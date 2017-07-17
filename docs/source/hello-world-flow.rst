@@ -895,7 +895,7 @@ Here is the full suite of tests we'll use for the ``IOUFlow``:
             net.runNetwork()
 
             val signedTx = future.getOrThrow()
-            signedTx.verifySignatures(b.services.legalIdentityKey)
+            signedTx.verifySignaturesExcept(b.services.legalIdentityKey)
         }
 
         @Test
@@ -905,7 +905,7 @@ Here is the full suite of tests we'll use for the ``IOUFlow``:
             net.runNetwork()
 
             val signedTx = future.getOrThrow()
-            signedTx.verifySignatures(a.services.legalIdentityKey)
+            signedTx.verifySignaturesExcept(a.services.legalIdentityKey)
         }
 
         @Test
@@ -960,7 +960,7 @@ Here is the full suite of tests we'll use for the ``IOUFlow``:
             net.runNetwork();
 
             SignedTransaction signedTx = future.get();
-            signedTx.verifySignatures(b.getServices().getLegalIdentityKey());
+            signedTx.verifySignaturesExcept(b.getServices().getLegalIdentityKey());
         }
 
         @Test
@@ -970,7 +970,7 @@ Here is the full suite of tests we'll use for the ``IOUFlow``:
             net.runNetwork();
 
             SignedTransaction signedTx = future.get();
-            signedTx.verifySignatures(a.getServices().getLegalIdentityKey());
+            signedTx.verifySignaturesExcept(a.getServices().getLegalIdentityKey());
         }
 
         @Test

@@ -144,7 +144,7 @@ class CollectSignaturesFlowTests {
         val flow = a.services.startFlow(TestFlowTwo.Initiator(state))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
-        result.verifySignatures()
+        result.verifyAllSignatures()
         println(result.tx)
         println(result.sigs)
     }
@@ -156,7 +156,7 @@ class CollectSignaturesFlowTests {
         val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
-        result.verifySignatures()
+        result.verifyAllSignatures()
         println(result.tx)
         println(result.sigs)
     }
