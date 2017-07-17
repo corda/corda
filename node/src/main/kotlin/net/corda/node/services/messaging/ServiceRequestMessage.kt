@@ -3,8 +3,8 @@ package net.corda.node.services.messaging
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.serialization.CordaSerializable
+import net.corda.node.services.api.DEFAULT_SESSION_ID
 
 /**
  * Abstract superclass for request messages sent to services which expect a reply.

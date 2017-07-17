@@ -3,7 +3,6 @@ package net.corda.core.serialization.carpenter
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
-import org.objectweb.asm.Type
 
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
@@ -19,6 +18,9 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
+class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
+    fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
+}
 
 /**
  * A class carpenter generates JVM bytecodes for a class given a schema and then loads it into a sub-classloader.
@@ -71,143 +73,10 @@ class ClassCarpenter {
     // TODO: Support annotations.
     // TODO: isFoo getter patterns for booleans (this is what Kotlin generates)
 
-    class DuplicateNameException : RuntimeException("An attempt was made to register two classes with the same name within the same ClassCarpenter namespace.")
-    class InterfaceMismatchException(msg: String) : RuntimeException(msg)
-    class NullablePrimitiveException(msg: String) : RuntimeException(msg)
-
-    abstract class Field(val field: Class<out Any?>) {
-        companion object {
-            const val unsetName = "Unset"
-        }
-
-        var name: String = unsetName
-        abstract val nullabilityAnnotation: String
-
-        val descriptor: String
-            get() = Type.getDescriptor(this.field)
-
-        val type: String
-            get() = if (this.field.isPrimitive) this.descriptor else "Ljava/lang/Object;"
-
-        fun generateField(cw: ClassWriter) {
-            val fieldVisitor = cw.visitField(ACC_PROTECTED + ACC_FINAL, name, descriptor, null, null)
-            fieldVisitor.visitAnnotation(nullabilityAnnotation, true).visitEnd()
-            fieldVisitor.visitEnd()
-        }
-
-        fun addNullabilityAnnotation(mv: MethodVisitor) {
-            mv.visitAnnotation(nullabilityAnnotation, true).visitEnd()
-        }
-
-        fun visitParameter(mv: MethodVisitor, idx: Int) {
-            with(mv) {
-                visitParameter(name, 0)
-                if (!field.isPrimitive) {
-                    visitParameterAnnotation(idx, nullabilityAnnotation, true).visitEnd()
-                }
-            }
-        }
-
-        abstract fun copy(name: String, field: Class<out Any?>): Field
-        abstract fun nullTest(mv: MethodVisitor, slot: Int)
-    }
-
-    class NonNullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Ljavax/annotation/Nonnull;"
-
-        constructor(name: String, field: Class<out Any?>) : this(field) {
-            this.name = name
-        }
-
-        override fun copy(name: String, field: Class<out Any?>) = NonNullableField(name, field)
-
-        override fun nullTest(mv: MethodVisitor, slot: Int) {
-            assert(name != unsetName)
-
-            if (!field.isPrimitive) {
-                with(mv) {
-                    visitVarInsn(ALOAD, 0) // load this
-                    visitVarInsn(ALOAD, slot) // load parameter
-                    visitLdcInsn("param \"$name\" cannot be null")
-                    visitMethodInsn(INVOKESTATIC,
-                            "java/util/Objects",
-                            "requireNonNull",
-                            "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
-                    visitInsn(POP)
-                }
-            }
-        }
-    }
-
-
-    class NullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Ljavax/annotation/Nullable;"
-
-        constructor(name: String, field: Class<out Any?>) : this(field) {
-            if (field.isPrimitive) {
-                throw NullablePrimitiveException (
-                        "Field $name is primitive type ${Type.getDescriptor(field)} and thus cannot be nullable")
-            }
-
-            this.name = name
-        }
-
-        override fun copy(name: String, field: Class<out Any?>) = NullableField(name, field)
-
-        override fun nullTest(mv: MethodVisitor, slot: Int) {
-            assert(name != unsetName)
-        }
-    }
-
-    /**
-     * A Schema represents a desired class.
-     */
-    abstract class Schema(
-            val name: String,
-            fields: Map<String, Field>,
-            val superclass: Schema? = null,
-            val interfaces: List<Class<*>> = emptyList())
-    {
-        private fun Map<String, ClassCarpenter.Field>.descriptors() =
-                LinkedHashMap(this.mapValues { it.value.descriptor })
-
-        /* Fix the order up front if the user didn't, inject the name into the field as it's
-           neater when iterating */
-        val fields = LinkedHashMap(fields.mapValues { it.value.copy(it.key, it.value.field) })
-
-        fun fieldsIncludingSuperclasses(): Map<String, Field> =
-                (superclass?.fieldsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(fields)
-
-        fun descriptorsIncludingSuperclasses(): Map<String, String> =
-                (superclass?.descriptorsIncludingSuperclasses() ?: emptyMap()) + fields.descriptors()
-
-        val jvmName: String
-            get() = name.replace(".", "/")
-    }
-
-    private val String.jvm: String get() = replace(".", "/")
-
-    class ClassSchema(
-            name: String,
-            fields: Map<String, Field>,
-            superclass: Schema? = null,
-            interfaces: List<Class<*>> = emptyList()
-    ) : Schema(name, fields, superclass, interfaces)
-
-    class InterfaceSchema(
-            name: String,
-            fields: Map<String, Field>,
-            superclass: Schema? = null,
-            interfaces: List<Class<*>> = emptyList()
-    ) : Schema(name, fields, superclass, interfaces)
-
-    private class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
-        fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
-    }
-
-    private val classloader = CarpenterClassLoader()
+    val classloader = CarpenterClassLoader()
 
     private val _loaded = HashMap<String, Class<*>>()
+    private val String.jvm: String get() = replace(".", "/")
 
     /** Returns a snapshot of the currently loaded classes as a map of full class name (package names+dots) -> class object */
     val loaded: Map<String, Class<*>> = HashMap(_loaded)
@@ -216,7 +85,8 @@ class ClassCarpenter {
      * Generate bytecode for the given schema and load into the JVM. The returned class object can be used to
      * construct instances of the generated class.
      *
-     * @throws DuplicateNameException if the schema's name is already taken in this namespace (you can create a new ClassCarpenter if you're OK with ambiguous names)
+     * @throws DuplicateNameException if the schema's name is already taken in this namespace (you can create a
+     * new ClassCarpenter if you're OK with ambiguous names)
      */
     fun build(schema: Schema): Class<*> {
         validateSchema(schema)
@@ -236,6 +106,8 @@ class ClassCarpenter {
                 is ClassSchema -> generateClass(it)
             }
         }
+
+        assert (schema.name in _loaded)
 
         return _loaded[schema.name]!!
     }
@@ -374,14 +246,14 @@ class ClassCarpenter {
             // Calculate the super call.
             val superclassFields = schema.superclass?.fieldsIncludingSuperclasses() ?: emptyMap()
             visitVarInsn(ALOAD, 0)
-            if (schema.superclass == null) {
+            val sc = schema.superclass
+            if (sc == null) {
                 visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false)
             } else {
                 var slot = 1
-                for (fieldType in superclassFields.values)
-                    slot += load(slot, fieldType)
-                val superDesc = schema.superclass.descriptorsIncludingSuperclasses().values.joinToString("")
-                visitMethodInsn(INVOKESPECIAL, schema.superclass.name.jvm, "<init>", "($superDesc)V", false)
+                superclassFields.values.forEach { slot += load(slot, it) }
+                val superDesc = sc.descriptorsIncludingSuperclasses().values.joinToString("")
+                visitMethodInsn(INVOKESPECIAL, sc.name.jvm, "<init>", "($superDesc)V", false)
             }
 
             // Assign the fields from parameters.

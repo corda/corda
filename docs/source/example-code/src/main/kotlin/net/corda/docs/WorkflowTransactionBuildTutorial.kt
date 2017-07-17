@@ -197,7 +197,7 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
             val agreedTx = selfSignedTx + it
             // Receive back their signature and confirm that it is for an unmodified transaction
             // Also that the only missing signature is from teh Notary
-            agreedTx.verifySignatures(notary.owningKey)
+            agreedTx.verifySignaturesExcept(notary.owningKey)
             // Recheck the data of the transaction. Note we run toLedgerTransaction on the WireTransaction
             // as we do not have all the signature.
             agreedTx.tx.toLedgerTransaction(serviceHub).verify()
@@ -226,7 +226,7 @@ class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
         // First we receive the verdict transaction signed by their single key
         val completeTx = receive<SignedTransaction>(source).unwrap {
             // Check the transaction is signed apart from our own key and the notary
-            val wtx = it.verifySignatures(serviceHub.myInfo.legalIdentity.owningKey, it.tx.notary!!.owningKey)
+            val wtx = it.verifySignaturesExcept(serviceHub.myInfo.legalIdentity.owningKey, it.tx.notary!!.owningKey)
             // Check the transaction data is correctly formed
             wtx.toLedgerTransaction(serviceHub).verify()
             // Confirm that this is the expected type of transaction

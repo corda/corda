@@ -8,11 +8,11 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.concurrent.transpose
 import net.corda.flows.IssuerFlow.IssuanceRequester
-import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
+import net.corda.testing.driver.driver
 import org.junit.Test
 
 class BankOfCordaRPCClientTest {

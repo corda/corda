@@ -457,14 +457,14 @@ object FlowCookbook {
             // We can verify that a transaction has all the required
             // signatures, and that they're all valid, by running:
             // DOCSTART 35
-            fullySignedTx.verifySignatures()
+            fullySignedTx.verifyRequiredSignatures()
             // DOCEND 35
 
             // If the transaction is only partially signed, we have to pass in
             // a list of the public keys corresponding to the missing
             // signatures, explicitly telling the system not to check them.
             // DOCSTART 36
-            onceSignedTx.verifySignatures(counterpartyPubKey)
+            onceSignedTx.verifySignaturesExcept(counterpartyPubKey)
             // DOCEND 36
 
             // We can also choose to only check the signatures that are

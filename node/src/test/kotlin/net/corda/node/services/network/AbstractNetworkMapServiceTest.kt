@@ -3,13 +3,9 @@ package net.corda.node.services.network
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.CHARLIE
-import net.corda.testing.DUMMY_MAP
+import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.send
 import net.corda.node.services.messaging.sendRequest
@@ -25,6 +21,10 @@ import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.CHARLIE
+import net.corda.testing.DUMMY_MAP
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat

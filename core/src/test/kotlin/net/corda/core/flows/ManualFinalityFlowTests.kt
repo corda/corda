@@ -49,7 +49,7 @@ class ManualFinalityFlowTests {
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
         val notarisedTx = result.single()
-        notarisedTx.verifySignatures()
+        notarisedTx.verifyRequiredSignatures()
         // We override the participants, so node C will get a copy despite not being involved, and B won't
         val transactionSeenByB = nodeB.services.database.transaction {
             nodeB.services.validatedTransactions.getTransaction(notarisedTx.id)

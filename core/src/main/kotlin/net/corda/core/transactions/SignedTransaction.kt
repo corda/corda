@@ -55,6 +55,17 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         : NamedByHash, SignatureException("Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}")
 
     /**
+     * Verifies the signatures on this transaction and throws if any are missing. In this context, "verifying" means
+     * checking they are valid signatures and that their public keys are in the contained transactions
+     * [BaseTransaction.mustSign] property.
+     *
+     * @throws SignatureException if any signatures are invalid or unrecognised.
+     * @throws SignaturesMissingException if any signatures should have been present but were not.
+     */
+    @Throws(SignatureException::class)
+    fun verifyRequiredSignatures() = verifySignaturesExcept()
+
+    /**
      * Verifies the signatures on this transaction and throws if any are missing which aren't passed as parameters.
      * In this context, "verifying" means checking they are valid signatures and that their public keys are in
      * the contained transactions [BaseTransaction.mustSign] property.
@@ -68,18 +79,14 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      */
     // DOCSTART 2
     @Throws(SignatureException::class)
-    fun verifySignatures(vararg allowedToBeMissing: PublicKey): WireTransaction {
+    fun verifySignaturesExcept(vararg allowedToBeMissing: PublicKey): WireTransaction {
     // DOCEND 2
         // Embedded WireTransaction is not deserialised until after we check the signatures.
         checkSignaturesAreValid()
 
-        val missing = getMissingSignatures()
-        if (missing.isNotEmpty()) {
-            val allowed = allowedToBeMissing.toSet()
-            val needed = missing - allowed
-            if (needed.isNotEmpty())
+        val needed = getMissingSignatures() - allowedToBeMissing
+        if (needed.isNotEmpty())
                 throw SignaturesMissingException(needed.toNonEmptySet(), getMissingKeyDescriptions(needed), id)
-        }
         check(tx.id == id)
         return tx
     }
@@ -88,7 +95,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * Mathematically validates the signatures that are present on this transaction. This does not imply that
      * the signatures are by the right keys, or that there are sufficient signatures, just that they aren't
      * corrupt. If you use this function directly you'll need to do the other checks yourself. Probably you
-     * want [verifySignatures] instead.
+     * want [verifySignaturesExcept] instead.
      *
      * @throws SignatureException if a signature fails to verify.
      */
@@ -136,8 +143,8 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     operator fun plus(sigList: Collection<DigitalSignature.WithKey>) = withAdditionalSignatures(sigList)
 
     /**
-     * Checks the transaction's signatures are valid, optionally calls [verifySignatures] to check
-     * all required signatures are present, and then calls [WireTransaction.toLedgerTransaction]
+     * Checks the transaction's signatures are valid, optionally calls [verifyRequiredSignatures] to
+     * check all required signatures are present, and then calls [WireTransaction.toLedgerTransaction]
      * with the passed in [ServiceHub] to resolve the dependencies, returning an unverified
      * LedgerTransaction.
      *
@@ -154,14 +161,14 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
         checkSignaturesAreValid()
-        if (checkSufficientSignatures) verifySignatures()
+        if (checkSufficientSignatures) verifyRequiredSignatures()
         return tx.toLedgerTransaction(services)
     }
 
     /**
-     * Checks the transaction's signatures are valid, optionally calls [verifySignatures] to check
-     * all required signatures are present, calls [WireTransaction.toLedgerTransaction] with the
-     * passed in [ServiceHub] to resolve the dependencies and return an unverified
+     * Checks the transaction's signatures are valid, optionally calls [verifyRequiredSignatures]
+     * to check all required signatures are present, calls [WireTransaction.toLedgerTransaction]
+     * with the passed in [ServiceHub] to resolve the dependencies and return an unverified
      * LedgerTransaction, then verifies the LedgerTransaction.
      *
      * @throws AttachmentResolutionException if a required attachment was not found in storage.
@@ -173,7 +180,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
         checkSignaturesAreValid()
-        if (checkSufficientSignatures) verifySignatures()
+        if (checkSufficientSignatures) verifyRequiredSignatures()
         tx.toLedgerTransaction(services).verify()
     }
 

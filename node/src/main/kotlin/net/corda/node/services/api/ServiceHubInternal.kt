@@ -12,7 +12,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
-import net.corda.core.node.services.FileUploader
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
@@ -24,6 +23,13 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.CordaPersistence
+import java.io.InputStream
+
+/**
+ * Session ID to use for services listening for the first message in a session (before a
+ * specific session ID has been established).
+ */
+val DEFAULT_SESSION_ID = 0L
 
 interface NetworkMapCacheInternal : NetworkMapCache {
     /**
@@ -60,6 +66,24 @@ interface NetworkMapCacheInternal : NetworkMapCache {
 sealed class NetworkCacheError : Exception() {
     /** Indicates a failure to deregister, because of a rejected request from the remote node */
     class DeregistrationFailed : NetworkCacheError()
+}
+
+/**
+ * An interface that denotes a service that can accept file uploads.
+ */
+// TODO This is no longer used and can be removed
+interface FileUploader {
+    /**
+     * Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
+     * back to the user in the response.
+     */
+    fun upload(file: InputStream): String
+
+    /**
+     * Check if this service accepts this type of upload. For example if you are uploading interest rates this could
+     * be "my-service-interest-rates". Type here does not refer to file extentions or MIME types.
+     */
+    fun accepts(type: String): Boolean
 }
 
 interface ServiceHubInternal : PluginServiceHub {
