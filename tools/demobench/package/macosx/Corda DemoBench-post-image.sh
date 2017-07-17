@@ -14,7 +14,7 @@ function signApplication() {
         return 1
     fi
 
-    # Resign the application because we've deleted the bugfixes
+    # Resign the application because we've deleted the bugfixes directory.
     if ! (codesign --force --sign "$IDENTITY" --preserve-metadata=identifier,entitlements,requirements --verbose "$APPDIR"); then
         echo "*** Failed to resign DemoBench application"
         return 1

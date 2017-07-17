@@ -12,7 +12,7 @@ elif [ $(basename $RTJAR) != "rt.jar" ]; then
     echo "File is not rt.jar"
     exit 1
 elif [ ! -f $RTJAR ]; then
-    echo "rt.jar not found"
+    echo "$RTJAR not found"
     exit 1
 fi
 

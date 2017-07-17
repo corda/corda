@@ -10,7 +10,9 @@
 
         var oFSO = new ActiveXObject("Scripting.FileSystemObject");
         var oFolder = oFSO.getFolder(".");
-        var to = oFolder.path + "\\Corda DemoBench\\runtime\\bin";
+        var imageHome = oFolder.path + "\\Corda DemoBench";
+        var jreHome = imageHome + "\\runtime";
+        var to = jreHome + "\\bin";
         if (!oFSO.FolderExists(to)) {
           oFSO.CreateFolder(to);
         }
@@ -19,11 +21,16 @@
         oFSO.CopyFile(javaExe, to);
         oFSO.CopyFile(javawExe, to);
 
-        var bugfixDir = oFolder.path + "\\Corda DemoBench\\app\\bugfixes";
-        var apply = bugfixDir + "\\apply.bat"
+        var bugfixDir = imageHome + "\\app\\bugfixes";
+        var apply = bugfixDir + "\\apply.bat";
         if (oFSO.FileExists(apply)) {
-            oShell.Exec(apply);
-            oFSO.DeleteFolder(bugfixDir, true);
+            var errorCode = oShell.Run("\"" + apply + "\" \"" + jreHome + "\\lib\\rt.jar\"", 0, true);
+            if (errorCode == 0) {
+                oFSO.DeleteFolder(bugfixDir, true);
+            } else {
+                // Failed to apply bugfixes to rt.jar
+                WScript.Quit(errorCode);
+            }
         }
      ]]>
     </script>
