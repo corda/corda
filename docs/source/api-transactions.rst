@@ -464,7 +464,7 @@ the contract. Here's an example of how we might do this:
 Verifying the transaction's signatures
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 We also need to verify that the transaction has all the required signatures, and that these signatures are valid, to
-prevent tampering. We do this using ``SignedTransaction.verifyAllSignatures``:
+prevent tampering. We do this using ``SignedTransaction.verifyRequiredSignatures``:
 
 .. container:: codeset
 

@@ -457,7 +457,7 @@ object FlowCookbook {
             // We can verify that a transaction has all the required
             // signatures, and that they're all valid, by running:
             // DOCSTART 35
-            fullySignedTx.verifyAllSignatures()
+            fullySignedTx.verifyRequiredSignatures()
             // DOCEND 35
 
             // If the transaction is only partially signed, we have to pass in
