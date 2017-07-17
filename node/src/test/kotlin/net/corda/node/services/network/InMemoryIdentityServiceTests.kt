@@ -5,7 +5,6 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
-import net.corda.flows.AnonymisedIdentity
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.*
 import org.bouncycastle.asn1.x500.X500Name
@@ -70,9 +69,9 @@ class InMemoryIdentityServiceTests {
         val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val identities = listOf("Node A", "Node B", "Node C")
                 .map { getTestPartyAndCertificate(X500Name("CN=$it,O=R3,OU=corda,L=London,C=GB"), generateKeyPair().public) }
-        assertNull(service.partyFromX500Name(identities.first().name))
+        assertNull(service.partyFromX500Name(identities.first().party.name))
         identities.forEach { service.registerIdentity(it) }
-        identities.forEach { assertEquals(it.party, service.partyFromX500Name(it.name)) }
+        identities.forEach { assertEquals(it.party, service.partyFromX500Name(it.party.name)) }
     }
 
     /**
@@ -109,39 +108,39 @@ class InMemoryIdentityServiceTests {
         val bobTxKey = Crypto.generateKeyPair()
         val bobTxCert = X509Utilities.createCertificate(CertificateType.IDENTITY, bobRootCert, bobRootKey, BOB.name, bobTxKey.public)
         val bobCertPath = certFactory.generateCertPath(listOf(bobTxCert.cert, bobRootCert.cert))
-        val bob = PartyAndCertificate(BOB.name, bobRootKey.public, bobRootCert, bobCertPath)
+        val bob = PartyAndCertificate.build(BOB.name, bobRootKey.public, bobRootCert, bobCertPath)
 
         // Now we have identities, construct the service and let it know about both
         val service = InMemoryIdentityService(setOf(alice, bob), emptyMap(), trustRoot.certificate.cert)
-        service.registerAnonymousIdentity(aliceTxIdentity.identity, alice.party, aliceTxIdentity.certPath)
+        service.registerAnonymousIdentity(aliceTxIdentity.party, alice.party, aliceTxIdentity.certPath)
 
         val anonymousBob = AnonymousParty(bobTxKey.public)
         service.registerAnonymousIdentity(anonymousBob, bob.party, bobCertPath)
 
         // Verify that paths are verified
-        service.assertOwnership(alice.party, aliceTxIdentity.identity)
+        service.assertOwnership(alice.party, aliceTxIdentity.party)
         service.assertOwnership(bob.party, anonymousBob)
         assertFailsWith<IllegalArgumentException> {
             service.assertOwnership(alice.party, anonymousBob)
         }
         assertFailsWith<IllegalArgumentException> {
-            service.assertOwnership(bob.party, aliceTxIdentity.identity)
+            service.assertOwnership(bob.party, aliceTxIdentity.party)
         }
 
         assertFailsWith<IllegalArgumentException> {
             val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
-            service.assertOwnership(Party(trustRoot.certificate.subject, owningKey), aliceTxIdentity.identity)
+            service.assertOwnership(Party(trustRoot.certificate.subject, owningKey), aliceTxIdentity.party)
         }
     }
 
-    private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, AnonymisedIdentity> {
+    private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate<Party>, PartyAndCertificate<AnonymousParty>> {
         val certFactory = CertificateFactory.getInstance("X509")
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name, txKey.public)
         val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
-        return Pair(issuer, AnonymisedIdentity(txCertPath, txCert, AnonymousParty(txKey.public)))
+        return Pair(issuer, PartyAndCertificate.build(txKey.public, txCert, txCertPath))
     }
 
     /**

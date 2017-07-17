@@ -430,7 +430,7 @@ class NodeVaultServiceTest {
         assertTrue { service.isRelevant(wellKnownCash, services.keyManagementService.keys) }
 
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
-        val anonymousCash = Cash.State(amount, anonymousIdentity.identity)
+        val anonymousCash = Cash.State(amount, anonymousIdentity.party)
         assertTrue { service.isRelevant(anonymousCash, services.keyManagementService.keys) }
 
         val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
@@ -450,13 +450,13 @@ class NodeVaultServiceTest {
         // Issue then move some cash
         val issueTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
             Cash().generateIssue(this,
-                    amount, anonymousIdentity.identity, services.myInfo.legalIdentity)
+                    amount, anonymousIdentity.party, services.myInfo.legalIdentity)
         }.toWireTransaction()
         val cashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
 
         database.transaction {
             val expected = Vault.Update(emptySet(), setOf(cashState), null)
-            val actual = service.makeUpdate(issueTx, setOf(anonymousIdentity.identity.owningKey))
+            val actual = service.makeUpdate(issueTx, setOf(anonymousIdentity.party.owningKey))
             assertEquals(expected, actual)
             services.vaultService.notify(issueTx)
         }
@@ -467,7 +467,7 @@ class NodeVaultServiceTest {
             }.toWireTransaction()
 
             val expected = Vault.Update(setOf(cashState), emptySet(), null)
-            val actual = service.makeUpdate(moveTx, setOf(anonymousIdentity.identity.owningKey))
+            val actual = service.makeUpdate(moveTx, setOf(anonymousIdentity.party.owningKey))
             assertEquals(expected, actual)
         }
     }

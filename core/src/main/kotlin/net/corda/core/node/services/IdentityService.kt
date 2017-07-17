@@ -21,12 +21,12 @@ interface IdentityService {
     /**
      * Verify and then store a well known identity.
      *
-     * @param party a party representing a legal entity.
+     * @param identity a party representing a legal entity.
      * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun registerIdentity(party: PartyAndCertificate)
+    fun registerIdentity(identity: PartyAndCertificate<Party>)
 
     /**
      * Verify and then store an identity.
@@ -52,14 +52,14 @@ interface IdentityService {
      * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromX500Name] should be
      * used in preference where possible.
      */
-    fun getAllIdentities(): Iterable<PartyAndCertificate>
+    fun getAllIdentities(): Iterable<PartyAndCertificate<Party>>
 
     /**
      * Get the certificate and path for a well known identity.
      *
      * @return the party and certificate, or null if unknown.
      */
-    fun certificateFromParty(party: Party): PartyAndCertificate?
+    fun certificateFromParty(party: Party): PartyAndCertificate<Party>?
 
     // There is no method for removing identities, as once we are made aware of a Party we want to keep track of them
     // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,

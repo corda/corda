@@ -3,19 +3,20 @@ package net.corda.core.node.services
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
-import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
@@ -23,7 +24,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.flows.AnonymisedIdentity
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.InputStream
@@ -497,7 +497,7 @@ interface KeyManagementService {
      * @return X.509 certificate and path to the trust root.
      */
     @Suspendable
-    fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity
+    fun freshKeyAndCert(identity: PartyAndCertificate<Party>, revocationEnabled: Boolean): PartyAndCertificate<AnonymousParty>
 
     /**
      * Filter some keys down to the set that this node owns (has private keys for).

@@ -10,6 +10,7 @@ import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -75,7 +76,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
 
-    val identities = ArrayList<PartyAndCertificate>()
+    val identities = ArrayList<PartyAndCertificate<Party>>()
 
     private val _nodes = ArrayList<MockNode>()
     /** A read only view of the current set of executing nodes. */
@@ -171,7 +172,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeIdentityService(trustRoot: X509Certificate,
                                          clientCa: CertificateAndKeyPair?,
-                                         legalIdentity: PartyAndCertificate): IdentityService {
+                                         legalIdentity: PartyAndCertificate<Party>): IdentityService {
             val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
                     .filterNotNull()
                     .toTypedArray()
@@ -200,7 +201,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     val override = overrideServices[it.info]
                     if (override != null) {
                         // TODO: Store the key
-                        ServiceEntry(it.info, getTestPartyAndCertificate(it.identity.name, override.public))
+                        ServiceEntry(it.info, getTestPartyAndCertificate(it.identity.party.name, override.public))
                     } else {
                         it
                     }

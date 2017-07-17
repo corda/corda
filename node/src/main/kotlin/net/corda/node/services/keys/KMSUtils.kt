@@ -2,19 +2,16 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
-import net.corda.flows.AnonymisedIdentity
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.Security
-import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.time.Duration
-import java.util.*
 
 /**
  * Generates a new random [KeyPair], adds it to the internal key storage, then generates a corresponding
@@ -29,18 +26,19 @@ import java.util.*
  */
 fun freshCertificate(identityService: IdentityService,
                      subjectPublicKey: PublicKey,
-                     issuer: PartyAndCertificate,
+                     issuer: PartyAndCertificate<Party>,
                      issuerSigner: ContentSigner,
-                     revocationEnabled: Boolean = false): AnonymisedIdentity {
+                     revocationEnabled: Boolean = false): PartyAndCertificate<AnonymousParty> {
     val issuerCertificate = issuer.certificate
     val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, Duration.ofDays(10 * 365), issuerCertificate)
-    val ourCertificate = Crypto.createCertificate(CertificateType.IDENTITY, issuerCertificate.subject, issuerSigner, issuer.name, subjectPublicKey, window)
+    val ourCertificate = Crypto.createCertificate(CertificateType.IDENTITY, issuerCertificate.subject, issuerSigner, issuer.party.name, subjectPublicKey, window)
     val certFactory = CertificateFactory.getInstance("X509")
     val ourCertPath = certFactory.generateCertPath(listOf(ourCertificate.cert) + issuer.certPath.certificates)
-    identityService.registerAnonymousIdentity(AnonymousParty(subjectPublicKey),
+    val partyAndCert = PartyAndCertificate.build(subjectPublicKey, issuerCertificate, ourCertPath)
+    identityService.registerAnonymousIdentity(partyAndCert.party,
             issuer.party,
             ourCertPath)
-    return AnonymisedIdentity(ourCertPath, issuerCertificate, subjectPublicKey)
+    return partyAndCert
 }
 
 fun getSigner(issuerKeyPair: KeyPair): ContentSigner {

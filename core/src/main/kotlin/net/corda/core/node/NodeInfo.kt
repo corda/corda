@@ -13,7 +13,7 @@ import net.corda.core.utilities.NonEmptySet
  * The identity can be used in flows and is distinct from the Node's legalIdentity
  */
 @CordaSerializable
-data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate)
+data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate<Party>)
 
 /**
  * Info about a network node that acts on behalf of some form of contract party.
@@ -21,8 +21,8 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
 // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
 @CordaSerializable
 data class NodeInfo(val addresses: List<NetworkHostAndPort>,
-                    val legalIdentityAndCert: PartyAndCertificate, //TODO This field will be removed in future PR which gets rid of services.
-                    val legalIdentitiesAndCerts: NonEmptySet<PartyAndCertificate>,
+                    val legalIdentityAndCert: PartyAndCertificate<Party>, //TODO This field will be removed in future PR which gets rid of services.
+                    val legalIdentitiesAndCerts: NonEmptySet<PartyAndCertificate<Party>>,
                     val platformVersion: Int,
                     var advertisedServices: List<ServiceEntry> = emptyList(),
                     val worldMapLocation: WorldMapLocation? = null) {

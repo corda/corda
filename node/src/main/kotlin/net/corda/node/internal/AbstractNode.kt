@@ -661,7 +661,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun makeIdentityService(trustRoot: X509Certificate,
                                            clientCa: CertificateAndKeyPair?,
-                                           legalIdentity: PartyAndCertificate): IdentityService {
+                                           legalIdentity: PartyAndCertificate<Party>): IdentityService {
         val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
                 .filterNotNull()
                 .toTypedArray()
@@ -696,11 +696,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected abstract fun startMessagingService(rpcOps: RPCOps)
 
-    protected fun obtainLegalIdentity(): PartyAndCertificate = identityKeyPair.first
+    protected fun obtainLegalIdentity(): PartyAndCertificate<Party> = identityKeyPair.first
     protected fun obtainLegalIdentityKey(): KeyPair = identityKeyPair.second
     private val identityKeyPair by lazy { obtainKeyPair("identity", configuration.myLegalName) }
 
-    private fun obtainKeyPair(serviceId: String, serviceName: X500Name): Pair<PartyAndCertificate, KeyPair> {
+    private fun obtainKeyPair(serviceId: String, serviceName: X500Name): Pair<PartyAndCertificate<Party>, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
@@ -714,7 +714,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val privKeyFile = configuration.baseDirectory / privateKeyAlias
         val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
         val certificateAndKeyPair = keyStore.certificateAndKeyPair(privateKeyAlias)
-        val identityCertPathAndKey: Pair<PartyAndCertificate, KeyPair> = if (certificateAndKeyPair != null) {
+        val identityCertPathAndKey: Pair<PartyAndCertificate<Party>, KeyPair> = if (certificateAndKeyPair != null) {
             val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
             val (cert, keyPair) = certificateAndKeyPair
             // Get keys from keystore.
@@ -724,7 +724,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                         "$serviceName vs $loadedServiceName")
             }
             val certPath = certFactory.generateCertPath(listOf(cert.cert) + clientCertPath)
-            Pair(PartyAndCertificate(loadedServiceName, keyPair.public, cert, certPath), keyPair)
+            Pair(PartyAndCertificate.build(loadedServiceName, keyPair.public, cert, certPath), keyPair)
         } else if (privKeyFile.exists()) {
             // Get keys from key file.
             // TODO: this is here to smooth out the key storage transition, remove this in future release.
@@ -761,13 +761,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val certPath = certFactory.generateCertPath(listOf(cert.cert) + clientCertPath)
             keyStore.save(serviceName, privateKeyAlias, keyPair)
             require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
-            Pair(PartyAndCertificate(serviceName, keyPair.public, cert, certPath), keyPair)
+            Pair(PartyAndCertificate.build(serviceName, keyPair.public, cert, certPath), keyPair)
         }
         partyKeys += identityCertPathAndKey.second
         return identityCertPathAndKey
     }
 
-    private fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair): PartyAndCertificate {
+    private fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair): PartyAndCertificate<Party> {
         val certFactory = CertificateFactory.getInstance("X509")
         val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
         val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
