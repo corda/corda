@@ -119,7 +119,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
         // be a clearer API if we do that. But for consistency with the other c'tor we currently do not.
         //
         // If 'stx' is set, then 'wtx' is the contents (from the c'tor).
-        val wtx = stx?.verifyAllSignaturesExcept() ?: wtx
+        val wtx = stx?.verifyAllSignatures() ?: wtx
         wtx?.let {
             fetchMissingAttachments(listOf(it))
             val ltx = it.toLedgerTransaction(serviceHub)

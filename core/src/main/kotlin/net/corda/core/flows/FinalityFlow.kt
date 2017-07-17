@@ -159,7 +159,7 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         return sorted.map { stx ->
             val notary = stx.tx.notary
             // The notary signature(s) are allowed to be missing but no others.
-            val wtx = if (notary != null) stx.verifyAllSignaturesExcept(notary.owningKey) else stx.verifyAllSignaturesExcept()
+            val wtx = if (notary != null) stx.verifySignaturesExcept(notary.owningKey) else stx.verifyAllSignatures()
             val ltx = wtx.toLedgerTransaction(augmentedLookup)
             ltx.verify()
             stx to ltx

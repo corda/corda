@@ -167,14 +167,14 @@ abstract class AbstractStateReplacementFlow {
             val mySignature = sign(stx)
             val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, mySignature)
 
-            // TODO: This step should not be necessary, as signatures are re-checked in verifyAllSignaturesExcept.
+            // TODO: This step should not be necessary, as signatures are re-checked in verifyAllSignatures.
             val allSignatures = swapSignatures.unwrap { signatures ->
                 signatures.forEach { it.verify(stx.id) }
                 signatures
             }
 
             val finalTx = stx + allSignatures
-            finalTx.verifyAllSignaturesExcept()
+            finalTx.verifyAllSignatures()
             serviceHub.recordTransactions(finalTx)
         }
 

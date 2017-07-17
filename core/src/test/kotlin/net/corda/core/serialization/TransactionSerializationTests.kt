@@ -64,12 +64,12 @@ class TransactionSerializationTests {
         val stx = notaryServices.addSignature(ptx)
 
         // Now check that the signature we just made verifies.
-        stx.verifyAllSignaturesExcept()
+        stx.verifyAllSignatures()
 
         // Corrupt the data and ensure the signature catches the problem.
         stx.id.bytes[5] = stx.id.bytes[5].inc()
         assertFailsWith(SignatureException::class) {
-            stx.verifyAllSignaturesExcept()
+            stx.verifyAllSignatures()
         }
     }
 
@@ -92,7 +92,7 @@ class TransactionSerializationTests {
             val dummyServices = MockServices(DUMMY_KEY_2)
             val stx2 = dummyServices.addSignature(ptx2)
 
-            stx.copy(sigs = stx2.sigs).verifyAllSignaturesExcept()
+            stx.copy(sigs = stx2.sigs).verifyAllSignatures()
         }
     }
 

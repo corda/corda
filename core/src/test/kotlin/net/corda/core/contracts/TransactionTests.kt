@@ -46,18 +46,18 @@ class TransactionTests {
         )
         assertEquals(
                 setOf(compKey, DUMMY_KEY_2.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifyAllSignaturesExcept() }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifyAllSignatures() }.missing
         )
 
         assertEquals(
                 setOf(compKey, DUMMY_KEY_2.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1, ak).verifyAllSignaturesExcept() }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1, ak).verifyAllSignatures() }.missing
         )
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk).verifyAllSignaturesExcept()
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ck).verifyAllSignaturesExcept()
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk, ck).verifyAllSignaturesExcept()
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak).verifyAllSignaturesExcept(compKey)
-        makeSigned(wtx, DUMMY_KEY_1, ak).verifyAllSignaturesExcept(compKey, DUMMY_KEY_2.public) // Mixed allowed to be missing.
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk).verifyAllSignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ck).verifyAllSignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk, ck).verifyAllSignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak).verifySignaturesExcept(compKey)
+        makeSigned(wtx, DUMMY_KEY_1, ak).verifySignaturesExcept(compKey, DUMMY_KEY_2.public) // Mixed allowed to be missing.
     }
 
     @Test
@@ -72,25 +72,25 @@ class TransactionTests {
                 type = TransactionType.General,
                 timeWindow = null
         )
-        assertFailsWith<IllegalArgumentException> { makeSigned(wtx).verifyAllSignaturesExcept() }
+        assertFailsWith<IllegalArgumentException> { makeSigned(wtx).verifyAllSignatures() }
 
         assertEquals(
                 setOf(DUMMY_KEY_1.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_2).verifyAllSignaturesExcept() }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_2).verifyAllSignatures() }.missing
         )
         assertEquals(
                 setOf(DUMMY_KEY_2.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifyAllSignaturesExcept() }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifyAllSignatures() }.missing
         )
         assertEquals(
                 setOf(DUMMY_KEY_2.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_CASH_ISSUER_KEY).verifyAllSignaturesExcept(DUMMY_KEY_1.public) }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_CASH_ISSUER_KEY).verifySignaturesExcept(DUMMY_KEY_1.public) }.missing
         )
 
-        makeSigned(wtx, DUMMY_KEY_1).verifyAllSignaturesExcept(DUMMY_KEY_2.public)
-        makeSigned(wtx, DUMMY_KEY_2).verifyAllSignaturesExcept(DUMMY_KEY_1.public)
+        makeSigned(wtx, DUMMY_KEY_1).verifySignaturesExcept(DUMMY_KEY_2.public)
+        makeSigned(wtx, DUMMY_KEY_2).verifySignaturesExcept(DUMMY_KEY_1.public)
 
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2).verifyAllSignaturesExcept()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2).verifyAllSignatures()
     }
 
     @Test

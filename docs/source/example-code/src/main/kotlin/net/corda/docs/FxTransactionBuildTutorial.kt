@@ -159,7 +159,7 @@ class ForeignExchangeFlow(val tradeId: String,
         val allPartySignedTx = sendAndReceive<DigitalSignature.WithKey>(remoteRequestWithNotary.owner, signedTransaction).unwrap {
             val withNewSignature = signedTransaction + it
             // check all signatures are present except the notary
-            withNewSignature.verifyAllSignaturesExcept(withNewSignature.tx.notary!!.owningKey)
+            withNewSignature.verifySignaturesExcept(withNewSignature.tx.notary!!.owningKey)
 
             // This verifies that the transaction is contract-valid, even though it is missing signatures.
             // In a full solution there would be states tracking the trade request which
@@ -234,7 +234,7 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
         val proposedTrade = sendAndReceive<SignedTransaction>(source, ourResponse).unwrap {
             val wtx = it.tx
             // check all signatures are present except our own and the notary
-            it.verifyAllSignaturesExcept(ourKey, wtx.notary!!.owningKey)
+            it.verifySignaturesExcept(ourKey, wtx.notary!!.owningKey)
 
             // We need to fetch their complete input states and dependencies so that verify can operate
             checkDependencies(it)
