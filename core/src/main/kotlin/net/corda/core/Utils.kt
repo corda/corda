@@ -252,37 +252,39 @@ fun extractZipFile(inputStream: InputStream, toDirectory: Path) {
     }
 }
 
-/**
- * Get a valid InputStream from an in-memory zip as required for tests.
- * Note that a slightly bigger than numOfExpectedBytes size is expected.
- */
-@Throws(IllegalArgumentException::class)
-fun sizedInputStreamAndHash(numOfExpectedBytes: Int): InputStreamAndHash {
-    if (numOfExpectedBytes <= 0) throw IllegalArgumentException("A positive number of numOfExpectedBytes is required.")
-    val baos = ByteArrayOutputStream()
-    ZipOutputStream(baos).use({ zos ->
-        val arraySize = 1024
-        val bytes = ByteArray(arraySize)
-        val n = (numOfExpectedBytes - 1) / arraySize + 1 // same as Math.ceil(numOfExpectedBytes/arraySize).
-        zos.setLevel(Deflater.NO_COMPRESSION)
-        zos.putNextEntry(ZipEntry("z"))
-        for (i in 0 until n) {
-            zos.write(bytes, 0, arraySize)
-        }
-        zos.closeEntry()
-    })
-    return getInputStreamAndHashFromOutputStream(baos)
-}
-
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
-fun getInputStreamAndHashFromOutputStream(baos: ByteArrayOutputStream): InputStreamAndHash {
-    // TODO: Consider converting OutputStream to InputStream without creating a ByteArray, probably using piped streams.
+fun ByteArrayOutputStream.getInputStreamAndHash(baos: ByteArrayOutputStream): InputStreamAndHash {
     val bytes = baos.toByteArray()
-    // TODO: Consider calculating sha256 on the fly using a DigestInputStream.
     return InputStreamAndHash(ByteArrayInputStream(bytes), bytes.sha256())
 }
 
-data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256)
+data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256) {
+    companion object {
+        /**
+         * Get a valid InputStream from an in-memory zip as required for some tests. The zip consists of a single file
+         * called "z" that contains the given content byte repeated the given number of times.
+         * Note that a slightly bigger than numOfExpectedBytes size is expected.
+         */
+        @Throws(IllegalArgumentException::class)
+        @JvmStatic
+        fun createInMemoryTestZip(numOfExpectedBytes: Int, content: Byte): InputStreamAndHash {
+            require(numOfExpectedBytes > 0)
+            val baos = ByteArrayOutputStream()
+            ZipOutputStream(baos).use { zos ->
+                val arraySize = 1024
+                val bytes = ByteArray(arraySize) { content }
+                val n = (numOfExpectedBytes - 1) / arraySize + 1 // same as Math.ceil(numOfExpectedBytes/arraySize).
+                zos.setLevel(Deflater.NO_COMPRESSION)
+                zos.putNextEntry(ZipEntry("z"))
+                for (i in 0 until n) {
+                    zos.write(bytes, 0, arraySize)
+                }
+                zos.closeEntry()
+            }
+            return baos.getInputStreamAndHash(baos)
+        }
+    }
+}
 
 // TODO: Generic csv printing utility for clases.
 

@@ -19,11 +19,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.utilities.StrandLocalTransactionManager
-import net.corda.node.utilities.createTransaction
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.transactions.TransactionManager
+import net.corda.node.utilities.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Connection
@@ -54,23 +50,23 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         @Suspendable
         inline fun sleep(millis: Long) {
             if (currentStateMachine() != null) {
-                val db = StrandLocalTransactionManager.database
-                TransactionManager.current().commit()
-                TransactionManager.current().close()
+                val db = DatabaseTransactionManager.dataSource
+                DatabaseTransactionManager.current().commit()
+                DatabaseTransactionManager.current().close()
                 Strand.sleep(millis)
-                StrandLocalTransactionManager.database = db
-                TransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
+                DatabaseTransactionManager.dataSource = db
+                DatabaseTransactionManager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
             } else Strand.sleep(millis)
         }
     }
 
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient override lateinit var serviceHub: ServiceHubInternal
-    @Transient internal lateinit var database: Database
+    @Transient internal lateinit var database: CordaPersistence
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
     @Transient internal lateinit var actionOnEnd: (Try<R>, Boolean) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
-    @Transient private var txTrampoline: Transaction? = null
+    @Transient private var txTrampoline: DatabaseTransaction? = null
 
     /**
      * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
@@ -131,7 +127,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun createTransaction() {
         // Make sure we have a database transaction
         database.createTransaction()
-        logger.trace { "Starting database transaction ${TransactionManager.currentOrNull()} on ${Strand.currentStrand()}" }
+        logger.trace { "Starting database transaction ${DatabaseTransactionManager.currentOrNull()} on ${Strand.currentStrand()}" }
     }
 
     private fun processException(exception: Throwable, propagated: Boolean) {
@@ -141,7 +137,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     internal fun commitTransaction() {
-        val transaction = TransactionManager.current()
+        val transaction = DatabaseTransactionManager.current()
         try {
             logger.trace { "Committing database transaction $transaction on ${Strand.currentStrand()}." }
             transaction.commit()
@@ -260,7 +256,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
         } else {
             sessionInitResponse as SessionReject
-            throw FlowSessionException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
+            throw UnexpectedFlowEndException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
         }
     }
 
@@ -362,7 +358,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 session.erroredEnd(message)
             } else {
                 val expectedType = receiveRequest.userReceiveType?.name ?: receiveType.simpleName
-                throw FlowSessionException("Counterparty flow on ${session.state.sendToParty} has completed without " +
+                throw UnexpectedFlowEndException("Counterparty flow on ${session.state.sendToParty} has completed without " +
                         "sending a $expectedType")
             }
         } else {
@@ -376,7 +372,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             (end.errorResponse as java.lang.Throwable).fillInStackTrace()
             throw end.errorResponse
         } else {
-            throw FlowSessionException("Counterparty flow on ${state.sendToParty} had an internal error and has terminated")
+            throw UnexpectedFlowEndException("Counterparty flow on ${state.sendToParty} had an internal error and has terminated")
         }
     }
 
@@ -384,8 +380,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun suspend(ioRequest: FlowIORequest) {
         // We have to pass the thread local database transaction across via a transient field as the fiber park
         // swaps them out.
-        txTrampoline = TransactionManager.currentOrNull()
-        StrandLocalTransactionManager.setThreadLocalTx(null)
+        txTrampoline =  DatabaseTransactionManager.setThreadLocalTx(null)
         if (ioRequest is WaitingRequest)
             waitingForResponse = ioRequest
 
@@ -394,7 +389,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             logger.trace { "Suspended on $ioRequest" }
             // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
             try {
-                StrandLocalTransactionManager.setThreadLocalTx(txTrampoline)
+                DatabaseTransactionManager.setThreadLocalTx(txTrampoline)
                 txTrampoline = null
                 actionOnSuspend(ioRequest)
             } catch (t: Throwable) {

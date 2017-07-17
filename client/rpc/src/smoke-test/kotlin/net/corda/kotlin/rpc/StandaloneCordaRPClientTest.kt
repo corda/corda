@@ -5,6 +5,7 @@ import com.google.common.hash.HashingInputStream
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
+import net.corda.core.InputStreamAndHash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.POUNDS
 import net.corda.core.contracts.SWISS_FRANCS
@@ -15,7 +16,6 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
 import net.corda.core.seconds
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -77,7 +77,7 @@ class StandaloneCordaRPClientTest {
 
     @Test
     fun `test attachments`() {
-        val attachment = sizedInputStreamAndHash(attachmentSize)
+        val attachment = InputStreamAndHash.createInMemoryTestZip(attachmentSize, 1)
         assertFalse(rpcProxy.attachmentExists(attachment.sha256))
         val id = WrapperStream(attachment.inputStream).use { rpcProxy.uploadAttachment(it) }
         assertEquals(attachment.sha256, id, "Attachment has incorrect SHA256 hash")

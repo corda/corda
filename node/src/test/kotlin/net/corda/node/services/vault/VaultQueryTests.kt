@@ -20,8 +20,8 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.schemas.CashSchemaV1
 import net.corda.schemas.CashSchemaV1.PersistentCashState
 import net.corda.schemas.CommercialPaperSchemaV1
@@ -35,10 +35,8 @@ import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.junit.*
 import org.junit.rules.ExpectedException
-import java.io.Closeable
 import java.lang.Thread.sleep
 import java.math.BigInteger
 import java.security.KeyPair
@@ -53,15 +51,12 @@ class VaultQueryTests {
     lateinit var services: MockServices
     val vaultSvc: VaultService get() = services.vaultService
     val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         val dataSourceProps = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProps)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProps)
         database.transaction {
             val customSchemas = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1)
             val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas))
@@ -82,7 +77,7 @@ class VaultQueryTests {
 
     @After
     fun tearDown() {
-        dataSource.close()
+        database.close()
     }
 
     /**
@@ -91,16 +86,14 @@ class VaultQueryTests {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val dataSourceAndDatabase = configureDatabase(makePersistentDataSourceProperties())
-        val dataSource = dataSourceAndDatabase.first
-        val database = dataSourceAndDatabase.second
+        val database = configureDatabase(makePersistentDataSourceProperties())
 
         setUpDb(database, 5000)
 
-        dataSource.close()
+        database.close()
     }
 
-    private fun setUpDb(_database: Database, delay: Long = 0) {
+    private fun setUpDb(_database: CordaPersistence, delay: Long = 0) {
 
         _database.transaction {
 

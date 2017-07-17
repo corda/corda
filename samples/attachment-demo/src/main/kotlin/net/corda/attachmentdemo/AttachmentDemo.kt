@@ -3,6 +3,8 @@ package net.corda.attachmentdemo
 import co.paralleluniverse.fibers.Suspendable
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.InputStreamAndHash
+import net.corda.core.InputStreamAndHash.Companion.createInMemoryTestZip
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionForContract
@@ -15,7 +17,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
-import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.NetworkHostAndPort
@@ -71,7 +72,7 @@ fun main(args: Array<String>) {
 
 /** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
 fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
-    val (inputStream, hash) = sizedInputStreamAndHash(numOfClearBytes)
+    val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(numOfClearBytes, 0)
     sender(rpc, inputStream, hash)
 }
 

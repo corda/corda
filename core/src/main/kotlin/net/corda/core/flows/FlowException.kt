@@ -25,6 +25,6 @@ open class FlowException(message: String?, cause: Throwable?) : CordaException(m
  * that we were not expecting), or the other side had an internal error, or the other side terminated when we
  * were waiting for a response.
  */
-class FlowSessionException(message: String?, cause: Throwable?) : CordaRuntimeException(message, cause) {
+class UnexpectedFlowEndException(message: String?, cause: Throwable?) : CordaRuntimeException(message, cause) {
     constructor(msg: String) : this(msg, null)
 }

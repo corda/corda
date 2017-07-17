@@ -9,12 +9,18 @@ set DIRNAME=%~dp0
 if "%DIRNAME%" == "" set DIRNAME=.
 
 call %DIRNAME%\..\..\gradlew -PpackageType=exe javapackage
+if "%ERRORLEVEL%" neq "0" goto Fail
 @echo
-@echo "Wrote installer to %DIRNAME%\build\javapackage\bundles\"
+@echo Wrote installer to %DIRNAME%\build\javapackage\bundles\
 @echo
 goto end
 
 :NoJavaHome
-@echo "Please set JAVA_HOME correctly"
+@echo Please set JAVA_HOME correctly.
+exit /b 1
+
+:Fail
+@echo Failed to write installer.
+exit /b 1
 
 :end

@@ -19,7 +19,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.TestClock

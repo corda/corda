@@ -11,7 +11,6 @@ import net.corda.core.node.services.linearHeadsOfType
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.utilities.transaction
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork

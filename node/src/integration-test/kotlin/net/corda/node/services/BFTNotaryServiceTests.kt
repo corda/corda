@@ -20,7 +20,6 @@ import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.node.utilities.transaction
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
