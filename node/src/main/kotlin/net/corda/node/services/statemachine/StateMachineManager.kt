@@ -39,7 +39,6 @@ import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.TopicSession
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -76,7 +75,7 @@ import kotlin.collections.ArrayList
 class StateMachineManager(val serviceHub: ServiceHubInternal,
                           val checkpointStorage: CheckpointStorage,
                           val executor: AffinityExecutor,
-                          val database: Database,
+                          val database: CordaPersistence,
                           private val unfinishedFibers: ReusableLatch = ReusableLatch()) {
 
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)

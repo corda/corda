@@ -14,19 +14,17 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -38,16 +36,13 @@ import kotlin.test.assertTrue
 class NodeVaultServiceTest {
     lateinit var services: MockServices
     val vaultSvc: VaultService get() = services.vaultService
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProps)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProps)
         database.transaction {
             services = object : MockServices() {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps)
@@ -65,7 +60,7 @@ class NodeVaultServiceTest {
 
     @After
     fun tearDown() {
-        dataSource.close()
+        database.close()
         LogHelper.reset(NodeVaultService::class)
     }
 

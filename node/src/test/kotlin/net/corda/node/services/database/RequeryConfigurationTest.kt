@@ -23,40 +23,35 @@ import net.corda.node.services.vault.schemas.requery.Models
 import net.corda.node.services.vault.schemas.requery.VaultCashBalancesEntity
 import net.corda.node.services.vault.schemas.requery.VaultSchema
 import net.corda.node.services.vault.schemas.requery.VaultStatesEntity
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.time.Instant
 import java.util.*
 
 class RequeryConfigurationTest {
 
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var transactionStorage: DBTransactionStorage
     lateinit var requerySession: KotlinEntityDataStore<Persistable>
 
     @Before
     fun setUp() {
         val dataSourceProperties = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProperties)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProperties)
         newTransactionStorage()
         newRequeryStorage(dataSourceProperties)
     }
 
     @After
     fun cleanUp() {
-        dataSource.close()
+        database.close()
     }
 
     @Test

@@ -37,7 +37,6 @@ import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.security.PublicKey
@@ -74,7 +73,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                           val serverAddress: NetworkHostAndPort,
                           val myIdentity: PublicKey?,
                           val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
-                          val database: Database,
+                          val database: CordaPersistence,
                           val networkMapRegistrationFuture: ListenableFuture<Unit>,
                           val monitoringService: MonitoringService,
                           advertisedAddress: NetworkHostAndPort = serverAddress

@@ -18,7 +18,6 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.statemachine.SessionInit
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before

@@ -22,7 +22,6 @@ import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.FixingFlow
 import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.InMemoryMessagingNetwork
 import rx.Observable
 import java.security.PublicKey

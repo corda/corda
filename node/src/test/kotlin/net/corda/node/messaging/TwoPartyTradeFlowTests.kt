@@ -35,14 +35,13 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
-import net.corda.node.utilities.transaction
+import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -681,7 +680,7 @@ class TwoPartyTradeFlowTests {
     }
 
 
-    class RecordingTransactionStorage(val database: Database, val delegate: WritableTransactionStorage) : WritableTransactionStorage {
+    class RecordingTransactionStorage(val database: CordaPersistence, val delegate: WritableTransactionStorage) : WritableTransactionStorage {
         override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
             return database.transaction {
                 delegate.track()

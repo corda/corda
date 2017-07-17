@@ -2,7 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSessionException
+import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.UntrustworthyData
@@ -45,7 +45,7 @@ fun <T> ReceivedSessionMessage<SessionData>.checkPayloadIs(type: Class<T>): Untr
     if (type.isInstance(message.payload)) {
         return UntrustworthyData(type.cast(message.payload))
     } else {
-        throw FlowSessionException("We were expecting a ${type.name} from $sender but we instead got a " +
+        throw UnexpectedFlowEndException("We were expecting a ${type.name} from $sender but we instead got a " +
                 "${message.payload.javaClass.name} (${message.payload})")
     }
 }

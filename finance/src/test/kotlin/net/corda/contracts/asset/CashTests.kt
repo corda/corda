@@ -14,16 +14,14 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
-import org.jetbrains.exposed.sql.Database
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.security.KeyPair
 import java.util.*
 import kotlin.test.*
@@ -45,17 +43,14 @@ class CashTests {
 
     lateinit var miniCorpServices: MockServices
     val vault: VaultService get() = miniCorpServices.vaultService
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
 
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProps)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProps)
         database.transaction {
             miniCorpServices = object : MockServices(MINI_CORP_KEY) {
                 override val keyManagementService: MockKeyManagementService = MockKeyManagementService(identityService, MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY)

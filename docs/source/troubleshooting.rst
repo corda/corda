@@ -27,11 +27,22 @@ If you have APT installed and OpenJFX is part of your Unix distribution's packag
 ***************************************************************************
 
 Some of the unit tests, and our serialization framework in general, rely on the constructor parameter names being visible
-to Java reflection.  Make sure you have specified the `-parameters` option to the Java compiler.  We attempt to set this globally
+to Java reflection.  Make sure you have specified the ``-parameters`` option to the Java compiler.  We attempt to set this globally
 for gradle and IntelliJ, but it's possible this option is not present in your environment for some reason.
 
 IDEA issues
 -----------
+
+Fiber classes not instrumented
+******************************
+
+If you run JUnit tests that use flows then IntelliJ will use a default JVM command line of just ``-ea``, which is
+insufficient. You will need to open the run config and change it to read ``-ea -javaagent:lib/quasar.jar`` and make
+sure the working directory is set to the root of the Corda repository. Alternatively, make sure you have the quasar.jar
+file in your application source tree and set the paths appropriately so the JVM can find it.
+
+You can edit the default JUnit run config in the run configs window to avoid having to do this every time you pick a
+new test to run.
 
 No source files are present
 ***************************

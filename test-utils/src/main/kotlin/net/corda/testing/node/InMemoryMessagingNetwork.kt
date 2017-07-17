@@ -17,12 +17,11 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.trace
 import net.corda.node.services.messaging.*
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.JDBCHashSet
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -108,7 +107,7 @@ class InMemoryMessagingNetwork(
     fun createNode(manuallyPumped: Boolean,
                    executor: AffinityExecutor,
                    advertisedServices: List<ServiceEntry>,
-                   database: Database): Pair<PeerHandle, MessagingServiceBuilder<InMemoryMessaging>> {
+                   database: CordaPersistence): Pair<PeerHandle, MessagingServiceBuilder<InMemoryMessaging>> {
         check(counter >= 0) { "In memory network stopped: please recreate." }
         val builder = createNodeWithID(manuallyPumped, counter, executor, advertisedServices, database = database) as Builder
         counter++
@@ -130,7 +129,7 @@ class InMemoryMessagingNetwork(
             executor: AffinityExecutor,
             advertisedServices: List<ServiceEntry>,
             description: X500Name = X509Utilities.getX509Name("In memory node $id","London","demo@r3.com",null),
-            database: Database)
+            database: CordaPersistence)
             : MessagingServiceBuilder<InMemoryMessaging> {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
@@ -187,7 +186,7 @@ class InMemoryMessagingNetwork(
             val id: PeerHandle,
             val serviceHandles: List<ServiceHandle>,
             val executor: AffinityExecutor,
-            val database: Database) : MessagingServiceBuilder<InMemoryMessaging> {
+            val database: CordaPersistence) : MessagingServiceBuilder<InMemoryMessaging> {
         override fun start(): ListenableFuture<InMemoryMessaging> {
             synchronized(this@InMemoryMessagingNetwork) {
                 val node = InMemoryMessaging(manuallyPumped, id, executor, database)
@@ -304,7 +303,7 @@ class InMemoryMessagingNetwork(
     inner class InMemoryMessaging(private val manuallyPumped: Boolean,
                                   private val peerHandle: PeerHandle,
                                   private val executor: AffinityExecutor,
-                                  private val database: Database) : SingletonSerializeAsToken(), MessagingService {
+                                  private val database: CordaPersistence) : SingletonSerializeAsToken(), MessagingService {
         inner class Handler(val topicSession: TopicSession,
                             val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 

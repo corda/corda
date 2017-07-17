@@ -7,7 +7,11 @@ if [ -z "$JAVA_HOME" -o ! -x $JAVA_HOME/bin/java ]; then
     exit 1
 fi
 
-$DIRNAME/../../gradlew -PpackageType=rpm javapackage $*
-echo
-echo "Wrote installer to '$(find $DIRNAME/build/javapackage/bundles -type f)'"
-echo
+if ($DIRNAME/../../gradlew -PpackageType=rpm javapackage $*); then
+    echo
+    echo "Wrote installer to '$(find $DIRNAME/build/javapackage/bundles -type f)'"
+    echo
+else
+    echo "Failed to create installer."
+    exit 1
+fi

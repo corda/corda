@@ -13,14 +13,12 @@ import net.corda.core.writeLines
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.makeTestDataSourceProperties
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.nio.charset.Charset
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
@@ -35,8 +33,7 @@ import kotlin.test.assertNull
 class NodeAttachmentStorageTest {
     // Use an in memory file system for testing attachment storage.
     lateinit var fs: FileSystem
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var dataSourceProperties: Properties
     lateinit var configuration: RequeryConfiguration
 
@@ -45,9 +42,7 @@ class NodeAttachmentStorageTest {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         dataSourceProperties = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProperties)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProperties)
 
         configuration = RequeryConfiguration(dataSourceProperties)
         fs = Jimfs.newFileSystem(Configuration.unix())
@@ -55,7 +50,7 @@ class NodeAttachmentStorageTest {
 
     @After
     fun tearDown() {
-        dataSource.close()
+        database.close()
     }
 
     @Test

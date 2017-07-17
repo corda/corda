@@ -36,7 +36,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
 import net.corda.node.utilities.JDBCHashMap
-import net.corda.node.utilities.transaction
 import java.nio.file.Path
 import java.util.*
 
