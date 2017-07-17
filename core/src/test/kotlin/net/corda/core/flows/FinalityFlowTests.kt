@@ -47,7 +47,7 @@ class FinalityFlowTests {
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
         val notarisedTx = result.single()
-        notarisedTx.verifySignatures()
+        notarisedTx.verifyAllSignaturesExcept()
         val transactionSeenByB = nodeB.services.database.transaction {
             nodeB.services.validatedTransactions.getTransaction(notarisedTx.id)
         }

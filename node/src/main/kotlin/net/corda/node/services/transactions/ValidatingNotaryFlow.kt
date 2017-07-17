@@ -33,7 +33,7 @@ class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryServ
 
     private fun checkSignatures(stx: SignedTransaction) {
         try {
-            stx.verifySignatures(serviceHub.myInfo.notaryIdentity.owningKey)
+            stx.verifyAllSignaturesExcept(serviceHub.myInfo.notaryIdentity.owningKey)
         } catch(e: SignatureException) {
             throw NotaryException(NotaryError.TransactionInvalid(e))
         }

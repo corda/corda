@@ -463,7 +463,7 @@ the contract. Here's an example of how we might do this:
 Verifying the signatures
 ^^^^^^^^^^^^^^^^^^^^^^^^
 We also need to verify the signatures over the transaction to prevent tampering. We do this using
-``SignedTransaction.verifySignatures``:
+``SignedTransaction.verifyAllSignaturesExcept``:
 
 .. container:: codeset
 
@@ -479,8 +479,8 @@ We also need to verify the signatures over the transaction to prevent tampering.
        :end-before: DOCEND 35
        :dedent: 12
 
-Optionally, we can pass ``verifySignatures`` a ``vararg`` of the public keys for which the signatures are allowed
-to be missing:
+Optionally, we can pass ``verifyAllSignaturesExcept`` a ``vararg`` of the public keys for which the signatures are
+allowed to be missing:
 
 .. container:: codeset
 

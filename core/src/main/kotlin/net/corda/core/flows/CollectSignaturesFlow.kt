@@ -86,7 +86,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         }
 
         // The signatures must be valid and the transaction must be valid.
-        partiallySignedTx.verifySignatures(*notSigned.toTypedArray())
+        partiallySignedTx.verifyAllSignaturesExcept(*notSigned.toTypedArray())
         partiallySignedTx.tx.toLedgerTransaction(serviceHub).verify()
 
         // Determine who still needs to sign.
@@ -105,7 +105,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
         progressTracker.currentStep = VERIFYING
-        if (notaryKey != null) stx.verifySignatures(notaryKey) else stx.verifySignatures()
+        if (notaryKey != null) stx.verifyAllSignaturesExcept(notaryKey) else stx.verifyAllSignaturesExcept()
 
         return stx
     }
@@ -223,7 +223,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
         val signed = stx.sigs.map { it.by }
         val allSigners = stx.tx.mustSign
         val notSigned = allSigners - signed
-        stx.verifySignatures(*notSigned.toTypedArray())
+        stx.verifyAllSignaturesExcept(*notSigned.toTypedArray())
     }
 
     /**
