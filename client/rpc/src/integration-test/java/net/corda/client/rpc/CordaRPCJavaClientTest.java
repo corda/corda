@@ -27,7 +27,6 @@ import static net.corda.node.services.RPCUserServiceKt.*;
 import static net.corda.testing.TestConstants.*;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
-
     private List<String> perms = Arrays.asList(startFlowPermission(CashPaymentFlow.class), startFlowPermission(CashIssueFlow.class));
     private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
@@ -60,7 +59,6 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
         login(rpcUser.getUsername(), rpcUser.getPassword());
     }
 
-
     @Test
     public void testCashBalances() throws NoSuchFieldException, ExecutionException, InterruptedException {
         login(rpcUser.getUsername(), rpcUser.getPassword());
@@ -80,7 +78,6 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     private Amount<Currency> getBalance(Currency currency) throws NoSuchFieldException {
-
         Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
         @SuppressWarnings("unchecked")
         QueryCriteria sumCriteria = new QueryCriteria.VaultCustomQueryCriteria(Builder.sum(pennies));

@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.*;
 import static kotlin.test.AssertionsKt.assertEquals;
 
 public class StandaloneCordaRPCJavaClientTest {
-
     private List<String> perms = Collections.singletonList("ALL");
     private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
