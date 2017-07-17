@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import com.google.common.collect.Lists
 import net.corda.core.contracts.AttachmentResolutionException
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.TransactionResolutionException
@@ -63,31 +64,27 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
     @Throws(SignatureException::class)
-    fun verifyRequiredSignatures() = verifySignaturesExcept()
+    fun verifyRequiredSignatures(): WireTransaction = verifySignaturesInternal(emptyList())
 
     /**
      * Verifies the signatures on this transaction and throws if any are missing which aren't passed as parameters.
      * In this context, "verifying" means checking they are valid signatures and that their public keys are in
      * the contained transactions [BaseTransaction.mustSign] property.
      *
-     * Normally you would not provide any keys to this function, but if you're in the process of building a partial
-     * transaction and you want to access the contents before you've signed it, you can specify your own keys here
-     * to bypass that check.
-     *
      * @throws SignatureException if any signatures are invalid or unrecognised.
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
-    // DOCSTART 2
     @Throws(SignatureException::class)
-    fun verifySignaturesExcept(vararg allowedToBeMissing: PublicKey): WireTransaction {
-    // DOCEND 2
+    fun verifySignaturesExcept(first: PublicKey, vararg rest: PublicKey): WireTransaction {
+        return verifySignaturesInternal(Lists.asList(first, rest))
+    }
+
+    private fun verifySignaturesInternal(allowedToBeMissing: List<PublicKey>): WireTransaction {
         // Embedded WireTransaction is not deserialised until after we check the signatures.
         checkSignaturesAreValid()
-
         val needed = getMissingSignatures() - allowedToBeMissing
         if (needed.isNotEmpty())
-                throw SignaturesMissingException(needed.toNonEmptySet(), getMissingKeyDescriptions(needed), id)
-        check(tx.id == id)
+            throw SignaturesMissingException(needed.toNonEmptySet(), getMissingKeyDescriptions(needed), id)
         return tx
     }
 
