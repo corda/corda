@@ -6,7 +6,9 @@ import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.TransactionType
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionKeyFlow
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
@@ -38,9 +40,9 @@ open class CashPaymentFlow(
         val txIdentities = if (anonymous) {
             subFlow(TransactionKeyFlow(recipient))
         } else {
-            emptyMap<Party, AnonymisedIdentity>()
+            emptyMap<Party, PartyAndCertificate<AnonymousParty>>()
         }
-        val anonymousRecipient = txIdentities.get(recipient)?.identity ?: recipient
+        val anonymousRecipient = txIdentities.get(recipient)?.party ?: recipient
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(null as Party?)
         // TODO: Have some way of restricting this to states the caller controls

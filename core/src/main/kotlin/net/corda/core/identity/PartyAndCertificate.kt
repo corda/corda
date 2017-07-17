@@ -12,17 +12,23 @@ import java.security.cert.CertPath
  * not part of the identifier themselves.
  */
 @CordaSerializable
-data class PartyAndCertificate(val party: Party,
-                               val certificate: X509CertificateHolder,
-                               val certPath: CertPath) {
-    constructor(name: X500Name, owningKey: PublicKey, certificate: X509CertificateHolder, certPath: CertPath) : this(Party(name, owningKey), certificate, certPath)
-    val name: X500Name
-        get() = party.name
+data class PartyAndCertificate<P : AbstractParty>(val party: P,
+                                                  val certificate: X509CertificateHolder,
+                                                  val certPath: CertPath) {
+    companion object {
+        fun build(name: X500Name, owningKey: PublicKey, certificate: X509CertificateHolder, certPath: CertPath): PartyAndCertificate<Party> {
+            return PartyAndCertificate(Party(name, owningKey), certificate, certPath)
+        }
+
+        fun build(owningKey: PublicKey, certificate: X509CertificateHolder, certPath: CertPath): PartyAndCertificate<AnonymousParty> {
+            return PartyAndCertificate(AnonymousParty(owningKey), certificate, certPath)
+        }
+    }
     val owningKey: PublicKey
         get() = party.owningKey
 
     override fun equals(other: Any?): Boolean {
-        return if (other is PartyAndCertificate)
+        return if (other is PartyAndCertificate<*>)
             party == other.party
         else
             false

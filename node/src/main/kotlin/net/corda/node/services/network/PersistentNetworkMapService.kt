@@ -1,6 +1,7 @@
 package net.corda.node.services.network
 
 import net.corda.core.ThreadBox
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.node.services.api.ServiceHubInternal
@@ -26,21 +27,21 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
         val registrationInfo = blob("node_registration_info")
     }
 
-    override val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo> = synchronizedMap(object : AbstractJDBCHashMap<PartyAndCertificate, NodeRegistrationInfo, Table>(Table, loadOnInit = true) {
+    override val nodeRegistrations: MutableMap<PartyAndCertificate<Party>, NodeRegistrationInfo> = synchronizedMap(object : AbstractJDBCHashMap<PartyAndCertificate<Party>, NodeRegistrationInfo, Table>(Table, loadOnInit = true) {
         // TODO: We should understand an X500Name database field type, rather than manually doing the conversion ourselves
-        override fun keyFromRow(row: ResultRow): PartyAndCertificate = PartyAndCertificate(X500Name(row[table.nodeParty.name]), row[table.nodeParty.owningKey],
+        override fun keyFromRow(row: ResultRow): PartyAndCertificate<Party> = PartyAndCertificate.build(X500Name(row[table.nodeParty.name]), row[table.nodeParty.owningKey],
                 row[table.nodeParty.certificate], row[table.nodeParty.certPath])
 
         override fun valueFromRow(row: ResultRow): NodeRegistrationInfo = deserializeFromBlob(row[table.registrationInfo])
 
-        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<PartyAndCertificate, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
-            insert[table.nodeParty.name] = entry.key.name.toString()
+        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<PartyAndCertificate<Party>, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
+            insert[table.nodeParty.name] = entry.key.party.name.toString()
             insert[table.nodeParty.owningKey] = entry.key.owningKey
             insert[table.nodeParty.certPath] = entry.key.certPath
             insert[table.nodeParty.certificate] = entry.key.certificate
         }
 
-        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<PartyAndCertificate, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
+        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<PartyAndCertificate<Party>, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
             insert[table.registrationInfo] = serializeToBlob(entry.value, finalizables)
         }
     })
