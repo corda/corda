@@ -1,10 +1,8 @@
 package net.corda.core.utilities
 
-import net.corda.core.TransientProperty
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
-import rx.subjects.BehaviorSubject
 import rx.subjects.PublishSubject
 import java.util.*
 
@@ -76,7 +74,7 @@ class ProgressTracker(vararg steps: Step) {
     val steps = arrayOf(UNSTARTED, *steps, DONE)
 
     // This field won't be serialized.
-    private val _changes by TransientProperty { PublishSubject.create<Change>() }
+    private val _changes by transient { PublishSubject.create<Change>() }
 
     @CordaSerializable
     private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)

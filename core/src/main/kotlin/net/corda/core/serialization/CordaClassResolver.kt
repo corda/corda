@@ -3,12 +3,13 @@ package net.corda.core.serialization
 import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.utilities.loggerFor
 import java.io.PrintWriter
-import java.lang.reflect.Modifier
+import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -52,18 +53,16 @@ class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean
     }
 
     private fun checkClass(type: Class<*>): Registration? {
-        /** If call path has disabled whitelisting (see [CordaKryo.register]), just return without checking. */
+        // If call path has disabled whitelisting (see [CordaKryo.register]), just return without checking.
         if (!whitelistEnabled) return null
         // Allow primitives, abstracts and interfaces
-        if (type.isPrimitive || type == Any::class.java || Modifier.isAbstract(type.modifiers) || type == String::class.java) return null
+        if (type.isPrimitive || type == Any::class.java || isAbstract(type.modifiers) || type == String::class.java) return null
         // If array, recurse on element type
-        if (type.isArray) {
-            return checkClass(type.componentType)
-        }
-        if (!type.isEnum && Enum::class.java.isAssignableFrom(type)) {
-            // Specialised enum entry, so just resolve the parent Enum type since cannot annotate the specialised entry.
-            return checkClass(type.superclass)
-        }
+        if (type.isArray) return checkClass(type.componentType)
+        // Specialised enum entry, so just resolve the parent Enum type since cannot annotate the specialised entry.
+        if (!type.isEnum && Enum::class.java.isAssignableFrom(type)) return checkClass(type.superclass)
+        // Kotlin lambdas require some special treatment
+        if (kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(type)) return null
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         // If we use a whitelist with blacklisting capabilities, whitelist.hasListed(type) may throw an IllegalStateException if input class is blacklisted.
         // Thus, blacklisting precedes annotation checking.
@@ -74,34 +73,40 @@ class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean
     }
 
     override fun registerImplicit(type: Class<*>): Registration {
-        val hasAnnotation = checkForAnnotation(type)
         // If something is not annotated, or AMQP is disabled, we stay serializing with Kryo.  This will typically be the
         // case for flow checkpoints (ignoring all cases where AMQP is disabled) since our top level messaging data structures
         // are annotated and once we enter AMQP serialisation we stay with it for the entire object subgraph.
-        if (!hasAnnotation || !amqpEnabled) {
-            val objectInstance = try {
-                type.kotlin.objectInstance
-            } catch (t: Throwable) {
-                // objectInstance will throw if the type is something like a lambda
-                null
-            }
-            // We have to set reference to true, since the flag influences how String fields are treated and we want it to be consistent.
-            val references = kryo.references
-            try {
-                kryo.references = true
-                val serializer = if (objectInstance != null) KotlinObjectSerializer(objectInstance) else kryo.getDefaultSerializer(type)
-                return register(Registration(type, serializer, NAME.toInt()))
-            } finally {
-                kryo.references = references
-            }
-        } else {
+        if (checkForAnnotation(type) && amqpEnabled) {
             // Build AMQP serializer
             return register(Registration(type, KryoAMQPSerializer, NAME.toInt()))
         }
+
+        val objectInstance = try {
+            type.kotlin.objectInstance
+        } catch (t: Throwable) {
+            null  // objectInstance will throw if the type is something like a lambda
+        }
+
+        // We have to set reference to true, since the flag influences how String fields are treated and we want it to be consistent.
+        val references = kryo.references
+        try {
+            kryo.references = true
+            val serializer = if (objectInstance != null) {
+                KotlinObjectSerializer(objectInstance)
+            } else if (kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(type)) {
+                // Kotlin lambdas extend this class and any captured variables are stored in synthentic fields
+                FieldSerializer<Any>(kryo, type).apply { setIgnoreSyntheticFields(false) }
+            } else {
+                kryo.getDefaultSerializer(type)
+            }
+            return register(Registration(type, serializer, NAME.toInt()))
+        } finally {
+            kryo.references = references
+        }
     }
 
-    // Trivial Serializer which simply returns the given instance which we already know is a Kotlin object
-    private class KotlinObjectSerializer(val objectInstance: Any) : Serializer<Any>() {
+    // Trivial Serializer which simply returns the given instance, which we already know is a Kotlin object
+    private class KotlinObjectSerializer(private val objectInstance: Any) : Serializer<Any>() {
         override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any = objectInstance
         override fun write(kryo: Kryo, output: Output, obj: Any) = Unit
     }

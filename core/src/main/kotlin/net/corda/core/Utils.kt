@@ -35,7 +35,6 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.concurrent.withLock
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
 @Suppress("unused") // It's here for completeness
@@ -215,17 +214,7 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
 @CordaSerializable
 abstract class RetryableException(message: String) : FlowException(message)
 
-/**
- * A simple wrapper that enables the use of Kotlin's "val x by TransientProperty { ... }" syntax. Such a property
- * will not be serialized to disk, and if it's missing (or the first time it's accessed), the initializer will be
- * used to set it up. Note that the initializer will be called with the TransientProperty object locked.
- */
-class TransientProperty<out T>(private val initializer: () -> T) {
-    @Transient private var v: T? = null
 
-    @Synchronized
-    operator fun getValue(thisRef: Any?, property: KProperty<*>) = v ?: initializer().also { v = it }
-}
 
 /**
  * Given a path to a zip file, extracts it to the given directory.
