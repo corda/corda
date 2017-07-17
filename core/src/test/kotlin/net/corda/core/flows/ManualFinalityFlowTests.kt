@@ -5,7 +5,6 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.TransactionType
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.node.MockNetwork
