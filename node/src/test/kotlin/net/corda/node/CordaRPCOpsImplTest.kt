@@ -22,7 +22,6 @@ import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.utilities.transaction
 import net.corda.nodeapi.PermissionException
 import net.corda.nodeapi.User
 import net.corda.testing.expect

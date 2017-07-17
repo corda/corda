@@ -10,38 +10,33 @@ import net.corda.core.schemas.QueryableState
 import net.corda.testing.LogHelper
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.subjects.PublishSubject
-import java.io.Closeable
 import javax.persistence.*
 import kotlin.test.assertEquals
 
 
 class HibernateObserverTests {
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(HibernateObserver::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(makeTestDataSourceProperties())
     }
 
     @After
     fun cleanUp() {
-        dataSource.close()
+        database.close()
         LogHelper.reset(HibernateObserver::class)
     }
 

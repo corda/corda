@@ -3,14 +3,13 @@ package net.corda.node.services.vault
 import com.codahale.metrics.Gauge
 import net.corda.core.node.services.VaultService
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.utilities.transaction
-import org.jetbrains.exposed.sql.Database
+import net.corda.node.utilities.CordaPersistence
 import java.util.*
 
 /**
  * This class observes the vault and reflect current cash balances as exposed metrics in the monitoring service.
  */
-class CashBalanceAsMetricsObserver(val serviceHubInternal: ServiceHubInternal, val database: Database) {
+class CashBalanceAsMetricsObserver(val serviceHubInternal: ServiceHubInternal, val database: CordaPersistence) {
     init {
         // TODO: Need to consider failure scenarios.  This needs to run if the TX is successfully recorded
         serviceHubInternal.vaultService.updates.subscribe { _ ->

@@ -34,6 +34,10 @@ UNRELEASED
 * Moved the core flows previously found in ``net.corda.flows`` into ``net.corda.core.flows``. This is so that all packages
   in the ``core`` module begin with ``net.corda.core``.
 
+* ``FinalityFlow`` now has can be subclassed, and the ``broadcastTransaction`` and ``lookupParties`` function can be
+  overriden in order to handle cases where no single transaction participant is aware of all parties, and therefore
+  the transaction must be relayed between participants rather than sent from a single node.
+
 Milestone 13
 ------------
 

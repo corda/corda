@@ -24,9 +24,8 @@ import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.utilities.transaction
+import net.corda.node.utilities.CordaPersistence
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -40,7 +39,7 @@ import java.util.*
 class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
-        private val database: Database
+        private val database: CordaPersistence
 ) : CordaRPCOps {
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
         return database.transaction {

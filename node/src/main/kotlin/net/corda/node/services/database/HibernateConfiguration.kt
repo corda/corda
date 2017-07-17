@@ -1,9 +1,9 @@
 package net.corda.node.services.database
 
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
+import net.corda.node.utilities.DatabaseTransactionManager
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
@@ -13,7 +13,6 @@ import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 
@@ -94,17 +93,15 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
     // during schema creation / update.
     class NodeDatabaseConnectionProvider : ConnectionProvider {
         override fun closeConnection(conn: Connection) {
-            val tx = TransactionManager.current()
+            val tx = DatabaseTransactionManager.current()
             tx.commit()
             tx.close()
         }
 
         override fun supportsAggressiveRelease(): Boolean = true
 
-        override fun getConnection(): Connection {
-            val tx = TransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
-            return tx.connection
-        }
+        override fun getConnection(): Connection =
+                DatabaseTransactionManager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ).connection
 
         override fun <T : Any?> unwrap(unwrapType: Class<T>): T {
             try {

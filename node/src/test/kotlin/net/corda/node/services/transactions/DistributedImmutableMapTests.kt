@@ -10,15 +10,14 @@ import net.corda.core.getOrThrow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.LogHelper
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -27,17 +26,14 @@ class DistributedImmutableMapTests {
     data class Member(val client: CopycatClient, val server: CopycatServer)
 
     lateinit var cluster: List<Member>
-    lateinit var dataSource: Closeable
     lateinit var transaction: Transaction
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
 
     @Before
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
         LogHelper.setLevel(NetworkMapService::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(makeTestDataSourceProperties())
         cluster = setUpCluster()
     }
 
@@ -49,7 +45,7 @@ class DistributedImmutableMapTests {
             it.client.close()
             it.server.shutdown()
         }
-        dataSource.close()
+        database.close()
     }
 
     @Test

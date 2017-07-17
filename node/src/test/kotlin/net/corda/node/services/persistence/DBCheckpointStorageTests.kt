@@ -6,16 +6,14 @@ import net.corda.testing.LogHelper
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
     val checkpoints = mutableListOf<Checkpoint>()
@@ -28,21 +26,18 @@ internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
 
 class DBCheckpointStorageTests {
     lateinit var checkpointStorage: DBCheckpointStorage
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(makeTestDataSourceProperties())
         newCheckpointStorage()
     }
 
     @After
     fun cleanUp() {
-        dataSource.close()
+        database.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
