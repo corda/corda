@@ -1,7 +1,7 @@
 package net.corda.node
 
-import net.corda.core.DeclaredField
-import net.corda.core.DeclaredField.Companion.declaredField
+import net.corda.core.internal.DeclaredField
+import net.corda.core.internal.staticField
 import net.corda.node.internal.Node
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
@@ -32,8 +32,8 @@ internal object SerialFilter {
         undecided = statusEnum.getField("UNDECIDED").get(null)
         rejected = statusEnum.getField("REJECTED").get(null)
         val configClass = Class.forName("${filterInterface.name}\$Config")
-        serialFilterLock = declaredField<Any>(configClass, "serialFilterLock").value
-        serialFilterField = declaredField(configClass, "serialFilter")
+        serialFilterLock = configClass.staticField<Any>("serialFilterLock").value
+        serialFilterField = configClass.staticField("serialFilter")
     }
 
     internal fun install(acceptClass: (Class<*>) -> Boolean) {
