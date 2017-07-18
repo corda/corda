@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -19,6 +20,7 @@ import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
+import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
@@ -51,10 +53,8 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     @Before
     fun setup() {
         mockNet = MockNetwork(defaultFactory = nodeFactory)
-        mockNet.createTwoNodes(firstNodeName = DUMMY_MAP.name, secondNodeName = ALICE.name).apply {
-            mapServiceNode = first
-            alice = second
-        }
+        mapServiceNode = mockNet.createNode(null, -1, nodeFactory, true, DUMMY_MAP.name, null, BigInteger.valueOf(random63BitValue()), ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
+        alice = mockNet.createNode(mapServiceNode.network.myAddress, -1, nodeFactory, true, ALICE.name)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
     }

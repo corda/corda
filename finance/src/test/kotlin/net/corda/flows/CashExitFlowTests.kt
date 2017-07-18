@@ -26,9 +26,9 @@ class CashExitFlowTests {
 
     @Before
     fun start() {
-        val nodes = mockNet.createTwoNodes()
-        notaryNode = nodes.first
-        bankOfCordaNode = nodes.second
+        val nodes = mockNet.createSomeNodes(1)
+        notaryNode = nodes.notaryNode
+        bankOfCordaNode = nodes.partyNodes[0]
         notary = notaryNode.info.notaryIdentity
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 

@@ -331,27 +331,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
     }
 
-    // TODO: Move this to using createSomeNodes which doesn't conflate network services with network users.
-    /**
-     * Sets up a two node network, in which the first node runs network map and notary services and the other
-     * doesn't.
-     */
-    fun createTwoNodes(firstNodeName: X500Name? = null,
-                       secondNodeName: X500Name? = null,
-                       nodeFactory: Factory = defaultFactory,
-                       notaryKeyPair: KeyPair? = null): Pair<MockNode, MockNode> {
-        require(nodes.isEmpty())
-        val notaryServiceInfo = ServiceInfo(SimpleNotaryService.type)
-        val notaryOverride = if (notaryKeyPair != null)
-            mapOf(Pair(notaryServiceInfo, notaryKeyPair))
-        else
-            null
-        return Pair(
-                createNode(null, -1, nodeFactory, true, firstNodeName, notaryOverride, BigInteger.valueOf(random63BitValue()), ServiceInfo(NetworkMapService.type), notaryServiceInfo),
-                createNode(nodes[0].network.myAddress, -1, nodeFactory, true, secondNodeName)
-        )
-    }
-
     /**
      * A bundle that separates the generic user nodes and service-providing nodes. A real network might not be so
      * clearly separated, but this is convenient for testing.
@@ -384,18 +363,18 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return BasketOfNodes(nodes, notaryNode, mapNode)
     }
 
-    fun createNotaryNode(networkMapAddr: SingleMessageRecipient? = null,
+    fun createNotaryNode(networkMapAddress: SingleMessageRecipient? = null,
                          legalName: X500Name? = null,
                          overrideServices: Map<ServiceInfo, KeyPair>? = null,
                          serviceName: X500Name? = null): MockNode {
-        return createNode(networkMapAddr, -1, defaultFactory, true, legalName, overrideServices, BigInteger.valueOf(random63BitValue()),
+        return createNode(networkMapAddress, -1, defaultFactory, true, legalName, overrideServices, BigInteger.valueOf(random63BitValue()),
                 ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type, serviceName))
     }
 
-    fun createPartyNode(networkMapAddr: SingleMessageRecipient,
+    fun createPartyNode(networkMapAddress: SingleMessageRecipient,
                         legalName: X500Name? = null,
                         overrideServices: Map<ServiceInfo, KeyPair>? = null): MockNode {
-        return createNode(networkMapAddr, -1, defaultFactory, true, legalName, overrideServices)
+        return createNode(networkMapAddress, -1, defaultFactory, true, legalName, overrideServices)
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.

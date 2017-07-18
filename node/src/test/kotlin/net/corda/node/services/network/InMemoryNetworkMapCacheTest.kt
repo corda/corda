@@ -21,7 +21,9 @@ class InMemoryNetworkMapCacheTest {
 
     @Test
     fun registerWithNetwork() {
-        val (n0, n1) = mockNet.createTwoNodes()
+        val nodes = mockNet.createSomeNodes(1)
+        val n0 = nodes.mapNode
+        val n1 = nodes.partyNodes[0]
         val future = n1.services.networkMapCache.addMapService(n1.network, n0.network.myAddress, false, null)
         mockNet.runNetwork()
         future.getOrThrow()
@@ -48,7 +50,9 @@ class InMemoryNetworkMapCacheTest {
 
     @Test
     fun `getNodeByLegalIdentity`() {
-        val (n0, n1) = mockNet.createTwoNodes()
+        val nodes = mockNet.createSomeNodes(1)
+        val n0 = nodes.mapNode
+        val n1 = nodes.partyNodes[0]
         val node0Cache: NetworkMapCache = n0.services.networkMapCache
         val expected = n1.info
 
