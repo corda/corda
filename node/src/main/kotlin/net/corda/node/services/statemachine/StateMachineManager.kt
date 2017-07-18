@@ -5,6 +5,7 @@ import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
+import com.esotericsoftware.kryo.ClassResolver
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
@@ -24,6 +25,7 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.internal.declaredField
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
 import net.corda.core.utilities.Try
@@ -36,7 +38,10 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.TopicSession
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.bufferUntilDatabaseCommit
+import net.corda.node.utilities.wrapWithDatabaseTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -82,10 +87,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val quasarKryoPool = KryoPool.Builder {
         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
         val classResolver = makeNoWhitelistClassResolver().apply { setKryo(serializer.kryo) }
-        // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
-        val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
         serializer.kryo.apply {
-            field.set(this, classResolver)
+            // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
+            declaredField<ClassResolver>(Kryo::class, "classResolver").value = classResolver
             DefaultKryoCustomizer.customize(this)
             addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
         }

@@ -8,13 +8,11 @@ import com.google.common.io.ByteStreams
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.flows.FlowException
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.write
-import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -32,7 +30,6 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.concurrent.withLock
-import kotlin.reflect.KClass
 
 // TODO: Review by EOY2016 if we ever found these utilities helpful.
 val Int.bd: BigDecimal get() = BigDecimal(this)
@@ -158,17 +155,6 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
 
     fun checkNotLocked() = check(!lock.isHeldByCurrentThread)
 }
-
-/**
- * This represents a transient exception or condition that might no longer be thrown if the operation is re-run or called
- * again.
- *
- * We avoid the use of the word transient here to hopefully reduce confusion with the term in relation to (Java) serialization.
- */
-@CordaSerializable
-abstract class RetryableException(message: String) : FlowException(message)
-
-
 
 /**
  * Given a path to a zip file, extracts it to the given directory.
@@ -299,21 +285,3 @@ fun <T> Class<T>.checkNotUnorderedHashMap() {
 
 fun Class<*>.requireExternal(msg: String = "Internal class")
         = require(!name.startsWith("net.corda.node.") && !name.contains(".internal.")) { "$msg: $name" }
-
-interface DeclaredField<T> {
-    companion object {
-        inline fun <reified T> Any?.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = declaredField(clazz.java, name)
-        inline fun <reified T> Any.declaredField(name: String): DeclaredField<T> = declaredField(javaClass, name)
-        inline fun <reified T> Any?.declaredField(clazz: Class<*>, name: String): DeclaredField<T> {
-            val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
-            val receiver = this
-            return object : DeclaredField<T> {
-                override var value
-                    get() = javaField.get(receiver) as T
-                    set(value) = javaField.set(receiver, value)
-            }
-        }
-    }
-
-    var value: T
-}
