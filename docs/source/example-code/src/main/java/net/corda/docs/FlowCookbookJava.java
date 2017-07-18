@@ -6,7 +6,6 @@ import com.google.common.collect.ImmutableSet;
 import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
 import net.corda.core.contracts.TransactionType.General;
-import net.corda.core.contracts.TransactionType.NotaryChange;
 import net.corda.core.crypto.DigitalSignature;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
@@ -311,16 +310,13 @@ public class FlowCookbookJava {
             ------------------------*/
             progressTracker.setCurrentStep(TX_BUILDING);
 
-            // There are two types of transaction (notary-change and general),
-            // and therefore two types of transaction builder:
             // DOCSTART 19
-            TransactionBuilder notaryChangeTxBuilder = new TransactionBuilder(NotaryChange.INSTANCE, specificNotary);
-            TransactionBuilder regTxBuilder = new TransactionBuilder(General.INSTANCE, specificNotary);
+            TransactionBuilder txBuilder = new TransactionBuilder(General.INSTANCE, specificNotary);
             // DOCEND 19
 
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:
             // DOCSTART 27
-            regTxBuilder.withItems(
+            txBuilder.withItems(
                     // Inputs, as ``StateRef``s that reference to the outputs of previous transactions
                     ourStateAndRef,
                     // Outputs, as ``ContractState``s
@@ -332,20 +328,20 @@ public class FlowCookbookJava {
 
             // We can also add items using methods for the individual components:
             // DOCSTART 28
-            regTxBuilder.addInputState(ourStateAndRef);
-            regTxBuilder.addOutputState(ourOutput);
-            regTxBuilder.addCommand(ourCommand);
-            regTxBuilder.addAttachment(ourAttachment);
+            txBuilder.addInputState(ourStateAndRef);
+            txBuilder.addOutputState(ourOutput);
+            txBuilder.addCommand(ourCommand);
+            txBuilder.addAttachment(ourAttachment);
             // DOCEND 28
 
             // There are several ways of setting the transaction's time-window.
             // We can set a time-window directly:
             // DOCSTART 44
-            regTxBuilder.setTimeWindow(ourTimeWindow);
+            txBuilder.setTimeWindow(ourTimeWindow);
             // DOCEND 44
             // Or as a start time plus a duration (e.g. 45 seconds):
             // DOCSTART 45
-            regTxBuilder.setTimeWindow(Instant.now(), Duration.ofSeconds(45));
+            txBuilder.setTimeWindow(Instant.now(), Duration.ofSeconds(45));
             // DOCEND 45
 
             /*-----------------------
@@ -356,12 +352,12 @@ public class FlowCookbookJava {
             // We finalise the transaction by signing it,
             // converting it into a ``SignedTransaction``.
             // DOCSTART 29
-            SignedTransaction onceSignedTx = getServiceHub().signInitialTransaction(regTxBuilder);
+            SignedTransaction onceSignedTx = getServiceHub().signInitialTransaction(txBuilder);
             // DOCEND 29
             // We can also sign the transaction using a different public key:
             // DOCSTART 30
             PublicKey otherKey = getServiceHub().getKeyManagementService().freshKey();
-            SignedTransaction onceSignedTx2 = getServiceHub().signInitialTransaction(regTxBuilder, otherKey);
+            SignedTransaction onceSignedTx2 = getServiceHub().signInitialTransaction(txBuilder, otherKey);
             // DOCEND 30
 
             // If instead this was a ``SignedTransaction`` that we'd received
