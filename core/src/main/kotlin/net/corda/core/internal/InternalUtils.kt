@@ -2,11 +2,13 @@ package net.corda.core.internal
 
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.reflect.Field
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.util.stream.Stream
+import kotlin.reflect.KClass
 
 /**
  * Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform
@@ -44,3 +46,27 @@ fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLin
 fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
+
+/** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
+fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(this, name, null)
+/** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
+fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
+/** Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
+fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
+/**
+ * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
+ * in its superclass [clazz].
+ */
+fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
+
+/**
+ * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
+ * visibility.
+ */
+class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
+    private val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
+    var value: T
+        @Suppress("UNCHECKED_CAST")
+        get() = javaField.get(receiver) as T
+        set(value) = javaField.set(receiver, value)
+}

@@ -1,8 +1,10 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.crypto.composite.CompositeKey.NodeAndWeight
 import net.corda.core.crypto.composite.CompositeSignature
 import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
+import net.corda.core.internal.declaredField
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
@@ -233,10 +235,7 @@ class CompositeKeyTests {
         // We will create a graph cycle between key5 and key3. Key5 has already a reference to key3 (via key4).
         // To create a cycle, we add a reference (child) from key3 to key5.
         // Children list is immutable, so reflection is used to inject key5 as an extra NodeAndWeight child of key3.
-        val field = key3.javaClass.getDeclaredField("children")
-        field.isAccessible = true
-        val fixedChildren = key3.children.plus(CompositeKey.NodeAndWeight(key5, 1))
-        field.set(key3, fixedChildren)
+        key3.declaredField<List<NodeAndWeight>>("children").value = key3.children + NodeAndWeight(key5, 1)
 
         /* A view of the example graph cycle.
          *
