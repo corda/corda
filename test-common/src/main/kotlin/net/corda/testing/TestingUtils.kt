@@ -6,8 +6,8 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.concurrent.firstOf
 import net.corda.core.getOrThrow
-import net.corda.core.millis
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.millis
 import net.corda.nodeapi.config.SSLConfiguration
 import org.slf4j.LoggerFactory
 import java.time.Duration
