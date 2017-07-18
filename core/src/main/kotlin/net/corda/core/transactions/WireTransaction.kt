@@ -8,18 +8,14 @@ import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.*
-import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
-import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
 
 /**
  * A transaction ready for serialisation, without any signatures attached. A WireTransaction is usually wrapped
- * by a [SignedTransaction] that carries the signatures over this payload. The hash of the wire transaction is
- * the identity of the transaction, that is, it's possible for two [SignedTransaction]s with different sets of
- * signatures to have the same identity hash.
+ * by a [SignedTransaction] that carries the signatures over this payload.
+ * The identity of the transaction is the Merkle tree root of its components (see [MerkleTree]).
  */
 class WireTransaction(
         /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
@@ -38,19 +34,8 @@ class WireTransaction(
         checkInvariants()
     }
 
-    // Cache the serialised form of the transaction and its hash to give us fast access to it.
-    @Volatile @Transient private var cachedBytes: SerializedBytes<WireTransaction>? = null
-    val serialized: SerializedBytes<WireTransaction> get() = cachedBytes ?: serialize().apply { cachedBytes = this }
-
+    /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */
     override val id: SecureHash by lazy { merkleTree.hash }
-
-    companion object {
-        fun deserialize(data: SerializedBytes<WireTransaction>, serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): WireTransaction {
-            val wtx = data.deserialize<WireTransaction>(serializationFactory, context)
-            wtx.cachedBytes = data
-            return wtx
-        }
-    }
 
     /**
      * Looks up identities and attachments from storage to generate a [LedgerTransaction]. A transaction is expected to

@@ -60,7 +60,7 @@ object DefaultKryoCustomizer {
             instantiatorStrategy = CustomInstantiatorStrategy()
 
             register(Arrays.asList("").javaClass, ArraysAsListSerializer())
-            register(SignedTransaction::class.java, ImmutableClassSerializer(SignedTransaction::class))
+            register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
             register(SerializedBytes::class.java, SerializedBytesSerializer)
 
