@@ -1,6 +1,7 @@
 package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.getOrThrow
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
