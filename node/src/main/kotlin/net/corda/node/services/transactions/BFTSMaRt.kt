@@ -11,7 +11,6 @@ import bftsmart.tom.core.messages.TOMMessage
 import bftsmart.tom.server.defaultservices.DefaultRecoverable
 import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
-import net.corda.core.DeclaredField.Companion.declaredField
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.DigitalSignature
@@ -21,6 +20,7 @@ import net.corda.core.crypto.sign
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.Party
+import net.corda.core.internal.declaredField
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
