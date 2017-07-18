@@ -22,7 +22,10 @@ import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.sequence
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.commonName
+import net.corda.core.crypto.toBase58String
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.AmountDiff
@@ -124,7 +127,7 @@ class TransactionViewer : CordaView("Transactions") {
                     totalValueEquiv = ::calculateTotalEquiv.lift(myIdentity,
                             reportingExchange,
                             resolved.map { it.state.data }.lift(),
-                            it.transaction.tx.outputs.map { it.data }.lift())
+                            it.transaction.tx.outputStates.lift())
             )
         }
 

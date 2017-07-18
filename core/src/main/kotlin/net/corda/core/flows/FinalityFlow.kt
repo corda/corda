@@ -133,7 +133,7 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
      * overriding functions.
      */
     protected fun extractParticipants(ltx: LedgerTransaction): List<AbstractParty> {
-        return ltx.outputs.flatMap { it.data.participants } + ltx.inputs.flatMap { it.state.data.participants }
+        return ltx.outputStates.flatMap { it.participants } + ltx.inputStates.flatMap { it.participants }
     }
 
     /**
