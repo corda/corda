@@ -18,6 +18,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.commonName
 import net.corda.core.match
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.then
 import net.corda.demobench.explorer.ExplorerController
@@ -194,7 +195,7 @@ class NodeTerminalView : Fragment() {
 
             txCount = txInit.size
             // This is the total number of states in the vault, regardless of pagination.
-            stateCount = stateInit.totalStatesAvailable.toInt()
+            stateCount = stateInit.totalStatesAvailable
 
             Platform.runLater {
                 logo.opacityProperty().animate(1.0, Duration.seconds(2.5))
