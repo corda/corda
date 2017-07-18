@@ -240,10 +240,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filter {
                     val serviceType = getServiceType(it)
                     if (serviceType != null && info.serviceIdentities(serviceType).isEmpty()) {
-                        log.debug {
-                            "Ignoring ${it.name} as a Corda service since $serviceType is not one of our " +
-                                    "advertised services"
-                        }
+                        log.debug { "Ignoring ${it.name} as a Corda service since $serviceType is not one of our " +
+                                "advertised services" }
                         false
                     } else {
                         true
@@ -379,13 +377,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         _services.rpcFlows += scanResult
                 .getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class)
                 .filter { it.isUserInvokable() } +
-                // Add any core flows here
-                listOf(
-                        ContractUpgradeFlow::class.java,
-                        // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
-                        CashIssueFlow::class.java,
-                        CashExitFlow::class.java,
-                        CashPaymentFlow::class.java)
+                    // Add any core flows here
+                    listOf(
+                            ContractUpgradeFlow::class.java,
+                            // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
+                            CashIssueFlow::class.java,
+                            CashExitFlow::class.java,
+                            CashPaymentFlow::class.java)
     }
 
     /**
@@ -711,6 +709,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
         // the public key. Obviously in a real system this would need to be a certificate chain of some kind to ensure
         // the legal name is actually validated in some way.
+
         // TODO: Integrate with Key management service?
         val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
