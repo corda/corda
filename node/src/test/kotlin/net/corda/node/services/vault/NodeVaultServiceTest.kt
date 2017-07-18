@@ -25,6 +25,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.observers.TestSubscriber
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -443,6 +444,10 @@ class NodeVaultServiceTest {
     @Test
     fun `make update`() {
         val service = (services.vaultService as NodeVaultService)
+        val vaultSubscriber = TestSubscriber<Vault.Update>().apply {
+            service.updates.subscribe(this)
+        }
+
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
         val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
@@ -454,21 +459,18 @@ class NodeVaultServiceTest {
         }.toWireTransaction()
         val cashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
 
-        database.transaction {
-            val expected = Vault.Update(emptySet(), setOf(cashState), null)
-            val actual = service.makeUpdate(issueTx, setOf(anonymousIdentity.identity.owningKey))
-            assertEquals(expected, actual)
-            services.vaultService.notify(issueTx)
-        }
+        database.transaction { service.notify(issueTx) }
+        val expectedIssueUpdate = Vault.Update(emptySet(), setOf(cashState), null)
 
         database.transaction {
             val moveTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
-                services.vaultService.generateSpend(this, Amount(1000, GBP), thirdPartyIdentity)
+                service.generateSpend(this, Amount(1000, GBP), thirdPartyIdentity)
             }.toWireTransaction()
-
-            val expected = Vault.Update(setOf(cashState), emptySet(), null)
-            val actual = service.makeUpdate(moveTx, setOf(anonymousIdentity.identity.owningKey))
-            assertEquals(expected, actual)
+            service.notify(moveTx)
         }
+        val expectedMoveUpdate = Vault.Update(setOf(cashState), emptySet(), null)
+
+        val observedUpdates = vaultSubscriber.onNextEvents
+        assertEquals(observedUpdates, listOf(expectedIssueUpdate, expectedMoveUpdate))
     }
 }
