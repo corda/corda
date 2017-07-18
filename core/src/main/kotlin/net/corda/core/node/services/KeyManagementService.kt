@@ -2,8 +2,8 @@ package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.DigitalSignature
+import net.corda.core.identity.AnonymisedIdentity
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.flows.AnonymisedIdentity
 import java.security.PublicKey
 
 /**

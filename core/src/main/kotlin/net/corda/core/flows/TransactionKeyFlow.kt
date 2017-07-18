@@ -1,10 +1,10 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.identity.AnonymisedIdentity
 import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
-import net.corda.flows.AnonymisedIdentity
 
 /**
  * Very basic flow which exchanges transaction key and certificate paths between two parties in a transaction.

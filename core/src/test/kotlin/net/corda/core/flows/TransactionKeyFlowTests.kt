@@ -54,17 +54,17 @@ class TransactionKeyFlowTests {
         // Verify that the generated anonymous identities do not match the well known identities
         val aliceAnonymousIdentity = actual[alice] ?: throw IllegalStateException()
         val bobAnonymousIdentity = actual[bob] ?: throw IllegalStateException()
-        assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity.identity)
-        assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity.identity)
+        assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity.party)
+        assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity.party)
 
         // Verify that the anonymous identities look sane
         assertEquals(alice.name, aliceAnonymousIdentity.certificate.subject)
         assertEquals(bob.name, bobAnonymousIdentity.certificate.subject)
 
         // Verify that the nodes have the right anonymous identities
-        assertTrue { aliceAnonymousIdentity.identity.owningKey in aliceNode.services.keyManagementService.keys }
-        assertTrue { bobAnonymousIdentity.identity.owningKey in bobNode.services.keyManagementService.keys }
-        assertFalse { aliceAnonymousIdentity.identity.owningKey in bobNode.services.keyManagementService.keys }
-        assertFalse { bobAnonymousIdentity.identity.owningKey in aliceNode.services.keyManagementService.keys }
+        assertTrue { aliceAnonymousIdentity.party.owningKey in aliceNode.services.keyManagementService.keys }
+        assertTrue { bobAnonymousIdentity.party.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { aliceAnonymousIdentity.party.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { bobAnonymousIdentity.party.owningKey in aliceNode.services.keyManagementService.keys }
     }
 }

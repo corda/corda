@@ -2,7 +2,7 @@ package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
-import net.corda.flows.AnonymisedIdentity
+import net.corda.core.identity.AnonymisedIdentity
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -94,6 +94,7 @@ interface IdentityService {
     fun partyFromKey(key: PublicKey): Party?
     @Deprecated("Use partyFromX500Name or partiesFromName")
     fun partyFromName(name: String): Party?
+
     fun partyFromX500Name(principal: X500Name): Party?
 
     /**

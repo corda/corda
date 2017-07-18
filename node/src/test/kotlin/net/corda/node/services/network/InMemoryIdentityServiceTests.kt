@@ -1,11 +1,11 @@
 package net.corda.node.services.network
 
 import net.corda.core.crypto.*
+import net.corda.core.identity.AnonymisedIdentity
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
-import net.corda.flows.AnonymisedIdentity
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.*
 import org.bouncycastle.asn1.x500.X500Name
@@ -107,12 +107,12 @@ class InMemoryIdentityServiceTests {
         val service = InMemoryIdentityService(setOf(alice), emptyMap(), trustRoot.certificate.cert)
         service.registerAnonymousIdentity(aliceTxIdentity, alice.party)
 
-        var actual = service.anonymousFromKey(aliceTxIdentity.identity.owningKey)
+        var actual = service.anonymousFromKey(aliceTxIdentity.party.owningKey)
         assertEquals<AnonymisedIdentity>(aliceTxIdentity, actual!!)
 
-        assertNull(service.anonymousFromKey(bobTxIdentity.identity.owningKey))
+        assertNull(service.anonymousFromKey(bobTxIdentity.party.owningKey))
         service.registerAnonymousIdentity(bobTxIdentity, bob.party)
-        actual = service.anonymousFromKey(bobTxIdentity.identity.owningKey)
+        actual = service.anonymousFromKey(bobTxIdentity.party.owningKey)
         assertEquals<AnonymisedIdentity>(bobTxIdentity, actual!!)
     }
 
@@ -138,22 +138,22 @@ class InMemoryIdentityServiceTests {
         val service = InMemoryIdentityService(setOf(alice, bob), emptyMap(), trustRoot.certificate.cert)
         service.registerAnonymousIdentity(aliceTxIdentity, alice.party)
 
-        val anonymousBob = AnonymisedIdentity(bobCertPath, bobTxCert, AnonymousParty(bobTxKey.public))
+        val anonymousBob = AnonymisedIdentity(AnonymousParty(bobTxKey.public), bobTxCert, bobCertPath)
         service.registerAnonymousIdentity(anonymousBob, bob.party)
 
         // Verify that paths are verified
-        service.assertOwnership(alice.party, aliceTxIdentity.identity)
-        service.assertOwnership(bob.party, anonymousBob.identity)
+        service.assertOwnership(alice.party, aliceTxIdentity.party)
+        service.assertOwnership(bob.party, anonymousBob.party)
         assertFailsWith<IllegalArgumentException> {
-            service.assertOwnership(alice.party, anonymousBob.identity)
+            service.assertOwnership(alice.party, anonymousBob.party)
         }
         assertFailsWith<IllegalArgumentException> {
-            service.assertOwnership(bob.party, aliceTxIdentity.identity)
+            service.assertOwnership(bob.party, aliceTxIdentity.party)
         }
 
         assertFailsWith<IllegalArgumentException> {
             val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
-            service.assertOwnership(Party(trustRoot.certificate.subject, owningKey), aliceTxIdentity.identity)
+            service.assertOwnership(Party(trustRoot.certificate.subject, owningKey), aliceTxIdentity.party)
         }
     }
 
@@ -164,7 +164,7 @@ class InMemoryIdentityServiceTests {
         val txKey = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name, txKey.public)
         val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
-        return Pair(issuer, AnonymisedIdentity(txCertPath, txCert, AnonymousParty(txKey.public)))
+        return Pair(issuer, AnonymisedIdentity(AnonymousParty(txKey.public), txCert, txCertPath))
     }
 
     /**

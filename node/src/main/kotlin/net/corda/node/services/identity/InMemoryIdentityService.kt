@@ -5,15 +5,11 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.subject
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.*
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.flows.AnonymisedIdentity
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -22,7 +18,6 @@ import java.security.cert.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
-import javax.security.auth.x500.X500Principal
 import kotlin.collections.ArrayList
 
 /**
@@ -82,7 +77,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         val anonymousParty = AnonymousParty(owningKey)
         val path = partyToPath[anonymousParty]
         return path?.let { it ->
-            AnonymisedIdentity(it.first, it.second, anonymousParty)
+            AnonymisedIdentity(anonymousParty, it.second, it.first)
         }
     }
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[owningKey]
@@ -142,14 +137,14 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         val certificate = X509CertificateHolder(anonymousIdentity.certPath.certificates.first().encoded)
         log.trace { "Registering identity $fullParty" }
 
-        partyToPath[anonymousIdentity.identity] = Pair(anonymousIdentity.certPath, certificate)
-        keyToParties[anonymousIdentity.identity.owningKey] = fullParty
+        partyToPath[anonymousIdentity.party] = Pair(anonymousIdentity.certPath, certificate)
+        keyToParties[anonymousIdentity.party.owningKey] = fullParty
         principalToParties[fullParty.name] = fullParty
         return fullParty
     }
 
     override fun verifyAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party): PartyAndCertificate {
-        val (path, _, anonymousParty) = anonymousIdentity
+        val (anonymousParty, _, path) = anonymousIdentity
         val fullParty = certificateFromParty(party) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
         require(path.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         // Validate the chain first, before we do anything clever with it
