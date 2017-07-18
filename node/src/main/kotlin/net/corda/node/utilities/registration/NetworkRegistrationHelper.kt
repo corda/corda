@@ -1,6 +1,5 @@
 package net.corda.node.utilities.registration
 
-import net.corda.core.*
 import net.corda.core.crypto.CertificateType
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.X509Utilities
@@ -9,6 +8,7 @@ import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.crypto.cert
 import net.corda.core.internal.*
+import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.*
 import org.bouncycastle.cert.path.CertPath

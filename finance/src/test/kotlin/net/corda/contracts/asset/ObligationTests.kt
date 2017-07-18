@@ -6,16 +6,16 @@ import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.testing.NULL_PARTY
-import net.corda.core.hours
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.days
+import net.corda.core.utilities.hours
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
 import org.junit.Test
-import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -272,7 +272,7 @@ class ObligationTests {
     @Test
     fun `generate set lifecycle`() {
         // We don't actually verify the states, this is just here to make things look sensible
-        val dueBefore = TEST_TX_TIME - Duration.ofDays(7)
+        val dueBefore = TEST_TX_TIME - 7.days
 
         // Generate a transaction issuing the obligation
         var tx = TransactionType.General.Builder(null).apply {
@@ -534,8 +534,8 @@ class ObligationTests {
         }
 
         // Try defaulting an obligation due in the future
-        val pastTestTime = TEST_TX_TIME - Duration.ofDays(7)
-        val futureTestTime = TEST_TX_TIME + Duration.ofDays(7)
+        val pastTestTime = TEST_TX_TIME - 7.days
+        val futureTestTime = TEST_TX_TIME + 7.days
         transaction("Settlement") {
             input(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime)
             output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }

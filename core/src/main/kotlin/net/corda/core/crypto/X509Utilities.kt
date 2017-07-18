@@ -1,5 +1,7 @@
 package net.corda.core.crypto
 
+import net.corda.core.utilities.days
+import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
@@ -33,7 +35,7 @@ object X509Utilities {
     val CORDA_CLIENT_TLS = "cordaclienttls"
     val CORDA_CLIENT_CA = "cordaclientca"
 
-    private val DEFAULT_VALIDITY_WINDOW = Pair(Duration.ofMillis(0), Duration.ofDays(365 * 10))
+    private val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
     /**
      * Helper function to return the latest out of an instant and an optional date.
      */

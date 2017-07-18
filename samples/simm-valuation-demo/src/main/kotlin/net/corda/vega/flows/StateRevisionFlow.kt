@@ -2,7 +2,7 @@ package net.corda.vega.flows
 
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.Party
-import net.corda.core.seconds
+import net.corda.core.utilities.seconds
 import net.corda.core.flows.AbstractStateReplacementFlow
 import net.corda.core.flows.StateReplacementException
 import net.corda.vega.contracts.RevisionedState

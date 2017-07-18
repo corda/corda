@@ -12,8 +12,8 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.future
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
-import net.corda.core.millis
-import net.corda.core.seconds
+import net.corda.core.utilities.millis
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.RPCServerConfiguration

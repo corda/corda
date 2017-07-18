@@ -4,7 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.seconds
+import net.corda.core.utilities.seconds
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.time.Duration

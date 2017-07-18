@@ -17,3 +17,7 @@ dependencies {
     // Bouncy Castle: for X.500 distinguished name manipulation
     compile "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
 }
+
+publish {
+    name project.name
+}

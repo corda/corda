@@ -10,7 +10,7 @@ import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.seconds
+import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService

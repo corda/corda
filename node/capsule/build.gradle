@@ -67,6 +67,6 @@ artifacts {
 }
 
 publish {
-    name = 'corda'
     disableDefaultJar = true
+    name  'corda'
 }

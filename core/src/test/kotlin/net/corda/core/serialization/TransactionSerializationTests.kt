@@ -3,7 +3,7 @@ package net.corda.core.serialization
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
-import net.corda.core.seconds
+import net.corda.core.utilities.seconds
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.*
 import net.corda.testing.node.MockServices

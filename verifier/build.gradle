@@ -75,6 +75,6 @@ artifacts {
 }
 
 publish {
-    name = 'corda-verifier'
     disableDefaultJar = true
+    name 'corda-verifier'
 }
