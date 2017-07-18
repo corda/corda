@@ -94,7 +94,7 @@ fun CompositeType.carpenterSchema(
 fun AMQPField.getTypeAsClass(
         classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())
 ) = when (type) {
-    "int"     -> Int::class.javaPrimitiveType!!
+    "int"     -> if (mandatory) Integer::class.java else Int::class.javaPrimitiveType!!
     "string"  -> String::class.java
     "short"   -> Short::class.javaPrimitiveType!!
     "long"    -> Long::class.javaPrimitiveType!!

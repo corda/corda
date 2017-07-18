@@ -2,10 +2,8 @@ package net.corda.core.serialization.amqp
 
 import org.junit.Test
 import kotlin.test.*
-import net.corda.core.serialization.carpenter.ClassCarpenter
-import net.corda.core.serialization.carpenter.ClassSchema
-import net.corda.core.serialization.carpenter.InterfaceSchema
-import net.corda.core.serialization.carpenter.NonNullableField
+import net.corda.core.serialization.carpenter.*
+import java.lang.Character
 
 interface I {
     fun getName() : String
@@ -124,5 +122,25 @@ class DeserializeNeedingCarpentryTests {
         assertEquals("timmy", (deserializedObj as I).getName())
         assertEquals("timmy", deserializedObj::class.java.getMethod("getName").invoke(deserializedObj))
         assertEquals(12, deserializedObj::class.java.getMethod("getAge").invoke(deserializedObj))
+    }
+
+    @Test
+    fun manyTypes() {
+        val cc = ClassCarpenter()
+
+        val manyClass = cc.build (ClassSchema(
+                "many",
+                mapOf(
+                        "intA" to NonNullableField (Int::class.java),
+                        "intB" to NullableField (Integer::class.java),
+                        "strA" to NonNullableField (String::class.java),
+                        "strB" to NullableField (String::class.java),
+                        "charA" to NonNullableField (Char::class.java),
+                        "charB" to NullableField (Character::class.java))))
+
+        val serialisedBytes = SerializationOutput().serialize(
+                manyClass.constructors.first().newInstance(1, 2, "a", "b", 'c', 'd'))
+
+        val deserializedObj = DeserializationInput().deserialize(serialisedBytes)
     }
 }
