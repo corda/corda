@@ -31,14 +31,12 @@ class CashPaymentFlowTests {
 
     @Before
     fun start() {
-        val nodes = mockNet.createTwoNodes()
-        notaryNode = nodes.first
-        bankOfCordaNode = nodes.second
+        val nodes = mockNet.createSomeNodes(1)
+        notaryNode = nodes.notaryNode
+        bankOfCordaNode = nodes.partyNodes[0]
         notary = notaryNode.info.notaryIdentity
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 
-        notaryNode.services.identityService.registerIdentity(bankOfCordaNode.info.legalIdentityAndCert)
-        bankOfCordaNode.services.identityService.registerIdentity(notaryNode.info.legalIdentityAndCert)
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref,
                 bankOfCorda,
                 notary)).resultFuture
