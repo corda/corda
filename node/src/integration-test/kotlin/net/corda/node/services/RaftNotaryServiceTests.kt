@@ -5,13 +5,13 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.testing.contracts.DummyContract
 import net.corda.core.identity.Party
-import net.corda.core.concurrent.transpose
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.transpose
 import net.corda.node.internal.AbstractNode
 import net.corda.testing.node.NodeBasedTest
 import org.bouncycastle.asn1.x500.X500Name

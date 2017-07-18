@@ -3,8 +3,8 @@ package net.corda.bank
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.concurrent.transpose
 import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.internal.concurrent.transpose
 import net.corda.testing.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.BOC

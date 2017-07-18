@@ -10,8 +10,8 @@ import net.corda.core.contracts.USD
 import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
-import net.corda.core.concurrent.transpose
 import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor

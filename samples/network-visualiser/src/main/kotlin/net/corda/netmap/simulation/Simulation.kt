@@ -8,9 +8,9 @@ import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
-import net.corda.core.concurrent.transpose
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.transpose
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR

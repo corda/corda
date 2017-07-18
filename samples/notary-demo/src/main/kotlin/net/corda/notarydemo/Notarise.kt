@@ -7,9 +7,9 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.concurrent.transpose
 import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient

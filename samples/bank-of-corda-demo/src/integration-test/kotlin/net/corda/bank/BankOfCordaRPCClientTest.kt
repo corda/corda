@@ -6,8 +6,8 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.concurrent.transpose
 import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.internal.concurrent.transpose
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
