@@ -34,18 +34,18 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         val logger = loggerFor<TraderDemoClientApi>()
     }
 
-    val cashCount: Int get() {
+    val cashCount: Long get() {
         val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
         val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
-        return rpc.vaultQueryBy<Cash.State>(countCriteria).otherResults.single() as Int
+        return rpc.vaultQueryBy<Cash.State>(countCriteria).otherResults.single() as Long
     }
 
     val dollarCashBalance: Amount<Currency> get() = rpc.getCashBalance(USD)
 
-    val commercialPaperCount: Int get() {
+    val commercialPaperCount: Long get() {
         val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
         val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
-        return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Int
+        return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
     }
 
     fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS, anonymous: Boolean = true) {
