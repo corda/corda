@@ -55,7 +55,9 @@ class AttachmentTests {
 
     @Test
     fun `download and store`() {
-        val (n0, n1) = mockNet.createTwoNodes()
+        val nodes = mockNet.createSomeNodes(2)
+        val n0 = nodes.partyNodes[0]
+        val n1 = nodes.partyNodes[1]
 
         // Insert an attachment into node zero's store directly.
         val id = n0.database.transaction {
@@ -84,7 +86,9 @@ class AttachmentTests {
 
     @Test
     fun `missing`() {
-        val (n0, n1) = mockNet.createTwoNodes()
+        val nodes = mockNet.createSomeNodes(2)
+        val n0 = nodes.partyNodes[0]
+        val n1 = nodes.partyNodes[1]
 
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
