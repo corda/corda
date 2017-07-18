@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.RateLimiter
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.catch
-import net.corda.core.minutes
+import net.corda.core.utilities.minutes
 import net.corda.core.until
 import net.corda.core.utilities.loggerFor
 import net.corda.demobench.model.NodeConfig

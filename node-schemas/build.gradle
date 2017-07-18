@@ -1,7 +1,7 @@
+apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'idea'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node database schemas'
@@ -33,5 +33,5 @@ jar {
 }
 
 publish {
-    name = jar.baseName
+    name jar.baseName
 }

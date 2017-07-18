@@ -2,7 +2,7 @@ package net.corda.irs.contract
 
 import net.corda.contracts.*
 import net.corda.core.contracts.*
-import net.corda.core.seconds
+import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY

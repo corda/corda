@@ -57,7 +57,6 @@ artifacts {
 }
 
 publish {
-    name = 'corda-webserver'
-    publishWar = false // TODO: Use WAR instead of JAR
     disableDefaultJar = true
+    name 'corda-webserver'
 }

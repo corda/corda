@@ -1,7 +1,11 @@
 package net.corda.irs.utilities
 
 import net.corda.core.contracts.TimeWindow
-import java.time.*
+import net.corda.core.utilities.hours
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 /**
  * This whole file exists as short cuts to get demos working.  In reality we'd have static data and/or rules engine
@@ -16,5 +20,5 @@ fun suggestInterestRateAnnouncementTimeWindow(index: String, source: String, dat
     // Here we apply a blanket announcement time of 11:45 London irrespective of source or index
     val time = LocalTime.of(11, 45)
     val zoneId = ZoneId.of("Europe/London")
-    return TimeWindow.fromStartAndDuration(ZonedDateTime.of(date, time, zoneId).toInstant(), Duration.ofHours(24))
+    return TimeWindow.fromStartAndDuration(ZonedDateTime.of(date, time, zoneId).toInstant(), 24.hours)
 }

@@ -6,15 +6,16 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.utilities.seconds
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.uploadFile
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.IntegrationTestCategory
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
@@ -25,13 +26,12 @@ import rx.Observable
 import java.net.URL
 import java.time.Duration
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 class IRSDemoTest : IntegrationTestCategory {
     val rpcUser = User("user", "password", emptySet())
     val currentDate: LocalDate = LocalDate.now()
     val futureDate: LocalDate = currentDate.plusMonths(6)
-    val maxWaitTime: Duration = Duration.of(60, ChronoUnit.SECONDS)
+    val maxWaitTime: Duration = 60.seconds
 
     @Test
     fun `runs IRS demo`() {
