@@ -5,6 +5,8 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.RetryableException
 import net.corda.core.concurrent.getOrThrow
+import net.corda.core.utilities.hours
+import net.corda.core.utilities.minutes
 import net.corda.testing.node.TestClock
 import org.junit.After
 import org.junit.Before
@@ -50,7 +52,7 @@ class FiberBoxTest {
 
     @Test
     fun `readWithDeadline with no wait`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
 
         mutex.write { integer = 1 }
         assertEquals(1, mutex.readWithDeadline(realClock, advancedClock.instant()) { integer })
@@ -58,7 +60,7 @@ class FiberBoxTest {
 
     @Test
     fun `readWithDeadline with stopped clock and background write`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
 
         assertEquals(1, mutex.readWithDeadline(stoppedClock, advancedClock.instant()) {
             backgroundWrite()
@@ -68,22 +70,22 @@ class FiberBoxTest {
 
     @Test(expected = TestRetryableException::class)
     fun `readWithDeadline with clock advanced`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
 
         assertEquals(1, mutex.readWithDeadline(testClock, advancedClock.instant()) {
-            backgroundAdvanceClock(testClock, Duration.ofHours(1))
+            backgroundAdvanceClock(testClock, 1.hours)
             if (integer == 1) 0 else throw TestRetryableException("Not 1")
         })
     }
 
     @Test
     fun `readWithDeadline with clock advanced 5x and background write`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
 
         assertEquals(5, mutex.readWithDeadline(testClock, advancedClock.instant()) {
-            backgroundAdvanceClock(testClock, Duration.ofMinutes(10))
+            backgroundAdvanceClock(testClock, 10.minutes)
             backgroundWrite()
             if (integer == 5) 5 else throw TestRetryableException("Not 5")
         })
@@ -97,7 +99,7 @@ class FiberBoxTest {
     @Test(expected = TestRetryableException::class)
     @Suspendable
     fun `readWithDeadline with clock advanced on Fibers`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
         val future = CompletableFuture<Int>()
         val scheduler = FiberExecutorScheduler("test", executor)
@@ -116,7 +118,7 @@ class FiberBoxTest {
                 while (fiber.state != Strand.State.TIMED_WAITING) {
                     Strand.sleep(1)
                 }
-                testClock.advanceBy(Duration.ofMinutes(10))
+                testClock.advanceBy(10.minutes)
             }).start()
         }
         assertEquals(2, future.getOrThrow())
@@ -130,7 +132,7 @@ class FiberBoxTest {
     @Test
     @Suspendable
     fun `readWithDeadline with background write on Fibers`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
         val future = CompletableFuture<Int>()
         val scheduler = FiberExecutorScheduler("test", executor)

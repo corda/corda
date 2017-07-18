@@ -6,6 +6,8 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.concurrent.getOrThrow
+import net.corda.core.utilities.hours
+import net.corda.core.utilities.minutes
 import net.corda.testing.node.TestClock
 import org.junit.After
 import org.junit.Before
@@ -44,7 +46,7 @@ class ClockUtilsTest {
 
     @Test
     fun `test waiting negative time for a deadline`() {
-        assertFalse(stoppedClock.awaitWithDeadline(stoppedClock.instant().minus(Duration.ofHours(1))), "Should have reached deadline")
+        assertFalse(stoppedClock.awaitWithDeadline(stoppedClock.instant().minus(1.hours)), "Should have reached deadline")
     }
 
     @Test
@@ -56,13 +58,13 @@ class ClockUtilsTest {
     @Test
     fun `test waiting negative time for a deadline with incomplete future`() {
         val future = SettableFuture.create<Boolean>()
-        assertFalse(stoppedClock.awaitWithDeadline(stoppedClock.instant().minus(Duration.ofHours(1)), future), "Should have reached deadline")
+        assertFalse(stoppedClock.awaitWithDeadline(stoppedClock.instant().minus(1.hours), future), "Should have reached deadline")
     }
 
 
     @Test
     fun `test waiting for a deadline with future completed before wait`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val future = SettableFuture.create<Boolean>()
         completeNow(future)
         assertTrue(stoppedClock.awaitWithDeadline(advancedClock.instant(), future), "Should not have reached deadline")
@@ -70,7 +72,7 @@ class ClockUtilsTest {
 
     @Test
     fun `test waiting for a deadline with future completed after wait`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val future = SettableFuture.create<Boolean>()
         completeAfterWaiting(future)
         assertTrue(stoppedClock.awaitWithDeadline(advancedClock.instant(), future), "Should not have reached deadline")
@@ -78,38 +80,38 @@ class ClockUtilsTest {
 
     @Test
     fun `test waiting for a deadline with clock advance`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
-        advanceClockAfterWait(testClock, Duration.ofHours(1))
+        advanceClockAfterWait(testClock, 1.hours)
         assertFalse(testClock.awaitWithDeadline(advancedClock.instant()), "Should have reached deadline")
     }
 
     @Test
     fun `test waiting for a deadline with clock advance and incomplete future`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
         val future = SettableFuture.create<Boolean>()
-        advanceClockAfterWait(testClock, Duration.ofHours(1))
+        advanceClockAfterWait(testClock, 1.hours)
         assertFalse(testClock.awaitWithDeadline(advancedClock.instant(), future), "Should have reached deadline")
     }
 
     @Test
     fun `test waiting for a deadline with clock advance and complete future`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(2))
+        val advancedClock = Clock.offset(stoppedClock, 2.hours)
         val testClock = TestClock(stoppedClock)
         val future = SettableFuture.create<Boolean>()
-        advanceClockAfterWait(testClock, Duration.ofHours(1))
+        advanceClockAfterWait(testClock, 1.hours)
         completeAfterWaiting(future)
         assertTrue(testClock.awaitWithDeadline(advancedClock.instant(), future), "Should not have reached deadline")
     }
 
     @Test
     fun `test waiting for a deadline with multiple clock advance and incomplete future`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
         val future = SettableFuture.create<Boolean>()
         for (advance in 1..6) {
-            advanceClockAfterWait(testClock, Duration.ofMinutes(10))
+            advanceClockAfterWait(testClock, 10.minutes)
         }
         assertFalse(testClock.awaitWithDeadline(advancedClock.instant(), future), "Should have reached deadline")
     }
@@ -126,7 +128,7 @@ class ClockUtilsTest {
         }
 
         val testClock = TestClock(stoppedClock)
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(10))
+        val advancedClock = Clock.offset(stoppedClock, 10.hours)
 
         try {
             testClock.awaitWithDeadline(advancedClock.instant(), SettableFuture.create<Boolean>())
@@ -138,7 +140,7 @@ class ClockUtilsTest {
     @Test
     @Suspendable
     fun `test waiting for a deadline with multiple clock advance and incomplete JDK8 future on Fibers`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
         val future = CompletableFuture<Boolean>()
         val scheduler = FiberExecutorScheduler("test", executor)
@@ -151,7 +153,7 @@ class ClockUtilsTest {
                 while (fiber.state != Strand.State.TIMED_WAITING) {
                     Strand.sleep(1)
                 }
-                testClock.advanceBy(Duration.ofMinutes(10))
+                testClock.advanceBy(10.minutes)
             }).start()
         }
         assertFalse(future.getOrThrow(), "Should have reached deadline")
@@ -160,7 +162,7 @@ class ClockUtilsTest {
     @Test
     @Suspendable
     fun `test waiting for a deadline with multiple clock advance and incomplete Guava future on Fibers`() {
-        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(1))
+        val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
         val future = SettableFuture.create<Boolean>()
         val scheduler = FiberExecutorScheduler("test", executor)
@@ -173,7 +175,7 @@ class ClockUtilsTest {
                 while (fiber.state != Strand.State.TIMED_WAITING) {
                     Strand.sleep(1)
                 }
-                testClock.advanceBy(Duration.ofMinutes(10))
+                testClock.advanceBy(10.minutes)
             }).start()
         }
         assertFalse(future.getOrThrow(), "Should have reached deadline")

@@ -6,7 +6,7 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
-import net.corda.core.minutes
+import net.corda.core.utilities.minutes
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes

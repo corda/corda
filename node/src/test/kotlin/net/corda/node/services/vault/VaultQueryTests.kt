@@ -8,12 +8,12 @@ import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.toBase58String
-import net.corda.core.days
+import net.corda.core.utilities.days
 import net.corda.core.identity.Party
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.seconds
+import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.NonEmptySet

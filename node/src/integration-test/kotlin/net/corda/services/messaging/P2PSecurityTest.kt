@@ -5,7 +5,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.node.NodeInfo
-import net.corda.core.seconds
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.NonEmptySet
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate

@@ -2,7 +2,7 @@ package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.millis
+import net.corda.core.utilities.millis
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.concurrent.transpose
 import net.corda.testing.DUMMY_BANK_A

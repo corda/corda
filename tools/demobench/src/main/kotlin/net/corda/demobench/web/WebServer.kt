@@ -3,7 +3,7 @@ package net.corda.demobench.web
 import com.google.common.util.concurrent.RateLimiter
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.openFuture
-import net.corda.core.minutes
+import net.corda.core.utilities.minutes
 import net.corda.core.until
 import net.corda.core.utilities.loggerFor
 import net.corda.demobench.model.NodeConfig
