@@ -1,11 +1,10 @@
 package net.corda.node.utilities
 
-import net.corda.core.crypto.CertificateAndKeyPair
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.cert
+import net.corda.core.crypto.*
 import net.corda.core.internal.exists
 import net.corda.core.internal.read
 import net.corda.core.internal.write
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.IOException
 import java.io.InputStream
@@ -78,10 +77,6 @@ fun loadKeyStore(input: InputStream, storePassword: String): KeyStore {
  * but for SSL purposes this is recommended.
  * @param chain the sequence of certificates starting with the public key certificate for this key and extending to the root CA cert.
  */
-fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: CertPath) {
-    addOrReplaceKey(alias, key, password, chain.certificates.toTypedArray<Certificate>())
-}
-
 fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: Array<out X509CertificateHolder>) {
     addOrReplaceKey(alias, key, password, chain.map { it.cert }.toTypedArray<Certificate>())
 }
@@ -175,16 +170,12 @@ fun KeyStore.getSupportedKey(alias: String, keyPassword: String): PrivateKey {
 }
 
 class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
-    private val keyStore = storePath.read { KeyStoreUtilities.loadKeyStore(it, storePassword) }
-
-    fun certificateAndKeyPair(alias: String): CertificateAndKeyPair? {
-        return if (keyStore.containsAlias(alias)) keyStore.getCertificateAndKeyPair(alias, storePassword) else null
-    }
+    private val keyStore = storePath.read { loadKeyStore(it, storePassword) }
 
     private fun createCertificate(serviceName: X500Name, pubKey: PublicKey): CertPath {
         val clientCertPath = keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
         // Assume key password = store password.
-        val clientCA = certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)!!
+        val clientCA = certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
         // Create new keys and store in keystore.
         val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, pubKey)
         val certPath = CertificateFactory.getInstance("X509").generateCertPath(listOf(cert.cert) + clientCertPath)
@@ -206,6 +197,7 @@ class KeyStoreWrapper(private val storePath: Path, private val storePassword: St
         keyStore.save(storePath, storePassword)
     }
 
+    // Delegate methods to keystore. Sadly keystore doesn't have an interface.
     fun containsAlias(alias: String) = keyStore.containsAlias(alias)
 
     fun getX509Certificate(alias: String) = keyStore.getX509Certificate(alias)
@@ -213,4 +205,6 @@ class KeyStoreWrapper(private val storePath: Path, private val storePassword: St
     fun getCertificateChain(alias: String): Array<out Certificate> = keyStore.getCertificateChain(alias)
 
     fun getCertificate(alias: String): Certificate = keyStore.getCertificate(alias)
+
+    fun certificateAndKeyPair(alias: String) = keyStore.getCertificateAndKeyPair(alias, storePassword)
 }

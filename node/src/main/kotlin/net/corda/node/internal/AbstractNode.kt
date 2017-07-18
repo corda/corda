@@ -8,9 +8,9 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
-import net.corda.core.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.flatMap
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -28,7 +28,10 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.flows.*
+import net.corda.flows.CashExitFlow
+import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
+import net.corda.flows.IssuerFlow
 import net.corda.node.services.*
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
@@ -75,8 +78,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
-import java.security.PublicKey
-import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -239,8 +240,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filter {
                     val serviceType = getServiceType(it)
                     if (serviceType != null && info.serviceIdentities(serviceType).isEmpty()) {
-                        log.debug { "Ignoring ${it.name} as a Corda service since $serviceType is not one of our " +
-                                "advertised services" }
+                        log.debug {
+                            "Ignoring ${it.name} as a Corda service since $serviceType is not one of our " +
+                                    "advertised services"
+                        }
                         false
                     } else {
                         true
@@ -376,13 +379,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         _services.rpcFlows += scanResult
                 .getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class)
                 .filter { it.isUserInvokable() } +
-                    // Add any core flows here
-                    listOf(
-                            ContractUpgradeFlow::class.java,
-                            // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
-                            CashIssueFlow::class.java,
-                            CashExitFlow::class.java,
-                            CashPaymentFlow::class.java)
+                // Add any core flows here
+                listOf(
+                        ContractUpgradeFlow::class.java,
+                        // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
+                        CashIssueFlow::class.java,
+                        CashExitFlow::class.java,
+                        CashPaymentFlow::class.java)
     }
 
     /**
@@ -716,51 +719,55 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         if (!keyStore.containsAlias(privateKeyAlias)) {
             val privKeyFile = configuration.baseDirectory / privateKeyAlias
             val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
-            // TODO: this is here to smooth out the key storage transition, remove this in future release.
             // TODO: Remove use of [ServiceIdentityGenerator.generateToDisk].
             // Get keys from key file.
+            // TODO: this is here to smooth out the key storage transition, remove this migration in future release.
             if (privKeyFile.exists()) {
-                log.info("Migrating $privateKeyAlias from file to keystore.")
-                val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
-                // Check that the identity in the config file matches the identity file we have stored to disk.
-                // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
-                // things up for us.
-                if (myIdentity.name != serviceName)
-                    throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:$serviceName vs ${myIdentity.name}")
-                // Load the private key.
-                val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
-                keyStore.saveNewKeyPair(serviceName, privateKeyAlias, keyPair)
-                // Store composite key separately.
-                if (myIdentity.owningKey is CompositeKey) {
-                    keyStore.savePublicKey(serviceName, compositeKeyAlias, myIdentity.owningKey)
-                }
-                log.info("Finish migrating $privateKeyAlias from file to keystore.")
+                migrateKeysFromFile(keyStore, serviceName, pubIdentityFile, privKeyFile, privateKeyAlias, compositeKeyAlias)
             } else {
                 log.info("$privateKeyAlias not found in keystore ${configuration.nodeKeystore}, generating fresh key!")
                 keyStore.saveNewKeyPair(serviceName, privateKeyAlias, generateKeyPair())
             }
         }
 
-        val identityCertPathAndKey = keyStore.certificateAndKeyPair(privateKeyAlias)!!.let { (cert, keyPair) ->
-            val clientCertPath = keyStore.getCertificateChain(privateKeyAlias)
-            // Get keys from keystore.
-            val loadedServiceName = cert.subject
-            if (loadedServiceName != serviceName)
-                throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:$serviceName vs $loadedServiceName")
+        val (cert, keyPair) = keyStore.certificateAndKeyPair(privateKeyAlias)
 
-            val certPath = CertificateFactory.getInstance("X509").generateCertPath(clientCertPath.toList())
-            // Use composite key instead if exists
-            // TODO: Use configuration to indicate composite key should be used for the identity.
-            val publicKey = if (keyStore.containsAlias(compositeKeyAlias)) {
-                Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
-            } else {
-                keyPair.public
-            }
-            Pair(PartyAndCertificate(loadedServiceName, publicKey, cert, certPath), keyPair)
+        // Get keys from keystore.
+        val loadedServiceName = cert.subject
+        if (loadedServiceName != serviceName)
+            throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:$serviceName vs $loadedServiceName")
+
+        val certPath = CertificateFactory.getInstance("X509").generateCertPath(keyStore.getCertificateChain(privateKeyAlias).toList())
+        // Use composite key instead if exists
+        // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
+        val publicKey = if (keyStore.containsAlias(compositeKeyAlias)) {
+            Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
+        } else {
+            keyPair.public
         }
 
-        partyKeys += identityCertPathAndKey.second
-        return identityCertPathAndKey
+        partyKeys += keyPair
+        return Pair(PartyAndCertificate(loadedServiceName, publicKey, cert, certPath), keyPair)
+    }
+
+    private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
+                                    pubIdentityFile: Path, privKeyFile: Path,
+                                    privateKeyAlias: String, compositeKeyAlias: String) {
+        log.info("Migrating $privateKeyAlias from file to keystore...")
+        val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
+        // Check that the identity in the config file matches the identity file we have stored to disk.
+        // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
+        // things up for us.
+        if (myIdentity.name != serviceName)
+            throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:$serviceName vs ${myIdentity.name}")
+        // Load the private key.
+        val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
+        keyStore.saveNewKeyPair(serviceName, privateKeyAlias, keyPair)
+        // Store composite key separately.
+        if (myIdentity.owningKey is CompositeKey) {
+            keyStore.savePublicKey(serviceName, compositeKeyAlias, myIdentity.owningKey)
+        }
+        log.info("Finish migrating $privateKeyAlias from file to keystore.")
     }
 
     private fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair): PartyAndCertificate {
