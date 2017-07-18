@@ -1,6 +1,4 @@
-package net.corda.core.utilities
-
-import net.corda.core.codePointsString
+package net.corda.core.internal
 
 /**
  * A simple wrapper class that contains icons and support for printing them only when we're connected to a terminal.
@@ -79,4 +77,9 @@ object Emoji {
         }
     }
 
+    private fun codePointsString(vararg codePoints: Int): String {
+        val builder = StringBuilder()
+        codePoints.forEach { builder.append(Character.toChars(it)) }
+        return builder.toString()
+    }
 }

@@ -1,4 +1,4 @@
-package net.corda.core.utilities
+package net.corda.core.internal
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.withLock

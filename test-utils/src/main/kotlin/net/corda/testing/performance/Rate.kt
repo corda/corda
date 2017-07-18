@@ -1,4 +1,4 @@
-package net.corda.core.utilities
+package net.corda.testing.performance
 
 import java.time.Duration
 import java.time.temporal.ChronoUnit
@@ -21,9 +21,9 @@ data class Rate(
     /**
      * Converts the number of events to the given unit.
      */
-    operator fun times(inUnit: TimeUnit): Long {
-        return inUnit.convert(numberOfEvents, perTimeUnit)
-    }
+    operator fun times(inUnit: TimeUnit): Long = inUnit.convert(numberOfEvents, perTimeUnit)
+
+    override fun toString(): String = "$numberOfEvents / ${perTimeUnit.name.dropLast(1).toLowerCase()}"  // drop the "s" at the end
 }
 
 operator fun Long.div(timeUnit: TimeUnit) = Rate(this, timeUnit)
