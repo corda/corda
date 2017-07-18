@@ -7,7 +7,6 @@ import net.corda.core.elapsedTime
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize

@@ -5,10 +5,10 @@ import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.testing.NullPublicKey
-import net.corda.core.seconds
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.seconds
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.LogHelper
 import net.corda.node.services.transactions.PersistentUniquenessProvider
