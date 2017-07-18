@@ -8,11 +8,9 @@ import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.flows.FlowException
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.write
-import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -195,17 +193,6 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
 
     fun checkNotLocked() = check(!lock.isHeldByCurrentThread)
 }
-
-/**
- * This represents a transient exception or condition that might no longer be thrown if the operation is re-run or called
- * again.
- *
- * We avoid the use of the word transient here to hopefully reduce confusion with the term in relation to (Java) serialization.
- */
-@CordaSerializable
-abstract class RetryableException(message: String) : FlowException(message)
-
-
 
 /**
  * Given a path to a zip file, extracts it to the given directory.
