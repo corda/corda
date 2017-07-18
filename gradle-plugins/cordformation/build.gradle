@@ -61,3 +61,7 @@ jar {
         rename { 'net/corda/plugins/runnodes.jar' }
     }
 }
+
+publish {
+    name project.name
+}

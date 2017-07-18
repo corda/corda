@@ -20,13 +20,13 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.testing.DUMMY_PUBKEY_1
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import org.bouncycastle.asn1.x500.X500Name
 import java.security.PublicKey
-import java.time.Duration
 import java.time.Instant
 
 // We group our two flows inside a singleton object to indicate that they work
@@ -280,11 +280,11 @@ object FlowCookbook {
             // We can also define a time window as an ``Instant`` +/- a time
             // tolerance (e.g. 30 seconds):
             // DOCSTART 42
-            val ourTimeWindow2: TimeWindow = TimeWindow.withTolerance(Instant.now(), Duration.ofSeconds(30))
+            val ourTimeWindow2: TimeWindow = TimeWindow.withTolerance(Instant.now(), 30.seconds)
             // DOCEND 42
             // Or as a start-time plus a duration:
             // DOCSTART 43
-            val ourTimeWindow3: TimeWindow = TimeWindow.fromStartAndDuration(Instant.now(), Duration.ofSeconds(30))
+            val ourTimeWindow3: TimeWindow = TimeWindow.fromStartAndDuration(Instant.now(), 30.seconds)
             // DOCEND 43
 
             /**-----------------------
@@ -326,7 +326,7 @@ object FlowCookbook {
             // DOCEND 44
             // Or as a start time plus a duration (e.g. 45 seconds):
             // DOCSTART 45
-            regTxBuilder.setTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(45))
+            regTxBuilder.setTimeWindow(serviceHub.clock.instant(), 45.seconds)
             // DOCEND 45
 
             /**----------------------
