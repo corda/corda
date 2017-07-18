@@ -98,5 +98,5 @@ jar {
 }
 
 publish {
-    name = jar.baseName
+    name jar.baseName
 }

@@ -30,13 +30,14 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
-import org.eclipse.jetty.util.BlockingArrayQueue
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
 import java.security.KeyPair
 import java.time.Instant
+import java.util.*
+import java.util.concurrent.LinkedBlockingQueue
 
 abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> {
     lateinit var mockNet: MockNetwork
@@ -222,9 +223,9 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         return response
     }
 
-    private fun MockNode.subscribe(): List<Update> {
+    private fun MockNode.subscribe(): Queue<Update> {
         val request = SubscribeRequest(true, network.myAddress)
-        val updates = BlockingArrayQueue<Update>()
+        val updates = LinkedBlockingQueue<Update>()
         services.networkService.addMessageHandler(PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
             updates += message.data.deserialize<Update>()
         }
