@@ -19,6 +19,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.flows.*
 import java.util.*
 
+// TODO: add doc tags and associated tutorial text.
 object CustomVaultQuery {
 
     @CordaService
@@ -47,6 +48,7 @@ object CustomVaultQuery {
         """
             log.info("SQL to execute: $nativeQuery")
             val session = services.jdbcSession()
+            // TODO: illustrate and document usage of Native Vs Prepared Vs Callable (Stored Procs) statements
             val prepStatement = session.prepareStatement(nativeQuery)
             val rs = prepStatement.executeQuery()
             var topUpLimits: MutableList<Amount<Currency>> = mutableListOf()
