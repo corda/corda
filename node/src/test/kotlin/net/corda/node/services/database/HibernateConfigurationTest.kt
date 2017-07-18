@@ -84,7 +84,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
                 }
-                override fun jdbcSession(): Connection = database.createSession()
+                override fun jdbcSession() = database.createSession()
             }
             hibernatePersister = services.hibernatePersister
         }
