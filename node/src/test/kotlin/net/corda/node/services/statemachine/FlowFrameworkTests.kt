@@ -31,6 +31,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.*
@@ -71,19 +72,27 @@ class FlowFrameworkTests {
 
     @Before
     fun start() {
-        val nodes = mockNet.createTwoNodes()
-        node1 = nodes.first
-        node2 = nodes.second
+        node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+        node2 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
+        // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
         val notaryService = ServiceInfo(ValidatingNotaryService.type, getTestX509Name("notary-service-2000"))
         val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
-        notary1 = mockNet.createNotaryNode(networkMapAddr = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
-        notary2 = mockNet.createNotaryNode(networkMapAddr = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
+        notary1 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
+        notary2 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
 
         mockNet.messagingNetwork.receivedMessages.toSessionTransfers().forEach { sessionTransfers += it }
         mockNet.runNetwork()
+
+        // We don't create a network map, so manually handle registrations
+        val nodes = listOf(node1, node2, notary1, notary2)
+        nodes.forEach { node ->
+            nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
+                node.services.identityService.registerIdentity(identity)
+            }
+        }
     }
 
     @After

@@ -42,7 +42,9 @@ class DataVendingServiceTests {
 
     @Test
     fun `notify of transaction`() {
-        val (vaultServiceNode, registerNode) = mockNet.createTwoNodes()
+        val nodes = mockNet.createSomeNodes(2)
+        val vaultServiceNode = nodes.partyNodes[0]
+        val registerNode = nodes.partyNodes[1]
         val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = registerNode.info.legalIdentity.ref(1)
         mockNet.runNetwork()
@@ -70,7 +72,9 @@ class DataVendingServiceTests {
      */
     @Test
     fun `notify failure`() {
-        val (vaultServiceNode, registerNode) = mockNet.createTwoNodes()
+        val nodes = mockNet.createSomeNodes(2)
+        val vaultServiceNode = nodes.partyNodes[0]
+        val registerNode = nodes.partyNodes[1]
         val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = MEGA_CORP.ref(1)
         mockNet.runNetwork()
