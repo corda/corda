@@ -346,10 +346,13 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             mapOf(Pair(notaryServiceInfo, notaryKeyPair))
         else
             null
-        return Pair(
+        val nodes = Pair(
                 createNode(null, -1, nodeFactory, true, firstNodeName, notaryOverride, BigInteger.valueOf(random63BitValue()), ServiceInfo(NetworkMapService.type), notaryServiceInfo),
                 createNode(nodes[0].network.myAddress, -1, nodeFactory, true, secondNodeName)
         )
+        nodes.first.services.identityService.registerIdentity(nodes.second.services.myInfo.legalIdentityAndCert)
+        nodes.second.services.identityService.registerIdentity(nodes.first.services.myInfo.legalIdentityAndCert)
+        return nodes
     }
 
     /**

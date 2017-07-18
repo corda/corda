@@ -327,8 +327,9 @@ class FlowFrameworkTests {
                 anonymous = false))
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1..3) {
-            node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity, anonymous = false))
+            val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity, anonymous = false))
             mockNet.runNetwork()
+            flow.resultFuture.getOrThrow()
         }
         val endpoint = mockNet.messagingNetwork.endpoint(notary1.network.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
         val party1Info = notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!
