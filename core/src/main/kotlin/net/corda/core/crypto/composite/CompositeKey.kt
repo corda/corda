@@ -59,7 +59,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
         }
     }
 
-    val children = children.sorted()
+    val children: List<NodeAndWeight> = children.sorted()
 
     init {
         // TODO: replace with the more extensive, but slower, checkValidity() test.

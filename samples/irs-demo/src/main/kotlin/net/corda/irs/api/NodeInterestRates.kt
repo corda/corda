@@ -8,12 +8,12 @@ import net.corda.contracts.Tenor
 import net.corda.contracts.math.CubicSplineInterpolator
 import net.corda.contracts.math.Interpolator
 import net.corda.contracts.math.InterpolatorFactory
-import net.corda.core.RetryableException
 import net.corda.core.ThreadBox
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.keys
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.StartableByRPC
@@ -192,7 +192,7 @@ object NodeInterestRates {
     }
 
     // TODO: can we split into two?  Fix not available (retryable/transient) and unknown (permanent)
-    class UnknownFix(val fix: FixOf) : RetryableException("Unknown fix: $fix")
+    class UnknownFix(val fix: FixOf) : FlowException("Unknown fix: $fix")
 
     // Upload the raw fix data via RPC. In a real system the oracle data would be taken from a database.
     @StartableByRPC
