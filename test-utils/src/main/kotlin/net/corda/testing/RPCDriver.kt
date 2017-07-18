@@ -12,7 +12,8 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseNetworkHostAndPort
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.concurrent.fork
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.map
 import net.corda.testing.driver.ProcessUtilities
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer

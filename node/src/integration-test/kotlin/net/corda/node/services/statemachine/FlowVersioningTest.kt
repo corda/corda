@@ -5,6 +5,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.concurrent.transpose
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.core.utilities.unwrap

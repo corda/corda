@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.transpose
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.elapsedTime
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo

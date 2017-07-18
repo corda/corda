@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.checkedAdd
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction

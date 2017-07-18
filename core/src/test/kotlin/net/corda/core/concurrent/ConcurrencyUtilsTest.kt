@@ -1,6 +1,8 @@
 package net.corda.core.concurrent
 
 import com.nhaarman.mockito_kotlin.*
+import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.internal.concurrent.openFuture
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.slf4j.Logger
@@ -8,7 +10,6 @@ import java.io.EOFException
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConcurrencyUtilsTest {
@@ -112,53 +113,5 @@ class ConcurrencyUtilsTest {
         }.isSameAs(x)
         assertEquals(emptyList<Any?>(), successes)
         assertEquals(listOf<Any?>(e), failures)
-    }
-}
-
-class TransposeTest {
-    private val a = openFuture<Int>()
-    private val b = openFuture<Int>()
-    private val c = openFuture<Int>()
-    private val f = listOf(a, b, c).transpose()
-    @Test
-    fun `transpose empty collection`() {
-        assertEquals(emptyList(), emptyList<CordaFuture<*>>().transpose().getOrThrow())
-    }
-
-    @Test
-    fun `transpose values are in the same order as the collection of futures`() {
-        b.set(2)
-        c.set(3)
-        assertFalse(f.isDone)
-        a.set(1)
-        assertEquals(listOf(1, 2, 3), f.getOrThrow())
-    }
-
-    @Test
-    fun `transpose throwables are reported in the order they were thrown`() {
-        val ax = Exception()
-        val bx = Exception()
-        val cx = Exception()
-        b.setException(bx)
-        c.setException(cx)
-        assertFalse(f.isDone)
-        a.setException(ax)
-        assertThatThrownBy { f.getOrThrow() }.isSameAs(bx)
-        assertEquals(listOf(cx, ax), bx.suppressed.asList())
-        assertEquals(emptyList(), ax.suppressed.asList())
-        assertEquals(emptyList(), cx.suppressed.asList())
-    }
-
-    @Test
-    fun `transpose mixture of outcomes`() {
-        val bx = Exception()
-        val cx = Exception()
-        b.setException(bx)
-        c.setException(cx)
-        assertFalse(f.isDone)
-        a.set(100) // Discarded.
-        assertThatThrownBy { f.getOrThrow() }.isSameAs(bx)
-        assertEquals(listOf(cx), bx.suppressed.asList())
-        assertEquals(emptyList(), cx.suppressed.asList())
     }
 }

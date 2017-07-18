@@ -1,5 +1,6 @@
 package net.corda.core
 
+import net.corda.core.internal.concurrent.getOrThrow
 import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import rx.subjects.PublishSubject

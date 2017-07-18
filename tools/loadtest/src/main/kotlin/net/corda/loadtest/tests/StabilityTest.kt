@@ -4,6 +4,8 @@ import net.corda.client.mock.Generator
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.USD
 import net.corda.core.flows.FlowException
+import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.CashFlowCommand

@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.openFuture
 import net.corda.core.concurrent.transpose
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
@@ -13,6 +12,10 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction

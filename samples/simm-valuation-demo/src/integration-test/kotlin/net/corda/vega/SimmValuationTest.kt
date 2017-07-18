@@ -3,6 +3,7 @@ package net.corda.vega
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.concurrent.transpose
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY

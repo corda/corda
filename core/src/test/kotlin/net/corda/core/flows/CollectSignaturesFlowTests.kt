@@ -6,6 +6,7 @@ import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.requireThat
 import net.corda.testing.contracts.DummyContract
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.testing.MINI_CORP_KEY

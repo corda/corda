@@ -2,6 +2,7 @@ package net.corda.bank.api
 
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.currency
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes

@@ -3,6 +3,7 @@ package net.corda.core.flows
 import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.utilities.opaque
 import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.DUMMY_NOTARY_KEY

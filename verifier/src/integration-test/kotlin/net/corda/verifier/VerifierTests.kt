@@ -8,6 +8,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.concurrent.transpose
+import net.corda.core.internal.concurrent.map
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow

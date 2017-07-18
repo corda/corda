@@ -1,6 +1,7 @@
 package net.corda.docs
 
 import net.corda.core.contracts.*
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.toFuture

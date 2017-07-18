@@ -6,6 +6,7 @@ import joptsimple.OptionException
 import net.corda.core.*
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.orgName
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.node.VersionInfo

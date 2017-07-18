@@ -9,6 +9,7 @@ import net.corda.core.utilities.seconds
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.StateReplacementException
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService

@@ -1,6 +1,8 @@
 package net.corda.core.concurrent
 
 import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.concurrent.match
+import net.corda.core.internal.concurrent.openFuture
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
@@ -20,42 +22,12 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
 
 /** Invoke [getOrThrow] and pass the value/throwable to success/failure respectively. */
 fun <V, W> Future<V>.match(success: (V) -> W, failure: (Throwable) -> W): W {
-    return success(try {
+    val value = try {
         getOrThrow()
     } catch (t: Throwable) {
         return failure(t)
-    })
-}
-
-/**
- * If all of the given futures succeed, the returned future's outcome is a list of all their values.
- * The values are in the same order as the futures in the collection, not the order of completion.
- * If at least one given future fails, the returned future's outcome is the first throwable that was thrown.
- * Any subsequent throwables are added to the first one as suppressed throwables, in the order they are thrown.
- * If no futures were given, the returned future has an immediate outcome of empty list.
- * Otherwise the returned future does not have an outcome until all given futures have an outcome, so hangs propagate.
- * Unlike Guava's Futures.allAsList, this method never hides failures/hangs subsequent to the first failure.
- */
-fun <V> Collection<CordaFuture<V>>.transpose(): CordaFuture<List<V>> = CordaFutureImpl<List<V>>().also { g ->
-    if (isEmpty()) {
-        g.set(emptyList())
-    } else {
-        val stateLock = Any()
-        var failure: Throwable? = null
-        var remaining = size
-        forEach {
-            it.then {
-                synchronized(stateLock) {
-                    it.match({}, {
-                        failure?.addSuppressed(it) ?: run { failure = it }
-                    })
-                    if (--remaining == 0) {
-                        failure?.let { g.setException(it) } ?: run { g.set(map { it.getOrThrow() }) }
-                    }
-                }
-            }
-        }
     }
+    return success(value)
 }
 
 /**

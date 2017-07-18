@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
 import net.corda.testing.ALICE

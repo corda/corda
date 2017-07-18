@@ -1,6 +1,7 @@
 package net.corda.testing.driver
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.node.services.ServiceInfo

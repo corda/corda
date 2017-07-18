@@ -8,6 +8,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.InputStreamAndHash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault

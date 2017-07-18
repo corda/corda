@@ -6,10 +6,11 @@ package net.corda.core
 import com.google.common.base.Throwables
 import com.google.common.io.ByteStreams
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.openFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowException
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.write

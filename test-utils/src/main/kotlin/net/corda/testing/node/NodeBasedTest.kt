@@ -1,11 +1,14 @@
 package net.corda.testing.node
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.fork
 import net.corda.core.concurrent.transpose
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo

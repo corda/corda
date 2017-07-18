@@ -1,8 +1,10 @@
 package net.corda.client.rpc
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.doneFuture
-import net.corda.core.concurrent.openFuture
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.nodeapi.RPCSinceVersion

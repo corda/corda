@@ -4,6 +4,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.transpose
 import net.corda.core.contracts.DOLLARS
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault

@@ -1,5 +1,6 @@
 package net.corda.netmap.simulation
 
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.testing.LogHelper
 import org.junit.Test
 

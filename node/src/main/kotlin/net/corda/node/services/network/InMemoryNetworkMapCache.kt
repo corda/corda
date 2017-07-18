@@ -3,9 +3,10 @@ package net.corda.node.services.network
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.openFuture
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -54,8 +55,8 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
     override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
-    private val _registrationFuture = openFuture<Unit>()
-    override val mapServiceRegistered: CordaFuture<Unit> get() = _registrationFuture
+    private val _registrationFuture = openFuture<Void?>()
+    override val mapServiceRegistered: CordaFuture<Void?> get() = _registrationFuture
 
     private var registeredForPush = false
     protected var registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
@@ -121,7 +122,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
             nodes?.forEach { processRegistration(it) }
             Unit
         }
-        _registrationFuture.captureLater(future)
+        _registrationFuture.captureLater(future.map { null })
 
         return future
     }
@@ -156,7 +157,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
         val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, address).map {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }
-        _registrationFuture.captureLater(future)
+        _registrationFuture.captureLater(future.map { null })
         return future
     }
 
@@ -180,6 +181,6 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
 
     @VisibleForTesting
     override fun runWithoutMapService() {
-        _registrationFuture.set(Unit)
+        _registrationFuture.set(null)
     }
 }

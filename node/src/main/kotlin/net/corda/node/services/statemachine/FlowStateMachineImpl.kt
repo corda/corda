@@ -7,13 +7,13 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.DeclaredField.Companion.declaredField
 import net.corda.core.abbreviate
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.OpenFuture
-import net.corda.core.concurrent.openFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent

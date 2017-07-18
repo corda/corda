@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.flows.AnonymisedIdentity
 import net.corda.testing.ALICE
 import net.corda.testing.BOB

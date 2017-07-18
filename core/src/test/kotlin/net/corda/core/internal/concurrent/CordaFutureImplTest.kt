@@ -1,13 +1,15 @@
-package net.corda.core.concurrent
+package net.corda.core.internal.concurrent
 
 import com.nhaarman.mockito_kotlin.*
+import net.corda.core.concurrent.CordaFuture
+import org.assertj.core.api.Assertions
 import org.junit.Test
-import kotlin.test.assertEquals
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.slf4j.Logger
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CordaFutureTest {
@@ -18,7 +20,7 @@ class CordaFutureTest {
             assertEquals(100, e.fork { 100 }.getOrThrow())
             val x = Exception()
             val f = e.fork { throw x }
-            assertThatThrownBy { f.getOrThrow() }.isSameAs(x)
+            Assertions.assertThatThrownBy { f.getOrThrow() }.isSameAs(x)
         } finally {
             e.shutdown()
         }
@@ -51,7 +53,7 @@ class CordaFutureTest {
             val x = Exception()
             val g = f.map { throw x }
             f.set(100)
-            assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
+            Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
         }
         run {
             val block = mock<(Any?) -> Any?>()
@@ -59,7 +61,7 @@ class CordaFutureTest {
             val g = f.map(block)
             val x = Exception()
             f.setException(x)
-            assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
+            Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
             verifyNoMoreInteractions(block)
         }
     }
@@ -77,14 +79,14 @@ class CordaFutureTest {
             val x = Exception()
             val g = f.flatMap { CordaFutureImpl<Void>().apply { setException(x) } }
             f.set(100)
-            assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
+            Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
         }
         run {
             val f = CordaFutureImpl<Int>()
             val x = Exception()
             val g: CordaFuture<Void> = f.flatMap { throw x }
             f.set(100)
-            assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
+            Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
         }
         run {
             val block = mock<(Any?) -> CordaFuture<*>>()
@@ -92,7 +94,7 @@ class CordaFutureTest {
             val g = f.flatMap(block)
             val x = Exception()
             f.setException(x)
-            assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
+            Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
             verifyNoMoreInteractions(block)
         }
     }
@@ -108,5 +110,53 @@ class CordaFutureTest {
             // Do nothing.
         }
         verify(log).error(any(), same(throwable))
+    }
+}
+
+class TransposeTest {
+    private val a = openFuture<Int>()
+    private val b = openFuture<Int>()
+    private val c = openFuture<Int>()
+    private val f = listOf(a, b, c).transpose()
+    @Test
+    fun `transpose empty collection`() {
+        assertEquals(emptyList(), emptyList<CordaFuture<*>>().transpose().getOrThrow())
+    }
+
+    @Test
+    fun `transpose values are in the same order as the collection of futures`() {
+        b.set(2)
+        c.set(3)
+        assertFalse(f.isDone)
+        a.set(1)
+        assertEquals(listOf(1, 2, 3), f.getOrThrow())
+    }
+
+    @Test
+    fun `transpose throwables are reported in the order they were thrown`() {
+        val ax = Exception()
+        val bx = Exception()
+        val cx = Exception()
+        b.setException(bx)
+        c.setException(cx)
+        assertFalse(f.isDone)
+        a.setException(ax)
+        Assertions.assertThatThrownBy { f.getOrThrow() }.isSameAs(bx)
+        assertEquals(listOf(cx, ax), bx.suppressed.asList())
+        assertEquals(emptyList(), ax.suppressed.asList())
+        assertEquals(emptyList(), cx.suppressed.asList())
+    }
+
+    @Test
+    fun `transpose mixture of outcomes`() {
+        val bx = Exception()
+        val cx = Exception()
+        b.setException(bx)
+        c.setException(cx)
+        assertFalse(f.isDone)
+        a.set(100) // Discarded.
+        Assertions.assertThatThrownBy { f.getOrThrow() }.isSameAs(bx)
+        assertEquals(listOf(cx), bx.suppressed.asList())
+        assertEquals(emptyList(), cx.suppressed.asList())
     }
 }

@@ -2,7 +2,6 @@ package net.corda.netmap.simulation
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.locationOrNull
-import net.corda.core.concurrent.doneFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CityDatabase
@@ -10,6 +9,8 @@ import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
 import net.corda.core.concurrent.transpose
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.flatMap
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR

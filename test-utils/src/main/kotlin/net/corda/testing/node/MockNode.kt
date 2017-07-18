@@ -3,13 +3,14 @@ package net.corda.testing.node
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.concurrent.doneFuture
 import net.corda.core.concurrent.getOrThrow
 import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.div

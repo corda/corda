@@ -3,11 +3,11 @@ package net.corda.node.services.transactions
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.Timer
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.OpenFuture
-import net.corda.core.concurrent.openFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
