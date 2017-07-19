@@ -458,7 +458,7 @@ object FlowCookbook {
             -----------------------**/
             progressTracker.currentStep = SIGS_GATHERING
 
-            // TODO: Use actual anonymous identities
+            // The states we use do not have participants, so anonymisation doesn't make sense here
             val identities = listOf(serviceHub.myInfo.legalIdentityAndCert, serviceHub.identityService.certificateFromParty(counterparty)!!)
                     .map { node ->
                         Pair(node.party, node.toAnonymous())
@@ -469,7 +469,7 @@ object FlowCookbook {
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, identities, setOf(otherKey), SIGS_GATHERING.childProgressTracker()))
+            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, setOf(otherKey), SIGS_GATHERING.childProgressTracker()))
             // DOCEND 15
 
             /**-----------------------

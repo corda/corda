@@ -67,6 +67,8 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
                             val outputIdentities: Map<Party, AnonymousPartyAndPath>,
                             val myInputKeys: Iterable<PublicKey>,
                             override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
+    constructor(partiallySignedTx: SignedTransaction, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, emptyMap(), emptyList(), progressTracker)
+    constructor(partiallySignedTx: SignedTransaction, myInputKeys: Iterable<PublicKey>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, emptyMap(), myInputKeys, progressTracker)
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counterparties.")
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")
@@ -78,7 +80,8 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
 
     @Suspendable override fun call(): SignedTransaction {
         val myInputIdentities: List<PartyAndCertificate> = myInputKeys.map { serviceHub.identityService.certificateFromKey(it) }.requireNoNulls()
-        val myKeys = (myInputKeys + outputIdentities[serviceHub.myInfo.legalIdentity]!!.party.owningKey).toSet()
+        val myOutputIdentity = outputIdentities[serviceHub.myInfo.legalIdentity]?.party ?: serviceHub.myInfo.legalIdentity
+        val myKeys = (myInputKeys + myOutputIdentity.owningKey).toSet()
 
         // Check the signatures which have already been provided and that the transaction is valid.
         // Usually just the Initiator and possibly an oracle would have signed at this point.
