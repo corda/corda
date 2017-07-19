@@ -34,7 +34,7 @@ data class PartyAndCertificate(val party: Party,
      * want to use well known identities as if they're anonymous identities.
      */
     fun toAnonymisedIdentity(): AnonymisedIdentity {
-        return AnonymisedIdentity(certPath, certificate, party.owningKey)
+        return AnonymisedIdentity(party.owningKey, certificate, certPath)
     }
     override fun toString(): String = party.toString()
 }
