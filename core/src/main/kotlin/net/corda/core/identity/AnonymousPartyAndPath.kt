@@ -9,8 +9,12 @@ import java.security.cert.X509Certificate
 
 /**
  * A pair of an anonymous party and the certificate path to prove it is owned by a well known identity. This class
- * does not validate the certificate path matches the party, and should not be trusted without being verified by the
- * [IdentityService].
+ * does not validate the certificate path matches the party, and should not be trusted without being verified, for example
+ * using [IdentityService.verifyAnonymousIdentity].
+ *
+ * Although similar to [PartyAndCertificate], the two distinct types exist in order to minimise risk of mixing up
+ * confidential and well known identities. In contrast to [PartyAndCertificate] equality tests are based on the anonymous
+ * party's key rather than name, which is the appropriate test for confidential parties but not for well known identities.
  */
 @CordaSerializable
 data class AnonymousPartyAndPath(

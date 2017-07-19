@@ -130,9 +130,11 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
 
     override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = partyToPath[anonymousParty]?.first
 
+    override fun registerAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate = verifyAndRegisterAnonymousIdentity(anonymousIdentity,  party)
+
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun registerAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate {
-        val fullParty = verifyAnonymousIdentity(anonymousIdentity, party)
+    override fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party): PartyAndCertificate {
+        val fullParty = verifyAnonymousIdentity(anonymousIdentity, wellKnownIdentity)
         val certificate = X509CertificateHolder(anonymousIdentity.certPath.certificates.first().encoded)
         log.trace { "Registering identity $fullParty" }
 

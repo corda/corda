@@ -105,13 +105,13 @@ class InMemoryIdentityServiceTests {
 
         // Now we have identities, construct the service and let it know about both
         val service = InMemoryIdentityService(setOf(alice), emptyMap(), trustRoot.certificate.cert)
-        service.registerAnonymousIdentity(aliceTxIdentity, alice.party)
+        service.verifyAndRegisterAnonymousIdentity(aliceTxIdentity, alice.party)
 
         var actual = service.anonymousFromKey(aliceTxIdentity.party.owningKey)
         assertEquals<AnonymousPartyAndPath>(aliceTxIdentity, actual!!)
 
         assertNull(service.anonymousFromKey(bobTxIdentity.party.owningKey))
-        service.registerAnonymousIdentity(bobTxIdentity, bob.party)
+        service.verifyAndRegisterAnonymousIdentity(bobTxIdentity, bob.party)
         actual = service.anonymousFromKey(bobTxIdentity.party.owningKey)
         assertEquals<AnonymousPartyAndPath>(bobTxIdentity, actual!!)
     }
@@ -136,10 +136,10 @@ class InMemoryIdentityServiceTests {
 
         // Now we have identities, construct the service and let it know about both
         val service = InMemoryIdentityService(setOf(alice, bob), emptyMap(), trustRoot.certificate.cert)
-        service.registerAnonymousIdentity(aliceTxIdentity, alice.party)
+        service.verifyAndRegisterAnonymousIdentity(aliceTxIdentity, alice.party)
 
         val anonymousBob = AnonymousPartyAndPath(AnonymousParty(bobTxKey.public),bobCertPath)
-        service.registerAnonymousIdentity(anonymousBob, bob.party)
+        service.verifyAndRegisterAnonymousIdentity(anonymousBob, bob.party)
 
         // Verify that paths are verified
         service.assertOwnership(alice.party, aliceTxIdentity.party)

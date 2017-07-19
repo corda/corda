@@ -38,7 +38,7 @@ class TransactionKeyFlow(val otherSide: Party,
             identities.put(otherSide, legalIdentityAnonymous)
         } else {
             val otherSideAnonymous = sendAndReceive<AnonymousPartyAndPath>(otherSide, legalIdentityAnonymous).unwrap { validateIdentity(otherSide, it) }
-            serviceHub.identityService.registerAnonymousIdentity(otherSideAnonymous, otherSide)
+            serviceHub.identityService.verifyAndRegisterAnonymousIdentity(otherSideAnonymous, otherSide)
             identities.put(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous)
             identities.put(otherSide, otherSideAnonymous)
         }

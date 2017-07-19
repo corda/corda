@@ -35,7 +35,7 @@ fun freshCertificate(identityService: IdentityService,
     val certFactory = CertificateFactory.getInstance("X509")
     val ourCertPath = certFactory.generateCertPath(listOf(ourCertificate.cert) + issuer.certPath.certificates)
     val anonymisedIdentity = AnonymousPartyAndPath(subjectPublicKey, ourCertPath)
-    identityService.registerAnonymousIdentity(anonymisedIdentity,
+    identityService.verifyAndRegisterAnonymousIdentity(anonymisedIdentity,
             issuer.party)
     return anonymisedIdentity
 }

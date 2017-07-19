@@ -38,7 +38,19 @@ interface IdentityService {
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    @Deprecated("Use verifyAndRegisterAnonymousIdentity() instead, which is the same function with a better name")
     fun registerAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
+
+    /**
+     * Verify and then store an anonymous identity.
+     *
+     * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
+     * @param wellKnownIdentity well known party the anonymised party must represent.
+     * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
+     * certificate chain for the anonymous party.
+     */
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party): PartyAndCertificate
 
     /**
      * Verify an anonymous identity.
