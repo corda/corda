@@ -4,10 +4,10 @@ import co.paralleluniverse.common.util.VisibleForTesting
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.NonEmptySet
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.getTestX509Name
@@ -18,7 +18,7 @@ import java.math.BigInteger
 /**
  * Network map cache with no backing map service.
  */
-class MockNetworkMapCache(serviceHub: ServiceHub) : InMemoryNetworkMapCache(false, serviceHub, null) {
+class MockNetworkMapCache(serviceHub: ServiceHubInternal) : InMemoryNetworkMapCache(false, serviceHub) {
     private companion object {
         val BANK_C = getTestPartyAndCertificate(getTestX509Name("Bank C"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
         val BANK_D = getTestPartyAndCertificate(getTestX509Name("Bank D"), entropyToKeyPair(BigInteger.valueOf(2000)).public)

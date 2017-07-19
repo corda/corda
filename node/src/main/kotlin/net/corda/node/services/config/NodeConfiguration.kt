@@ -86,12 +86,10 @@ data class FullNodeConfiguration(
     }
 
     fun calculateServices(): Set<ServiceInfo> {
-        val advertisedServices = extraAdvertisedServiceIds
+        return extraAdvertisedServiceIds
                 .filter(String::isNotBlank)
                 .map { ServiceInfo.parse(it) }
                 .toMutableSet()
-        if (networkMapService == null) advertisedServices += ServiceInfo(NetworkMapService.type)
-        return advertisedServices
     }
 }
 

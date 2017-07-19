@@ -21,6 +21,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.NetworkCacheError
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.createMessage
@@ -51,8 +52,7 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 open class InMemoryNetworkMapCache(
         val loadNetworkCacheDB: Boolean = false,
-        private val serviceHub: ServiceHub?,
-        schemaService: SchemaService? = null) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+        private val serviceHub: ServiceHubInternal?) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<InMemoryNetworkMapCache>()
     }
@@ -71,11 +71,11 @@ open class InMemoryNetworkMapCache(
     override val mapServiceRegistered: CordaFuture<Void?> get() = _registrationFuture
     protected val registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
     private var _loadDBSuccess: Boolean = false
-    override val loadDBSuccess get() = _loadDBSuccess //todo move it to persistent network map cache
+    override val loadDBSuccess get() = _loadDBSuccess
 
     init {
-        schemaService?.let {
-            sessionFactory = HibernateConfiguration(schemaService).sessionFactoryForRegisteredSchemas()
+        serviceHub?.schemaService?.let {
+            sessionFactory = HibernateConfiguration(it).sessionFactoryForRegisteredSchemas()
         }
         if (loadNetworkCacheDB) {
             loadFromDB()
@@ -215,7 +215,7 @@ open class InMemoryNetworkMapCache(
     /**
      * Load NetworkMap data from the database if present. Node can start without having NetworkMapService configured.
      */
-    fun loadFromDB() {
+    private fun loadFromDB() {
         logger.info("Loading node infos from database...")
         val session = sessionFactory?.withOptions()?.
                 connection(TransactionManager.current().connection)?.
@@ -227,11 +227,12 @@ open class InMemoryNetworkMapCache(
             if (result.isNotEmpty()) _loadDBSuccess = true
             for (nodeInfo in result) {
                 logger.info("Loaded node info: $nodeInfo")
-                val publicKey = parsePublicKeyBase58(nodeInfo.legalIdentitiesAndCerts.filter { it.isMain }.single().owningKey) // TODO workaround
+                val publicKey = parsePublicKeyBase58(nodeInfo.legalIdentitiesAndCerts.filter { it.isMain }.single().owningKey)
                 val node = nodeInfo.toNodeInfo()
-                registeredNodes.put(publicKey, node) // TODO it will change, we won't store it in memory
+                registeredNodes.put(publicKey, node) // TODO It will change, we won't store it in memory
+                changePublisher.onNext(MapChange.Added(node)) // Redeploy bridges after reading from DB on startup.
             }
-            if (loadDBSuccess) // Useful only if we don't have NetworkMapService configured, it will be overridden by `addNetworkService`
+            if (loadDBSuccess) // Useful only if we don't have NetworkMapService configured so StateMachineManager can start.
                 _registrationFuture.set(Unit)
         }
     }
