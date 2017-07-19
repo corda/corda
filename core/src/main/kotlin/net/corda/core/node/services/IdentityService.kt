@@ -2,6 +2,7 @@ package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
+import net.corda.core.identity.AnonymousPartyAndPath
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -29,15 +30,39 @@ interface IdentityService {
     fun registerIdentity(party: PartyAndCertificate)
 
     /**
-     * Verify and then store an identity.
+     * Verify and then store an anonymous identity.
      *
-     * @param anonymousParty a party representing a legal entity in a transaction.
-     * @param path certificate path from the trusted root to the party.
+     * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
+     * @param party well known party the anonymised party must represent.
      * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun registerAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath)
+    @Deprecated("Use verifyAndRegisterAnonymousIdentity() instead, which is the same function with a better name")
+    fun registerAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
+
+    /**
+     * Verify and then store an anonymous identity.
+     *
+     * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
+     * @param wellKnownIdentity well known party the anonymised party must represent.
+     * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
+     * certificate chain for the anonymous party.
+     */
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party): PartyAndCertificate
+
+    /**
+     * Verify an anonymous identity.
+     *
+     * @param anonymousParty a party representing a legal entity in a transaction.
+     * @param party well known party the anonymised party must represent.
+     * @param path certificate path from the trusted root to the party.
+     * @return the full well known identity.
+     * @throws IllegalArgumentException if the certificate path is invalid.
+     */
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
@@ -55,6 +80,19 @@ interface IdentityService {
     fun getAllIdentities(): Iterable<PartyAndCertificate>
 
     /**
+     * Get the certificate and path for a previously registered anonymous identity. These are used to prove an anonmyous
+     * identity is owned by a well known identity.
+     */
+    fun anonymousFromKey(owningKey: PublicKey): AnonymousPartyAndPath?
+
+    /**
+     * Get the certificate and path for a well known identity's owning key.
+     *
+     * @return the party and certificate, or null if unknown.
+     */
+    fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate?
+
+    /**
      * Get the certificate and path for a well known identity.
      *
      * @return the party and certificate, or null if unknown.
@@ -68,6 +106,7 @@ interface IdentityService {
     fun partyFromKey(key: PublicKey): Party?
     @Deprecated("Use partyFromX500Name or partiesFromName")
     fun partyFromName(name: String): Party?
+
     fun partyFromX500Name(principal: X500Name): Party?
 
     /**
@@ -98,6 +137,7 @@ interface IdentityService {
     /**
      * Get the certificate chain showing an anonymous party is owned by the given party.
      */
+    @Deprecated("Use anonymousFromKey instead, which provides more detail and takes in a more relevant input", replaceWith = ReplaceWith("anonymousFromKey(anonymousParty.owningKey)"))
     fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath?
 
     /**

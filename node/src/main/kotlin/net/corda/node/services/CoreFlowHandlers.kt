@@ -7,11 +7,11 @@ import net.corda.core.contracts.UpgradedContract
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
+import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
-import net.corda.flows.*
 
 /**
  * This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
@@ -138,10 +138,9 @@ class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean
         val revocationEnabled = false
         progressTracker.currentStep = SENDING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
-        val otherSideAnonymous = sendAndReceive<AnonymisedIdentity>(otherSide, legalIdentityAnonymous).unwrap { TransactionKeyFlow.validateIdentity(otherSide, it) }
-        val (certPath, theirCert, txIdentity) = otherSideAnonymous
+        val otherSideAnonymous = sendAndReceive<AnonymousPartyAndPath>(otherSide, legalIdentityAnonymous).unwrap { TransactionKeyFlow.validateIdentity(otherSide, it) }
         // Validate then store their identity so that we can prove the key in the transaction is owned by the
         // counterparty.
-        serviceHub.identityService.registerAnonymousIdentity(txIdentity, otherSide, certPath)
+        serviceHub.identityService.registerAnonymousIdentity(otherSideAnonymous, otherSide)
     }
 }
