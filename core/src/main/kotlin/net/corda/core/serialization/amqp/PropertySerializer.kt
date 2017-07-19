@@ -108,9 +108,9 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
     }
 
     /**
-     * A property serializer for the AMQP char type, needed as a specialisation as the underlaying
-     * value of the character is stored in numeric ASCII form and on deserialisation requires explicit
-     * casting back to a char otherwise it's treated as an Integer and TypeMismatchs occur
+     * A property serializer for the AMQP char type, needed as a specialisation as the underlying
+     * value of the character is stored in numeric UTF-16 form and on deserialisation requires explicit
+     * casting back to a char otherwise it's treated as an Integer and a TypeMismatch occurs
      */
     class AMQPCharPropertySerializer(name: String, readMethod: Method) :
             PropertySerializer(name, readMethod, Char::class.java) {
@@ -119,7 +119,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
         override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput) = (obj as Int).toChar()
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            data.putObject(readMethod.invoke(obj))
+            data.putChar((readMethod.invoke(obj) as Char).toInt())
         }
     }
 }
