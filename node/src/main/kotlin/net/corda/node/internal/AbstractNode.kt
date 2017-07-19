@@ -802,10 +802,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val keyManagementService by lazy { makeKeyManagementService(identityService) }
         override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch) }
         override val identityService by lazy {
-            val keystore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
+            val trustStore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
+            val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
             makeIdentityService(
-                    keystore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).cert,
-                    keystore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
+                    trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).cert,
+                    caKeyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
                     info.legalIdentityAndCert)
         }
         override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
