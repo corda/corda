@@ -257,7 +257,7 @@ interface CordaRPCOps : RPCOps {
      * complete with an exception if it is unable to.
      */
     @RPCReturnsObservables
-    fun waitUntilRegisteredWithNetworkMap(): CordaFuture<Void?>
+    fun waitUntilNetworkReady(): CordaFuture<Void?>
 
     // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
     // the node's state locally and query that directly.

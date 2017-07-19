@@ -102,7 +102,7 @@ open class NodeStartup(val args: Array<String>) {
         node.start()
         printPluginsAndServices(node)
 
-        node.networkMapRegistrationFuture.thenMatch({
+        node.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             // TODO: Replace this with a standard function to get an unambiguous rendering of the X.500 name.
             val name = node.info.legalIdentity.name.orgName ?: node.info.legalIdentity.name.commonName

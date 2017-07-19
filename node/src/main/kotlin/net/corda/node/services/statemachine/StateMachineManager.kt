@@ -170,7 +170,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         checkQuasarJavaAgentPresence()
         restoreFibersFromCheckpoints()
         listenToLedgerTransactions()
-        serviceHub.networkMapCache.mapServiceRegistered.then { executor.execute(this::resumeRestoredFibers) }
+        serviceHub.networkMapCache.nodeReady.then { executor.execute(this::resumeRestoredFibers) }
     }
 
     private fun checkQuasarJavaAgentPresence() {
