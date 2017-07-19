@@ -98,7 +98,7 @@ fun createKeystoreForCordaNode(sslKeyStorePath: Path,
             X509Utilities.CORDA_CLIENT_CA,
             clientKey.private,
             keyPass,
-            org.bouncycastle.cert.path.CertPath(arrayOf(clientCACert, intermediateCACert, rootCACert)))
+            arrayOf(clientCACert, intermediateCACert, rootCACert))
     clientCAKeystore.save(clientCAKeystorePath, storePassword)
 
     val tlsKeystore = loadOrCreateKeyStore(sslKeyStorePath, storePassword)
@@ -106,6 +106,6 @@ fun createKeystoreForCordaNode(sslKeyStorePath: Path,
             X509Utilities.CORDA_CLIENT_TLS,
             tlsKey.private,
             keyPass,
-            org.bouncycastle.cert.path.CertPath(arrayOf(clientTLSCert, clientCACert, intermediateCACert, rootCACert)))
+            arrayOf(clientTLSCert, clientCACert, intermediateCACert, rootCACert))
     tlsKeystore.save(sslKeyStorePath, storePassword)
 }
