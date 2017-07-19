@@ -50,7 +50,6 @@ import javax.annotation.concurrent.ThreadSafe
  * than the identity service directly, as this avoids problems with service start sequence (network map cache
  * and identity services depend on each other). Should always be provided except for unit test cases.
  */
-// TODO Split into InMemory- and Persistent- NetworkMapCache
 @ThreadSafe
 open class InMemoryNetworkMapCache(
         val loadNetworkCacheDB: Boolean = false,
@@ -70,7 +69,7 @@ open class InMemoryNetworkMapCache(
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
     private val _registrationFuture = openFuture<Void?>()
-    override val mapServiceRegistered: CordaFuture<Void?> get() = _registrationFuture
+    override val nodeReady: CordaFuture<Void?> get() = _registrationFuture
     protected val registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
     private var _loadDBSuccess: Boolean = false
     override val loadDBSuccess get() = _loadDBSuccess
@@ -259,13 +258,12 @@ open class InMemoryNetworkMapCache(
                     connection(TransactionManager.current().connection)?.
                     flushMode(FlushMode.MANUAL)?.
                     openSession()
-            session?.use { // TODO remove by linking table!
-                val info = session.find(NodeInfoSchemaV1.PersistentNodeInfo::class.java, mapOf("party_name" to nodeInfo.legalIdentity.name)) //find by name
+            session?.use {
+                val info = session.find(NodeInfoSchemaV1.PersistentNodeInfo::class.java, mapOf("party_name" to nodeInfo.legalIdentity.name)) // Find by name
                 session.remove(info)
                 // TODO with legalIdentityAndCert
                 session.flush()
             }
         }
     }
-
 }

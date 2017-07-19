@@ -139,10 +139,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     var isPreviousCheckpointsPresent = false
         private set
 
-    protected val _networkMapRegistrationFuture = openFuture<Unit>()
+    protected val _nodeReadyFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service */
-    val networkMapRegistrationFuture: CordaFuture<Unit>
-        get() = _networkMapRegistrationFuture
+    val nodeReadyFuture: CordaFuture<Unit>
+        get() = _nodeReadyFuture
 
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
     open val pluginRegistries: List<CordaPluginRegistry> by lazy {
@@ -210,7 +210,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             runOnStop += network::stop
             // If we succesfuly loaded network data from database, we set this future to Unit.
-            _networkMapRegistrationFuture.captureLater(registerWithNetworkMapIfConfigured())
+            _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
             smm.start()
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
@@ -622,7 +622,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     /** Return list of node's addresses. It's overridden in MockNetwork as we don't have real addresses for MockNodes. */
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
-    // TODO it should work also for normal nodes too - not throw exception, but check if it was loadedFromDB
     /** This is overriden by the mock node implementation to enable operation without any network map service */
     protected open fun noNetworkMapConfigured(): CordaFuture<Unit> {
         if (services.networkMapCache.loadDBSuccess) {

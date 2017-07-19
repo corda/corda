@@ -304,7 +304,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot).apply {
             if (start) {
                 start()
-                if (threadPerNode && networkMapAddress != null) networkMapRegistrationFuture.getOrThrow() // XXX: What about manually-started nodes?
+                if (threadPerNode && networkMapAddress != null) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
             }
             _nodes.add(this)
         }

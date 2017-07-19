@@ -31,7 +31,7 @@ class PersistentNetworkMapCacheTest: NodeBasedTest() {
     @Before
     fun start() {
         val nodes = startNodesWithPort(partiesList)
-        nodes.forEach { it.networkMapRegistrationFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
+        nodes.forEach { it.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
         nodes.forEach {
             infos.add(it.info)
             addressesMap[it.info.legalIdentity.name] = it.info.addresses[0]
@@ -112,9 +112,9 @@ class PersistentNetworkMapCacheTest: NodeBasedTest() {
             assert(nms.info in it.services.networkMapCache.partyNodes)
         }
         otherNodes.forEach {
-            it.networkMapRegistrationFuture.get()
+            it.nodeReadyFuture.get()
         }
-        charlie.networkMapRegistrationFuture.get() // Finish registration.
+        charlie.nodeReadyFuture.get() // Finish registration.
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
         val cacheA = otherNodes[0].services.networkMapCache.partyNodes
         val cacheB = otherNodes[1].services.networkMapCache.partyNodes

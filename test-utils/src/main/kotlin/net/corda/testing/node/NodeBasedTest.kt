@@ -35,7 +35,6 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
@@ -116,7 +115,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 advertisedServices,
                 rpcUsers,
                 networkMapConf + configOverrides)
-        return if (waitForConnection) node.networkMapRegistrationFuture.map { node } else Futures.immediateFuture(node)
+        return if (waitForConnection) node.nodeReadyFuture.map { node } else Futures.immediateFuture(node)
     }
 
     fun startNotaryCluster(notaryName: X500Name,

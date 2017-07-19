@@ -538,7 +538,7 @@ class DriverDSL(
         }
     }
 
-    // TODO get rid of this? or what?
+    // TODO get rid of this?
     private fun networkMapServiceConfigLookup(networkMapCandidates: List<NodeDefinition>): (X500Name) -> Map<String, String>? {
         return networkMapStartStrategy.run {
             when (this) {
@@ -722,7 +722,7 @@ class DriverDSL(
             )
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, openFuture()).flatMap { rpc ->
-                    rpc.waitUntilRegisteredWithNetworkMap().map {
+                    rpc.waitUntilNetworkReady().map {
                         NodeHandle.InProcess(rpc.nodeIdentity(), rpc, nodeConfiguration, webAddress, node, thread)
                     }
                 }
@@ -737,9 +737,9 @@ class DriverDSL(
                 }
                 // We continue to use SSL enabled port for RPC when its for node user.
                 establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, processDeathFuture).flatMap { rpc ->
-                    // Call waitUntilRegisteredWithNetworkMap in background in case RPC is failing over:
+                    // Call waitUntilNetworkReady in background in case RPC is failing over:
                     val networkMapFuture = executorService.fork {
-                        rpc.waitUntilRegisteredWithNetworkMap()
+                        rpc.waitUntilNetworkReady()
                     }.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
