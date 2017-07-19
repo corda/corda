@@ -5,7 +5,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.sign
-import net.corda.core.identity.AnonymisedIdentity
+import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
@@ -56,7 +56,7 @@ class E2ETestKeyManagementService(val identityService: IdentityService,
         return keyPair.public
     }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity {
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymousPartyAndPath {
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
     }
 

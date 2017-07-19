@@ -1,7 +1,7 @@
 package net.corda.node.services.network
 
 import net.corda.core.crypto.*
-import net.corda.core.identity.AnonymisedIdentity
+import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -108,12 +108,12 @@ class InMemoryIdentityServiceTests {
         service.registerAnonymousIdentity(aliceTxIdentity, alice.party)
 
         var actual = service.anonymousFromKey(aliceTxIdentity.party.owningKey)
-        assertEquals<AnonymisedIdentity>(aliceTxIdentity, actual!!)
+        assertEquals<AnonymousPartyAndPath>(aliceTxIdentity, actual!!)
 
         assertNull(service.anonymousFromKey(bobTxIdentity.party.owningKey))
         service.registerAnonymousIdentity(bobTxIdentity, bob.party)
         actual = service.anonymousFromKey(bobTxIdentity.party.owningKey)
-        assertEquals<AnonymisedIdentity>(bobTxIdentity, actual!!)
+        assertEquals<AnonymousPartyAndPath>(bobTxIdentity, actual!!)
     }
 
     /**
@@ -138,7 +138,7 @@ class InMemoryIdentityServiceTests {
         val service = InMemoryIdentityService(setOf(alice, bob), emptyMap(), trustRoot.certificate.cert)
         service.registerAnonymousIdentity(aliceTxIdentity, alice.party)
 
-        val anonymousBob = AnonymisedIdentity(AnonymousParty(bobTxKey.public), bobTxCert, bobCertPath)
+        val anonymousBob = AnonymousPartyAndPath(AnonymousParty(bobTxKey.public),bobCertPath)
         service.registerAnonymousIdentity(anonymousBob, bob.party)
 
         // Verify that paths are verified
@@ -157,14 +157,14 @@ class InMemoryIdentityServiceTests {
         }
     }
 
-    private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, AnonymisedIdentity> {
+    private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, AnonymousPartyAndPath> {
         val certFactory = CertificateFactory.getInstance("X509")
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name, txKey.public)
         val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
-        return Pair(issuer, AnonymisedIdentity(AnonymousParty(txKey.public), txCert, txCertPath))
+        return Pair(issuer, AnonymousPartyAndPath(AnonymousParty(txKey.public), txCertPath))
     }
 
     /**

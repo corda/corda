@@ -2,7 +2,7 @@ package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
-import net.corda.core.identity.AnonymisedIdentity
+import net.corda.core.identity.AnonymousPartyAndPath
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -38,7 +38,7 @@ interface IdentityService {
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun registerAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party): PartyAndCertificate
+    fun registerAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
 
     /**
      * Verify an anonymous identity.
@@ -50,7 +50,7 @@ interface IdentityService {
      * @throws IllegalArgumentException if the certificate path is invalid.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAnonymousIdentity(anonymousIdentity: AnonymisedIdentity, party: Party): PartyAndCertificate
+    fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
@@ -71,7 +71,7 @@ interface IdentityService {
      * Get the certificate and path for a previously registered anonymous identity. These are used to prove an anonmyous
      * identity is owned by a well known identity.
      */
-    fun anonymousFromKey(owningKey: PublicKey): AnonymisedIdentity?
+    fun anonymousFromKey(owningKey: PublicKey): AnonymousPartyAndPath?
 
     /**
      * Get the certificate and path for a well known identity's owning key.

@@ -3,7 +3,7 @@ package net.corda.testing.node
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.AnonymisedIdentity
+import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
@@ -105,7 +105,7 @@ class MockKeyManagementService(val identityService: IdentityService,
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity {
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymousPartyAndPath {
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
     }
 
