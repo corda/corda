@@ -274,10 +274,10 @@ class ObligationTests {
         // We don't actually verify the states, this is just here to make things look sensible
         val dueBefore = TEST_TX_TIME - 7.days
 
-        // Generate a transaction issuing the obligation
+        // Generate a transaction issuing the obligation.
         var tx = TransactionType.General.Builder(null).apply {
             val amount = Amount(100, Issued(defaultIssuer, USD))
-            Obligation<Currency>().generateCashIssue(this, MINI_CORP, amount, dueBefore,
+            Obligation<Currency>().generateCashIssue(this, ALICE, amount, dueBefore,
                     beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
         }
         var stx = miniCorpServices.signInitialTransaction(tx)

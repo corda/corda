@@ -24,9 +24,6 @@ import java.math.BigInteger
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit
-import java.time.temporal.IsoFields
-import java.time.temporal.TemporalUnit
 import java.util.*
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -260,6 +257,9 @@ class Obligation<P : Any> : Contract {
      * @param acceptableContracts is the contract types that can be accepted, such as cash.
      * @param acceptableIssuedProducts is the assets which are acceptable forms of payment (i.e. GBP issued by the Bank
      * of England).
+     * @param dueBefore when payment is due by.
+     * @param timeTolerance tolerance value on [dueBefore], to handle clock skew between distributed systems. Generally
+     * this would be about 30 seconds.
      */
     @CordaSerializable
     data class Terms<P : Any>(
@@ -478,9 +478,11 @@ class Obligation<P : Any> : Contract {
      * the given pubkey.
      *
      * @param tx transaction builder to add states and commands to.
-     * @param obligor the party who is expected to pay some currency amount to fulfil the obligation.
+     * @param obligor the party who is expected to pay some currency amount to fulfil the obligation (also the owner of
+     * the obligation).
      * @param amount currency amount the obligor is expected to pay.
-     * @param dueBefore the date on which the obligation is due. A default time tolerance of 30 seconds is provided on this.
+     * @param dueBefore the date on which the obligation is due. The default time tolerance is used (currently this is
+     * 30 seconds).
      * @param beneficiary the party the obligor is expected to pay.
      * @param notary the notary for this transaction's outputs.
      */
@@ -490,8 +492,7 @@ class Obligation<P : Any> : Contract {
                       dueBefore: Instant,
                       beneficiary: AbstractParty,
                       notary: Party) {
-        val issuanceDef = Terms(NonEmptySet.of(Cash().legalContractReference), NonEmptySet.of(amount.token),
-                dueBefore, Duration.of(30, ChronoUnit.SECONDS))
+        val issuanceDef = Terms(NonEmptySet.of(Cash().legalContractReference), NonEmptySet.of(amount.token), dueBefore)
         OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, amount.quantity, beneficiary), notary), Commands.Issue())
     }
 
