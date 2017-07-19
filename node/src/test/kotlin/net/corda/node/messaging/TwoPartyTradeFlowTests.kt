@@ -99,7 +99,7 @@ class TwoPartyTradeFlowTests {
             val aliceNode = basketOfNodes.partyNodes[0]
             val bobNode = basketOfNodes.partyNodes[1]
             val bankNode = basketOfNodes.partyNodes[2]
-            val cpIssuer = bankNode.info.legalIdentity.ref(1, 2, 3)
+            val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
@@ -109,7 +109,7 @@ class TwoPartyTradeFlowTests {
             }
 
             val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, cpIssuer, aliceNode.info.legalIdentity,
+                fillUpForSeller(false, issuer, aliceNode.info.legalIdentity,
                         1200.DOLLARS `issued by` bankNode.info.legalIdentity.ref(0), null, notaryNode.info.notaryIdentity).second
             }
 
