@@ -19,6 +19,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.internal.Emoji
 import net.corda.schemas.CashSchemaV1
@@ -72,7 +73,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         ConserveAmount())
         )
         ) {
-            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Currency>>>
+            override fun groupStates(tx: LedgerTransaction): List<LedgerTransaction.InOutGroup<State, Issued<Currency>>>
                     = tx.groupStates<State, Issued<Currency>> { it.amount.token }
         }
 
@@ -173,7 +174,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     override fun generateIssueCommand() = Commands.Issue()
     override fun generateMoveCommand() = Commands.Move()
 
-    override fun verify(tx: TransactionForContract)
+    override fun verify(tx: LedgerTransaction)
             = verifyClause(tx, Clauses.Group(), extractCommands(tx.commands))
 }
 

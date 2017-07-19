@@ -9,6 +9,7 @@ import net.corda.contracts.asset.sumAmountsDue
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.identity.AbstractParty
+import net.corda.core.transactions.LedgerTransaction
 import java.security.PublicKey
 
 /**
@@ -49,7 +50,7 @@ open class NetClause<C : CommandData, P : Any> : Clause<ContractState, C, Unit>(
     override val requiredCommands: Set<Class<out CommandData>> = setOf(Obligation.Commands.Net::class.java)
 
     @Suppress("ConvertLambdaToReference")
-    override fun verify(tx: TransactionForContract,
+    override fun verify(tx: LedgerTransaction,
                         inputs: List<ContractState>,
                         outputs: List<ContractState>,
                         commands: List<AuthenticatedObject<C>>,

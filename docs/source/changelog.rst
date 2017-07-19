@@ -38,6 +38,13 @@ UNRELEASED
   overriden in order to handle cases where no single transaction participant is aware of all parties, and therefore
   the transaction must be relayed between participants rather than sent from a single node.
 
+* ``TransactionForContract`` has been removed and all usages of this class have been replaced with usage of
+  ``LedgerTransaction``. In particular ``Contract.verify`` and the ``Clauses`` API have been changed and now take a
+  ``LedgerTransaction`` as passed in parameter. The prinicpal consequence of this is that the types of the input and output
+  collections on the transaction object have changed, so it may be necessary to ``map`` down to the ``ContractState``
+  sub-properties in existing code.
+  It is intended that new helper methods will be added shortly to the API to reduce the impact of these changes.
+
 Milestone 13
 ------------
 

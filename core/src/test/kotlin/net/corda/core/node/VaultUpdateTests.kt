@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.testing.DUMMY_NOTARY
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -13,7 +14,7 @@ class VaultUpdateTests {
 
     object DummyContract : Contract {
 
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
         }
 
         override val legalContractReference: SecureHash = SecureHash.sha256("")
