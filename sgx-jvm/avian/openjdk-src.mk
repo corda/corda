@@ -8,13 +8,8 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/common/verify_stub.c \
 	$(openjdk-src)/share/native/java/io/FileInputStream.c \
 	$(openjdk-src)/share/native/java/io/io_util.c \
-	$(openjdk-src)/share/native/java/io/ObjectInputStream.c \
-	$(openjdk-src)/share/native/java/io/ObjectOutputStream.c \
-	$(openjdk-src)/share/native/java/io/ObjectStreamClass.c \
-	$(openjdk-src)/share/native/java/io/RandomAccessFile.c \
 	$(openjdk-src)/share/native/java/lang/Class.c \
 	$(openjdk-src)/share/native/java/lang/ClassLoader.c \
-	$(openjdk-src)/share/native/java/lang/Compiler.c \
 	$(openjdk-src)/share/native/java/lang/Double.c \
 	$(openjdk-src)/share/native/java/lang/Float.c \
 	$(openjdk-src)/share/native/java/lang/Object.c \
@@ -32,13 +27,9 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/lang/Thread.c \
 	$(openjdk-src)/share/native/java/lang/Throwable.c \
 	$(wildcard $(openjdk-src)/share/native/java/lang/fdlibm/src/*.c) \
-	$(openjdk-src)/share/native/java/net/DatagramPacket.c \
 	$(openjdk-src)/share/native/java/net/InetAddress.c \
-	$(openjdk-src)/share/native/java/net/Inet4Address.c \
-	$(openjdk-src)/share/native/java/net/Inet6Address.c \
 	$(openjdk-src)/share/native/java/nio/Bits.c \
 	$(openjdk-src)/share/native/java/security/AccessController.c \
-	$(wildcard $(openjdk-src)/share/native/java/sql/DriverManager.c) \
 	$(openjdk-src)/share/native/java/util/concurrent/atomic/AtomicLong.c \
 	$(openjdk-src)/share/native/java/util/TimeZone.c \
 	$(openjdk-src)/share/native/java/util/zip/Adler32.c \
@@ -47,7 +38,6 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/util/zip/Inflater.c \
 	$(openjdk-src)/share/native/java/util/zip/ZipFile.c \
 	$(openjdk-src)/share/native/java/util/zip/zip_util.c \
-	$(openjdk-src)/share/native/sun/management/VMManagementImpl.c \
 	$(openjdk-src)/share/native/sun/misc/GC.c \
 	$(openjdk-src)/share/native/sun/misc/MessageUtils.c \
 	$(openjdk-src)/share/native/sun/misc/NativeSignalHandler.c \
@@ -60,18 +50,12 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/sun/reflect/Reflection.c
 
 openjdk-headers-classes = \
-	java.io.Console \
 	java.io.FileDescriptor \
 	java.io.FileInputStream \
 	java.io.FileOutputStream \
 	java.io.FileSystem \
-	java.io.ObjectInputStream \
-	java.io.ObjectOutputStream \
-	java.io.ObjectStreamClass \
-	java.io.RandomAccessFile \
 	java.lang.Class \
 	java.lang.ClassLoader \
-	java.lang.Compiler \
 	java.lang.Double \
 	java.lang.Float \
 	java.lang.Integer \
@@ -90,17 +74,6 @@ openjdk-headers-classes = \
 	java.lang.reflect.Array \
 	java.lang.reflect.Proxy \
 	java.net.InetAddress \
-	java.net.Inet4Address \
-	java.net.Inet6Address \
-	java.net.DatagramPacket \
-	java.net.SocketOptions \
-	java.net.InetAddressImplFactory \
-	java.net.Inet4AddressImpl \
-	java.net.Inet6AddressImpl \
-	java.net.NetworkInterface \
-	java.net.PlainSocketImpl \
-	java.net.SocketInputStream \
-	java.net.SocketOutputStream \
 	java.nio.MappedByteBuffer \
 	java.security.AccessController \
 	java.util.ResourceBundle \
@@ -113,7 +86,6 @@ openjdk-headers-classes = \
 	java.util.zip.Inflater \
 	java.util.zip.ZipEntry \
 	java.util.zip.ZipFile \
-	sun.management.VMManagementImpl \
 	sun.misc.GC \
 	sun.misc.MessageUtils \
 	sun.misc.NativeSignalHandler \
@@ -123,19 +95,7 @@ openjdk-headers-classes = \
 	sun.misc.Version \
 	sun.misc.URLClassPath \
 	sun.net.spi.DefaultProxySelector \
-	sun.nio.ch.FileKey \
-	sun.nio.ch.FileChannelImpl \
-	sun.nio.ch.FileDispatcherImpl \
-	sun.nio.ch.DatagramChannelImpl \
-	sun.nio.ch.DatagramDispatcher \
 	sun.nio.ch.IOStatus \
-	sun.nio.ch.IOUtil \
-	sun.nio.ch.Net \
-	sun.nio.ch.ServerSocketChannelImpl \
-	sun.nio.ch.SocketChannelImpl \
-	sun.nio.ch.SocketDispatcher \
-	sun.nio.ch.PollArrayWrapper \
-	sun.nio.ch.NativeThread \
 	sun.reflect.ConstantPool \
 	sun.reflect.NativeConstructorAccessorImpl \
 	sun.reflect.NativeMethodAccessorImpl \
@@ -159,7 +119,6 @@ openjdk-cflags = \
 	"-I$(openjdk-src)/share/native/java/lang/fdlibm/include" \
 	"-I$(openjdk-src)/share/native/java/net" \
 	"-I$(openjdk-src)/share/native/java/util/zip" \
-	"-I$(openjdk-src)/share/native/sun/management" \
 	"-I$(openjdk-src)/share/native/sun/nio/ch" \
 	"-I$(openjdk-src)/share/javavm/include" \
 	-D_LITTLE_ENDIAN \
@@ -181,44 +140,16 @@ ifeq ($(platform),windows)
 	openjdk-sources += \
 		$(openjdk-src)/windows/native/common/jni_util_md.c \
 		$(openjdk-src)/windows/native/java/io/canonicalize_md.c \
-		$(openjdk-src)/windows/native/java/io/Console_md.c \
 		$(openjdk-src)/windows/native/java/io/FileDescriptor_md.c \
 		$(openjdk-src)/windows/native/java/io/FileInputStream_md.c \
 		$(openjdk-src)/windows/native/java/io/FileOutputStream_md.c \
 		$(openjdk-src)/windows/native/java/io/io_util_md.c \
-		$(openjdk-src)/windows/native/java/io/RandomAccessFile_md.c \
 		$(openjdk-src)/windows/native/java/io/WinNTFileSystem_md.c \
 		$(openjdk-src)/windows/native/java/lang/java_props_md.c \
-		$(openjdk-src)/windows/native/java/lang/ProcessEnvironment_md.c \
-		$(openjdk-src)/windows/native/java/lang/ProcessImpl_md.c \
-		$(openjdk-src)/windows/native/java/net/net_util_md.c \
-		$(openjdk-src)/windows/native/java/net/ExtendedOptionsImpl.c \
-		$(openjdk-src)/windows/native/java/net/DualStackPlainSocketImpl.c \
-		$(openjdk-src)/windows/native/java/net/InetAddressImplFactory.c \
-		$(openjdk-src)/windows/native/java/net/Inet4AddressImpl.c \
-		$(openjdk-src)/windows/native/java/net/Inet6AddressImpl.c \
-		$(openjdk-src)/windows/native/java/net/NetworkInterface.c \
-		$(openjdk-src)/windows/native/java/net/NetworkInterface_winXP.c \
-		$(openjdk-src)/windows/native/java/net/SocketInputStream.c \
-		$(openjdk-src)/windows/native/java/net/SocketOutputStream.c \
-		$(openjdk-src)/windows/native/java/net/TwoStacksPlainDatagramSocketImpl.c \
-		$(openjdk-src)/windows/native/java/net/TwoStacksPlainSocketImpl.c \
 		$(openjdk-src)/windows/native/java/util/WindowsPreferences.c \
 		$(openjdk-src)/windows/native/java/util/logging.c \
 		$(openjdk-src)/windows/native/java/util/TimeZone_md.c \
 		$(openjdk-src)/windows/native/sun/io/Win32ErrorMode.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/DatagramChannelImpl.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/DatagramDispatcher.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/FileChannelImpl.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/FileDispatcherImpl.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/FileKey.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/IOUtil.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/Net.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/ServerSocketChannelImpl.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/SocketChannelImpl.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/SocketDispatcher.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/WindowsSelectorImpl.c \
-		$(openjdk-src)/windows/native/sun/nio/fs/WindowsNativeDispatcher.c \
 		$(openjdk-src)/windows/native/sun/security/provider/WinCAPISeedGenerator.c
 
 	ifeq (7,$(openjdk-version))
@@ -228,14 +159,7 @@ ifeq ($(platform),windows)
 	endif
 
 	openjdk-headers-classes += \
-		java.net.DualStackPlainSocketImpl \
-		java.net.SocketImpl \
-		java.net.TwoStacksPlainDatagramSocketImpl \
-		java.net.TwoStacksPlainSocketImpl \
-		java.lang.ProcessImpl \
-		sun.io.Win32ErrorMode \
-		sun.nio.ch.WindowsSelectorImpl \
-		sun.nio.fs.WindowsNativeDispatcher \
+		sun.io.Win32ErrorMode
 
 	openjdk-cflags += \
 		"-I$(openjdk-src)/windows/javavm/export" \
@@ -263,58 +187,24 @@ else
 	openjdk-sources += \
 		$(shell find $(openjdk-src)/solaris/native/common -name '*.c') \
 		$(openjdk-src)/solaris/native/java/io/canonicalize_md.c \
-		$(openjdk-src)/solaris/native/java/io/Console_md.c \
 		$(openjdk-src)/solaris/native/java/io/FileDescriptor_md.c \
 		$(openjdk-src)/solaris/native/java/io/FileInputStream_md.c \
 		$(openjdk-src)/solaris/native/java/io/FileOutputStream_md.c \
 		$(wildcard $(openjdk-src)/solaris/native/java/io/FileSystem_md.c) \
 		$(openjdk-src)/solaris/native/java/io/io_util_md.c \
-		$(openjdk-src)/solaris/native/java/io/RandomAccessFile_md.c \
 		$(openjdk-src)/solaris/native/java/io/UnixFileSystem_md.c \
 		$(openjdk-src)/solaris/native/java/lang/java_props_md.c \
 		$(wildcard $(openjdk-src)/solaris/native/java/lang/childproc.c) \
-		$(openjdk-src)/solaris/native/java/lang/ProcessEnvironment_md.c \
-		$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c \
-		$(openjdk-src)/solaris/native/java/net/net_util_md.c \
-		$(openjdk-src)/solaris/native/java/net/ExtendedOptionsImpl.c \
-		$(openjdk-src)/solaris/native/java/net/InetAddressImplFactory.c \
-		$(openjdk-src)/solaris/native/java/net/Inet4AddressImpl.c \
-		$(openjdk-src)/solaris/native/java/net/Inet6AddressImpl.c \
-		$(openjdk-src)/solaris/native/java/net/NetworkInterface.c \
-		$(openjdk-src)/solaris/native/java/net/PlainSocketImpl.c \
-		$(openjdk-src)/solaris/native/java/net/PlainDatagramSocketImpl.c \
-		$(openjdk-src)/solaris/native/java/net/SocketInputStream.c \
-		$(openjdk-src)/solaris/native/java/net/SocketOutputStream.c \
 		$(openjdk-src)/solaris/native/java/nio/MappedByteBuffer.c \
 		$(openjdk-src)/solaris/native/java/util/FileSystemPreferences.c \
 		$(openjdk-src)/solaris/native/java/util/logging.c \
-		$(openjdk-src)/solaris/native/java/util/TimeZone_md.c \
-		$(openjdk-src)/solaris/native/sun/net/dns/ResolverConfigurationImpl.c \
-		$(openjdk-src)/solaris/native/sun/net/spi/DefaultProxySelector.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/DatagramChannelImpl.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/DatagramDispatcher.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/FileChannelImpl.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/FileDispatcherImpl.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/FileKey.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/IOUtil.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/Net.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/ServerSocketChannelImpl.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/SocketChannelImpl.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/SocketDispatcher.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/PollArrayWrapper.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/InheritedChannel.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/NativeThread.c \
-		$(openjdk-src)/solaris/native/sun/nio/fs/UnixNativeDispatcher.c \
+		$(openjdk-src)/solaris/native/java/util/TimeZone_md.c
 
 	openjdk-headers-classes += \
-		java.net.PlainDatagramSocketImpl \
-		java.io.UnixFileSystem \
-		sun.nio.ch.InheritedChannel \
-		sun.nio.fs.UnixNativeDispatcher \
+		java.io.UnixFileSystem
 
 	ifneq (7,$(openjdk-version))
-		openjdk-headers-classes += \
-			jdk.net.SocketFlow
+		openjdk-headers-classes +=
 	endif
 
 	openjdk-cflags += \
@@ -337,11 +227,9 @@ else
 
 	ifeq ($(platform),linux)
 		openjdk-sources += \
-			$(openjdk-src)/solaris/native/java/net/linux_close.c \
-			$(openjdk-src)/solaris/native/sun/nio/ch/EPollArrayWrapper.c
+			$(openjdk-src)/solaris/native/java/net/linux_close.c
 
-		openjdk-headers-classes += \
-			sun.nio.ch.EPollArrayWrapper
+		openjdk-headers-classes +=
 
 		openjdk-cflags += \
 			"-I$(openjdk-src)/solaris/native/common/deps/glib2" \
@@ -370,9 +258,7 @@ else
 	endif
 endif
 
-openjdk-local-sources += \
-	$(src)/openjdk/my_net_util.c \
-	$(src)/openjdk/my_management.c
+openjdk-local-sources +=
 
 openjdk-c-objects = \
 	$(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%-openjdk.o,$(x)))

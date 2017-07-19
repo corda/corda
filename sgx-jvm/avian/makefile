@@ -235,6 +235,10 @@ ifneq ($(openjdk),)
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
 
+        ifeq ($(openjdk-image),)
+            openjdk-image = $(openjdk)/jre
+        endif
+
 	classpath = openjdk
 	boot-classpath := "$(boot-classpath)$(path-separator)$$($(native-path) "$(openjdk)/jre/lib/rt.jar")"
 	build-javahome = $(openjdk)/jre
@@ -1530,7 +1534,6 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/Singleton.java \
 		$(classpath-src)/avian/Stream.java \
 		$(classpath-src)/avian/SystemClassLoader.java \
-		$(classpath-src)/avian/Traces.java \
 		$(classpath-src)/avian/VMClass.java \
 		$(classpath-src)/avian/VMField.java \
 		$(classpath-src)/avian/VMMethod.java \
@@ -2378,10 +2381,10 @@ $(openjdk-jar-dep):
 	@mkdir -p $(dir $(@))
 	@mkdir -p $(classpath-build)
 	(cd $(classpath-build) && \
-		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/rt.jar")" && \
-		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jsse.jar")" && \
-		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jce.jar")" && \
-		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/charsets.jar")" && \
-		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/ext/sunjce_provider.jar")" && \
-		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/resources.jar")")
+		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/rt.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/jsse.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/jce.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/charsets.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/resources.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/ext/sunec.jar")")
 	@touch $(@)

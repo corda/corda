@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.BufferUnderflowException;
 import java.nio.BufferOverflowException;
@@ -8,31 +9,31 @@ public class Buffers {
     System.loadLibrary("test");
   }
   
-  private static void testArrays(Factory factory1, Factory factory2) {
+  private static void testArrays(Factory factory1, Factory factory2) throws IOException {
     final int size = 64;
     ByteBuffer b1 = factory1.allocate(size);
     ByteBuffer b2 = factory2.allocate(size);
     
     String s = "1234567890abcdefghijklmnopqrstuvwxyz";
-    b1.put(s.getBytes());
+    b1.put(s.getBytes("UTF-8"));
     b1.flip();
     byte[] ba = new byte[s.length()];
     b1.get(ba);
-    assertEquals(s, new String(ba));
+    assertEquals(s, new String(ba, "UTF-8"));
     b1.position(0);
     b2.put(b1);
     b2.flip();
     b2.get(ba);
-    assertEquals(s, new String(ba));
+    assertEquals(s, new String(ba, "UTF-8"));
     b1.position(0);
     b2.position(0);
     b1.limit(b1.capacity());
     b2.limit(b2.capacity());
-    b1.put(s.getBytes(), 4, 5);
+    b1.put(s.getBytes("UTF-8"), 4, 5);
     b1.flip();
     ba = new byte[5];
     b1.get(ba);
-    assertEquals(s.substring(4, 9), new String(ba));
+    assertEquals(s.substring(4, 9), new String(ba, "UTF-8"));
   }
 
   private static void testPrimativeGetAndSet(Factory factory1, Factory factory2) {

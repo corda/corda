@@ -33,35 +33,6 @@ public class Integers {
       expect(Integer.numberOfLeadingZeros(negative) == 0);
       negative += ((int)Math.pow(2, i));
     }
-
-    for(int i = 0; i < 99999; i++) {
-      String binary = "";
-      int nolz = 0;
-      boolean nolzFound = false;
-      for(int j = 0; j < 31; j++) {
-        double r = Math.random();
-        if(r < 0.5) {
-          binary += "0";
-          if(!nolzFound) {
-            nolz++;
-          }
-        } else {
-          binary += "1";
-          nolzFound = true;
-        }
-      }
-
-      double r = Math.random();
-      if(r < 0.5) {
-        // positive
-        binary = "0" + binary;
-        nolz++;
-        expect(Integer.numberOfLeadingZeros(Integer.parseInt(binary, 2)) == nolz);
-      } else {
-        // negative
-        expect(Integer.numberOfLeadingZeros(-Integer.parseInt(binary, 2)) == 0);
-      }
-    }
   }
 
   public static void main(String[] args) throws Exception {

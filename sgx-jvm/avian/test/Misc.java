@@ -313,19 +313,6 @@ public class Misc {
       throw new RuntimeException(e);
     }
 
-    // as of this writing, we don't support URLs on Android, since it
-    // pulls in a third-party library we don't include:
-    if (! "http://www.android.com/".equals
-        (System.getProperty("java.vendor.url")))
-    {
-      expect(new URL("http://oss.readytalk.com")
-             .getHost().equals("oss.readytalk.com"));
-    }
-
-    expect(java.util.Arrays.equals
-	   (new byte[] { 0, 0, 0, 0 },
-	    java.net.InetAddress.getByName("0.0.0.0").getAddress()));
-
     expect(! staticRan);
     Static.run();
     expect(staticRan);

@@ -29,4 +29,4 @@ jni/build/libuntrusted_corda_sgx.so: jni/build/Makefile ../../verify-enclave/bui
 
 .PHONY: clean
 clean:
-	rm -rf {standalone,common,enclave,jni}/build
+	$(RM) -r {standalone,common,enclave,jni}/build

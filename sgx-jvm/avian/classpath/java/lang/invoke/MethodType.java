@@ -38,8 +38,11 @@ public final class MethodType implements java.io.Serializable {
 
   MethodType(String spec) {
     this.loader = SystemClassLoader.appLoader();
-    this.spec = new byte[spec.length() + 1];
-    spec.getBytes(0, spec.length(), this.spec, 0);
+    try {
+        this.spec = spec.getBytes("UTF-8");
+    } catch (java.io.UnsupportedEncodingException e) {
+        throw new IllegalStateException(e.getMessage(), e);
+    }
   }
 
   public String toMethodDescriptorString() {
@@ -94,7 +97,11 @@ public final class MethodType implements java.io.Serializable {
 
     result = new Result(spec, rtype, type(spec).return_);
 
-    this.spec = sb.toString().getBytes();
+    try {
+        this.spec = sb.toString().getBytes("UTF-8");
+    } catch (java.io.UnsupportedEncodingException e) {
+        throw new IllegalStateException(e.getMessage(), e);
+    }
   }
 
   public static MethodType methodType(Class rtype,

@@ -117,7 +117,7 @@ public class Strings {
   public static void main(String[] args) throws Exception {
     expect(new String(new byte[] { 99, 111, 109, 46, 101, 99, 111, 118, 97,
                                    116, 101, 46, 110, 97, 116, 46, 98, 117,
-                                   115, 46, 83, 121, 109, 98, 111, 108 })
+                                   115, 46, 83, 121, 109, 98, 111, 108 }, "UTF-8")
       .equals("com.ecovate.nat.bus.Symbol"));
     
     final String months = "Jan\u00aeFeb\u00aeMar\u00ae";
@@ -224,7 +224,7 @@ public class Strings {
     { String s = "hello, world!";
       java.nio.CharBuffer buffer = java.nio.CharBuffer.allocate(s.length());
       new java.io.InputStreamReader
-        (new java.io.ByteArrayInputStream(s.getBytes())).read(buffer);
+        (new java.io.ByteArrayInputStream(s.getBytes("UTF-8"))).read(buffer);
       expect(s.equals(new String(buffer.array())));
     }
   }

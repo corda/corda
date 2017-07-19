@@ -4,11 +4,11 @@ The build
 Prerequisites
 -------------
 
-* Install mercurial, gcc/g++(6), autoconf, automake, ocaml, opendjk(8), libtool, python(2.7)
-* Make sure JAVA_HOME points to your jdk 8 installation
+* Install gcc/g++(6), autoconf, automake, ocaml, opendjk(8), libtool, python(2.7)
+* Make sure JAVA_HOME points to your OpenJDK 8 installation
 * Make sure CXX points to g++ (the project does NOT compile with other compilers like clang!)
 * If your hardware supports SGX and you want to use it directly you need to install and load the sgx kernel module (verify by running `lsmod | grep isgx`) and have the sgx service running (on a systemd setup verify by running `systemctl status aesmd`). Note that this is only required for actually running the binary, the build should work fine without.
-* The SGX SDK has a simulation mode that doesn't require hardware support. To use this edit `sgx-jvm/jvm-enclave/CMakeLists.txt` and change `set(SGX_USE_HARDWARE TRUE)` to `FALSE`
+* The SGX SDK has a simulation mode that doesn't require hardware support. To use this edit `sgx-jvm/jvm-enclave/common/CMakeLists.txt` and change `set(SGX_USE_HARDWARE TRUE)` to `FALSE`
 
 Toplevel Makefile targets
 -------------------------

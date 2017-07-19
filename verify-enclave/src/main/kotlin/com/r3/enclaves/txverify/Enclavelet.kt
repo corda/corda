@@ -3,31 +3,12 @@
 package com.r3.enclaves.txverify
 
 import com.esotericsoftware.minlog.Log
-import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.contracts.TransactionState
-import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.AttachmentsStorageService
-import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.createTestKryo
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.WireTransaction
-import org.bouncycastle.asn1.x500.X500Name
 import java.io.File
-import java.io.InputStream
-import java.nio.file.Path
-import java.security.PublicKey
-import java.security.cert.CertPath
-import java.security.cert.X509Certificate
 
 // This file implements the functionality of the SGX transaction verification enclave.
 

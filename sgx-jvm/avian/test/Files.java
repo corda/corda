@@ -35,62 +35,32 @@ public class Files {
     }
   }
 
-  private static void setExecutableTestWithPermissions(boolean executable)
-    throws Exception
-  {
-    File file = File.createTempFile("avian.", null);
-    try {
-      file.setExecutable(executable);
-      if (executable) {
-        expect(file.canExecute());
-      } else {
-        // Commented out because this will fail on Windows - both on Avian and on OpenJDK
-        // The implementation for Windows considers canExecute() to be the same as canRead()
-        // expect(!file.canExecute());
-      }
-    } finally {
-      expect(file.delete());
-    }
-  }
-  
   public static void main(String[] args) throws Exception {
     isAbsoluteTest(true);
     isAbsoluteTest(false);
-    setExecutableTestWithPermissions(true);
-    setExecutableTestWithPermissions(false);
     isRootParent();
   
     { File f = new File("test.txt");
-      f.createNewFile();
-      expect(! f.createNewFile());
-      f.delete();
-    }
-
-    { File f = new File("test.txt");
       FileOutputStream out = new FileOutputStream(f);
+      byte[] message = "hello, world!\n".getBytes("UTF-8");
+      out.write(message);
+      out.close();
+
+      expect(f.lastModified() > 0);
+
+      FileInputStream in = new FileInputStream(f);
       try {
-        byte[] message = "hello, world!\n".getBytes();
-        out.write(message);
-        out.close();
+        expect(in.available() == message.length);
 
-        expect(f.lastModified() > 0);
-
-        FileInputStream in = new FileInputStream(f);
-        try {
-          expect(in.available() == message.length);
-          
-          for (int i = 0; i < message.length; ++i) {
-            in.read();
-            expect(in.available() == message.length - i - 1);
-          }
-          
-          expect(in.read() == -1);
-          expect(in.available() == 0);
-        } finally {
-          in.close();
+        for (int i = 0; i < message.length; ++i) {
+          in.read();
+          expect(in.available() == message.length - i - 1);
         }
+          
+        expect(in.read() == -1);
+        expect(in.available() == 0);
       } finally {
-        f.delete();
+        in.close();
       }
     }
 

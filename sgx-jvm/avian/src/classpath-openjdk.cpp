@@ -380,9 +380,6 @@ class MyClasspath : public Classpath {
     sb.append("/lib/jce.jar");
     sb.append(s->pathSeparator());
     sb.append(javaHome);
-    sb.append("/lib/ext/sunjce_provider.jar");
-    sb.append(s->pathSeparator());
-    sb.append(javaHome);
     sb.append("/lib/resources.jar");
     sb.append('\0');
 
@@ -1989,10 +1986,6 @@ int64_t JNICALL getBootstrapResources(Thread* t, object, uintptr_t* arguments)
   }
 }
 
-extern "C" AVIAN_EXPORT jint JNICALL net_JNI_OnLoad(JavaVM*, void*);
-
-extern "C" AVIAN_EXPORT jint JNICALL management_JNI_OnLoad(JavaVM*, void*);
-
 void JNICALL loadLibrary(Thread* t, object, uintptr_t* arguments)
 {
   Thread::LibraryLoadStack stack(
@@ -2008,43 +2001,7 @@ void JNICALL loadLibrary(Thread* t, object, uintptr_t* arguments)
   bool absolute = arguments[2];
 
   if (not absolute) {
-    if (strcmp(RUNTIME_ARRAY_BODY(n), "net") == 0) {
-      bool ran;
-
-      {
-        ACQUIRE(t, t->m->classLock);
-
-        local::MyClasspath* c
-            = static_cast<local::MyClasspath*>(t->m->classpath);
-
-        ran = c->ranNetOnLoad;
-        c->ranNetOnLoad = true;
-      }
-
-      if (not ran) {
-        net_JNI_OnLoad(t->m, 0);
-      }
-
-      return;
-    } else if (strcmp(RUNTIME_ARRAY_BODY(n), "management") == 0) {
-      bool ran;
-
-      {
-        ACQUIRE(t, t->m->classLock);
-
-        local::MyClasspath* c
-            = static_cast<local::MyClasspath*>(t->m->classpath);
-
-        ran = c->ranManagementOnLoad;
-        c->ranManagementOnLoad = true;
-      }
-
-      if (not ran) {
-        management_JNI_OnLoad(t->m, 0);
-      }
-
-      return;
-    } else if (strcmp(RUNTIME_ARRAY_BODY(n), "zip") == 0
+    if (strcmp(RUNTIME_ARRAY_BODY(n), "zip") == 0
                or strcmp(RUNTIME_ARRAY_BODY(n), "nio") == 0) {
       return;
     }

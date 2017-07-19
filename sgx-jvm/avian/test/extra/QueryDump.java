@@ -43,7 +43,7 @@ public class QueryDump {
       offset += c;
     }
     if (offset != b.length) throw new EOFException();
-    return new String(b);
+    return new String(b, "UTF-8");
   }
 
   private static Record record(Map<Integer, Record> map, int key) {

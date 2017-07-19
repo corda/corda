@@ -42,7 +42,7 @@ public class PrintDump {
       offset += c;
     }
     if (offset != b.length) throw new EOFException();
-    return new String(b);
+    return new String(b, "UTF-8");
   }
 
   private static void pipe(InputStream in, PrintStream out)

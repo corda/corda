@@ -127,7 +127,7 @@ public class ConstantPool {
 
     public void writeTo(OutputStream out) throws IOException {
       write1(out, CONSTANT_Utf8);
-      byte[] bytes = data.getBytes();
+      byte[] bytes = data.getBytes("UTF-8");
       write2(out, bytes.length);
       out.write(bytes);
     }
