@@ -212,8 +212,8 @@ open class Node(override val configuration: FullNodeConfiguration,
         log.trace { "Trying to detect public hostname through the Network Map Service at $serverAddress" }
         val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, configuration)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
-            initialConnectAttempts = 5
-            retryInterval = 5.seconds.toMillis()
+            initialConnectAttempts = 2 // TODO Public host discovery needs rewriting, as we may start nodes without network map, and we don't want to wait that long on startup.
+            retryInterval = 2.seconds.toMillis()
             retryIntervalMultiplier = 1.5
             maxRetryInterval = 3.minutes.toMillis()
         }
@@ -221,7 +221,7 @@ open class Node(override val configuration: FullNodeConfiguration,
             locator.createSessionFactory()
         } catch (e: ActiveMQNotConnectedException) {
             log.info("Unable to connect to the Network Map Service at $serverAddress for IP address discovery. Using configuration address.")
-            return null // TODO This should be rewritten, after NMS changes.
+            return null
         }
 
         val session = clientFactory.createSession(PEER_USER, PEER_USER, false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
@@ -257,7 +257,7 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 
     //TODO persistent NetworkMapCache
-    override fun makeNetworkMapCache() = InMemoryNetworkMapCache(true, services, schemas)
+    override fun makeNetworkMapCache() = InMemoryNetworkMapCache(true, services)
 
     /**
      * Insert an initial step in the registration process which will throw an exception if a non-recoverable error is

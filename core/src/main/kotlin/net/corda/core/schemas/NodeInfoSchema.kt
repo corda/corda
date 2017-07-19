@@ -1,6 +1,5 @@
 package net.corda.core.schemas
 
-import com.google.common.net.HostAndPort
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.Party
@@ -11,6 +10,7 @@ import net.corda.core.node.WorldCoordinate
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.NetworkHostAndPort
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.Serializable
@@ -50,13 +50,12 @@ object NodeInfoSchemaV1 : MappedSchema(
             val addresses: List<NodeInfoSchemaV1.DBHostAndPort>,
 
             @Column(name = "legal_identities_certs")
-            @ManyToMany(cascade = arrayOf(CascadeType.ALL)) // TODO look into distributed services
+            @ManyToMany(cascade = arrayOf(CascadeType.ALL))
             val legalIdentitiesAndCerts: Set<DBPartyAndCertificate>,
 
             @Column(name = "platform_version")
             val platformVersion: Int,
 
-            // TODO This concept will be removed in next PR, so I don't care about storing it properly
             @Column(name = "advertised_services")
             @ElementCollection
             var advertisedServices: List<DBServiceEntry> = emptyList(),
@@ -67,8 +66,8 @@ object NodeInfoSchemaV1 : MappedSchema(
         fun toNodeInfo(): NodeInfo {
             return NodeInfo(
                     this.addresses.map { it.toHostAndPort() },
-                    this.legalIdentitiesAndCerts.filter { it.isMain }.single().toLegalIdentityAndCert(), //TODO workaround
-                    this.legalIdentitiesAndCerts.map { it.toLegalIdentityAndCert() }.toSet(),
+                    this.legalIdentitiesAndCerts.filter { it.isMain }.single().toLegalIdentityAndCert(), // TODO Workaround, it will be changed after PR with services removal.
+                    this.legalIdentitiesAndCerts.filter { !it.isMain }.map { it.toLegalIdentityAndCert() }.toSet(),
                     this.platformVersion,
                     this.advertisedServices.map {
                         it.serviceEntry?.deserialize<ServiceEntry>() ?: throw IllegalStateException("Service entry shouldn't be null") },
@@ -83,18 +82,16 @@ object NodeInfoSchemaV1 : MappedSchema(
     ) {
         constructor(): this(null, null)
         companion object {
-            fun fromHostAndPort(hostAndPort: HostAndPort) = DBHostAndPort(
+            fun fromHostAndPort(hostAndPort: NetworkHostAndPort) = DBHostAndPort(
                     hostAndPort.host,
-                    if(hostAndPort.hasPort()) hostAndPort.port else null
+                    hostAndPort.port
             )
         }
-        fun toHostAndPort(): HostAndPort {
-            val host = HostAndPort.fromHost(this.host)
-            return if (port != null) host.withDefaultPort(port) else host
+        fun toHostAndPort(): NetworkHostAndPort {
+            return NetworkHostAndPort(this.host!!, this.port!!)
         }
     }
 
-    // TODO This will be removed in future PR.
     @Embeddable
     class DBServiceEntry(
             @Column(length = 65535)
@@ -103,7 +100,7 @@ object NodeInfoSchemaV1 : MappedSchema(
         constructor(): this(null)
     }
 
-    // TODO it's probably not worth storing that this way, as we won't access it
+    // TODO It's probably not worth storing this way.
     @Embeddable
     class DBWorldMapLocation(
             val latitude: Double?,
@@ -127,7 +124,7 @@ object NodeInfoSchemaV1 : MappedSchema(
     }
 
     /**
-     *  PartyAndCertificate entity (to be replaced by referencing final Identity Schema) - TODO blocked on identity work
+     *  PartyAndCertificate entity (to be replaced by referencing final Identity Schema).
      */
     @Entity
     @Table(name = "node_info_party_cert")
@@ -150,7 +147,7 @@ object NodeInfoSchemaV1 : MappedSchema(
 
             val isMain: Boolean,
 
-            @ManyToMany(mappedBy = "legalIdentitiesAndCerts") // Because of distributed services
+            @ManyToMany(mappedBy = "legalIdentitiesAndCerts") // ManyToMany because of distributed services.
             private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
     ) {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)

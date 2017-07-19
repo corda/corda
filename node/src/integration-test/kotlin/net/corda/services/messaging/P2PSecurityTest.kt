@@ -28,7 +28,7 @@ import java.util.concurrent.TimeoutException
 
 class P2PSecurityTest : NodeBasedTest() {
 
-//    @Test
+    @Test
     fun `incorrect legal name for the network map service config`() {
         val incorrectNetworkMapName = getTestX509Name("NetworkMap-${random63BitValue()}")
         val node = startNode(BOB.name, configOverrides = mapOf(

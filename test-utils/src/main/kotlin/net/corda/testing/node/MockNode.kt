@@ -163,7 +163,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .getOrThrow()
         }
 
-        override fun makeNetworkMapCache() = InMemoryNetworkMapCache(false, services, null)
+        override fun makeNetworkMapCache() = InMemoryNetworkMapCache(false, services)
 
         override fun makeIdentityService(trustRoot: X509Certificate,
                                          clientCa: CertificateAndKeyPair?,

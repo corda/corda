@@ -24,8 +24,9 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
 // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
 @CordaSerializable
 data class NodeInfo(val addresses: List<NetworkHostAndPort>,
-                    val legalIdentityAndCert: PartyAndCertificate, //TODO This field will be removed in future PR which gets rid of services.
-                    val legalIdentitiesAndCerts: NonEmptySet<PartyAndCertificate>,
+                    // TODO After removing of services these two fields will be merged together and made NonEmptySet.
+                    val legalIdentityAndCert: PartyAndCertificate,
+                    val legalIdentitiesAndCerts: Set<PartyAndCertificate>,
                     val platformVersion: Int,
                     val advertisedServices: List<ServiceEntry> = emptyList(),
                     val worldMapLocation: WorldMapLocation? = null) {
@@ -48,7 +49,7 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
                     id = 0,
                     addresses = this.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
                     legalIdentitiesAndCerts = this.legalIdentitiesAndCerts.map { NodeInfoSchemaV1.DBPartyAndCertificate(it) }.toSet()
-                            // TODO it's workaround to keep the main identity (btw it should be on linking table)
+                            // TODO It's workaround to keep the main identity, will be removed in future PR getting rid of services.
                             + NodeInfoSchemaV1.DBPartyAndCertificate(this.legalIdentityAndCert, isMain = true),
                     platformVersion = this.platformVersion,
                     advertisedServices = this.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it.serialize().bytes) },

@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
@@ -20,6 +21,7 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configOf
 import net.corda.node.services.config.plus
+import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
@@ -85,21 +87,21 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                             platformVersion: Int = 1,
                             advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
-                            configOverrides: Map<String, Any> = emptyMap(),
-                            baseDirectoryOverride: Path? = null): Node {
-        check(_networkMapNode == null)
-        return startNodeInternal(legalName, platformVersion, advertisedServices, rpcUsers, configOverrides, baseDirectoryOverride = baseDirectoryOverride).apply {
+                            configOverrides: Map<String, Any> = emptyMap()): Node {
+        check(_networkMapNode == null || _networkMapNode!!.info.legalIdentity.name == legalName)
+        return startNodeInternal(legalName, platformVersion, advertisedServices + ServiceInfo(NetworkMapService.type), rpcUsers, configOverrides).apply {
             _networkMapNode = this
         }
     }
 
+    @JvmOverloads
     fun startNode(legalName: X500Name,
                   platformVersion: Int = 1,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap(),
-                  baseDirectoryOverride: Path? = null,
-                  noNetworkMap: Boolean = false): CordaFuture<Node> {
+                  noNetworkMap: Boolean = false,
+                  waitForConnection: Boolean = true): CordaFuture<Node> {
         val networkMapConf = if (!noNetworkMap) {
             mapOf(
                     "networkMapService" to mapOf(
@@ -113,9 +115,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 platformVersion,
                 advertisedServices,
                 rpcUsers,
-                networkMapConf + configOverrides,
-                baseDirectoryOverride = baseDirectoryOverride)
-        return node.networkMapRegistrationFuture.map { node }
+                networkMapConf + configOverrides)
+        return if (waitForConnection) node.networkMapRegistrationFuture.map { node } else Futures.immediateFuture(node)
     }
 
     fun startNotaryCluster(notaryName: X500Name,
@@ -154,16 +155,16 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                                   platformVersion: Int,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
-                                  configOverrides: Map<String, Any>,
-                                  baseDirectoryOverride: Path?): Node {
-        val baseDirectory = baseDirectoryOverride ?: baseDirectory(legalName).createDirectories()
+                                  configOverrides: Map<String, Any>): Node {
+        val baseDirectory = baseDirectory(legalName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
+        val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOf(
                         "myLegalName" to legalName.toString(),
-                        "p2pAddress" to localPort[0].toString(),
+                        "p2pAddress" to p2pAddress,
                         "rpcAddress" to localPort[1].toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                         "rpcUsers" to rpcUsers.map { it.toMap() }
