@@ -49,7 +49,7 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
                 val selfSignCert = X509Utilities.createSelfSignedCACertificate(config.myLegalName, keyPair)
                 // Save to the key store.
                 caKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, keyPair.private, privateKeyPassword.toCharArray(),
-                        CertPath(arrayOf(selfSignCert)))
+                        arrayOf(selfSignCert))
                 caKeyStore.save(config.nodeKeystore, keystorePassword)
             }
             val keyPair = caKeyStore.getKeyPair(SELF_SIGNED_PRIVATE_KEY, privateKeyPassword)
