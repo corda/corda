@@ -20,7 +20,7 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import net.corda.schemas.CashSchemaV1
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger

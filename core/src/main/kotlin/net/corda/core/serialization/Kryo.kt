@@ -12,7 +12,7 @@ import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.LazyPool
+import net.corda.core.internal.LazyPool
 import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey

@@ -13,7 +13,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
