@@ -276,7 +276,8 @@ class ObligationTests {
 
         // Generate a transaction issuing the obligation
         var tx = TransactionType.General.Builder(null).apply {
-            Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement.copy(dueBefore = dueBefore), 100.DOLLARS.quantity,
+            val amount = Amount(100, Issued(defaultIssuer, USD))
+            Obligation<Currency>().generateCashIssue(this, MINI_CORP, amount, dueBefore,
                     beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
         }
         var stx = miniCorpServices.signInitialTransaction(tx)

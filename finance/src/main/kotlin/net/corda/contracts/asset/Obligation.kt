@@ -24,6 +24,9 @@ import java.math.BigInteger
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.time.temporal.IsoFields
+import java.time.temporal.TemporalUnit
 import java.util.*
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -254,6 +257,9 @@ class Obligation<P : Any> : Contract {
      * Subset of state, containing the elements specified when issuing a new settlement contract.
      *
      * @param P the product the obligation is for payment of.
+     * @param acceptableContracts is the contract types that can be accepted, such as cash.
+     * @param acceptableIssuedProducts is the assets which are acceptable forms of payment (i.e. GBP issued by the Bank
+     * of England).
      */
     @CordaSerializable
     data class Terms<P : Any>(
@@ -468,7 +474,37 @@ class Obligation<P : Any> : Contract {
     )
 
     /**
+     * Puts together an issuance transaction for the specified currency obligation amount that starts out being owned by
+     * the given pubkey.
+     *
+     * @param tx transaction builder to add states and commands to.
+     * @param obligor the party who is expected to pay some currency amount to fulfil the obligation.
+     * @param amount currency amount the obligor is expected to pay.
+     * @param dueBefore the date on which the obligation is due. A default time tolerance of 30 seconds is provided on this.
+     * @param beneficiary the party the obligor is expected to pay.
+     * @param notary the notary for this transaction's outputs.
+     */
+    fun generateCashIssue(tx: TransactionBuilder,
+                      obligor: AbstractParty,
+                      amount: Amount<Issued<Currency>>,
+                      dueBefore: Instant,
+                      beneficiary: AbstractParty,
+                      notary: Party) {
+        val issuanceDef = Terms(NonEmptySet.of(Cash().legalContractReference), NonEmptySet.of(amount.token),
+                dueBefore, Duration.of(30, ChronoUnit.SECONDS))
+        OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, amount.quantity, beneficiary), notary), Commands.Issue())
+    }
+
+    /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
+     *
+     * @param tx transaction builder to add states and commands to.
+     * @param obligor the party who is expected to pay some amount to fulfil the obligation.
+     * @param issuanceDef the terms of the obligation, including which contracts and underlying assets are acceptable
+     * forms of payment.
+     * @param pennies the quantity of the asset (in the smallest normal unit of measurement) owed.
+     * @param beneficiary the party the obligor is expected to pay.
+     * @param notary the notary for this transaction's outputs.
      */
     fun generateIssue(tx: TransactionBuilder,
                       obligor: AbstractParty,
