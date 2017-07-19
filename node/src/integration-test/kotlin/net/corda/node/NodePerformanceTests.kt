@@ -10,7 +10,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.minutes
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.div
+import net.corda.testing.performance.div
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission

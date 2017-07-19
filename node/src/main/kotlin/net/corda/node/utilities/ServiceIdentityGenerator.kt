@@ -3,8 +3,6 @@ package net.corda.node.utilities
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
-import net.corda.core.serialization.serialize
-import net.corda.core.serialization.storageKryo
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x500.X500Name
@@ -33,16 +31,16 @@ object ServiceIdentityGenerator {
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
         // Avoid adding complexity! This class is a hack that needs to stay runnable in the gradle environment.
-        val notaryParty = Party(serviceName, notaryKey)
-        val notaryPartyBytes = notaryParty.serialize()
         val privateKeyFile = "$serviceId-private-key"
         val publicKeyFile = "$serviceId-public"
+        val compositeKeyFile = "$serviceId-composite-key"
         keyPairs.zip(dirs) { keyPair, dir ->
             Files.createDirectories(dir)
-            notaryPartyBytes.writeToFile(dir.resolve(publicKeyFile))
+            Files.write(dir.resolve(compositeKeyFile), notaryKey.encoded)
             // Use storageKryo as our whitelist is not available in the gradle build environment:
-            keyPair.serialize(storageKryo()).writeToFile(dir.resolve(privateKeyFile))
+            Files.write(dir.resolve(privateKeyFile), keyPair.private.encoded)
+            Files.write(dir.resolve(publicKeyFile), keyPair.public.encoded)
         }
-        return notaryParty
+        return Party(serviceName, notaryKey)
     }
 }

@@ -13,6 +13,8 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.LazyStickyPool
+import net.corda.core.internal.LifeCycle
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.seconds
 import net.corda.core.serialization.KryoPoolWithContext

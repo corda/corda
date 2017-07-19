@@ -271,12 +271,6 @@ fun <T> Observable<T>.toFuture(): CordaFuture<T> = openFuture<T>().also {
 /** Return the sum of an Iterable of [BigDecimal]s. */
 fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }
 
-fun codePointsString(vararg codePoints: Int): String {
-    val builder = StringBuilder()
-    codePoints.forEach { builder.append(Character.toChars(it)) }
-    return builder.toString()
-}
-
 fun <T> Class<T>.checkNotUnorderedHashMap() {
     if (HashMap::class.java.isAssignableFrom(this) && !LinkedHashMap::class.java.isAssignableFrom(this)) {
         throw NotSerializableException("Map type $this is unstable under iteration. Suggested fix: use LinkedHashMap instead.")

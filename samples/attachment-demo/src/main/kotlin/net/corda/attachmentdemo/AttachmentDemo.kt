@@ -19,7 +19,7 @@ import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
 import net.corda.testing.DUMMY_BANK_B

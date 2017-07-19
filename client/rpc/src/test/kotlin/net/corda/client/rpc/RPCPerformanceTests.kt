@@ -5,7 +5,7 @@ import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
-import net.corda.core.utilities.div
+import net.corda.testing.performance.div
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.testing.RPCDriverExposedDSLInterface
 import net.corda.testing.measure

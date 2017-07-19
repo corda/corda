@@ -11,7 +11,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import net.corda.core.utilities.loggerFor
 import net.corda.node.ArgsParser
 import net.corda.node.CmdLineOptions

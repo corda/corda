@@ -1,11 +1,10 @@
 package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
-import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.days
-import net.corda.flows.AnonymisedIdentity
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PublicKey
@@ -29,16 +28,16 @@ fun freshCertificate(identityService: IdentityService,
                      subjectPublicKey: PublicKey,
                      issuer: PartyAndCertificate,
                      issuerSigner: ContentSigner,
-                     revocationEnabled: Boolean = false): AnonymisedIdentity {
+                     revocationEnabled: Boolean = false): AnonymousPartyAndPath {
     val issuerCertificate = issuer.certificate
     val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 3650.days, issuerCertificate)
     val ourCertificate = Crypto.createCertificate(CertificateType.IDENTITY, issuerCertificate.subject, issuerSigner, issuer.name, subjectPublicKey, window)
     val certFactory = CertificateFactory.getInstance("X509")
     val ourCertPath = certFactory.generateCertPath(listOf(ourCertificate.cert) + issuer.certPath.certificates)
-    identityService.registerAnonymousIdentity(AnonymousParty(subjectPublicKey),
-            issuer.party,
-            ourCertPath)
-    return AnonymisedIdentity(ourCertPath, issuerCertificate, subjectPublicKey)
+    val anonymisedIdentity = AnonymousPartyAndPath(subjectPublicKey, ourCertPath)
+    identityService.verifyAndRegisterAnonymousIdentity(anonymisedIdentity,
+            issuer.party)
+    return anonymisedIdentity
 }
 
 fun getSigner(issuerKeyPair: KeyPair): ContentSigner {

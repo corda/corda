@@ -11,7 +11,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl

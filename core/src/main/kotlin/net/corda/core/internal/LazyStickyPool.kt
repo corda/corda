@@ -1,4 +1,4 @@
-package net.corda.core.utilities
+package net.corda.core.internal
 
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue

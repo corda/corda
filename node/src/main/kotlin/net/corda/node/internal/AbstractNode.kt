@@ -718,11 +718,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         if (!keyStore.containsAlias(privateKeyAlias)) {
             val privKeyFile = configuration.baseDirectory / privateKeyAlias
             val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
+            val compositeKeyFile = configuration.baseDirectory / compositeKeyAlias
             // TODO: Remove use of [ServiceIdentityGenerator.generateToDisk].
             // Get keys from key file.
             // TODO: this is here to smooth out the key storage transition, remove this migration in future release.
             if (privKeyFile.exists()) {
-                migrateKeysFromFile(keyStore, serviceName, pubIdentityFile, privKeyFile, privateKeyAlias, compositeKeyAlias)
+                migrateKeysFromFile(keyStore, serviceName, pubIdentityFile, privKeyFile, compositeKeyFile, privateKeyAlias, compositeKeyAlias)
             } else {
                 log.info("$privateKeyAlias not found in keystore ${configuration.nodeKeystore}, generating fresh key!")
                 keyStore.saveNewKeyPair(serviceName, privateKeyAlias, generateKeyPair())
@@ -750,21 +751,17 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
-                                    pubIdentityFile: Path, privKeyFile: Path,
+                                    pubKeyFile: Path, privKeyFile: Path, compositeKeyFile:Path,
                                     privateKeyAlias: String, compositeKeyAlias: String) {
         log.info("Migrating $privateKeyAlias from file to keystore...")
-        val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
         // Check that the identity in the config file matches the identity file we have stored to disk.
-        // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
-        // things up for us.
-        if (myIdentity.name != serviceName)
-            throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:$serviceName vs ${myIdentity.name}")
         // Load the private key.
-        val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
-        keyStore.saveNewKeyPair(serviceName, privateKeyAlias, keyPair)
+        val publicKey = Crypto.decodePublicKey(pubKeyFile.readAll())
+        val privateKey = Crypto.decodePrivateKey(privKeyFile.readAll())
+        keyStore.saveNewKeyPair(serviceName, privateKeyAlias, KeyPair(publicKey, privateKey))
         // Store composite key separately.
-        if (myIdentity.owningKey is CompositeKey) {
-            keyStore.savePublicKey(serviceName, compositeKeyAlias, myIdentity.owningKey)
+        if (compositeKeyFile.exists()) {
+            keyStore.savePublicKey(serviceName, compositeKeyAlias, Crypto.decodePublicKey(compositeKeyFile.readAll()))
         }
         log.info("Finish migrating $privateKeyAlias from file to keystore.")
     }

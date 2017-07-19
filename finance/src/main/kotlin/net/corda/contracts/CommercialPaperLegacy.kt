@@ -9,7 +9,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import java.time.Instant
 import java.util.*
 
