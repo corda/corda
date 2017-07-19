@@ -254,6 +254,12 @@ class Obligation<P : Any> : Contract {
      * Subset of state, containing the elements specified when issuing a new settlement contract.
      *
      * @param P the product the obligation is for payment of.
+     * @param acceptableContracts is the contract types that can be accepted, such as cash.
+     * @param acceptableIssuedProducts is the assets which are acceptable forms of payment (i.e. GBP issued by the Bank
+     * of England).
+     * @param dueBefore when payment is due by.
+     * @param timeTolerance tolerance value on [dueBefore], to handle clock skew between distributed systems. Generally
+     * this would be about 30 seconds.
      */
     @CordaSerializable
     data class Terms<P : Any>(
@@ -468,7 +474,38 @@ class Obligation<P : Any> : Contract {
     )
 
     /**
+     * Puts together an issuance transaction for the specified currency obligation amount that starts out being owned by
+     * the given pubkey.
+     *
+     * @param tx transaction builder to add states and commands to.
+     * @param obligor the party who is expected to pay some currency amount to fulfil the obligation (also the owner of
+     * the obligation).
+     * @param amount currency amount the obligor is expected to pay.
+     * @param dueBefore the date on which the obligation is due. The default time tolerance is used (currently this is
+     * 30 seconds).
+     * @param beneficiary the party the obligor is expected to pay.
+     * @param notary the notary for this transaction's outputs.
+     */
+    fun generateCashIssue(tx: TransactionBuilder,
+                      obligor: AbstractParty,
+                      amount: Amount<Issued<Currency>>,
+                      dueBefore: Instant,
+                      beneficiary: AbstractParty,
+                      notary: Party) {
+        val issuanceDef = Terms(NonEmptySet.of(Cash().legalContractReference), NonEmptySet.of(amount.token), dueBefore)
+        OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, amount.quantity, beneficiary), notary), Commands.Issue())
+    }
+
+    /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
+     *
+     * @param tx transaction builder to add states and commands to.
+     * @param obligor the party who is expected to pay some amount to fulfil the obligation.
+     * @param issuanceDef the terms of the obligation, including which contracts and underlying assets are acceptable
+     * forms of payment.
+     * @param pennies the quantity of the asset (in the smallest normal unit of measurement) owed.
+     * @param beneficiary the party the obligor is expected to pay.
+     * @param notary the notary for this transaction's outputs.
      */
     fun generateIssue(tx: TransactionBuilder,
                       obligor: AbstractParty,
