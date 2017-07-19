@@ -84,7 +84,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     override fun certificateFromParty(party: Party): PartyAndCertificate? = principalToParties[party.name]
 
     // We give the caller a copy of the data set to avoid any locking problems
-    override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
+    override fun getAllIdentities(): Iterable<PartyAndCertificate> = java.util.ArrayList(keyToParties.values)
 
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
     @Deprecated("Use partyFromX500Name")
@@ -139,7 +139,6 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
 
         partyToPath[anonymousIdentity.party] = Pair(anonymousIdentity.certPath, certificate)
         keyToParties[anonymousIdentity.party.owningKey] = fullParty
-        principalToParties[fullParty.name] = fullParty
         return fullParty
     }
 
