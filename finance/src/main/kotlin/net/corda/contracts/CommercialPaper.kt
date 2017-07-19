@@ -18,7 +18,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import net.corda.schemas.CommercialPaperSchemaV1
 import java.time.Instant
 import java.util.*

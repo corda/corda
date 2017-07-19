@@ -2,8 +2,8 @@ package net.corda.core.flows
 
 import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.Party
-import net.corda.flows.AnonymisedIdentity
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
@@ -49,22 +49,22 @@ class TransactionKeyFlowTests {
         val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow(bob))
 
         // Get the results
-        val actual: Map<Party, AnonymisedIdentity> = requesterFlow.resultFuture.getOrThrow().toMap()
+        val actual: Map<Party, AnonymousPartyAndPath> = requesterFlow.resultFuture.getOrThrow().toMap()
         assertEquals(2, actual.size)
         // Verify that the generated anonymous identities do not match the well known identities
         val aliceAnonymousIdentity = actual[alice] ?: throw IllegalStateException()
         val bobAnonymousIdentity = actual[bob] ?: throw IllegalStateException()
-        assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity.identity)
-        assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity.identity)
+        assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity.party)
+        assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity.party)
 
         // Verify that the anonymous identities look sane
-        assertEquals(alice.name, aliceAnonymousIdentity.certificate.subject)
-        assertEquals(bob.name, bobAnonymousIdentity.certificate.subject)
+        assertEquals(alice.name, aliceAnonymousIdentity.name)
+        assertEquals(bob.name, bobAnonymousIdentity.name)
 
         // Verify that the nodes have the right anonymous identities
-        assertTrue { aliceAnonymousIdentity.identity.owningKey in aliceNode.services.keyManagementService.keys }
-        assertTrue { bobAnonymousIdentity.identity.owningKey in bobNode.services.keyManagementService.keys }
-        assertFalse { aliceAnonymousIdentity.identity.owningKey in bobNode.services.keyManagementService.keys }
-        assertFalse { bobAnonymousIdentity.identity.owningKey in aliceNode.services.keyManagementService.keys }
+        assertTrue { aliceAnonymousIdentity.party.owningKey in aliceNode.services.keyManagementService.keys }
+        assertTrue { bobAnonymousIdentity.party.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { aliceAnonymousIdentity.party.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { bobAnonymousIdentity.party.owningKey in aliceNode.services.keyManagementService.keys }
     }
 }

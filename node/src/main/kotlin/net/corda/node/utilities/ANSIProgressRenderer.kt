@@ -1,6 +1,6 @@
 package net.corda.node.utilities
 
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.utilities.ANSIProgressRenderer.progressTracker
 import org.apache.logging.log4j.LogManager
