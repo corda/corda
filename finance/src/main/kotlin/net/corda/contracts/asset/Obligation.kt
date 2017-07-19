@@ -16,7 +16,7 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.seconds
 import org.bouncycastle.asn1.x500.X500Name
