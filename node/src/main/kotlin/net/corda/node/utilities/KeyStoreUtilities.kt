@@ -1,19 +1,19 @@
 package net.corda.node.utilities
 
-import net.corda.core.crypto.CertificateAndKeyPair
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.cert
+import net.corda.core.crypto.*
 import net.corda.core.internal.exists
 import net.corda.core.internal.read
 import net.corda.core.internal.write
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.path.CertPath
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.Path
 import java.security.*
+import java.security.cert.CertPath
 import java.security.cert.Certificate
+import java.security.cert.CertificateFactory
 
 val KEYSTORE_TYPE = "JKS"
 
@@ -77,8 +77,8 @@ fun loadKeyStore(input: InputStream, storePassword: String): KeyStore {
  * but for SSL purposes this is recommended.
  * @param chain the sequence of certificates starting with the public key certificate for this key and extending to the root CA cert.
  */
-fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: CertPath) {
-    addOrReplaceKey(alias, key, password, chain.certificates.map { it.cert }.toTypedArray<Certificate>())
+fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: Array<out X509CertificateHolder>) {
+    addOrReplaceKey(alias, key, password, chain.map { it.cert }.toTypedArray<Certificate>())
 }
 
 /**
@@ -89,7 +89,7 @@ fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain
  * but for SSL purposes this is recommended.
  * @param chain the sequence of certificates starting with the public key certificate for this key and extending to the root CA cert.
  */
-fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: Array<Certificate>) {
+fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: Array<out Certificate>) {
     if (containsAlias(alias)) {
         this.deleteEntry(alias)
     }
@@ -167,4 +167,44 @@ fun KeyStore.getSupportedKey(alias: String, keyPassword: String): PrivateKey {
     val keyPass = keyPassword.toCharArray()
     val key = getKey(alias, keyPass) as PrivateKey
     return Crypto.toSupportedPrivateKey(key)
+}
+
+class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
+    private val keyStore = storePath.read { loadKeyStore(it, storePassword) }
+
+    private fun createCertificate(serviceName: X500Name, pubKey: PublicKey): CertPath {
+        val clientCertPath = keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
+        // Assume key password = store password.
+        val clientCA = certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
+        // Create new keys and store in keystore.
+        val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, pubKey)
+        val certPath = CertificateFactory.getInstance("X509").generateCertPath(listOf(cert.cert) + clientCertPath)
+        require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
+        return certPath
+    }
+
+    fun saveNewKeyPair(serviceName: X500Name, privateKeyAlias: String, keyPair: KeyPair) {
+        val certPath = createCertificate(serviceName, keyPair.public)
+        // Assume key password = store password.
+        keyStore.addOrReplaceKey(privateKeyAlias, keyPair.private, storePassword.toCharArray(), certPath.certificates.toTypedArray())
+        keyStore.save(storePath, storePassword)
+    }
+
+    fun savePublicKey(serviceName: X500Name, pubKeyAlias: String, pubKey: PublicKey) {
+        val certPath = createCertificate(serviceName, pubKey)
+        // Assume key password = store password.
+        keyStore.addOrReplaceCertificate(pubKeyAlias, certPath.certificates.first())
+        keyStore.save(storePath, storePassword)
+    }
+
+    // Delegate methods to keystore. Sadly keystore doesn't have an interface.
+    fun containsAlias(alias: String) = keyStore.containsAlias(alias)
+
+    fun getX509Certificate(alias: String) = keyStore.getX509Certificate(alias)
+
+    fun getCertificateChain(alias: String): Array<out Certificate> = keyStore.getCertificateChain(alias)
+
+    fun getCertificate(alias: String): Certificate = keyStore.getCertificate(alias)
+
+    fun certificateAndKeyPair(alias: String) = keyStore.getCertificateAndKeyPair(alias, storePassword)
 }
