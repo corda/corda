@@ -13,7 +13,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.Emoji
+import net.corda.core.internal.Emoji
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.testing.BOC
