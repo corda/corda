@@ -20,10 +20,4 @@ sealed class NetworkMapStartStrategy {
     class Nominated(override val legalName: X500Name) : NetworkMapStartStrategy() {
         override val startDedicated = false
     }
-
-    // TODO
-    class NoNetworkMap(): NetworkMapStartStrategy() { // TODO get rid of overrides
-        override val legalName = DUMMY_MAP.name
-        override val startDedicated = false
-    }
 }

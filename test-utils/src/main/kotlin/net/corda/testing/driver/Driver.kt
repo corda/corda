@@ -85,8 +85,6 @@ interface DriverDSLExposedInterface : CordformContext {
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
      *     in. If null the Driver-level value will be used.
-     * @param noNetworkMapService tells us if we want to specify the network map for this node, or run only with database cached data
-     *     Notice, that if nothing is loaded from database and node doesn't have configured network map service the startup will fail.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
     fun startNode(providedName: X500Name? = null,
@@ -94,8 +92,7 @@ interface DriverDSLExposedInterface : CordformContext {
                   rpcUsers: List<User> = emptyList(),
                   verifierType: VerifierType = VerifierType.InMemory,
                   customOverrides: Map<String, Any?> = emptyMap(),
-                  startInSameProcess: Boolean? = null,
-                  noNetworkMapService: Boolean = false): CordaFuture<NodeHandle>
+                  startInSameProcess: Boolean? = null): CordaFuture<NodeHandle>
 
     fun startNodes(
             nodes: List<CordformNode>,
@@ -226,7 +223,8 @@ sealed class PortAllocation {
  *   }
  *
  * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously, but rather returns a [CordaFuture]
- * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service.
+ * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service or
+ * loaded node data from database.
  *
  * The driver implicitly bootstraps a [NetworkMapService].
  *
@@ -554,20 +552,17 @@ class DriverDSL(
                         { nodeName: X500Name -> if (nodeName == legalName) null else it }
                     }
                 }
-                else -> TODO() //TODO
             }
         }
     }
 
-    // TODO do sth simillar to NodeBasedTest, add flag noNetworkMap, add network map for this network
     override fun startNode(
             providedName: X500Name?,
             advertisedServices: Set<ServiceInfo>,
             rpcUsers: List<User>,
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            noNetworkMapService: Boolean // TODO make it another network map strategy
+            startInSameProcess: Boolean?
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         val rpcAddress = portAllocation.nextHostAndPort()
