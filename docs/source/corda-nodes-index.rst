@@ -4,6 +4,7 @@ Corda nodes
 .. toctree::
    :maxdepth: 1
 
+   deploying-a-node
    running-a-node
    clientrpc
    shell
