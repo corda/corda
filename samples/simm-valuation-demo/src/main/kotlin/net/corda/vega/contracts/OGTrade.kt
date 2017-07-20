@@ -23,7 +23,7 @@ data class OGTrade(override val legalContractReference: SecureHash = SecureHash.
                                 outputs: List<ContractState>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: Unit?): Set<Commands> {
-                require(tx.timeWindow?.midpoint != null) { "must have a time-window" }
+                requireNotNull(tx.timeWindow) { "must have a time-window" }
                 // We return an empty set because we don't process any commands
                 return emptySet()
             }
@@ -43,7 +43,7 @@ data class OGTrade(override val legalContractReference: SecureHash = SecureHash.
                                 groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Agree>()
 
-                require(inputs.size == 0) { "Inputs must be empty" }
+                require(inputs.isEmpty()) { "Inputs must be empty" }
                 require(outputs.size == 1) { "" }
                 require(outputs[0].buyer != outputs[0].seller)
                 require(outputs[0].participants.containsAll(outputs[0].participants))

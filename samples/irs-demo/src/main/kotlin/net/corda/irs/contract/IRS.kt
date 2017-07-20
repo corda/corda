@@ -522,7 +522,7 @@ class InterestRateSwap : Contract {
                                 outputs: List<ContractState>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: Unit?): Set<Commands> {
-                require(tx.timeWindow?.midpoint != null) { "must be have a time-window)" }
+                requireNotNull(tx.timeWindow) { "must be have a time-window)" }
                 // We return an empty set because we don't process any commands
                 return emptySet()
             }
@@ -584,8 +584,7 @@ class InterestRateSwap : Contract {
                     "There is only one change in the IRS floating leg payment schedule" using (paymentDifferences.size == 1)
                 }
 
-                val changedRates = paymentDifferences.single().second // Ignore the date of the changed rate (we checked that earlier).
-                val (oldFloatingRatePaymentEvent, newFixedRatePaymentEvent) = changedRates
+                val (oldFloatingRatePaymentEvent, newFixedRatePaymentEvent) = paymentDifferences.single().second // Ignore the date of the changed rate (we checked that earlier).
                 val fixValue = command.value.fix
                 // Need to check that everything is the same apart from the new fixed rate entry.
                 requireThat {

@@ -5,12 +5,12 @@ import net.corda.core.utilities.seconds
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant
-import java.time.ZoneId
+import java.time.ZoneOffset
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class TimeWindowCheckerTests {
-    val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+    val clock: Clock = Clock.fixed(Instant.now(), ZoneOffset.UTC)
     val timeWindowChecker = TimeWindowChecker(clock)
 
     @Test

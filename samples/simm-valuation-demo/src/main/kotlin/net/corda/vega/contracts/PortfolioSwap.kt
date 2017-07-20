@@ -25,7 +25,7 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
                                 outputs: List<ContractState>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: Unit?): Set<Commands> {
-                require(tx.timeWindow?.midpoint != null) { "must  have a time-window)" }
+                requireNotNull(tx.timeWindow) { "must have a time-window)" }
                 // We return an empty set because we don't process any commands
                 return emptySet()
             }
@@ -69,7 +69,7 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
                 val command = tx.commands.requireSingleCommand<Commands.Agree>()
 
                 requireThat {
-                    "there are no inputs" using (inputs.size == 0)
+                    "there are no inputs" using (inputs.isEmpty())
                     "there is one output" using (outputs.size == 1)
                     "valuer must be a party" using (outputs[0].participants.contains(outputs[0].valuer))
                 }
