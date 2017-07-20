@@ -1,6 +1,10 @@
 package net.corda.core.serialization.amqp
 
-import net.corda.core.contracts.*
+import net.corda.core.CordaRuntimeException
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
@@ -8,7 +12,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.EmptyWhitelist
 import net.corda.core.serialization.KryoAMQPSerializer
 import net.corda.core.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.core.CordaRuntimeException
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.nodeapi.RPCException
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
@@ -505,7 +509,7 @@ class SerializationOutputTests {
     }
 
     object FooContract : Contract {
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
 
         }
 

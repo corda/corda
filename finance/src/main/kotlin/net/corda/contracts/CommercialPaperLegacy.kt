@@ -8,6 +8,7 @@ import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.internal.Emoji
 import java.time.Instant
@@ -54,7 +55,7 @@ class CommercialPaperLegacy : Contract {
         class Issue : TypeOnlyCommandData(), Commands
     }
 
-    override fun verify(tx: TransactionForContract) {
+    override fun verify(tx: LedgerTransaction) {
         // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
         val groups = tx.groupStates(State::withoutOwner)
 
@@ -80,7 +81,7 @@ class CommercialPaperLegacy : Contract {
                 is Commands.Redeem -> {
                     // Redemption of the paper requires movement of on-ledger cash.
                     val input = inputs.single()
-                    val received = tx.outputs.sumCashBy(input.owner)
+                    val received = tx.outputs.map { it.data }.sumCashBy(input.owner)
                     val time = timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must have a time-window")
                     requireThat {
                         "the paper must have matured" using (time >= input.maturityDate)

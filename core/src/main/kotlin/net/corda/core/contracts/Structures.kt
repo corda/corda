@@ -6,7 +6,11 @@ import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.serialization.serialize
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -205,7 +209,7 @@ interface LinearState : ContractState {
      */
     @CordaSerializable
     class ClauseVerifier<in S : LinearState, C : CommandData> : Clause<S, C, Unit>() {
-        override fun verify(tx: TransactionForContract,
+        override fun verify(tx: LedgerTransaction,
                             inputs: List<S>,
                             outputs: List<S>,
                             commands: List<AuthenticatedObject<C>>,
@@ -399,7 +403,7 @@ interface Contract {
      * existing contract code.
      */
     @Throws(IllegalArgumentException::class)
-    fun verify(tx: TransactionForContract)
+    fun verify(tx: LedgerTransaction)
 
     /**
      * Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
