@@ -241,6 +241,6 @@ object TwoPartyTradeFlow {
         }
         // DOCEND 1
 
-        data class SharedTx(val tx: TransactionBuilder, val identities: Map<Party, AnonymousPartyAndPath>, val cashSigningPubKeys: List<PublicKey>>)
+        data class SharedTx(val tx: TransactionBuilder, val identities: Map<Party, AnonymousPartyAndPath>, val cashSigningPubKeys: List<PublicKey>)
     }
 }

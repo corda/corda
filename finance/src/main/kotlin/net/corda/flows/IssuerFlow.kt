@@ -47,7 +47,7 @@ object IssuerFlow {
             return sendAndReceive<AbstractCashFlow.Result>(issuerBankParty, issueRequest).unwrap { res ->
                 val anonymousRecipient = res.recipient!!
                 val wellKnownRecipient = serviceHub.identityService.partyFromAnonymous(anonymousRecipient)
-                require(wellKnownRecipient == issueToParty) { "Confidential identity to pay must belong to ${issueToParty} but found ${wellKnownRecipient}" }
+                require(wellKnownRecipient == issueToParty) { "Confidential identity to pay must belong to $issueToParty but found $wellKnownRecipient" }
                 val tx = res.stx.tx
                 val expectedAmount = Amount(amount.quantity, Issued(issuerBankParty.ref(issueToPartyRef), amount.token))
                 val cashOutputs = tx.filterOutputs<Cash.State> { state -> state.owner == anonymousRecipient }

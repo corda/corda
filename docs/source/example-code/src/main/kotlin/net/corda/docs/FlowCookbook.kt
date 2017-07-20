@@ -10,6 +10,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
@@ -460,9 +461,7 @@ object FlowCookbook {
 
             // The states we use do not have participants, so anonymisation doesn't make sense here
             val identities = listOf(serviceHub.myInfo.legalIdentityAndCert, serviceHub.identityService.certificateFromParty(counterparty)!!)
-                    .map { node ->
-                        Pair(node.party, node.toAnonymous())
-                    }.toMap()
+                    .associateBy(PartyAndCertificate::party){ it.toAnonymous() }
             // The list of parties who need to sign a transaction is dictated
             // by the transaction's commands. Once we've signed a transaction
             // ourselves, we can automatically gather the signatures of the
