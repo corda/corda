@@ -113,7 +113,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 platformVersion,
                 advertisedServices,
                 rpcUsers,
-                networkMapConf + configOverrides)
+                networkMapConf + configOverrides,
+                noNetworkMap)
         return if (waitForConnection) node.nodeReadyFuture.map { node } else Futures.immediateFuture(node)
     }
 
@@ -155,7 +156,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                                   platformVersion: Int,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
-                                  configOverrides: Map<String, Any>): Node {
+                                  configOverrides: Map<String, Any>,
+                                  noNetworkMap: Boolean = false): Node {
         val baseDirectory = baseDirectory(legalName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
@@ -167,7 +169,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                         "p2pAddress" to p2pAddress,
                         "rpcAddress" to localPort[1].toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
-                        "rpcUsers" to rpcUsers.map { it.toMap() }
+                        "rpcUsers" to rpcUsers.map { it.toMap() },
+                        "noNetworkMap" to noNetworkMap
                 ) + configOverrides
         )
 

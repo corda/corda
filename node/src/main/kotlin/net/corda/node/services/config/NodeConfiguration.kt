@@ -69,7 +69,8 @@ data class FullNodeConfiguration(
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
         val useTestClock: Boolean = false,
-        val detectPublicIp: Boolean = true
+        val detectPublicIp: Boolean = true,
+        val noNetworkMap: Boolean = false // Switch off automatic network map assignment to node without networkMapAddress and network map in advertised services.
 ) : NodeConfiguration {
     /** This is not retrieved from the config file but rather from a command line argument. */
     @Suppress("DEPRECATION")
@@ -86,10 +87,12 @@ data class FullNodeConfiguration(
     }
 
     fun calculateServices(): Set<ServiceInfo> {
-        return extraAdvertisedServiceIds
+        val advertisedServices = extraAdvertisedServiceIds
                 .filter(String::isNotBlank)
                 .map { ServiceInfo.parse(it) }
                 .toMutableSet()
+        if (networkMapService == null && !noNetworkMap) advertisedServices += ServiceInfo(NetworkMapService.type)
+        return advertisedServices
     }
 }
 
