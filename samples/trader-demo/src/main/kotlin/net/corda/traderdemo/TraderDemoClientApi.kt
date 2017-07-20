@@ -49,9 +49,9 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
 
     fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS) {
         val bankOfCordaParty = rpc.partyFromX500Name(BOC.name)
-                ?: throw IllegalStateException("Unable to locate ${BOC.name} in Network Map Service")
+                ?: throw IllegalStateException("Unable to locate ${BOC.name} in identity service")
         val notaryLegalIdentity = rpc.partyFromX500Name(DUMMY_NOTARY.name)
-                ?: throw IllegalStateException("Unable to locate ${DUMMY_NOTARY.name} in Network Map Service")
+                ?: throw IllegalStateException("Unable to locate ${DUMMY_NOTARY.name} in identity service")
         val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
                 ?: throw IllegalStateException("Unable to locate notary node in network map cache")
         val me = rpc.nodeIdentity()

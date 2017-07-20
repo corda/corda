@@ -227,10 +227,9 @@ abstract class SignTransactionFlow(val otherParty: Party,
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
-        // Refuse to sign anything where we don't know all of the parties involved
         val signingIdentities = stx.sigs.map { serviceHub.identityService.partyFromKey(it.by) }.filterNotNull()
-        require(signingIdentities.any { it == otherParty }) {
-            "The Initiator of CollectSignaturesFlow must have signed the transaction."
+        require(otherParty in signingIdentities) {
+            "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingIdentities}"
         }
         val signed = stx.sigs.map { it.by }
         val allSigners = stx.tx.requiredSigningKeys
