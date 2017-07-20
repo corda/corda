@@ -13,6 +13,8 @@ import net.corda.core.utilities.unwrap
 /**
  * Flow for ensuring that one or more counterparties are aware of all identities in a transaction for KYC purposes.
  * This is intended for use as a subflow of another flow.
+ *
+ * @return a mapping of well known identities to the confidential identities used in the transaction.
  */
 @StartableByRPC
 @InitiatingFlow
@@ -42,7 +44,7 @@ class IdentitySyncFlow(val otherSides: Set<Party>,
         progressTracker.currentStep = SYNCING_IDENTITIES
         otherSides.forEach { otherSide ->
             val requestedIdentities: List<AnonymousParty> = sendAndReceive<List<AnonymousParty>>(otherSide, confidentialIdentities).unwrap { req ->
-                require(req.all { it in identities }) { "${otherSide} requested a confidential identity not part of transaction ${tx.id}"}
+                require(req.all { it in identities }) { "${otherSide} requested a confidential identity not part of transaction ${tx.id}" }
                 req
             }
             val sendIdentities: List<AnonymousPartyAndPath> = requestedIdentities.map(identities::get).requireNoNulls()
