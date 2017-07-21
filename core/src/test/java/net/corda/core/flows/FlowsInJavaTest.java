@@ -1,12 +1,13 @@
 package net.corda.core.flows;
 
 import co.paralleluniverse.fibers.Suspendable;
-import net.corda.core.concurrent.CordaFuture;
 import net.corda.core.identity.Party;
 import net.corda.testing.node.MockNetwork;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -32,7 +33,7 @@ public class FlowsInJavaTest {
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
         node2.registerInitiatedFlow(SendHelloAndThenReceive.class);
-        CordaFuture<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(node2.getInfo().getLegalIdentity())).getResultFuture();
+        Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(node2.getInfo().getLegalIdentity())).getResultFuture();
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }

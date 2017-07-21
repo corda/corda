@@ -1,6 +1,7 @@
 package net.corda.core.internal.concurrent
 
 import com.google.common.annotations.VisibleForTesting
+import net.corda.core.concurrent.ApiFuture
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.match
 import net.corda.core.utilities.getOrThrow
@@ -118,25 +119,19 @@ interface ValueOrException<in V> {
 }
 
 /** A [CordaFuture] with additional methods to complete it with a value, exception or the outcome of another future. */
-interface OpenFuture<V> : ValueOrException<V>, CordaFuture<V> {
+interface OpenFuture<V> : ValueOrException<V>, ApiFuture<V> {
     override fun unwrap(): CompletableFuture<V>
 }
 
 /** Unless you really want this particular implementation, use [openFuture] to make one. */
 @VisibleForTesting
-internal class CordaFutureImpl<V> : OpenFuture<V> {
+internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = CompletableFuture()) : Future<V> by impl, OpenFuture<V> {
     companion object {
         private val defaultLog = loggerFor<CordaFutureImpl<*>>()
         internal val listenerFailedMessage = "Future listener failed:"
     }
 
-    private val impl = CompletableFuture<V>()
     override fun unwrap() = impl
-    override fun cancel(mayInterruptIfRunning: Boolean) = impl.cancel(mayInterruptIfRunning)
-    override val isCancelled get() = impl.isCancelled
-    override val isDone get() = impl.isDone
-    override fun get(): V = impl.get()
-    override fun get(timeout: Duration): V = impl.get(timeout)
     override fun set(value: V) = impl.complete(value)
     override fun setException(t: Throwable) = impl.completeExceptionally(t)
     override fun <W> then(callback: (CordaFuture<V>) -> W) = thenImpl(defaultLog, callback)

@@ -5,7 +5,7 @@ import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.abbreviate
-import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.ApiFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
@@ -78,7 +78,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Transient private var _resultFuture: OpenFuture<R>? = openFuture()
     /** This future will complete when the call method returns. */
-    override val resultFuture: CordaFuture<R>
+    override val resultFuture: ApiFuture<R>
         get() = _resultFuture ?: openFuture<R>().also { _resultFuture = it }
 
     // This state IS serialised, as we need it to know what the fiber is waiting for.

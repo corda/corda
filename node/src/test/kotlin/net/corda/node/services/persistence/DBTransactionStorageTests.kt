@@ -8,7 +8,6 @@ import net.corda.core.crypto.testing.NullPublicKey
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.seconds
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.LogHelper
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -19,6 +18,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class DBTransactionStorageTests {
@@ -124,7 +124,7 @@ class DBTransactionStorageTests {
         database.transaction {
             transactionStorage.addTransaction(expected)
         }
-        val actual = future.get(1.seconds)
+        val actual = future.get(1, TimeUnit.SECONDS)
         assertEquals(expected, actual)
     }
 

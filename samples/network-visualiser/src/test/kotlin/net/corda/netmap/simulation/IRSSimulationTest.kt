@@ -11,7 +11,7 @@ class IRSSimulationTest {
         LogHelper.setLevel("+messages")
         val sim = IRSSimulation(false, false, null)
         val future = sim.start()
-        while (!future.isDone) sim.iterate()
+        while (!future.isDone()) sim.iterate()
         future.getOrThrow()
     }
 }

@@ -285,10 +285,10 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             p2pConsumer!!
         }
 
-        while (!networkMapRegistrationFuture.isDone && processMessage(consumer)) {
+        while (!networkMapRegistrationFuture.isDone() && processMessage(consumer)) {
         }
         with(networkMapRegistrationFuture) {
-            if (isDone) getOrThrow() else andForget(log) // Trigger node shutdown here to avoid deadlock in shutdown hooks.
+            if (isDone()) getOrThrow() else andForget(log) // Trigger node shutdown here to avoid deadlock in shutdown hooks.
         }
     }
 

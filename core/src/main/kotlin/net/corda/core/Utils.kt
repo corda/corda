@@ -258,7 +258,7 @@ fun <T> Observable<T>.toFuture(): CordaFuture<T> = openFuture<T>().also {
         override fun onCompleted() {}
     })
     it.then {
-        if (it.isCancelled) {
+        if (it.isCancelled()) {
             subscription.unsubscribe()
         }
     }

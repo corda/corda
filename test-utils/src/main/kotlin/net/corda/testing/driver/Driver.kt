@@ -349,7 +349,7 @@ fun <A> poll(
     val task = object : Runnable {
         var counter = -1
         override fun run() {
-            if (resultFuture.isCancelled) return // Give up, caller can no longer get the result.
+            if (resultFuture.isCancelled()) return // Give up, caller can no longer get the result.
             if (++counter == warnCount) {
                 log.warn("Been polling $pollName for ${(pollInterval * warnCount.toLong()).seconds} seconds...")
             }
@@ -518,7 +518,7 @@ class DriverDSL(
             try {
                 client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
             } catch (e: Exception) {
-                if (processDeathFuture.isDone) throw e
+                if (processDeathFuture.isDone()) throw e
                 log.error("Exception $e, Retrying RPC connection at $nodeAddress")
                 null
             }

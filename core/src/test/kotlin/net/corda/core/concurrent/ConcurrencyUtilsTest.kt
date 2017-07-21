@@ -47,7 +47,7 @@ class ConcurrencyUtilsTest {
         assertEquals(100, g.getOrThrow())
         assertEquals(1, invocations) // Handler didn't run as g was already done.
         verifyNoMoreInteractions(log) // CancellationException is not logged (if due to cancel).
-        assertTrue(f2.isCancelled)
+        assertTrue(f2.isCancelled())
     }
 
     /**

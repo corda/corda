@@ -3,9 +3,9 @@ package net.corda.core.concurrent;
 import net.corda.core.internal.concurrent.OpenFuture;
 import org.junit.Test;
 
-import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static net.corda.core.internal.concurrent.CordaFutureImplKt.doneFuture;
@@ -24,7 +24,7 @@ public class CordaFutureInJavaTest {
         }
         {
             CordaFuture<Number> f = openFuture();
-            assertThatThrownBy(() -> f.get(Duration.ofMillis(1))).isInstanceOf(TimeoutException.class);
+            assertThatThrownBy(() -> f.get(1, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
         }
         {
             CordaFuture<Number> f = doneFuture(100);
