@@ -3,7 +3,7 @@ package net.corda.core.contracts.clauses
 import net.corda.core.contracts.AuthenticatedObject
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionForContract
+import net.corda.core.transactions.LedgerTransaction
 import java.util.*
 
 /**
@@ -24,7 +24,7 @@ open class AllOf<S : ContractState, C : CommandData, K : Any>(firstClause: Claus
         return clauses
     }
 
-    override fun verify(tx: TransactionForContract,
+    override fun verify(tx: LedgerTransaction,
                         inputs: List<S>,
                         outputs: List<S>,
                         commands: List<AuthenticatedObject<C>>,

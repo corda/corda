@@ -9,14 +9,15 @@ import net.corda.core.contracts.clauses.Clause
 import net.corda.core.contracts.clauses.GroupClauseVerifier
 import net.corda.core.contracts.clauses.verifyClause
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.internal.Emoji
 import net.corda.schemas.CommercialPaperSchemaV1
@@ -57,7 +58,7 @@ class CommercialPaper : Contract {
             val maturityDate: Instant
     )
 
-    override fun verify(tx: TransactionForContract) = verifyClause(tx, Clauses.Group(), tx.commands.select<Commands>())
+    override fun verify(tx: LedgerTransaction) = verifyClause(tx, Clauses.Group(), tx.commands.select<Commands>())
 
     data class State(
             val issuance: PartyAndReference,
@@ -112,7 +113,7 @@ class CommercialPaper : Contract {
                         Redeem(),
                         Move(),
                         Issue())) {
-            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
+            override fun groupStates(tx: LedgerTransaction): List<LedgerTransaction.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }
 
@@ -121,7 +122,7 @@ class CommercialPaper : Contract {
                 { token -> map { Amount(it.faceValue.quantity, it.token) }.sumOrZero(token) }) {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
 
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: List<AuthenticatedObject<Commands>>,
@@ -140,7 +141,7 @@ class CommercialPaper : Contract {
         class Move : Clause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Move::class.java)
 
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: List<AuthenticatedObject<Commands>>,
@@ -160,7 +161,7 @@ class CommercialPaper : Contract {
         class Redeem : Clause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Redeem::class.java)
 
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: List<AuthenticatedObject<Commands>>,
@@ -171,7 +172,7 @@ class CommercialPaper : Contract {
                 val timeWindow = tx.timeWindow
 
                 val input = inputs.single()
-                val received = tx.outputs.sumCashBy(input.owner)
+                val received = tx.outputs.map { it.data }.sumCashBy(input.owner)
                 val time = timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must have a time-window")
                 requireThat {
                     "the paper must have matured" using (time >= input.maturityDate)

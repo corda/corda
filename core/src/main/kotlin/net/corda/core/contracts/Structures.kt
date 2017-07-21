@@ -6,14 +6,17 @@ import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.serialization.serialize
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.PublicKey
-import java.time.Duration
 import java.time.Instant
 import java.util.jar.JarInputStream
 
@@ -205,7 +208,7 @@ interface LinearState : ContractState {
      */
     @CordaSerializable
     class ClauseVerifier<in S : LinearState, C : CommandData> : Clause<S, C, Unit>() {
-        override fun verify(tx: TransactionForContract,
+        override fun verify(tx: LedgerTransaction,
                             inputs: List<S>,
                             outputs: List<S>,
                             commands: List<AuthenticatedObject<C>>,
@@ -324,63 +327,6 @@ data class AuthenticatedObject<out T : Any>(
 )
 // DOCEND 6
 
-/**
- * A time-window is required for validation/notarization purposes.
- * If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
- * between (fromTime, untilTime).
- * Usually, a time-window is required to have both sides set (fromTime, untilTime).
- * However, some apps may require that a time-window has a start [Instant] (fromTime), but no end [Instant] (untilTime) and vice versa.
- * TODO: Consider refactoring using TimeWindow abstraction like TimeWindow.From, TimeWindow.Until, TimeWindow.Between.
- */
-@CordaSerializable
-class TimeWindow private constructor(
-        /** The time at which this transaction is said to have occurred is after this moment. */
-        val fromTime: Instant?,
-        /** The time at which this transaction is said to have occurred is before this moment. */
-        val untilTime: Instant?
-) {
-    companion object {
-        /** Use when the left-side [fromTime] of a [TimeWindow] is only required and we don't need an end instant (untilTime). */
-        @JvmStatic
-        fun fromOnly(fromTime: Instant) = TimeWindow(fromTime, null)
-
-        /** Use when the right-side [untilTime] of a [TimeWindow] is only required and we don't need a start instant (fromTime). */
-        @JvmStatic
-        fun untilOnly(untilTime: Instant) = TimeWindow(null, untilTime)
-
-        /** Use when both sides of a [TimeWindow] must be set ([fromTime], [untilTime]). */
-        @JvmStatic
-        fun between(fromTime: Instant, untilTime: Instant): TimeWindow {
-            require(fromTime < untilTime) { "fromTime should be earlier than untilTime" }
-            return TimeWindow(fromTime, untilTime)
-        }
-
-        /** Use when we have a start time and a period of validity. */
-        @JvmStatic
-        fun fromStartAndDuration(fromTime: Instant, duration: Duration): TimeWindow = between(fromTime, fromTime + duration)
-
-        /**
-         * When we need to create a [TimeWindow] based on a specific time [Instant] and some tolerance in both sides of this instant.
-         * The result will be the following time-window: ([time] - [tolerance], [time] + [tolerance]).
-         */
-        @JvmStatic
-        fun withTolerance(time: Instant, tolerance: Duration) = between(time - tolerance, time + tolerance)
-    }
-
-    /** The midpoint is calculated as fromTime + (untilTime - fromTime)/2. Note that it can only be computed if both sides are set. */
-    val midpoint: Instant get() = fromTime!! + Duration.between(fromTime, untilTime!!).dividedBy(2)
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is TimeWindow) return false
-        return (fromTime == other.fromTime && untilTime == other.untilTime)
-    }
-
-    override fun hashCode() = 31 * (fromTime?.hashCode() ?: 0) + (untilTime?.hashCode() ?: 0)
-
-    override fun toString() = "TimeWindow(fromTime=$fromTime, untilTime=$untilTime)"
-}
-
 // DOCSTART 5
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
@@ -399,7 +345,7 @@ interface Contract {
      * existing contract code.
      */
     @Throws(IllegalArgumentException::class)
-    fun verify(tx: TransactionForContract)
+    fun verify(tx: LedgerTransaction)
 
     /**
      * Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of

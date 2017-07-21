@@ -15,6 +15,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.internal.Emoji
 import net.corda.core.utilities.NonEmptySet
@@ -74,7 +75,7 @@ class Obligation<P : Any> : Contract {
                         )
                 )
         ) {
-            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
+            override fun groupStates(tx: LedgerTransaction): List<LedgerTransaction.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
                     = tx.groupStates<Obligation.State<P>, Issued<Terms<P>>> { it.amount.token }
         }
 
@@ -97,7 +98,7 @@ class Obligation<P : Any> : Contract {
             val lifecycleClause = Clauses.VerifyLifecycle<ContractState, C, Unit, P>()
             override fun toString(): String = "Net obligations"
 
-            override fun verify(tx: TransactionForContract, inputs: List<ContractState>, outputs: List<ContractState>, commands: List<AuthenticatedObject<C>>, groupingKey: Unit?): Set<C> {
+            override fun verify(tx: LedgerTransaction, inputs: List<ContractState>, outputs: List<ContractState>, commands: List<AuthenticatedObject<C>>, groupingKey: Unit?): Set<C> {
                 lifecycleClause.verify(tx, inputs, outputs, commands, groupingKey)
                 return super.verify(tx, inputs, outputs, commands, groupingKey)
             }
@@ -109,7 +110,7 @@ class Obligation<P : Any> : Contract {
         class SetLifecycle<P : Any> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.SetLifecycle::class.java)
 
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State<P>>,
                                 outputs: List<State<P>>,
                                 commands: List<AuthenticatedObject<Commands>>,
@@ -128,7 +129,7 @@ class Obligation<P : Any> : Contract {
          */
         class Settle<P : Any> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Settle::class.java)
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State<P>>,
                                 outputs: List<State<P>>,
                                 commands: List<AuthenticatedObject<Commands>>,
@@ -158,7 +159,7 @@ class Obligation<P : Any> : Contract {
                 //  Move (signed by B)
                 //
                 // That would pass this check. Ensuring they do not is best addressed in the transaction generation stage.
-                val assetStates = tx.outputs.filterIsInstance<FungibleAsset<*>>()
+                val assetStates = tx.outputs.map { it.data }.filterIsInstance<FungibleAsset<*>>()
                 val acceptableAssetStates = assetStates
                         // TODO: This filter is nonsense, because it just checks there is an asset contract loaded, we need to
                         // verify the asset contract is the asset contract we expect.
@@ -216,7 +217,7 @@ class Obligation<P : Any> : Contract {
          * non-standard lifecycle states on input/output.
          */
         class VerifyLifecycle<S : ContractState, C : CommandData, T : Any, P : Any> : Clause<S, C, T>() {
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<S>,
                                 outputs: List<S>,
                                 commands: List<AuthenticatedObject<C>>,
@@ -385,7 +386,7 @@ class Obligation<P : Any> : Contract {
         data class Exit<P : Any>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 
-    override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
+    override fun verify(tx: LedgerTransaction) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
             Clauses.Net<Commands, P>(),
             Clauses.Group<P>()
     ), tx.commands.select<Obligation.Commands>())
@@ -396,7 +397,7 @@ class Obligation<P : Any> : Contract {
     @VisibleForTesting
     private fun verifySetLifecycleCommand(inputs: List<FungibleAsset<Terms<P>>>,
                                           outputs: List<FungibleAsset<Terms<P>>>,
-                                          tx: TransactionForContract,
+                                          tx: LedgerTransaction,
                                           setLifecycleCommand: AuthenticatedObject<Commands.SetLifecycle>) {
         // Default must not change anything except lifecycle, so number of inputs and outputs must match
         // exactly.

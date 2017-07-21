@@ -122,12 +122,11 @@ sealed class TransactionType {
          * If any contract fails to verify, the whole transaction is considered to be invalid.
          */
         private fun verifyContracts(tx: LedgerTransaction) {
-            val ctx = tx.toTransactionForContract()
             // TODO: This will all be replaced in future once the sandbox and contract constraints work is done.
-            val contracts = (ctx.inputs.map { it.contract } + ctx.outputs.map { it.contract }).toSet()
+            val contracts = (tx.inputs.map { it.state.data.contract } + tx.outputs.map { it.data.contract }).toSet()
             for (contract in contracts) {
                 try {
-                    contract.verify(ctx)
+                    contract.verify(tx)
                 } catch(e: Throwable) {
                     throw TransactionVerificationException.ContractRejection(tx.id, contract, e)
                 }
