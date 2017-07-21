@@ -1,9 +1,11 @@
 package net.corda.client.rpc.internal
 
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.RPCOps
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.minutes
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
@@ -85,13 +87,15 @@ data class RPCClientConfiguration(
  */
 class RPCClient<I : RPCOps>(
         val transport: TransportConfiguration,
-        val rpcConfiguration: RPCClientConfiguration = RPCClientConfiguration.default
+        val rpcConfiguration: RPCClientConfiguration = RPCClientConfiguration.default,
+        val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: SSLConfiguration? = null,
-            configuration: RPCClientConfiguration = RPCClientConfiguration.default
-    ) : this(tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration), configuration)
+            configuration: RPCClientConfiguration = RPCClientConfiguration.default,
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+    ) : this(tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration), configuration, serializationContext)
 
     companion object {
         private val log = loggerFor<RPCClient<*>>()
@@ -147,7 +151,7 @@ class RPCClient<I : RPCOps>(
             }
             val serverLocatorWithFailover = serverLocatorFactory().apply { reconnectAttempts = rpcConfiguration.maxReconnectAttempts }
             val serverLocatorWithoutFailover = serverLocatorFactory()
-            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocatorWithFailover, serverLocatorWithoutFailover, clientAddress, rpcOpsClass)
+            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocatorWithFailover, serverLocatorWithoutFailover, clientAddress, rpcOpsClass, serializationContext)
             fun closeConnection() {
                 proxyHandler.close()
                 serverLocatorWithFailover.close()

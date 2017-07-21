@@ -5,6 +5,7 @@ import net.corda.client.mock.Generator
 import net.corda.client.mock.generateOrFail
 import net.corda.client.mock.int
 import net.corda.client.mock.string
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.internal.div
@@ -22,6 +23,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
+import net.corda.nodeapi.serialization.KRYO_RPC_CLIENT_CONTEXT
 import net.corda.testing.driver.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -224,6 +226,7 @@ fun <A> rpcDriver(
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
+        initialiseSerialization: Boolean = true,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
         startNodesInProcess: Boolean = false,
         dsl: RPCDriverExposedDSLInterface.() -> A
@@ -241,7 +244,8 @@ fun <A> rpcDriver(
                 )
         ),
         coerce = { it },
-        dsl = dsl
+        dsl = dsl,
+        initialiseSerialization = initialiseSerialization
 )
 
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
@@ -510,7 +514,8 @@ class RandomRpcUser {
             val hostAndPort = args[1].parseNetworkHostAndPort()
             val username = args[2]
             val password = args[3]
-            val handle = RPCClient<RPCOps>(hostAndPort, null).start(rpcClass, username, password)
+            CordaRPCClient.initialiseSerialization()
+            val handle = RPCClient<RPCOps>(hostAndPort, null, serializationContext = KRYO_RPC_CLIENT_CONTEXT).start(rpcClass, username, password)
             val callGenerators = rpcClass.declaredMethods.map { method ->
                 Generator.sequence(method.parameters.map {
                     generatorStore[it.type] ?: throw Exception("No generator for ${it.type}")
