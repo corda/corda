@@ -12,10 +12,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.core.utilities.UntrustworthyData
@@ -416,7 +413,7 @@ object FlowCookbook {
             // sign it! We need to make sure the transaction represents an
             // agreement we actually want to enter into.
             // DOCSTART 34
-            val outputState: DummyState = wireTx.outputs.single().data as DummyState
+            val outputState: DummyState = wireTx.outputsOfType<DummyState>().single()
             if (outputState.magicNumber == 777) {
                 // ``FlowException`` is a special exception type. It will be
                 // propagated back to any counterparty flows waiting for a
@@ -548,7 +545,7 @@ object FlowCookbook {
             val signTransactionFlow: SignTransactionFlow = object : SignTransactionFlow(counterparty) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     // Any additional checking we see fit...
-                    val outputState = stx.tx.outputs.single().data as DummyState
+                    val outputState = stx.tx.outputsOfType<DummyState>().single()
                     assert(outputState.magicNumber == 777)
                 }
             }

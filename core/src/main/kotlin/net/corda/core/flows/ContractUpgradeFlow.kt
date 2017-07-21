@@ -24,7 +24,7 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
         @JvmStatic
         fun verify(tx: LedgerTransaction) {
             // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
-            verify(tx.inputs.single().state.data, tx.outputs.single().data, tx.commands.map { Command(it.value, it.signers) }.single())
+            verify(tx.inputStates.single(), tx.outputStates.single(), tx.commands.map { Command(it.value, it.signers) }.single())
         }
 
         @JvmStatic

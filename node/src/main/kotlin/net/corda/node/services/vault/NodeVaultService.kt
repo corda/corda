@@ -457,7 +457,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         // Retrieve unspent and unlocked cash states that meet our spending criteria.
         val acceptableCoins = unconsumedStatesForSpending<Cash.State>(amount, onlyFromParties, tx.notary, tx.lockId)
         return OnLedgerAsset.generateSpend(tx, amount, to, acceptableCoins,
-                { state, amount, owner -> deriveState(state, amount, owner) },
+                { state, quantity, owner -> deriveState(state, quantity, owner) },
                 { Cash().generateMoveCommand() })
     }
 
@@ -466,9 +466,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     @VisibleForTesting
     internal fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
-        val ourNewStates = tx.outputs.
-                filter { isRelevant(it.data, ourKeys) }.
-                map { tx.outRef<ContractState>(it.data) }
+        val ourNewStates = tx.filterOutRefs<ContractState> { isRelevant(it, ourKeys) }
 
         // Retrieve all unconsumed states for this transaction's inputs
         val consumedStates = HashSet<StateAndRef<ContractState>>()

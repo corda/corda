@@ -6,12 +6,11 @@ import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
-import net.corda.core.indexOfOrThrow
+import net.corda.core.internal.Emoji
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
-import net.corda.core.internal.Emoji
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -52,16 +51,6 @@ class WireTransaction(
             return wtx
         }
     }
-
-    /** Returns a [StateAndRef] for the given output index. */
-    @Suppress("UNCHECKED_CAST")
-    fun <T : ContractState> outRef(index: Int): StateAndRef<T> {
-        require(index >= 0 && index < outputs.size)
-        return StateAndRef(outputs[index] as TransactionState<T>, StateRef(id, index))
-    }
-
-    /** Returns a [StateAndRef] for the requested output state, or throws [IllegalArgumentException] if not found. */
-    fun <T : ContractState> outRef(state: ContractState): StateAndRef<T> = outRef(outputs.map { it.data }.indexOfOrThrow(state))
 
     /**
      * Looks up identities and attachments from storage to generate a [LedgerTransaction]. A transaction is expected to

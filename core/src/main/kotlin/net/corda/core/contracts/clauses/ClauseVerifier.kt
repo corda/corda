@@ -23,7 +23,7 @@ fun <C : CommandData> verifyClause(tx: LedgerTransaction,
             Clause.log.trace("Tx ${tx.id} clause: $clause")
         }
     }
-    val matchedCommands = clause.verify(tx, tx.inputs.map { it.state.data }, tx.outputs.map { it.data }, commands, null)
+    val matchedCommands = clause.verify(tx, tx.inputStates, tx.outputStates, commands, null)
 
     check(matchedCommands.containsAll(commands.map { it.value })) { "The following commands were not matched at the end of execution: " + (commands - matchedCommands) }
 }

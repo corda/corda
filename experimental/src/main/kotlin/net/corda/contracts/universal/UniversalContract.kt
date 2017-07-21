@@ -192,7 +192,7 @@ class UniversalContract : Contract {
 
         when (value) {
             is Commands.Action -> {
-                val inState = tx.inputs.single().state.data as State
+                val inState = tx.inputsOfType<State>().single()
                 val arr = when (inState.details) {
                     is Actions -> inState.details
                     is RollOut -> reduceRollOut(inState.details)
@@ -222,7 +222,7 @@ class UniversalContract : Contract {
 
                 when (tx.outputs.size) {
                     1 -> {
-                        val outState = tx.outputs.single().data as State
+                        val outState = tx.outputsOfType<State>().single()
                         requireThat {
                             "output state must match action result state" using (arrangement.equals(outState.details))
                             "output state must match action result state" using (rest == zero)
@@ -230,7 +230,7 @@ class UniversalContract : Contract {
                     }
                     0 -> throw IllegalArgumentException("must have at least one out state")
                     else -> {
-                        val allContracts = And(tx.outputs.map { (it.data as State).details }.toSet())
+                        val allContracts = And(tx.outputsOfType<State>().map { it.details }.toSet())
 
                         requireThat {
                             "output states must match action result state" using (arrangement.equals(allContracts))
@@ -240,15 +240,15 @@ class UniversalContract : Contract {
                 }
             }
             is Commands.Issue -> {
-                val outState = tx.outputs.single().data as State
+                val outState = tx.outputsOfType<State>().single()
                 requireThat {
                     "the transaction is signed by all liable parties" using (liableParties(outState.details).all { it in cmd.signers })
                     "the transaction has no input states" using tx.inputs.isEmpty()
                 }
             }
             is Commands.Move -> {
-                val inState = tx.inputs.single().state.data as State
-                val outState = tx.outputs.single().data as State
+                val inState = tx.inputsOfType<State>().single()
+                val outState = tx.outputsOfType<State>().single()
                 requireThat {
                     "the transaction is signed by all liable parties" using
                             (liableParties(outState.details).all { it in cmd.signers })
@@ -257,13 +257,13 @@ class UniversalContract : Contract {
                 }
             }
             is Commands.Fix -> {
-                val inState = tx.inputs.single().state.data as State
+                val inState = tx.inputsOfType<State>().single()
                 val arr = when (inState.details) {
                     is Actions -> inState.details
                     is RollOut -> reduceRollOut(inState.details)
                     else -> throw IllegalArgumentException("Unexpected arrangement, " + tx.inputs.single())
                 }
-                val outState = tx.outputs.single().data as State
+                val outState = tx.outputsOfType<State>().single()
 
                 val unusedFixes = value.fixes.map { it.of }.toMutableSet()
                 val expectedArr = replaceFixing(tx, arr,
