@@ -16,6 +16,7 @@ import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.identity.Party
 import net.corda.core.internal.div
+import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -348,7 +349,7 @@ fun <A> poll(
         override fun run() {
             if (resultFuture.isCancelled) return // Give up, caller can no longer get the result.
             if (++counter == warnCount) {
-                log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
+                log.warn("Been polling $pollName for ${(pollInterval * warnCount.toLong()).seconds} seconds...")
             }
             try {
                 val checkResult = check()

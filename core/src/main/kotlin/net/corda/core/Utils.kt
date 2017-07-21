@@ -19,7 +19,6 @@ import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
-import java.time.temporal.Temporal
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
@@ -92,9 +91,6 @@ fun <A> ListenableFuture<out A>.toObservable(): Observable<A> {
         })
     }
 }
-
-// Simple infix function to add back null safety that the JDK lacks:  timeA until timeB
-infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
 
 /** Returns the index of the given item or throws [IllegalArgumentException] if not found. */
 fun <T> List<T>.indexOfOrThrow(item: T): Int {

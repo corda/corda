@@ -4,6 +4,7 @@ import net.corda.contracts.asset.OnLedgerAsset
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.identity.AbstractParty
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
 import java.security.PublicKey
@@ -37,7 +38,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
                      generateExitCommand: (Amount<Issued<T>>) -> CommandData): Set<PublicKey>
     = OnLedgerAsset.generateExit(tx, amountIssued, assetStates, deriveState, generateMoveCommand, generateExitCommand)
 
-    override fun verify(tx: TransactionForContract,
+    override fun verify(tx: LedgerTransaction,
                         inputs: List<S>,
                         outputs: List<S>,
                         commands: List<AuthenticatedObject<C>>,

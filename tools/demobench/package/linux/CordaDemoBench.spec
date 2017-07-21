@@ -20,6 +20,8 @@ Autoreq: 0
 %define __jar_repack %{nil}
 
 %define _javaHome %{getenv:JAVA_HOME}
+%define _bugfixdir %{_sourcedir}/CordaDemoBench/app/bugfixes
+%define _rtJar %{_sourcedir}/CordaDemoBench/runtime/lib/rt.jar
 
 %description
 Corda DemoBench
@@ -29,6 +31,12 @@ Corda DemoBench
 %build
 
 %install
+# Apply bugfixes to installed rt.jar
+if [ -f %{_bugfixdir}/apply.sh ]; then
+    chmod ugo+x %{_bugfixdir}/apply.sh
+    %{_bugfixdir}/apply.sh %{_rtJar}
+    rm -rf %{_bugfixdir}
+fi
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/opt
 cp -r %{_sourcedir}/CordaDemoBench %{buildroot}/opt

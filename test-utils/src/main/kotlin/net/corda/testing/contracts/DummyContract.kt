@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
@@ -39,7 +40,7 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
         class Move : TypeOnlyCommandData(), Commands
     }
 
-    override fun verify(tx: TransactionForContract) {
+    override fun verify(tx: LedgerTransaction) {
         // Always accepts.
     }
 
