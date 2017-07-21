@@ -3,7 +3,7 @@ package net.corda.core.contracts.clauses
 import net.corda.core.contracts.AuthenticatedObject
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionForContract
+import net.corda.core.transactions.LedgerTransaction
 import java.util.*
 
 /**
@@ -18,7 +18,7 @@ open class AnyOf<in S : ContractState, C : CommandData, in K : Any>(vararg rawCl
         return matched
     }
 
-    override fun verify(tx: TransactionForContract, inputs: List<S>, outputs: List<S>, commands: List<AuthenticatedObject<C>>, groupingKey: K?): Set<C> {
+    override fun verify(tx: LedgerTransaction, inputs: List<S>, outputs: List<S>, commands: List<AuthenticatedObject<C>>, groupingKey: K?): Set<C> {
         return matchedClauses(commands).flatMapTo(HashSet<C>()) { clause ->
             clause.verify(tx, inputs, outputs, commands, groupingKey)
         }

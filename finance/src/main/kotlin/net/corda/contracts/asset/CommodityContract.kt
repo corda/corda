@@ -13,6 +13,7 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.util.*
 
@@ -69,7 +70,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
             /**
              * Group commodity states by issuance definition (issuer and underlying commodity).
              */
-            override fun groupStates(tx: TransactionForContract)
+            override fun groupStates(tx: LedgerTransaction)
                     = tx.groupStates<State, Issued<Commodity>> { it.amount.token }
         }
 
@@ -137,7 +138,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         data class Exit(override val amount: Amount<Issued<Commodity>>) : Commands, FungibleAsset.Commands.Exit<Commodity>
     }
 
-    override fun verify(tx: TransactionForContract)
+    override fun verify(tx: LedgerTransaction)
             = verifyClause(tx, Clauses.Group(), extractCommands(tx.commands))
 
     override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Commands>>

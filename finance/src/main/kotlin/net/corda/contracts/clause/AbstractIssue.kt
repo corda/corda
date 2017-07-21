@@ -2,6 +2,7 @@ package net.corda.contracts.clause
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
+import net.corda.core.transactions.LedgerTransaction
 
 /**
  * Standard issue clause for contracts that issue fungible assets.
@@ -17,7 +18,7 @@ abstract class AbstractIssue<in S : ContractState, C : CommandData, T : Any>(
         val sum: List<S>.() -> Amount<Issued<T>>,
         val sumOrZero: List<S>.(token: Issued<T>) -> Amount<Issued<T>>
 ) : Clause<S, C, Issued<T>>() {
-    override fun verify(tx: TransactionForContract,
+    override fun verify(tx: LedgerTransaction,
                         inputs: List<S>,
                         outputs: List<S>,
                         commands: List<AuthenticatedObject<C>>,

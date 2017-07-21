@@ -7,7 +7,6 @@ import kotlin.Pair;
 import kotlin.Unit;
 import net.corda.contracts.asset.CashKt;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.TransactionForContract.InOutGroup;
 import net.corda.core.contracts.clauses.AnyOf;
 import net.corda.core.contracts.clauses.Clause;
 import net.corda.core.contracts.clauses.ClauseVerifier;
@@ -18,6 +17,7 @@ import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
 import net.corda.core.node.services.VaultService;
+import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -153,7 +153,7 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public List<InOutGroup<State, State>> groupStates(@NotNull TransactionForContract tx) {
+            public List<LedgerTransaction.InOutGroup<State, State>> groupStates(@NotNull LedgerTransaction tx) {
                 return tx.groupStates(State.class, State::withoutOwner);
             }
         }
@@ -168,11 +168,11 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public Set<Commands> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull LedgerTransaction tx,
                                         @NotNull List<? extends State> inputs,
                                         @NotNull List<? extends State> outputs,
                                         @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
-                                                 State groupingKey) {
+                                        State groupingKey) {
                 AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
                 State input = Iterables.getOnlyElement(inputs);
@@ -200,11 +200,11 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public Set<Commands> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull LedgerTransaction tx,
                                         @NotNull List<? extends State> inputs,
                                         @NotNull List<? extends State> outputs,
                                         @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
-                                                 State groupingKey) {
+                                        State groupingKey) {
                 AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
                 // There should be only a single input due to aggregation above
@@ -217,7 +217,7 @@ public class JavaCommercialPaper implements Contract {
                 Instant time = null == timeWindow
                         ? null
                         : timeWindow.getUntilTime();
-                Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
+                Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs().stream().map(TransactionState::getData).collect(Collectors.toList()), input.getOwner());
 
                 requireThat(require -> {
                     require.using("must be timestamped", timeWindow != null);
@@ -243,11 +243,11 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public Set<Commands> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull LedgerTransaction tx,
                                         @NotNull List<? extends State> inputs,
                                         @NotNull List<? extends State> outputs,
                                         @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
-                                                 State groupingKey) {
+                                        State groupingKey) {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 State output = Iterables.getOnlyElement(outputs);
                 TimeWindow timeWindowCommand = tx.getTimeWindow();
@@ -293,7 +293,7 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @NotNull
-    private List<AuthenticatedObject<Commands>> extractCommands(@NotNull TransactionForContract tx) {
+    private List<AuthenticatedObject<Commands>> extractCommands(@NotNull LedgerTransaction tx) {
         return tx.getCommands()
                 .stream()
                 .filter((AuthenticatedObject<CommandData> command) -> command.getValue() instanceof Commands)
@@ -302,7 +302,7 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @Override
-    public void verify(@NotNull TransactionForContract tx) throws IllegalArgumentException {
+    public void verify(@NotNull LedgerTransaction tx) throws IllegalArgumentException {
         ClauseVerifier.verifyClause(tx, new Clauses.Group(), extractCommands(tx));
     }
 

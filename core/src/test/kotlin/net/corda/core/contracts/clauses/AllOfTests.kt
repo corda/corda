@@ -2,8 +2,9 @@ package net.corda.core.contracts.clauses
 
 import net.corda.core.contracts.AuthenticatedObject
 import net.corda.core.contracts.CommandData
-import net.corda.core.contracts.TransactionForContract
+import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.SecureHash
+import net.corda.core.transactions.LedgerTransaction
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
@@ -15,7 +16,7 @@ class AllOfTests {
     fun minimal() {
         val counter = AtomicInteger(0)
         val clause = AllOf(matchedClause(counter), matchedClause(counter))
-        val tx = TransactionForContract(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256())
+        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, emptyList(), null, TransactionType.General)
         verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
 
         // Check that we've run the verify() function of two clauses
@@ -25,7 +26,7 @@ class AllOfTests {
     @Test
     fun `not all match`() {
         val clause = AllOf(matchedClause(), unmatchedClause())
-        val tx = TransactionForContract(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256())
+        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, emptyList(), null, TransactionType.General)
         assertFailsWith<IllegalStateException> { verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>()) }
     }
 }

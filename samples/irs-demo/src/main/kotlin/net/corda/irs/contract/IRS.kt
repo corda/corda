@@ -1,9 +1,7 @@
 package net.corda.irs.contract
 
-import net.corda.contracts.*
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
+import net.corda.contracts.*
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
@@ -13,6 +11,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.FixingFlow
@@ -461,7 +460,7 @@ class InterestRateSwap : Contract {
                 fixingCalendar, index, indexSource, indexTenor)
     }
 
-    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.TimeWindow(), Clauses.Group()), tx.commands.select<Commands>())
+    override fun verify(tx: LedgerTransaction) = verifyClause(tx, AllOf(Clauses.TimeWindow(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Clauses {
         /**
@@ -512,18 +511,18 @@ class InterestRateSwap : Contract {
 
         class Group : GroupClauseVerifier<State, Commands, UniqueIdentifier>(AnyOf(Agree(), Fix(), Pay(), Mature())) {
             // Group by Trade ID for in / out states
-            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, UniqueIdentifier>> {
+            override fun groupStates(tx: LedgerTransaction): List<LedgerTransaction.InOutGroup<State, UniqueIdentifier>> {
                 return tx.groupStates { state -> state.linearId }
             }
         }
 
         class TimeWindow : Clause<ContractState, Commands, Unit>() {
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: Unit?): Set<Commands> {
-                require(tx.timeWindow?.midpoint != null) { "must be have a time-window)" }
+                requireNotNull(tx.timeWindow) { "must be have a time-window)" }
                 // We return an empty set because we don't process any commands
                 return emptySet()
             }
@@ -532,7 +531,7 @@ class InterestRateSwap : Contract {
         class Agree : AbstractIRSClause() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Agree::class.java)
 
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: List<AuthenticatedObject<Commands>>,
@@ -568,7 +567,7 @@ class InterestRateSwap : Contract {
         class Fix : AbstractIRSClause() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Refix::class.java)
 
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: List<AuthenticatedObject<Commands>>,
@@ -585,8 +584,7 @@ class InterestRateSwap : Contract {
                     "There is only one change in the IRS floating leg payment schedule" using (paymentDifferences.size == 1)
                 }
 
-                val changedRates = paymentDifferences.single().second // Ignore the date of the changed rate (we checked that earlier).
-                val (oldFloatingRatePaymentEvent, newFixedRatePaymentEvent) = changedRates
+                val (oldFloatingRatePaymentEvent, newFixedRatePaymentEvent) = paymentDifferences.single().second // Ignore the date of the changed rate (we checked that earlier).
                 val fixValue = command.value.fix
                 // Need to check that everything is the same apart from the new fixed rate entry.
                 requireThat {
@@ -613,7 +611,7 @@ class InterestRateSwap : Contract {
         class Pay : AbstractIRSClause() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Pay::class.java)
 
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: List<AuthenticatedObject<Commands>>,
@@ -629,7 +627,7 @@ class InterestRateSwap : Contract {
         class Mature : AbstractIRSClause() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Mature::class.java)
 
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: List<AuthenticatedObject<Commands>>,

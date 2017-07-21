@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.unconsumedStates
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.internal.Emoji
 import net.corda.core.utilities.OpaqueBytes
@@ -206,7 +207,7 @@ class ContractUpgradeFlowTest {
 
         override fun upgrade(state: Cash.State) = CashV2.State(state.amount.times(1000), listOf(state.owner))
 
-        override fun verify(tx: TransactionForContract) {}
+        override fun verify(tx: LedgerTransaction) {}
 
         // Dummy Cash contract for testing.
         override val legalContractReference = SecureHash.sha256("")
