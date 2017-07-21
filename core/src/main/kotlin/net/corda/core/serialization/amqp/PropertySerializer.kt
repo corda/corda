@@ -55,8 +55,10 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
     companion object {
         fun make(name: String, readMethod: Method, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
             if (SerializerFactory.isPrimitive(resolvedType)) {
-                // This is a little inefficient for performance since it does a runtime check of type.  We could do build time check with lots of subclasses here.
-                return AMQPPrimitivePropertySerializer(name, readMethod, resolvedType)
+                return when(resolvedType) {
+                    Char::class.java, Character::class.java -> AMQPCharPropertySerializer(name, readMethod)
+                    else -> AMQPPrimitivePropertySerializer(name, readMethod, resolvedType)
+                }
             } else {
                 return DescribedTypePropertySerializer(name, readMethod, resolvedType) { factory.get(null, resolvedType) }
             }
@@ -86,10 +88,9 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
     }
 
     /**
-     * A property serializer for an AMQP primitive type (Int, String, etc).
+     * A property serializer for most AMQP primitive type (Int, String, etc).
      */
     class AMQPPrimitivePropertySerializer(name: String, readMethod: Method, resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
-
         override fun writeClassInfo(output: SerializationOutput) {}
 
         override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
@@ -103,6 +104,22 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
             } else {
                 data.putObject(value)
             }
+        }
+    }
+
+    /**
+     * A property serializer for the AMQP char type, needed as a specialisation as the underlying
+     * value of the character is stored in numeric UTF-16 form and on deserialisation requires explicit
+     * casting back to a char otherwise it's treated as an Integer and a TypeMismatch occurs
+     */
+    class AMQPCharPropertySerializer(name: String, readMethod: Method) :
+            PropertySerializer(name, readMethod, Char::class.java) {
+        override fun writeClassInfo(output: SerializationOutput) {}
+
+        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput) = (obj as Int).toChar()
+
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
+            data.putChar((readMethod.invoke(obj) as Char).toInt())
         }
     }
 }
