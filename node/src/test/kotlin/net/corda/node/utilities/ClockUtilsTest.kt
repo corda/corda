@@ -5,7 +5,7 @@ import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.concurrent.getOrThrow
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.minutes
 import net.corda.testing.node.TestClock

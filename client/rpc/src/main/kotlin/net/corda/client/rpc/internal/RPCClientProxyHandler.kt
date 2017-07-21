@@ -13,7 +13,6 @@ import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.concurrent.getOrThrow
 import net.corda.core.internal.LazyPool
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
