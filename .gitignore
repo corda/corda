@@ -67,7 +67,7 @@ lib/dokka.jar
 ## Plugin-specific files:
 
 # IntelliJ
-**/out/
+out/
 /classes/
 
 # mpeltonen/sbt-idea plugin

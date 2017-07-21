@@ -33,11 +33,10 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal) :
     private val replicaHolder = SettableFuture.create<Replica>()
 
     init {
-        val replicaId = services.configuration.bftReplicaId ?: throw IllegalArgumentException("bftReplicaId value must be specified in the configuration")
-        val config = BFTSMaRtConfig(services.configuration.notaryClusterAddresses)
-
-        client = config.use {
-            val configHandle = config.handle()
+        val replicaId = services.configuration.bftSMaRt.replicaId
+        require(replicaId >= 0) { "bftSMaRt replicaId must be specified in the configuration" }
+        client = BFTSMaRtConfig(services.configuration.notaryClusterAddresses, services.configuration.bftSMaRt.debug, services.configuration.bftSMaRt.exposeRaces).use {
+            val configHandle = it.handle()
             // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
             thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
                 configHandle.use {
@@ -47,7 +46,6 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal) :
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
             }
-
             BFTSMaRt.Client(it, replicaId)
         }
     }
