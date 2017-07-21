@@ -3,11 +3,11 @@ package net.corda.node.utilities
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.SettableFuture
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.internal.until
 import rx.Observable
 import rx.Subscriber
 import rx.subscriptions.Subscriptions
 import java.time.Clock
-import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicLong
@@ -78,7 +78,7 @@ fun Clock.awaitWithDeadline(deadline: Instant, future: Future<*> = GuavaSettable
         } else {
             null
         }
-        nanos = Duration.between(this.instant(), deadline).toNanos()
+        nanos = (instant() until deadline).toNanos()
         if (nanos > 0) {
             try {
                 // This will return when it times out, or when the clock mutates or when when the original future completes.

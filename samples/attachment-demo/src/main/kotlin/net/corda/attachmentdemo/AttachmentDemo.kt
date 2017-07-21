@@ -4,10 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.InputStreamAndHash
-import net.corda.core.InputStreamAndHash.Companion.createInMemoryTestZip
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionForContract
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
@@ -16,10 +14,11 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.internal.Emoji
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.internal.Emoji
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
 import net.corda.testing.DUMMY_BANK_B
@@ -173,8 +172,8 @@ class AttachmentContract : Contract {
     override val legalContractReference: SecureHash
         get() = SecureHash.zeroHash // TODO not implemented
 
-    override fun verify(tx: TransactionForContract) {
-        val state = tx.outputs.filterIsInstance<AttachmentContract.State>().single()
+    override fun verify(tx: LedgerTransaction) {
+        val state = tx.outputs.map { it.data }.filterIsInstance<AttachmentContract.State>().single()
         val attachment = tx.attachments.single()
         require(state.hash == attachment.id)
     }

@@ -61,7 +61,7 @@ Kotlin syntax works.
       class CommercialPaper : Contract {
           override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
 
-          override fun verify(tx: TransactionForContract) {
+          override fun verify(tx: LedgerTransaction) {
               TODO()
           }
       }
@@ -75,7 +75,7 @@ Kotlin syntax works.
           }
 
           @Override
-          public void verify(TransactionForContract tx) {
+          public void verify(LedgerTransaction tx) {
               throw new UnsupportedOperationException();
           }
       }
@@ -298,7 +298,7 @@ run two contracts one time each: Cash and CommercialPaper.
 
    .. sourcecode:: kotlin
 
-      override fun verify(tx: TransactionForContract) {
+      override fun verify(tx: LedgerTransaction) {
           // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
           val groups = tx.groupStates(State::withoutOwner)
 
@@ -309,7 +309,7 @@ run two contracts one time each: Cash and CommercialPaper.
    .. sourcecode:: java
 
       @Override
-      public void verify(TransactionForContract tx) {
+      public void verify(LedgerTransaction tx) {
           List<InOutGroup<State, State>> groups = tx.groupStates(State.class, State::withoutOwner);
           AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
 
@@ -356,7 +356,7 @@ inputs e.g. because she received the dollars in two payments. The input and outp
 the cash smart contract must consider the pounds and the dollars separately because they are not fungible: they cannot
 be merged together. So we have two groups: A and B.
 
-The ``TransactionForContract.groupStates`` method handles this logic for us: firstly, it selects only states of the
+The ``LedgerTransaction.groupStates`` method handles this logic for us: firstly, it selects only states of the
 given type (as the transaction may include other types of state, such as states representing bond ownership, or a
 multi-sig state) and then it takes a function that maps a state to a grouping key. All states that share the same key are
 grouped together. In the case of the cash example above, the grouping key would be the currency.
@@ -791,7 +791,7 @@ The time-lock contract mentioned above can be implemented very simply:
 
     class TestTimeLock : Contract {
         ...
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
             val time = tx.timestamp.before ?: throw IllegalStateException(...)
             ...
             requireThat {

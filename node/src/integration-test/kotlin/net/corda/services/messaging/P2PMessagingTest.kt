@@ -5,6 +5,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.elapsedTime
 import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.times
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
@@ -44,7 +45,7 @@ class P2PMessagingTest : NodeBasedTest() {
         // Start the network map a second time - this will restore message queues from the journal.
         // This will hang and fail prior the fix. https://github.com/corda/corda/issues/37
         stopAllNodes()
-        startNodes().getOrThrow(timeout = startUpDuration.multipliedBy(3))
+        startNodes().getOrThrow(timeout = startUpDuration * 3)
     }
 
     // https://github.com/corda/corda/issues/71
