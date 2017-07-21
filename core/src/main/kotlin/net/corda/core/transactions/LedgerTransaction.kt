@@ -6,6 +6,7 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.util.*
+import java.util.function.Predicate
 
 /**
  * A LedgerTransaction is derived from a [WireTransaction]. It is the result of doing the following operations:
@@ -42,8 +43,15 @@ class LedgerTransaction(
         checkInvariants()
     }
 
+    val inputStates: List<ContractState> get() = inputs.map { it.state.data }
+
+    /**
+     * Returns the typed input StateAndRef at the specified index
+     * @param index The index into the inputs.
+     * @return The [StateAndRef]
+     */
     @Suppress("UNCHECKED_CAST")
-    fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as TransactionState<T>, StateRef(id, index))
+    fun <T : ContractState> inRef(index: Int) = inputs[index] as StateAndRef<T>
 
     /**
      * Verifies this transaction and throws an exception if not valid, depending on the type. For general transactions:
@@ -100,8 +108,8 @@ class LedgerTransaction(
      */
     // DOCSTART 2
     fun <T : ContractState, K : Any> groupStates(ofType: Class<T>, selector: (T) -> K): List<InOutGroup<T, K>> {
-        val inputs = inputs.map { it.state.data }.filterIsInstance(ofType)
-        val outputs = outputs.map { it.data }.filterIsInstance(ofType)
+        val inputs = inputsOfType(ofType)
+        val outputs = outputsOfType(ofType)
 
         val inGroups: Map<K, List<T>> = inputs.groupBy(selector)
         val outGroups: Map<K, List<T>> = outputs.groupBy(selector)
@@ -136,4 +144,166 @@ class LedgerTransaction(
     // DOCSTART 3
     data class InOutGroup<out T : ContractState, out K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
     // DOCEND 3
+
+    /**
+     * Helper to simplify getting an indexed input [ContractState].
+     * @param index the position of the item in the inputs.
+     * @return The [StateAndRef] at the requested index
+     */
+    fun getInput(index: Int): ContractState = inputs[index].state.data
+
+    /**
+     * Helper to simplify getting all inputs states of a particular class, interface, or base class.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [ContractState].
+     * @return the possibly empty list of inputs matching the clazz restriction.
+     */
+    fun <T : ContractState> inputsOfType(clazz: Class<T>): List<T> {
+        @Suppress("UNCHECKED_CAST")
+        return inputs.map { it.state.data }.filterIsInstance(clazz)
+    }
+
+    /**
+     * Helper to simplify getting all inputs states of a particular class, interface, or base class.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [ContractState].
+     * @return the possibly empty list of inputs [StateAndRef] matching the clazz restriction.
+     */
+    fun <T : ContractState> inRefsOfType(clazz: Class<T>): List<StateAndRef<T>> {
+        @Suppress("UNCHECKED_CAST")
+        return inputs.filter { clazz.isInstance(it.state.data) }.map { it as StateAndRef<T> }
+    }
+
+    /**
+     * Helper to simplify filtering inputs according to a [Predicate].
+     * @param predicate A filtering function taking a state of type T and returning true if it should be included in the list.
+     * The class filtering is applied before the predicate.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [ContractState].
+     * @return the possibly empty list of input states matching the predicate and clazz restrictions.
+     */
+    fun <T : ContractState> filterInputs(predicate: Predicate<T>, clazz: Class<T>): List<T> = inputsOfType(clazz).filter { predicate.test(it) }
+
+    /**
+     * Helper to simplify filtering inputs according to a [Predicate].
+     * @param predicate A filtering function taking a state of type T and returning true if it should be included in the list.
+     * The class filtering is applied before the predicate.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [ContractState].
+     * @return the possibly empty list of inputs [StateAndRef] matching the predicate and clazz restrictions.
+     */
+    fun <T : ContractState> filterInRefs(predicate: Predicate<T>, clazz: Class<T>): List<StateAndRef<T>> = inRefsOfType(clazz).filter { predicate.test(it.state.data) }
+
+    /**
+     * Helper to simplify finding a single input [ContractState] matching a [Predicate].
+     * @param predicate A filtering function taking a state of type T and returning true if this is the desired item.
+     * The class filtering is applied before the predicate.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of ContractState.
+     * @return the single item matching the predicate.
+     * @throws IllegalArgumentException if no item, or multiple items are found matching the requirements.
+     */
+    fun <T : ContractState> findInput(predicate: Predicate<T>, clazz: Class<T>): T = filterInputs(predicate, clazz).single()
+
+    /**
+     * Helper to simplify finding a single input matching a [Predicate].
+     * @param predicate A filtering function taking a state of type T and returning true if this is the desired item.
+     * The class filtering is applied before the predicate.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of ContractState.
+     * @return the single item matching the predicate.
+     * @throws IllegalArgumentException if no item, or multiple items are found matching the requirements.
+     */
+    fun <T : ContractState> findInRef(predicate: Predicate<T>, clazz: Class<T>): StateAndRef<T> = filterInRefs(predicate, clazz).single()
+
+    /**
+     * Helper to simplify getting an indexed command.
+     * @param index the position of the item in the commands.
+     * @return The Command at the requested index
+     */
+    fun getCommand(index: Int): Command = Command(commands[index].value, commands[index].signers)
+
+    /**
+     * Helper to simplify getting all [Command] items with a [CommandData] of a particular class, interface, or base class.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [CommandData].
+     * @return the possibly empty list of commands with [CommandData] values matching the clazz restriction.
+     */
+    fun <T : CommandData> commandsOfType(clazz: Class<T>): List<Command> {
+        return commands.filter { clazz.isInstance(it.value) }.map { Command(it.value, it.signers) }
+    }
+
+    /**
+     * Helper to simplify filtering [Command] items according to a [Predicate].
+     * @param predicate A filtering function taking a [CommandData] item of type T and returning true if it should be included in the list.
+     * The class filtering is applied before the predicate.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [CommandData].
+     * @return the possibly empty list of [Command] items with [CommandData] values matching the predicate and clazz restrictions.
+     */
+    fun <T : CommandData> filterCommands(predicate: Predicate<T>, clazz: Class<T>): List<Command> {
+        @Suppress("UNCHECKED_CAST")
+        return commandsOfType(clazz).filter { predicate.test(it.value as T) }
+    }
+
+
+    /**
+     * Helper to simplify finding a single [Command] items according to a [Predicate].
+     * @param predicate A filtering function taking a [CommandData] item of type T and returning true if it should be included in the list.
+     * The class filtering is applied before the predicate.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [CommandData].
+     * @return the [Command] item with [CommandData] values matching the predicate and clazz restrictions.
+     * @throws IllegalArgumentException if no items, or multiple items matched the requirements.
+     */
+    fun <T : CommandData> findCommand(predicate: Predicate<T>, clazz: Class<T>): Command {
+        return filterCommands(predicate, clazz).single()
+    }
+
+    /**
+     * Helper to simplify getting an indexed attachment.
+     * @param index the position of the item in the attachments.
+     * @return The Attachment at the requested index.
+     */
+    fun getAttachment(index: Int): Attachment = attachments[index]
+
+    /**
+     * Helper to simplify getting an indexed attachment.
+     * @param id the SecureHash of the desired attachment.
+     * @return The Attachment with the matching id.
+     * @throws IllegalArgumentException if no item matches the id.
+     */
+    fun getAttachment(id: SecureHash): Attachment = attachments.single { it.id == id }
+
+    //Kotlin extension methods to take advantage of Kotlin's smart type inference when querying the LedgerTransaction
+    inline fun <reified T : ContractState> inputsOfType(): List<T> = this.inputsOfType(T::class.java)
+
+    inline fun <reified T : ContractState> inRefsOfType(): List<StateAndRef<T>> = this.inRefsOfType(T::class.java)
+
+    inline fun <reified T : ContractState> filterInputs(crossinline predicate: (T) -> Boolean): List<T> {
+        return filterInputs(Predicate { predicate(it) }, T::class.java)
+    }
+
+    inline fun <reified T : ContractState> filterInRefs(crossinline predicate: (T) -> Boolean): List<StateAndRef<T>> {
+        return filterInRefs(Predicate { predicate(it) }, T::class.java)
+    }
+
+    inline fun <reified T : ContractState> findInRef(crossinline predicate: (T) -> Boolean): StateAndRef<T> {
+        return findInRef(Predicate { predicate(it) }, T::class.java)
+    }
+
+    inline fun <reified T : ContractState> findInput(crossinline predicate: (T) -> Boolean): T {
+        return findInput(Predicate { predicate(it) }, T::class.java)
+    }
+
+    inline fun <reified T : CommandData> commandsOfType(): List<Command> = this.commandsOfType(T::class.java)
+
+    inline fun <reified T : CommandData> filterCommands(crossinline predicate: (T) -> Boolean): List<Command> {
+        return filterCommands(Predicate { predicate(it) }, T::class.java)
+    }
+
+    inline fun <reified T : CommandData> findCommand(crossinline predicate: (T) -> Boolean): Command {
+        return findCommand(Predicate { predicate(it) }, T::class.java)
+    }
 }
+

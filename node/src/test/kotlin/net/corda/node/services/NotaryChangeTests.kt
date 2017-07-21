@@ -1,19 +1,19 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.flows.NotaryChangeFlow
+import net.corda.core.flows.StateReplacementException
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.flows.NotaryChangeFlow
-import net.corda.core.flows.StateReplacementException
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -109,8 +109,8 @@ class NotaryChangeTests {
         val notaryChangeTx = clientNodeA.services.validatedTransactions.getTransaction(newState.ref.txhash)!!.tx
 
         // Check that all encumbrances have been propagated to the outputs
-        val originalOutputs = issueTx.outputs.map { it.data }
-        val newOutputs = notaryChangeTx.outputs.map { it.data }
+        val originalOutputs = issueTx.outputStates
+        val newOutputs = notaryChangeTx.outputStates
         assertTrue(originalOutputs.minus(newOutputs).isEmpty())
 
         // Check that encumbrance links aren't broken after notary change

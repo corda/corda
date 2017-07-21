@@ -2,8 +2,8 @@ package net.corda.irs.contract
 
 import net.corda.contracts.*
 import net.corda.core.contracts.*
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.seconds
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Test
@@ -246,7 +246,7 @@ class IRSTests : TestDependencyInjectionBase() {
      * Utility so I don't have to keep typing this.
      */
     fun singleIRS(irsSelector: Int = 1): InterestRateSwap.State {
-        return generateIRSTxn(irsSelector).tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
+        return generateIRSTxn(irsSelector).tx.outputsOfType<InterestRateSwap.State>().single()
     }
 
     /**
@@ -300,7 +300,7 @@ class IRSTests : TestDependencyInjectionBase() {
         var previousTXN = generateIRSTxn(1)
         previousTXN.toLedgerTransaction(services).verify()
         services.recordTransactions(previousTXN)
-        fun currentIRS() = previousTXN.tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
+        fun currentIRS() = previousTXN.tx.outputsOfType<InterestRateSwap.State>().single()
 
         while (true) {
             val nextFix: FixOf = currentIRS().nextFixingOf() ?: break
