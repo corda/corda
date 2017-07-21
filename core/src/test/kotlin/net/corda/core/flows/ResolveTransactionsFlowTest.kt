@@ -1,15 +1,15 @@
 package net.corda.core.flows
 
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
-import net.corda.core.utilities.opaque
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.sequence
 import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MINI_CORP
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import org.junit.After
@@ -17,7 +17,6 @@ import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import java.security.SignatureException
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import kotlin.test.assertEquals
@@ -141,7 +140,7 @@ class ResolveTransactionsFlowTest {
             jar.write("Some test file".toByteArray())
             jar.closeEntry()
             jar.close()
-            return bs.toByteArray().opaque().open()
+            return bs.toByteArray().sequence().open()
         }
         // TODO: this operation should not require an explicit transaction
         val id = a.database.transaction {

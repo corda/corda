@@ -4,13 +4,12 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.composite.CompositeKey.NodeAndWeight
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.provider.CordaObjectIdentifier
-import net.corda.core.crypto.toSHA256Bytes
 import net.corda.core.crypto.toStringShort
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.sequence
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
-import java.nio.ByteBuffer
 import java.security.PublicKey
 import java.util.*
 
@@ -145,7 +144,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
         override fun compareTo(other: NodeAndWeight): Int {
             return if (weight == other.weight)
-                ByteBuffer.wrap(node.toSHA256Bytes()).compareTo(ByteBuffer.wrap(other.node.toSHA256Bytes()))
+                node.encoded.sequence().compareTo(other.node.encoded.sequence())
             else
                 weight.compareTo(other.weight)
         }

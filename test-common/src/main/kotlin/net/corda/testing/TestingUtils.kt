@@ -57,7 +57,7 @@ fun <A> ScheduledExecutorService.poll(
 
 /** @param sslConfig optional [CordaRPCClient] arg. */
 fun ScheduledExecutorService.establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration?, username: String, password: String, processDeathFuture: ListenableFuture<out Throwable>): ListenableFuture<Pair<CordaRPCClient, CordaRPCConnection>> {
-    val client = CordaRPCClient(nodeAddress, sslConfig)
+    val client = CordaRPCClient(nodeAddress, sslConfig, initialiseSerialization = false)
     val connectionFuture = poll("RPC connection") {
         try {
             client.start(username, password)

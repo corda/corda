@@ -11,6 +11,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.utilities.loadKeyStore
 import net.corda.node.utilities.loadOrCreateKeyStore
 import net.corda.node.utilities.save
+import net.corda.testing.TestDependencyInjectionBase
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +22,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CompositeKeyTests {
+class CompositeKeyTests : TestDependencyInjectionBase() {
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()

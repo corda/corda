@@ -8,8 +8,6 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockNetwork
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -17,22 +15,10 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class TransactionKeyFlowTests {
-    lateinit var mockNet: MockNetwork
-
-    @Before
-    fun before() {
-        mockNet = MockNetwork(false)
-    }
-
-    @After
-    fun cleanUp() {
-        mockNet.stopNodes()
-    }
-
     @Test
     fun `issue key`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        mockNet = MockNetwork(false, true)
+        val mockNet = MockNetwork(false, true)
 
         // Set up values we'll need
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
@@ -66,5 +52,7 @@ class TransactionKeyFlowTests {
         assertTrue { bobAnonymousIdentity.party.owningKey in bobNode.services.keyManagementService.keys }
         assertFalse { aliceAnonymousIdentity.party.owningKey in bobNode.services.keyManagementService.keys }
         assertFalse { bobAnonymousIdentity.party.owningKey in aliceNode.services.keyManagementService.keys }
+
+        mockNet.stopNodes()
     }
 }

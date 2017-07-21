@@ -11,6 +11,7 @@ import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
+import net.corda.testing.BOC
 import net.corda.testing.node.NodeBasedTest
 import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -36,7 +37,7 @@ class TraderDemoTest : NodeBasedTest() {
         nodeA.registerInitiatedFlow(BuyerFlow::class.java)
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
-            val client = CordaRPCClient(it.configuration.rpcAddress!!)
+            val client = CordaRPCClient(it.configuration.rpcAddress!!, initialiseSerialization = false)
             client.start(demoUser[0].username, demoUser[0].password).proxy
         }
 

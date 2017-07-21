@@ -5,11 +5,11 @@ import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.*
 import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.getOrThrow
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
@@ -19,11 +19,11 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.ServiceEntry
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
@@ -67,7 +67,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
                   InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-                  private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
+                  private val defaultFactory: Factory = MockNetwork.DefaultFactory,
+                  private val initialiseSerialization: Boolean = true) {
     val nextNodeId
         get() = _nextNodeId
     private var _nextNodeId = 0
@@ -85,6 +86,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     val nodes: List<MockNode> = _nodes
 
     init {
+        if (initialiseSerialization) initialiseTestSerialization()
         filesystem.getPath("/nodes").createDirectory()
     }
 
@@ -396,6 +398,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     fun stopNodes() {
         nodes.forEach { if (it.started) it.stop() }
+        if (initialiseSerialization) resetTestSerialization()
     }
 
     // Test method to block until all scheduled activity, active flows
