@@ -17,7 +17,7 @@ import kotlin.test.assertFailsWith
 
 val TEST_PROGRAM_ID = TransactionSerializationTests.TestCash()
 
-class TransactionSerializationTests {
+class TransactionSerializationTests : TestDependencyInjectionBase() {
     class TestCash : Contract {
         override val legalContractReference = SecureHash.sha256("TestCash")
 

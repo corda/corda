@@ -7,14 +7,13 @@ import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.p2PKryo
+import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.withoutReferences
 import java.security.PublicKey
 import java.util.function.Predicate
 
 fun <T : Any> serializedHash(x: T): SecureHash {
-    return p2PKryo().run { kryo -> kryo.withoutReferences { x.serialize(kryo).hash } }
+    return x.serialize(context = P2P_CONTEXT.withoutReferences()).hash
 }
 
 /**

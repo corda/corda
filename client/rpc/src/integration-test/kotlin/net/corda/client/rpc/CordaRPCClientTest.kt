@@ -49,7 +49,7 @@ class CordaRPCClientTest : NodeBasedTest() {
     @Before
     fun setUp() {
         node = startNode(ALICE.name, rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
-        client = CordaRPCClient(node.configuration.rpcAddress!!)
+        client = CordaRPCClient(node.configuration.rpcAddress!!, initialiseSerialization = false)
     }
 
     @After

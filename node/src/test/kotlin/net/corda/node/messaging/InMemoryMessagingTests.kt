@@ -8,6 +8,8 @@ import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.node.MockNetwork
 import org.junit.After
+import net.corda.testing.resetTestSerialization
+import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -15,11 +17,20 @@ import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
 class InMemoryMessagingTests {
-    val mockNet = MockNetwork()
+    lateinit var mockNet: MockNetwork
+
+    @Before
+    fun setUp() {
+        mockNet = MockNetwork()
+    }
 
     @After
-    fun cleanUp() {
-        mockNet.stopNodes()
+    fun tearDown() {
+        if (mockNet.nodes.isNotEmpty()) {
+            mockNet.stopNodes()
+        } else {
+            resetTestSerialization()
+        }
     }
 
     @Test

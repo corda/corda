@@ -7,6 +7,8 @@ import com.google.common.collect.testing.features.CollectionSize
 import junit.framework.TestSuite
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -47,9 +49,15 @@ class NonEmptySetTest {
 
         @Test
         fun `serialize deserialize`() {
-            val original = NonEmptySet.of(-17, 22, 17)
-            val copy = original.serialize().deserialize()
-            assertThat(copy).isEqualTo(original).isNotSameAs(original)
+            initialiseTestSerialization()
+            try {
+                val original = NonEmptySet.of(-17, 22, 17)
+                val copy = original.serialize().deserialize()
+
+                assertThat(copy).isEqualTo(original).isNotSameAs(original)
+            } finally {
+                resetTestSerialization()
+            }
         }
     }
 

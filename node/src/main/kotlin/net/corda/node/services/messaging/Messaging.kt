@@ -154,7 +154,8 @@ fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): Listenabl
     val messageFuture = SettableFuture.create<M>()
     runOnNextMessage(topic, sessionId) { message ->
         messageFuture.catch {
-            message.data.deserialize<M>()
+            @Suppress("UNCHECKED_CAST")
+            message.data.deserialize<Any>() as M
         }
     }
     return messageFuture

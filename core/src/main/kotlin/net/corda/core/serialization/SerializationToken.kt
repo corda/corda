@@ -5,7 +5,6 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
 
@@ -57,17 +56,9 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
 
 private val serializationContextKey = SerializeAsTokenContext::class.java
 
-fun Kryo.serializationContext() = context.get(serializationContextKey) as? SerializeAsTokenContext
+fun SerializationContext.withTokenContext(serializationContext: SerializeAsTokenContext): SerializationContext = this.withProperty(serializationContextKey, serializationContext)
 
-fun <T> Kryo.withSerializationContext(serializationContext: SerializeAsTokenContext, block: () -> T) = run {
-    context.containsKey(serializationContextKey) && throw IllegalStateException("There is already a serialization context.")
-    context.put(serializationContextKey, serializationContext)
-    try {
-        block()
-    } finally {
-        context.remove(serializationContextKey)
-    }
-}
+fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializationContextKey) as? SerializeAsTokenContext
 
 /**
  * A context for mapping SerializationTokens to/from SerializeAsTokens.
@@ -79,12 +70,8 @@ fun <T> Kryo.withSerializationContext(serializationContext: SerializeAsTokenCont
  * on the Kryo instance when serializing to enable/disable tokenization.
  */
 class SerializeAsTokenContext internal constructor(val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) {
-    constructor(toBeTokenized: Any, kryoPool: KryoPool, serviceHub: ServiceHub) : this(serviceHub, {
-        kryoPool.run { kryo ->
-            kryo.withSerializationContext(this) {
-                toBeTokenized.serialize(kryo)
-            }
-        }
+    constructor(toBeTokenized: Any, serializationFactory: SerializationFactory, context: SerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
+        serializationFactory.serialize(toBeTokenized, context.withTokenContext(this))
     })
 
     private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()

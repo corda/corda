@@ -21,10 +21,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.node.services.vault.schemas.requery.*
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.After
@@ -40,7 +37,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class VaultSchemaTest {
+class VaultSchemaTest : TestDependencyInjectionBase() {
 
     var instance: KotlinEntityDataStore<Persistable>? = null
     val data: KotlinEntityDataStore<Persistable> get() = instance!!

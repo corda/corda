@@ -4,8 +4,13 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import net.corda.core.serialization.createTestKryo
+import net.corda.core.serialization.AllWhitelist
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.serialize
+import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.nodeapi.serialization.KryoHeaderV0_1
+import net.corda.nodeapi.serialization.SerializationContextImpl
+import net.corda.nodeapi.serialization.SerializationFactoryImpl
 import org.junit.Before
 import org.junit.Test
 import java.util.*
@@ -106,10 +111,6 @@ class ProgressTrackerTest {
             }
         }
 
-        val kryo = createTestKryo().apply {
-            // This is required to make sure Kryo walks through the auto-generated members for the lambda below.
-            fieldSerializerConfig.isIgnoreSyntheticFields = false
-        }
         pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
         class Tmp {
             val unserializable = Unserializable()
@@ -119,6 +120,13 @@ class ProgressTrackerTest {
             }
         }
         Tmp()
-        pt.serialize(kryo)
+        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
+        val context = SerializationContextImpl(KryoHeaderV0_1,
+                javaClass.classLoader,
+                AllWhitelist,
+                emptyMap(),
+                true,
+                SerializationContext.UseCase.P2P)
+        pt.serialize(factory, context)
     }
 }

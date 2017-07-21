@@ -40,6 +40,8 @@ import net.corda.testing.BOB
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MOCK_VERSION_INFO
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
@@ -187,7 +189,7 @@ sealed class NodeHandle {
             val nodeThread: Thread
     ) : NodeHandle()
 
-    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
+    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!, initialiseSerialization = false)
 }
 
 data class WebserverHandle(
@@ -250,6 +252,7 @@ fun <A> driver(
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
+        initialiseSerialization: Boolean = true,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
         startNodesInProcess: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
@@ -278,9 +281,11 @@ fun <A> driver(
  */
 fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericDriver(
         driverDsl: D,
+        initialiseSerialization: Boolean = true,
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
+    if (initialiseSerialization) initialiseTestSerialization()
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
@@ -291,6 +296,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
+        if (initialiseSerialization) resetTestSerialization()
     }
 }
 
@@ -511,7 +517,7 @@ class DriverDSL(
     }
 
     private fun establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration, processDeathFuture: ListenableFuture<out Throwable>): ListenableFuture<CordaRPCOps> {
-        val client = CordaRPCClient(nodeAddress, sslConfig)
+        val client = CordaRPCClient(nodeAddress, sslConfig, initialiseSerialization = false)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
@@ -769,7 +775,7 @@ class DriverDSL(
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
                 val clock: Clock = if (nodeConf.useTestClock) TestClock() else NodeClock()
                 // TODO pass the version in?
-                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, clock)
+                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, clock, initialiseSerialization = false)
                 node.start()
                 val nodeThread = thread(name = nodeConf.myLegalName.commonName) {
                     node.run()
