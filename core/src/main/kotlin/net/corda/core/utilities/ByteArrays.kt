@@ -9,7 +9,7 @@ import java.io.ByteArrayInputStream
 /**
  * An abstraction of a byte array, with offset and size.
  *
- * The data of interest typically starts at position `offset` within the `bytes` and is `size` bytes long.
+ * The data of interest typically starts at position [offset] within the [bytes] and is [size] bytes long.
  */
 @CordaSerializable
 sealed class ByteSequence : Comparable<ByteSequence> {
@@ -46,8 +46,6 @@ sealed class ByteSequence : Comparable<ByteSequence> {
     companion object {
         @JvmStatic
         fun of(bytes: ByteArray, offset: Int = 0, size: Int = bytes.size): ByteSequence {
-            require(offset >= 0 && offset < bytes.size)
-            require(size >= 0 && size <= bytes.size)
             return if (offset == 0 && size == bytes.size && size != 0) OpaqueBytes(bytes) else OpaqueBytesSubSequence(bytes, offset, size)
         }
     }
@@ -140,4 +138,9 @@ fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of
 fun ByteArray.toHexString(): String = BaseEncoding.base16().encode(this)
 fun String.parseAsHex(): ByteArray = BaseEncoding.base16().decode(this)
 
-private class OpaqueBytesSubSequence(override val bytes: ByteArray, override val offset: Int, override val size: Int) : ByteSequence()
+private class OpaqueBytesSubSequence(override val bytes: ByteArray, override val offset: Int, override val size: Int) : ByteSequence() {
+    init {
+        require(offset >= 0 && offset < bytes.size)
+        require(size >= 0 && size <= bytes.size)
+    }
+}
