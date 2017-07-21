@@ -23,6 +23,7 @@ import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.driver.*
+import net.corda.testing.poll
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -125,7 +126,7 @@ data class VerificationRequestorHandle(
     }
 
     fun waitUntilNumberOfVerifiers(number: Int) {
-        poll(executorService, "$number verifiers to come online") {
+        executorService.poll("$number verifiers to come online") {
             if (session.queueQuery(SimpleString(VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME)).consumerCount >= number) {
                 Unit
             } else {
@@ -276,7 +277,7 @@ data class VerifierDriverDSL(
 
     override fun NodeHandle.waitUntilNumberOfVerifiers(number: Int) {
         connectToNode { session ->
-            poll(driverDSL.executorService, "$number verifiers to come online") {
+            driverDSL.executorService.poll("$number verifiers to come online") {
                 if (session.queueQuery(SimpleString(VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME)).consumerCount >= number) {
                     Unit
                 } else {
