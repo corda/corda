@@ -3,7 +3,7 @@ Deploying a node
 
 Building nodes using Gradle
 ---------------------------
-Nodes are usually built using a Gradle task. The cannonical Gradle file for building nodes is the one used by the
+Nodes are usually built using a Gradle task. The canonical Gradle file for building nodes is the one used by the
 CorDapp template. Both a `Java version <https://github.com/corda/cordapp-template-java/blob/master/build.gradle>`_ and
 a `Kotlin version <https://github.com/corda/cordapp-template-kotlin/blob/master/build.gradle>`_ are available.
 
@@ -41,8 +41,8 @@ If your CorDapps have any additional external dependencies, they should be added
 For further information about managing dependencies, see
 `the Gradle docs <https://docs.gradle.org/current/userguide/dependency_management.html>`_.
 
-Cordform and deployNodes
-~~~~~~~~~~~~~~~~~~~~~~~~
+Building the nodes
+~~~~~~~~~~~~~~~~~~
 Cordform is the local node deployment system for CorDapps. The nodes generated are intended for experimenting,
 debugging, and testing node configurations, but not for production or testnet deployment.
 
@@ -92,7 +92,8 @@ notary/network map node:
     }
 
 You can extend ``deployNodes`` to generate any number of nodes you like. The only requirement is that you must specify
-one node as running the network map service.
+one node as running the network map service, by putting their name in the ``networkMap`` field. In our example, the
+``Controller`` is set as the network map service.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
