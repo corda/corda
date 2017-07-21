@@ -8,7 +8,7 @@ import net.corda.contracts.Tenor
 import net.corda.contracts.math.CubicSplineInterpolator
 import net.corda.contracts.math.Interpolator
 import net.corda.contracts.math.InterpolatorFactory
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException

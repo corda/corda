@@ -1,7 +1,7 @@
 package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.isFulfilledBy

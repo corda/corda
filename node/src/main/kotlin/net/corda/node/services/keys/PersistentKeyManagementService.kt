@@ -1,6 +1,6 @@
 package net.corda.node.services.keys
 
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.keys

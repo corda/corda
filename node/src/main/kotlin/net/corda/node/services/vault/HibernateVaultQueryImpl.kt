@@ -1,6 +1,6 @@
 package net.corda.node.services.vault
 
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
