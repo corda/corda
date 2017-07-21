@@ -13,7 +13,6 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
-import net.corda.core.internal.div
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -229,10 +228,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun myAddresses() = emptyList<NetworkHostAndPort>()
 
-        override fun start(): MockNode {
+        override fun start() {
             super.start()
             mockNet.identities.add(info.legalIdentityAndCert)
-            return this
         }
 
         // Allow unit tests to modify the plugin list before the node start,
@@ -287,27 +285,21 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                    vararg advertisedServices: ServiceInfo,
                    configOverrides: (NodeConfiguration) -> Any? = {}): MockNode {
-        val newNode = forcedID == -1
-        val id = if (newNode) _nextNodeId++ else forcedID
-
-        val path = baseDirectory(id)
-        if (newNode)
-            (path / "attachments").createDirectories()
-
+        val id = if (forcedID == -1) _nextNodeId++ else forcedID
+        val path = baseDirectory(id).createDirectories()
         val config = testNodeConfiguration(
                 baseDirectory = path,
                 myLegalName = legalName ?: getTestX509Name("Mock Company $id")).also {
             whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
             configOverrides(it)
         }
-        val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
-        if (start) {
-            node.setup().start()
-            if (threadPerNode && networkMapAddress != null)
-                node.networkMapRegistrationFuture.getOrThrow()   // Block and wait for the node to register in the net map.
+        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot).apply {
+            if (start) {
+                start()
+                if (threadPerNode && networkMapAddress != null) networkMapRegistrationFuture.getOrThrow()
+            }
+            _nodes.add(this)
         }
-        _nodes.add(node)
-        return node
     }
 
     fun baseDirectory(nodeId: Int): Path = filesystem.getPath("/nodes/$nodeId")
