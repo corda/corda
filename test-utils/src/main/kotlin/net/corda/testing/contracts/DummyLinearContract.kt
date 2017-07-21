@@ -1,6 +1,9 @@
 package net.corda.testing.contracts
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.contracts.clauses.FilterOn
 import net.corda.core.contracts.clauses.verifyClause
@@ -10,6 +13,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import java.time.LocalDateTime
@@ -19,7 +23,7 @@ class DummyLinearContract : Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("Test")
 
     val clause: Clause<State, CommandData, Unit> = LinearState.ClauseVerifier()
-    override fun verify(tx: TransactionForContract) = verifyClause(tx,
+    override fun verify(tx: LedgerTransaction) = verifyClause(tx,
             FilterOn(clause, { states -> states.filterIsInstance<State>() }),
             emptyList())
 

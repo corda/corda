@@ -6,6 +6,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.concurrent.firstOf
 import net.corda.core.getOrThrow
+import net.corda.core.internal.times
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.millis
 import net.corda.nodeapi.config.SSLConfiguration
@@ -36,7 +37,7 @@ fun <A> ScheduledExecutorService.poll(
         override fun run() {
             if (resultFuture.isCancelled) return // Give up, caller can no longer get the result.
             if (++counter == warnCount) {
-                log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
+                log.warn("Been polling $pollName for ${(pollInterval * warnCount.toLong()).seconds} seconds...")
             }
             try {
                 val checkResult = check()

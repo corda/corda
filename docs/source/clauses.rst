@@ -18,7 +18,7 @@ Let's take a look at a simplified structure of the ``Clause`` class:
             open val requiredCommands: Set<Class<out CommandData>> = emptySet()
 
             @Throws(IllegalStateException::class)
-            abstract fun verify(tx: TransactionForContract,
+            abstract fun verify(tx: LedgerTransaction,
                         inputs: List<S>,
                         outputs: List<S>,
                         commands: List<AuthenticatedObject<C>>,
@@ -47,7 +47,7 @@ An example ``verify`` from ``Obligation`` contract:
 
    .. sourcecode:: kotlin
 
-        override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
+        override fun verify(tx: LedgerTransaction) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
             Clauses.Net<Commands, P>(),
             Clauses.Group<P>()
         ), tx.commands.select<Obligation.Commands>())
@@ -112,7 +112,7 @@ Example from ``CommercialPaper.kt``:
                 Redeem(),
                 Move(),
                 Issue())) {
-            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
+            override fun groupStates(tx: LedgerTransaction): List<LedgerTransaction.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }
 
@@ -183,11 +183,11 @@ grouped input and output states with a grouping key used for each group. Example
                 )
             )
         ) {
-            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
+            override fun groupStates(tx: LedgerTransaction): List<LedgerTransaction.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
                     = tx.groupStates<Obligation.State<P>, Issued<Terms<P>>> { it.amount.token }
         }
 
-Usually it's convenient to use ``groupStates`` function defined on ``TransactionForContract`` class. Which given a type and a
+Usually it's convenient to use ``groupStates`` function defined on ``LedgerTransaction`` class. Which given a type and a
 selector function, that returns a grouping key, associates inputs and outputs together so that they can be processed as one.
 The grouping key is any arbitrary object that can act as a map key (so must implement equals and hashCode).
 
@@ -232,7 +232,7 @@ Example from ``CommercialPaper.kt``:
                 { token -> map { Amount(it.faceValue.quantity, it.token) }.sumOrZero(token) }) {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
 
-            override fun verify(tx: TransactionForContract,
+            override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: List<AuthenticatedObject<Commands>>,

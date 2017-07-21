@@ -7,8 +7,15 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
+import java.time.Duration
+import java.time.temporal.Temporal
 import java.util.stream.Stream
 import kotlin.reflect.KClass
+
+infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
+
+operator fun Duration.div(divider: Long): Duration = dividedBy(divider)
+operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multiplicand)
 
 /**
  * Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform

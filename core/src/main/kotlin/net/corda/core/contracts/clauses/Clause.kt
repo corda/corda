@@ -3,7 +3,7 @@ package net.corda.core.contracts.clauses
 import net.corda.core.contracts.AuthenticatedObject
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionForContract
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
 
 /**
@@ -48,14 +48,14 @@ abstract class Clause<in S : ContractState, C : CommandData, in K : Any> {
      * @param commands commands which are relevant to this clause. By default this is the set passed into [verifyClause],
      * but may be further reduced by clauses such as [GroupClauseVerifier].
      * @param groupingKey a grouping key applied to states and commands, where applicable. Taken from
-     * [TransactionForContract.InOutGroup].
+     * [LedgerTransaction.InOutGroup].
      * @return the set of commands that are consumed IF this clause is matched, and cannot be used to match a
      * later clause. This would normally be all commands matching "requiredCommands" for this clause, but some
      * verify() functions may do further filtering on possible matches, and return a subset. This may also include
      * commands that were not required (for example the Exit command for fungible assets is optional).
      */
     @Throws(IllegalStateException::class)
-    abstract fun verify(tx: TransactionForContract,
+    abstract fun verify(tx: LedgerTransaction,
                         inputs: List<S>,
                         outputs: List<S>,
                         commands: List<AuthenticatedObject<C>>,
