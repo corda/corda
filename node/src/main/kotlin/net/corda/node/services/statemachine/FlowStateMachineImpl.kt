@@ -255,18 +255,23 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun debugStackDump(): StackDump {
-        var dump: StackDump? = null
+    override fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot {
+        var snapshot: FlowStackSnapshot? = null
         val stackTrace = currentFiber().stackTrace
         Fiber.parkAndSerialize { fiber, _ ->
-            dump = StackDump.extractFromFiber(fiber, stackTrace.toList())
+            snapshot = FlowStackSnapshot.extractFromFiber(fiber, stackTrace.toList(), flowClass)
             Fiber.unparkDeserialized(fiber, fiber.scheduler)
         }
         // This is because the dump itself is on the stack, which means it creates a loop in the object graph, we set
         // it to null to break the loop
-        val temporaryDump = dump
-        dump = null
-        return temporaryDump!!
+        val temporarySnapshot = snapshot
+        snapshot = null
+        return temporarySnapshot!!
+    }
+
+    override fun persistFlowStackSnapshot(flowClass: Class<*>, path: String?) {
+        val snapshot = flowStackSnapshot(flowClass)
+        FlowStackSnapshot.persistAsJsonFile(snapshot, path)
     }
 
     /**
