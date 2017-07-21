@@ -2,14 +2,13 @@ package net.corda.core.serialization
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.internal.WriteOnceProperty
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.WriteOnceProperty
 import net.corda.core.utilities.sequence
-import java.io.NotSerializableException
 
 /**
  * An abstraction for serializing and deserializing objects, with support for versioning of the wire format via
@@ -23,7 +22,6 @@ interface SerializationFactory {
      * @param clazz The class or superclass or the object to be deserialized, or [Any] or [Object] if unknown.
      * @param context A context that configures various parameters to deserialization.
      */
-    @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
 
     /**
@@ -32,7 +30,6 @@ interface SerializationFactory {
      * @param obj The object to be serialized.
      * @param context A context that configures various parameters to serialization, including the serialization format version.
      */
-    @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T>
 }
 

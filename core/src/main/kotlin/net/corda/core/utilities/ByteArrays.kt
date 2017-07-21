@@ -7,7 +7,7 @@ import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 
 /**
- * An abstraction of a byte array, with offset and size.
+ * An abstraction of a byte array, with offset and size that does no copying of bytes unless asked to.
  *
  * The data of interest typically starts at position [offset] within the [bytes] and is [size] bytes long.
  */
@@ -25,9 +25,6 @@ sealed class ByteSequence : Comparable<ByteSequence> {
      * The start position of the sequence within the byte array.
      */
     abstract val offset: Int
-    /**
-     * An [InputStream] over the byte sequence.
-     */
     /** Returns a [ByteArrayInputStream] of the bytes */
     fun open() = ByteArrayInputStream(bytes, offset, size)
 
@@ -44,7 +41,12 @@ sealed class ByteSequence : Comparable<ByteSequence> {
     }
 
     companion object {
+        /**
+         * Construct a [ByteSequence] given a [ByteArray] and optional offset and size, that represents that potentially
+         * sub-sequence of bytes.  The returned implementation is optimised when the whole [ByteArray] is the sequence.
+         */
         @JvmStatic
+        @JvmOverloads
         fun of(bytes: ByteArray, offset: Int = 0, size: Int = bytes.size): ByteSequence {
             return if (offset == 0 && size == bytes.size && size != 0) OpaqueBytes(bytes) else OpaqueBytesSubSequence(bytes, offset, size)
         }
@@ -132,7 +134,6 @@ open class OpaqueBytes(override val bytes: ByteArray) : ByteSequence() {
 @Deprecated("Use sequence instead")
 fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
 
-@JvmOverloads
 fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of(this, offset, size)
 
 fun ByteArray.toHexString(): String = BaseEncoding.base16().encode(this)

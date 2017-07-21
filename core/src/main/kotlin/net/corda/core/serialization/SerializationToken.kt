@@ -56,21 +56,9 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
 
 private val serializationContextKey = SerializeAsTokenContext::class.java
 
-fun SerializationContext.tokenContext() = this.properties[serializationContextKey] as? SerializeAsTokenContext
+fun SerializationContext.withTokenContext(serializationContext: SerializeAsTokenContext): SerializationContext = this.withProperty(serializationContextKey, serializationContext)
 
-fun SerializationContext.withTokenContext(serializationContext: SerializeAsTokenContext) = this.withProperty(serializationContextKey, serializationContext)
-
-fun Kryo.serializationContext() = context.get(serializationContextKey) as? SerializeAsTokenContext
-
-fun <T> Kryo.withSerializationContext(serializationContext: SerializeAsTokenContext, block: () -> T) = run {
-    context.containsKey(serializationContextKey) && throw IllegalStateException("There is already a serialization context.")
-    context.put(serializationContextKey, serializationContext)
-    try {
-        block()
-    } finally {
-        context.remove(serializationContextKey)
-    }
-}
+fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializationContextKey) as? SerializeAsTokenContext
 
 /**
  * A context for mapping SerializationTokens to/from SerializeAsTokens.
