@@ -4,10 +4,11 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.testing.TestDependencyInjectionBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class KotlinUtilsTest {
+class KotlinUtilsTest : TestDependencyInjectionBase() {
     @Test
     fun `transient property which is null`() {
         val test = NullTransientProperty()

@@ -116,7 +116,7 @@ class ContractUpgradeFlowTest {
 
     @Test
     fun `2 parties contract upgrade using RPC`() {
-        rpcDriver {
+        rpcDriver(initialiseSerialization = false) {
             // Create dummy contract.
             val twoPartyDummyContract = DummyContract.generateInitial(0, notary, a.info.legalIdentity.ref(1), b.info.legalIdentity.ref(1))
             val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)

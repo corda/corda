@@ -13,9 +13,9 @@ import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
+import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.storageKryo
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.database.HibernateConfiguration
@@ -96,7 +96,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                                     return@forEachIndexed
                                 val vaultState = result[0] as VaultSchemaV1.VaultStates
                                 val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
-                                val state = vaultState.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                val state = vaultState.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
                                 statesMeta.add(Vault.StateMetadata(stateRef, vaultState.contractStateClassName, vaultState.recordedTime, vaultState.consumedTime, vaultState.stateStatus, vaultState.notaryName, vaultState.notaryKey, vaultState.lockId, vaultState.lockUpdateTime))
                                 statesAndRefs.add(StateAndRef(state, stateRef))
                             }

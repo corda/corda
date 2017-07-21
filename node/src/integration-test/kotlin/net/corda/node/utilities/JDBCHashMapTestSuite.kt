@@ -10,7 +10,10 @@ import com.google.common.collect.testing.features.MapFeature
 import com.google.common.collect.testing.features.SetFeature
 import com.google.common.collect.testing.testers.*
 import junit.framework.TestSuite
+import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -42,6 +45,7 @@ class JDBCHashMapTestSuite {
         @JvmStatic
         @BeforeClass
         fun before() {
+            initialiseTestSerialization()
             database = configureDatabase(makeTestDataSourceProperties())
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
@@ -57,6 +61,7 @@ class JDBCHashMapTestSuite {
         fun after() {
             closeDatabaseTx()
             database.close()
+            resetTestSerialization()
         }
 
         @JvmStatic
@@ -198,7 +203,7 @@ class JDBCHashMapTestSuite {
      *
      * If the Map reloads, then so will the Set as it just delegates.
      */
-    class MapCanBeReloaded {
+    class MapCanBeReloaded : TestDependencyInjectionBase() {
         private val ops = listOf(Triple(AddOrRemove.ADD, "A", "1"),
                 Triple(AddOrRemove.ADD, "B", "2"),
                 Triple(AddOrRemove.ADD, "C", "3"),
@@ -234,7 +239,6 @@ class JDBCHashMapTestSuite {
         fun after() {
             database.close()
         }
-
 
         @Test
         fun `fill map and check content after reconstruction`() {

@@ -158,11 +158,14 @@ instead by running ``git checkout release-M12``.
 
 Next steps
 ----------
+The best way to check that everything is working fine is by running the :doc:`tutorial CorDapp <tutorial-cordapp>` and
+the :doc:`samples <running-the-demos>`.
 
-The best way to check that everything is working fine is by :doc:`running-the-demos`.
+Next, you should read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
-Once you have these demos running, you may be interested in writing your own CorDapps, in which case you should refer to 
-:doc:`tutorial-cordapp`.
+By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
+:doc:`Hello, World tutorial <hello-world-index>`. You may want to refer to the :doc:`API docs <api-index>` along the
+way.
 
 If you encounter any issues, please see the :doc:`troubleshooting` page, or get in touch with us on the
 `forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.

@@ -25,6 +25,8 @@ import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
@@ -67,6 +69,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Before
     fun setup() {
+        initialiseTestSerialization()
         countDown = CountDownLatch(1)
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
@@ -114,6 +117,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmExecutor.shutdown()
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
         database.close()
+        resetTestSerialization()
     }
 
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {
