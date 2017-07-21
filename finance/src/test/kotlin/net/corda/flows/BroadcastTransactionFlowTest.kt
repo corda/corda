@@ -10,6 +10,9 @@ import net.corda.contracts.testing.SignedTransactionGenerator
 import net.corda.core.flows.BroadcastTransactionFlow.NotifyTxRequest
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
+import org.junit.After
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 
@@ -18,8 +21,14 @@ class BroadcastTransactionFlowTest {
 
     class NotifyTxRequestMessageGenerator : Generator<NotifyTxRequest>(NotifyTxRequest::class.java) {
         override fun generate(random: SourceOfRandomness, status: GenerationStatus): NotifyTxRequest {
+            initialiseTestSerialization()
             return NotifyTxRequest(tx = SignedTransactionGenerator().generate(random, status))
         }
+    }
+
+    @After
+    fun teardown() {
+        resetTestSerialization()
     }
 
     @Property

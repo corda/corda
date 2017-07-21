@@ -79,7 +79,7 @@ class IRSDemoTest : IntegrationTestCategory {
     fun getFloatingLegFixCount(nodeApi: HttpApi) = getTrades(nodeApi)[0].calculation.floatingLegPaymentSchedule.count { it.value.rate.ratioUnit != null }
 
     fun getFixingDateObservable(config: FullNodeConfiguration): Observable<LocalDate?> {
-        val client = CordaRPCClient(config.rpcAddress!!)
+        val client = CordaRPCClient(config.rpcAddress!!, initialiseSerialization = false)
         val proxy = client.start("user", "password").proxy
         val vaultUpdates = proxy.vaultAndUpdates().second
 

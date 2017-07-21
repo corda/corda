@@ -15,8 +15,8 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
@@ -46,7 +46,7 @@ import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-class VaultQueryTests {
+class VaultQueryTests : TestDependencyInjectionBase() {
 
     lateinit var services: MockServices
     val vaultSvc: VaultService get() = services.vaultService

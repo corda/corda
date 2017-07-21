@@ -51,7 +51,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     lateinit var newNode: (X500Name) -> NodeInfo
 
-    override fun setup() = driver {
+    override fun setup() = driver(initialiseSerialization = false) {
         val cashUser = User("user1", "test", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>(),
@@ -72,14 +72,14 @@ class NodeMonitorModelTest : DriverBasedTest() {
         vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
         networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-        monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+        monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password, initialiseSerialization = false)
         rpc = monitor.proxyObservable.value!!
 
         val bobNodeHandle = startNode(BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
         bobNode = bobNodeHandle.nodeInfo
         val monitorBob = NodeMonitorModel()
         stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
-        monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+        monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password, initialiseSerialization = false)
         rpcBob = monitorBob.proxyObservable.value!!
         runTest()
     }

@@ -3,12 +3,14 @@ package net.corda.testing.node
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors.listeningDecorator
-import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
+import net.corda.core.flatMap
+import net.corda.core.getOrThrow
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.map
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.WHITESPACE
@@ -23,6 +25,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.testing.DUMMY_MAP
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
 import org.apache.logging.log4j.Level
@@ -39,7 +42,7 @@ import kotlin.concurrent.thread
  * purposes. Use the driver if you need to run the nodes in separate processes otherwise this class will suffice.
  */
 // TODO Some of the logic here duplicates what's in the driver
-abstract class NodeBasedTest {
+abstract class NodeBasedTest : TestDependencyInjectionBase() {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
@@ -161,7 +164,7 @@ abstract class NodeBasedTest {
 
         val parsedConfig = config.parseAs<FullNodeConfiguration>()
         val node = Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
-                if (parsedConfig.useTestClock) TestClock() else NodeClock())
+                if (parsedConfig.useTestClock) TestClock() else NodeClock(), initialiseSerialization = false)
         node.start()
         nodes += node
         thread(name = legalName.commonName) {

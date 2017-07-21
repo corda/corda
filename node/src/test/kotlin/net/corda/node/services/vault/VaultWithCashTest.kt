@@ -1,13 +1,8 @@
 package net.corda.node.services.vault
 
-import net.corda.testing.contracts.DummyDealContract
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.testing.contracts.fillWithSomeTestCash
-import net.corda.testing.contracts.fillWithSomeTestDeals
-import net.corda.testing.contracts.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyLinearContract
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.consumedStates
@@ -15,12 +10,8 @@ import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.testing.LogHelper
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.*
+import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -36,7 +27,7 @@ import kotlin.test.assertNull
 
 // TODO: Move this to the cash contract tests once mock services are further split up.
 
-class VaultWithCashTest {
+class VaultWithCashTest : TestDependencyInjectionBase() {
     lateinit var services: MockServices
     val vault: VaultService get() = services.vaultService
     lateinit var database: CordaPersistence

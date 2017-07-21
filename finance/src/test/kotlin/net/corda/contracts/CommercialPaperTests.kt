@@ -209,7 +209,7 @@ class CommercialPaperTestsGeneric {
 
     @Test
     fun `issue move and then redeem`() {
-
+        initialiseTestSerialization()
         val dataSourcePropsAlice = makeTestDataSourceProperties()
         val databaseAlice = configureDatabase(dataSourcePropsAlice)
         databaseAlice.transaction {
@@ -307,5 +307,6 @@ class CommercialPaperTestsGeneric {
             validRedemption.toLedgerTransaction(aliceServices).verify()
             // soft lock not released after success either!!! (as transaction not recorded)
         }
+        resetTestSerialization()
     }
 }
