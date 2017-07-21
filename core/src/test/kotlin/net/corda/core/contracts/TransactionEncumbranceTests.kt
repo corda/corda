@@ -29,7 +29,7 @@ class TransactionEncumbranceTests {
     class DummyTimeLock : Contract {
         override val legalContractReference = SecureHash.sha256("DummyTimeLock")
         override fun verify(tx: LedgerTransaction) {
-            val timeLockInput = tx.inputs.map { it.state.data }.filterIsInstance<State>().singleOrNull() ?: return
+            val timeLockInput = tx.inputsOfType<State>().singleOrNull() ?: return
             val time = tx.timeWindow?.untilTime ?: throw IllegalArgumentException("Transactions containing time-locks must have a time-window")
             requireThat {
                 "the time specified in the time-lock has passed" using (time >= timeLockInput.validFrom)

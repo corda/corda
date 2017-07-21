@@ -123,7 +123,7 @@ sealed class TransactionType {
          */
         private fun verifyContracts(tx: LedgerTransaction) {
             // TODO: This will all be replaced in future once the sandbox and contract constraints work is done.
-            val contracts = (tx.inputs.map { it.state.data.contract } + tx.outputs.map { it.data.contract }).toSet()
+            val contracts = (tx.inputStates.map { it.contract } + tx.outputStates.map { it.contract }).toSet()
             for (contract in contracts) {
                 try {
                     contract.verify(tx)
@@ -171,6 +171,6 @@ sealed class TransactionType {
             }
         }
 
-        override fun getRequiredSigners(tx: LedgerTransaction) = tx.inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()
+        override fun getRequiredSigners(tx: LedgerTransaction) = tx.inputStates.flatMap { it.participants }.map { it.owningKey }.toSet()
     }
 }

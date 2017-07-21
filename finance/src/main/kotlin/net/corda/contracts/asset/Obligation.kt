@@ -14,10 +14,10 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.Emoji
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.internal.Emoji
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.seconds
 import org.bouncycastle.asn1.x500.X500Name
@@ -159,7 +159,7 @@ class Obligation<P : Any> : Contract {
                 //  Move (signed by B)
                 //
                 // That would pass this check. Ensuring they do not is best addressed in the transaction generation stage.
-                val assetStates = tx.outputs.map { it.data }.filterIsInstance<FungibleAsset<*>>()
+                val assetStates = tx.outputsOfType<FungibleAsset<*>>()
                 val acceptableAssetStates = assetStates
                         // TODO: This filter is nonsense, because it just checks there is an asset contract loaded, we need to
                         // verify the asset contract is the asset contract we expect.

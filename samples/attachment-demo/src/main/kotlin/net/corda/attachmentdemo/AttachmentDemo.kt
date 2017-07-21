@@ -125,7 +125,7 @@ fun recipient(rpc: CordaRPCOps) {
     val wtx = stx.tx
     if (wtx.attachments.isNotEmpty()) {
         if (wtx.outputs.isNotEmpty()) {
-            val state = wtx.outputs.map { it.data }.filterIsInstance<AttachmentContract.State>().single()
+            val state = wtx.outputsOfType<AttachmentContract.State>().single()
             require(rpc.attachmentExists(state.hash))
 
             // Download the attachment via the Web endpoint.
@@ -173,7 +173,7 @@ class AttachmentContract : Contract {
         get() = SecureHash.zeroHash // TODO not implemented
 
     override fun verify(tx: LedgerTransaction) {
-        val state = tx.outputs.map { it.data }.filterIsInstance<AttachmentContract.State>().single()
+        val state = tx.outputsOfType<AttachmentContract.State>().single()
         val attachment = tx.attachments.single()
         require(state.hash == attachment.id)
     }

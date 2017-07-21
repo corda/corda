@@ -27,8 +27,8 @@ import javafx.util.Duration
 import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
-import net.corda.core.identity.Party
 import net.corda.core.crypto.toBase58String
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
@@ -77,7 +77,7 @@ class Network : CordaView() {
                     .map { it as? PartiallyResolvedTransaction.InputResolution.Resolved }
                     .filterNotNull()
                     .map { it.stateAndRef.state.data }.getParties()
-            val outputParties = it.transaction.tx.outputs.map { it.data }.observable().getParties()
+            val outputParties = it.transaction.tx.outputStates.observable().getParties()
             val signingParties = it.transaction.sigs.map { getModel<NetworkIdentityModel>().lookup(it.by) }
             // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network.
             // TODO : Expose artemis queue to get real message information.

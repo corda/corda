@@ -55,7 +55,7 @@ class CashExitFlowTests {
         val expected = (initialBalance - exitAmount).`issued by`(bankOfCorda.ref(ref))
         assertEquals(1, exitTx.inputs.size)
         assertEquals(1, exitTx.outputs.size)
-        val output = exitTx.outputs.map { it.data }.filterIsInstance<Cash.State>().single()
+        val output = exitTx.outputsOfType<Cash.State>().single()
         assertEquals(expected, output.amount)
     }
 
