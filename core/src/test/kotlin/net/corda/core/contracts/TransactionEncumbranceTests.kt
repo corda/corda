@@ -3,6 +3,7 @@ package net.corda.core.contracts
 import net.corda.contracts.asset.Cash
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.ledger
@@ -28,8 +29,8 @@ class TransactionEncumbranceTests {
 
     class DummyTimeLock : Contract {
         override val legalContractReference = SecureHash.sha256("DummyTimeLock")
-        override fun verify(tx: TransactionForContract) {
-            val timeLockInput = tx.inputs.filterIsInstance<State>().singleOrNull() ?: return
+        override fun verify(tx: LedgerTransaction) {
+            val timeLockInput = tx.inputs.map { it.state.data }.filterIsInstance<State>().singleOrNull() ?: return
             val time = tx.timeWindow?.untilTime ?: throw IllegalArgumentException("Transactions containing time-locks must have a time-window")
             requireThat {
                 "the time specified in the time-lock has passed" using (time >= timeLockInput.validFrom)

@@ -3,7 +3,7 @@ package net.corda.core.contracts.clauses
 import net.corda.core.contracts.AuthenticatedObject
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionForContract
+import net.corda.core.transactions.LedgerTransaction
 import java.util.*
 
 /**
@@ -19,7 +19,7 @@ class FirstComposition<S : ContractState, C : CommandData, K : Any>(firstClause:
         clauses.addAll(remainingClauses)
     }
 
-    override fun verify(tx: TransactionForContract, inputs: List<S>, outputs: List<S>, commands: List<AuthenticatedObject<C>>, groupingKey: K?): Set<C> {
+    override fun verify(tx: LedgerTransaction, inputs: List<S>, outputs: List<S>, commands: List<AuthenticatedObject<C>>, groupingKey: K?): Set<C> {
         val clause = matchedClauses(commands).singleOrNull() ?: throw IllegalStateException("No delegate clause matched in first composition")
         return clause.verify(tx, inputs, outputs, commands, groupingKey)
     }

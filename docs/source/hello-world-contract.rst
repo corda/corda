@@ -36,7 +36,7 @@ Just as every Corda state must implement the ``ContractState`` interface, every 
         interface Contract {
             // Implements the contract constraints in code.
             @Throws(IllegalArgumentException::class)
-            fun verify(tx: TransactionForContract)
+            fun verify(tx: LedgerTransaction)
 
             // Expresses the contract constraints as legal prose.
             val legalContractReference: SecureHash
@@ -94,7 +94,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
             // Our Create command.
             class Create : CommandData
 
-            override fun verify(tx: TransactionForContract) {
+            override fun verify(tx: LedgerTransaction) {
                 val command = tx.commands.requireSingleCommand<Create>()
 
                 requireThat {
@@ -103,7 +103,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     "There should be one output state of type IOUState." using (tx.outputs.size == 1)
 
                     // IOU-specific constraints.
-                    val out = tx.outputs.single() as IOUState
+                    val out = tx.outputs.single().data as IOUState
                     "The IOU's value must be non-negative." using (out.value > 0)
                     "The lender and the borrower cannot be the same entity." using (out.lender != out.borrower)
 
@@ -125,7 +125,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
         import net.corda.core.contracts.AuthenticatedObject;
         import net.corda.core.contracts.CommandData;
         import net.corda.core.contracts.Contract;
-        import net.corda.core.contracts.TransactionForContract;
+        import net.corda.core.transactions.LedgerTransaction;
         import net.corda.core.crypto.SecureHash;
         import net.corda.core.identity.Party;
 
@@ -137,7 +137,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
             public static class Create implements CommandData {}
 
             @Override
-            public void verify(TransactionForContract tx) {
+            public void verify(LedgerTransaction tx) {
                 final AuthenticatedObject<Create> command = requireSingleCommand(tx.getCommands(), Create.class);
 
                 requireThat(check -> {
@@ -146,7 +146,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     check.using("There should be one output state of type IOUState.", tx.getOutputs().size() == 1);
 
                     // IOU-specific constraints.
-                    final IOUState out = (IOUState) tx.getOutputs().get(0);
+                    final IOUState out = (IOUState) tx.getOutputs().getData().get(0);
                     final Party lender = out.getLender();
                     final Party borrower = out.getBorrower();
                     check.using("The IOU's value must be non-negative.",out.getValue() > 0);

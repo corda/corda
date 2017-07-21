@@ -189,6 +189,10 @@ task javapackage(dependsOn: distZip) {
                     include(name: 'plugins/*.jar')
                     include(name: 'explorer/*.jar')
                 }
+
+                fileset(dir: "$pkg_source/package", type: 'data') {
+                    include(name: "bugfixes/**")
+                }
             }
 
             // This is specific to MacOSX packager.

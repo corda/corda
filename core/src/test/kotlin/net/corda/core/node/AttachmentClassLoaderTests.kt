@@ -9,6 +9,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
@@ -58,7 +59,7 @@ class AttachmentClassLoaderTests {
             class Create : TypeOnlyCommandData(), Commands
         }
 
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
             // Always accepts.
         }
 

@@ -8,9 +8,8 @@ import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyContract
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
@@ -26,6 +25,7 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.contracts.DummyContract
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.After
 import org.junit.Assert
@@ -94,7 +94,7 @@ class VaultSchemaTest {
             class Create : TypeOnlyCommandData(), Commands
         }
 
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
             // Always accepts.
         }
     }
