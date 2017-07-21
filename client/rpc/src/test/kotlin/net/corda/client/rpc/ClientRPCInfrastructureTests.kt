@@ -27,7 +27,9 @@ import kotlin.test.assertTrue
 class ClientRPCInfrastructureTests : AbstractRPCTest() {
     // TODO: Test that timeouts work
 
-    private fun RPCDriverExposedDSLInterface.testProxy() = testProxy<TestOps>(TestOpsImpl()).ops
+    private fun RPCDriverExposedDSLInterface.testProxy(): TestOps {
+        return testProxy<TestOps>(TestOpsImpl()).ops
+    }
 
     interface TestOps : RPCOps {
         @Throws(IllegalArgumentException::class)

@@ -7,12 +7,18 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.node.MockNetwork
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
 
 class InMemoryNetworkMapCacheTest {
-    private val mockNet = MockNetwork()
+    lateinit var mockNet: MockNetwork
+
+    @Before
+    fun setUp() {
+        mockNet = MockNetwork()
+    }
 
     @After
     fun teardown() {

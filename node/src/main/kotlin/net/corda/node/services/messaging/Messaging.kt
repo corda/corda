@@ -154,7 +154,8 @@ fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): CordaFutu
     val messageFuture = openFuture<M>()
     runOnNextMessage(topic, sessionId) { message ->
         messageFuture.capture {
-            message.data.deserialize<M>()
+            @Suppress("UNCHECKED_CAST")
+            message.data.deserialize<Any>() as M
         }
     }
     return messageFuture

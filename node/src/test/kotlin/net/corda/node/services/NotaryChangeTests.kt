@@ -34,7 +34,7 @@ class NotaryChangeTests {
     lateinit var clientNodeB: MockNetwork.MockNode
 
     @Before
-    fun setup() {
+    fun setUp() {
         mockNet = MockNetwork()
         oldNotaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,

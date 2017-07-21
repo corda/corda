@@ -21,6 +21,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.testing.DUMMY_MAP
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
 import org.apache.logging.log4j.Level
@@ -37,7 +38,7 @@ import kotlin.concurrent.thread
  * purposes. Use the driver if you need to run the nodes in separate processes otherwise this class will suffice.
  */
 // TODO Some of the logic here duplicates what's in the driver
-abstract class NodeBasedTest {
+abstract class NodeBasedTest : TestDependencyInjectionBase() {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
@@ -159,7 +160,7 @@ abstract class NodeBasedTest {
 
         val parsedConfig = config.parseAs<FullNodeConfiguration>()
         val node = Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
-                if (parsedConfig.useTestClock) TestClock() else NodeClock())
+                if (parsedConfig.useTestClock) TestClock() else NodeClock(), initialiseSerialization = false)
         node.start()
         nodes += node
         thread(name = legalName.commonName) {

@@ -6,6 +6,7 @@ import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
 import net.corda.testing.MEGA_CORP
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.generateStateRef
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.junit.After
@@ -14,7 +15,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class PersistentUniquenessProviderTests {
+class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
     val identity = MEGA_CORP
     val txID = SecureHash.randomSHA256()
 

@@ -1,7 +1,6 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import net.corda.core.*
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
@@ -10,8 +9,10 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
+import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -31,6 +32,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.serialization.*
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -56,7 +58,8 @@ import kotlin.system.exitProcess
 open class Node(override val configuration: FullNodeConfiguration,
                 advertisedServices: Set<ServiceInfo>,
                 val versionInfo: VersionInfo,
-                clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
+                clock: Clock = NodeClock(),
+                val initialiseSerialization: Boolean = true) : AbstractNode(configuration, advertisedServices, clock) {
     companion object {
         private val logger = loggerFor<Node>()
         var renderBasicInfoToConsole = true
@@ -293,6 +296,9 @@ open class Node(override val configuration: FullNodeConfiguration,
     val startupComplete: CordaFuture<Unit> get() = _startupComplete
 
     override fun start(): Node {
+        if (initialiseSerialization) {
+            initialiseSerialization()
+        }
         super.start()
 
         networkMapRegistrationFuture.thenMatch({
@@ -322,6 +328,16 @@ open class Node(override val configuration: FullNodeConfiguration,
             stop()
         }
         return this
+    }
+
+    private fun initialiseSerialization() {
+        SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
+            registerScheme(KryoServerSerializationScheme())
+        }
+        SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
+        SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT
+        SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT
+        SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT
     }
 
     /** Starts a blocking event loop for message dispatch. */

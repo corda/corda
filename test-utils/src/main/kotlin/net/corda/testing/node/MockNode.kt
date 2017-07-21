@@ -18,12 +18,11 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.ServiceEntry
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
@@ -67,7 +66,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
                   InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-                  private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
+                  private val defaultFactory: Factory = MockNetwork.DefaultFactory,
+                  private val initialiseSerialization: Boolean = true) {
     val nextNodeId
         get() = _nextNodeId
     private var _nextNodeId = 0
@@ -85,6 +85,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     val nodes: List<MockNode> = _nodes
 
     init {
+        if (initialiseSerialization) initialiseTestSerialization()
         filesystem.getPath("/nodes").createDirectory()
     }
 
@@ -396,6 +397,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     fun stopNodes() {
         nodes.forEach { if (it.started) it.stop() }
+        if (initialiseSerialization) resetTestSerialization()
     }
 
     // Test method to block until all scheduled activity, active flows

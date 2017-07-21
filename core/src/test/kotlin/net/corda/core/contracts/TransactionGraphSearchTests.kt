@@ -1,20 +1,17 @@
 package net.corda.core.contracts
 
-import net.corda.testing.contracts.DummyContract
-import net.corda.testing.contracts.DummyState
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.testing.MEGA_CORP_KEY
-import net.corda.testing.MEGA_CORP_PUBKEY
+import net.corda.testing.*
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockTransactionStorage
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class TransactionGraphSearchTests {
+class TransactionGraphSearchTests : TestDependencyInjectionBase() {
     class GraphTransactionStorage(val originTx: SignedTransaction, val inputTx: SignedTransaction) : MockTransactionStorage() {
         init {
             addTransaction(originTx)

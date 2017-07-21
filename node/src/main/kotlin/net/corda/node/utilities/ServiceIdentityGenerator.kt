@@ -37,7 +37,6 @@ object ServiceIdentityGenerator {
         keyPairs.zip(dirs) { keyPair, dir ->
             Files.createDirectories(dir)
             Files.write(dir.resolve(compositeKeyFile), notaryKey.encoded)
-            // Use storageKryo as our whitelist is not available in the gradle build environment:
             Files.write(dir.resolve(privateKeyFile), keyPair.private.encoded)
             Files.write(dir.resolve(publicKeyFile), keyPair.public.encoded)
         }

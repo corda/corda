@@ -34,7 +34,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class NodeVaultServiceTest {
+class NodeVaultServiceTest : TestDependencyInjectionBase() {
     lateinit var services: MockServices
     val vaultSvc: VaultService get() = services.vaultService
     lateinit var database: CordaPersistence

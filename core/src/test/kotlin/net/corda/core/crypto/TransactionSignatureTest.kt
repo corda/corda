@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.testing.TestDependencyInjectionBase
 import org.junit.Test
 import java.security.SignatureException
 import java.time.Instant
@@ -8,7 +9,7 @@ import kotlin.test.assertTrue
 /**
  * Digital signature MetaData tests
  */
-class TransactionSignatureTest {
+class TransactionSignatureTest : TestDependencyInjectionBase() {
 
     val testBytes = "12345678901234567890123456789012".toByteArray()
 

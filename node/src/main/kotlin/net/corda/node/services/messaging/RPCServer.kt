@@ -4,7 +4,6 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.RemovalListener
@@ -17,7 +16,8 @@ import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.seconds
-import net.corda.core.serialization.KryoPoolWithContext
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.utilities.*
 import net.corda.node.services.RPCUserService
 import net.corda.nodeapi.*
@@ -81,7 +81,6 @@ class RPCServer(
 ) {
     private companion object {
         val log = loggerFor<RPCServer>()
-        val kryoPool = KryoPool.Builder { RPCKryo(RpcServerObservableSerializer) }.build()
     }
     private enum class State {
         UNSTARTED,
@@ -258,7 +257,7 @@ class RPCServer(
 
     private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
         lifeCycle.requireState(State.STARTED)
-        val clientToServer = RPCApi.ClientToServer.fromClientMessage(kryoPool, artemisMessage)
+        val clientToServer = RPCApi.ClientToServer.fromClientMessage(RPC_SERVER_CONTEXT, artemisMessage)
         log.debug { "-> RPC -> $clientToServer" }
         when (clientToServer) {
             is RPCApi.ClientToServer.RpcRequest -> {
@@ -302,8 +301,7 @@ class RPCServer(
                 clientAddress,
                 serverControl!!,
                 sessionAndProducerPool,
-                observationSendExecutor!!,
-                kryoPool
+                observationSendExecutor!!
         )
 
         val buffered = bufferIfQueueNotBound(clientAddress, reply, observableContext)
@@ -385,19 +383,19 @@ class ObservableContext(
         val clientAddress: SimpleString,
         val serverControl: ActiveMQServerControl,
         val sessionAndProducerPool: LazyStickyPool<ArtemisProducer>,
-        val observationSendExecutor: ExecutorService,
-        kryoPool: KryoPool
+        val observationSendExecutor: ExecutorService
 ) {
     private companion object {
         val log = loggerFor<ObservableContext>()
     }
 
-    private val kryoPoolWithObservableContext = RpcServerObservableSerializer.createPoolWithContext(kryoPool, this)
+    private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(this)
+
     fun sendMessage(serverToClient: RPCApi.ServerToClient) {
         try {
             sessionAndProducerPool.run(rpcRequestId) {
                 val artemisMessage = it.session.createMessage(false)
-                serverToClient.writeToClientMessage(kryoPoolWithObservableContext, artemisMessage)
+                serverToClient.writeToClientMessage(serializationContextWithObservableContext, artemisMessage)
                 it.producer.send(clientAddress, artemisMessage)
                 log.debug("<- RPC <- $serverToClient")
             }
@@ -408,12 +406,12 @@ class ObservableContext(
     }
 }
 
-private object RpcServerObservableSerializer : Serializer<Observable<*>>() {
+object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     private object RpcObservableContextKey
     private val log = loggerFor<RpcServerObservableSerializer>()
 
-    fun createPoolWithContext(kryoPool: KryoPool, observableContext: ObservableContext): KryoPool {
-        return KryoPoolWithContext(kryoPool, RpcObservableContextKey, observableContext)
+    fun createContext(observableContext: ObservableContext): SerializationContext {
+        return RPC_SERVER_CONTEXT.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
     }
 
     override fun read(kryo: Kryo?, input: Input?, type: Class<Observable<*>>?): Observable<Any> {

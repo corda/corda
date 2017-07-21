@@ -8,10 +8,11 @@ import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.LogHelper
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.testing.LogHelper
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Transaction
@@ -22,7 +23,7 @@ import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class DistributedImmutableMapTests {
+class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     data class Member(val client: CopycatClient, val server: CopycatServer)
 
     lateinit var cluster: List<Member>

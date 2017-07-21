@@ -1,8 +1,8 @@
 package net.corda.client.rpc
 
 import net.corda.core.messaging.RPCOps
-import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.messaging.getRpcContext
+import net.corda.node.services.messaging.requirePermission
 import net.corda.nodeapi.PermissionException
 import net.corda.nodeapi.User
 import net.corda.testing.RPCDriverExposedDSLInterface

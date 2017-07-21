@@ -14,7 +14,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.testing.LogHelper
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.CordaPersistence
@@ -34,7 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
-class NodeInterestRatesTest {
+class NodeInterestRatesTest : TestDependencyInjectionBase() {
     val TEST_DATA = NodeInterestRates.parseFile("""
         LIBOR 2016-03-16 1M = 0.678
         LIBOR 2016-03-16 2M = 0.685
@@ -202,7 +201,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `network tearoff`() {
-        val mockNet = MockNetwork()
+        val mockNet = MockNetwork(initialiseSerialization = false)
         val n1 = mockNet.createNotaryNode()
         val n2 = mockNet.createNode(n1.network.myAddress, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
         n2.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)

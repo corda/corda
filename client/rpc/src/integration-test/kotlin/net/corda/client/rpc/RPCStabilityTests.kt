@@ -1,10 +1,5 @@
 package net.corda.client.rpc
 
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.crypto.random63BitValue
@@ -14,11 +9,11 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.RPCKryo
 import net.corda.testing.*
 import net.corda.testing.driver.poll
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -300,16 +295,8 @@ class RPCStabilityTests {
             return Observable.interval(interval.toMillis(), TimeUnit.MILLISECONDS).map { chunk }
         }
     }
-    val dummyObservableSerialiser = object : Serializer<Observable<*>>() {
-        override fun write(kryo: Kryo?, output: Output?, `object`: Observable<*>?) {
-        }
-        override fun read(kryo: Kryo?, input: Input?, type: Class<Observable<*>>?): Observable<Any> {
-            return Observable.empty()
-        }
-    }
     @Test
     fun `slow consumers are kicked`() {
-        val kryoPool = KryoPool.Builder { RPCKryo(dummyObservableSerialiser) }.build()
         rpcDriver {
             val server = startRpcServer(maxBufferedBytesPerClient = 10 * 1024 * 1024, ops = SlowConsumerRPCOpsImpl()).get()
 
@@ -334,7 +321,7 @@ class RPCStabilityTests {
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
                     arguments = listOf(10.millis, 123456)
             )
-            request.writeToClientMessage(kryoPool, message)
+            request.writeToClientMessage(SerializationDefaults.RPC_SERVER_CONTEXT, message)
             producer.send(message)
             session.commit()
 

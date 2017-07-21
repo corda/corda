@@ -1,6 +1,5 @@
 package net.corda.core.transactions
 
-import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTree
@@ -9,10 +8,9 @@ import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.indexOfOrThrow
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.p2PKryo
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.internal.Emoji
 import java.security.PublicKey
 import java.security.SignatureException
@@ -48,8 +46,8 @@ class WireTransaction(
     override val id: SecureHash by lazy { merkleTree.hash }
 
     companion object {
-        fun deserialize(data: SerializedBytes<WireTransaction>, kryo: KryoPool = p2PKryo()): WireTransaction {
-            val wtx = data.bytes.deserialize<WireTransaction>(kryo)
+        fun deserialize(data: SerializedBytes<WireTransaction>, serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): WireTransaction {
+            val wtx = data.deserialize<WireTransaction>(serializationFactory, context)
             wtx.cachedBytes = data
             return wtx
         }

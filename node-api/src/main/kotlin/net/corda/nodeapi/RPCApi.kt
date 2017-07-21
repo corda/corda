@@ -1,7 +1,6 @@
 package net.corda.nodeapi
 
-import com.esotericsoftware.kryo.pool.KryoPool
-import net.corda.core.serialization.KryoPoolWithContext
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
@@ -96,12 +95,12 @@ object RPCApi {
                 val methodName: String,
                 val arguments: List<Any?>
         ) : ClientToServer() {
-            fun writeToClientMessage(kryoPool: KryoPool, message: ClientMessage) {
+            fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
                 MessageUtil.setJMSReplyTo(message, clientAddress)
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REQUEST.ordinal)
                 message.putLongProperty(RPC_ID_FIELD_NAME, id.toLong)
                 message.putStringProperty(METHOD_NAME_FIELD_NAME, methodName)
-                message.bodyBuffer.writeBytes(arguments.serialize(kryoPool).bytes)
+                message.bodyBuffer.writeBytes(arguments.serialize(context = context).bytes)
             }
         }
 
@@ -119,14 +118,14 @@ object RPCApi {
         }
 
         companion object {
-            fun fromClientMessage(kryoPool: KryoPool, message: ClientMessage): ClientToServer {
+            fun fromClientMessage(context: SerializationContext, message: ClientMessage): ClientToServer {
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
                     RPCApi.ClientToServer.Tag.RPC_REQUEST -> RpcRequest(
                             clientAddress = MessageUtil.getJMSReplyTo(message),
                             id = RpcRequestId(message.getLongProperty(RPC_ID_FIELD_NAME)),
                             methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
-                            arguments = message.getBodyAsByteArray().deserialize(kryoPool)
+                            arguments = message.getBodyAsByteArray().deserialize(context = context)
                     )
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
                         val ids = ArrayList<ObservableId>()
@@ -148,16 +147,16 @@ object RPCApi {
             OBSERVATION
         }
 
-        abstract fun writeToClientMessage(kryoPool: KryoPool, message: ClientMessage)
+        abstract fun writeToClientMessage(context: SerializationContext, message: ClientMessage)
 
         data class RpcReply(
                 val id: RpcRequestId,
                 val result: Try<Any?>
         ) : ServerToClient() {
-            override fun writeToClientMessage(kryoPool: KryoPool, message: ClientMessage) {
+            override fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REPLY.ordinal)
                 message.putLongProperty(RPC_ID_FIELD_NAME, id.toLong)
-                message.bodyBuffer.writeBytes(result.serialize(kryoPool).bytes)
+                message.bodyBuffer.writeBytes(result.serialize(context = context).bytes)
             }
         }
 
@@ -165,31 +164,31 @@ object RPCApi {
                 val id: ObservableId,
                 val content: Notification<*>
         ) : ServerToClient() {
-            override fun writeToClientMessage(kryoPool: KryoPool, message: ClientMessage) {
+            override fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.OBSERVATION.ordinal)
                 message.putLongProperty(OBSERVABLE_ID_FIELD_NAME, id.toLong)
-                message.bodyBuffer.writeBytes(content.serialize(kryoPool).bytes)
+                message.bodyBuffer.writeBytes(content.serialize(context = context).bytes)
             }
         }
 
         companion object {
-            fun fromClientMessage(kryoPool: KryoPool, message: ClientMessage): ServerToClient {
+            fun fromClientMessage(context: SerializationContext, message: ClientMessage): ServerToClient {
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
                     RPCApi.ServerToClient.Tag.RPC_REPLY -> {
                         val id = RpcRequestId(message.getLongProperty(RPC_ID_FIELD_NAME))
-                        val poolWithIdContext = KryoPoolWithContext(kryoPool, RpcRequestOrObservableIdKey, id.toLong)
+                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id.toLong)
                         RpcReply(
                                 id = id,
-                                result = message.getBodyAsByteArray().deserialize(poolWithIdContext)
+                                result = message.getBodyAsByteArray().deserialize(context = poolWithIdContext)
                         )
                     }
                     RPCApi.ServerToClient.Tag.OBSERVATION -> {
                         val id = ObservableId(message.getLongProperty(OBSERVABLE_ID_FIELD_NAME))
-                        val poolWithIdContext = KryoPoolWithContext(kryoPool, RpcRequestOrObservableIdKey, id.toLong)
+                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id.toLong)
                         Observation(
                                 id = id,
-                                content = message.getBodyAsByteArray().deserialize(poolWithIdContext)
+                                content = message.getBodyAsByteArray().deserialize(context = poolWithIdContext)
                         )
                     }
                 }

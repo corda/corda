@@ -12,10 +12,10 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.utilities.opaque
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.sequence
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.RPCUserService
@@ -349,7 +349,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                                          private val message: ClientMessage) : ReceivedMessage {
         override val data: ByteArray by lazy { ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) } }
         override val debugTimestamp: Instant get() = Instant.ofEpochMilli(message.timestamp)
-        override fun toString() = "${topicSession.topic}#${data.opaque()}"
+        override fun toString() = "${topicSession.topic}#${data.sequence()}"
     }
 
     private fun deliver(msg: ReceivedMessage): Boolean {
