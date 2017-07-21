@@ -52,7 +52,7 @@ task graphs {
     doLast {
         def projects = new LinkedHashMap()
         walkProjects(rootProject) { projects[it] = new GraphProject(projects, it) }
-        def graphsDir = new File(reporting.baseDir, 'graphs')
+        def graphsDir = reporting.baseDir
         graphsDir.mkdirs()
         def graphs = projects.collect { new Graph(graphsDir, it.value) }
         graphs.each { graph ->

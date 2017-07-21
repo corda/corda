@@ -288,5 +288,3 @@ artifactory {
         }
     }
 }
-
-apply from: 'graphs.gradle'
