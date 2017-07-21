@@ -20,6 +20,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.*
 import net.corda.nodeapi.*
+import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientMessage
@@ -61,7 +62,8 @@ class RPCClientProxyHandler(
         private val rpcConfiguration: RPCClientConfiguration,
         private val rpcUsername: String,
         private val rpcPassword: String,
-        private val serverLocator: ServerLocator,
+        private val serverLocatorWithFailover: ServerLocator,
+        private val serverLocatorWithoutFailover: ServerLocator,
         private val clientAddress: SimpleString,
         private val rpcOpsClass: Class<out RPCOps>,
         serializationContext: SerializationContext
@@ -138,7 +140,9 @@ class RPCClientProxyHandler(
     // integrated properly.
     private var sessionAndConsumer: ArtemisConsumer? = null
     // Pool producers to reduce contention on the client side.
-    private val sessionAndProducerPool = LazyPool(bound = rpcConfiguration.producerPoolBound) {
+    private val sessionAndProducerPool = LazyPool(bound = rpcConfiguration.producerPoolBound) { createSessionAndProducer(serverLocatorWithFailover) }
+    private val reapObservablesSessionAndProducerPool = LazyPool(shouldReturnToPool = { !it.producer.isClosed }) { createSessionAndProducer(serverLocatorWithoutFailover) }
+    private fun createSessionAndProducer(serverLocator: ServerLocator) = run {
         // Note how we create new sessions *and* session factories per producer.
         // We cannot simply pool producers on one session because sessions are single threaded.
         // We cannot simply pool sessions on one session factory because flow control credits are tied to factories, so
@@ -167,7 +171,7 @@ class RPCClientProxyHandler(
         sessionAndProducerPool.run {
             it.session.createTemporaryQueue(clientAddress, clientAddress)
         }
-        val sessionFactory = serverLocator.createSessionFactory()
+        val sessionFactory = serverLocatorWithFailover.createSessionFactory()
         val session = sessionFactory.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
         val consumer = session.createConsumer(clientAddress)
         consumer.setMessageHandler(this@RPCClientProxyHandler::artemisMessageHandler)
@@ -276,8 +280,8 @@ class RPCClientProxyHandler(
         observableContext.observableMap.invalidateAll()
         reapObservables()
         reaperExecutor?.shutdownNow()
-        sessionAndProducerPool.close().forEach {
-            it.sessionFactory.close()
+        listOf(sessionAndProducerPool, reapObservablesSessionAndProducerPool).forEach {
+            it.close().forEach { it.sessionFactory.close() }
         }
         // Note the ordering is important, we shut down the consumer *before* the observation executor, otherwise we may
         // leak borrowed executors.
@@ -316,23 +320,30 @@ class RPCClientProxyHandler(
     }
 
     private fun reapObservables() {
-        observableContext.observableMap.cleanUp()
-        val observableIds = observablesToReap.locked {
-            if (observables.isNotEmpty()) {
-                val temporary = observables
-                observables = ArrayList()
-                temporary
-            } else {
-                null
+        try {
+            observableContext.observableMap.cleanUp()
+            val observableIds = observablesToReap.locked {
+                if (observables.isNotEmpty()) {
+                    observables.also { observables = ArrayList() }
+                } else {
+                    null
+                }
+            } ?: return
+            try {
+                log.debug { "Reaping ${observableIds.size} observables" }
+                reapObservablesSessionAndProducerPool.run {
+                    val message = it.session.createMessage(false)
+                    RPCApi.ClientToServer.ObservablesClosed(observableIds).writeToClientMessage(message)
+                    it.producer.send(message)
+                }
+            } catch (t: Throwable) {
+                observablesToReap.locked { observables.addAll(observableIds) }
+                throw t
             }
-        }
-        if (observableIds != null) {
-            log.debug { "Reaping ${observableIds.size} observables" }
-            sessionAndProducerPool.run {
-                val message = it.session.createMessage(false)
-                RPCApi.ClientToServer.ObservablesClosed(observableIds).writeToClientMessage(message)
-                it.producer.send(message)
-            }
+        } catch (e: ActiveMQObjectClosedException) {
+            // Do nothing, likely the server died and the pool will provide a fresh session/producer next time.
+        } catch (t: Throwable) {
+            log.error("Failed to reapObservables:", t)
         }
     }
 }

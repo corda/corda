@@ -227,9 +227,7 @@ class RPCStabilityTests {
             serverFollower.unfollow()
             // Set retry interval to 1s to reduce test duration
             val clientConfiguration = RPCClientConfiguration.default.copy(connectionRetryInterval = 1.seconds)
-            val clientFollower = shutdownManager.follower()
             val client = startRpcClient<ReconnectOps>(serverPort, configuration = clientConfiguration).getOrThrow()
-            clientFollower.unfollow()
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
             startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
@@ -237,7 +235,6 @@ class RPCStabilityTests {
                 client.ping()
             }
             assertEquals("pong", pingFuture.getOrThrow(10.seconds))
-            clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
     }
 
