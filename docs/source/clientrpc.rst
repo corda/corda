@@ -18,16 +18,52 @@ an ongoing stream of updates from the node. More detail on how to use this is pr
 
 For a brief tutorial on how one can use the RPC API see :doc:`tutorial-clientrpc-api`.
 
-Security
---------
+RPC permissions
+---------------
+If a node's owner needs to interact with their node via RPC (e.g. to read the contents of the node's storage), they
+must define one or more RPC users. Each user is authenticated with a username and password, and is assigned a set of
+permissions that RPC can use for fine-grain access control.
 
-Users wanting to use the RPC library are first required to authenticate themselves with the node using a valid username
-and password. These are specified in the configuration file. Each user can be configured with a set of permissions which
-the RPC can use for fine-grain access control.
+These users are added to the node's ``node.conf`` file.
+
+The syntax for adding an RPC user is:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        rpcUsers=[
+            {
+                username=exampleUser
+                password=examplePass
+                permissions=[]
+            }
+            ...
+        ]
+
+Currently, users need special permissions to start flows via RPC. These permissions are added as follows:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        rpcUsers=[
+            {
+                username=exampleUser
+                password=examplePass
+                permissions=[
+                    "StartFlow.net.corda.flows.ExampleFlow1",
+                    "StartFlow.net.corda.flows.ExampleFlow2"
+                ]
+            }
+            ...
+        ]
+
+.. note:: Currently, the node's web server has super-user access, meaning that it can run any RPC operation without
+logging in. This will be changed in a future release.
 
 Observables
 -----------
-
 The RPC system handles observables in a special way. When a method returns an observable, whether directly or
 as a sub-object of the response object graph, an observable is created on the client to match the one on the
 server. Objects emitted by the server-side observable are pushed onto a queue which is then drained by the client.
@@ -47,13 +83,11 @@ will be freed automatically.
 
 Futures
 -------
-
 A method can also return a ``ListenableFuture`` in its object graph and it will be treated in a similar manner to
 observables. Calling the ``cancel`` method on the future will unsubscribe it from any future value and release any resources.
 
 Versioning
 ----------
-
 The client RPC protocol is versioned using the node's Platform Version (see :doc:`versioning`). When a proxy is created
 the server is queried for its version, and you can specify your minimum requirement. Methods added in later versions
 are tagged with the ``@RPCSinceVersion`` annotation. If you try to use a method that the server isn't advertising support
@@ -62,14 +96,12 @@ of, an ``UnsupportedOperationException`` is thrown. If you want to know the vers
 
 Thread safety
 -------------
-
 A proxy is thread safe, blocking, and allows multiple RPCs to be in flight at once. Any observables that are returned and
 you subscribe to will have objects emitted in order on a background thread pool. Each Observable stream is tied to a single
 thread, however note that two separate Observables may invoke their respective callbacks on different threads.
 
 Error handling
 --------------
-
 If something goes wrong with the RPC infrastructure itself, an ``RPCException`` is thrown. If you call a method that
 requires a higher version of the protocol than the server supports, ``UnsupportedOperationException`` is thrown.
 Otherwise, if the server implementation throws an exception, that exception is serialised and rethrown on the client
@@ -77,18 +109,13 @@ side as if it was thrown from inside the called RPC method. These exceptions can
 
 Wire protocol
 -------------
-
 The client RPC wire protocol is defined and documented in ``net/corda/client/rpc/RPCApi.kt``.
 
 Whitelisting classes with the Corda node
 ----------------------------------------
-
-To avoid the RPC interface being wide open to all
-classes on the classpath, Cordapps have to whitelist any classes they require with the serialization framework of Corda,
-if they are not one of those whitelisted by default in ``DefaultWhitelist``, via either the plugin architecture or simply
-with the annotation ``@CordaSerializable``.  See :doc:`running-a-node` or :doc:`serialization`.  An example is shown in :doc:`tutorial-clientrpc-api`.
-
-.. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are likely.
+CorDapps must whitelist any classes used over RPC with Corda's serialization framework, unless they are whitelisted by
+default in ``DefaultWhitelist``. The whitelisting is done either via the plugin architecture or by using the
+``@CordaSerializable`` annotation.  See :doc:`serialization`. An example is shown in :doc:`tutorial-clientrpc-api`.
 
 .. _CordaRPCClient: api/javadoc/net/corda/client/rpc/CordaRPCClient.html
 .. _CordaRPCOps: api/javadoc/net/corda/core/messaging/CordaRPCOps.html

@@ -1,7 +1,8 @@
 Writing a CorDapp
 =================
 
-The source-code for a CorDapp is a set of files written in a JVM language that defines a set of Corda components:
+When writing a CorDapp, you are writing a set of files in a JVM language that defines one or more of the following
+Corda components:
 
 * States (i.e. classes implementing ``ContractState``)
 * Contracts (i.e. classes implementing ``Contract``)
@@ -9,14 +10,14 @@ The source-code for a CorDapp is a set of files written in a JVM language that d
 * Web APIs
 * Services
 
-These files should be placed under ``src/main/[java|kotlin]``. The CorDapp's resources folder (``src/main/resources``)
-should also include the following subfolders:
+CorDapp structure
+-----------------
+Your CorDapp project's structure should be based on the structure of the
+`Java Template CorDapp <https://github.com/corda/cordapp-template-java>`_ or the
+`Kotlin Template CorDapp <https://github.com/corda/cordapp-template-kotlin>`_, depending on which language you intend
+to use.
 
-* ``src/main/resources/certificates``, containing the node's certificates
-* ``src/main/resources/META-INF/services``, containing a file named ``net.corda.core.node.CordaPluginRegistry``
-
-For example, the source-code of the `Template CorDapp <https://github.com/corda/cordapp-template>`_ has the following
-structure:
+The ``src`` directory of the Template CorDapp, where we define our CorDapp's source-code, has the following structure:
 
 .. parsed-literal::
 
@@ -59,87 +60,97 @@ structure:
                     └── contract
                         └── TemplateTests.java
 
-Defining a plugin
------------------
-You can specify the transport options (between nodes and between Web Client and a node) for your CorDapp by subclassing
-``net.corda.core.node.CordaPluginRegistry``:
+The build file
+--------------
+At the root of the Template CorDapp, you will also find a ``build.gradle`` file. This file is useful for several
+reasons:
 
-* The ``customizeSerialization`` function allows classes to be whitelisted for object serialisation, over and
-  above those tagged with the ``@CordaSerializable`` annotation. For instance, new state types will need to be
-  explicitly registered. In general, the annotation should be preferred. See :doc:`serialization`.
+Choosing your CorDapp version
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The following two lines of the ``build.gradle`` file define the Corda version used to build your CorDapp:
 
-The fully-qualified class path of each ``CordaPluginRegistry`` subclass must be added to the
-``net.corda.core.node.CordaPluginRegistry`` file in the CorDapp's ``resources/META-INF/services`` folder. A CorDapp
-can register multiple plugins in a single ``net.corda.core.node.CordaPluginRegistry`` file.
+.. sourcecode:: groovy
 
-You can specify the web APIs and static web content for your CorDapp by implementing
-``net.corda.webserver.services.WebServerPluginRegistry`` interface:
+    ext.corda_release_version = '0.13.0'
+    ext.corda_gradle_plugins_version = '0.13.3'
 
-* The ``webApis`` property is a list of JAX-RS annotated REST access classes. These classes will be constructed by
-  the bundled web server and must have a single argument constructor taking a ``CordaRPCOps`` object. This will
-  allow the API to communicate with the node process via the RPC interface. These web APIs will not be available if the
-  bundled web server is not started.
+In this case, our CorDapp will use the Milestone 13 release of Corda, and version 13.3 of the Corda gradle plugins. You
+can find the latest published version of both here: https://bintray.com/r3/corda.
 
-* The ``staticServeDirs`` property maps static web content to virtual paths and allows simple web demos to be
-  distributed within the CorDapp jars. These static serving directories will not be available if the bundled web server
-  is not started.
+``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
+``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
+versions can be found here: https://bintray.com/r3/corda/cordformation.
+
+In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
+
+Project dependencies
+^^^^^^^^^^^^^^^^^^^^
+If your CorDapps have any additional external dependencies, they should be added to the ``dependencies`` section:
+
+.. sourcecode:: groovy
+
+   dependencies {
+
+       ...
+
+       // Cordapp dependencies
+       // Specify your cordapp's dependencies below, including dependent cordapps
+   }
+
+For further information about managing dependencies, see
+`the Gradle docs <https://docs.gradle.org/current/userguide/dependency_management.html>`_.
+
+Build tasks
+^^^^^^^^^^^
+The build file also defines a number of build tasks that will allow us to package up our plugin. We will discuss these
+later.
+
+Defining plugins
+----------------
+Your CorDapp may need to define two types of plugins:
+
+* ``CordaPluginRegistry`` subclasses, which define additional serializable classes and vault schemas
+* ``WebServerPluginRegistry`` subclasses, which define the APIs and static web content served by your CorDapp
+
+The fully-qualified class path of each ``CordaPluginRegistry`` subclass must then be added to the
+``net.corda.core.node.CordaPluginRegistry`` file in the CorDapp's ``resources/META-INF/services`` folder. Meanwhile,
+the fully-qualified class path of each ``WebServerPluginRegistry`` subclass must be added to the
+``net.corda.webserver.services.WebServerPluginRegistry`` file, again in the CorDapp's ``resources/META-INF/services``
+folder.
+
+The ``CordaPluginRegistry`` class defines the following:
+
+* ``customizeSerialization``, which can be overridden to provide a list of the classes to be whitelisted for object
+  serialisation, over and above those tagged with the ``@CordaSerializable`` annotation. See :doc:`serialization`
+
+* ``requiredSchemas``, which can be overridden to return a set of the MappedSchemas to use for persistence and vault
+  queries
+
+The ``WebServerPluginRegistry`` class defines the following:
+
+* ``webApis``, which can be overridden to return a list of JAX-RS annotated REST access classes. These classes will be
+  constructed by the bundled web server and must have a single argument constructor taking a ``CordaRPCOps`` object.
+  This will allow the API to communicate with the node process via the RPC interface. These web APIs will not be
+  available if the bundled web server is not started
+
+* ``staticServeDirs``, which can be overridden to map static web content to virtual paths and allow simple web demos to
+  be distributed within the CorDapp jars. This static content will not be available if the bundled web server is not
+  started
+
   * The static web content itself should be placed inside the ``src/main/resources`` directory
 
-The fully-qualified class path of each ``WebServerPluginRegistry`` class must be added to the
-``net.corda.webserver.services.WebServerPluginRegistry`` file in the CorDapp's ``resources/META-INF/services`` folder. A CorDapp
-can register multiple plugins in a single ``net.corda.webserver.services.WebServerPluginRegistry`` file.
+Building your CorDapp
+---------------------
+You build a CorDapp by running the gradle ``jar`` task to package up the CorDapp's source files into a jar file.
+
+By default, the jar will be created under ``build/libs``.
 
 Installing CorDapps
 -------------------
-To run a CorDapp, its source is compiled into a JAR by running the gradle ``jar`` task. The CorDapp JAR is then added
-to a node by adding it to the node's ``<node_dir>/plugins/`` folder (where ``node_dir`` is the folder in which the
-node's JAR and configuration files are stored).
-
-.. note:: Any external dependencies of your CorDapp will automatically be placed into the
-   ``<node_dir>/dependencies/`` folder. This will be changed in a future release.
-
-.. note:: Building nodes using the gradle ``deployNodes`` task will place the CorDapp JAR into each node's ``plugins``
-   folder automatically.
+Once you've built your CorDapp jar, you install it on a node by adding it to the node's ``<node_dir>/plugins/``
+folder (where ``node_dir`` is the folder in which the node's JAR and configuration files are stored).
 
 At runtime, nodes will load any plugins present in their ``plugins`` folder.
 
-RPC permissions
----------------
-If a node's owner needs to interact with their node via RPC (e.g. to read the contents of the node's storage), they
-must define one or more RPC users. These users are added to the node's ``node.conf`` file.
-
-The syntax for adding an RPC user is:
-
-.. container:: codeset
-
-    .. sourcecode:: groovy
-
-        rpcUsers=[
-            {
-                username=exampleUser
-                password=examplePass
-                permissions=[]
-            }
-            ...
-        ]
-
-Currently, users need special permissions to start flows via RPC. These permissions are added as follows:
-
-.. container:: codeset
-
-    .. sourcecode:: groovy
-
-        rpcUsers=[
-            {
-                username=exampleUser
-                password=examplePass
-                permissions=[
-                    "StartFlow.net.corda.flows.ExampleFlow1",
-                    "StartFlow.net.corda.flows.ExampleFlow2"
-                ]
-            }
-            ...
-        ]
-
-.. note:: Currently, the node's web server has super-user access, meaning that it can run any RPC operation without
-   logging in. This will be changed in a future release.
+You can also create a set of nodes with any CorDapps defined in your source folder already installed by running the
+Cordapp Template's ``deployNodes`` task. See :doc:`deploying-a-node`.
