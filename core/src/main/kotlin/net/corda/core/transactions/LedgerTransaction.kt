@@ -3,6 +3,7 @@ package net.corda.core.transactions
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.internal.castIfPossible
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.util.*
@@ -51,7 +52,7 @@ class LedgerTransaction(
      * @return The [StateAndRef]
      */
     @Suppress("UNCHECKED_CAST")
-    fun <T : ContractState> inRef(index: Int) = inputs[index] as StateAndRef<T>
+    fun <T : ContractState> inRef(index: Int): StateAndRef<T> = inputs[index] as StateAndRef<T>
 
     /**
      * Verifies this transaction and throws an exception if not valid, depending on the type. For general transactions:
@@ -158,10 +159,9 @@ class LedgerTransaction(
      * [clazz] must be an extension of [ContractState].
      * @return the possibly empty list of inputs matching the clazz restriction.
      */
-    fun <T : ContractState> inputsOfType(clazz: Class<T>): List<T> {
-        @Suppress("UNCHECKED_CAST")
-        return inputs.map { it.state.data }.filterIsInstance(clazz)
-    }
+    fun <T : ContractState> inputsOfType(clazz: Class<T>): List<T> = inputs.mapNotNull { clazz.castIfPossible(it.state.data) }
+
+    inline fun <reified T : ContractState> inputsOfType(): List<T> = inputsOfType(T::class.java)
 
     /**
      * Helper to simplify getting all inputs states of a particular class, interface, or base class.
@@ -171,18 +171,26 @@ class LedgerTransaction(
      */
     fun <T : ContractState> inRefsOfType(clazz: Class<T>): List<StateAndRef<T>> {
         @Suppress("UNCHECKED_CAST")
-        return inputs.filter { clazz.isInstance(it.state.data) }.map { it as StateAndRef<T> }
+        return inputs.mapNotNull { if (clazz.isInstance(it.state.data)) it as StateAndRef<T> else null }
     }
+
+    inline fun <reified T : ContractState> inRefsOfType(): List<StateAndRef<T>> = inRefsOfType(T::class.java)
 
     /**
      * Helper to simplify filtering inputs according to a [Predicate].
-     * @param predicate A filtering function taking a state of type T and returning true if it should be included in the list.
-     * The class filtering is applied before the predicate.
      * @param clazz The class type used for filtering via an [Class.isInstance] check.
      * [clazz] must be an extension of [ContractState].
+     * @param predicate A filtering function taking a state of type T and returning true if it should be included in the list.
+     * The class filtering is applied before the predicate.
      * @return the possibly empty list of input states matching the predicate and clazz restrictions.
      */
-    fun <T : ContractState> filterInputs(predicate: Predicate<T>, clazz: Class<T>): List<T> = inputsOfType(clazz).filter { predicate.test(it) }
+    fun <T : ContractState> filterInputs(clazz: Class<T>, predicate: Predicate<T>): List<T> {
+        return inputsOfType(clazz).filter { predicate.test(it) }
+    }
+
+    inline fun <reified T : ContractState> filterInputs(crossinline predicate: (T) -> Boolean): List<T> {
+        return filterInputs(T::class.java, Predicate { predicate(it) })
+    }
 
     /**
      * Helper to simplify filtering inputs according to a [Predicate].
@@ -192,29 +200,47 @@ class LedgerTransaction(
      * [clazz] must be an extension of [ContractState].
      * @return the possibly empty list of inputs [StateAndRef] matching the predicate and clazz restrictions.
      */
-    fun <T : ContractState> filterInRefs(predicate: Predicate<T>, clazz: Class<T>): List<StateAndRef<T>> = inRefsOfType(clazz).filter { predicate.test(it.state.data) }
+    fun <T : ContractState> filterInRefs(clazz: Class<T>, predicate: Predicate<T>): List<StateAndRef<T>> {
+        return inRefsOfType(clazz).filter { predicate.test(it.state.data) }
+    }
+
+    inline fun <reified T : ContractState> filterInRefs(crossinline predicate: (T) -> Boolean): List<StateAndRef<T>> {
+        return filterInRefs(T::class.java, Predicate { predicate(it) })
+    }
 
     /**
      * Helper to simplify finding a single input [ContractState] matching a [Predicate].
-     * @param predicate A filtering function taking a state of type T and returning true if this is the desired item.
-     * The class filtering is applied before the predicate.
      * @param clazz The class type used for filtering via an [Class.isInstance] check.
      * [clazz] must be an extension of ContractState.
+     * @param predicate A filtering function taking a state of type T and returning true if this is the desired item.
+     * The class filtering is applied before the predicate.
      * @return the single item matching the predicate.
      * @throws IllegalArgumentException if no item, or multiple items are found matching the requirements.
      */
-    fun <T : ContractState> findInput(predicate: Predicate<T>, clazz: Class<T>): T = filterInputs(predicate, clazz).single()
+    fun <T : ContractState> findInput(clazz: Class<T>, predicate: Predicate<T>): T {
+        return inputsOfType(clazz).single { predicate.test(it) }
+    }
+
+    inline fun <reified T : ContractState> findInput(crossinline predicate: (T) -> Boolean): T {
+        return findInput(T::class.java, Predicate { predicate(it) })
+    }
 
     /**
      * Helper to simplify finding a single input matching a [Predicate].
-     * @param predicate A filtering function taking a state of type T and returning true if this is the desired item.
-     * The class filtering is applied before the predicate.
      * @param clazz The class type used for filtering via an [Class.isInstance] check.
      * [clazz] must be an extension of ContractState.
+     * @param predicate A filtering function taking a state of type T and returning true if this is the desired item.
+     * The class filtering is applied before the predicate.
      * @return the single item matching the predicate.
      * @throws IllegalArgumentException if no item, or multiple items are found matching the requirements.
      */
-    fun <T : ContractState> findInRef(predicate: Predicate<T>, clazz: Class<T>): StateAndRef<T> = filterInRefs(predicate, clazz).single()
+    fun <T : ContractState> findInRef(clazz: Class<T>, predicate: Predicate<T>): StateAndRef<T> {
+        return inRefsOfType(clazz).single { predicate.test(it.state.data) }
+    }
+
+    inline fun <reified T : ContractState> findInRef(crossinline predicate: (T) -> Boolean): StateAndRef<T> {
+        return findInRef(T::class.java, Predicate { predicate(it) })
+    }
 
     /**
      * Helper to simplify getting an indexed command.
@@ -230,34 +256,44 @@ class LedgerTransaction(
      * @return the possibly empty list of commands with [CommandData] values matching the clazz restriction.
      */
     fun <T : CommandData> commandsOfType(clazz: Class<T>): List<Command> {
-        return commands.filter { clazz.isInstance(it.value) }.map { Command(it.value, it.signers) }
+        return commands.mapNotNull { (signers, _, value) -> clazz.castIfPossible(value)?.let { Command(it, signers) } }
     }
+
+    inline fun <reified T : CommandData> commandsOfType(): List<Command> = commandsOfType(T::class.java)
 
     /**
      * Helper to simplify filtering [Command] items according to a [Predicate].
-     * @param predicate A filtering function taking a [CommandData] item of type T and returning true if it should be included in the list.
-     * The class filtering is applied before the predicate.
      * @param clazz The class type used for filtering via an [Class.isInstance] check.
      * [clazz] must be an extension of [CommandData].
+     * @param predicate A filtering function taking a [CommandData] item of type T and returning true if it should be included in the list.
+     * The class filtering is applied before the predicate.
      * @return the possibly empty list of [Command] items with [CommandData] values matching the predicate and clazz restrictions.
      */
-    fun <T : CommandData> filterCommands(predicate: Predicate<T>, clazz: Class<T>): List<Command> {
+    fun <T : CommandData> filterCommands(clazz: Class<T>, predicate: Predicate<T>): List<Command> {
         @Suppress("UNCHECKED_CAST")
         return commandsOfType(clazz).filter { predicate.test(it.value as T) }
     }
 
+    inline fun <reified T : CommandData> filterCommands(crossinline predicate: (T) -> Boolean): List<Command> {
+        return filterCommands(T::class.java, Predicate { predicate(it) })
+    }
 
     /**
      * Helper to simplify finding a single [Command] items according to a [Predicate].
-     * @param predicate A filtering function taking a [CommandData] item of type T and returning true if it should be included in the list.
-     * The class filtering is applied before the predicate.
      * @param clazz The class type used for filtering via an [Class.isInstance] check.
      * [clazz] must be an extension of [CommandData].
+     * @param predicate A filtering function taking a [CommandData] item of type T and returning true if it should be included in the list.
+     * The class filtering is applied before the predicate.
      * @return the [Command] item with [CommandData] values matching the predicate and clazz restrictions.
      * @throws IllegalArgumentException if no items, or multiple items matched the requirements.
      */
-    fun <T : CommandData> findCommand(predicate: Predicate<T>, clazz: Class<T>): Command {
-        return filterCommands(predicate, clazz).single()
+    fun <T : CommandData> findCommand(clazz: Class<T>, predicate: Predicate<T>): Command {
+        @Suppress("UNCHECKED_CAST")
+        return commandsOfType(clazz).single { predicate.test(it.value as T) }
+    }
+
+    inline fun <reified T : CommandData> findCommand(crossinline predicate: (T) -> Boolean): Command {
+        return findCommand(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -273,37 +309,6 @@ class LedgerTransaction(
      * @return The Attachment with the matching id.
      * @throws IllegalArgumentException if no item matches the id.
      */
-    fun getAttachment(id: SecureHash): Attachment = attachments.single { it.id == id }
-
-    //Kotlin extension methods to take advantage of Kotlin's smart type inference when querying the LedgerTransaction
-    inline fun <reified T : ContractState> inputsOfType(): List<T> = this.inputsOfType(T::class.java)
-
-    inline fun <reified T : ContractState> inRefsOfType(): List<StateAndRef<T>> = this.inRefsOfType(T::class.java)
-
-    inline fun <reified T : ContractState> filterInputs(crossinline predicate: (T) -> Boolean): List<T> {
-        return filterInputs(Predicate { predicate(it) }, T::class.java)
-    }
-
-    inline fun <reified T : ContractState> filterInRefs(crossinline predicate: (T) -> Boolean): List<StateAndRef<T>> {
-        return filterInRefs(Predicate { predicate(it) }, T::class.java)
-    }
-
-    inline fun <reified T : ContractState> findInRef(crossinline predicate: (T) -> Boolean): StateAndRef<T> {
-        return findInRef(Predicate { predicate(it) }, T::class.java)
-    }
-
-    inline fun <reified T : ContractState> findInput(crossinline predicate: (T) -> Boolean): T {
-        return findInput(Predicate { predicate(it) }, T::class.java)
-    }
-
-    inline fun <reified T : CommandData> commandsOfType(): List<Command> = this.commandsOfType(T::class.java)
-
-    inline fun <reified T : CommandData> filterCommands(crossinline predicate: (T) -> Boolean): List<Command> {
-        return filterCommands(Predicate { predicate(it) }, T::class.java)
-    }
-
-    inline fun <reified T : CommandData> findCommand(crossinline predicate: (T) -> Boolean): Command {
-        return findCommand(Predicate { predicate(it) }, T::class.java)
-    }
+    fun getAttachment(id: SecureHash): Attachment = attachments.first { it.id == id }
 }
 

@@ -54,6 +54,8 @@ fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, var
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
+fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
+
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
 fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(this, name, null)
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */

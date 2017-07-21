@@ -189,7 +189,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Filtered Input Tests`() {
         val ltx = makeDummyTransaction()
-        val intStates = ltx.filterInputs(Predicate { it.data.rem(2) == 0 }, IntTypeDummyState::class.java)
+        val intStates = ltx.filterInputs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
         assertEquals(listOf(0, 2, 4), intStates.map { it.data })
         val stringStates: List<StringTypeDummyState> = ltx.filterInputs { it.data == "3" }
@@ -199,7 +199,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Filtered InRef Tests`() {
         val ltx = makeDummyTransaction()
-        val intStates = ltx.filterInRefs(Predicate { it.data.rem(2) == 0 }, IntTypeDummyState::class.java)
+        val intStates = ltx.filterInRefs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
         assertEquals(listOf(0, 2, 4), intStates.map { it.state.data.data })
         assertEquals(listOf(ltx.inputs[0], ltx.inputs[4], ltx.inputs[8]), intStates)
@@ -211,7 +211,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Filtered Output Tests`() {
         val ltx = makeDummyTransaction()
-        val intStates = ltx.filterOutputs(Predicate { it.data.rem(2) == 0 }, IntTypeDummyState::class.java)
+        val intStates = ltx.filterOutputs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
         assertEquals(listOf(0, 2, 4), intStates.map { it.data })
         val stringStates: List<StringTypeDummyState> = ltx.filterOutputs { it.data == "3" }
@@ -221,7 +221,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Filtered OutRef Tests`() {
         val ltx = makeDummyTransaction()
-        val intStates = ltx.filterOutRefs(Predicate { it.data.rem(2) == 0 }, IntTypeDummyState::class.java)
+        val intStates = ltx.filterOutRefs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
         assertEquals(listOf(0, 2, 4), intStates.map { it.state.data.data })
         assertEquals(listOf(0, 4, 8), intStates.map { it.ref.index })
@@ -235,7 +235,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Filtered Commands Tests`() {
         val ltx = makeDummyTransaction()
-        val intCmds1 = ltx.filterCommands(Predicate { it.id.rem(2) == 0 }, Commands.Cmd1::class.java)
+        val intCmds1 = ltx.filterCommands(Commands.Cmd1::class.java, Predicate { it.id.rem(2) == 0 })
         assertEquals(3, intCmds1.size)
         assertEquals(listOf(0, 2, 4), intCmds1.map { (it.value as Commands.Cmd1).id })
         val intCmds2 = ltx.filterCommands<Commands.Cmd2> { it.id == 3 }
@@ -245,7 +245,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Find Input Tests`() {
         val ltx = makeDummyTransaction()
-        val intState = ltx.findInput(Predicate { it.data == 4 }, IntTypeDummyState::class.java)
+        val intState = ltx.findInput(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.getInput(8), intState)
         val stringState: StringTypeDummyState = ltx.findInput { it.data == "3" }
         assertEquals(ltx.getInput(7), stringState)
@@ -254,7 +254,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Find InRef Tests`() {
         val ltx = makeDummyTransaction()
-        val intState = ltx.findInRef(Predicate { it.data == 4 }, IntTypeDummyState::class.java)
+        val intState = ltx.findInRef(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.inRef(8), intState)
         val stringState: StateAndRef<StringTypeDummyState> = ltx.findInRef { it.data == "3" }
         assertEquals(ltx.inRef(7), stringState)
@@ -263,7 +263,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Find Output Tests`() {
         val ltx = makeDummyTransaction()
-        val intState = ltx.findOutput(Predicate { it.data == 4 }, IntTypeDummyState::class.java)
+        val intState = ltx.findOutput(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.getOutput(8), intState)
         val stringState: StringTypeDummyState = ltx.findOutput { it.data == "3" }
         assertEquals(ltx.getOutput(7), stringState)
@@ -272,7 +272,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Find OutRef Tests`() {
         val ltx = makeDummyTransaction()
-        val intState = ltx.findOutRef(Predicate { it.data == 4 }, IntTypeDummyState::class.java)
+        val intState = ltx.findOutRef(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.outRef(8), intState)
         val stringState: StateAndRef<StringTypeDummyState> = ltx.findOutRef { it.data == "3" }
         assertEquals(ltx.outRef(7), stringState)
@@ -281,7 +281,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Find Commands Tests`() {
         val ltx = makeDummyTransaction()
-        val intCmd1 = ltx.findCommand(Predicate { it.id == 2 }, Commands.Cmd1::class.java)
+        val intCmd1 = ltx.findCommand(Commands.Cmd1::class.java, Predicate { it.id == 2 })
         assertEquals(ltx.getCommand(4), intCmd1)
         val intCmd2 = ltx.findCommand<Commands.Cmd2> { it.id == 3 }
         assertEquals(ltx.getCommand(7), intCmd2)
