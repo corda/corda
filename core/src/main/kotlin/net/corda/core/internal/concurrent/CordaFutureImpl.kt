@@ -2,15 +2,15 @@ package net.corda.core.internal.concurrent
 
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.get
-import net.corda.core.concurrent.getOrThrow
 import net.corda.core.concurrent.match
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 /** @return a fresh [OpenFuture]. */
 fun <V> openFuture(): OpenFuture<V> = CordaFutureImpl()
@@ -21,8 +21,8 @@ fun <V> doneFuture(value: V): CordaFuture<V> = CordaFutureImpl<V>().apply { set(
 /** @return a future that will have the same outcome as the given block, when this executor has finished running it. */
 fun <V> Executor.fork(block: () -> V): CordaFuture<V> = CordaFutureImpl<V>().also { execute { it.capture(block) } }
 
-/** @see [net.corda.core.concurrent.getOrThrow] */
-fun <V> CordaFuture<V>.getOrThrow(timeout: Duration? = null) = unwrap().getOrThrow(timeout)
+/** @see [net.corda.core.utilities.getOrThrow] */
+fun <V> CordaFuture<V>.getOrThrow(timeout: Duration? = null): V = unwrap().getOrThrow(timeout)
 
 /** Same as [net.corda.core.concurrent.match], which blocks if this isn't done. See [thenMatch] for non-blocking behaviour. */
 fun <V, W> CordaFuture<V>.match(success: (V) -> W, failure: (Throwable) -> W) = unwrap().match(success, failure)
@@ -151,3 +151,5 @@ internal class CordaFutureImpl<V> : OpenFuture<V> {
         }
     }
 }
+
+internal fun <V> Future<V>.get(timeout: Duration? = null): V = if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)

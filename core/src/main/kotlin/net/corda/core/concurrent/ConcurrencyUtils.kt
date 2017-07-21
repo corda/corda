@@ -3,22 +3,11 @@ package net.corda.core.concurrent
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.internal.concurrent.match
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.utilities.getOrThrow
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.time.Duration
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-
-fun <V> Future<V>.get(timeout: Duration? = null): V = if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)
-
-/** Same as [Future.get] except that the [ExecutionException] is unwrapped. */
-fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
-    get(timeout)
-} catch (e: ExecutionException) {
-    throw e.cause!!
-}
 
 /** Invoke [getOrThrow] and pass the value/throwable to success/failure respectively. */
 fun <V, W> Future<V>.match(success: (V) -> W, failure: (Throwable) -> W): W {
