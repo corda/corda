@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import net.corda.core.contracts.*
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 
@@ -21,9 +22,9 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
 
     companion object {
         @JvmStatic
-        fun verify(tx: TransactionForContract) {
+        fun verify(tx: LedgerTransaction) {
             // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
-            verify(tx.inputs.single(), tx.outputs.single(), tx.commands.map { Command(it.value, it.signers) }.single())
+            verify(tx.inputs.single().state.data, tx.outputs.single().data, tx.commands.map { Command(it.value, it.signers) }.single())
         }
 
         @JvmStatic

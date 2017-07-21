@@ -1,8 +1,8 @@
 package net.corda.testing.node
 
+import net.corda.core.internal.until
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext
-import net.corda.core.serialization.SingletonSerializationToken
 import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
 import net.corda.node.utilities.MutableClock
 import java.time.Clock
@@ -35,7 +35,7 @@ class TestClock(private var delegateClock: Clock = Clock.systemUTC()) : MutableC
      *
      * This will only be approximate due to the time ticking away, but will be some time shortly after the requested [Instant].
      */
-    @Synchronized fun setTo(newInstant: Instant) = advanceBy(Duration.between(instant(), newInstant))
+    @Synchronized fun setTo(newInstant: Instant) = advanceBy(instant() until newInstant)
 
     @Synchronized override fun instant(): Instant {
         return delegateClock.instant()

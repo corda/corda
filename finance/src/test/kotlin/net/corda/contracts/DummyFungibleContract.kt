@@ -8,13 +8,16 @@ import net.corda.core.contracts.clauses.AllOf
 import net.corda.core.contracts.clauses.FirstOf
 import net.corda.core.contracts.clauses.GroupClauseVerifier
 import net.corda.core.contracts.clauses.verifyClause
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.newSecureRandom
+import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.internal.Emoji
 import net.corda.schemas.SampleCashSchemaV1
@@ -36,7 +39,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         ConserveAmount())
         )
         ) {
-            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Currency>>>
+            override fun groupStates(tx: LedgerTransaction): List<LedgerTransaction.InOutGroup<State, Issued<Currency>>>
                     = tx.groupStates<State, Issued<Currency>> { it.amount.token }
         }
 
@@ -126,7 +129,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
     override fun generateIssueCommand() = Commands.Issue()
     override fun generateMoveCommand() = Commands.Move()
 
-    override fun verify(tx: TransactionForContract)
+    override fun verify(tx: LedgerTransaction)
             = verifyClause(tx, Clauses.Group(), extractCommands(tx.commands))
 }
 

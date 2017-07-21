@@ -1,11 +1,11 @@
 package net.corda.contracts.isolated
 
 import net.corda.core.contracts.*
-import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 
@@ -22,7 +22,7 @@ class AnotherDummyContract : Contract, net.corda.core.node.DummyContractBackdoor
         class Create : TypeOnlyCommandData(), Commands
     }
 
-    override fun verify(tx: TransactionForContract) {
+    override fun verify(tx: LedgerTransaction) {
         // Always accepts.
     }
 
