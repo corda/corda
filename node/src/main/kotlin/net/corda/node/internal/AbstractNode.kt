@@ -9,7 +9,6 @@ import com.google.common.util.concurrent.SettableFuture
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.crypto.*
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.flatMap
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -23,7 +22,6 @@ import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -767,8 +765,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
     private fun createAttachmentStorage(): NodeAttachmentService {
-        val attachmentsDir = (configuration.baseDirectory / "attachments").createDirectories()
-        return NodeAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics)
+        return NodeAttachmentService(configuration.dataSourceProperties, services.monitoringService.metrics)
     }
 
     private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {

@@ -13,7 +13,6 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
-import net.corda.core.internal.div
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -227,16 +226,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun myAddresses() = emptyList<NetworkHostAndPort>()
 
-        /** Use [startMockNode] if you created the node with start = false. */
         override fun start() {
             super.start()
             mockNet.identities.add(info.legalIdentityAndCert)
-        }
-
-        fun startMockNode() {
-            configuration.baseDirectory.createDirectories()
-            start()
-            if (mockNet.threadPerNode && networkMapAddress != null) networkMapRegistrationFuture.getOrThrow()
         }
 
         // Allow unit tests to modify the plugin list before the node start,
@@ -280,7 +272,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     /**
      * Returns a node, optionally created by the passed factory method.
-     * @param start whether [startMockNode] is invoked at the end, which does a bit more than [start].
      * @param overrideServices a set of service entries to use in place of the node's default service entries,
      * for example where a node's service is part of a cluster.
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
@@ -292,19 +283,20 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                    vararg advertisedServices: ServiceInfo,
                    configOverrides: (NodeConfiguration) -> Any? = {}): MockNode {
-        val newNode = forcedID == -1
-        val id = if (newNode) _nextNodeId++ else forcedID
-        val path = baseDirectory(id)
-        if (newNode) (path / "attachments").createDirectories()
+        val id = if (forcedID == -1) _nextNodeId++ else forcedID
+        val path = baseDirectory(id).createDirectories()
         val config = testNodeConfiguration(
                 baseDirectory = path,
                 myLegalName = legalName ?: getTestX509Name("Mock Company $id")).also {
             whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
             configOverrides(it)
         }
-        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot).also {
-            _nodes.add(it)
-            if (start) it.startMockNode()
+        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot).apply {
+            if (start) {
+                start()
+                if (threadPerNode && networkMapAddress != null) networkMapRegistrationFuture.getOrThrow()
+            }
+            _nodes.add(this)
         }
     }
 
