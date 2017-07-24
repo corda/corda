@@ -1,6 +1,6 @@
 package net.corda.node.services.persistence
 
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
