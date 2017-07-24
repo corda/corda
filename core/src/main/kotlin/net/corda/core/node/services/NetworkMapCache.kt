@@ -123,7 +123,7 @@ interface NetworkMapCache {
      * Returns a service identity advertised by one of the nodes on the network
      * @param type Specifies the type of the service
      */
-    fun getServiceOf(type: ServiceType): Party? {
+    fun getAnyServiceOfType(type: ServiceType): Party? {
         for (node in partyNodes) {
             val serviceIdentities = node.serviceIdentities(type)
             if (serviceIdentities.isNotEmpty()) {
