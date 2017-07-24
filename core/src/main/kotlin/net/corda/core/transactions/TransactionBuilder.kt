@@ -178,7 +178,7 @@ open class TransactionBuilder(
                 throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.joinToString()}")
         }
         val wtx = toWireTransaction()
-        return SignedTransaction(wtx.serialize(), ArrayList(currentSigs))
+        return SignedTransaction(wtx, ArrayList(currentSigs))
     }
 
     /**

@@ -605,7 +605,6 @@ class TwoPartyTradeFlowTests {
             vararg extraSigningNodes: AbstractNode): Map<SecureHash, SignedTransaction> {
 
         val signed = wtxToSign.map {
-            val bits = it.serialize()
             val id = it.id
             val sigs = mutableListOf<DigitalSignature.WithKey>()
             sigs.add(node.services.keyManagementService.sign(id.bytes, node.services.legalIdentityKey))
@@ -613,7 +612,7 @@ class TwoPartyTradeFlowTests {
             extraSigningNodes.forEach { currentNode ->
                 sigs.add(currentNode.services.keyManagementService.sign(id.bytes, currentNode.info.legalIdentity.owningKey))
             }
-            SignedTransaction(bits, sigs)
+            SignedTransaction(it, sigs)
         }
         return node.database.transaction {
             node.services.recordTransactions(signed)
