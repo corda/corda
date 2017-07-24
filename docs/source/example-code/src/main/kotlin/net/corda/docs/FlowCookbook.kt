@@ -12,7 +12,10 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.core.transactions.*
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.core.utilities.UntrustworthyData
@@ -243,11 +246,11 @@ object FlowCookbook {
             // public keys. To be valid, the transaction requires a signature
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
-            val commandData: CommandData = DummyContract.Commands.Create()
+            val commandData: DummyContract.Commands.Create = DummyContract.Commands.Create()
             val ourPubKey: PublicKey = serviceHub.legalIdentityKey
             val counterpartyPubKey: PublicKey = counterparty.owningKey
             val requiredSigners: List<PublicKey> = listOf(ourPubKey, counterpartyPubKey)
-            val ourCommand: Command = Command(commandData, requiredSigners)
+            val ourCommand: Command<DummyContract.Commands.Create> = Command(commandData, requiredSigners)
             // DOCEND 24
 
             // ``CommandData`` can either be:

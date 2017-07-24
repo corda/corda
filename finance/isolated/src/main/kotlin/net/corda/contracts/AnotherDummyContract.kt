@@ -1,4 +1,4 @@
-package net.corda.contracts.isolated
+package net.corda.contracts
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash

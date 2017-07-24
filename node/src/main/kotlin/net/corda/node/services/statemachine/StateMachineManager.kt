@@ -17,6 +17,7 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.internal.castIfPossible
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
@@ -147,10 +148,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
         @Suppress("UNCHECKED_CAST")
         return mutex.locked {
-            stateMachines.keys
-                    .map { it.logic }
-                    .filterIsInstance(flowClass)
-                    .map { it to (it.stateMachine as FlowStateMachineImpl<T>).resultFuture }
+            stateMachines.keys.mapNotNull {
+                flowClass.castIfPossible(it.logic)?.let { it to (it.stateMachine as FlowStateMachineImpl<T>).resultFuture }
+            }
         }
     }
 
@@ -382,7 +382,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun deserializeFiber(checkpoint: Checkpoint, logger: Logger): FlowStateMachineImpl<*>? {
         return try {
-            checkpoint.serializedFiber.deserialize<FlowStateMachineImpl<*>>(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext)).apply { fromCheckpoint = true }
+            checkpoint.serializedFiber.deserialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext)).apply { fromCheckpoint = true }
         } catch (t: Throwable) {
             logger.error("Encountered unrestorable checkpoint!", t)
             null

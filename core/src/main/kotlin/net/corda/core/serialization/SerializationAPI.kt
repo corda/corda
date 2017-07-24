@@ -135,7 +135,3 @@ class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }
 }
-
-// The more specific deserialize version results in the bytes being cached, which is faster.
-@JvmName("SerializedBytesWireTransaction")
-fun SerializedBytes<WireTransaction>.deserialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): WireTransaction = WireTransaction.deserialize(this, serializationFactory, context)

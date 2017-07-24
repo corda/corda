@@ -4,6 +4,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
+import net.corda.core.internal.castIfPossible
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.UntrustworthyData
 
@@ -42,10 +43,7 @@ data class ErrorSessionEnd(override val recipientSessionId: Long, val errorRespo
 data class ReceivedSessionMessage<out M : ExistingSessionMessage>(val sender: Party, val message: M)
 
 fun <T> ReceivedSessionMessage<SessionData>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
-    if (type.isInstance(message.payload)) {
-        return UntrustworthyData(type.cast(message.payload))
-    } else {
-        throw UnexpectedFlowEndException("We were expecting a ${type.name} from $sender but we instead got a " +
-                "${message.payload.javaClass.name} (${message.payload})")
-    }
+    return type.castIfPossible(message.payload)?.let { UntrustworthyData(it) } ?:
+            throw UnexpectedFlowEndException("We were expecting a ${type.name} from $sender but we instead got a " +
+                    "${message.payload.javaClass.name} (${message.payload})")
 }
