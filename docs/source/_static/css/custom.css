@@ -179,3 +179,11 @@ a:visited {
     background-position: center top;
     background-origin: content box;
 }
+
+
+/* Version dropdown */
+
+.version-dropdown {
+    border-radius: 4px;
+    border-color: #263673;
+}
