@@ -263,11 +263,11 @@ public class FlowCookbookJava {
             // public keys. To be valid, the transaction requires a signature
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
-            CommandData commandData = new DummyContract.Commands.Create();
+            DummyContract.Commands.Create commandData = new DummyContract.Commands.Create();
             PublicKey ourPubKey = getServiceHub().getLegalIdentityKey();
             PublicKey counterpartyPubKey = counterparty.getOwningKey();
             List<PublicKey> requiredSigners = ImmutableList.of(ourPubKey, counterpartyPubKey);
-            Command ourCommand = new Command(commandData, requiredSigners);
+            Command<DummyContract.Commands.Create> ourCommand = new Command<>(commandData, requiredSigners);
             // DOCEND 24
 
             // ``CommandData`` can either be:

@@ -24,7 +24,7 @@ class WireTransaction(
         override val attachments: List<SecureHash>,
         outputs: List<TransactionState<ContractState>>,
         /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
-        override val commands: List<Command>,
+        override val commands: List<Command<*>>,
         notary: Party?,
         signers: List<PublicKey>,
         type: TransactionType,
@@ -125,7 +125,7 @@ class WireTransaction(
         val buf = StringBuilder()
         buf.appendln("Transaction:")
         for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:      $input")
-        for (output in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     ${output.data}")
+        for ((data) in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     $data")
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
         for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
         return buf.toString()

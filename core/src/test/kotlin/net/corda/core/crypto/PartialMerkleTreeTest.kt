@@ -102,7 +102,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
             return when (elem) {
                 is StateRef -> true
                 is TransactionState<*> -> elem.data.participants[0].owningKey.keys == MINI_CORP_PUBKEY.keys
-                is Command -> MEGA_CORP_PUBKEY in elem.signers
+                is Command<*> -> MEGA_CORP_PUBKEY in elem.signers
                 is TimeWindow -> true
                 is PublicKey -> elem == MEGA_CORP_PUBKEY
                 else -> false

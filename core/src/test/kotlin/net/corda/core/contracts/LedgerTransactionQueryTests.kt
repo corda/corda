@@ -112,10 +112,10 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `Simple Command Indexer tests`() {
         val ltx = makeDummyTransaction()
-        assertEquals(0, (ltx.getCommand(0).value as Commands.Cmd1).id)
-        assertEquals(0, (ltx.getCommand(1).value as Commands.Cmd2).id)
-        assertEquals(3, (ltx.getCommand(6).value as Commands.Cmd1).id)
-        assertEquals(3, (ltx.getCommand(7).value as Commands.Cmd2).id)
+        assertEquals(0, ltx.getCommand<Commands.Cmd1>(0).value.id)
+        assertEquals(0, ltx.getCommand<Commands.Cmd2>(1).value.id)
+        assertEquals(3, ltx.getCommand<Commands.Cmd1>(6).value.id)
+        assertEquals(3, ltx.getCommand<Commands.Cmd2>(7).value.id)
         assertFailsWith<IndexOutOfBoundsException> { ltx.getOutput(10) }
     }
 
@@ -178,10 +178,10 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
         val ltx = makeDummyTransaction()
         val intCmd1 = ltx.commandsOfType(Commands.Cmd1::class.java)
         assertEquals(5, intCmd1.size)
-        assertEquals(listOf(0, 1, 2, 3, 4), intCmd1.map { (it.value as Commands.Cmd1).id })
+        assertEquals(listOf(0, 1, 2, 3, 4), intCmd1.map { it.value.id })
         val intCmd2 = ltx.commandsOfType<Commands.Cmd2>()
         assertEquals(5, intCmd2.size)
-        assertEquals(listOf(0, 1, 2, 3, 4), intCmd2.map { (it.value as Commands.Cmd2).id })
+        assertEquals(listOf(0, 1, 2, 3, 4), intCmd2.map { it.value.id })
         val notPresentQuery = ltx.commandsOfType(FungibleAsset.Commands.Exit::class.java)
         assertEquals(emptyList(), notPresentQuery)
     }
@@ -237,9 +237,9 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
         val ltx = makeDummyTransaction()
         val intCmds1 = ltx.filterCommands(Commands.Cmd1::class.java, Predicate { it.id.rem(2) == 0 })
         assertEquals(3, intCmds1.size)
-        assertEquals(listOf(0, 2, 4), intCmds1.map { (it.value as Commands.Cmd1).id })
+        assertEquals(listOf(0, 2, 4), intCmds1.map { it.value.id })
         val intCmds2 = ltx.filterCommands<Commands.Cmd2> { it.id == 3 }
-        assertEquals(3, (intCmds2.single().value as Commands.Cmd2).id)
+        assertEquals(3, intCmds2.single().value.id)
     }
 
     @Test

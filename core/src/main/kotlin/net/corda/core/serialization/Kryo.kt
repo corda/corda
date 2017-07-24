@@ -265,7 +265,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         // Otherwise we just assume the code we need is on the classpath already.
         kryo.useClassLoader(attachmentsClassLoader(kryo, attachmentHashes) ?: javaClass.classLoader) {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
-            val commands = kryo.readClassAndObject(input) as List<Command>
+            val commands = kryo.readClassAndObject(input) as List<Command<*>>
             val notary = kryo.readClassAndObject(input) as Party?
             val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType

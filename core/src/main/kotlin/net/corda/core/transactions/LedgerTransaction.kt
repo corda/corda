@@ -247,7 +247,8 @@ class LedgerTransaction(
      * @param index the position of the item in the commands.
      * @return The Command at the requested index
      */
-    fun getCommand(index: Int): Command = Command(commands[index].value, commands[index].signers)
+    @Suppress("UNCHECKED_CAST")
+    fun <T : CommandData> getCommand(index: Int): Command<T> = Command(commands[index].value as T, commands[index].signers)
 
     /**
      * Helper to simplify getting all [Command] items with a [CommandData] of a particular class, interface, or base class.
@@ -255,11 +256,11 @@ class LedgerTransaction(
      * [clazz] must be an extension of [CommandData].
      * @return the possibly empty list of commands with [CommandData] values matching the clazz restriction.
      */
-    fun <T : CommandData> commandsOfType(clazz: Class<T>): List<Command> {
+    fun <T : CommandData> commandsOfType(clazz: Class<T>): List<Command<T>> {
         return commands.mapNotNull { (signers, _, value) -> clazz.castIfPossible(value)?.let { Command(it, signers) } }
     }
 
-    inline fun <reified T : CommandData> commandsOfType(): List<Command> = commandsOfType(T::class.java)
+    inline fun <reified T : CommandData> commandsOfType(): List<Command<T>> = commandsOfType(T::class.java)
 
     /**
      * Helper to simplify filtering [Command] items according to a [Predicate].
@@ -269,12 +270,11 @@ class LedgerTransaction(
      * The class filtering is applied before the predicate.
      * @return the possibly empty list of [Command] items with [CommandData] values matching the predicate and clazz restrictions.
      */
-    fun <T : CommandData> filterCommands(clazz: Class<T>, predicate: Predicate<T>): List<Command> {
-        @Suppress("UNCHECKED_CAST")
-        return commandsOfType(clazz).filter { predicate.test(it.value as T) }
+    fun <T : CommandData> filterCommands(clazz: Class<T>, predicate: Predicate<T>): List<Command<T>> {
+        return commandsOfType(clazz).filter { predicate.test(it.value) }
     }
 
-    inline fun <reified T : CommandData> filterCommands(crossinline predicate: (T) -> Boolean): List<Command> {
+    inline fun <reified T : CommandData> filterCommands(crossinline predicate: (T) -> Boolean): List<Command<T>> {
         return filterCommands(T::class.java, Predicate { predicate(it) })
     }
 
@@ -287,12 +287,11 @@ class LedgerTransaction(
      * @return the [Command] item with [CommandData] values matching the predicate and clazz restrictions.
      * @throws IllegalArgumentException if no items, or multiple items matched the requirements.
      */
-    fun <T : CommandData> findCommand(clazz: Class<T>, predicate: Predicate<T>): Command {
-        @Suppress("UNCHECKED_CAST")
-        return commandsOfType(clazz).single { predicate.test(it.value as T) }
+    fun <T : CommandData> findCommand(clazz: Class<T>, predicate: Predicate<T>): Command<T> {
+        return commandsOfType(clazz).single { predicate.test(it.value) }
     }
 
-    inline fun <reified T : CommandData> findCommand(crossinline predicate: (T) -> Boolean): Command {
+    inline fun <reified T : CommandData> findCommand(crossinline predicate: (T) -> Boolean): Command<T> {
         return findCommand(T::class.java, Predicate { predicate(it) })
     }
 

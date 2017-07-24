@@ -56,8 +56,8 @@ class CommandDataGenerator : Generator<CommandData>(CommandData::class.java) {
     }
 }
 
-class CommandGenerator : Generator<Command>(Command::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Command {
+class CommandGenerator : Generator<Command<*>>(Command::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Command<*> {
         val signersGenerator = ArrayListGenerator()
         signersGenerator.addComponentGenerators(listOf(PublicKeyGenerator()))
         return Command(CommandDataGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))

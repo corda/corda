@@ -2,7 +2,6 @@ package net.corda.verifier
 
 import net.corda.client.mock.*
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.entropyToKeyPair
@@ -12,6 +11,7 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.testing.contracts.DummyContract
 import java.io.ByteArrayInputStream
 import java.math.BigInteger
 import java.security.PublicKey
@@ -49,7 +49,7 @@ data class GeneratedLedger(
         Generator.replicatePoisson(1.0, pickOneOrMaybeNew(attachments, attachmentGenerator))
     }
 
-    val commandsGenerator: Generator<List<Pair<Command, Party>>> by lazy {
+    val commandsGenerator: Generator<List<Pair<Command<*>, Party>>> by lazy {
         Generator.replicatePoisson(4.0, commandGenerator(identities))
     }
 
@@ -214,7 +214,7 @@ val stateGenerator: Generator<ContractState> =
             GeneratedState(nonce, participants.map { AnonymousParty(it) })
         }
 
-fun commandGenerator(partiesToPickFrom: Collection<Party>): Generator<Pair<Command, Party>> {
+fun commandGenerator(partiesToPickFrom: Collection<Party>): Generator<Pair<Command<*>, Party>> {
     return pickOneOrMaybeNew(partiesToPickFrom, partyGenerator).combine(Generator.long()) { signer, nonce ->
         Pair(
                 Command(GeneratedCommandData(nonce), signer.owningKey),

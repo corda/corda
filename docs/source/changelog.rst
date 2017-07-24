@@ -43,7 +43,9 @@ UNRELEASED
   ``LedgerTransaction`` as passed in parameter. The prinicpal consequence of this is that the types of the input and output
   collections on the transaction object have changed, so it may be necessary to ``map`` down to the ``ContractState``
   sub-properties in existing code.
-  It is intended that new helper methods will be added shortly to the API to reduce the impact of these changes.
+
+* Added various query methods to ``LedgerTransaction`` to simplify querying of states and commands. In the same vain
+  ``Command`` is now parameterised on the ``CommandData`` field.
 
 Milestone 13
 ------------

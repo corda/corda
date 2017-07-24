@@ -24,12 +24,15 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
         @JvmStatic
         fun verify(tx: LedgerTransaction) {
             // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
-            verify(tx.inputStates.single(), tx.outputStates.single(), tx.commands.map { Command(it.value, it.signers) }.single())
+            verify(
+                    tx.inputStates.single(),
+                    tx.outputStates.single(),
+                    tx.commandsOfType<UpgradeCommand>().single())
         }
 
         @JvmStatic
-        fun verify(input: ContractState, output: ContractState, commandData: Command) {
-            val command = commandData.value as UpgradeCommand
+        fun verify(input: ContractState, output: ContractState, commandData: Command<UpgradeCommand>) {
+            val command = commandData.value
             val participantKeys: Set<PublicKey> = input.participants.map { it.owningKey }.toSet()
             val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
             @Suppress("UNCHECKED_CAST")

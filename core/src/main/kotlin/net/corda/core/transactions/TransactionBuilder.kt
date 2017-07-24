@@ -37,7 +37,7 @@ open class TransactionBuilder(
         protected val inputs: MutableList<StateRef> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
-        protected val commands: MutableList<Command> = arrayListOf(),
+        protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected val signers: MutableSet<PublicKey> = mutableSetOf(),
         protected var window: TimeWindow? = null) {
     constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
@@ -65,7 +65,7 @@ open class TransactionBuilder(
                 is SecureHash -> addAttachment(t)
                 is TransactionState<*> -> addOutputState(t)
                 is ContractState -> addOutputState(t)
-                is Command -> addCommand(t)
+                is Command<*> -> addCommand(t)
                 is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
                 is TimeWindow -> setTimeWindow(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
@@ -105,7 +105,9 @@ open class TransactionBuilder(
     }
 
     @JvmOverloads
-    fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null) = addOutputState(TransactionState(state, notary, encumbrance))
+    fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null): TransactionBuilder {
+        return addOutputState(TransactionState(state, notary, encumbrance))
+    }
 
     /** A default notary must be specified during builder construction to use this method */
     fun addOutputState(state: ContractState): TransactionBuilder {
@@ -114,7 +116,7 @@ open class TransactionBuilder(
         return this
     }
 
-    fun addCommand(arg: Command): TransactionBuilder {
+    fun addCommand(arg: Command<*>): TransactionBuilder {
         // TODO: replace pubkeys in commands with 'pointers' to keys in signers
         signers.addAll(arg.signers)
         commands.add(arg)
@@ -149,7 +151,7 @@ open class TransactionBuilder(
     fun inputStates(): List<StateRef> = ArrayList(inputs)
     fun attachments(): List<SecureHash> = ArrayList(attachments)
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
-    fun commands(): List<Command> = ArrayList(commands)
+    fun commands(): List<Command<*>> = ArrayList(commands)
 
     /** The signatures that have been collected so far - might be incomplete! */
     @Deprecated("Signatures should be gathered on a SignedTransaction instead.")
