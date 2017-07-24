@@ -78,5 +78,4 @@ class DriverTests {
             assertThat(debugLinesPresent).isTrue()
         }
     }
-
 }

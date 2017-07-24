@@ -68,4 +68,20 @@ class InMemoryNetworkMapCacheTest {
 
         // TODO: Should have a test case with anonymous lookup
     }
+
+    @Test
+    fun `remove node from cache`() {
+        val nodes = mockNet.createSomeNodes(1)
+        val n0 = nodes.mapNode
+        val n1 = nodes.partyNodes[0]
+        val node0Cache = n0.services.networkMapCache as InMemoryNetworkMapCache
+        mockNet.runNetwork()
+        n0.database.transaction {
+            node0Cache.removeNode(n1.info)
+            assert(node0Cache.getNodeByLegalIdentity(n1.info.legalIdentity) == null)
+            assert(node0Cache.getNodeByLegalIdentity(n0.info.legalIdentity) != null)
+            assert(node0Cache.getNodeByLegalName(n1.info.legalIdentity.name) == null)
+        }
+    }
+    // TODO Add some tests with distributed services.
 }

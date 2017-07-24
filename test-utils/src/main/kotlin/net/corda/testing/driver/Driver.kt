@@ -536,7 +536,6 @@ class DriverDSL(
         }
     }
 
-    // TODO get rid of this?
     private fun networkMapServiceConfigLookup(networkMapCandidates: List<NodeDefinition>): (X500Name) -> Map<String, String>? {
         return networkMapStartStrategy.run {
             when (this) {
