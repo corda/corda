@@ -18,23 +18,19 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 {% block footer %}
 <script>
     // A synchronous request to retrieve all the Corda versions.
-    var request = new XMLHttpRequest();
-    request.open("GET", "http://localhost:63342/corda-project/docs/build/html/_static/versions", false);
-    <!--request.open("GET", "https://docs.corda.net/head/_static/versions", false);-->
-    request.send(null);
+    $.getJSON("https://docs.corda.net/_static/versions", function(data) {
+        // Grab the current version.
+        var version = $("#version").html();
 
-    // Grab the current version.
-    var version = document.getElementById("version").innerHTML;
-
-    // We populate the version dropdown.
-    var json = JSON.parse(request.responseText);
-    $.each(json, function(link, text) {
-        if (text === version) {
-            $('#versionDropdown').append($('<option>').text(text).attr('value', link).prop('selected', true));
-        } else {
-            $('#versionDropdown').append($('<option>').text(text).attr('value', link));
-        }
-    });
+        // We populate the version dropdown.
+        $.each(data, function(link, text) {
+            if (text === version) {
+                $('#versionDropdown').append($('<option>').text(text).attr('value', link).prop('selected', true));
+            } else {
+                $('#versionDropdown').append($('<option>').text(text).attr('value', link));
+            }
+        });
+    }
 </script>
 
 <script>
