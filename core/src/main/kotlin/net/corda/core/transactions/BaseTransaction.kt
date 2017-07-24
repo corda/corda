@@ -2,7 +2,7 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
-import net.corda.core.indexOfOrThrow
+import net.corda.core.internal.indexOfOrThrow
 import net.corda.core.internal.castIfPossible
 import java.security.PublicKey
 import java.util.*

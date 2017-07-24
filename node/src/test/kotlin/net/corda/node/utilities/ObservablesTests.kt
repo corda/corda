@@ -1,8 +1,8 @@
 package net.corda.node.utilities
 
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.bufferUntilSubscribed
-import net.corda.core.tee
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.tee
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

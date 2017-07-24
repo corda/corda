@@ -5,7 +5,7 @@ import com.google.common.hash.HashingInputStream
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
-import net.corda.core.InputStreamAndHash
+import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow

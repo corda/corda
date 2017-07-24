@@ -6,12 +6,12 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.abbreviate
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.abbreviate
 import net.corda.core.internal.staticField
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
@@ -122,7 +122,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         actionOnEnd(Try.Success(result), false)
         _resultFuture?.set(result)
         logic.progressTracker?.currentStep = ProgressTracker.DONE
-        logger.debug { "Flow finished with result $result" }
+        logger.debug { "Flow finished with result ${result.toString().abbreviate(300)}" }
     }
 
     private fun createTransaction() {

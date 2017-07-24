@@ -6,7 +6,6 @@ import net.corda.contracts.asset.CASH
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.`issued by`
 import net.corda.contracts.asset.`owned by`
-import net.corda.core.bd
 import net.corda.core.contracts.*
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.generateKeyPair
@@ -81,7 +80,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val res = oracle.query(listOf(q))
             assertEquals(1, res.size)
-            assertEquals("0.678".bd, res[0].value)
+            assertEquals(BigDecimal("0.678"), res[0].value)
             assertEquals(q, res[0].of)
         }
     }
@@ -163,7 +162,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         database.transaction {
             val tx = makeTX()
             val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-            val badFix = Fix(fixOf, "0.6789".bd)
+            val badFix = Fix(fixOf, BigDecimal("0.6789"))
             tx.addCommand(badFix, oracle.identity.owningKey)
             val wtx = tx.toWireTransaction()
             val ftx = wtx.buildFilteredTransaction(Predicate { x -> fixCmdFilter(x) })
@@ -212,7 +211,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         val tx = TransactionType.General.Builder(null)
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val oracle = n2.info.serviceIdentities(NodeInterestRates.Oracle.type).first()
-        val flow = FilteredRatesFlow(tx, oracle, fixOf, "0.675".bd, "0.1".bd)
+        val flow = FilteredRatesFlow(tx, oracle, fixOf, BigDecimal("0.675"), BigDecimal("0.1"))
         LogHelper.setLevel("rates")
         mockNet.runNetwork()
         val future = n1.services.startFlow(flow).resultFuture
@@ -221,7 +220,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         // We should now have a valid fix of our tx from the oracle.
         val fix = tx.toWireTransaction().commands.map { it.value as Fix }.first()
         assertEquals(fixOf, fix.of)
-        assertEquals("0.678".bd, fix.value)
+        assertEquals(BigDecimal("0.678"), fix.value)
         mockNet.stopNodes()
     }
 
