@@ -138,19 +138,3 @@ The ``WebServerPluginRegistry`` class defines the following:
   started
 
   * The static web content itself should be placed inside the ``src/main/resources`` directory
-
-Building your CorDapp
----------------------
-You build a CorDapp by running the gradle ``jar`` task to package up the CorDapp's source files into a jar file.
-
-By default, the jar will be created under ``build/libs``.
-
-Installing CorDapps
--------------------
-Once you've built your CorDapp jar, you install it on a node by adding it to the node's ``<node_dir>/plugins/``
-folder (where ``node_dir`` is the folder in which the node's JAR and configuration files are stored).
-
-At runtime, nodes will load any plugins present in their ``plugins`` folder.
-
-You can also create a set of nodes with any CorDapps defined in your source folder already installed by running the
-Cordapp Template's ``deployNodes`` task. See :doc:`deploying-a-node`.
