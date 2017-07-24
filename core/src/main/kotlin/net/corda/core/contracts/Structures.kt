@@ -284,14 +284,13 @@ abstract class TypeOnlyCommandData : CommandData {
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
 @CordaSerializable
-// DOCSTART 9
-data class Command(val value: CommandData, val signers: List<PublicKey>) {
-// DOCEND 9
+data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) {
+    // TODO Introduce NonEmptyList?
     init {
         require(signers.isNotEmpty())
     }
 
-    constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
+    constructor(data: T, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
     override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString()}"

@@ -1,5 +1,6 @@
 package net.corda.node.services.database
 
+import net.corda.core.internal.castIfPossible
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
@@ -100,17 +101,14 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
 
         override fun supportsAggressiveRelease(): Boolean = true
 
-        override fun getConnection(): Connection =
-                DatabaseTransactionManager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ).connection
-
-        override fun <T : Any?> unwrap(unwrapType: Class<T>): T {
-            try {
-                return unwrapType.cast(this)
-            } catch(e: ClassCastException) {
-                throw UnknownUnwrapTypeException(unwrapType)
-            }
+        override fun getConnection(): Connection {
+            return DatabaseTransactionManager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ).connection
         }
 
-        override fun isUnwrappableAs(unwrapType: Class<*>?): Boolean = (unwrapType == NodeDatabaseConnectionProvider::class.java)
+        override fun <T : Any?> unwrap(unwrapType: Class<T>): T {
+            return unwrapType.castIfPossible(this) ?: throw UnknownUnwrapTypeException(unwrapType)
+        }
+
+        override fun isUnwrappableAs(unwrapType: Class<*>?): Boolean = unwrapType == NodeDatabaseConnectionProvider::class.java
     }
 }

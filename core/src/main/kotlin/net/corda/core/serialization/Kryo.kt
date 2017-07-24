@@ -6,12 +6,10 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.VisibleForTesting
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.MetaData
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignatureType
+import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -267,7 +265,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         // Otherwise we just assume the code we need is on the classpath already.
         kryo.useClassLoader(attachmentsClassLoader(kryo, attachmentHashes) ?: javaClass.classLoader) {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
-            val commands = kryo.readClassAndObject(input) as List<Command>
+            val commands = kryo.readClassAndObject(input) as List<Command<*>>
             val notary = kryo.readClassAndObject(input) as Party?
             val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
@@ -277,11 +275,27 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
     }
 }
 
+@ThreadSafe
+object SignedTransactionSerializer : Serializer<SignedTransaction>() {
+    override fun write(kryo: Kryo, output: Output, obj: SignedTransaction) {
+        kryo.writeClassAndObject(output, obj.txBits)
+        kryo.writeClassAndObject(output, obj.sigs)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun read(kryo: Kryo, input: Input, type: Class<SignedTransaction>): SignedTransaction {
+        return SignedTransaction(
+                kryo.readClassAndObject(input) as SerializedBytes<WireTransaction>,
+                kryo.readClassAndObject(input) as List<DigitalSignature.WithKey>
+        )
+    }
+}
+
 /** For serialising an ed25519 private key */
 @ThreadSafe
 object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
-        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec )
+        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
         output.writeBytesWithLength(obj.seed)
     }
 

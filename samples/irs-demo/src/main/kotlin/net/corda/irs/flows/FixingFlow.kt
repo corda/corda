@@ -80,7 +80,7 @@ object FixingFlow {
                 @Suspendable
                 override fun filtering(elem: Any): Boolean {
                     return when (elem) {
-                        is Command -> oracleParty.owningKey in elem.signers && elem.value is Fix
+                        is Command<*> -> oracleParty.owningKey in elem.signers && elem.value is Fix
                         else -> false
                     }
                 }

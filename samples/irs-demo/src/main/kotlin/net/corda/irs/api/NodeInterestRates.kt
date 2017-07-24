@@ -8,7 +8,6 @@ import net.corda.contracts.Tenor
 import net.corda.contracts.math.CubicSplineInterpolator
 import net.corda.contracts.math.Interpolator
 import net.corda.contracts.math.InterpolatorFactory
-import net.corda.core.internal.ThreadBox
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
@@ -18,6 +17,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.ThreadBox
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -151,7 +151,7 @@ object NodeInterestRates {
                 throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
             }
             // Performing validation of obtained FilteredLeaves.
-            fun commandValidator(elem: Command): Boolean {
+            fun commandValidator(elem: Command<*>): Boolean {
                 if (!(identity.owningKey in elem.signers && elem.value is Fix))
                     throw IllegalArgumentException("Oracle received unknown command (not in signers or not Fix).")
                 val fix = elem.value as Fix
@@ -163,7 +163,7 @@ object NodeInterestRates {
 
             fun check(elem: Any): Boolean {
                 return when (elem) {
-                    is Command -> commandValidator(elem)
+                    is Command<*> -> commandValidator(elem)
                     else -> throw IllegalArgumentException("Oracle received data of different type than expected.")
                 }
             }
