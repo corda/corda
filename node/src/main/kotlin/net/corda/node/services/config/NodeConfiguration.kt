@@ -14,7 +14,9 @@ import java.nio.file.Path
 import java.util.*
 
 /** @param exposeRaces for testing only, so its default is not in reference.conf but here. */
-data class BFTSMaRtConfiguration(val replicaId: Int, val debug: Boolean, val exposeRaces: Boolean = false)
+data class BFTSMaRtConfiguration(val replicaId: Int, val debug: Boolean, val exposeRaces: Boolean = false) {
+    fun isValid() = replicaId >= 0
+}
 
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: X500Name

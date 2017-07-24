@@ -22,6 +22,7 @@ import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDete
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectResponseProperty
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
+import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.ArtemisMessagingComponent
@@ -348,6 +349,15 @@ open class Node(override val configuration: FullNodeConfiguration,
     override fun setup(): Node {
         super.setup()
         return this
+    }
+
+    override fun createBFTSMaRtCluster(): BFTSMaRt.Cluster {
+        return object : BFTSMaRt.Cluster {
+            override fun waitUntilAllReplicasHaveInitialized(client: BFTSMaRt.Client) {
+                client.awaitClientConnectionToCluster() // Almost does enough.
+                log.warn("Assume all BFT replicas have initialized.")
+            }
+        }
     }
 
     private var shutdown = false

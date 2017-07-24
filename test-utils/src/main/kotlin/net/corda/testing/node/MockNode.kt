@@ -32,9 +32,7 @@ import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.node.services.transactions.*
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.testing.*
@@ -262,6 +260,22 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         var acceptableLiveFiberCountOnStop: Int = 0
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
+
+        override fun createBFTSMaRtCluster(): BFTSMaRt.Cluster {
+            return object : BFTSMaRt.Cluster {
+                override fun waitUntilAllReplicasHaveInitialized(client: BFTSMaRt.Client) {
+                    val clusterNodes = mockNet.nodes.filter {
+                        services.notaryIdentityKey in it.info.serviceIdentities(BFTNonValidatingNotaryService.type).map { it.owningKey }
+                    }
+                    if (clusterNodes.size != configuration.notaryClusterAddresses.size) {
+                        throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")
+                    }
+                    clusterNodes.forEach {
+                        (it.smm.findServices { it is BFTNonValidatingNotaryService }.single() as BFTNonValidatingNotaryService).waitUntilReplicaHasInitialized()
+                    }
+                }
+            }
+        }
     }
 
     /**

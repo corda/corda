@@ -9,7 +9,6 @@ import com.google.common.util.concurrent.SettableFuture
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.crypto.*
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.flatMap
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -23,7 +22,6 @@ import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -647,7 +645,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             ValidatingNotaryService.type -> ValidatingNotaryService(services)
             RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services)
-            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services)
+            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services, createBFTSMaRtCluster())
             else -> {
                 log.info("Notary type ${type.id} does not match any built-in notary types. " +
                         "It is expected to be loaded via a CorDapp")
@@ -661,6 +659,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
         installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
     }
+
+    /** Create an object for interacting with the cluster, doesn't create the cluster itself. */
+    protected abstract fun createBFTSMaRtCluster(): BFTSMaRt.Cluster
 
     protected open fun makeIdentityService(trustRoot: X509Certificate,
                                            clientCa: CertificateAndKeyPair?,

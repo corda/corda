@@ -23,7 +23,7 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
-class BFTNonValidatingNotaryService(override val services: ServiceHubInternal) : NotaryService() {
+class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, cluster: BFTSMaRt.Cluster) : NotaryService() {
     companion object {
         val type = SimpleNotaryService.type.getSubType("bft")
         private val log = loggerFor<BFTNonValidatingNotaryService>()
@@ -33,9 +33,9 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal) :
     private val replicaHolder = SettableFuture.create<Replica>()
 
     init {
-        val replicaId = services.configuration.bftSMaRt.replicaId
-        require(replicaId >= 0) { "bftSMaRt replicaId must be specified in the configuration" }
+        require(services.configuration.bftSMaRt.isValid()) { "bftSMaRt replicaId must be specified in the configuration" }
         client = BFTSMaRtConfig(services.configuration.notaryClusterAddresses, services.configuration.bftSMaRt.debug, services.configuration.bftSMaRt.exposeRaces).use {
+            val replicaId = services.configuration.bftSMaRt.replicaId
             val configHandle = it.handle()
             // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
             thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
@@ -46,8 +46,13 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal) :
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
             }
-            BFTSMaRt.Client(it, replicaId)
+            BFTSMaRt.Client(it, replicaId, cluster)
         }
+    }
+
+    fun waitUntilReplicaHasInitialized() {
+        log.debug { "Waiting for replica ${services.configuration.bftSMaRt.replicaId} to initialize." }
+        replicaHolder.getOrThrow()
     }
 
     fun commitTransaction(tx: Any, otherSide: Party) = client.commitTransaction(tx, otherSide)

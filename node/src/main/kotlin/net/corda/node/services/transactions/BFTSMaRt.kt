@@ -3,7 +3,6 @@ package net.corda.node.services.transactions
 import bftsmart.communication.ServerCommunicationSystem
 import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemClientSide
 import bftsmart.communication.client.netty.NettyClientServerSession
-import bftsmart.statemanagement.SMMessage
 import bftsmart.statemanagement.strategy.StandardStateManager
 import bftsmart.tom.MessageContext
 import bftsmart.tom.ServiceProxy
@@ -72,7 +71,12 @@ object BFTSMaRt {
         data class Signatures(val txSignatures: List<DigitalSignature>) : ClusterResponse()
     }
 
-    class Client(config: BFTSMaRtConfig, private val clientId: Int) : SingletonSerializeAsToken() {
+    interface Cluster {
+        /** Avoid bug where a replica fails to start due to a consensus change during the BFT startup sequence. */
+        fun waitUntilAllReplicasHaveInitialized(client: Client)
+    }
+
+    class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster) : SingletonSerializeAsToken() {
         companion object {
             private val log = loggerFor<Client>()
         }
@@ -85,7 +89,7 @@ object BFTSMaRt {
             proxy.close() // XXX: Does this do enough?
         }
 
-        private fun awaitClientConnectionToCluster() {
+        internal fun awaitClientConnectionToCluster() {
             // TODO: Hopefully we only need to wait for the client's initial connection to the cluster, and this method can be moved to some startup code.
             while (true) {
                 val inactive = sessionTable.entries.mapNotNull { if (it.value.channel.isActive) null else it.key }
@@ -101,7 +105,7 @@ object BFTSMaRt {
          */
         fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
             require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
-            awaitClientConnectionToCluster()
+            cluster.waitUntilAllReplicasHaveInitialized(this)
             val requestBytes = CommitRequest(transaction, otherSide).serialize().bytes
             val responseBytes = proxy.invokeOrdered(requestBytes)
             return responseBytes.deserialize<ClusterResponse>()
@@ -182,13 +186,8 @@ object BFTSMaRt {
             val exposeStartupRace = config.exposeRaces && replicaId < maxFaultyReplicas(config.clusterSize)
             object : StandardStateManager() {
                 override fun askCurrentConsensusId() {
-                    if (exposeStartupRace) Thread.sleep(10000)
+                    if (exposeStartupRace) Thread.sleep(20000) // Must be long enough for the non-redundant replicas to reach a non-initial consensus.
                     super.askCurrentConsensusId()
-                }
-
-                override fun currentConsensusIdReceived(smsg: SMMessage?) = synchronized(this) {
-                    super.currentConsensusIdReceived(smsg)
-                    waitingCID = -1 // Allow super.currentConsensusIdReceived to process the response. XXX: Is this safe?
                 }
             }
         }
