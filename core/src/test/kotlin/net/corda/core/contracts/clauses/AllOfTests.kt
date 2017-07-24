@@ -16,7 +16,7 @@ class AllOfTests {
     fun minimal() {
         val counter = AtomicInteger(0)
         val clause = AllOf(matchedClause(counter), matchedClause(counter))
-        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General)
+        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General, null)
         verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
 
         // Check that we've run the verify() function of two clauses
@@ -26,7 +26,7 @@ class AllOfTests {
     @Test
     fun `not all match`() {
         val clause = AllOf(matchedClause(), unmatchedClause())
-        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General)
+        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General, null)
         assertFailsWith<IllegalStateException> { verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>()) }
     }
 }

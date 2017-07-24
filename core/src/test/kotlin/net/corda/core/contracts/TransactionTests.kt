@@ -107,7 +107,8 @@ class TransactionTests : TestDependencyInjectionBase() {
                 id,
                 null,
                 timeWindow,
-                TransactionType.General
+                TransactionType.General,
+                null
         )
 
         transaction.verify()
@@ -148,7 +149,8 @@ class TransactionTests : TestDependencyInjectionBase() {
                 id,
                 notary,
                 timeWindow,
-                TransactionType.General
+                TransactionType.General,
+                null
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction() }

@@ -6,6 +6,7 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
+import net.corda.core.utilities.OpaqueBytes
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
@@ -33,7 +34,9 @@ open class TransactionBuilder(
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
-        protected var window: TimeWindow? = null) {
+        protected var window: TimeWindow? = null,
+        protected var privacySalt: PrivacySalt = PrivacySalt(secureRandomBytes(32))
+    ) {
     constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
     /**
@@ -46,7 +49,8 @@ open class TransactionBuilder(
             attachments = ArrayList(attachments),
             outputs = ArrayList(outputs),
             commands = ArrayList(commands),
-            window = window
+            window = window,
+            privacySalt = privacySalt
     )
 
     // DOCSTART 1
@@ -61,6 +65,7 @@ open class TransactionBuilder(
                 is Command<*> -> addCommand(t)
                 is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
                 is TimeWindow -> setTimeWindow(t)
+                is PrivacySalt -> setPrivacySalt(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
         }
@@ -69,7 +74,7 @@ open class TransactionBuilder(
     // DOCEND 1
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), notary, type, window)
+            ArrayList(outputs), ArrayList(commands), notary, type, window, privacySalt)
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
@@ -135,6 +140,11 @@ open class TransactionBuilder(
      * node.
      */
     fun setTimeWindow(time: Instant, timeTolerance: Duration) = setTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
+
+    fun setPrivacySalt(privacySalt: PrivacySalt): TransactionBuilder {
+        this.privacySalt = privacySalt
+        return this
+    }
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)

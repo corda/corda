@@ -125,7 +125,8 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
                 id,
                 notary,
                 timeWindow,
-                TransactionType.General
+                TransactionType.General,
+                null
         )
     }
 
@@ -155,7 +156,8 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
                 id,
                 notary,
                 timeWindow,
-                TransactionType.General
+                TransactionType.General,
+                null
         )
     }
 

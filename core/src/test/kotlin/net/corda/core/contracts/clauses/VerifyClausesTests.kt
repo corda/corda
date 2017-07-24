@@ -23,7 +23,7 @@ class VerifyClausesTests {
                                 outputs: List<ContractState>,
                                 commands: List<AuthenticatedObject<CommandData>>, groupingKey: Unit?): Set<CommandData> = emptySet()
         }
-        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General)
+        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General, null)
         verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
     }
 
@@ -36,7 +36,7 @@ class VerifyClausesTests {
                                 commands: List<AuthenticatedObject<CommandData>>, groupingKey: Unit?): Set<CommandData> = emptySet()
         }
         val command = AuthenticatedObject(emptyList(), emptyList(), DummyContract.Commands.Create())
-        val tx = LedgerTransaction(emptyList(), emptyList(), listOf(command), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General)
+        val tx = LedgerTransaction(emptyList(), emptyList(), listOf(command), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General, null)
         // The clause is matched, but doesn't mark the command as consumed, so this should error
         assertFailsWith<IllegalStateException> { verifyClause(tx, clause, listOf(command)) }
     }

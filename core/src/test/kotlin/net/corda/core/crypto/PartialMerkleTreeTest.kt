@@ -97,7 +97,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `building Merkle tree for a transaction`() {
+    fun `building Merkle tree for a tx and nonce test`() {
         fun filtering(elem: Any): Boolean {
             return when (elem) {
                 is StateRef -> true
@@ -109,17 +109,22 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
             }
         }
 
-        val mt = testTx.buildFilteredTransaction(Predicate(::filtering))
-        val leaves = mt.filteredLeaves
         val d = testTx.serialize().deserialize()
         assertEquals(testTx.id, d.id)
-        assertEquals(1, leaves.commands.size)
-        assertEquals(1, leaves.outputs.size)
+
+        val mt = testTx.buildFilteredTransaction(Predicate(::filtering))
+        val leaves = mt.filteredLeaves
+
         assertEquals(1, leaves.inputs.size)
         assertEquals(0, leaves.attachments.size)
-        assertTrue(mt.filteredLeaves.timeWindow != null)
-        assertEquals(null, mt.filteredLeaves.type)
-        assertEquals(null, mt.filteredLeaves.notary)
+        assertEquals(1, leaves.outputs.size)
+        assertEquals(1, leaves.commands.size)
+        assertNull(mt.filteredLeaves.notary)
+        assertEquals(1, leaves.mustSign.size)
+        assertNull(mt.filteredLeaves.type)
+        assertNotNull(mt.filteredLeaves.timeWindow)
+        assertNull(mt.filteredLeaves.privacySalt)
+        assertEquals(5, leaves.nonces.size)
         assertTrue(mt.verify())
     }
 

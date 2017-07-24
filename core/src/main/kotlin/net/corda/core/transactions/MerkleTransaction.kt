@@ -1,19 +1,32 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.MerkleTree
-import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.crypto.PartialMerkleTree
-import net.corda.core.crypto.SecureHash
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.OpaqueBytes
+import java.nio.ByteBuffer
+import java.security.PublicKey
 import java.util.function.Predicate
 
-fun <T : Any> serializedHash(x: T): SecureHash {
-    return x.serialize(context = P2P_CONTEXT.withoutReferences()).hash
+fun <T : Any> serializedHash(x: T, privacySalt: PrivacySalt?, index: Int): SecureHash {
+    return if (privacySalt != null)
+        serializedHash(x, computeNonce(privacySalt, index))
+    else
+        (x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes).sha256()
 }
+
+fun <T : Any> serializedHash(x: T, nonce: SecureHash): SecureHash {
+    return if (x !is PrivacySalt) // PrivacySalt is not required to have an accompanied nonce.
+        (x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes + nonce.bytes).sha256()
+    else
+        (x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes).sha256()
+}
+
+fun computeNonce(privacySalt: PrivacySalt, index: Int) = (privacySalt.bytes + ByteBuffer.allocate(4).putInt(index).array()).sha256()
 
 /**
  * Implemented by [WireTransaction] and [FilteredLeaves]. A TraversableTransaction allows you to iterate
@@ -32,6 +45,7 @@ interface TraversableTransaction {
     val notary: Party?
     val type: TransactionType?
     val timeWindow: TimeWindow?
+    val privacySalt: PrivacySalt?
 
     /**
      * Returns a flattened list of all the components that are present in the transaction, in the following order:
@@ -54,6 +68,7 @@ interface TraversableTransaction {
             notary?.let { result += it }
             type?.let { result += it }
             timeWindow?.let { result += it }
+            privacySalt?.let { result += it }
             return result
         }
 
@@ -62,7 +77,7 @@ interface TraversableTransaction {
      * The root of the tree is the transaction identifier. The tree structure is helpful for privacy, please
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
-    val availableComponentHashes: List<SecureHash> get() = availableComponents.map { serializedHash(it) }
+    val availableComponentHashes: List<SecureHash> get() = availableComponents.mapIndexed { index, it -> serializedHash(it, privacySalt, index) }
 }
 
 /**
@@ -77,8 +92,19 @@ class FilteredLeaves(
         override val commands: List<Command<*>>,
         override val notary: Party?,
         override val type: TransactionType?,
-        override val timeWindow: TimeWindow?
+        override val timeWindow: TimeWindow?,
+        override val privacySalt: PrivacySalt?,
+        val nonces: List<SecureHash>
 ) : TraversableTransaction {
+
+    init {
+        // PrivacySalt is the only component not requiring a nonce.
+        if (privacySalt != null)
+            require(availableComponents.size - 1 == nonces.size)
+        else
+            require(availableComponents.size == nonces.size)
+    }
+
     /**
      * Function that checks the whole filtered structure.
      * Force type checking on a structure that we obtained, so we don't sign more than expected.
@@ -92,6 +118,8 @@ class FilteredLeaves(
         val checkList = availableComponents.map { checkingFun(it) }
         return (!checkList.isEmpty()) && checkList.all { it }
     }
+
+    override val availableComponentHashes: List<SecureHash> get() = availableComponents.mapIndexed { index, it -> serializedHash(it, nonces[index]) }
 }
 
 /**

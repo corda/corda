@@ -1,13 +1,11 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.MerkleTree
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.keys
+import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -28,7 +26,18 @@ data class WireTransaction(
         override val notary: Party?,
         // TODO: remove type
         override val type: TransactionType,
-        override val timeWindow: TimeWindow?
+        override val timeWindow: TimeWindow?,
+        /**
+         * For privacy purposes, each part of a transaction should be accompanied by a nonce.
+         * To avoid storing a random number (nonce) per component, an initial "salt" is the sole value utilised,
+         * so that all component nonces are deterministically computed in the following way:
+         * nonce1 = H(salt || 1)
+         * nonce2 = H(salt || 2)
+         *
+         * Thus, all of the nonces are "independent" in the sense that knowing one or some of them, you can learn
+         * nothing about the rest.
+         */
+        override val privacySalt: PrivacySalt = PrivacySalt(secureRandomBytes(32))
 ) : CoreTransaction(), TraversableTransaction {
     init {
         checkBaseInvariants()
@@ -92,7 +101,7 @@ data class WireTransaction(
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, type)
+        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, type, privacySalt)
     }
 
     /**
@@ -109,21 +118,64 @@ data class WireTransaction(
 
     /**
      * Construction of partial transaction from WireTransaction based on filtering.
+     * Note that list of nonces to be sent is updated on the fly, based on the index of the filtered tx component.
      * @param filtering filtering over the whole WireTransaction
      * @returns FilteredLeaves used in PartialMerkleTree calculation and verification.
      */
     fun filterWithFun(filtering: Predicate<Any>): FilteredLeaves {
+        val nonces: MutableList<SecureHash> = mutableListOf()
+
+        fun notNullFalseAndNonceUpdate(elem: Any?, index: Int, nonces: MutableList<SecureHash>): Any? {
+            return if (elem == null || !filtering.test(elem))
+                null
+            else {
+                nonces.add(computeNonce(privacySalt, index))
+                elem
+            }
+        }
+
         fun notNullFalse(elem: Any?): Any? = if (elem == null || !filtering.test(elem)) null else elem
+
+        fun<T : Any> filterAndNoncesUpdate(filtering: Predicate<Any>, t: T, index: Int, nonces: MutableList<SecureHash>): Boolean {
+            return if (filtering.test(t)) {
+                nonces.add(computeNonce(privacySalt, index))
+                true
+            } else
+                false
+        }
+
         return FilteredLeaves(
-                inputs.filter { filtering.test(it) },
-                attachments.filter { filtering.test(it) },
-                outputs.filter { filtering.test(it) },
-                commands.filter { filtering.test(it) },
-                notNullFalse(notary) as Party?,
-                notNullFalse(type) as TransactionType?,
-                notNullFalse(timeWindow) as TimeWindow?
+                inputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index, nonces) },
+                attachments.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[0], nonces) },
+                outputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[1], nonces) },
+                commands.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[2], nonces) },
+                notNullFalseAndNonceUpdate(notary, offsets[3], nonces) as Party?,
+                notNullFalseAndNonceUpdate(type, offsets[4], nonces) as TransactionType?,
+                notNullFalseAndNonceUpdate(timeWindow, offsets[5], nonces) as TimeWindow?,
+                notNullFalse(privacySalt) as PrivacySalt?, // PrivacySalt doesn't need an accompanied nonce.
+                nonces
         )
     }
+
+    private fun indexOffsets(): List<Int> {
+        // No need to add zero index for inputs, thus offsets[0] corresponds to attachments and offsets[1] to outputs.
+        val offsets = mutableListOf(inputs.size, inputs.size + attachments.size)
+        offsets.add(offsets.last() + outputs.size)
+        offsets.add(offsets.last() + commands.size)
+        if (notary != null)
+            offsets.add(offsets.last() + 1)
+        else
+            offsets.add(offsets.last())
+        offsets.add(offsets.last() + 1) // For tx type.
+        if (timeWindow != null)
+            offsets.add(offsets.last() + 1)
+        else
+            offsets.add(offsets.last())
+        // No need to add offset for privacySalt as it doesn't require a nonce.
+        return offsets
+    }
+
+    val offsets: List<Int> by lazy { indexOffsets() }
 
     /**
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.

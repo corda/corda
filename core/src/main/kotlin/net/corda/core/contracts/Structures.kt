@@ -434,3 +434,11 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
     }
     throw FileNotFoundException(path)
 }
+
+/** A privacy salt is required to compute nonces per transaction component. */
+@CordaSerializable
+class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
+    init {
+        require(bytes.size == 32)
+    }
+}
