@@ -1,6 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.node.services.api.ServiceHubInternal

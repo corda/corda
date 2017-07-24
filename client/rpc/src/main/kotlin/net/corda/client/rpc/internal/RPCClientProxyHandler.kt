@@ -10,7 +10,7 @@ import com.google.common.cache.RemovalCause
 import com.google.common.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.LazyPool
 import net.corda.core.internal.LazyStickyPool

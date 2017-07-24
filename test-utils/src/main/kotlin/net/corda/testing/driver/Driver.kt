@@ -9,7 +9,6 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
-import net.corda.core.ThreadBox
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.crypto.X509Utilities
@@ -17,6 +16,7 @@ import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.div
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps

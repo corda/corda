@@ -1,11 +1,11 @@
 package net.corda.node.services.messaging
 
-import net.corda.core.ThreadBox
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.andForget
 import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -468,8 +468,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     private fun sendWithRetry(retryCount: Int, address: String, message: ClientMessage, retryId: Long) {
-        fun randomiseDuplicateId(message: ClientMessage) {
-            message.putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+        fun ClientMessage.randomiseDuplicateId() {
+            putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
         }
 
         log.trace { "Attempting to retry #$retryCount message delivery for $retryId" }
@@ -479,7 +479,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             return
         }
 
-        randomiseDuplicateId(message)
+        message.randomiseDuplicateId()
 
         state.locked {
             log.trace { "Retry #$retryCount sending message $message to $address for $retryId" }
