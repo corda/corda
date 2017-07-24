@@ -6,7 +6,6 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.serialize
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
@@ -25,10 +24,6 @@ import java.util.*
  * @param notary Notary used for the transaction. If null, this indicates the transaction DOES NOT have a notary.
  * When this is set to a non-null value, an output state can be added by just passing in a [ContractState] – a
  * [TransactionState] with this notary specified will be generated automatically.
- *
- * @param signers The set of public keys the transaction needs signatures for. The logic for building the signers set
- * can be customised for every [TransactionType]. E.g. in the general case it contains the command and notary public keys,
- * but for the [TransactionType.NotaryChange] transactions it is the set of all input [ContractState.participants].
  */
 open class TransactionBuilder(
         protected val type: TransactionType = TransactionType.General,
@@ -38,7 +33,6 @@ open class TransactionBuilder(
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
-        protected val signers: MutableSet<PublicKey> = mutableSetOf(),
         protected var window: TimeWindow? = null) {
     constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
@@ -52,7 +46,6 @@ open class TransactionBuilder(
             attachments = ArrayList(attachments),
             outputs = ArrayList(outputs),
             commands = ArrayList(commands),
-            signers = LinkedHashSet(signers),
             window = window
     )
 
@@ -76,7 +69,7 @@ open class TransactionBuilder(
     // DOCEND 1
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, window)
+            ArrayList(outputs), ArrayList(commands), notary, type, window)
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
@@ -89,7 +82,6 @@ open class TransactionBuilder(
     open fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder {
         val notary = stateAndRef.state.notary
         require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
-        signers.add(notary.owningKey)
         inputs.add(stateAndRef.ref)
         return this
     }
@@ -117,8 +109,6 @@ open class TransactionBuilder(
     }
 
     fun addCommand(arg: Command<*>): TransactionBuilder {
-        // TODO: replace pubkeys in commands with 'pointers' to keys in signers
-        signers.addAll(arg.signers)
         commands.add(arg)
         return this
     }
@@ -133,7 +123,6 @@ open class TransactionBuilder(
      */
     fun setTimeWindow(timeWindow: TimeWindow): TransactionBuilder {
         check(notary != null) { "Only notarised transactions can have a time-window" }
-        signers.add(notary!!.owningKey)
         window = timeWindow
         return this
     }
@@ -175,7 +164,8 @@ open class TransactionBuilder(
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
-            val missing: Set<PublicKey> = signers.filter { !it.isFulfilledBy(gotKeys) }.toSet()
+            val requiredKeys = commands.flatMap { it.signers }.toSet()
+            val missing: Set<PublicKey> = requiredKeys.filter { !it.isFulfilledBy(gotKeys) }.toSet()
             if (missing.isNotEmpty())
                 throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.joinToString()}")
         }

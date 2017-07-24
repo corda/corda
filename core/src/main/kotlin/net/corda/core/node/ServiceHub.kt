@@ -87,7 +87,10 @@ interface ServiceHub : ServicesForResolution {
     @Throws(TransactionResolutionException::class)
     override fun loadState(stateRef: StateRef): TransactionState<*> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.tx.outputs[stateRef.index]
+        return if (stx.isNotaryChangeTransaction()) {
+            stx.resolveNotaryChangeTransaction(this).outputs[stateRef.index]
+        }
+        else stx.tx.outputs[stateRef.index]
     }
 
     /**
@@ -98,7 +101,10 @@ interface ServiceHub : ServicesForResolution {
     @Throws(TransactionResolutionException::class)
     fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.tx.outRef<T>(stateRef.index)
+        return if (stx.isNotaryChangeTransaction()) {
+            stx.resolveNotaryChangeTransaction(this).outRef<T>(stateRef.index)
+        }
+        else stx.tx.outRef<T>(stateRef.index)
     }
 
     /**
