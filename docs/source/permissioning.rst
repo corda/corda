@@ -15,12 +15,10 @@ Initial Registration
 The certificate signing request will be created based on node information obtained from the node configuration. 
 The following information from the node configuration file is needed to generate the request.
 
-:myLegalName: Your company's legal name. e.g. "Mega Corp LLC". This needs to be unique on the network. If another node
-    has already been permissioned with this name then the permissioning server will automatically reject the request. The
-    request will also be rejected if it violates legal name rules, see `Legal Name Constraints`_ for more information.
-
-    .. note:: In a future version the uniqueness requirement will be relaxed to a X.500 name. This will allow differentiation
-        between entities with the same name.
+:myLegalName: Your company's legal name as an X.500 string. X.500 allows differentiation between entities with the same
+    name as the legal name needs to be unique on the network. If another node has already been permissioned with this
+    name then the permissioning server will automatically reject the request. The request will also be rejected if it
+    violates legal name rules, see `Legal Name Constraints`_ for more information.
 
 :emailAddress: e.g. "admin@company.com"
 
