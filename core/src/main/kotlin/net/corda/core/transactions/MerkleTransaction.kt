@@ -29,7 +29,7 @@ interface TraversableTransaction {
     val inputs: List<StateRef>
     val attachments: List<SecureHash>
     val outputs: List<TransactionState<ContractState>>
-    val commands: List<Command>
+    val commands: List<Command<*>>
     val notary: Party?
     val mustSign: List<PublicKey>
     val type: TransactionType?
@@ -77,7 +77,7 @@ class FilteredLeaves(
         override val inputs: List<StateRef>,
         override val attachments: List<SecureHash>,
         override val outputs: List<TransactionState<ContractState>>,
-        override val commands: List<Command>,
+        override val commands: List<Command<*>>,
         override val notary: Party?,
         override val mustSign: List<PublicKey>,
         override val type: TransactionType?,

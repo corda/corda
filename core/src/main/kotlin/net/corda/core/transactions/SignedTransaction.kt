@@ -10,6 +10,8 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
 import java.security.PublicKey
@@ -34,20 +36,21 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
                              val sigs: List<DigitalSignature.WithKey>
 ) : NamedByHash {
 // DOCEND 1
+    constructor(wtx: WireTransaction, sigs: List<DigitalSignature.WithKey>) : this(wtx.serialize(), sigs) {
+        cachedTransaction = wtx
+    }
+
     init {
         require(sigs.isNotEmpty())
     }
 
-    // TODO: This needs to be reworked to ensure that the inner WireTransaction is only ever deserialised sandboxed.
+    /** Cache the deserialized form of the transaction. This is useful when building a transaction or collecting signatures. */
+    @Volatile @Transient private var cachedTransaction: WireTransaction? = null
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
-    val tx: WireTransaction by lazy { WireTransaction.deserialize(txBits) }
+    val tx: WireTransaction get() = cachedTransaction ?: txBits.deserialize().apply { cachedTransaction = this }
 
-    /**
-     * The Merkle root of the inner [WireTransaction]. Note that this is _not_ the same as the simple hash of
-     * [txBits], which would not use the Merkle tree structure. If the difference isn't clear, please consult
-     * the user guide section "Transaction tear-offs" to learn more about Merkle trees.
-     */
+    /** The id of the contained [WireTransaction]. */
     override val id: SecureHash get() = tx.id
 
     @CordaSerializable
@@ -87,7 +90,6 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         val needed = getMissingSignatures() - allowedToBeMissing
         if (needed.isNotEmpty())
                 throw SignaturesMissingException(needed.toNonEmptySet(), getMissingKeyDescriptions(needed), id)
-        check(tx.id == id)
         return tx
     }
 
@@ -131,10 +133,21 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     }
 
     /** Returns the same transaction but with an additional (unchecked) signature. */
-    fun withAdditionalSignature(sig: DigitalSignature.WithKey) = copy(sigs = sigs + sig)
+    fun withAdditionalSignature(sig: DigitalSignature.WithKey) = copyWithCache(listOf(sig))
 
     /** Returns the same transaction but with an additional (unchecked) signatures. */
-    fun withAdditionalSignatures(sigList: Iterable<DigitalSignature.WithKey>) = copy(sigs = sigs + sigList)
+    fun withAdditionalSignatures(sigList: Iterable<DigitalSignature.WithKey>) = copyWithCache(sigList)
+
+    /**
+     * Creates a copy of the SignedTransaction that includes the provided [sigList]. Also propagates the [cachedTransaction]
+     * so the contained transaction does not need to be deserialized again.
+     */
+    private fun copyWithCache(sigList: Iterable<DigitalSignature.WithKey>): SignedTransaction {
+        val cached = cachedTransaction
+        return copy(sigs = sigs + sigList).apply {
+            cachedTransaction = cached
+        }
+    }
 
     /** Alias for [withAdditionalSignature] to let you use Kotlin operator overloading. */
     operator fun plus(sig: DigitalSignature.WithKey) = withAdditionalSignature(sig)

@@ -1,10 +1,7 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionType
-import net.corda.core.contracts.UpgradedContract
-import net.corda.core.contracts.requireThat
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousPartyAndPath
@@ -121,7 +118,10 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
             "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" using (proposal.modification == authorisedUpgrade)
             "The proposed tx matches the expected tx for this upgrade" using (proposedTx == expectedTx)
         }
-        ContractUpgradeFlow.verify(oldStateAndRef.state.data, expectedTx.outRef<ContractState>(0).state.data, expectedTx.commands.single())
+        ContractUpgradeFlow.verify(
+                oldStateAndRef.state.data,
+                expectedTx.outRef<ContractState>(0).state.data,
+                expectedTx.toLedgerTransaction(serviceHub).commandsOfType<UpgradeCommand>().single())
     }
 }
 

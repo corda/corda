@@ -51,12 +51,12 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     fun fixCmdFilter(elem: Any): Boolean {
         return when (elem) {
-            is Command -> oracle.identity.owningKey in elem.signers && elem.value is Fix
+            is Command<*> -> oracle.identity.owningKey in elem.signers && elem.value is Fix
             else -> false
         }
     }
 
-    fun filterCmds(elem: Any): Boolean = elem is Command
+    fun filterCmds(elem: Any): Boolean = elem is Command<*>
 
     @Before
     fun setUp() {
@@ -179,7 +179,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
             fun filtering(elem: Any): Boolean {
                 return when (elem) {
-                    is Command -> oracle.identity.owningKey in elem.signers && elem.value is Fix
+                    is Command<*> -> oracle.identity.owningKey in elem.signers && elem.value is Fix
                     is TransactionState<ContractState> -> true
                     else -> false
                 }
@@ -234,7 +234,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         : RatesFixFlow(tx, oracle, fixOf, expectedRate, rateTolerance, progressTracker) {
         override fun filtering(elem: Any): Boolean {
             return when (elem) {
-                is Command -> oracle.owningKey in elem.signers && elem.value is Fix
+                is Command<*> -> oracle.owningKey in elem.signers && elem.value is Fix
                 else -> false
             }
         }

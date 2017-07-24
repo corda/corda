@@ -104,4 +104,18 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
         val stx = notaryServices.addSignature(ptx)
         assertEquals(TEST_TX_TIME, stx.tx.timeWindow?.midpoint)
     }
+
+    @Test
+    fun storeAndLoadWhenSigning() {
+        val ptx = megaCorpServices.signInitialTransaction(tx)
+        ptx.verifySignaturesExcept(notaryServices.key.public)
+
+        val stored = ptx.serialize()
+        val loaded = stored.deserialize()
+
+        assertEquals(loaded, ptx)
+
+        val final = notaryServices.addSignature(loaded)
+        final.verifyRequiredSignatures()
+    }
 }

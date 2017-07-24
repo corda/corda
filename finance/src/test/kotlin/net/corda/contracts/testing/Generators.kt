@@ -56,8 +56,8 @@ class CommandDataGenerator : Generator<CommandData>(CommandData::class.java) {
     }
 }
 
-class CommandGenerator : Generator<Command>(Command::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Command {
+class CommandGenerator : Generator<Command<*>>(Command::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Command<*> {
         val signersGenerator = ArrayListGenerator()
         signersGenerator.addComponentGenerators(listOf(PublicKeyGenerator()))
         return Command(CommandDataGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
@@ -84,7 +84,7 @@ class SignedTransactionGenerator : Generator<SignedTransaction>(SignedTransactio
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): SignedTransaction {
         val wireTransaction = WiredTransactionGenerator().generate(random, status)
         return SignedTransaction(
-                txBits = wireTransaction.serialized,
+                wtx = wireTransaction,
                 sigs = listOf(NullSignature)
         )
     }

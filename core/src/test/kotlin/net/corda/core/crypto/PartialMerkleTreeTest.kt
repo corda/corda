@@ -6,6 +6,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.Party
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.*
@@ -101,7 +102,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
             return when (elem) {
                 is StateRef -> true
                 is TransactionState<*> -> elem.data.participants[0].owningKey.keys == MINI_CORP_PUBKEY.keys
-                is Command -> MEGA_CORP_PUBKEY in elem.signers
+                is Command<*> -> MEGA_CORP_PUBKEY in elem.signers
                 is TimeWindow -> true
                 is PublicKey -> elem == MEGA_CORP_PUBKEY
                 else -> false
@@ -110,7 +111,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
 
         val mt = testTx.buildFilteredTransaction(Predicate(::filtering))
         val leaves = mt.filteredLeaves
-        val d = WireTransaction.deserialize(testTx.serialized)
+        val d = testTx.serialize().deserialize()
         assertEquals(testTx.id, d.id)
         assertEquals(1, leaves.commands.size)
         assertEquals(1, leaves.outputs.size)
