@@ -8,8 +8,7 @@ already installed. You run each node by navigating to ``<node_dir>`` in a termin
 
 .. code-block:: shell
 
-   Windows:   java -jar corda.jar
-   UNIX:      ./corda.jar
+   java -jar corda.jar
 
 .. warning:: If your working directory is not ``<node_dir>`` your plugins and configuration will not be used.
 
