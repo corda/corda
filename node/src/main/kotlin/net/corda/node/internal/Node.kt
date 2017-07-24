@@ -353,8 +353,7 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     override fun createBFTSMaRtCluster(): BFTSMaRt.Cluster {
         return object : BFTSMaRt.Cluster {
-            override fun waitUntilAllReplicasHaveInitialized(client: BFTSMaRt.Client) {
-                client.awaitClientConnectionToCluster() // Almost does enough.
+            override fun waitUntilAllReplicasHaveInitialized() {
                 log.warn("Assume all BFT replicas have initialized.")
             }
         }

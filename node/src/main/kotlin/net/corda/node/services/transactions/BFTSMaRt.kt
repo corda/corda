@@ -73,7 +73,7 @@ object BFTSMaRt {
 
     interface Cluster {
         /** Avoid bug where a replica fails to start due to a consensus change during the BFT startup sequence. */
-        fun waitUntilAllReplicasHaveInitialized(client: Client)
+        fun waitUntilAllReplicasHaveInitialized()
     }
 
     class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster) : SingletonSerializeAsToken() {
@@ -89,7 +89,7 @@ object BFTSMaRt {
             proxy.close() // XXX: Does this do enough?
         }
 
-        internal fun awaitClientConnectionToCluster() {
+        private fun awaitClientConnectionToCluster() {
             // TODO: Hopefully we only need to wait for the client's initial connection to the cluster, and this method can be moved to some startup code.
             while (true) {
                 val inactive = sessionTable.entries.mapNotNull { if (it.value.channel.isActive) null else it.key }
@@ -105,7 +105,8 @@ object BFTSMaRt {
          */
         fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
             require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
-            cluster.waitUntilAllReplicasHaveInitialized(this)
+            awaitClientConnectionToCluster()
+            cluster.waitUntilAllReplicasHaveInitialized()
             val requestBytes = CommitRequest(transaction, otherSide).serialize().bytes
             val responseBytes = proxy.invokeOrdered(requestBytes)
             return responseBytes.deserialize<ClusterResponse>()

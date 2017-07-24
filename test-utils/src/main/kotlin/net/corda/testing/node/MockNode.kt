@@ -263,7 +263,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun createBFTSMaRtCluster(): BFTSMaRt.Cluster {
             return object : BFTSMaRt.Cluster {
-                override fun waitUntilAllReplicasHaveInitialized(client: BFTSMaRt.Client) {
+                override fun waitUntilAllReplicasHaveInitialized() {
                     val clusterNodes = mockNet.nodes.filter {
                         services.notaryIdentityKey in it.info.serviceIdentities(BFTNonValidatingNotaryService.type).map { it.owningKey }
                     }
