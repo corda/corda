@@ -9,7 +9,6 @@ import com.google.common.util.concurrent.SettableFuture
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.crypto.*
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.flatMap
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -23,7 +22,6 @@ import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -160,7 +158,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
     }
 
-    open fun start(): AbstractNode {
+    open fun start() {
         require(!started) { "Node has already been started" }
 
         if (configuration.devMode) {
@@ -221,7 +219,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             _services.schedulerService.start()
         }
         started = true
-        return this
     }
 
     private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
@@ -564,14 +561,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         } else {
             throw DatabaseConfigurationException("There must be a database configured.")
         }
-    }
-
-    /**
-     * Run any tasks that are needed to ensure the node is in a correct state before running start().
-     */
-    open fun setup(): AbstractNode {
-        configuration.baseDirectory.createDirectories()
-        return this
     }
 
     private fun makeAdvertisedServices(tokenizableServices: MutableList<Any>) {

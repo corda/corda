@@ -122,7 +122,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                     baseDirectory = config.baseDirectory,
                     myLegalName = RATES_SERVICE_NAME)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
-                override fun start(): MockNetwork.MockNode {
+                override fun start() {
                     super.start()
                     registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
                     registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
@@ -131,7 +131,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             installCordaService(NodeInterestRates.Oracle::class.java).uploadFixes(it.reader().readText())
                         }
                     }
-                    return this
                 }
             }
         }
