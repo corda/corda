@@ -1,8 +1,6 @@
 package net.corda.contracts.asset
 
-import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
@@ -10,13 +8,15 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
+import net.corda.testing.contracts.DummyState
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -26,7 +26,7 @@ import java.security.KeyPair
 import java.util.*
 import kotlin.test.*
 
-class CashTests {
+class CashTests : TestDependencyInjectionBase() {
     val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
     val inState = Cash.State(
@@ -76,6 +76,7 @@ class CashTests {
 
             vaultStatesUnconsumed = miniCorpServices.vaultService.unconsumedStates<Cash.State>().toList()
         }
+        resetTestSerialization()
     }
 
     @Test
@@ -152,12 +153,13 @@ class CashTests {
 
     @Test
     fun generateIssueRaw() {
+        initialiseTestSerialization()
         // Test generation works.
         val tx: WireTransaction = TransactionType.General.Builder(notary = null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = AnonymousParty(DUMMY_PUBKEY_1), notary = DUMMY_NOTARY)
         }.toWireTransaction()
         assertTrue(tx.inputs.isEmpty())
-        val s = tx.outputs[0].data as Cash.State
+        val s = tx.outputsOfType<Cash.State>().single()
         assertEquals(100.DOLLARS `issued by` MINI_CORP.ref(12, 34), s.amount)
         assertEquals(MINI_CORP as AbstractParty, s.amount.token.issuer.party)
         assertEquals(AnonymousParty(DUMMY_PUBKEY_1), s.owner)
@@ -167,6 +169,7 @@ class CashTests {
 
     @Test
     fun generateIssueFromAmount() {
+        initialiseTestSerialization()
         // Test issuance from an issued amount
         val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
         val tx: WireTransaction = TransactionType.General.Builder(notary = null).apply {
@@ -239,6 +242,7 @@ class CashTests {
      */
     @Test(expected = IllegalStateException::class)
     fun `reject issuance with inputs`() {
+        initialiseTestSerialization()
         // Issue some cash
         var ptx = TransactionType.General.Builder(DUMMY_NOTARY)
 
@@ -490,6 +494,7 @@ class CashTests {
      */
     @Test
     fun generateSimpleExit() {
+        initialiseTestSerialization()
         val wtx = makeExit(100.DOLLARS, MEGA_CORP, 1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(0, wtx.outputs.size)
@@ -505,10 +510,11 @@ class CashTests {
      */
     @Test
     fun generatePartialExit() {
+        initialiseTestSerialization()
         val wtx = makeExit(50.DOLLARS, MEGA_CORP, 1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(1, wtx.outputs.size)
-        assertEquals(WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount.splitEvenly(2).first()), wtx.outputs[0].data)
+        assertEquals(WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount.splitEvenly(2).first()), wtx.getOutput(0))
     }
 
     /**
@@ -516,6 +522,7 @@ class CashTests {
      */
     @Test
     fun generateAbsentExit() {
+        initialiseTestSerialization()
         assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, MEGA_CORP, 1) }
     }
 
@@ -524,6 +531,7 @@ class CashTests {
      */
     @Test
     fun generateInvalidReferenceExit() {
+        initialiseTestSerialization()
         assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, MEGA_CORP, 2) }
     }
 
@@ -532,6 +540,7 @@ class CashTests {
      */
     @Test
     fun generateInsufficientExit() {
+        initialiseTestSerialization()
         assertFailsWith<InsufficientBalanceException> { makeExit(1000.DOLLARS, MEGA_CORP, 1) }
     }
 
@@ -540,6 +549,7 @@ class CashTests {
      */
     @Test
     fun generateOwnerWithNoStatesExit() {
+        initialiseTestSerialization()
         assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, CHARLIE, 1) }
     }
 
@@ -548,6 +558,7 @@ class CashTests {
      */
     @Test
     fun generateExitWithEmptyVault() {
+        initialiseTestSerialization()
         assertFailsWith<InsufficientBalanceException> {
             val tx = TransactionType.General.Builder(DUMMY_NOTARY)
             Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList())
@@ -556,22 +567,21 @@ class CashTests {
 
     @Test
     fun generateSimpleDirectSpend() {
-
+        initialiseTestSerialization()
         database.transaction {
-
             val wtx = makeSpend(100.DOLLARS, THEIR_IDENTITY_1)
 
             @Suppress("UNCHECKED_CAST")
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             assertEquals(vaultState.ref, wtx.inputs[0])
-            assertEquals(vaultState.state.data.copy(owner = THEIR_IDENTITY_1), wtx.outputs[0].data)
+            assertEquals(vaultState.state.data.copy(owner = THEIR_IDENTITY_1), wtx.getOutput(0))
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
 
     @Test
     fun generateSimpleSpendWithParties() {
-
+        initialiseTestSerialization()
         database.transaction {
 
             val tx = TransactionType.General.Builder(DUMMY_NOTARY)
@@ -583,7 +593,7 @@ class CashTests {
 
     @Test
     fun generateSimpleSpendWithChange() {
-
+        initialiseTestSerialization()
         database.transaction {
 
             val wtx = makeSpend(10.DOLLARS, THEIR_IDENTITY_1)
@@ -599,7 +609,7 @@ class CashTests {
 
     @Test
     fun generateSpendWithTwoInputs() {
-
+        initialiseTestSerialization()
         database.transaction {
             val wtx = makeSpend(500.DOLLARS, THEIR_IDENTITY_1)
 
@@ -608,14 +618,14 @@ class CashTests {
             val vaultState1 = vaultStatesUnconsumed.elementAt(1)
             assertEquals(vaultState0.ref, wtx.inputs[0])
             assertEquals(vaultState1.ref, wtx.inputs[1])
-            assertEquals(vaultState0.state.data.copy(owner = THEIR_IDENTITY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
+            assertEquals(vaultState0.state.data.copy(owner = THEIR_IDENTITY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.getOutput(0))
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
 
     @Test
     fun generateSpendMixedDeposits() {
-
+        initialiseTestSerialization()
         database.transaction {
             val wtx = makeSpend(580.DOLLARS, THEIR_IDENTITY_1)
             assertEquals(3, wtx.inputs.size)
@@ -629,14 +639,14 @@ class CashTests {
             assertEquals(vaultState1.ref, wtx.inputs[1])
             assertEquals(vaultState2.ref, wtx.inputs[2])
             assertEquals(vaultState0.state.data.copy(owner = THEIR_IDENTITY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
-            assertEquals(vaultState2.state.data.copy(owner = THEIR_IDENTITY_1), wtx.outputs[0].data)
+            assertEquals(vaultState2.state.data.copy(owner = THEIR_IDENTITY_1), wtx.getOutput(0))
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
 
     @Test
     fun generateSpendInsufficientBalance() {
-
+        initialiseTestSerialization()
         database.transaction {
 
             val e: InsufficientBalanceException = assertFailsWith("balance") {

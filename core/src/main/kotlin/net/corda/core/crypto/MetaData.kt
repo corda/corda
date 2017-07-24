@@ -1,8 +1,8 @@
 package net.corda.core.crypto
 
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.opaque
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.sequence
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -51,7 +51,7 @@ open class MetaData(
         if (timestamp != other.timestamp) return false
         if (visibleInputs != other.visibleInputs) return false
         if (signedInputs != other.signedInputs) return false
-        if (merkleRoot.opaque() != other.merkleRoot.opaque()) return false
+        if (merkleRoot.sequence() != other.merkleRoot.sequence()) return false
         if (publicKey != other.publicKey) return false
         return true
     }

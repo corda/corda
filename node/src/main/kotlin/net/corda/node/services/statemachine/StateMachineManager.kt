@@ -2,21 +2,13 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
-import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
-import com.esotericsoftware.kryo.ClassResolver
-import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
-import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import io.requery.util.CloseableIterator
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
@@ -25,9 +17,10 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.declaredField
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.then
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
@@ -84,34 +77,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                           private val unfinishedFibers: ReusableLatch = ReusableLatch()) {
 
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
-
-    private val quasarKryoPool = KryoPool.Builder {
-        val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-        val classResolver = makeNoWhitelistClassResolver().apply { setKryo(serializer.kryo) }
-        serializer.kryo.apply {
-            // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
-            declaredField<ClassResolver>(Kryo::class, "classResolver").value = classResolver
-            DefaultKryoCustomizer.customize(this)
-            addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
-        }
-    }.build()
-
-    // TODO Move this into the blacklist and upgrade the blacklist to allow custom messages
-    private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
-        override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
-            val message = if (closeable is CloseableIterator<*>) {
-                "A live Iterator pointing to the database has been detected during flow checkpointing. This may be due " +
-                        "to a Vault query - move it into a private method."
-            } else {
-                "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
-                        "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
-                        "confined to a private method or the reference is nulled out."
-            }
-            throw UnsupportedOperationException(message)
-        }
-
-        override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
-    }
 
     companion object {
         private val logger = loggerFor<StateMachineManager>()
@@ -173,7 +138,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     internal val tokenizableServices = ArrayList<Any>()
     // Context for tokenized services in checkpoints
     private val serializationContext by lazy {
-        SerializeAsTokenContext(tokenizableServices, quasarKryoPool, serviceHub)
+        SerializeAsTokenContext(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
     }
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
@@ -410,22 +375,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
-        return quasarKryoPool.run { kryo ->
-            // add the map of tokens -> tokenizedServices to the kyro context
-            kryo.withSerializationContext(serializationContext) {
-                fiber.serialize(kryo)
-            }
-        }
+        return fiber.serialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext))
     }
 
     private fun deserializeFiber(checkpoint: Checkpoint, logger: Logger): FlowStateMachineImpl<*>? {
         return try {
-            quasarKryoPool.run { kryo ->
-                // put the map of token -> tokenized into the kryo context
-                kryo.withSerializationContext(serializationContext) {
-                    checkpoint.serializedFiber.deserialize(kryo)
-                }.apply { fromCheckpoint = true }
-            }
+            checkpoint.serializedFiber.deserialize<FlowStateMachineImpl<*>>(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext)).apply { fromCheckpoint = true }
         } catch (t: Throwable) {
             logger.error("Encountered unrestorable checkpoint!", t)
             null

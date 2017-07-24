@@ -6,8 +6,8 @@ import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import java.util.*
@@ -49,10 +49,7 @@ object IssuerFlow {
             return sendAndReceive<AbstractCashFlow.Result>(issuerBankParty, issueRequest).unwrap { res ->
                 val tx = res.stx.tx
                 val expectedAmount = Amount(amount.quantity, Issued(issuerBankParty.ref(issueToPartyRef), amount.token))
-                val cashOutputs = tx.outputs
-                        .map { it.data}
-                        .filterIsInstance<Cash.State>()
-                        .filter { state -> state.owner == res.recipient }
+                val cashOutputs = tx.filterOutputs<Cash.State> { state -> state.owner == res.recipient }
                 require(cashOutputs.size == 1) { "Require a single cash output paying ${res.recipient}, found ${tx.outputs}" }
                 require(cashOutputs.single().amount == expectedAmount) { "Require payment of $expectedAmount"}
                 res

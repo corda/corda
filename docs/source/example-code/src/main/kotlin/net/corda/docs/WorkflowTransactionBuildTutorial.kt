@@ -79,7 +79,7 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
                     "Issue of new WorkflowContract must not include any inputs" using (tx.inputs.isEmpty())
                     "Issue of new WorkflowContract must be in a unique transaction" using (tx.outputs.size == 1)
                 }
-                val issued = tx.outputs[0].data as TradeApprovalContract.State
+                val issued = tx.outputsOfType<TradeApprovalContract.State>().single()
                 requireThat {
                     "Issue requires the source Party as signer" using (command.signers.contains(issued.source.owningKey))
                     "Initial Issue state must be NEW" using (issued.state == WorkflowState.NEW)

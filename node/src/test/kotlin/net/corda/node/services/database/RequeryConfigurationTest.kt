@@ -5,7 +5,6 @@ import io.requery.kotlin.eq
 import io.requery.sql.KotlinEntityDataStore
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.testing.NullPublicKey
@@ -13,11 +12,8 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.storageKryo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_PUBKEY_1
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.schemas.requery.Models
 import net.corda.node.services.vault.schemas.requery.VaultCashBalancesEntity
@@ -25,6 +21,10 @@ import net.corda.node.services.vault.schemas.requery.VaultSchema
 import net.corda.node.services.vault.schemas.requery.VaultStatesEntity
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_PUBKEY_1
+import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions
 import org.junit.After
@@ -35,7 +35,7 @@ import org.junit.Test
 import java.time.Instant
 import java.util.*
 
-class RequeryConfigurationTest {
+class RequeryConfigurationTest : TestDependencyInjectionBase() {
 
     lateinit var database: CordaPersistence
     lateinit var transactionStorage: DBTransactionStorage
@@ -175,7 +175,7 @@ class RequeryConfigurationTest {
             index = txnState.index
             stateStatus = Vault.StateStatus.UNCONSUMED
             contractStateClassName = DummyContract.SingleOwnerState::class.java.name
-            contractState = DummyContract.SingleOwnerState(owner = AnonymousParty(DUMMY_PUBKEY_1)).serialize(storageKryo()).bytes
+            contractState = DummyContract.SingleOwnerState(owner = AnonymousParty(DUMMY_PUBKEY_1)).serialize().bytes
             notaryName = txn.tx.notary!!.name.toString()
             notaryKey = txn.tx.notary!!.owningKey.toBase58String()
             recordedTime = Instant.now()

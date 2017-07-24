@@ -1,18 +1,21 @@
 package net.corda.node.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.*
+import net.corda.core.andForget
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.getOrThrow
+import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.utilities.opaque
+import net.corda.core.thenMatch
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.sequence
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.RPCUserService
@@ -346,7 +349,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                                          private val message: ClientMessage) : ReceivedMessage {
         override val data: ByteArray by lazy { ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) } }
         override val debugTimestamp: Instant get() = Instant.ofEpochMilli(message.timestamp)
-        override fun toString() = "${topicSession.topic}#${data.opaque()}"
+        override fun toString() = "${topicSession.topic}#${data.sequence()}"
     }
 
     private fun deliver(msg: ReceivedMessage): Boolean {
@@ -465,8 +468,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     private fun sendWithRetry(retryCount: Int, address: String, message: ClientMessage, retryId: Long) {
-        fun randomiseDuplicateId(message: ClientMessage) {
-            message.putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+        fun ClientMessage.randomiseDuplicateId() {
+            putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
         }
 
         log.trace { "Attempting to retry #$retryCount message delivery for $retryId" }
@@ -476,7 +479,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             return
         }
 
-        randomiseDuplicateId(message)
+        message.randomiseDuplicateId()
 
         state.locked {
             log.trace { "Retry #$retryCount sending message $message to $address for $retryId" }

@@ -12,7 +12,7 @@ import io.requery.kotlin.notNull
 import io.requery.query.RowExpression
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.OnLedgerAsset
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -26,10 +26,10 @@ import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
+import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.storageKryo
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -95,7 +95,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                         index = it.key.index
                         stateStatus = Vault.StateStatus.UNCONSUMED
                         contractStateClassName = it.value.state.data.javaClass.name
-                        contractState = it.value.state.serialize(storageKryo()).bytes
+                        contractState = it.value.state.serialize(context = STORAGE_CONTEXT).bytes
                         notaryName = it.value.state.notary.name.toString()
                         notaryKey = it.value.state.notary.owningKey.toBase58String()
                         recordedTime = services.clock.instant()
@@ -198,7 +198,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                     Sequence { iterator }
                             .map { it ->
                                 val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                                val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                val state = it.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
                                 Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime)
                                 StateAndRef(state, stateRef)
                             }
@@ -217,7 +217,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                                 .and(VaultSchema.VaultStates::index eq it.index)
                         result.get()?.each {
                             val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                            val state = it.contractState.deserialize<TransactionState<*>>(storageKryo())
+                            val state = it.contractState.deserialize<TransactionState<*>>(context = STORAGE_CONTEXT)
                             results += StateAndRef(state, stateRef)
                         }
                     }
@@ -380,7 +380,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                         val txHash = SecureHash.parse(rs.getString(1))
                         val index = rs.getInt(2)
                         val stateRef = StateRef(txHash, index)
-                        val state = rs.getBytes(3).deserialize<TransactionState<T>>(storageKryo())
+                        val state = rs.getBytes(3).deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
                         val pennies = rs.getLong(4)
                         totalPennies = rs.getLong(5)
                         val rowLockId = rs.getString(6)
@@ -435,7 +435,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                     query.get()
                             .map { it ->
                                 val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                                val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                val state = it.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
                                 StateAndRef(state, stateRef)
                             }.toList()
                 }
@@ -457,7 +457,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         // Retrieve unspent and unlocked cash states that meet our spending criteria.
         val acceptableCoins = unconsumedStatesForSpending<Cash.State>(amount, onlyFromParties, tx.notary, tx.lockId)
         return OnLedgerAsset.generateSpend(tx, amount, to, acceptableCoins,
-                { state, amount, owner -> deriveState(state, amount, owner) },
+                { state, quantity, owner -> deriveState(state, quantity, owner) },
                 { Cash().generateMoveCommand() })
     }
 
@@ -466,9 +466,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     @VisibleForTesting
     internal fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
-        val ourNewStates = tx.outputs.
-                filter { isRelevant(it.data, ourKeys) }.
-                map { tx.outRef<ContractState>(it.data) }
+        val ourNewStates = tx.filterOutRefs<ContractState> { isRelevant(it, ourKeys) }
 
         // Retrieve all unconsumed states for this transaction's inputs
         val consumedStates = HashSet<StateAndRef<ContractState>>()
@@ -480,7 +478,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 result.get().forEach {
                     val txHash = SecureHash.parse(it.txId)
                     val index = it.index
-                    val state = it.contractState.deserialize<TransactionState<ContractState>>(storageKryo())
+                    val state = it.contractState.deserialize<TransactionState<ContractState>>(context = STORAGE_CONTEXT)
                     consumedStates.add(StateAndRef(state, StateRef(txHash, index)))
                 }
             }

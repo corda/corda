@@ -51,12 +51,13 @@ class NodeMonitorModel {
      * Register for updates to/from a given vault.
      * TODO provide an unsubscribe mechanism
      */
-    fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
+    fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String, initialiseSerialization: Boolean = true) {
         val client = CordaRPCClient(
                 hostAndPort = nodeHostAndPort,
                 configuration = CordaRPCClientConfiguration.default.copy(
                         connectionMaxRetryInterval = 10.seconds
-                )
+                ),
+                initialiseSerialization = initialiseSerialization
         )
         val connection = client.start(username, password)
         val proxy = connection.proxy
