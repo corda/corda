@@ -82,7 +82,7 @@ class NodeConfigTest {
 
     @Test
     fun `test services`() {
-        val config = createConfig(services = listOf("my.service"))
+        val config = createConfig(services = mutableListOf("my.service"))
         assertEquals(listOf("my.service"), config.extraServices)
     }
 
@@ -107,13 +107,13 @@ class NodeConfigTest {
 
     @Test
     fun `test cash issuer`() {
-        val config = createConfig(services = listOf("corda.issuer.GBP"))
+        val config = createConfig(services = mutableListOf("corda.issuer.GBP"))
         assertTrue(config.isCashIssuer)
     }
 
     @Test
     fun `test not cash issuer`() {
-        val config = createConfig(services = listOf("corda.issuerubbish"))
+        val config = createConfig(services = mutableListOf("corda.issuerubbish"))
         assertFalse(config.isCashIssuer)
     }
 
@@ -138,7 +138,7 @@ class NodeConfigTest {
                 rpcPort = 40002,
                 webPort = 20001,
                 h2Port = 30001,
-                services = listOf("my.service"),
+                services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
         assertEquals(prettyPrint("{"
@@ -164,7 +164,7 @@ class NodeConfigTest {
                 rpcPort = 40002,
                 webPort = 20001,
                 h2Port = 30001,
-                services = listOf("my.service"),
+                services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
@@ -193,7 +193,7 @@ class NodeConfigTest {
                 rpcPort = 40002,
                 webPort = 20001,
                 h2Port = 30001,
-                services = listOf("my.service"),
+                services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
@@ -223,7 +223,7 @@ class NodeConfigTest {
                 rpcPort = 40002,
                 webPort = 20001,
                 h2Port = 30001,
-                services = listOf("my.service"),
+                services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
@@ -257,7 +257,7 @@ class NodeConfigTest {
             rpcPort: Int = -1,
             webPort: Int = -1,
             h2Port: Int = -1,
-            services: List<String> = listOf("extra.service"),
+            services: MutableList<String> = mutableListOf("extra.service"),
             users: List<User> = listOf(user("guest"))
     ) = NodeConfig(
             baseDir,

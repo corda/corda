@@ -255,8 +255,6 @@ open class Node(override val configuration: FullNodeConfiguration,
         (network as NodeMessagingClient).start(rpcOps, userService)
     }
 
-    override fun makeNetworkMapCache() = InMemoryNetworkMapCache(true, services)
-
     /**
      * Insert an initial step in the registration process which will throw an exception if a non-recoverable error is
      * encountered when trying to connect to the network map node.

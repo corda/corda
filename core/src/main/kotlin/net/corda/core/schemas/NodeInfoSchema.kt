@@ -19,13 +19,15 @@ import javax.persistence.CascadeType
 import javax.persistence.Column
 import javax.persistence.ElementCollection
 import javax.persistence.Embeddable
-import javax.persistence.Embedded
+import javax.persistence.EmbeddedId
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.Id
 import javax.persistence.JoinColumn
+import javax.persistence.JoinTable
 import javax.persistence.Lob
 import javax.persistence.ManyToMany
+import javax.persistence.OneToMany
 import javax.persistence.Table
 
 object NodeInfoSchema
@@ -33,7 +35,7 @@ object NodeInfoSchema
 object NodeInfoSchemaV1 : MappedSchema(
         schemaFamily = NodeInfoSchema.javaClass,
         version = 1,
-        mappedTypes = listOf(PersistentNodeInfo::class.java, DBPartyAndCertificate::class.java)
+        mappedTypes = listOf(PersistentNodeInfo::class.java, DBPartyAndCertificate::class.java, DBHostAndPort::class.java)
 ) {
     @Entity
     @Table(name = "node_infos")
@@ -43,14 +45,15 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "node_info_id")
             var id: Int,
 
-            // TODO bidirectional OneToMany, or just composite id
             @Column(name = "addresses")
-            @ElementCollection
-            @Embedded
+            @OneToMany(cascade = arrayOf(CascadeType.ALL), orphanRemoval = true)
             val addresses: List<NodeInfoSchemaV1.DBHostAndPort>,
 
             @Column(name = "legal_identities_certs")
             @ManyToMany(cascade = arrayOf(CascadeType.ALL))
+            @JoinTable(name = "link_nodeInfo_party",
+                    joinColumns = arrayOf(JoinColumn(name="node_info_id")),
+                    inverseJoinColumns = arrayOf(JoinColumn(name="party_name")))
             val legalIdentitiesAndCerts: Set<DBPartyAndCertificate>,
 
             @Column(name = "platform_version")
@@ -76,39 +79,40 @@ object NodeInfoSchemaV1 : MappedSchema(
     }
 
     @Embeddable
+    data class PKHostAndPort(
+            val host: String? = null,
+            val port: Int? = null
+    ) : Serializable
+
+    @Entity // I am not sure if we really need proliferation of entities, but design doc says about queries on address.
     class DBHostAndPort(
-            val host: String?,
-            val port: Int?
-    ) {
-        constructor(): this(null, null)
+                @EmbeddedId
+                private val pk: PKHostAndPort
+    ) : Serializable {
         companion object {
             fun fromHostAndPort(hostAndPort: NetworkHostAndPort) = DBHostAndPort(
-                    hostAndPort.host,
-                    hostAndPort.port
+                    PKHostAndPort(hostAndPort.host, hostAndPort.port)
             )
         }
         fun toHostAndPort(): NetworkHostAndPort {
-            return NetworkHostAndPort(this.host!!, this.port!!)
+            return NetworkHostAndPort(this.pk.host!!, this.pk.port!!)
         }
     }
 
-    @Embeddable
+    @Embeddable // TODO To be removed with services.
     class DBServiceEntry(
             @Column(length = 65535)
-            val serviceEntry: ByteArray?
-    ) {
-        constructor(): this(null)
-    }
+            val serviceEntry: ByteArray? = null
+    )
 
     // TODO It's probably not worth storing this way.
     @Embeddable
     class DBWorldMapLocation(
-            val latitude: Double?,
-            val longitude: Double?,
-            val description: String?,
-            val countryCode: String?
+            val latitude: Double? = null,
+            val longitude: Double? = null,
+            val description: String? = null,
+            val countryCode: String? = null
     ) {
-        constructor(): this(null, null, null, null)
         constructor(location: WorldMapLocation): this(
                 location.coordinate.latitude,
                 location.coordinate.longitude,
@@ -128,12 +132,12 @@ object NodeInfoSchemaV1 : MappedSchema(
      */
     @Entity
     @Table(name = "node_info_party_cert")
-            //indexes = arrayOf(Index(name = "party_cert_idx", columnList = "party_name")))
     class DBPartyAndCertificate(
+            @Id
             @Column(name = "owning_key", length = 65535, nullable = false)
             val owningKey: String,
 
-            @Id // TODO Do we assume that names are unique?
+            //@Id // TODO Do we assume that names are unique? Note: We can't have it as Id, because our toString on X500 is inconsistent.
             @Column(name = "party_name", nullable = false)
             val name: String,
 

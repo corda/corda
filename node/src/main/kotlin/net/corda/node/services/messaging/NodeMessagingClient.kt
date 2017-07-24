@@ -268,7 +268,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
      * the original and make another without a filter.  We do this so that there is a network map in place for all other
      * message handlers.
      */
-    private fun makeP2PConsumer(session: ClientSession, networkMapOnly: Boolean): ClientConsumer { // TODO Get rid of this.
+    private fun makeP2PConsumer(session: ClientSession, networkMapOnly: Boolean): ClientConsumer {
         return if (networkMapOnly) {
             // Filter for just the network map messages.
             val messageFilter = "hyphenated_props:$topicProperty like 'platform.network_map.%'"
