@@ -15,9 +15,25 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
         }
     }
 
+    // because this might be an array of array of primitives (to any recursive depth) and
+    // because we care that the lowest type is unboxed we can't rely on the inbuilt type
+    // id to generate it properly (it will always return [[[Ljava.lang.type -> type[][][]
+    // for example).
+    //
+    // We *need* to retain knowledge for AMQP deserialisation weather that lowest primitive
+    // was boxed or unboxed so just infer it recursively
+    private fun calcTypeName(type: Type) : String =
+        if (type.componentType().isArray()) {
+            val typeName = calcTypeName(type.componentType()); "$typeName[]"
+        }
+        else {
+            val arrayType = if (type.asClass()!!.componentType.isPrimitive) "[p]" else "[]"
+            "${type.componentType().typeName}$arrayType"
+        }
+
     override val typeDescriptor by lazy { "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}" }
     internal val elementType: Type by lazy { type.componentType() }
-    internal open val typeName by lazy { type.typeName }
+    internal open val typeName by lazy { calcTypeName(type) }
 
     internal val typeNotation: TypeNotation by lazy {
         RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
@@ -73,13 +89,13 @@ abstract class PrimArraySerializer(type: Type, factory: SerializerFactory) : Arr
         // We don't need to handle the unboxed byte type as that is coercible to a byte array, but
         // the other 7 primitive types we do
         val primTypes: Map<Type, (SerializerFactory) -> PrimArraySerializer> = mapOf(
-                IntArray::class.java to { f -> PrimIntArraySerializer(f, "int[p]") },
-                CharArray::class.java to { f -> PrimCharArraySerializer(f, "char[p]") },
-                BooleanArray::class.java to { f -> PrimBooleanArraySerializer(f, "boolean[p]") },
-                FloatArray::class.java to { f -> PrimFloatArraySerializer(f, "float[p]") },
-                ShortArray::class.java to { f -> PrimShortArraySerializer(f, "short[p]") },
-                DoubleArray::class.java to { f -> PrimDoubleArraySerializer(f, "double[p]") },
-                LongArray::class.java to { f -> PrimLongArraySerializer(f, "long[p]") }
+                IntArray::class.java to { f -> PrimIntArraySerializer(f) },
+                CharArray::class.java to { f -> PrimCharArraySerializer(f) },
+                BooleanArray::class.java to { f -> PrimBooleanArraySerializer(f) },
+                FloatArray::class.java to { f -> PrimFloatArraySerializer(f) },
+                ShortArray::class.java to { f -> PrimShortArraySerializer(f) },
+                DoubleArray::class.java to { f -> PrimDoubleArraySerializer(f) },
+                LongArray::class.java to { f -> PrimLongArraySerializer(f) }
                 // ByteArray::class.java <-> NOT NEEDED HERE (see comment above)
         )
 
@@ -91,14 +107,14 @@ abstract class PrimArraySerializer(type: Type, factory: SerializerFactory) : Arr
     }
 }
 
-class PrimIntArraySerializer(factory: SerializerFactory, override val typeName: String) :
+class PrimIntArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(IntArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         localWriteObject(data) { (obj as IntArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
     }
 }
 
-class PrimCharArraySerializer(factory: SerializerFactory, override val typeName: String) :
+class PrimCharArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(CharArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         localWriteObject(data) { (obj as CharArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
@@ -114,35 +130,35 @@ class PrimCharArraySerializer(factory: SerializerFactory, override val typeName:
     }
 }
 
-class PrimBooleanArraySerializer(factory: SerializerFactory, override val typeName: String) :
+class PrimBooleanArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(BooleanArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         localWriteObject(data) { (obj as BooleanArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
     }
 }
 
-class PrimDoubleArraySerializer(factory: SerializerFactory, override val typeName: String) :
+class PrimDoubleArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(DoubleArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         localWriteObject(data) { (obj as DoubleArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
     }
 }
 
-class PrimFloatArraySerializer(factory: SerializerFactory, override val typeName: String) :
+class PrimFloatArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(FloatArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         localWriteObject(data) { (obj as FloatArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
     }
 }
 
-class PrimShortArraySerializer(factory: SerializerFactory, override val typeName: String) :
+class PrimShortArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(ShortArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         localWriteObject(data) { (obj as ShortArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
     }
 }
 
-class PrimLongArraySerializer(factory: SerializerFactory, override val typeName: String) :
+class PrimLongArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(LongArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         localWriteObject(data) { (obj as LongArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
