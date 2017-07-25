@@ -10,8 +10,8 @@ import java.lang.reflect.Type
 open class ArraySerializer(override val type: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     companion object {
         fun make(type: Type, factory: SerializerFactory) = when (type) {
-                Array<Character>::class.java -> CharArraySerializer (factory)
-                else -> ArraySerializer(type, factory)
+            Array<Character>::class.java -> CharArraySerializer(factory)
+            else -> ArraySerializer(type, factory)
         }
     }
 
@@ -55,10 +55,8 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
     }
 }
 
-/**
- * Boxed Character arrays required a specialisation to handle the type conversion properly when populating
- * the array since Kotlin won't allow an implicit cast from Int (as they're stored as 16bit ints) to Char
- */
+// Boxed Character arrays required a specialisation to handle the type conversion properly when populating
+// the array since Kotlin won't allow an implicit cast from Int (as they're stored as 16bit ints) to Char
 class CharArraySerializer(factory: SerializerFactory) : ArraySerializer(Array<Character>::class.java, factory) {
     override fun <T> List<T>.toArrayOfType(type: Type): Any {
         val elementType = type.asClass() ?: throw NotSerializableException("Unexpected array element type $type")
@@ -69,10 +67,8 @@ class CharArraySerializer(factory: SerializerFactory) : ArraySerializer(Array<Ch
     }
 }
 
-/**
- * Specialisation of [ArraySerializer] that handles arrays of unboxed java primitive types
- */
-abstract class PrimArraySerializer (type: Type, factory: SerializerFactory) : ArraySerializer(type, factory) {
+// Specialisation of [ArraySerializer] that handles arrays of unboxed java primitive types
+abstract class PrimArraySerializer(type: Type, factory: SerializerFactory) : ArraySerializer(type, factory) {
     companion object {
         // We don't need to handle the unboxed byte type as that is coercible to a byte array, but
         // the other 7 primitive types we do
@@ -84,27 +80,28 @@ abstract class PrimArraySerializer (type: Type, factory: SerializerFactory) : Ar
                 ShortArray::class.java to { f -> PrimShortArraySerializer(f, "short[p]") },
                 DoubleArray::class.java to { f -> PrimDoubleArraySerializer(f, "double[p]") },
                 LongArray::class.java to { f -> PrimLongArraySerializer(f, "long[p]") }
+                // ByteArray::class.java <-> NOT NEEDED HERE (see comment above)
         )
 
         fun make(type: Type, factory: SerializerFactory) = primTypes[type]!!(factory)
     }
 
-    fun localWriteObject(data: Data, func : () -> Unit) {
+    fun localWriteObject(data: Data, func: () -> Unit) {
         data.withDescribed(typeNotation.descriptor) { withList { func() } }
     }
 }
 
-class PrimIntArraySerializer(factory: SerializerFactory, override val typeName : String) :
+class PrimIntArraySerializer(factory: SerializerFactory, override val typeName: String) :
         PrimArraySerializer(IntArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as IntArray).forEach { output.writeObjectOrNull(it, data, elementType) }}
+        localWriteObject(data) { (obj as IntArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
     }
 }
 
-class PrimCharArraySerializer(factory: SerializerFactory, override val typeName : String) :
+class PrimCharArraySerializer(factory: SerializerFactory, override val typeName: String) :
         PrimArraySerializer(CharArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as CharArray).forEach { output.writeObjectOrNull(it, data, elementType) }}
+        localWriteObject(data) { (obj as CharArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
     }
 
     override fun <T> List<T>.toArrayOfType(type: Type): Any {
@@ -117,14 +114,14 @@ class PrimCharArraySerializer(factory: SerializerFactory, override val typeName 
     }
 }
 
-class PrimBooleanArraySerializer(factory: SerializerFactory, override val typeName : String) :
+class PrimBooleanArraySerializer(factory: SerializerFactory, override val typeName: String) :
         PrimArraySerializer(BooleanArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         localWriteObject(data) { (obj as BooleanArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
     }
 }
 
-class PrimDoubleArraySerializer(factory: SerializerFactory, override val typeName : String) :
+class PrimDoubleArraySerializer(factory: SerializerFactory, override val typeName: String) :
         PrimArraySerializer(DoubleArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         localWriteObject(data) { (obj as DoubleArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
