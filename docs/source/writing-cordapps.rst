@@ -93,3 +93,6 @@ The ``WebServerPluginRegistry`` class defines the following:
   started
 
   * The static web content itself should be placed inside the ``src/main/resources`` directory
+
+To learn about how to use gradle to build your cordapp against Corda and generate an artifact please read
+:doc:`cordapp-build-systems`.
