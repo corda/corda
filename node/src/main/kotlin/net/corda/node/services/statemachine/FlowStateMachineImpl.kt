@@ -227,14 +227,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
         val permissionGranted = true // TODO define permission control service on ServiceHubInternal and actually check authorization.
         val checkPermissionEvent = FlowPermissionAuditEvent(
-            serviceHub.clock.instant(),
-            flowInitiator,
-            "Flow Permission Required: $permissionName",
-            extraAuditData,
-            logic.javaClass,
-            id,
-            permissionName,
-            permissionGranted)
+                serviceHub.clock.instant(),
+                flowInitiator,
+                "Flow Permission Required: $permissionName",
+                extraAuditData,
+                logic.javaClass,
+                id,
+                permissionName,
+                permissionGranted)
         serviceHub.auditService.recordAuditEvent(checkPermissionEvent)
         if (!permissionGranted) {
             throw FlowPermissionException("User $flowInitiator not permissioned for $permissionName on flow $id")
@@ -242,13 +242,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     // TODO Dummy implementation of access to application specific audit logging
-    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String,String>) {
+    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
         val flowAuditEvent = FlowAppAuditEvent(
-                    serviceHub.clock.instant(),
-                    flowInitiator,
-                    comment,
-                    extraAuditData,
-                    logic.javaClass,
+                serviceHub.clock.instant(),
+                flowInitiator,
+                comment,
+                extraAuditData,
+                logic.javaClass,
                 id,
                 eventType)
         serviceHub.auditService.recordAuditEvent(flowAuditEvent)
@@ -256,22 +256,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot {
-        var snapshot: FlowStackSnapshot? = null
-        val stackTrace = currentFiber().stackTrace
-        Fiber.parkAndSerialize { fiber, _ ->
-            snapshot = FlowStackSnapshot.extractFromFiber(fiber, stackTrace.toList(), flowClass)
-            Fiber.unparkDeserialized(fiber, fiber.scheduler)
-        }
-        // This is because the dump itself is on the stack, which means it creates a loop in the object graph, we set
-        // it to null to break the loop
-        val temporarySnapshot = snapshot
-        snapshot = null
-        return temporarySnapshot!!
+        val factory = FlowStackSnapshotDefaults.FLOW_STACK_SNAPSHOT_FACTORY
+        return factory.getFlowStackSnapshot(flowClass)
     }
 
-    override fun persistFlowStackSnapshot(flowClass: Class<*>, path: String?) {
-        val snapshot = flowStackSnapshot(flowClass)
-        FlowStackSnapshot.persistAsJsonFile(snapshot, path)
+    override fun persistFlowStackSnapshot(flowClass: Class<*>) {
+        val factory = FlowStackSnapshotDefaults.FLOW_STACK_SNAPSHOT_FACTORY
+        factory.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id.toString())
     }
 
     /**

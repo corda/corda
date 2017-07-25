@@ -247,10 +247,9 @@ abstract class FlowLogic<out T> {
      * Use this to track the monitor evolution of the quasar stack values during the flow execution.
      * Note: With respect to the [flowStackSnapshot], the snapshot being persisted by this method is partial,
      * meaning that only flow relevant traces and local variables are persisted.
-     * Also, when the path parameter is a reference to an existing file, the file will be overridden.
      */
     @Suspendable
-    fun persistFlowStackSnapshot(path:String? = null) = stateMachine.persistFlowStackSnapshot(this::class.java, path)
+    fun persistFlowStackSnapshot() = stateMachine.persistFlowStackSnapshot(this::class.java)
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

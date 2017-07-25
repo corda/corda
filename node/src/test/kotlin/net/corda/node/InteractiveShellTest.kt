@@ -33,6 +33,7 @@ class InteractiveShellTest {
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
         constructor(party: Party) : this(party.name.toString())
+
         override fun call() = a
     }
 
@@ -97,7 +98,7 @@ class InteractiveShellTest {
             throw UnsupportedOperationException("not implemented")
         }
 
-        override fun persistFlowStackSnapshot(flowClass: Class<*>, path: String?) {
+        override fun persistFlowStackSnapshot(flowClass: Class<*>) {
             throw UnsupportedOperationException("not implemented")
         }
 

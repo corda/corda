@@ -35,15 +35,15 @@ interface FlowStateMachine<R> {
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
 
-    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String,String>)
+    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>)
 
-    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String,String>)
-
-    @Suspendable
-    fun flowStackSnapshot(flowClass:Class<*>): FlowStackSnapshot
+    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>)
 
     @Suspendable
-    fun persistFlowStackSnapshot(flowClass: Class<*>, path:String? = null)
+    fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot
+
+    @Suspendable
+    fun persistFlowStackSnapshot(flowClass: Class<*>)
 
     val serviceHub: ServiceHub
     val logger: Logger

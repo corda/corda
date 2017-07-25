@@ -59,7 +59,6 @@ dependencies {
 
     // For JSON
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_version}"
 
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     compile "net.i2p.crypto:eddsa:$eddsa_version"
