@@ -108,10 +108,9 @@ class AttachmentTests {
                                 overrideServices: Map<ServiceInfo, KeyPair>?,
                                 entropyRoot: BigInteger): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
-                    override fun start(): MockNetwork.MockNode {
+                    override fun start() {
                         super.start()
                         attachments.checkAttachmentsOnLoad = false
-                        return this
                     }
                 }
             }
