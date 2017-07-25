@@ -370,5 +370,63 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[1], deserializedC.c[1])
         assertEquals(c.c[2], deserializedC.c[2])
     }
+
+    @Test
+    fun arrayOfArrayOfInt() {
+        class C(val c: Array<Array<Int>>)
+        val c = C (arrayOf (arrayOf(1,2,3), arrayOf(4,5,6)))
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0].size, deserializedC.c[0].size)
+        assertEquals(c.c[0][0], deserializedC.c[0][0])
+        assertEquals(c.c[0][1], deserializedC.c[0][1])
+        assertEquals(c.c[0][2], deserializedC.c[0][2])
+        assertEquals(c.c[1].size, deserializedC.c[1].size)
+        assertEquals(c.c[1][0], deserializedC.c[1][0])
+        assertEquals(c.c[1][1], deserializedC.c[1][1])
+        assertEquals(c.c[1][2], deserializedC.c[1][2])
+    }
+
+    @Test
+    fun arrayOfIntArray() {
+        class C(val c: Array<IntArray>)
+        val c = C (arrayOf (IntArray(3), IntArray(3)))
+        c.c[0][0] = 1; c.c[0][1] = 2; c.c[0][2] = 3
+        c.c[1][0] = 4; c.c[1][1] = 5; c.c[1][2] = 6
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0].size, deserializedC.c[0].size)
+        assertEquals(c.c[0][0], deserializedC.c[0][0])
+        assertEquals(c.c[0][1], deserializedC.c[0][1])
+        assertEquals(c.c[0][2], deserializedC.c[0][2])
+        assertEquals(c.c[1].size, deserializedC.c[1].size)
+        assertEquals(c.c[1][0], deserializedC.c[1][0])
+        assertEquals(c.c[1][1], deserializedC.c[1][1])
+        assertEquals(c.c[1][2], deserializedC.c[1][2])
+    }
+
+    @Test
+    fun arrayOfArrayOfIntArray() {
+        class C(val c: Array<Array<IntArray>>)
+
+        val c = C(arrayOf(arrayOf(IntArray(3), IntArray(3), IntArray(3)),
+                          arrayOf(IntArray(3), IntArray(3), IntArray(3)),
+                          arrayOf(IntArray(3), IntArray(3), IntArray(3))))
+
+        for (i in 0..2) { for (j in 0..2) { for (k in 0..2) { c.c[i][j][k] = i + j + k } } }
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        for (i in 0..2) { for (j in 0..2) { for (k in 0..2) {
+            assertEquals(c.c[i][j][k], deserializedC.c[i][j][k])
+        }}}
+    }
 }
 
