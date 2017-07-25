@@ -72,7 +72,9 @@ class Cordformation implements Plugin<Project> {
             filteredDeps.each {
                 // net.corda may be a core dependency which shouldn't be included in this cordapp so give a warning
                 if(it.group.contains('net.corda')) {
-                    logger.warn("Including a dependency with a net.corda group: $it")
+                    logger.warn("You appear to have included a Corda platform component ($it) using a 'compile' or 'runtime' dependency." +
+                                "This can cause node stability problems. Please use 'corda' instead." +
+                                "See http://docs.corda.net/cordapp-build-systems.html")
                 } else {
                     logger.trace("Including dependency: $it")
                 }
