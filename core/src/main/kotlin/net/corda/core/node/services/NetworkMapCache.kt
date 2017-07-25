@@ -6,7 +6,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
-import net.corda.core.randomOrNull
+import net.corda.core.internal.randomOrNull
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
@@ -97,9 +97,9 @@ interface NetworkMapCache {
 
     /** Gets a notary identity by the given name. */
     fun getNotary(principal: X500Name): Party? {
-        val notaryNode = notaryNodes.randomOrNull {
+        val notaryNode = notaryNodes.filter {
             it.advertisedServices.any { it.info.type.isSubTypeOf(ServiceType.notary) && it.info.name == principal }
-        }
+        }.randomOrNull()
         return notaryNode?.notaryIdentity
     }
 

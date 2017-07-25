@@ -47,6 +47,9 @@ UNRELEASED
 * Added various query methods to ``LedgerTransaction`` to simplify querying of states and commands. In the same vain
   ``Command`` is now parameterised on the ``CommandData`` field.
 
+* Kotlin utilities that we deemed useful enough to keep public have been moved out of ``net.corda.core.Utils`` and into
+  ``net.corda.core.utilities.KotlinUtils``. The other utilities have been marked as internal.
+
 Milestone 13
 ------------
 

@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.checkedAdd
+import net.corda.core.utilities.exactAdd
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.getOrThrow
@@ -176,7 +176,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             val inputHashes = downloads.flatMap { it.tx.inputs }.map { it.txhash }
             nextRequests.addAll(inputHashes)
 
-            limitCounter = limitCounter checkedAdd nextRequests.size
+            limitCounter = limitCounter exactAdd nextRequests.size
             if (limitCounter > limit)
                 throw ExcessivelyLargeTransactionGraph()
         }

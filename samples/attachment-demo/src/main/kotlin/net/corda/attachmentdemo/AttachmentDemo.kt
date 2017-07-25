@@ -3,7 +3,6 @@ package net.corda.attachmentdemo
 import co.paralleluniverse.fibers.Suspendable
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.InputStreamAndHash
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionType
@@ -15,6 +14,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.transactions.LedgerTransaction

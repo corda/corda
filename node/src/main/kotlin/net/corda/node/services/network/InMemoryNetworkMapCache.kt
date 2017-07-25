@@ -1,8 +1,8 @@
 package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
-import net.corda.core.bufferUntilSubscribed
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
