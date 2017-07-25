@@ -2,7 +2,7 @@ package net.corda.client.jfx
 
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.ProgressTrackingEvent
-import net.corda.core.bufferUntilSubscribed
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD

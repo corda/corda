@@ -3,7 +3,7 @@ package net.corda.node.services.network
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.bufferUntilSubscribed
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.map

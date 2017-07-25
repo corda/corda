@@ -4,7 +4,7 @@ package net.corda.webserver
 
 import com.typesafe.config.ConfigException
 import net.corda.core.internal.div
-import net.corda.core.rootCause
+import net.corda.core.internal.rootCause
 import net.corda.webserver.internal.NodeWebServer
 import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory

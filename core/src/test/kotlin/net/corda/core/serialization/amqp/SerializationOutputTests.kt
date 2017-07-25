@@ -240,7 +240,7 @@ class SerializationOutputTests {
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = IllegalArgumentException::class)
     fun `test dislike of HashMap`() {
         val obj = WrapHashMap(HashMap<String, String>())
         serdes(obj)

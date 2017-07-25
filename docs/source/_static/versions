@@ -1,0 +1,11 @@
+{
+	"https://docs.corda.net/releases/release-M6.0": "M6.0",
+	"https://docs.corda.net/releases/release-M7.0": "M7.0",
+	"https://docs.corda.net/releases/release-M8.2": "M8.2",
+	"https://docs.corda.net/releases/release-M9.2": "M9.2",
+	"https://docs.corda.net/releases/release-M10.1": "M10.1",
+	"https://docs.corda.net/releases/release-M11.1": "M11.1",
+	"https://docs.corda.net/releases/release-M12.1": "M12.1",
+	"https://docs.corda.net/releases/release-M13.0": "M13.0",
+	"https://docs.corda.net/head/": "Master"
+}

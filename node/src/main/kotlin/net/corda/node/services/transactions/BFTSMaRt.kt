@@ -28,7 +28,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.toTypedArray
+import net.corda.core.internal.toTypedArray
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug

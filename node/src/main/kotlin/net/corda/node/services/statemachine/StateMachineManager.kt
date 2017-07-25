@@ -9,7 +9,7 @@ import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.internal.ThreadBox
-import net.corda.core.bufferUntilSubscribed
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowException

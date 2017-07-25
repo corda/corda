@@ -1,6 +1,5 @@
 package net.corda.core.serialization.amqp
 
-import net.corda.core.checkNotUnorderedHashMap
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -47,9 +46,9 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
             // Write map
             data.putMap()
             data.enter()
-            for (entry in obj as Map<*, *>) {
-                output.writeObjectOrNull(entry.key, data, declaredType.actualTypeArguments[0])
-                output.writeObjectOrNull(entry.value, data, declaredType.actualTypeArguments[1])
+            for ((key, value) in obj as Map<*, *>) {
+                output.writeObjectOrNull(key, data, declaredType.actualTypeArguments[0])
+                output.writeObjectOrNull(value, data, declaredType.actualTypeArguments[1])
             }
             data.exit() // exit map
         }
@@ -64,4 +63,10 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
     private fun readEntry(schema: Schema, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) =
             input.readObjectOrNull(entry.key, schema, declaredType.actualTypeArguments[0]) to
                     input.readObjectOrNull(entry.value, schema, declaredType.actualTypeArguments[1])
+}
+
+internal fun Class<*>.checkNotUnorderedHashMap() {
+    if (HashMap::class.java.isAssignableFrom(this) && !LinkedHashMap::class.java.isAssignableFrom(this)) {
+        throw IllegalArgumentException("Map type $this is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
+    }
 }
