@@ -4,11 +4,11 @@ import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import net.corda.core.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.i2p.crypto.eddsa.EdDSAPrivateKey

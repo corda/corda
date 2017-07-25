@@ -26,7 +26,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.reflect.KClass
 
-inline val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
+val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
 fun Throwable.getStackTraceAsString() = StringWriter().also { printStackTrace(PrintWriter(it)) }.toString()
 
 infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)

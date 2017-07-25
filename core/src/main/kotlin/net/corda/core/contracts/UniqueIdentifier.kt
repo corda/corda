@@ -1,6 +1,6 @@
 package net.corda.core.contracts
 
-import net.corda.core.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
 

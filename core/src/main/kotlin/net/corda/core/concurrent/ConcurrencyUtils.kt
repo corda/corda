@@ -2,8 +2,8 @@ package net.corda.core.concurrent
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.VisibleForTesting
 import net.corda.core.catch
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.match
 import net.corda.core.then
 import org.slf4j.Logger
