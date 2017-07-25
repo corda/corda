@@ -1,5 +1,5 @@
-Building Cordapps
-=================
+Cordapp Build Systems
+=====================
 
 Cordapps run on the Corda platform and integrate with it and each other. To learn more about the basics of a Cordapp
 please read :doc:`cordapp-overview`. To learn about writing a Cordapp as a developer please read :doc:`writing-cordapps`.
@@ -39,10 +39,37 @@ To make use of the Corda test facilities you must;
 These configurations work by the ``cordformation`` plugin adding ``corda`` as a new configuration that ``compile``
 extends from, and ``cordaRuntime`` which ``runtime`` extends from.
 
+Choosing your Corda version
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The following two lines of the ``build.gradle`` file define the Corda version used to build your CorDapp:
+
+.. sourcecode:: groovy
+
+    ext.corda_release_version = '0.13.0'
+    ext.corda_gradle_plugins_version = '0.13.3'
+
+In this case, our CorDapp will use the Milestone 13 release of Corda, and version 13.3 of the Corda gradle plugins. You
+can find the latest published version of both here: https://bintray.com/r3/corda.
+
+``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
+``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
+versions can be found here: https://bintray.com/r3/corda/cordformation.
+
+In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
+
 Building against Cordapps
 -------------------------
 
 To build against a Cordapp you must add it as a ``cordapp`` dependency to your ``build.gradle``.
+
+Other Dependencies
+------------------
+
+If your CorDapps have any additional external dependencies, they can be specified like normal Kotlin/Java dependencies
+in Gradle. See the example below, specifically the ``apache-commons`` include.
+
+For further information about managing dependencies, see
+`the Gradle docs <https://docs.gradle.org/current/userguide/dependency_management.html>`_.
 
 Installing CorDapps
 -------------------
