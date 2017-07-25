@@ -460,7 +460,7 @@ object FlowCookbook {
             progressTracker.currentStep = SIGS_GATHERING
 
             // The states we use do not have participants, so anonymisation doesn't make sense here
-            val identities = listOf(serviceHub.myInfo.legalIdentityAndCert, serviceHub.identityService.certificateFromParty(counterparty)!!)
+            val identities = listOf(serviceHub.myInfo.legalIdentityAndCert, serviceHub.identityService.certificateFromParty(counterparty))
                     .associateBy(PartyAndCertificate::party){ it.toAnonymous() }
             // The list of parties who need to sign a transaction is dictated
             // by the transaction's commands. Once we've signed a transaction

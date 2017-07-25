@@ -41,29 +41,36 @@ interface IdentityService {
     fun registerAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
 
     /**
-     * Verify and then store an anonymous identity.
+     * Verify that an anonymous identity's certificate path is valid and then store it.
      *
      * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
-     * @param wellKnownIdentity well known party the anonymised party must represent, if provided. Null to use whatever
-     * identity signed the anonymous identity.
      * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party? = null): PartyAndCertificate
+    fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath): PartyAndCertificate
 
     /**
-     * Verify an anonymous identity.
+     * Verify that an anonymous identity's certificate path is valid and connects to the specified well known identity,
+     * and then store the anonymous identity.
+     *
+     * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
+     * @param wellKnownIdentity well known party the anonymised party must represent, if provided.
+     * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
+     * certificate chain for the anonymous party.
+     */
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party): PartyAndCertificate
+
+    /**
+     * Verify an anonymous identity certificate path is valid and connects to the specified well known identity.
      *
      * @param anonymousParty a party representing a legal entity in a transaction.
-     * @param wellKnownIdentity well known party the anonymised party must represent, if provided. Null to use whatever
-     * identity signed the anonymous identity.
-     * @param path certificate path from the trusted root to the party.
-     * @return the full well known identity.
+     * @param fullParty the full well known identity and its X.509 certificate.
      * @throws IllegalArgumentException if the certificate path is invalid.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party?): PartyAndCertificate
+    fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, fullParty: PartyAndCertificate)
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
@@ -96,9 +103,11 @@ interface IdentityService {
     /**
      * Get the certificate and path for a well known identity.
      *
-     * @return the party and certificate, or null if unknown.
+     * @return the party and certificate.
+     * @throws IllegalArgumentException if the certificate and path are unknown. This should never happen for a well
+     * known identity.
      */
-    fun certificateFromParty(party: Party): PartyAndCertificate?
+    fun certificateFromParty(party: Party): PartyAndCertificate
 
     // There is no method for removing identities, as once we are made aware of a Party we want to keep track of them
     // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,

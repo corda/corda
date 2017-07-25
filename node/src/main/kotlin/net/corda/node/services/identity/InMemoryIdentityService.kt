@@ -82,7 +82,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         }
     }
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToWellKnownParties[owningKey]
-    override fun certificateFromParty(party: Party): PartyAndCertificate? = principalToParties[party.name]
+    override fun certificateFromParty(party: Party): PartyAndCertificate = principalToParties[party.name] ?: throw IllegalArgumentException("Unknown well known identity ${party.name}")
 
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = java.util.ArrayList(keyToWellKnownParties.values)
@@ -135,8 +135,9 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     override fun registerAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate = verifyAndRegisterAnonymousIdentity(anonymousIdentity,  party)
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party?): PartyAndCertificate {
-        val fullParty = verifyAnonymousIdentity(anonymousIdentity, wellKnownIdentity)
+    override fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party): PartyAndCertificate {
+        val fullParty = certificateFromParty(wellKnownIdentity)
+        verifyAnonymousIdentity(anonymousIdentity, fullParty)
         val certificate = X509CertificateHolder(anonymousIdentity.certPath.certificates.first().encoded)
         log.trace { "Registering identity $fullParty" }
 
@@ -145,21 +146,27 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         return fullParty
     }
 
-    override fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party?): PartyAndCertificate {
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    override fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath): PartyAndCertificate {
+        val issuerCertificate = anonymousIdentity.certPath.certificates[1] as X509Certificate
+        val issuer = Party(issuerCertificate.subject, issuerCertificate.publicKey)
+        val fullParty = certificateFromParty(issuer)
+        verifyAnonymousIdentity(anonymousIdentity, fullParty)
+        val certificate = X509CertificateHolder(anonymousIdentity.certPath.certificates.first().encoded)
+        log.trace { "Registering identity $fullParty" }
+
+        partyToPath[anonymousIdentity.party] = Pair(anonymousIdentity.certPath, certificate)
+        keyToWellKnownParties[anonymousIdentity.party.owningKey] = fullParty
+        return fullParty
+    }
+
+    override fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, fullParty: PartyAndCertificate) {
         val (anonymousParty, path) = anonymousIdentity
         require(path.certificates.size >= 2) { "Certificate path must contain at least two certificates" }
-        val fullParty = if (wellKnownIdentity != null) {
-            certificateFromParty(wellKnownIdentity) ?: throw IllegalArgumentException("Unknown identity ${wellKnownIdentity.name}")
-        } else {
-            val issuerCertificate = path.certificates[1] as X509Certificate
-            val issuer = Party(issuerCertificate.subject, issuerCertificate.publicKey)
-            certificateFromParty(issuer) ?: throw IllegalArgumentException("Unknown identity ${issuer.name}")
-        }
         // Validate the chain first, before we do anything clever with it
         validateCertificatePath(anonymousParty, path)
         val subjectCertificate = path.certificates.first()
         require(subjectCertificate is X509Certificate && subjectCertificate.subject == fullParty.name) { "Subject of the transaction certificate must match the well known identity" }
-        return fullParty
     }
 
     /**
