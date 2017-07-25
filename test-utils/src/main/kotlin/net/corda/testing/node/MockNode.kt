@@ -229,10 +229,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun myAddresses() = emptyList<NetworkHostAndPort>()
 
-        override fun start(): MockNode {
+        override fun start() {
             super.start()
             mockNet.identities.add(info.legalIdentityAndCert)
-            return this
         }
 
         // Allow unit tests to modify the plugin list before the node start,
@@ -300,14 +299,14 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
             configOverrides(it)
         }
-        val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
-        if (start) {
-            node.setup().start()
-            if (threadPerNode && networkMapAddress != null)
-                node.networkMapRegistrationFuture.getOrThrow()   // Block and wait for the node to register in the net map.
+        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot).apply {
+            if (start) {
+                configuration.baseDirectory.createDirectories()
+                start()
+                if (threadPerNode && networkMapAddress != null) networkMapRegistrationFuture.getOrThrow()
+            }
+            _nodes.add(this)
         }
-        _nodes.add(node)
-        return node
     }
 
     fun baseDirectory(nodeId: Int): Path = filesystem.getPath("/nodes/$nodeId")
