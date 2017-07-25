@@ -53,7 +53,6 @@ class DeserializeSimpleTypesTests {
     @Test
     fun testArrayOfInt() {
         class IA(val ia: Array<Int>)
-
         val ia = IA(arrayOf(1, 2, 3))
 
         assertEquals("class [Ljava.lang.Integer;", ia.ia::class.java.toString())
@@ -182,52 +181,177 @@ class DeserializeSimpleTypesTests {
 
     @Test
     fun testArrayOfByte() {
-        class C(val c: Array<Byte>)
+        class C (val c: Array<Byte>)
+        val c = C(arrayOf (0b0001, 0b0101, 0b1111))
+
+        assertEquals("class [Ljava.lang.Byte;", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "byte[]")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 
     @Test
     fun testByteArray() {
         class C(val c: ByteArray)
+        val c = C(ByteArray(3))
+        c.c[0] = 0b0001; c.c[1] = 0b0101; c.c[2] = 0b1111
+
+        assertEquals("class [B", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "binary")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 
     @Test
     fun testArrayOfShort() {
         class C(val c: Array<Short>)
+        val c = C(arrayOf (1, 2, 3))
+
+        assertEquals("class [Ljava.lang.Short;", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "short[]")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 
     @Test
     fun testShortArray() {
         class C(val c: ShortArray)
+        val c = C(ShortArray(3))
+        c.c[0] = 1; c.c[1] = 2; c.c[2] = 5
+
+        assertEquals("class [S", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "short[p]")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 
     @Test
     fun testArrayOfLong() {
         class C(val c: Array<Long>)
+        val c = C(arrayOf (2147483650, -2147483800, 10))
+
+        assertEquals("class [Ljava.lang.Long;", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "long[]")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 
     @Test
     fun testLongArray() {
         class C(val c: LongArray)
+        val c = C(LongArray(3))
+        c.c[0] = 2147483650; c.c[1] = -2147483800; c.c[2] = 10
+
+        assertEquals("class [J", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "long[p]")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 
     @Test
     fun testArrayOfFloat() {
         class C(val c: Array<Float>)
+        val c = C(arrayOf(10F, 100.023232F, -1455.433400F))
+
+        assertEquals("class [Ljava.lang.Float;", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "float[]")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 
     @Test
     fun testFloatArray() {
         class C(val c: FloatArray)
+        val c = C(FloatArray(3))
+        c.c[0] = 10F; c.c[1] = 100.023232F; c.c[2] = -1455.433400F
+
+        assertEquals("class [F", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "float[p]")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 
     @Test
     fun testArrayOfDouble() {
         class C(val c: Array<Double>)
+        val c = C(arrayOf(10.0, 100.2, -1455.2))
+
+        assertEquals("class [Ljava.lang.Double;", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "double[]")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 
     @Test
     fun testDoubleArray() {
         class C(val c: DoubleArray)
+        val c = C(DoubleArray(3))
+        c.c[0] = 10.0; c.c[1] = 100.2; c.c[2] = -1455.2
+
+        assertEquals("class [D", c.c::class.java.toString())
+        assertEquals(SerializerFactory.nameForType(c.c::class.java), "double[p]")
+
+        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC.c.size)
+        assertEquals(c.c[0], deserializedC.c[0])
+        assertEquals(c.c[1], deserializedC.c[1])
+        assertEquals(c.c[2], deserializedC.c[2])
     }
 }
 

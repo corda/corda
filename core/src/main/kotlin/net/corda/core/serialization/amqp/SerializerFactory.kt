@@ -203,20 +203,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
             } else {
                 findCustomSerializer(clazz, declaredType) ?: run {
                     if (type.isArray()) {
-                        println ("Array: ${type.componentType()}, ${type.componentType()::class.java}")
-                        println (clazz)
-                        println (declaredType)
-                        println ("${clazz.componentType.isPrimitive()}")
-                        if (clazz.componentType.isPrimitive) {
-                            println ("primitive array")
-                            whitelisted(type.componentType())
-                            PrimArraySerializer.make(type, this)
-                        }
-                        else {
-                            println ("non primitive array")
-                            whitelisted(type.componentType())
-                            ArraySerializer.make (type, this)
-                        }
+                        whitelisted(type.componentType())
+                        if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
+                        else ArraySerializer.make (type, this)
                     } else if (clazz.kotlin.objectInstance != null) {
                         whitelisted(clazz)
                         SingletonSerializer(clazz, clazz.kotlin.objectInstance!!, this)
@@ -304,19 +293,15 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
         private val namesOfPrimitiveTypes: Map<String, Class<*>> = primitiveTypeNames.map { it.value to it.key }.toMap()
 
-        fun nameForType(type: Type) : String {
-            println ("nameForType $type - ${(type as Class<*>).isArray} - ${type?.componentType?.isPrimitive}")
-            val result = when (type) {
-                is Class<*> -> primitiveTypeName(type) ?: if (type.isArray) {
-                    if (type.componentType.isPrimitive) "${nameForType(type.componentType)}[p]" else "${nameForType(type.componentType)}[]"
-                } else type.name
+        fun nameForType(type: Type) : String = when (type) {
+                is Class<*> -> {
+                    primitiveTypeName(type) ?: if (type.isArray) {
+                        "${nameForType(type.componentType)}${if(type.componentType.isPrimitive)"[p]" else "[]"}"
+                    } else type.name
+                }
                 is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
                 is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
                 else -> throw NotSerializableException("Unable to render type $type to a string.")
-            }
-
-            println ("nameForType = $result")
-            return result
         }
 
         private fun typeForName(name: String): Type {
@@ -337,7 +322,6 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                     "float[p]" -> FloatArray::class.java
                     "double[p]" -> DoubleArray::class.java
                     "short[p]" -> ShortArray::class.java
-                    "byte[p]" -> ByteArray::class.java
                     "long[p]" -> LongArray::class.java
                     else -> throw NotSerializableException("Not able to deserialize array type: $name")
                 }

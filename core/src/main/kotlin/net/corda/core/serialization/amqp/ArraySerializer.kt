@@ -15,9 +15,9 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
         }
     }
 
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
-    internal val elementType: Type = type.componentType()
-    internal open val typeName = type.typeName
+    override val typeDescriptor by lazy { "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}" }
+    internal val elementType: Type by lazy { type.componentType() }
+    internal open val typeName by lazy { type.typeName }
 
     internal val typeNotation: TypeNotation by lazy {
         RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
@@ -49,7 +49,6 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
     open fun <T> List<T>.toArrayOfType(type: Type): Any {
         val elementType = type.asClass() ?: throw NotSerializableException("Unexpected array element type $type")
         val list = this
-        println ("toArrayOfType - $elementType")
         return java.lang.reflect.Array.newInstance(elementType, this.size).apply {
             (0..lastIndex).forEach { java.lang.reflect.Array.set(this, it, list[it]) }
         }
@@ -75,6 +74,8 @@ class CharArraySerializer(factory: SerializerFactory) : ArraySerializer(Array<Ch
  */
 abstract class PrimArraySerializer (type: Type, factory: SerializerFactory) : ArraySerializer(type, factory) {
     companion object {
+        // We don't need to handle the unboxed byte type as that is coercible to a byte array, but
+        // the other 7 primitive types we do
         val primTypes: Map<Type, (SerializerFactory) -> PrimArraySerializer> = mapOf(
                 IntArray::class.java to { f -> PrimIntArraySerializer(f, "int[p]") },
                 CharArray::class.java to { f -> PrimCharArraySerializer(f, "char[p]") },
@@ -82,7 +83,6 @@ abstract class PrimArraySerializer (type: Type, factory: SerializerFactory) : Ar
                 FloatArray::class.java to { f -> PrimFloatArraySerializer(f, "float[p]") },
                 ShortArray::class.java to { f -> PrimShortArraySerializer(f, "short[p]") },
                 DoubleArray::class.java to { f -> PrimDoubleArraySerializer(f, "double[p]") },
-                ByteArray::class.java to { f -> PrimByteArraySerializer(f, "byte[p]") },
                 LongArray::class.java to { f -> PrimLongArraySerializer(f, "long[p]") }
         )
 
@@ -145,16 +145,9 @@ class PrimShortArraySerializer(factory: SerializerFactory, override val typeName
     }
 }
 
-class PrimByteArraySerializer(factory: SerializerFactory, override val typeName: String) :
-        PrimArraySerializer(ByteArray::class.java, factory) {
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as ByteArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
-    }
-}
-
 class PrimLongArraySerializer(factory: SerializerFactory, override val typeName: String) :
         PrimArraySerializer(LongArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as FloatArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
+        localWriteObject(data) { (obj as LongArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
     }
 }
