@@ -102,7 +102,7 @@ class AttachmentTests {
     @Test
     fun `malicious response`() {
         // Make a node that doesn't do sanity checking at load time.
-        val n0 = mockNet.createNode(null, -1, object : MockNetwork.Factory {
+        val n0 = mockNet.createNode(nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 advertisedServices: Set<ServiceInfo>, id: Int,
                                 overrideServices: Map<ServiceInfo, KeyPair>?,
@@ -114,7 +114,7 @@ class AttachmentTests {
                     }
                 }
             }
-        }, true, null, null, ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
+        }, advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
         val n1 = mockNet.createNode(n0.network.myAddress)
 
         val attachment = fakeAttachment()

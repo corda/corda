@@ -38,8 +38,8 @@ class InMemoryNetworkMapCacheTest {
     @Test
     fun `key collision`() {
         val entropy = BigInteger.valueOf(24012017L)
-        val nodeA = mockNet.createNode(null, -1, MockNetwork.DefaultFactory, true, ALICE.name, null, entropy, ServiceInfo(NetworkMapService.type))
-        val nodeB = mockNet.createNode(null, -1, MockNetwork.DefaultFactory, true, BOB.name, null, entropy, ServiceInfo(NetworkMapService.type))
+        val nodeA = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = ALICE.name, entropyRoot = entropy, advertisedServices = ServiceInfo(NetworkMapService.type))
+        val nodeB = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = BOB.name, entropyRoot = entropy, advertisedServices = ServiceInfo(NetworkMapService.type))
         assertEquals(nodeA.info.legalIdentity, nodeB.info.legalIdentity)
 
         mockNet.runNetwork()

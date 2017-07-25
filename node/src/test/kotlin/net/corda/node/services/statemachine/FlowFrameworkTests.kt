@@ -169,7 +169,7 @@ class FlowFrameworkTests {
         node3.disableDBCloseOnStop()
         node3.stop()
 
-        node3 = mockNet.createNode(node1.network.myAddress, forcedID = node3.id)
+        node3 = mockNet.createNode(node1.network.myAddress, node3.id)
         val restoredFlow = node3.getSingleFlow<NoOpFlow>().first
         assertEquals(false, restoredFlow.flowStarted) // Not started yet as no network activity has been allowed yet
         mockNet.runNetwork() // Allow network map messages to flow
@@ -179,7 +179,7 @@ class FlowFrameworkTests {
         node3.stop()
 
         // Now it is completed the flow should leave no Checkpoint.
-        node3 = mockNet.createNode(node1.network.myAddress, forcedID = node3.id)
+        node3 = mockNet.createNode(node1.network.myAddress, node3.id)
         mockNet.runNetwork() // Allow network map messages to flow
         node3.smm.executor.flush()
         assertTrue(node3.smm.findStateMachines(NoOpFlow::class.java).isEmpty())
