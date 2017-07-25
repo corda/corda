@@ -37,3 +37,6 @@ It's reproduced here as an example of both ways you can do this for a couple of 
 
 .. note:: Several of the core interfaces at the heart of Corda are already annotated and so any classes that implement
    them will automatically be whitelisted.  This includes `Contract`, `ContractState` and `CommandData`.
+
+.. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are
+   likely.
