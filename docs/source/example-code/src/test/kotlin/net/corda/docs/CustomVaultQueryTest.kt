@@ -66,8 +66,7 @@ class CustomVaultQueryTest {
         val flowHandle1 = nodeA.services.startFlow(CashIssueFlow(amountToIssue,
                 OpaqueBytes.of(0x01),
                 nodeA.info.legalIdentity,
-                notaryNode.info.notaryIdentity,
-                false))
+                notaryNode.info.notaryIdentity))
         // Wait for the flow to stop and print
         flowHandle1.resultFuture.getOrThrow()
     }

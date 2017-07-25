@@ -2,9 +2,9 @@ package net.corda.core.flows
 
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.flows.CashIssueFlow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
@@ -21,7 +21,8 @@ class IdentitySyncFlowTests {
 
     @Before
     fun before() {
-        mockNet = MockNetwork(false)
+        // We run this in parallel threads to help catch any race conditions that may exist.
+        mockNet = MockNetwork(networkSendManuallyPumped = false, threadPerNode = true)
     }
 
     @After
@@ -31,9 +32,6 @@ class IdentitySyncFlowTests {
 
     @Test
     fun `sync confidential identities`() {
-        // We run this in parallel threads to help catch any race conditions that may exist.
-        mockNet = MockNetwork(networkSendManuallyPumped = false, threadPerNode = true, initialiseSerialization = false)
-
         // Set up values we'll need
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
@@ -54,8 +52,6 @@ class IdentitySyncFlowTests {
 
         // Run the flow to sync up the identities
         aliceNode.services.startFlow(IdentitySyncFlow(bob, issueTx.tx)).resultFuture.getOrThrow()
-        val aliceIdentity = aliceNode.services.identityService
-        val bobIdentity = bobNode.services.identityService
         val expected = aliceNode.services.identityService.partyFromAnonymous(confidentialIdentity)
         val actual = bobNode.services.identityService.partyFromAnonymous(confidentialIdentity)
         assertEquals(expected, actual)
