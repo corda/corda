@@ -13,6 +13,6 @@ class DeserializedGenericArrayType(private val componentType: Type) : GenericArr
     override fun toString(): String = typeName
     override fun hashCode(): Int = Objects.hashCode(componentType)
     override fun equals(other: Any?): Boolean {
-        return other is GenericArrayType && componentType.equals(other.genericComponentType)
+        return other is GenericArrayType && (componentType == other.genericComponentType)
     }
 }
