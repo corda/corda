@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.toTypedArray
+import net.corda.core.internal.toTypedArray
 import net.corda.node.utilities.KEYSTORE_TYPE
 import net.corda.node.utilities.addOrReplaceCertificate
 import net.corda.node.utilities.addOrReplaceKey

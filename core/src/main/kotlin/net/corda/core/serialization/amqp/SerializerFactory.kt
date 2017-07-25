@@ -2,7 +2,6 @@ package net.corda.core.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
-import net.corda.core.checkNotUnorderedHashMap
 import net.corda.core.serialization.AllWhitelist
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable

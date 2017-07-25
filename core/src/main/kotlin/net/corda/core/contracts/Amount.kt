@@ -1,5 +1,8 @@
 package net.corda.core.contracts
 
+import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.utilities.exactAdd
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -168,7 +171,7 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      */
     operator fun plus(other: Amount<T>): Amount<T> {
         checkToken(other)
-        return Amount(Math.addExact(quantity, other.quantity), displayTokenSize, token)
+        return Amount(quantity exactAdd other.quantity, displayTokenSize, token)
     }
 
     /**
@@ -268,9 +271,9 @@ data class SourceAndAmount<T : Any, out P : Any>(val source: P, val amount: Amou
  * but in various scenarios it may be more consistent to allow positive and negative values.
  * For example it is common for a bank to code asset flows as gains and losses from its perspective i.e. always the destination.
  * @param token represents the type of asset token as would be used to construct Amount<T> objects.
- * @param source is the [Party], [Account], [CompositeKey], or other identifier of the token source if quantityDelta is positive,
+ * @param source is the [Party], [CompositeKey], or other identifier of the token source if quantityDelta is positive,
  * or the token sink if quantityDelta is negative. The type P should support value equality.
- * @param destination is the [Party], [Account], [CompositeKey], or other identifier of the token sink if quantityDelta is positive,
+ * @param destination is the [Party], [CompositeKey], or other identifier of the token sink if quantityDelta is positive,
  * or the token source if quantityDelta is negative. The type P should support value equality.
  */
 @CordaSerializable
@@ -329,7 +332,7 @@ class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
             "Only AmountTransfer between the same two parties can be aggregated/netted"
         }
         return if (other.source == source) {
-            AmountTransfer(Math.addExact(quantityDelta, other.quantityDelta), token, source, destination)
+            AmountTransfer(quantityDelta exactAdd other.quantityDelta, token, source, destination)
         } else {
             AmountTransfer(Math.subtractExact(quantityDelta, other.quantityDelta), token, source, destination)
         }

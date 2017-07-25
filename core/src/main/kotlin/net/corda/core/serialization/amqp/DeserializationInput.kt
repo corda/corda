@@ -1,6 +1,6 @@
 package net.corda.core.serialization.amqp
 
-import net.corda.core.getStackTraceAsString
+import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.serialization.SerializedBytes
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType

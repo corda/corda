@@ -8,9 +8,16 @@ import kotlin.reflect.KProperty
 
 //
 // READ ME FIRST:
-// This is a collection of public utilities useful only for Kotlin code. If you're looking to add a public utility that
-// is also relevant to Java then put it in Utils.kt.
+// This is a collection of public utilities useful only for Kotlin code. Think carefully before adding anything here and
+// make sure it's tested and documented. If you're looking to add a public utility that is also relevant to Java then
+// don't put it here but in a seperate file called Utils.kt
 //
+
+/** Like the + operator but throws [ArithmeticException] in case of integer overflow. */
+infix fun Int.exactAdd(b: Int): Int = Math.addExact(this, b)
+
+/** Like the + operator but throws [ArithmeticException] in case of integer overflow. */
+infix fun Long.exactAdd(b: Long): Long = Math.addExact(this, b)
 
 /**
  * Get the [Logger] for a class using the syntax

@@ -1,7 +1,7 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.internal.ThreadBox
-import net.corda.core.bufferUntilSubscribed
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.DataFeed

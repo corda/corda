@@ -1,48 +1,12 @@
 Deploying a node
 ================
 
-Building nodes using Gradle
+Using Gradle to build nodes
 ---------------------------
 Nodes are usually built using a Gradle task. The canonical Gradle file for building nodes is the one used by the
 CorDapp template. Both a `Java version <https://github.com/corda/cordapp-template-java/blob/master/build.gradle>`_ and
 a `Kotlin version <https://github.com/corda/cordapp-template-kotlin/blob/master/build.gradle>`_ are available.
 
-The buildscript
-~~~~~~~~~~~~~~~
-The buildscript is always located at the top of the build file. Among other things, this section determines which
-version of Corda and the Corda gradle plugins are used to build the nodes and their CorDapps:
-
-.. sourcecode:: groovy
-
-    ext.corda_release_version = '0.14-SNAPSHOT'
-    ext.corda_gradle_plugins_version = '0.14.2'
-
-Release versions suffixed by ``-SNAPSHOT`` are based on the unstable Master branch
-(see :doc:`building-against-master`). You should generally use the latest Milestone release instead.
-
-``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
-``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
-versions can be found here: https://bintray.com/r3/corda/cordformation.
-
-Project dependencies
-~~~~~~~~~~~~~~~~~~~~
-If your CorDapps have any additional external dependencies, they should be added to the ``dependencies`` section:`
-
-.. sourcecode:: groovy
-
-  dependencies {
-
-      ...
-
-      // Cordapp dependencies
-      // Specify your cordapp's dependencies below, including dependent cordapps
-  }
-
-For further information about managing dependencies, see
-`the Gradle docs <https://docs.gradle.org/current/userguide/dependency_management.html>`_.
-
-Building the nodes
-~~~~~~~~~~~~~~~~~~
 Cordform is the local node deployment system for CorDapps. The nodes generated are intended for experimenting,
 debugging, and testing node configurations, but not for production or testnet deployment.
 

@@ -3,8 +3,8 @@ package net.corda.services.messaging
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.elapsedTime
 import net.corda.core.getOrThrow
+import net.corda.core.internal.elapsedTime
 import net.corda.core.internal.times
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
