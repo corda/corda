@@ -6,7 +6,7 @@ Building a CorDapp
 
    cordapp-overview
    writing-cordapps
-   cordapp-integration
+   cordapp-building
    api-index
    flow-cookbook
    cheat-sheet

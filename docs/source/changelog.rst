@@ -50,6 +50,13 @@ UNRELEASED
 * Kotlin utilities that we deemed useful enough to keep public have been moved out of ``net.corda.core.Utils`` and into
   ``net.corda.core.utilities.KotlinUtils``. The other utilities have been marked as internal.
 
+* Changes to ``Cordformation``/ cordapp building:
+
+   * ``Cordformation`` modifies the JAR task to make cordapps build as semi fat JARs containing all dependencies
+     except other cordapps and Corda core dependencies.
+   * ``Cordformation`` adds a ``corda`` and ``cordaRuntime`` configuration to projects which cordapp developers should
+     use to exclude core Corda JARs from being built into Cordapp fat JARs.
+
 Milestone 13
 ------------
 

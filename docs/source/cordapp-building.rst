@@ -1,10 +1,10 @@
-Integrating Cordapps
-====================
+Building Cordapps
+=================
 
 Cordapps run on the Corda platform and integrate with it and each other. To learn more about the basics of a Cordapp
 please read :doc:`cordapp-overview`. To learn about writing a Cordapp as a developer please read :doc:`writing-cordapps`.
 
-This article will specifically deal with build systems.
+This article will specifically deal with how to build cordapps, specifically with Gradle.
 
 Cordapp JAR Format
 ------------------
@@ -84,9 +84,6 @@ is already correctly configured and this is for reference only;
             testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
             testCompile "junit:junit:$junit_version"
 
-            compile "org.graphstream:gs-core:1.3"
-            compile("org.graphstream:gs-ui:1.3") {
-                exclude group: "bouncycastle"
-            }
+            compile "org.apache.commons:commons-lang3:3.6"
         }
 
