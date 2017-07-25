@@ -295,7 +295,7 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     val startupComplete: ListenableFuture<Unit> = SettableFuture.create()
 
-    override fun start(): Node {
+    override fun start() {
         if (initialiseSerialization) {
             initialiseSerialization()
         }
@@ -327,7 +327,6 @@ open class Node(override val configuration: FullNodeConfiguration,
         shutdownHook = addShutdownHook {
             stop()
         }
-        return this
     }
 
     private fun initialiseSerialization() {
@@ -343,12 +342,6 @@ open class Node(override val configuration: FullNodeConfiguration,
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
         (network as NodeMessagingClient).run(messageBroker!!.serverControl)
-    }
-
-    // TODO: Do we really need setup?
-    override fun setup(): Node {
-        super.setup()
-        return this
     }
 
     override fun createBFTSMaRtCluster(): BFTSMaRt.Cluster {
