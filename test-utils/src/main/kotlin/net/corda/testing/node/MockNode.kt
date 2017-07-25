@@ -20,9 +20,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.WorldMapLocation
-import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
@@ -260,8 +258,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
 
-        override fun createBFTSMaRtCluster(): BFTSMaRt.Cluster {
-            return object : BFTSMaRt.Cluster {
+        override fun makeCoreNotaryService(type: ServiceType): NotaryService? {
+            if (type != BFTNonValidatingNotaryService.type) return super.makeCoreNotaryService(type)
+            return BFTNonValidatingNotaryService(services, object : BFTSMaRt.Cluster {
                 override fun waitUntilAllReplicasHaveInitialized() {
                     val clusterNodes = mockNet.nodes.filter {
                         services.notaryIdentityKey in it.info.serviceIdentities(BFTNonValidatingNotaryService.type).map { it.owningKey }
@@ -273,7 +272,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         (it.smm.findServices { it is BFTNonValidatingNotaryService }.single() as BFTNonValidatingNotaryService).waitUntilReplicaHasInitialized()
                     }
                 }
-            }
+            })
         }
     }
 

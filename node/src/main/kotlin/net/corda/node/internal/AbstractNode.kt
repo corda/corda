@@ -566,10 +566,20 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeAdvertisedServices(tokenizableServices: MutableList<Any>) {
         val serviceTypes = info.advertisedServices.map { it.info.type }
         if (NetworkMapService.type in serviceTypes) makeNetworkMapService()
-
         val notaryServiceType = serviceTypes.singleOrNull { it.isNotary() }
         if (notaryServiceType != null) {
-            makeCoreNotaryService(notaryServiceType, tokenizableServices)
+            val service = makeCoreNotaryService(notaryServiceType)
+            if (service != null) {
+                service.apply {
+                    tokenizableServices.add(this)
+                    runOnStop += this::stop
+                    start()
+                }
+                installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
+            } else {
+                log.info("Notary type ${notaryServiceType.id} does not match any built-in notary types. " +
+                        "It is expected to be loaded via a CorDapp")
+            }
         }
     }
 
@@ -630,29 +640,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         inNodeNetworkMapService = PersistentNetworkMapService(services, configuration.minimumPlatformVersion)
     }
 
-    open protected fun makeCoreNotaryService(type: ServiceType, tokenizableServices: MutableList<Any>) {
-        val service: NotaryService = when (type) {
+    open protected fun makeCoreNotaryService(type: ServiceType): NotaryService? {
+        return when (type) {
             SimpleNotaryService.type -> SimpleNotaryService(services)
             ValidatingNotaryService.type -> ValidatingNotaryService(services)
             RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services)
-            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services, createBFTSMaRtCluster())
-            else -> {
-                log.info("Notary type ${type.id} does not match any built-in notary types. " +
-                        "It is expected to be loaded via a CorDapp")
-                return
-            }
+            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services)
+            else -> null
         }
-        service.apply {
-            tokenizableServices.add(this)
-            runOnStop += this::stop
-            start()
-        }
-        installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
     }
-
-    /** Create an object for interacting with the cluster, doesn't create the cluster itself. */
-    protected abstract fun createBFTSMaRtCluster(): BFTSMaRt.Cluster
 
     protected open fun makeIdentityService(trustRoot: X509Certificate,
                                            clientCa: CertificateAndKeyPair?,

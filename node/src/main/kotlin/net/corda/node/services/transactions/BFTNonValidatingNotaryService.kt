@@ -23,10 +23,15 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
-class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, cluster: BFTSMaRt.Cluster) : NotaryService() {
+class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, cluster: BFTSMaRt.Cluster = distributedCluster) : NotaryService() {
     companion object {
         val type = SimpleNotaryService.type.getSubType("bft")
         private val log = loggerFor<BFTNonValidatingNotaryService>()
+        private val distributedCluster = object : BFTSMaRt.Cluster {
+            override fun waitUntilAllReplicasHaveInitialized() {
+                log.warn("Assume all BFT replicas have initialized.")
+            }
+        }
     }
 
     private val client: BFTSMaRt.Client
@@ -52,7 +57,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
 
     fun waitUntilReplicaHasInitialized() {
         log.debug { "Waiting for replica ${services.configuration.bftSMaRt.replicaId} to initialize." }
-        replicaHolder.getOrThrow()
+        replicaHolder.getOrThrow() // It's enough to wait for the ServiceReplica constructor to return.
     }
 
     fun commitTransaction(tx: Any, otherSide: Party) = client.commitTransaction(tx, otherSide)
