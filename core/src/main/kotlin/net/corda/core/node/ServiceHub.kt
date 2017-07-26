@@ -104,7 +104,9 @@ interface ServiceHub : ServicesForResolution {
         return if (stx.isNotaryChangeTransaction()) {
             stx.resolveNotaryChangeTransaction(this).outRef<T>(stateRef.index)
         }
-        else stx.tx.outRef<T>(stateRef.index)
+        else {
+            stx.tx.outRef<T>(stateRef.index)
+        }
     }
 
     /**

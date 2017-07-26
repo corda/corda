@@ -40,7 +40,7 @@ data class LedgerTransaction(
     //DOCEND 1
     init {
         checkBaseInvariants()
-        check(notary != null || timeWindow == null) { "Transactions with time-windows must be notarised" }
+        if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
         checkNoNotaryChange()
         checkEncumbrancesValid()
     }

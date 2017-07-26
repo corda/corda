@@ -116,17 +116,15 @@ class TransactionTests : TestDependencyInjectionBase() {
     @Test
     fun `transaction cannot have duplicate inputs`() {
         val stateRef = StateRef(SecureHash.randomSHA256(), 0)
-        val buildTransaction = {
-            WireTransaction(
-                    inputs = listOf(stateRef, stateRef),
-                    attachments = emptyList(),
-                    outputs = emptyList(),
-                    commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
-                    notary = DUMMY_NOTARY,
-                    type = TransactionType.General,
-                    timeWindow = null
-            )
-        }
+        fun buildTransaction() = WireTransaction(
+                inputs = listOf(stateRef, stateRef),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = DUMMY_NOTARY,
+                type = TransactionType.General,
+                timeWindow = null
+        )
 
         assertFailsWith<IllegalStateException> { buildTransaction() }
     }
@@ -142,18 +140,16 @@ class TransactionTests : TestDependencyInjectionBase() {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
-        val buildTransaction = {
-            LedgerTransaction(
-                    inputs,
-                    outputs,
-                    commands,
-                    attachments,
-                    id,
-                    notary,
-                    timeWindow,
-                    TransactionType.General
-            )
-        }
+        fun buildTransaction() = LedgerTransaction(
+                inputs,
+                outputs,
+                commands,
+                attachments,
+                id,
+                notary,
+                timeWindow,
+                TransactionType.General
+        )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction() }
     }

@@ -30,7 +30,7 @@ import java.util.*
 // DOCSTART 1
 data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                              override val sigs: List<DigitalSignature.WithKey>
-) : TransactionWithSignatures, CoreTransaction() {
+) : TransactionWithSignatures {
     // DOCEND 1
     constructor(ctx: CoreTransaction, sigs: List<DigitalSignature.WithKey>) : this(ctx.serialize(), sigs) {
         cachedTransaction = ctx
@@ -53,18 +53,15 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     val tx: WireTransaction get() = transaction as WireTransaction
 
     /** Returns the contained [NotaryChangeWireTransaction], or throws if this is a normal transaction */
-    val ntx: NotaryChangeWireTransaction get() = transaction as NotaryChangeWireTransaction
+    val notaryChangeTx: NotaryChangeWireTransaction get() = transaction as NotaryChangeWireTransaction
 
-    override val inputs: List<StateRef> get() = transaction.inputs
-    override val notary: Party? get() = transaction.notary
-    override val outputs: List<TransactionState<ContractState>> get() = transaction.outputs
+    /** Helper to access the inputs of the contained transaction */
+    val inputs: List<StateRef> get() = transaction.inputs
+    /** Helper to access the notary of the contained transaction */
+    val notary: Party? get() = transaction.notary
 
     override val requiredSigningKeys: Set<PublicKey> get() = tx.requiredSigningKeys
 
-    /**
-     * Get a human readable description of where signatures are required from, and are missing, to assist in debugging
-     * the underlying cause.
-     */
     override fun getKeyDescriptions(keys: Set<PublicKey>): ArrayList<String> {
         // TODO: We need a much better way of structuring this data
         val descriptions = ArrayList<String>()

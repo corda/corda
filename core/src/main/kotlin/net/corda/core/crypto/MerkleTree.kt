@@ -23,7 +23,7 @@ sealed class MerkleTree {
         /**
          * Merkle tree building using hashes, with zero hash padding to full power of 2.
          */
-        @Throws(IllegalArgumentException::class)
+        @Throws(MerkleTreeException::class)
         fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree {
             if (allLeavesHashes.isEmpty())
                 throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")

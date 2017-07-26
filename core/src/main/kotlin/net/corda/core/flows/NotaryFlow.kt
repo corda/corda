@@ -67,7 +67,7 @@ object NotaryFlow {
                 stx
             } else {
                 if (stx.isNotaryChangeTransaction()) {
-                    stx.ntx
+                    stx.notaryChangeTx
                 } else {
                     stx.tx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
                 }

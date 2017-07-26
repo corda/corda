@@ -11,7 +11,7 @@ sealed class TransactionType {
     /** A general transaction type where transaction validity is determined by custom contract code */
     object General : TransactionType() {
         /** Just uses the default [TransactionBuilder] with no special logic */
-        @Deprecated("Use TransactionBuilder directly instead")
+        @Deprecated("Use TransactionBuilder directly instead", ReplaceWith("TransactionBuilder()"))
         class Builder(notary: Party?) : TransactionBuilder(General, notary)
     }
 }

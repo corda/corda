@@ -19,7 +19,7 @@ data class NotaryChangeWireTransaction(
         val newNotary: Party
 ) : CoreTransaction() {
     /**
-     * This transaction does not contain ant output states, outputs can be obtained by resolving a
+     * This transaction does not contain any output states, outputs can be obtained by resolving a
      * [NotaryChangeLedgerTransaction] and applying the notary modification to inputs.
      */
     override val outputs: List<TransactionState<ContractState>>
@@ -79,9 +79,7 @@ data class NotaryChangeLedgerTransaction(
         inputs.forEachIndexed { i, (state, ref) ->
             state.encumbrance?.let {
                 val nextIndex = i + 1
-                val nextStateIsEncumbrance = {
-                    inputs[nextIndex].ref.txhash == ref.txhash && inputs[nextIndex].ref.index == it
-                }
+                fun nextStateIsEncumbrance() = (inputs[nextIndex].ref.txhash == ref.txhash) && (inputs[nextIndex].ref.index == it)
                 if (nextIndex >= inputs.size || !nextStateIsEncumbrance()) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
                             id,

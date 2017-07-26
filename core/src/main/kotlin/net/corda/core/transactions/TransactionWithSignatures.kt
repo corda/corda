@@ -17,8 +17,7 @@ interface TransactionWithSignatures : NamedByHash {
 
     /**
      * Verifies the signatures on this transaction and throws if any are missing. In this context, "verifying" means
-     * checking they are valid signatures and that their public keys are in the contained transactions
-     * [BaseTransaction.mustSign] property.
+     * checking they are valid signatures and that their public keys are in the [requiredSigningKeys] set.
      *
      * @throws SignatureException if any signatures are invalid or unrecognised.
      * @throws SignaturesMissingException if any signatures should have been present but were not.
@@ -29,7 +28,7 @@ interface TransactionWithSignatures : NamedByHash {
     /**
      * Verifies the signatures on this transaction and throws if any are missing which aren't passed as parameters.
      * In this context, "verifying" means checking they are valid signatures and that their public keys are in
-     * the contained transactions [BaseTransaction.mustSign] property.
+     * the [requiredSigningKeys] set.
      *
      * Normally you would not provide any keys to this function, but if you're in the process of building a partial
      * transaction and you want to access the contents before you've signed it, you can specify your own keys here
@@ -38,11 +37,8 @@ interface TransactionWithSignatures : NamedByHash {
      * @throws SignatureException if any signatures are invalid or unrecognised.
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
-    // DOCSTART 2
     @Throws(SignatureException::class)
     fun verifySignaturesExcept(vararg allowedToBeMissing: PublicKey) {
-        // DOCEND 2
-        // Embedded WireTransaction is not deserialised until after we check the signatures.
         checkSignaturesAreValid()
 
         val needed = getMissingSignatures() - allowedToBeMissing
@@ -65,7 +61,12 @@ interface TransactionWithSignatures : NamedByHash {
         }
     }
 
-    /** Provides a textual description for each of the [keys], which is helpful for error scenarios */
+    /**
+     * Get a human readable description of where signatures are required from, and are missing, to assist in debugging
+     * the underlying cause.
+     *
+     * Note that the results should not be serialised, parsed or expected to remain stable between Corda versions.
+     */
     fun getKeyDescriptions(keys: Set<PublicKey>): List<String>
 
     private fun getMissingSignatures(): Set<PublicKey> {

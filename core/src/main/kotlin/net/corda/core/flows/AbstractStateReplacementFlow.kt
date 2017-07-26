@@ -78,7 +78,9 @@ abstract class AbstractStateReplacementFlow {
             val newOutput = run {
                 if (stx.isNotaryChangeTransaction()) {
                     stx.resolveNotaryChangeTransaction(serviceHub).outRef<T>(0)
-                } else stx.tx.outRef<T>(0)
+                } else {
+                    stx.tx.outRef<T>(0)
+                }
             }
 
             return newOutput
@@ -181,7 +183,9 @@ abstract class AbstractStateReplacementFlow {
             val finalTx = stx + allSignatures
             if (finalTx.isNotaryChangeTransaction()) {
                 finalTx.resolveNotaryChangeTransaction(serviceHub).verifyRequiredSignatures()
-            } else finalTx.verifyRequiredSignatures()
+            } else {
+                finalTx.verifyRequiredSignatures()
+            }
             serviceHub.recordTransactions(finalTx)
         }
 
@@ -199,7 +203,9 @@ abstract class AbstractStateReplacementFlow {
 
             val requiredKeys = if (stx.isNotaryChangeTransaction()) {
                 stx.resolveNotaryChangeTransaction(serviceHub).requiredSigningKeys
-            } else stx.tx.requiredSigningKeys
+            } else {
+                stx.tx.requiredSigningKeys
+            }
 
             require(myKey in requiredKeys) { "Party is not a participant for any of the input states of transaction ${stx.id}" }
         }

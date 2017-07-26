@@ -32,7 +32,8 @@ data class WireTransaction(
 ) : CoreTransaction(), TraversableTransaction {
     init {
         checkBaseInvariants()
-        if (timeWindow != null) check(notary != null) { "If a time-window is provided, there must be a notary" }
+        if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
+        check(availableComponents.isNotEmpty()) { "A WireTransaction cannot be empty" }
     }
 
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */

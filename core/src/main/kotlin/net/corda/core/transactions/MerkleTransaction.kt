@@ -9,7 +9,6 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.serialize
-import java.security.PublicKey
 import java.util.function.Predicate
 
 fun <T : Any> serializedHash(x: T): SecureHash {
