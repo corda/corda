@@ -449,7 +449,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `make update`() {
         val service = (services.vaultService as NodeVaultService)
-        val vaultSubscriber = TestSubscriber<Vault.Update>().apply {
+        val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {
             service.updates.subscribe(this)
         }
 

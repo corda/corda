@@ -3,6 +3,7 @@ package net.corda.client.jfx.model
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineInfo
@@ -32,14 +33,14 @@ data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val mess
 class NodeMonitorModel {
 
     private val stateMachineUpdatesSubject = PublishSubject.create<StateMachineUpdate>()
-    private val vaultUpdatesSubject = PublishSubject.create<Vault.Update>()
+    private val vaultUpdatesSubject = PublishSubject.create<Vault.Update<ContractState>>()
     private val transactionsSubject = PublishSubject.create<SignedTransaction>()
     private val stateMachineTransactionMappingSubject = PublishSubject.create<StateMachineTransactionMapping>()
     private val progressTrackingSubject = PublishSubject.create<ProgressTrackingEvent>()
     private val networkMapSubject = PublishSubject.create<MapChange>()
 
     val stateMachineUpdates: Observable<StateMachineUpdate> = stateMachineUpdatesSubject
-    val vaultUpdates: Observable<Vault.Update> = vaultUpdatesSubject
+    val vaultUpdates: Observable<Vault.Update<ContractState>> = vaultUpdatesSubject
     val transactions: Observable<SignedTransaction> = transactionsSubject
     val stateMachineTransactionMapping: Observable<StateMachineTransactionMapping> = stateMachineTransactionMappingSubject
     val progressTracking: Observable<ProgressTrackingEvent> = progressTrackingSubject
@@ -85,7 +86,7 @@ class NodeMonitorModel {
 
         // Vault updates
         val (vault, vaultUpdates) = proxy.vaultAndUpdates()
-        val initialVaultUpdate = Vault.Update(setOf(), vault.toSet())
+        val initialVaultUpdate = Vault.Update<ContractState>(setOf(), vault.toSet())
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
 
         // Transactions

@@ -29,7 +29,7 @@ class FullNodeConfigurationTest {
                 rpcAddress = NetworkHostAndPort("localhost", 1),
                 messagingServerAddress = null,
                 extraAdvertisedServiceIds = emptyList(),
-                bftReplicaId = null,
+                bftSMaRt = BFTSMaRtConfiguration(-1, false),
                 notaryNodeAddress = null,
                 notaryClusterAddresses = emptyList(),
                 certificateChainCheckPolicies = emptyList(),

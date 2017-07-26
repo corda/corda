@@ -16,6 +16,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.node.internal.AbstractNode
+import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minClusterSize
@@ -25,14 +26,11 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Files
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@Ignore("Replica 6 constructor goes around the loop in BaseStateManager.askCurrentConsensusId forever, so stop hangs when getting the Replica instance to dispose it."
-        + "Happens frequently on Windows and has happened on Linux.")
 class BFTNotaryServiceTests {
     companion object {
         private val clusterName = X500Name("CN=BFT,O=R3,OU=corda,L=Zurich,C=CH")
@@ -46,7 +44,7 @@ class BFTNotaryServiceTests {
         mockNet.stopNodes()
     }
 
-    private fun bftNotaryCluster(clusterSize: Int): Party {
+    private fun bftNotaryCluster(clusterSize: Int, exposeRaces: Boolean = false): Party {
         Files.deleteIfExists("config" / "currentView") // XXX: Make config object warn if this exists?
         val replicaIds = (0 until clusterSize)
         val party = ServiceIdentityGenerator.generateToDisk(
@@ -60,11 +58,24 @@ class BFTNotaryServiceTests {
                     node.network.myAddress,
                     advertisedServices = bftNotaryService,
                     configOverrides = {
-                        whenever(it.bftReplicaId).thenReturn(replicaId)
+                        whenever(it.bftSMaRt).thenReturn(BFTSMaRtConfiguration(replicaId, false, exposeRaces))
                         whenever(it.notaryClusterAddresses).thenReturn(notaryClusterAddresses)
                     })
         }
         return party
+    }
+
+    /** Failure mode is the redundant replica gets stuck in startup, so we can't dispose it cleanly at the end. */
+    @Test
+    fun `all replicas start even if there is a new consensus during startup`() {
+        val notary = bftNotaryCluster(minClusterSize(1), true) // This true adds a sleep to expose the race.
+        val f = node.run {
+            val trivialTx = signInitialTransaction(notary) {}
+            // Create a new consensus while the redundant replica is sleeping:
+            services.startFlow(NotaryFlow.Client(trivialTx)).resultFuture
+        }
+        mockNet.runNetwork()
+        f.getOrThrow()
     }
 
     @Test
