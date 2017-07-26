@@ -171,12 +171,12 @@ repositories {
 // TODO: Corda root project currently produces a dummy cordapp when it shouldn't.
 // Required for building out the fat JAR.
 dependencies {
-    corda project(':node')
+    cordaCompile project(':node')
     compile "com.google.guava:guava:$guava_version"
 
     // Set to corda compile to ensure it exists now deploy nodes no longer relies on build
-    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    corda project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
     cordaRuntime project(':client:jfx')

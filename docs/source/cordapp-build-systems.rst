@@ -28,15 +28,15 @@ Building against Corda
 To build against Corda you must do the following to your ``build.gradle``;
 
 * Add the ``net.corda:corda:<version>`` JAR as a ``cordaRuntime`` dependency.
-* Add each compile dependency (eg ``corda-core``) as a ``corda`` dependency.
+* Add each compile dependency (eg ``corda-core``) as a ``cordaCompile`` dependency.
 
 To make use of the Corda test facilities you must;
 
 * Add ``net.corda:corda-test-utils:<version>`` as a ``testCompile`` dependency (eg; a default Java/Kotlin compile task).
 
-.. warning:: Never include ``corda-test-utils`` as a ``compile`` or ``corda`` dependency.
+.. warning:: Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency.
 
-These configurations work by the ``cordformation`` plugin adding ``corda`` as a new configuration that ``compile``
+These configurations work by the ``cordformation`` plugin adding ``cordaCompile`` as a new configuration that ``compile``
 extends from, and ``cordaRuntime`` which ``runtime`` extends from.
 
 Choosing your Corda version
@@ -93,12 +93,12 @@ is already correctly configured and this is for reference only;
 
         dependencies {
             // Corda integration dependencies
-            corda "net.corda:corda-core:$corda_release_version"
-            corda "net.corda:corda-finance:$corda_release_version"
-            corda "net.corda:corda-jackson:$corda_release_version"
-            corda "net.corda:corda-rpc:$corda_release_version"
-            corda "net.corda:corda-node-api:$corda_release_version"
-            corda "net.corda:corda-webserver-impl:$corda_release_version"
+            cordaCompile "net.corda:corda-core:$corda_release_version"
+            cordaCompile "net.corda:corda-finance:$corda_release_version"
+            cordaCompile "net.corda:corda-jackson:$corda_release_version"
+            cordaCompile "net.corda:corda-rpc:$corda_release_version"
+            cordaCompile "net.corda:corda-node-api:$corda_release_version"
+            cordaCompile "net.corda:corda-webserver-impl:$corda_release_version"
             cordaRuntime "net.corda:corda:$corda_release_version"
             cordaRuntime "net.corda:corda-webserver:$corda_release_version"
             testCompile "net.corda:corda-test-utils:$corda_release_version"
