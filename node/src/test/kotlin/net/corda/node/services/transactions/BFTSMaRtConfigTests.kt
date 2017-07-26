@@ -28,13 +28,13 @@ class BFTSMaRtConfigTests {
 
     @Test
     fun `overlapping port ranges are rejected`() {
-        fun addresses(vararg ports: Int) = ports.map { NetworkHostAndPort("localhost", it) }
-        assertThatThrownBy { BFTSMaRtConfig(addresses(11000, 11001)).use {} }
+        fun config(vararg ports: Int) = BFTSMaRtConfig(ports.map { NetworkHostAndPort("localhost", it) }, false, false)
+        assertThatThrownBy { config(11000, 11001).use {} }
                 .isInstanceOf(IllegalArgumentException::class.java)
                 .hasMessage(portIsClaimedFormat.format("localhost:11001", setOf("localhost:11000", "localhost:11001")))
-        assertThatThrownBy { BFTSMaRtConfig(addresses(11001, 11000)).use {} }
+        assertThatThrownBy { config(11001, 11000).use {} }
                 .isInstanceOf(IllegalArgumentException::class.java)
                 .hasMessage(portIsClaimedFormat.format("localhost:11001", setOf("localhost:11001", "localhost:11002", "localhost:11000")))
-        BFTSMaRtConfig(addresses(11000, 11002)).use {} // Non-overlapping.
+        config(11000, 11002).use {} // Non-overlapping.
     }
 }

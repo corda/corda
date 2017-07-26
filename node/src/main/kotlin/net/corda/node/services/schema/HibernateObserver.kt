@@ -17,7 +17,7 @@ import rx.Observable
  * A vault observer that extracts Object Relational Mappings for contract states that support it, and persists them with Hibernate.
  */
 // TODO: Manage version evolution of the schemas via additional tooling.
-class HibernateObserver(vaultUpdates: Observable<Vault.Update>, val config: HibernateConfiguration) {
+class HibernateObserver(vaultUpdates: Observable<Vault.Update<ContractState>>, val config: HibernateConfiguration) {
 
     companion object {
         val logger = loggerFor<HibernateObserver>()

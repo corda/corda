@@ -51,7 +51,7 @@ interface VaultQueryService {
     fun <T : ContractState> _trackBy(criteria: QueryCriteria,
                                      paging: PageSpecification,
                                      sorting: Sort,
-                                     contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update>
+                                     contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>>
     // DOCEND VaultQueryAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
@@ -76,23 +76,23 @@ interface VaultQueryService {
         return _queryBy(criteria, paging, sorting, contractType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update> {
+    fun <T : ContractState> trackBy(contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return _trackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update> {
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return _trackBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update> {
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return _trackBy(criteria, paging, Sort(emptySet()), contractType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return _trackBy(criteria, PageSpecification(), sorting, contractType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return _trackBy(criteria, paging, sorting, contractType)
     }
 }
@@ -117,24 +117,24 @@ inline fun <reified T : ContractState> VaultQueryService.queryBy(criteria: Query
     return _queryBy(criteria, paging, sorting, T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(): DataFeed<Vault.Page<T>, Vault.Update> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(): DataFeed<Vault.Page<T>, Vault.Update<T>> {
     return _trackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
     return _trackBy(criteria, PageSpecification(), Sort(emptySet()), T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
     return _trackBy(criteria, paging, Sort(emptySet()), T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
     return _trackBy(criteria, PageSpecification(), sorting, T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
     return _trackBy(criteria, paging, sorting, T::class.java)
 }
 
-class VaultQueryException(description: String) : FlowException("$description")
+class VaultQueryException(description: String) : FlowException(description)

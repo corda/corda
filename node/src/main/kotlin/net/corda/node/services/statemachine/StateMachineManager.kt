@@ -142,6 +142,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         SerializeAsTokenContext(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
     }
 
+    fun findServices(predicate: (Any) -> Boolean) = tokenizableServices.filter(predicate)
+
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
     fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
         @Suppress("UNCHECKED_CAST")
