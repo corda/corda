@@ -10,11 +10,20 @@ import org.gradle.api.artifacts.Configuration
  */
 class Cordformation implements Plugin<Project> {
     void apply(Project project) {
-        Configuration cordappConf = project.configurations.create("cordapp")
-        cordappConf.transitive = false
-        project.configurations.compile.extendsFrom cordappConf
+        createCompileConfiguration("cordapp", project)
+        createCompileConfiguration("corda", project)
+
+        Configuration configuration = project.configurations.create("cordaRuntime")
+        configuration.transitive = false
+        project.configurations.runtime.extendsFrom configuration
 
         configureCordappJar(project)
+    }
+
+    private void createCompileConfiguration(String name, Project project) {
+        Configuration configuration = project.configurations.create(name)
+        configuration.transitive = false
+        project.configurations.compile.extendsFrom configuration
     }
 
     /**
@@ -47,26 +56,30 @@ class Cordformation implements Plugin<Project> {
         }, filePathInJar).asFile()
     }
 
-    private static def getDirectNonCordaDependencies(Project project) {
-        def coreCordaNames = ['jfx', 'mock', 'rpc', 'core', 'corda', 'cordform-common', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'verifier', 'webserver', 'capsule', 'webcapsule']
-        def excludes = coreCordaNames.collect { [group: 'net.corda', name: it] } + [
+    private static Set<File> getDirectNonCordaDependencies(Project project) {
+        def excludes = [
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib'],
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jre8'],
                 [group: 'co.paralleluniverse', name: 'quasar-core']
         ]
-        // The direct dependencies of this project
-        def cordappDeps = project.configurations.cordapp.allDependencies
-        def directDeps = project.configurations.runtime.allDependencies - cordappDeps
-        // We want to filter out anything Corda related or provided by Corda, like kotlin-stdlib and quasar
-        def filteredDeps = directDeps.findAll { excludes.collect { exclude -> (exclude.group == it.group) && (exclude.name == it.name) }.findAll { it }.isEmpty() }
-        filteredDeps.each {
-            // net.corda may be a core dependency which shouldn't be included in this cordapp so give a warning
-            if(it.group.contains('net.corda')) {
-                project.logger.warn("Including a dependency with a net.corda group: $it")
-            } else {
-                project.logger.trace("Including dependency: $it")
+
+        project.with {
+            // The direct dependencies of this project
+            def excludeDeps = configurations.cordapp.allDependencies + configurations.corda.allDependencies + configurations.cordaRuntime.allDependencies
+            def directDeps = configurations.runtime.allDependencies - excludeDeps
+            // We want to filter out anything Corda related or provided by Corda, like kotlin-stdlib and quasar
+            def filteredDeps = directDeps.findAll { excludes.collect { exclude -> (exclude.group == it.group) && (exclude.name == it.name) }.findAll { it }.isEmpty() }
+            filteredDeps.each {
+                // net.corda may be a core dependency which shouldn't be included in this cordapp so give a warning
+                if(it.group.contains('net.corda')) {
+                    logger.warn("You appear to have included a Corda platform component ($it) using a 'compile' or 'runtime' dependency." +
+                                "This can cause node stability problems. Please use 'corda' instead." +
+                                "See http://docs.corda.net/cordapp-build-systems.html")
+                } else {
+                    logger.trace("Including dependency: $it")
+                }
             }
+            return filteredDeps.collect { configurations.runtime.files it }.flatten().toSet()
         }
-        return filteredDeps.collect { project.configurations.runtime.files it }.flatten().toSet()
     }
 }
