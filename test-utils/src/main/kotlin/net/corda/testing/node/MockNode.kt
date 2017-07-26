@@ -269,7 +269,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")
                     }
                     clusterNodes.forEach {
-                        (it.smm.findServices { it is BFTNonValidatingNotaryService }.single() as BFTNonValidatingNotaryService).waitUntilReplicaHasInitialized()
+                        val notaryService = it.smm.findServices { it is BFTNonValidatingNotaryService }.single() as BFTNonValidatingNotaryService
+                        notaryService.waitUntilReplicaHasInitialized()
                     }
                 }
             })

@@ -29,7 +29,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
         private val log = loggerFor<BFTNonValidatingNotaryService>()
         private val distributedCluster = object : BFTSMaRt.Cluster {
             override fun waitUntilAllReplicasHaveInitialized() {
-                log.warn("Assume all BFT replicas have initialized.")
+                log.warn("A replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
             }
         }
     }
