@@ -101,7 +101,7 @@ which could be represented as ``{ first: foo, second: 123 }``.
 
 The same syntax is also used to specify the parameters for RPCs, accessed via the ``run`` command, like this:
 
-``run getCashBalances``
+``run registeredFlows``
 
 Attachments
 -----------

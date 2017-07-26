@@ -157,12 +157,6 @@ interface VaultService {
     val updatesPublisher: PublishSubject<Vault.Update>
 
     /**
-     * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
-     * which we have no cash evaluate to null (not present in map), not 0.
-     */
-    val cashBalances: Map<Currency, Amount<Currency>>
-
-    /**
      * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
      * first subscriber is registered so as to avoid racing with early updates.
      */

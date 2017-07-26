@@ -1,26 +1,29 @@
 package net.corda.java.rpc;
 
-import net.corda.client.rpc.*;
-import net.corda.contracts.asset.*;
-import net.corda.core.contracts.*;
-import net.corda.core.messaging.*;
-import net.corda.core.node.*;
-import net.corda.core.node.services.*;
-import net.corda.core.node.services.vault.*;
-import net.corda.core.utilities.*;
-import net.corda.flows.*;
-import net.corda.nodeapi.*;
-import net.corda.schemas.*;
-import net.corda.smoketesting.*;
-import org.bouncycastle.asn1.x500.*;
-import org.junit.*;
+import net.corda.client.rpc.CordaRPCConnection;
+import net.corda.core.contracts.Amount;
+import net.corda.core.messaging.CordaRPCOps;
+import net.corda.core.messaging.DataFeed;
+import net.corda.core.messaging.FlowHandle;
+import net.corda.core.node.NodeInfo;
+import net.corda.core.node.services.NetworkMapCache;
+import net.corda.core.utilities.OpaqueBytes;
+import net.corda.flows.AbstractCashFlow;
+import net.corda.flows.CashIssueFlow;
+import net.corda.nodeapi.User;
+import net.corda.smoketesting.NodeConfig;
+import net.corda.smoketesting.NodeProcess;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.lang.reflect.*;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static kotlin.test.AssertionsKt.assertEquals;
+import static net.corda.contracts.GetBalances.getCashBalance;
 
 public class StandaloneCordaRPCJavaClientTest {
     private List<String> perms = Collections.singletonList("ALL");
@@ -76,24 +79,9 @@ public class StandaloneCordaRPCJavaClientTest {
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 
-        Amount<Currency> balance = getBalance(Currency.getInstance("USD"));
+        Amount<Currency> balance = getCashBalance(rpcProxy, Currency.getInstance("USD"));
         System.out.print("Balance: " + balance + "\n");
 
         assertEquals(dollars123, balance, "matching");
-    }
-
-    private Amount<Currency> getBalance(Currency currency) throws NoSuchFieldException {
-        Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
-        @SuppressWarnings("unchecked")
-        QueryCriteria sumCriteria = new QueryCriteria.VaultCustomQueryCriteria(Builder.sum(pennies));
-
-        Vault.Page<Cash.State> results = rpcProxy.vaultQueryByCriteria(sumCriteria, Cash.State.class);
-        if (results.getOtherResults().isEmpty()) {
-            return new Amount<>(0L, currency);
-        } else {
-            Assert.assertNotNull(results.getOtherResults());
-            Long quantity = (Long) results.getOtherResults().get(0);
-            return new Amount<>(quantity, currency);
-        }
     }
 }
