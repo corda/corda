@@ -45,7 +45,7 @@ class P2PMessagingTest : NodeBasedTest() {
         // Start the network map a second time - this will restore message queues from the journal.
         // This will hang and fail prior the fix. https://github.com/corda/corda/issues/37
         stopAllNodes()
-        startNodes().getOrThrow(timeout = startUpDuration * 3)
+        startNodes().getOrThrow(timeout = startUpDuration * 3) //TODO This test doesn't make sense anymore.
     }
 
     // https://github.com/corda/corda/issues/71

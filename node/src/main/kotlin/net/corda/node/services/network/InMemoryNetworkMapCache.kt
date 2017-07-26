@@ -101,9 +101,9 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
 
     // TODO See comment to queryByLegalName why it's left like that.
     override fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == principal }
-            //serviceHub!!.database.transaction { queryByLegalName(principal).singleOrNull() }
+            //serviceHub!!.database.transaction { queryByLegalName(principal).firstOrNull() }
     override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? =
-            serviceHub!!.database.transaction { queryByLegalIdentity(identityKey).singleOrNull() }
+            serviceHub!!.database.transaction { queryByLegalIdentity(identityKey).firstOrNull() }
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
         val wellKnownParty = if (serviceHub != null) {
             serviceHub.identityService.partyFromAnonymous(party)
@@ -162,6 +162,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
                 updateInfoDB(node)
                 changePublisher.onNext(MapChange.Added(node))
             } else if (previousNode != node) {
+                updateInfoDB(node)
                 changePublisher.onNext(MapChange.Modified(node, previousNode))
             }
         }
@@ -232,7 +233,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
                 logger.info("Loaded node info: $nodeInfo")
                 val publicKey = parsePublicKeyBase58(nodeInfo.legalIdentitiesAndCerts.filter { it.isMain }.single().owningKey)
                 val node = nodeInfo.toNodeInfo()
-                registeredNodes.put(publicKey, node) // TODO It will change, we won't store it in memory
+                registeredNodes.put(publicKey, node)
                 changePublisher.onNext(MapChange.Added(node)) // Redeploy bridges after reading from DB on startup.
             }
             if (loadDBSuccess) // Useful only if we don't have NetworkMapService configured so StateMachineManager can start.
@@ -241,26 +242,22 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
     }
 
     private fun updateInfoDB(nodeInfo: NodeInfo) {
-        val session = sessionFactory?.withOptions()?.
-                connection(TransactionManager.current().connection)?.
-                flushMode(FlushMode.MANUAL)?.
-                openSession()
+        val session = createSession()
         session?.use {
             val nodeInfoEntry = nodeInfo.generateMappedObject(NodeInfoSchemaV1)
-            session.merge(nodeInfoEntry) //todo saveOrUpdate
-            session.flush()
+            val tx = it.beginTransaction()
+            session.saveOrUpdate(nodeInfoEntry)
+            tx.commit()
         }
     }
 
     private fun removeInfoDB(nodeInfo: NodeInfo) {
-        val session = sessionFactory?.withOptions()?.
-                connection(TransactionManager.current().connection)?.
-                flushMode(FlushMode.MANUAL)?.
-                openSession()
+        val session = createSession()
         session?.use {
             val info = findByLegalIdentity(session, nodeInfo.legalIdentity.owningKey).single()
+            val tx = it.beginTransaction()
             session.remove(info)
-            session.flush()
+            tx.commit()
         }
     }
 

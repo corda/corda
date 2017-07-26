@@ -85,7 +85,7 @@ object NodeInfoSchemaV1 : MappedSchema(
     ) : Serializable
 
     @Entity // I am not sure if we really need proliferation of entities, but design doc says about queries on address.
-    class DBHostAndPort(
+    data class DBHostAndPort(
                 @EmbeddedId
                 private val pk: PKHostAndPort
     ) : Serializable {
@@ -151,7 +151,7 @@ object NodeInfoSchemaV1 : MappedSchema(
 
             val isMain: Boolean,
 
-            @ManyToMany(mappedBy = "legalIdentitiesAndCerts") // ManyToMany because of distributed services.
+            @ManyToMany(mappedBy = "legalIdentitiesAndCerts", cascade = arrayOf(CascadeType.ALL)) // ManyToMany because of distributed services.
             private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
     ) {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
