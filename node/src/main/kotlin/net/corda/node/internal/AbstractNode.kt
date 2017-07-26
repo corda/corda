@@ -57,7 +57,6 @@ import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
 import net.corda.node.services.transactions.*
-import net.corda.node.services.vault.CashBalanceAsMetricsObserver
 import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
@@ -485,7 +484,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeVaultObservers() {
         VaultSoftLockManager(services.vaultService, smm)
-        CashBalanceAsMetricsObserver(services, database)
         ScheduledActivityObserver(services)
         HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService))
     }

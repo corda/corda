@@ -1,15 +1,16 @@
 package net.corda.docs
 
+import net.corda.contracts.getCashBalances
 import net.corda.core.contracts.*
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.toFuture
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashIssueFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -78,11 +79,11 @@ class FxTransactionBuildTutorialTest {
         // Get the balances when the vault updates
         nodeAVaultUpdate.get()
         val balancesA = nodeA.database.transaction {
-            nodeA.services.vaultService.cashBalances
+            nodeA.services.getCashBalances()
         }
         nodeBVaultUpdate.get()
         val balancesB = nodeB.database.transaction {
-            nodeB.services.vaultService.cashBalances
+            nodeB.services.getCashBalances()
         }
         println("BalanceA\n" + balancesA)
         println("BalanceB\n" + balancesB)
@@ -96,10 +97,10 @@ class FxTransactionBuildTutorialTest {
     private fun printBalances() {
         // Print out the balances
         nodeA.database.transaction {
-            println("BalanceA\n" + nodeA.services.vaultService.cashBalances)
+            println("BalanceA\n" + nodeA.services.getCashBalances())
         }
         nodeB.database.transaction {
-            println("BalanceB\n" + nodeB.services.vaultService.cashBalances)
+            println("BalanceB\n" + nodeB.services.getCashBalances())
         }
     }
 }

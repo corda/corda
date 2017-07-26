@@ -2,14 +2,15 @@ package net.corda.traderdemo.flow
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
+import net.corda.contracts.getCashBalances
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.TransactionGraphSearch
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.Party
+import net.corda.core.internal.Emoji
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.internal.Emoji
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow
@@ -46,7 +47,7 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
     }
 
     private fun logBalance() {
-        val balances = serviceHub.vaultService.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
+        val balances = serviceHub.getCashBalances().entries.map { "${it.key.currencyCode} ${it.value}" }
         println("Remaining balance: ${balances.joinToString()}")
     }
 
