@@ -3,20 +3,17 @@ package net.corda.demobench.views
 import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
-import java.awt.Dimension
-import java.net.URI
-import java.util.logging.Level
-import javax.swing.SwingUtilities
 import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.control.ProgressIndicator
 import javafx.scene.image.ImageView
-import javafx.scene.layout.StackPane
 import javafx.scene.layout.HBox
+import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.util.Duration
+import net.corda.contracts.getCashBalances
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.commonName
 import net.corda.core.internal.concurrent.match
@@ -35,6 +32,10 @@ import net.corda.demobench.web.WebServerController
 import rx.Subscription
 import rx.schedulers.Schedulers
 import tornadofx.*
+import java.awt.Dimension
+import java.net.URI
+import java.util.logging.Level
+import javax.swing.SwingUtilities
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()

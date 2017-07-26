@@ -36,8 +36,10 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.vault.schemas.requery.*
+import net.corda.node.services.vault.schemas.requery.Models
 import net.corda.node.services.vault.schemas.requery.VaultSchema
+import net.corda.node.services.vault.schemas.requery.VaultStatesEntity
+import net.corda.node.services.vault.schemas.requery.VaultTxnNoteEntity
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
 import rx.Observable
@@ -124,51 +126,6 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         return update
     }
 
-    // TODO: consider moving this logic outside the vault
-    // TODO: revisit the concurrency safety of this logic when we move beyond single threaded SMM.
-    //       For example, we update currency totals in a non-deterministic order and so expose ourselves to deadlock.
-    private fun maybeUpdateCashBalances(update: Vault.Update) {
-        if (update.containsType<Cash.State>()) {
-            val consumed = sumCashStates(update.consumed)
-            val produced = sumCashStates(update.produced)
-            (produced.keys + consumed.keys).map { currency ->
-                val producedAmount = produced[currency] ?: Amount(0, currency)
-                val consumedAmount = consumed[currency] ?: Amount(0, currency)
-
-                val cashBalanceEntity = VaultCashBalancesEntity()
-                cashBalanceEntity.currency = currency.currencyCode
-                cashBalanceEntity.amount = producedAmount.quantity - consumedAmount.quantity
-
-                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
-                    val state = findByKey(VaultCashBalancesEntity::class, currency.currencyCode)
-                    state?.run {
-                        amount += producedAmount.quantity - consumedAmount.quantity
-                    }
-                    upsert(state ?: cashBalanceEntity)
-                    val total = state?.amount ?: cashBalanceEntity.amount
-                    log.trace { "Updating Cash balance for $currency by ${cashBalanceEntity.amount} pennies (total: $total)" }
-                }
-            }
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun sumCashStates(states: Iterable<StateAndRef<ContractState>>): Map<Currency, Amount<Currency>> {
-        return states.mapNotNull { (it.state.data as? FungibleAsset<Currency>)?.amount }
-                .groupBy { it.token.product }
-                .mapValues { it.value.map { Amount(it.quantity, it.token.product) }.sumOrThrow() }
-    }
-
-    override val cashBalances: Map<Currency, Amount<Currency>> get() {
-        val cashBalancesByCurrency =
-                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
-                    val balances = select(VaultSchema.VaultCashBalances::class)
-                    balances.get().toList()
-                }
-        return cashBalancesByCurrency.associateBy({ Currency.getInstance(it.currency) },
-                { Amount(it.amount, Currency.getInstance(it.currency)) })
-    }
-
     override val rawUpdates: Observable<Vault.Update>
         get() = mutex.locked { _rawUpdatesPublisher }
 
@@ -232,7 +189,6 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn, ourKeys) }
         if (netDelta != Vault.NoUpdate) {
             recordUpdate(netDelta)
-            maybeUpdateCashBalances(netDelta)
             mutex.locked {
                 // flowId required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
