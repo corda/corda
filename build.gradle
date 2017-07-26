@@ -174,7 +174,7 @@ dependencies {
     corda project(':node')
     compile "com.google.guava:guava:$guava_version"
 
-    // Set to compile to ensure it exists now deploy nodes no longer relies on build
+    // Set to corda compile to ensure it exists now deploy nodes no longer relies on build
     corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     corda project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
