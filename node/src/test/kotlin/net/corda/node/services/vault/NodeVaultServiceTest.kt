@@ -2,24 +2,26 @@ package net.corda.node.services.vault
 
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.unconsumedStates
+import net.corda.core.node.services.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
+import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.schemas.CommercialPaperSchemaV1
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -31,7 +33,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NodeVaultServiceTest : TestDependencyInjectionBase() {
@@ -45,8 +46,10 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps)
         database.transaction {
+            val customSchemas = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1)
+            val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas))
             services = object : MockServices() {
-                override val vaultService: VaultService = makeVaultService(dataSourceProps)
+                override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -55,6 +58,8 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
                 }
+
+                override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
             }
         }
     }
@@ -155,7 +160,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         val vaultStates =
                 database.transaction {
-                    assertNull(vaultSvc.cashBalances[USD])
+                    assertEquals(0.DOLLARS, services.getCashBalance(USD))
                     services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
                 }
         val stateRefsToSoftLock = (vaultStates.states.map { it.ref }).toNonEmptySet()
@@ -211,7 +216,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         val vaultStates =
                 database.transaction {
-                    assertNull(vaultSvc.cashBalances[USD])
+                    assertEquals(0.DOLLARS, services.getCashBalance(USD))
                     services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
                 }
         val stateRefsToSoftLock = vaultStates.states.map { it.ref }
@@ -238,7 +243,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         val vaultStates =
                 database.transaction {
-                    assertNull(vaultSvc.cashBalances[USD])
+                    assertEquals(0.DOLLARS, services.getCashBalance(USD))
                     services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
                 }
         val stateRefsToSoftLock = (vaultStates.states.map { it.ref }).toNonEmptySet()
@@ -264,7 +269,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         val vaultStates =
                 database.transaction {
-                    assertNull(vaultSvc.cashBalances[USD])
+                    assertEquals(0.DOLLARS, services.getCashBalance(USD))
                     services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
                 }
         val stateRefsToSoftLock = vaultStates.states.map { it.ref }
