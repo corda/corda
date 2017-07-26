@@ -60,51 +60,6 @@ The ``src`` directory of the Template CorDapp, where we define our CorDapp's sou
                     └── contract
                         └── TemplateTests.java
 
-The build file
---------------
-At the root of the Template CorDapp, you will also find a ``build.gradle`` file. This file is useful for several
-reasons:
-
-Choosing your CorDapp version
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The following two lines of the ``build.gradle`` file define the Corda version used to build your CorDapp:
-
-.. sourcecode:: groovy
-
-    ext.corda_release_version = '0.13.0'
-    ext.corda_gradle_plugins_version = '0.13.3'
-
-In this case, our CorDapp will use the Milestone 13 release of Corda, and version 13.3 of the Corda gradle plugins. You
-can find the latest published version of both here: https://bintray.com/r3/corda.
-
-``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
-``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
-versions can be found here: https://bintray.com/r3/corda/cordformation.
-
-In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
-
-Project dependencies
-^^^^^^^^^^^^^^^^^^^^
-If your CorDapps have any additional external dependencies, they should be added to the ``dependencies`` section:
-
-.. sourcecode:: groovy
-
-   dependencies {
-
-       ...
-
-       // Cordapp dependencies
-       // Specify your cordapp's dependencies below, including dependent cordapps
-   }
-
-For further information about managing dependencies, see
-`the Gradle docs <https://docs.gradle.org/current/userguide/dependency_management.html>`_.
-
-Build tasks
-^^^^^^^^^^^
-The build file also defines a number of build tasks that will allow us to package up our plugin. We will discuss these
-later.
-
 Defining plugins
 ----------------
 Your CorDapp may need to define two types of plugins:
@@ -138,3 +93,6 @@ The ``WebServerPluginRegistry`` class defines the following:
   started
 
   * The static web content itself should be placed inside the ``src/main/resources`` directory
+
+To learn about how to use gradle to build your cordapp against Corda and generate an artifact please read
+:doc:`cordapp-build-systems`.

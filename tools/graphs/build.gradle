@@ -1,0 +1,75 @@
+class GraphProject {
+    def projects, project, nodeName, safeName
+    GraphProject(projects, project) {
+        def path = project.path.split(':').findAll { it }
+        if (!path) path.add project.rootProject.name
+        path = path.collect { it.split('[/\\\\]')[-1] }
+        nodeName = path.join(':')
+        safeName = path.join('_')
+        this.projects = projects
+        this.project = project
+    }
+    def getCompileDeps() {
+        project.configurations.compile.dependencies.matching { it in ProjectDependency }.collect { projects[it.dependencyProject] }
+    }
+}
+
+class Graph {
+    def arcs = new LinkedHashSet()
+    def dotFile, imgFile, project
+    Graph(graphsDir, project) {
+        initArcs(project)
+        dotFile = new File(graphsDir, "${project.safeName}.dot")
+        imgFile = new File(graphsDir, "${project.safeName}.png")
+        this.project = project
+    }
+    def initArcs(project) {
+        project.compileDeps.each {
+            arcs.add([project, it])
+            initArcs(it)
+        }
+    }
+    def output() {
+        dotFile.text = ''
+        dotFile << "digraph \"$project.nodeName\" {\n"
+        dotFile << '    rankdir=LR;\n'
+        arcs.collect { it.collect { it.nodeName } }.each {
+            dotFile << "    \"${it[0]}\" -> \"${it[1]}\";\n"
+        }
+        dotFile << '}\n'
+        project.project.exec {
+            commandLine 'dot', '-Tpng', '-o', imgFile, dotFile
+        }
+    }
+}
+
+def walkProjects(project, block) {
+    block(project)
+    project.childProjects.each { walkProjects(it.value, block) }
+}
+
+task graphs {
+    doLast {
+        def projects = new LinkedHashMap()
+        walkProjects(rootProject) { projects[it] = new GraphProject(projects, it) }
+        def graphsDir = reporting.baseDir
+        graphsDir.mkdirs()
+        def graphs = projects.collect { new Graph(graphsDir, it.value) }
+        graphs.each { graph ->
+            if (!graph.arcs) {
+                logger.info "$graph.project.nodeName is a leaf."
+                return
+            }
+            for (def that : graphs) {
+                if (that != graph && that.arcs + graph.arcs == that.arcs) {
+                    logger.info "$graph.project.nodeName is included in: $that.imgFile"
+                    return
+                }
+            }
+            graph.output()
+        }
+        exec {
+            commandLine 'eog', graphsDir
+        }
+    }
+}
