@@ -13,6 +13,11 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
+/** @param exposeRaces for testing only, so its default is not in reference.conf but here. */
+data class BFTSMaRtConfiguration(val replicaId: Int, val debug: Boolean, val exposeRaces: Boolean = false) {
+    fun isValid() = replicaId >= 0
+}
+
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: X500Name
     val networkMapService: NetworkMapInfo?
@@ -26,7 +31,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
     val messageRedeliveryDelaySeconds: Int
-    val bftReplicaId: Int?
+    val bftSMaRt: BFTSMaRtConfiguration
     val notaryNodeAddress: NetworkHostAndPort?
     val notaryClusterAddresses: List<NetworkHostAndPort>
 }
@@ -56,7 +61,7 @@ data class FullNodeConfiguration(
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         val messagingServerAddress: NetworkHostAndPort?,
         val extraAdvertisedServiceIds: List<String>,
-        override val bftReplicaId: Int?,
+        override val bftSMaRt: BFTSMaRtConfiguration,
         override val notaryNodeAddress: NetworkHostAndPort?,
         override val notaryClusterAddresses: List<NetworkHostAndPort>,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,

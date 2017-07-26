@@ -44,7 +44,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * other transactions observed, then the changes are observed "net" of those.
      */
     @CordaSerializable
-    data class Update(val consumed: Set<StateAndRef<ContractState>>, val produced: Set<StateAndRef<ContractState>>, val flowId: UUID? = null) {
+    data class Update<U : ContractState>(val consumed: Set<StateAndRef<U>>, val produced: Set<StateAndRef<U>>, val flowId: UUID? = null) {
         /** Checks whether the update contains a state of the specified type. */
         inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
 
@@ -63,8 +63,8 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
          *
          * i.e. the net effect in terms of state live-ness of receiving the combined update is the same as receiving this followed by rhs.
          */
-        operator fun plus(rhs: Update): Update {
-            val combined = Vault.Update(
+        operator fun plus(rhs: Update<U>): Update<U> {
+            val combined = Vault.Update<U>(
                     consumed + (rhs.consumed - produced),
                     // The ordering below matters to preserve ordering of consumed/produced Sets when they are insertion order dependent implementations.
                     produced.filter { it !in rhs.consumed }.toSet() + rhs.produced)
@@ -84,7 +84,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     companion object {
-        val NoUpdate = Update(emptySet(), emptySet())
+        val NoUpdate = Update<ContractState>(emptySet(), emptySet())
     }
 
     @CordaSerializable
@@ -143,18 +143,18 @@ interface VaultService {
      * JVM or across to another [Thread] which is executing in a different database transaction) then the Vault may
      * not incorporate the update due to racing with committing the current database transaction.
      */
-    val rawUpdates: Observable<Vault.Update>
+    val rawUpdates: Observable<Vault.Update<ContractState>>
 
     /**
      * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
      * the update, and the database transaction associated with the update will have been committed and closed.
      */
-    val updates: Observable<Vault.Update>
+    val updates: Observable<Vault.Update<ContractState>>
 
     /**
      * Enable creation of observables of updates.
      */
-    val updatesPublisher: PublishSubject<Vault.Update>
+    val updatesPublisher: PublishSubject<Vault.Update<ContractState>>
 
     /**
      * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
@@ -162,7 +162,7 @@ interface VaultService {
      */
     // TODO: Remove this from the interface
     @Deprecated("This function will be removed in a future milestone", ReplaceWith("trackBy(QueryCriteria())"))
-    fun track(): DataFeed<Vault<ContractState>, Vault.Update>
+    fun track(): DataFeed<Vault<ContractState>, Vault.Update<ContractState>>
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s
@@ -185,7 +185,7 @@ interface VaultService {
     /**
      * Provide a [CordaFuture] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
-    fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update> {
+    fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
         return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
 

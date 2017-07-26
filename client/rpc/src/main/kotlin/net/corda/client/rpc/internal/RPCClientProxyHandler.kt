@@ -84,7 +84,7 @@ class RPCClientProxyHandler(
     private var reaperExecutor: ScheduledExecutorService? = null
 
     // A sticky pool for running Observable.onNext()s. We need the stickiness to preserve the observation ordering.
-    private val observationExecutorThreadFactory = ThreadFactoryBuilder().setNameFormat("rpc-client-observation-pool-%d").build()
+    private val observationExecutorThreadFactory = ThreadFactoryBuilder().setNameFormat("rpc-client-observation-pool-%d").setDaemon(true).build()
     private val observationExecutorPool = LazyStickyPool(rpcConfiguration.observationExecutorPoolSize) {
         Executors.newFixedThreadPool(1, observationExecutorThreadFactory)
     }

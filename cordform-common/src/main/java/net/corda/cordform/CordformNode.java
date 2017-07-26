@@ -4,6 +4,7 @@ import static java.util.Collections.emptyList;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -86,6 +87,6 @@ public class CordformNode implements NodeDefinition {
      * @param id The (0-based) BFT replica ID.
      */
     public void bftReplicaId(Integer id) {
-        config = config.withValue("bftReplicaId", ConfigValueFactory.fromAnyRef(id));
+        config = config.withValue("bftSMaRt", ConfigValueFactory.fromMap(Collections.singletonMap("replicaId", id)));
     }
 }

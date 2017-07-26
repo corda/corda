@@ -4,6 +4,7 @@ import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.ProgressTrackingEvent
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.isFulfilledBy
@@ -47,7 +48,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var stateMachineUpdatesBob: Observable<StateMachineUpdate>
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
-    lateinit var vaultUpdates: Observable<Vault.Update>
+    lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     lateinit var newNode: (X500Name) -> NodeInfo
 

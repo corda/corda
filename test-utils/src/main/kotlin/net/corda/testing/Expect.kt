@@ -78,6 +78,11 @@ fun <E> sequence(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = Expec
  */
 fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Parallel(listOf(*expectations))
 
+/**
+ * Tests that events arrive in unspecified order.
+ *
+ * @param expectations The pieces of DSL all of which should run but in an unspecified order depending on what sequence events arrive.
+ */
 fun <E> parallel(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = ExpectCompose.Parallel(expectations)
 
 /**
