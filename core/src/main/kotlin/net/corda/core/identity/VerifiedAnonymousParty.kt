@@ -12,12 +12,12 @@ import java.security.cert.X509Certificate
  * does not validate the certificate path matches the party, and should not be trusted without being verified, for example
  * using [IdentityService.verifyAnonymousIdentity].
  *
- * Although similar to [PartyAndCertificate], the two distinct types exist in order to minimise risk of mixing up
- * confidential and well known identities. In contrast to [PartyAndCertificate] equality tests are based on the anonymous
+ * Although similar to [VerifiedParty], the two distinct types exist in order to minimise risk of mixing up
+ * confidential and well known identities. In contrast to [VerifiedParty] equality tests are based on the anonymous
  * party's key rather than name, which is the appropriate test for confidential parties but not for well known identities.
  */
 @CordaSerializable
-data class AnonymousPartyAndPath(
+data class VerifiedAnonymousParty(
         val party: AnonymousParty,
         val certPath: CertPath) {
     constructor(party: PublicKey, certPath: CertPath)
@@ -35,7 +35,7 @@ data class AnonymousPartyAndPath(
         get() = (certPath.certificates.first() as? X509Certificate)?.subject
 
     override fun equals(other: Any?): Boolean {
-        return if (other is AnonymousPartyAndPath)
+        return if (other is VerifiedAnonymousParty)
             party == other.party
         else
             false

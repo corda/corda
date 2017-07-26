@@ -9,7 +9,7 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.NonEmptySet
 import net.corda.node.services.network.InMemoryNetworkMapCache
-import net.corda.testing.getTestPartyAndCertificate
+import net.corda.testing.getTestVerifedParty
 import net.corda.testing.getTestX509Name
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -20,8 +20,8 @@ import java.math.BigInteger
  */
 class MockNetworkMapCache(serviceHub: ServiceHub) : InMemoryNetworkMapCache(serviceHub) {
     private companion object {
-        val BANK_C = getTestPartyAndCertificate(getTestX509Name("Bank C"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
-        val BANK_D = getTestPartyAndCertificate(getTestX509Name("Bank D"), entropyToKeyPair(BigInteger.valueOf(2000)).public)
+        val BANK_C = getTestVerifedParty(getTestX509Name("Bank C"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
+        val BANK_D = getTestVerifedParty(getTestX509Name("Bank D"), entropyToKeyPair(BigInteger.valueOf(2000)).public)
         val BANK_C_ADDR = NetworkHostAndPort("bankC", 8080)
         val BANK_D_ADDR = NetworkHostAndPort("bankD", 8080)
     }

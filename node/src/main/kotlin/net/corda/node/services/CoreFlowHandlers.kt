@@ -6,7 +6,7 @@ import net.corda.core.contracts.UpgradeCommand
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
-import net.corda.core.identity.AnonymousPartyAndPath
+import net.corda.core.identity.VerifiedAnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -87,7 +87,7 @@ class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean
         val revocationEnabled = false
         progressTracker.currentStep = SENDING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
-        val otherSideAnonymous = sendAndReceive<AnonymousPartyAndPath>(otherSide, legalIdentityAnonymous).unwrap { TransactionKeyFlow.validateIdentity(otherSide, it) }
+        val otherSideAnonymous = sendAndReceive<VerifiedAnonymousParty>(otherSide, legalIdentityAnonymous).unwrap { TransactionKeyFlow.validateIdentity(otherSide, it) }
         // Validate then store their identity so that we can prove the key in the transaction is owned by the
         // counterparty.
         serviceHub.identityService.registerAnonymousIdentity(otherSideAnonymous, otherSide)

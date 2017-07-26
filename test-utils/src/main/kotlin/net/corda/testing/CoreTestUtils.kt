@@ -8,7 +8,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.VerifiedParty
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.OpaqueBytes
@@ -67,20 +67,20 @@ val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
 val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
 
-val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getX509Name("MegaCorp","London","demo@r3.com",null), MEGA_CORP_PUBKEY)
+val MEGA_CORP_IDENTITY: VerifiedParty get() = getTestVerifedParty(X509Utilities.getX509Name("MegaCorp","London","demo@r3.com",null), MEGA_CORP_PUBKEY)
 val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
-val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getX509Name("MiniCorp","London","demo@r3.com",null), MINI_CORP_PUBKEY)
+val MINI_CORP_IDENTITY: VerifiedParty get() = getTestVerifedParty(X509Utilities.getX509Name("MiniCorp","London","demo@r3.com",null), MINI_CORP_PUBKEY)
 val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getTestX509Name("BankOfCorda"), BOC_PUBKEY)
+val BOC_IDENTITY: VerifiedParty get() = getTestVerifedParty(getTestX509Name("BankOfCorda"), BOC_PUBKEY)
 val BOC: Party get() = BOC_IDENTITY.party
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getX509Name("BigCorporation","London","demo@r3.com",null), BIG_CORP_PUBKEY)
+val BIG_CORP_IDENTITY: VerifiedParty get() = getTestVerifedParty(X509Utilities.getX509Name("BigCorporation","London","demo@r3.com",null), BIG_CORP_PUBKEY)
 val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
@@ -201,16 +201,16 @@ fun getTestX509Name(commonName: String): X500Name {
     return nameBuilder.build()
 }
 
-fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+fun getTestVerifedParty(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): VerifiedParty {
     val certFactory = CertificateFactory.getInstance("X509")
     val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
     val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
-    return PartyAndCertificate(party, certHolder, certPath)
+    return VerifiedParty(party, certHolder, certPath)
 }
 
 /**
  * Build a test party with a nonsense certificate authority for testing purposes.
  */
-fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
-    return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
+fun getTestVerifedParty(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA): VerifiedParty {
+    return getTestVerifedParty(Party(name, publicKey), trustRoot)
 }

@@ -2,7 +2,7 @@ package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
-import net.corda.core.identity.AnonymousPartyAndPath
+import net.corda.core.identity.VerifiedAnonymousParty
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -22,12 +22,12 @@ interface IdentityService {
     /**
      * Verify and then store a well known identity.
      *
-     * @param party a party representing a legal entity.
+     * @param verifiedParty a party representing a legal entity.
      * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun registerIdentity(party: PartyAndCertificate)
+    fun registerIdentity(verifiedParty: VerifiedParty)
 
     /**
      * Verify and then store an anonymous identity.
@@ -39,7 +39,7 @@ interface IdentityService {
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     @Deprecated("Use verifyAndRegisterAnonymousIdentity() instead, which is the same function with a better name")
-    fun registerAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
+    fun registerAnonymousIdentity(anonymousIdentity: VerifiedAnonymousParty, party: Party): VerifiedParty
 
     /**
      * Verify and then store an anonymous identity.
@@ -50,7 +50,7 @@ interface IdentityService {
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party): PartyAndCertificate
+    fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: VerifiedAnonymousParty, wellKnownIdentity: Party): VerifiedParty
 
     /**
      * Verify an anonymous identity.
@@ -62,7 +62,7 @@ interface IdentityService {
      * @throws IllegalArgumentException if the certificate path is invalid.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
+    fun verifyAnonymousIdentity(anonymousIdentity: VerifiedAnonymousParty, party: Party): VerifiedParty
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
@@ -77,27 +77,27 @@ interface IdentityService {
      * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromX500Name] should be
      * used in preference where possible.
      */
-    fun getAllIdentities(): Iterable<PartyAndCertificate>
+    fun getAllIdentities(): Iterable<VerifiedParty>
 
     /**
      * Get the certificate and path for a previously registered anonymous identity. These are used to prove an anonmyous
      * identity is owned by a well known identity.
      */
-    fun anonymousFromKey(owningKey: PublicKey): AnonymousPartyAndPath?
+    fun anonymousFromKey(owningKey: PublicKey): VerifiedAnonymousParty?
 
     /**
      * Get the certificate and path for a well known identity's owning key.
      *
      * @return the party and certificate, or null if unknown.
      */
-    fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate?
+    fun certificateFromKey(owningKey: PublicKey): VerifiedParty?
 
     /**
      * Get the certificate and path for a well known identity.
      *
      * @return the party and certificate, or null if unknown.
      */
-    fun certificateFromParty(party: Party): PartyAndCertificate?
+    fun certificateFromParty(party: Party): VerifiedParty?
 
     // There is no method for removing identities, as once we are made aware of a Party we want to keep track of them
     // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,
