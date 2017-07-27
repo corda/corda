@@ -316,7 +316,7 @@ public class JavaCommercialPaper implements Contract {
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary, Integer encumbrance) {
         State state = new State(issuance, issuance.getParty(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary, encumbrance);
-        return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
+        return new TransactionBuilder(notary).withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {

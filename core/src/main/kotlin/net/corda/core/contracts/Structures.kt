@@ -80,7 +80,7 @@ interface ContractState {
      * A _participant_ is any party that is able to consume this state in a valid transaction.
      *
      * The list of participants is required for certain types of transactions. For example, when changing the notary
-     * for this state ([TransactionType.NotaryChange]), every participant has to be involved and approve the transaction
+     * for this state, every participant has to be involved and approve the transaction
      * so that they receive the updated state, and don't end up in a situation where they can no longer use a state
      * they possess, since someone consumed that state during the notary change process.
      *

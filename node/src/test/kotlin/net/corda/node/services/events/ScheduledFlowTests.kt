@@ -8,6 +8,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -57,7 +58,7 @@ class ScheduledFlowTests {
                     serviceHub.myInfo.legalIdentity, destination)
 
             val notary = serviceHub.networkMapCache.getAnyNotary()
-            val builder = TransactionType.General.Builder(notary)
+            val builder = TransactionBuilder(notary)
             builder.withItems(scheduledState)
             val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, setOf(serviceHub.myInfo.legalIdentity)))
@@ -77,7 +78,7 @@ class ScheduledFlowTests {
             require(!scheduledState.processed) { "State should not have been previously processed" }
             val notary = state.state.notary
             val newStateOutput = scheduledState.copy(processed = true)
-            val builder = TransactionType.General.Builder(notary)
+            val builder = TransactionBuilder(notary)
             builder.withItems(state, newStateOutput)
             val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, setOf(scheduledState.source, scheduledState.destination)))

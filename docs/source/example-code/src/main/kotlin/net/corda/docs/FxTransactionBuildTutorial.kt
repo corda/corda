@@ -5,7 +5,6 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
@@ -16,6 +15,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
 import java.util.*
 
@@ -180,7 +180,7 @@ class ForeignExchangeFlow(val tradeId: String,
         // This is the correct way to create a TransactionBuilder,
         // do not construct directly.
         // We also set the notary to match the input notary
-        val builder = TransactionType.General.Builder(ourStates.inputs.first().state.notary)
+        val builder = TransactionBuilder(ourStates.inputs.first().state.notary)
 
         // Add the move commands and key to indicate all the respective owners and need to sign
         val ourSigners = ourStates.inputs.map { it.state.data.owner.owningKey }.toSet()

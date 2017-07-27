@@ -3,7 +3,6 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StartableByRPC
@@ -50,7 +49,7 @@ class CashIssueFlow(val amount: Amount<Currency>,
         }
         val anonymousRecipient = txIdentities[recipient]?.party ?: recipient
         progressTracker.currentStep = GENERATING_TX
-        val builder: TransactionBuilder = TransactionType.General.Builder(notary = notary)
+        val builder: TransactionBuilder = TransactionBuilder(notary)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
         val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), anonymousRecipient, notary)
         progressTracker.currentStep = SIGNING_TX

@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
@@ -135,7 +136,7 @@ class ObligationTests {
 
         initialiseTestSerialization()
         // Test generation works.
-        val tx = TransactionType.General.Builder(notary = null).apply {
+        val tx = TransactionBuilder(notary = null).apply {
             Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
                     beneficiary = CHARLIE, notary = DUMMY_NOTARY)
         }.toWireTransaction()
@@ -214,14 +215,14 @@ class ObligationTests {
     fun `reject issuance with inputs`() {
         initialiseTestSerialization()
         // Issue some obligation
-        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        val tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
                     beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
         }.toWireTransaction()
 
 
         // Include the previously issued obligation in a new issuance command
-        val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
+        val ptx = TransactionBuilder(DUMMY_NOTARY)
         ptx.addInputState(tx.outRef<Obligation.State<Currency>>(0))
         Obligation<Currency>().generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
                 beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
@@ -233,7 +234,7 @@ class ObligationTests {
         initialiseTestSerialization()
         val obligationAliceToBob = oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)
         val obligationBobToAlice = oneMillionDollars.OBLIGATION between Pair(BOB, ALICE)
-        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        val tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateCloseOutNetting(this, ALICE, obligationAliceToBob, obligationBobToAlice)
         }.toWireTransaction()
         assertEquals(0, tx.outputs.size)
@@ -245,7 +246,7 @@ class ObligationTests {
         initialiseTestSerialization()
         val obligationAliceToBob = (2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(ALICE, BOB)
         val obligationBobToAlice = oneMillionDollars.OBLIGATION between Pair(BOB, ALICE)
-        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        val tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateCloseOutNetting(this, ALICE, obligationAliceToBob, obligationBobToAlice)
         }.toWireTransaction()
         assertEquals(1, tx.outputs.size)
@@ -260,7 +261,7 @@ class ObligationTests {
         initialiseTestSerialization()
         val obligationAliceToBob = oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)
         val obligationBobToAlice = oneMillionDollars.OBLIGATION between Pair(BOB, ALICE)
-        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        val tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.amount.token, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
         }.toWireTransaction()
         assertEquals(0, tx.outputs.size)
@@ -272,7 +273,7 @@ class ObligationTests {
         initialiseTestSerialization()
         val obligationAliceToBob = oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)
         val obligationBobToAlice = (2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(BOB, ALICE)
-        val tx = TransactionType.General.Builder(null).apply {
+        val tx = TransactionBuilder(null).apply {
             Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.amount.token, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
         }.toWireTransaction()
         assertEquals(1, tx.outputs.size)
@@ -289,7 +290,7 @@ class ObligationTests {
         val dueBefore = TEST_TX_TIME - 7.days
 
         // Generate a transaction issuing the obligation.
-        var tx = TransactionType.General.Builder(null).apply {
+        var tx = TransactionBuilder(null).apply {
             val amount = Amount(100, Issued(defaultIssuer, USD))
             Obligation<Currency>().generateCashIssue(this, ALICE, amount, dueBefore,
                     beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
@@ -298,7 +299,7 @@ class ObligationTests {
         var stateAndRef = stx.tx.outRef<Obligation.State<Currency>>(0)
 
         // Now generate a transaction marking the obligation as having defaulted
-        tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateSetLifecycle(this, listOf(stateAndRef), Lifecycle.DEFAULTED, DUMMY_NOTARY)
         }
         var ptx = miniCorpServices.signInitialTransaction(tx, MINI_CORP_PUBKEY)
@@ -310,7 +311,7 @@ class ObligationTests {
 
         // And set it back
         stateAndRef = stx.tx.outRef<Obligation.State<Currency>>(0)
-        tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateSetLifecycle(this, listOf(stateAndRef), Lifecycle.NORMAL, DUMMY_NOTARY)
         }
         ptx = miniCorpServices.signInitialTransaction(tx)
@@ -324,18 +325,18 @@ class ObligationTests {
     @Test
     fun `generate settlement transaction`() {
         initialiseTestSerialization()
-        val cashTx = TransactionType.General.Builder(null).apply {
+        val cashTx = TransactionBuilder(null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` defaultIssuer, MINI_CORP, DUMMY_NOTARY)
         }.toWireTransaction()
 
         // Generate a transaction issuing the obligation
-        val obligationTx = TransactionType.General.Builder(null).apply {
+        val obligationTx = TransactionBuilder(null).apply {
             Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
                     beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
         }.toWireTransaction()
 
         // Now generate a transaction settling the obligation
-        val settleTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        val settleTx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateSettle(this, listOf(obligationTx.outRef(0)), listOf(cashTx.outRef(0)), Cash.Commands.Move(), DUMMY_NOTARY)
         }.toWireTransaction()
         assertEquals(2, settleTx.inputs.size)

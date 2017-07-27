@@ -16,6 +16,7 @@ import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
@@ -122,7 +123,7 @@ class SubmitTradeApprovalFlow(val tradeId: String,
         // identify a notary. This might also be done external to the flow
         val notary = serviceHub.networkMapCache.getAnyNotary()
         // Create the TransactionBuilder and populate with the new state.
-        val tx = TransactionType.General.Builder(notary)
+        val tx = TransactionBuilder(notary)
                 .withItems(tradeProposal, Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
         tx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)
         // We can automatically sign as there is no untrusted data.
@@ -177,9 +178,7 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
         // To destroy the old proposal state and replace with the new completion state.
         // Also add the Completed command with keys of all parties to signal the Tx purpose
         // to the Contract verify method.
-        val tx = TransactionType.
-                General.
-                Builder(notary).
+        val tx = TransactionBuilder(notary).
                 withItems(
                         latestRecord,
                         newState,

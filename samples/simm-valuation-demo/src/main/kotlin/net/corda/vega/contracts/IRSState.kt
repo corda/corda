@@ -2,7 +2,6 @@ package net.corda.vega.contracts
 
 import net.corda.contracts.DealState
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.keys
 import net.corda.core.identity.AbstractParty
@@ -29,6 +28,6 @@ data class IRSState(val swap: SwapData,
 
     override fun generateAgreement(notary: Party): TransactionBuilder {
         val state = IRSState(swap, buyer, seller, OGTrade())
-        return TransactionType.General.Builder(notary).withItems(state, Command(OGTrade.Commands.Agree(), participants.map { it.owningKey }))
+        return TransactionBuilder(notary).withItems(state, Command(OGTrade.Commands.Agree(), participants.map { it.owningKey }))
     }
 }

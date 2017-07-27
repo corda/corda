@@ -42,7 +42,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
     }
 
     override fun generateAgreement(notary: Party): TransactionBuilder {
-        return TransactionType.General.Builder(notary).withItems(copy(), Command(PortfolioSwap.Commands.Agree(), participants.map { it.owningKey }))
+        return TransactionBuilder(notary).withItems(copy(), Command(PortfolioSwap.Commands.Agree(), participants.map { it.owningKey }))
     }
 
     override fun generateRevision(notary: Party, oldState: StateAndRef<*>, updatedValue: Update): TransactionBuilder {
@@ -50,7 +50,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
         val portfolio = updatedValue.portfolio ?: portfolio
         val valuation = updatedValue.valuation ?: valuation
 
-        val tx = TransactionType.General.Builder(notary)
+        val tx = TransactionBuilder(notary)
         tx.addInputState(oldState)
         tx.addOutputState(copy(portfolio = portfolio, valuation = valuation))
         tx.addCommand(PortfolioSwap.Commands.Update(), participants.map { it.owningKey })

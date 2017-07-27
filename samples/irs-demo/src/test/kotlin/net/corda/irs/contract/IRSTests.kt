@@ -3,6 +3,7 @@ package net.corda.irs.contract
 import net.corda.contracts.*
 import net.corda.core.contracts.*
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
@@ -305,7 +306,7 @@ class IRSTests : TestDependencyInjectionBase() {
         while (true) {
             val nextFix: FixOf = currentIRS().nextFixingOf() ?: break
             val fixTX: SignedTransaction = run {
-                val tx = TransactionType.General.Builder(DUMMY_NOTARY)
+                val tx = TransactionBuilder(DUMMY_NOTARY)
                 val fixing = Fix(nextFix, "0.052".percent.value)
                 InterestRateSwap().generateFix(tx, previousTXN.tx.outRef(0), fixing)
                 tx.setTimeWindow(TEST_TX_TIME, 30.seconds)

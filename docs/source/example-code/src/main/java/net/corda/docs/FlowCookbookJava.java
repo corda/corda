@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.TransactionType.General;
 import net.corda.core.crypto.DigitalSignature;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;

@@ -13,6 +13,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.CHARLIE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
@@ -30,7 +31,7 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
 
     val transactions: List<SignedTransaction> = dealIds.map {
         // Issue a deal state
-        val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+        val dummyIssue = TransactionBuilder(notary = DUMMY_NOTARY).apply {
             addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)))
             signWith(DUMMY_NOTARY_KEY)
         }
@@ -60,7 +61,7 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
 
     val transactions: List<SignedTransaction> = (1..numberToCreate).map {
         // Issue a Linear state
-        val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+        val dummyIssue = TransactionBuilder(notary = DUMMY_NOTARY).apply {
             addOutputState(DummyLinearContract.State(
                     linearId = UniqueIdentifier(externalId),
                     participants = participants.plus(me),
@@ -111,7 +112,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
     // We will allocate one state to one transaction, for simplicities sake.
     val cash = Cash()
     val transactions: List<SignedTransaction> = amounts.map { pennies ->
-        val issuance = TransactionType.General.Builder(null as Party?)
+        val issuance = TransactionBuilder(null as Party?)
         cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), me, outputNotary)
         issuance.signWith(issuerKey)
 
@@ -139,7 +140,7 @@ fun ServiceHub.fillWithSomeTestCommodity(amount: Amount<Commodity>,
     val me = AnonymousParty(myKey)
 
     val commodity = CommodityContract()
-    val issuance = TransactionType.General.Builder(null as Party?)
+    val issuance = TransactionBuilder(null as Party?)
     commodity.generateIssue(issuance, Amount(amount.quantity, Issued(issuedBy.copy(reference = ref), amount.token)), me, outputNotary)
     issuance.signWith(issuerKey)
     val transaction = issuance.toSignedTransaction(true)
@@ -180,7 +181,7 @@ fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int,
 fun <T : LinearState> ServiceHub.consume(states: List<StateAndRef<T>>) {
     // Create a txn consuming different contract types
     states.forEach {
-        val consumedTx = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+        val consumedTx = TransactionBuilder(notary = DUMMY_NOTARY).apply {
             addInputState(it)
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
@@ -191,7 +192,7 @@ fun <T : LinearState> ServiceHub.consume(states: List<StateAndRef<T>>) {
 
 fun <T : LinearState> ServiceHub.consumeAndProduce(stateAndRef: StateAndRef<T>): StateAndRef<T> {
     // Create a txn consuming different contract types
-    val consumedTx = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+    val consumedTx = TransactionBuilder(notary = DUMMY_NOTARY).apply {
         addInputState(stateAndRef)
         signWith(DUMMY_NOTARY_KEY)
     }.toSignedTransaction()
@@ -199,7 +200,7 @@ fun <T : LinearState> ServiceHub.consumeAndProduce(stateAndRef: StateAndRef<T>):
     recordTransactions(consumedTx)
 
     // Create a txn consuming different contract types
-    val producedTx = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+    val producedTx = TransactionBuilder(notary = DUMMY_NOTARY).apply {
         addOutputState(DummyLinearContract.State(linearId = stateAndRef.state.data.linearId,
                 participants = stateAndRef.state.data.participants))
         signWith(DUMMY_NOTARY_KEY)
@@ -224,7 +225,7 @@ fun ServiceHub.evolveLinearState(linearState: StateAndRef<LinearState>) : StateA
 @JvmOverloads
 fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): Vault<Cash.State> {
     // A tx that spends our money.
-    val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+    val spendTX = TransactionBuilder(DUMMY_NOTARY).apply {
         vaultService.generateSpend(this, amount, to)
         signWith(DUMMY_NOTARY_KEY)
     }.toSignedTransaction(checkSufficientSignatures = false)

@@ -104,7 +104,7 @@ transaction and send it to the recipient node:
 
        // Create a trivial transaction that just passes across the attachment - in normal cases there would be
        // inputs, outputs and commands that refer to this attachment.
-       val ptx = TransactionType.General.Builder(notary = null)
+       val ptx = TransactionBuilder(notary = null)
        require(rpc.attachmentExists(PROSPECTUS_HASH))
        ptx.addAttachment(PROSPECTUS_HASH)
        // TODO: Add a dummy state and specify a notary, so that the tx hash is randomised each time and the demo can be repeated.

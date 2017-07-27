@@ -403,7 +403,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val freshKey = services.legalIdentityKey
 
             // Issue a txn to Send us some Money
-            val usefulBuilder = TransactionType.General.Builder(null).apply {
+            val usefulBuilder = TransactionBuilder(null).apply {
                 Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
             }
             val usefulTX = megaCorpServices.signInitialTransaction(usefulBuilder)
@@ -416,7 +416,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             assertEquals(3, vaultSvc.getTransactionNotes(usefulTX.id).count())
 
             // Issue more Money (GBP)
-            val anotherBuilder = TransactionType.General.Builder(null).apply {
+            val anotherBuilder = TransactionBuilder(null).apply {
                 Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
             }
             val anotherTX = megaCorpServices.signInitialTransaction(anotherBuilder)
