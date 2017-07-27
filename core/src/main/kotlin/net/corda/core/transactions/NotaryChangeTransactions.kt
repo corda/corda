@@ -30,7 +30,7 @@ data class NotaryChangeWireTransaction(
         check(notary != newNotary) { "The old and new notaries must be different – $newNotary" }
     }
 
-    override val id: SecureHash by lazy { serializedHash(inputs + notary + newNotary) }
+    override val id: SecureHash by lazy { serializedHash(inputs + notary + newNotary) } // TODO: do we need a nonce here?
 
     fun resolve(services: ServiceHub, sigs: List<DigitalSignature.WithKey>): NotaryChangeLedgerTransaction {
         val resolvedInputs = inputs.map { ref ->

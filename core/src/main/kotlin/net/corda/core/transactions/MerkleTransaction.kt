@@ -1,31 +1,35 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.OpaqueBytes
 import java.nio.ByteBuffer
-import java.security.PublicKey
 import java.util.function.Predicate
 
+/**
+ * If a privacy salt is provided, the resulted output (merkle-leaf) is computed as
+ * Hash(serializedObject || Hash(privacy_salt || obj_index_in_merkle_tree)).
+ */
 fun <T : Any> serializedHash(x: T, privacySalt: PrivacySalt?, index: Int): SecureHash {
     return if (privacySalt != null)
         serializedHash(x, computeNonce(privacySalt, index))
     else
-        (x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes).sha256()
+        serializedHash(x)
 }
 
 fun <T : Any> serializedHash(x: T, nonce: SecureHash): SecureHash {
     return if (x !is PrivacySalt) // PrivacySalt is not required to have an accompanied nonce.
         (x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes + nonce.bytes).sha256()
     else
-        (x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes).sha256()
+        serializedHash(x)
 }
 
+fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes.sha256()
+
+/** The nonce is computed as Hash(privacySalt || index). */
 fun computeNonce(privacySalt: PrivacySalt, index: Int) = (privacySalt.bytes + ByteBuffer.allocate(4).putInt(index).array()).sha256()
 
 /**

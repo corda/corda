@@ -5,7 +5,6 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -37,7 +36,7 @@ data class WireTransaction(
          * Thus, all of the nonces are "independent" in the sense that knowing one or some of them, you can learn
          * nothing about the rest.
          */
-        override val privacySalt: PrivacySalt = PrivacySalt(secureRandomBytes(32))
+        override val privacySalt: PrivacySalt = PrivacySalt()
 ) : CoreTransaction(), TraversableTransaction {
     init {
         checkBaseInvariants()

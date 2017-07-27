@@ -2,6 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
@@ -435,9 +436,20 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
     throw FileNotFoundException(path)
 }
 
-/** A privacy salt is required to compute nonces per transaction component. */
+/**
+ * A privacy salt is required to compute nonces per transaction component in order to ensure that an adversary cannot
+ * use brute force techniques and reveal the content of a merkle-leaf hashed value.
+ * Because this salt serves the role of the seed to compute nonces, its size and entropy should be equal to the
+ * underlying hash function used for Merkle tree generation, currently [SHA256], which has an output of 32 bytes.
+ * There are two constructors, one that generates a new 32-bytes random salt, and another that takes a [ByteArray] input.
+ * The latter is required in cases where the salt value needs to be pre-generated (agreed between transacting parties),
+ * but it is highlighted that one should always ensure it has sufficient entropy.
+ */
+
 @CordaSerializable
 class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
+    constructor() : this(secureRandomBytes(32))
+
     init {
         require(bytes.size == 32)
     }

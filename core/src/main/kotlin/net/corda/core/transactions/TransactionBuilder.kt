@@ -6,7 +6,6 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
-import net.corda.core.utilities.OpaqueBytes
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
@@ -35,7 +34,7 @@ open class TransactionBuilder(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
-        protected var privacySalt: PrivacySalt = PrivacySalt(secureRandomBytes(32))
+        protected var privacySalt: PrivacySalt = PrivacySalt()
     ) {
     constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
