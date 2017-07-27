@@ -14,6 +14,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.contracts.DummyContractBackdoor
 import net.corda.testing.node.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert
@@ -29,16 +30,15 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-interface DummyContractBackdoor {
-    fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder
-    fun inspectState(state: ContractState): Int
-}
-
 val ATTACHMENT_TEST_PROGRAM_ID = AttachmentClassLoaderTests.AttachmentDummyContract()
 
 class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     companion object {
-        val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
+        /**
+         * Run dummyContractJar task in the test-utils module to regenerate the test-contracts jar. Then copy it over
+         * to the resources folder.
+         */
+        val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentClassLoaderTests::class.java.getResource("test-contracts.jar")
 
         private fun SerializationContext.withAttachmentStorage(attachmentStorage: AttachmentStorage): SerializationContext {
             val serviceHub = mock<ServiceHub>()
@@ -92,7 +92,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     fun `dynamically load AnotherDummyContract from isolated contracts jar`() {
         val child = ClassLoaderForTests()
 
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contractClass = Class.forName("net.corda.testing.contracts.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as Contract
 
         assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.legalContractReference)
@@ -183,7 +183,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl)
+        val contractClass = Class.forName("net.corda.testing.contracts.AnotherDummyContract", true, cl)
         val contract = contractClass.newInstance() as Contract
         assertEquals(cl, contract.javaClass.classLoader)
         assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.legalContractReference)
@@ -200,7 +200,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
     fun createContract2Cash(): Contract {
         val cl = ClassLoaderForTests()
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl)
+        val contractClass = Class.forName("net.corda.testing.contracts.AnotherDummyContract", true, cl)
         return contractClass.newInstance() as Contract
     }
 
@@ -246,7 +246,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        val context = P2P_CONTEXT.withClassLoader(cl).withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl))
+        val context = P2P_CONTEXT.withClassLoader(cl).withWhitelisted(Class.forName("net.corda.testing.contracts.AnotherDummyContract", true, cl))
 
         val state2 = bytes.deserialize(context = context)
         assertEquals(cl, state2.contract.javaClass.classLoader)
@@ -255,7 +255,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         // We should be able to load same class from a different class loader and have them be distinct.
         val cl2 = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        val context3 = P2P_CONTEXT.withClassLoader(cl2).withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl2))
+        val context3 = P2P_CONTEXT.withClassLoader(cl2).withWhitelisted(Class.forName("net.corda.testing.contracts.AnotherDummyContract", true, cl2))
 
         val state3 = bytes.deserialize(context = context3)
         assertEquals(cl2, state3.contract.javaClass.classLoader)
@@ -277,13 +277,13 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     @Test
     fun `test serialization of WireTransaction with dynamically loaded contract`() {
         val child = ClassLoaderForTests()
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contractClass = Class.forName("net.corda.testing.contracts.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val storage = MockAttachmentStorage()
         val context = P2P_CONTEXT.withWhitelisted(contract.javaClass)
-                .withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract\$State", true, child))
-                .withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract\$Commands\$Create", true, child))
+                .withWhitelisted(Class.forName("net.corda.testing.contracts.AnotherDummyContract\$State", true, child))
+                .withWhitelisted(Class.forName("net.corda.testing.contracts.AnotherDummyContract\$Commands\$Create", true, child))
                 .withAttachmentStorage(storage)
 
         // todo - think about better way to push attachmentStorage down to serializer
@@ -302,7 +302,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     @Test
     fun `test deserialize of WireTransaction where contract cannot be found`() {
         val child = ClassLoaderForTests()
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contractClass = Class.forName("net.corda.testing.contracts.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val storage = MockAttachmentStorage()

@@ -2,7 +2,6 @@
 // output JAR from the capsule then the buildCordaJAR task goes into an infinite loop.
 rootProject.name = 'corda-project'
 include 'finance'
-include 'finance:isolated'
 include 'core'
 include 'docs'
 include 'node-api'
