@@ -3,36 +3,31 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.utilities.exactAdd
 import net.corda.core.crypto.SecureHash
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
 import java.util.*
 
 // TODO: This code is currently unit tested by TwoPartyTradeFlowTests, it should have its own tests.
-
-// TODO: It may be a clearer API if we make the primary c'tor private here, and only allow a single tx to be "resolved".
-
 /**
- * This flow is used to verify the validity of a transaction by recursively checking the validity of all the
- * dependencies. Once a transaction is checked it's inserted into local storage so it can be relayed and won't be
- * checked again.
+ * Resolves transactions for the specified [txHashes] along with their full history (dependency graph) from [otherSide].
+ * Each retrieved transaction is validated and inserted into the local transaction storage.
  *
- * A couple of constructors are provided that accept a single transaction. When these are used, the dependencies of that
- * transaction are resolved and then the transaction itself is verified. Again, if successful, the results are inserted
- * into the database as long as a [SignedTransaction] was provided. If only the [WireTransaction] form was provided
- * then this isn't enough to put into the local database, so only the dependencies are checked and inserted. This way
- * to use the flow is helpful when resolving and verifying a finished but partially signed transaction.
- *
- * The flow returns a list of verified [LedgerTransaction] objects, in a depth-first order.
+ * @return a list of verified [SignedTransaction] objects, in a depth-first order.
  */
 class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
-                              private val otherSide: Party) : FlowLogic<List<LedgerTransaction>>() {
-
+                              private val otherSide: Party) : FlowLogic<List<SignedTransaction>>() {
+    /**
+     * Resolves and validates the dependencies of the specified [signedTransaction]. Fetches the attachments, but does
+     * *not* validate or store the [signedTransaction] itself.
+     *
+     * @return a list of verified [SignedTransaction] objects, in a depth-first order.
+     */
+    constructor(signedTransaction: SignedTransaction, otherSide: Party) : this(dependencyIDs(signedTransaction), otherSide) {
+        this.signedTransaction = signedTransaction
+    }
     companion object {
-        private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
+        private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet()
 
         /**
          * Topologically sorts the given transactions such that dependencies are listed before dependers. */
@@ -41,7 +36,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             // Construct txhash -> dependent-txs map
             val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
             transactions.forEach { stx ->
-                stx.tx.inputs.forEach { (txhash) ->
+                stx.inputs.forEach { (txhash) ->
                     // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is)
                     forwardGraph.getOrPut(txhash) { LinkedHashSet() }.add(stx)
                 }
@@ -64,67 +59,40 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             require(result.size == transactions.size)
             return result
         }
-
     }
 
     @CordaSerializable
     class ExcessivelyLargeTransactionGraph : Exception()
 
-    // Transactions to verify after the dependencies.
-    private var stx: SignedTransaction? = null
-    private var wtx: WireTransaction? = null
+    /** Transaction for fetch attachments for */
+    private var signedTransaction: SignedTransaction? = null
 
     // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a very bad guess.
     /** The maximum number of transactions this flow will try to download before bailing out. */
     var transactionCountLimit = 5000
 
-    /**
-     * Resolve the full history of a transaction and verify it with its dependencies.
-     */
-    constructor(stx: SignedTransaction, otherSide: Party) : this(stx.tx, otherSide) {
-        this.stx = stx
-    }
-
-    /**
-     * Resolve the full history of a transaction and verify it with its dependencies.
-     */
-    constructor(wtx: WireTransaction, otherSide: Party) : this(dependencyIDs(wtx), otherSide) {
-        this.wtx = wtx
-    }
-
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class)
-    override fun call(): List<LedgerTransaction> {
+    override fun call(): List<SignedTransaction> {
         val newTxns: Iterable<SignedTransaction> = topologicalSort(downloadDependencies(txHashes))
 
         // For each transaction, verify it and insert it into the database. As we are iterating over them in a
         // depth-first order, we should not encounter any verification failures due to missing data. If we fail
         // half way through, it's no big deal, although it might result in us attempting to re-download data
         // redundantly next time we attempt verification.
-        val result = ArrayList<LedgerTransaction>()
+        val result = ArrayList<SignedTransaction>()
 
         for (stx in newTxns) {
-            // Resolve to a LedgerTransaction and then run all contracts.
-            val ltx = stx.toLedgerTransaction(serviceHub)
-            // Block on each verification request.
-            // TODO We could recover some parallelism from the dependency graph.
-            serviceHub.transactionVerifierService.verify(ltx).getOrThrow()
+            // TODO: We could recover some parallelism from the dependency graph.
+            stx.verify(serviceHub)
             serviceHub.recordTransactions(stx)
-            result += ltx
+            result += stx
         }
 
-        // If this flow is resolving a specific transaction, make sure we have its attachments and then verify
-        // it as well, but don't insert to the database. Note that when we were given a SignedTransaction (stx != null)
-        // we *could* insert, because successful verification implies we have everything we need here, and it might
-        // be a clearer API if we do that. But for consistency with the other c'tor we currently do not.
-        //
-        // If 'stx' is set, then 'wtx' is the contents (from the c'tor).
-        val wtx = stx?.verifyRequiredSignatures() ?: wtx
-        wtx?.let {
+        // If this flow is resolving a specific transaction, make sure we have its attachments as well
+        signedTransaction?.let {
             fetchMissingAttachments(listOf(it))
-            val ltx = it.toLedgerTransaction(serviceHub)
-            ltx.verify()
-            result += ltx
+            result += it
         }
 
         return result
@@ -167,13 +135,13 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             // Request the standalone transaction data (which may refer to things we don't yet have).
             val downloads: List<SignedTransaction> = subFlow(FetchTransactionsFlow(notAlreadyFetched, otherSide)).downloaded
 
-            fetchMissingAttachments(downloads.map { it.tx })
+            fetchMissingAttachments(downloads)
 
             for (stx in downloads)
                 check(resultQ.putIfAbsent(stx.id, stx) == null)   // Assert checks the filter at the start.
 
             // Add all input states to the work queue.
-            val inputHashes = downloads.flatMap { it.tx.inputs }.map { it.txhash }
+            val inputHashes = downloads.flatMap { it.inputs }.map { it.txhash }
             nextRequests.addAll(inputHashes)
 
             limitCounter = limitCounter exactAdd nextRequests.size
@@ -189,9 +157,10 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
      * first in the returned list and thus doesn't have any unverified dependencies.
      */
     @Suspendable
-    private fun fetchMissingAttachments(downloads: List<WireTransaction>) {
+    private fun fetchMissingAttachments(downloads: List<SignedTransaction>) {
         // TODO: This could be done in parallel with other fetches for extra speed.
-        val missingAttachments = downloads.flatMap { wtx ->
+        val wireTransactions = downloads.filterNot { it.isNotaryChangeTransaction() }.map { it.tx }
+        val missingAttachments = wireTransactions.flatMap { wtx ->
             wtx.attachments.filter { serviceHub.attachments.openAttachment(it) == null }
         }
         if (missingAttachments.isNotEmpty())

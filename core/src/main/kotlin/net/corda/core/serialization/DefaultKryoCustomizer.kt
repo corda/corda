@@ -14,6 +14,7 @@ import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.crypto.MetaData
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
@@ -58,6 +59,11 @@ object DefaultKryoCustomizer {
             fieldSerializerConfig.cachedFieldNameStrategy = FieldSerializer.CachedFieldNameStrategy.EXTENDED
 
             instantiatorStrategy = CustomInstantiatorStrategy()
+
+            // WARNING: reordering the registrations here will cause a change in the serialized form, since classes
+            // with custom serializers get written as registration ids. This will break backwards-compatibility.
+            // Please add any new registrations to the end.
+            // TODO: re-organise registrations into logical groups before v1.0
 
             register(Arrays.asList("").javaClass, ArraysAsListSerializer())
             register(SignedTransaction::class.java, SignedTransactionSerializer)
@@ -115,6 +121,8 @@ object DefaultKryoCustomizer {
             register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
             register(BCSphincs256PublicKey::class.java, PublicKeySerializer)
             register(sun.security.ec.ECPublicKeyImpl::class.java, PublicKeySerializer)
+
+            register(NotaryChangeWireTransaction::class.java, NotaryChangeWireTransactionSerializer)
 
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }
