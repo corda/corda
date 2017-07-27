@@ -16,8 +16,7 @@ import net.corda.core.utilities.unwrap
 class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val stx = subFlow(ReceiveTransactionFlow(SignedTransaction::class.java, otherParty)).unwrap { it }
-        stx.verify(serviceHub)
+        val stx = subFlow(ReceiveTransactionFlow(otherParty))
         serviceHub.recordTransactions(stx)
     }
 }
@@ -30,7 +29,7 @@ class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Accep
      * and is also in a geographically convenient location we can just automatically approve the change.
      * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
      */
-    override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
+    override fun verifyProposal(stx:SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
         val state = proposal.stateRef
         val proposedTx = proposal.stx.resolveNotaryChangeTransaction(serviceHub)
         val newNotary = proposal.modification
@@ -50,15 +49,15 @@ class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Accep
 class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Class<out UpgradedContract<ContractState, *>>>(otherSide) {
     @Suspendable
     @Throws(StateReplacementException::class)
-    override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<Class<out UpgradedContract<ContractState, *>>>) {
+    override fun verifyProposal(stx:SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Class<out UpgradedContract<ContractState, *>>>) {
         // Retrieve signed transaction from our side, we will apply the upgrade logic to the transaction on our side, and
         // verify outputs matches the proposed upgrade.
-        val stx = serviceHub.validatedTransactions.getTransaction(proposal.stateRef.txhash)
-        requireNotNull(stx) { "We don't have a copy of the referenced state" }
-        val oldStateAndRef = stx!!.tx.outRef<ContractState>(proposal.stateRef.index)
+        val ourSTX = serviceHub.validatedTransactions.getTransaction(proposal.stateRef.txhash)
+        requireNotNull(ourSTX) { "We don't have a copy of the referenced state" }
+        val oldStateAndRef = ourSTX!!.tx.outRef<ContractState>(proposal.stateRef.index)
         val authorisedUpgrade = serviceHub.vaultService.getAuthorisedContractUpgrade(oldStateAndRef.ref) ?:
                 throw IllegalStateException("Contract state upgrade is unauthorised. State hash : ${oldStateAndRef.ref}")
-        val proposedTx = proposal.stx.tx
+        val proposedTx = stx.tx
         val expectedTx = ContractUpgradeFlow.assembleBareTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt).toWireTransaction()
         requireThat {
             "The instigator is one of the participants" using (otherSide in oldStateAndRef.state.data.participants)

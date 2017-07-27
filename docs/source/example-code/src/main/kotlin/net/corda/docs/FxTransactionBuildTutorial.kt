@@ -28,8 +28,8 @@ private data class FxRequest(val tradeId: String,
                              val notary: Party? = null)
 
 @CordaSerializable
-private data class FxResponse(val inputs: List<StateAndRef<Cash.State>>,
-                              val outputs: List<Cash.State>)
+private data class FxResponse(override val inputStates: List<StateAndRef<Cash.State>>,
+                              val outputs: List<Cash.State>) : TradeProposal<Cash.State>
 
 // DOCSTART 1
 // This is equivalent to the VaultService.generateSpend
@@ -122,7 +122,7 @@ class ForeignExchangeFlow(val tradeId: String,
         val ourStates = prepareOurInputsAndOutputs(serviceHub, localRequest)
 
         // identify the notary for our states
-        val notary = ourStates.inputs.first().state.notary
+        val notary = ourStates.inputStates.first().state.notary
         // ensure request to other side is for a consistent notary
         val remoteRequestWithNotary = remoteRequest.copy(notary = notary)
 
@@ -130,17 +130,17 @@ class ForeignExchangeFlow(val tradeId: String,
         // Then they can return their candidate states
         send(remoteRequestWithNotary.owner, remoteRequestWithNotary)
 
-        val theirStates = subFlow(ReceiveTransactionFlow(FxResponse::class.java, remoteRequestWithNotary.owner)).unwrap {
-            require(it.inputs.all { it.state.notary == notary }) {
+        val theirStates = subFlow(ReceiveProposalFlow(FxResponse::class.java, remoteRequestWithNotary.owner)).unwrap {
+            require(it.inputStates.all { it.state.notary == notary }) {
                 "notary of remote states must be same as for our states"
             }
-            require(it.inputs.all { it.state.data.amount.token == remoteRequestWithNotary.amount.token }) {
+            require(it.inputStates.all { it.state.data.amount.token == remoteRequestWithNotary.amount.token }) {
                 "Inputs not of the correct currency"
             }
             require(it.outputs.all { it.amount.token == remoteRequestWithNotary.amount.token }) {
                 "Outputs not of the correct currency"
             }
-            require(it.inputs.map { it.state.data.amount.quantity }.sum()
+            require(it.inputStates.map { it.state.data.amount.quantity }.sum()
                     >= remoteRequestWithNotary.amount.quantity) {
                 "the provided inputs don't provide sufficient funds"
             }
@@ -181,16 +181,16 @@ class ForeignExchangeFlow(val tradeId: String,
         // This is the correct way to create a TransactionBuilder,
         // do not construct directly.
         // We also set the notary to match the input notary
-        val builder = TransactionBuilder(ourStates.inputs.first().state.notary)
+        val builder = TransactionBuilder(ourStates.inputStates.first().state.notary)
 
         // Add the move commands and key to indicate all the respective owners and need to sign
-        val ourSigners = ourStates.inputs.map { it.state.data.owner.owningKey }.toSet()
-        val theirSigners = theirStates.inputs.map { it.state.data.owner.owningKey }.toSet()
+        val ourSigners = ourStates.inputStates.map { it.state.data.owner.owningKey }.toSet()
+        val theirSigners = theirStates.inputStates.map { it.state.data.owner.owningKey }.toSet()
         builder.addCommand(Cash.Commands.Move(), (ourSigners + theirSigners).toList())
 
         // Build and add the inputs and outputs
-        builder.withItems(*ourStates.inputs.toTypedArray())
-        builder.withItems(*theirStates.inputs.toTypedArray())
+        builder.withItems(*ourStates.inputStates.toTypedArray())
+        builder.withItems(*theirStates.inputStates.toTypedArray())
         builder.withItems(*ourStates.outputs.toTypedArray())
         builder.withItems(*theirStates.outputs.toTypedArray())
 
@@ -231,10 +231,11 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
         val ourResponse = prepareOurInputsAndOutputs(serviceHub, request)
 
         // Send back our proposed states and await the full transaction to verify
-        val ourKey = serviceHub.keyManagementService.filterMyKeys(ourResponse.inputs.flatMap { it.state.data.participants }.map { it.owningKey }).single()
+        val ourKey = serviceHub.keyManagementService.filterMyKeys(ourResponse.inputStates.flatMap { it.state.data.participants }.map { it.owningKey }).single()
         // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
-        subFlow(SendTransactionFlow(source, ourResponse.inputs.map { it.ref.txhash }.toSet(), ourResponse))
-        val proposedTrade = subFlow(ReceiveTransactionFlow(SignedTransaction::class.java, source, verifySignatures = false, verifyTransaction = false)).unwrap {
+
+        subFlow(SendProposalFlow(source, ourResponse))
+        val proposedTrade = subFlow(ReceiveTransactionFlow(source, verifySignatures = false, verifyTransaction = false)).let {
             val wtx = it.tx
             // check all signatures are present except our own and the notary
             it.verifySignaturesExcept(ourKey, wtx.notary!!.owningKey)

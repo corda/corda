@@ -42,7 +42,7 @@ class LargeTransactionsTest {
     class ReceiveLargeTransactionFlow(private val counterParty: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            subFlow(ReceiveTransactionFlow(SignedTransaction::class.java, counterParty)).unwrap { it }
+            subFlow(ReceiveTransactionFlow(counterParty))
             // Unblock the other side by sending some dummy object (Unit is fine here as it's a singleton).
             send(counterParty, Unit)
         }

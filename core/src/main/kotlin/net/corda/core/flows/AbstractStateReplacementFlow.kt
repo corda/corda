@@ -10,7 +10,6 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
@@ -27,7 +26,7 @@ abstract class AbstractStateReplacementFlow {
      * @param M the type of a class representing proposed modification by the instigator.
      */
     @CordaSerializable
-    data class Proposal<out M>(val stateRef: StateRef, val modification: M, val stx: SignedTransaction)
+    data class Proposal<out M>(val stateRef: StateRef, val modification: M)
 
     /**
      * The assembled transaction for upgrading a contract.
@@ -114,8 +113,9 @@ abstract class AbstractStateReplacementFlow {
 
         @Suspendable
         private fun getParticipantSignature(party: Party, stx: SignedTransaction): DigitalSignature.WithKey {
-            val proposal = Proposal(originalState.ref, modification, stx)
-            subFlow(SendTransactionFlow(party, stx, proposal))
+            val proposal = Proposal(originalState.ref, modification)
+            subFlow(SendTransactionFlow(party, stx))
+            send(party, proposal)
             return receive<DigitalSignature.WithKey>(party).unwrap {
                 check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verify(stx.id)
@@ -149,11 +149,11 @@ abstract class AbstractStateReplacementFlow {
         @Throws(StateReplacementException::class)
         override fun call(): Void? {
             progressTracker.currentStep = VERIFYING
-            val maybeProposal: UntrustworthyData<Proposal<T>> = receiveTransaction(otherSide, verifySignatures = false)
-            val stx: SignedTransaction = maybeProposal.unwrap {
-                verifyProposal(it)
-                verifyTx(it.stx)
-                it.stx
+            val stx = subFlow(ReceiveTransactionFlow(otherSide, verifySignatures = false)).apply {
+                verifyTx(this)
+            }
+            receive<Proposal<T>>(otherSide).unwrap {
+                verifyProposal(stx, it)
             }
             approve(stx)
             return null
@@ -194,7 +194,7 @@ abstract class AbstractStateReplacementFlow {
          * proposal is returned if acceptable, otherwise a [StateReplacementException] is thrown.
          */
         @Throws(StateReplacementException::class)
-        abstract protected fun verifyProposal(proposal: Proposal<T>)
+        abstract protected fun verifyProposal(stx: SignedTransaction, proposal: Proposal<T>)
 
         private fun checkMySignatureRequired(stx: SignedTransaction) {
             // TODO: use keys from the keyManagementService instead
@@ -211,10 +211,6 @@ abstract class AbstractStateReplacementFlow {
 
         private fun sign(stx: SignedTransaction): DigitalSignature.WithKey {
             return serviceHub.createSignature(stx)
-        }
-
-        private inline fun <reified T : Any> FlowLogic<*>.receiveTransaction(otherSide: Party, verifySignatures: Boolean): UntrustworthyData<T> {
-            return subFlow(ReceiveTransactionFlow(T::class.java, otherSide, verifySignatures = verifySignatures))
         }
     }
 }

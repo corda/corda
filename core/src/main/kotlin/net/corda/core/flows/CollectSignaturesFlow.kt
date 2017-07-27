@@ -188,33 +188,29 @@ abstract class SignTransactionFlow(val otherParty: Party,
     @Suspendable override fun call(): SignedTransaction {
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check signatures is disabled as we don't have all signatures.
-        val checkedProposal = subFlow(ReceiveTransactionFlow(SignedTransaction::class.java, otherParty, verifySignatures = false)).unwrap { stx ->
-            progressTracker.currentStep = VERIFYING
-            // Check that the Responder actually needs to sign.
-            checkMySignatureRequired(stx)
-            // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
-            checkSignatures(stx)
-            stx.tx.toLedgerTransaction(serviceHub).verify()
-            // Perform some custom verification over the transaction.
-            try {
-                checkTransaction(stx)
-            } catch(e: Exception) {
-                if (e is IllegalStateException || e is IllegalArgumentException || e is AssertionError)
-                    throw FlowException(e)
-                else
-                    throw e
-            }
-            // All good. Unwrap the proposal.
-            stx
+        val stx = subFlow(ReceiveTransactionFlow(otherParty, verifySignatures = false))
+        progressTracker.currentStep = VERIFYING
+        // Check that the Responder actually needs to sign.
+        checkMySignatureRequired(stx)
+        // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
+        checkSignatures(stx)
+        stx.tx.toLedgerTransaction(serviceHub).verify()
+        // Perform some custom verification over the transaction.
+        try {
+            checkTransaction(stx)
+        } catch(e: Exception) {
+            if (e is IllegalStateException || e is IllegalArgumentException || e is AssertionError)
+                throw FlowException(e)
+            else
+                throw e
         }
-
         // Sign and send back our signature to the Initiator.
         progressTracker.currentStep = SIGNING
-        val mySignature = serviceHub.createSignature(checkedProposal)
+        val mySignature = serviceHub.createSignature(stx)
         send(otherParty, mySignature)
 
         // Return the fully signed transaction once it has been committed.
-        return waitForLedgerCommit(checkedProposal.id)
+        return waitForLedgerCommit(stx.id)
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {

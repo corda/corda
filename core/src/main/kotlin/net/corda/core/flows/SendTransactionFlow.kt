@@ -1,37 +1,48 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.TransactionData.SignedTransactionData
-import net.corda.core.flows.TransactionData.TransactionHashesData
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 
 /**
- * The [SendTransactionFlow] corresponds to the [ReceiveTransactionFlow].
+ * The [SendTransactionFlow] should be called in response to the [ReceiveTransactionFlow]. This flow sends the
+ * [SignedTransaction] to the [otherSide].
  *
- * The [SendTransactionFlow] provides an ad hoc data vending service, which anticipates incoming data request from the
- * [otherSide] during the transaction resolving process.
+ * After sending the [SignedTransaction], the [SendTransactionFlow] will listen for incoming [FetchDataFlow.Request]
+ * from the [otherSide], the requested data will be used for the transaction resolving process.
  *
- * The number of request from [ReceiveTransactionFlow] is depends on the depth of the transaction history and the data
+ * The number of request from [ReceiveTransactionFlow] depends on the depth of the transaction history and the data
  * [otherSide] already possess. The [SendTransactionFlow] is expected to receive [FetchDataFlow.Request] continuously
  * until the [otherSide] has all the data they need to resolve the transaction, an [FetchDataFlow.Request.End] will be
  * sent from the [otherSide] to indicate end of data request.
  *
  * @param otherSide the target party.
- * @param payload the message that will be sent to the [otherSide] before data vending starts.
+ * @param stx the [SignedTransaction] being sent to the [otherSide].
  */
+class SendTransactionFlow(otherSide: Party, stx: SignedTransaction) : DataVendingFlow<SignedTransaction>(otherSide, stx)
 
-open class SendTransactionFlow private constructor(val otherSide: Party, val payload: TransactionData<*>) : FlowLogic<Unit>() {
-    @JvmOverloads
-    constructor(otherSide: Party, stx: SignedTransaction, extraData: Any? = null) : this(otherSide, SignedTransactionData(stx, extraData))
+/**
+ * The [SendProposalFlow] should be called in response to the [ReceiveProposalFlow]. This flow sends the [TradeProposal]
+ * to the [otherSide].
+ *
+ * After sending the [TradeProposal], the [SendProposalFlow] will listen for incoming [FetchDataFlow.Request]
+ * from the [otherSide], the requested data will be used for the transaction resolving process.
+ *
+ * The number of request from [ReceiveProposalFlow] depends on the depth of the transaction history and the data
+ * [otherSide] already possess. The [SendProposalFlow] is expected to receive [FetchDataFlow.Request] continuously
+ * until the [otherSide] has all the data they need to resolve the transaction, an [FetchDataFlow.Request.End] will be
+ * sent from the [otherSide] to indicate end of data request.
+ *
+ * @param otherSide the target party.
+ * @param tradeProposal the [TradeProposal] being sent to the [otherSide].
+ */
+class SendProposalFlow(otherSide: Party, tradeProposal: TradeProposal<*>) : DataVendingFlow<TradeProposal<*>>(otherSide, tradeProposal)
 
-    @JvmOverloads
-    constructor(otherSide: Party, hashes: Set<SecureHash>, extraData: Any? = null) : this(otherSide, TransactionHashesData(hashes, extraData))
-
+open class DataVendingFlow<out T : Any>(val otherSide: Party, val payload: T) : FlowLogic<Unit>() {
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any) = sendAndReceive<FetchDataFlow.Request>(otherSide, payload)
 
@@ -69,8 +80,9 @@ open class SendTransactionFlow private constructor(val otherSide: Party, val pay
     }
 }
 
-@CordaSerializable
-sealed class TransactionData<out T : Any>(val tx: T, val extraData: Any?) {
-    class SignedTransactionData(stx: SignedTransaction, extraData: Any?) : TransactionData<SignedTransaction>(stx, extraData)
-    class TransactionHashesData(hashes: Set<SecureHash>, extraData: Any?) : TransactionData<Set<SecureHash>>(hashes, extraData)
+/**
+ * TODO: API DOCs
+ */
+interface TradeProposal<out T : ContractState> {
+    val inputStates: List<StateAndRef<T>>
 }

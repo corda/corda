@@ -2,43 +2,47 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.identity.Party
-import net.corda.core.internal.castIfPossible
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 
 /**
- * The [ReceiveTransactionFlow] should be called in response to the [SendTransactionFlow]. It automates the receiving
- * and resolving of a signed transaction or input hashes.
+ * The [ReceiveTransactionFlow] should be called in response to the [SendTransactionFlow].
  *
- * This flow is a combination of [receive] and [ResolveTransactionsFlow], it will expect a incoming message of type
- * [TransactionData] created by [SendTransactionFlow]. This flow will resolve the transaction data and return a
- * [UntrustworthyData] for further verification.
+ * This flow is a combination of [receive] and [ResolveTransactionsFlow], the flow is expecting a [SignedTransaction]
+ * from the [otherParty]. This flow will resolve the [SignedTransaction] and return the [SignedTransaction] after its resolved.
  */
-
-class ReceiveTransactionFlow<out T : Any>
+class ReceiveTransactionFlow
 @JvmOverloads
-constructor(private val expectedDataType: Class<T>,
-            private val otherParty: Party,
+constructor(private val otherParty: Party,
             private val verifySignatures: Boolean = true,
-            private val verifyTransaction: Boolean = true) : FlowLogic<UntrustworthyData<T>>() {
+            private val verifyTransaction: Boolean = true) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     @SuppressWarnings
-    override fun call(): UntrustworthyData<T> {
-        return receive<TransactionData<*>>(otherParty).unwrap {
-            val resolveTransactionFlow = when (it) {
-                is TransactionData.SignedTransactionData -> ResolveTransactionsFlow(otherParty, it.tx, verifySignatures, verifyTransaction)
-                is TransactionData.TransactionHashesData -> ResolveTransactionsFlow(otherParty, it.tx)
-            }
-            subFlow(resolveTransactionFlow)
-            UntrustworthyData(it.checkPayloadIs(expectedDataType))
+    override fun call(): SignedTransaction {
+        return receive<SignedTransaction>(otherParty).unwrap {
+            subFlow(ResolveTransactionsFlow(otherParty, it, verifySignatures, verifyTransaction))
+            it
         }
     }
+}
 
-    private fun <T> TransactionData<*>.checkPayloadIs(type: Class<T>): T {
-        return extraData?.let { type.castIfPossible(it) } ?: type.castIfPossible(tx) ?:
-                throw UnexpectedFlowEndException("We were expecting a ${type.name} from $otherParty but we instead got a " +
-                        "${tx.javaClass.name} ($tx), ${extraData?.javaClass?.name} ($extraData)")
-
+/**
+ * The [ReceiveProposalFlow] should be called in response to the [SendProposalFlow].
+ *
+ * This flow is a combination of [receive] and [ResolveTransactionsFlow], the flow is expecting a [TradeProposal] from
+ * the [otherParty]. This flow will resolve the [TradeProposal.inputStates] and return a [UntrustworthyData] for
+ * further verification.
+ */
+class ReceiveProposalFlow<out T : TradeProposal<*>>(private val expectedClass: Class<T>, private val otherParty: Party) : FlowLogic<UntrustworthyData<T>>() {
+    @Suspendable
+    @SuppressWarnings
+    override fun call(): UntrustworthyData<T> {
+        return receive(expectedClass, otherParty).unwrap {
+            subFlow(ResolveTransactionsFlow(otherParty, it.inputStates.map { it.ref.txhash }.toSet()))
+            UntrustworthyData(it)
+        }
     }
 }
+
