@@ -311,7 +311,7 @@ public class FlowCookbookJava {
             progressTracker.setCurrentStep(TX_BUILDING);
 
             // DOCSTART 19
-            TransactionBuilder txBuilder = new TransactionBuilder(General.INSTANCE, specificNotary);
+            TransactionBuilder txBuilder = new TransactionBuilder(specificNotary);
             // DOCEND 19
 
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:

@@ -458,7 +458,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 
         // Issue then move some cash
-        val issueTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
+        val issueTx = TransactionBuilder(services.myInfo.legalIdentity).apply {
             Cash().generateIssue(this,
                     amount, anonymousIdentity.party, services.myInfo.legalIdentity)
         }.toWireTransaction()
@@ -468,7 +468,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(cashState), null)
 
         database.transaction {
-            val moveTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
+            val moveTx = TransactionBuilder(services.myInfo.legalIdentity).apply {
                 service.generateSpend(this, Amount(1000, GBP), thirdPartyIdentity)
             }.toWireTransaction()
             service.notify(moveTx)

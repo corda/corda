@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-
 import com.esotericsoftware.kryo.KryoException
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
@@ -120,7 +119,6 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         assertEquals(1, leaves.outputs.size)
         assertEquals(1, leaves.commands.size)
         assertNull(mt.filteredLeaves.notary)
-        assertNull(mt.filteredLeaves.type)
         assertNotNull(mt.filteredLeaves.timeWindow)
         assertNull(mt.filteredLeaves.privacySalt)
         assertEquals(4, leaves.nonces.size)
@@ -244,7 +242,6 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
                 outputs = testTx.outputs,
                 commands = testTx.commands,
                 notary = notary,
-                type = TransactionType.General,
                 timeWindow = timeWindow
         )
     }
