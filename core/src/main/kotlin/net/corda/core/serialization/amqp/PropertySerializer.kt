@@ -117,12 +117,12 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
         override fun writeClassInfo(output: SerializationOutput) {}
 
         override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
-            return if(obj == null) null else (obj as Int).toChar()
+            return if(obj == null) null else (obj as Short).toChar()
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
             val input = readMethod.invoke(obj)
-            if (input != null) data.putChar((input as Char).toInt()) else data.putNull()
+            if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
         }
     }
 }

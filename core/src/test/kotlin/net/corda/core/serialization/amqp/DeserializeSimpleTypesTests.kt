@@ -32,11 +32,24 @@ class DeserializeSimpleTypesTests {
     fun testChar() {
         data class C(val c: Char)
 
-        val c = C('c')
-        val serialisedC = SerializationOutput().serialize(c)
-        val deserializedC = DeserializationInput().deserialize(serialisedC)
+        var deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('c')))
+        assertEquals('c', deserializedC.c)
 
-        assertEquals(c.c, deserializedC.c)
+        // CYRILLIC CAPITAL LETTER YU (U+042E)
+        deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('Ю')))
+        assertEquals('Ю', deserializedC.c)
+
+        // 	ARABIC LETTER FEH WITH DOT BELOW (U+06A3)
+        deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('ڣ')))
+        assertEquals('ڣ', deserializedC.c)
+
+        // 	ARABIC LETTER DAD WITH DOT BELOW (U+06FB)
+        deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('ۻ')))
+        assertEquals('ۻ', deserializedC.c)
+
+        // BENGALI LETTER AA (U+0986)
+        deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('আ')))
+        assertEquals('আ', deserializedC.c)
     }
 
     @Test
@@ -150,12 +163,23 @@ class DeserializeSimpleTypesTests {
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "char[p]")
 
         val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        var deserializedC = DeserializationInput(sf).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
         assertEquals(c.c[1], deserializedC.c[1])
         assertEquals(c.c[2], deserializedC.c[2])
+
+        // second test with more interesting characters
+        v[0] = 'ই'; v[1] = ' '; v[2] = 'ਔ'
+        val c2 = C(v)
+
+        deserializedC = DeserializationInput(sf).deserialize(TestSerializationOutput(VERBOSE, sf).serialize(c2))
+
+        assertEquals(c2.c.size, deserializedC.c.size)
+        assertEquals(c2.c[0], deserializedC.c[0])
+        assertEquals(c2.c[1], deserializedC.c[1])
+        assertEquals(c2.c[2], deserializedC.c[2])
     }
 
     @Test
