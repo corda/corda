@@ -99,6 +99,7 @@ class TransactionTests : TestDependencyInjectionBase() {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
+        val privacySalt: PrivacySalt = PrivacySalt()
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
                 outputs,
@@ -108,7 +109,7 @@ class TransactionTests : TestDependencyInjectionBase() {
                 null,
                 timeWindow,
                 TransactionType.General,
-                null
+                privacySalt
         )
 
         transaction.verify()
@@ -141,6 +142,7 @@ class TransactionTests : TestDependencyInjectionBase() {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
+        val privacySalt: PrivacySalt = PrivacySalt()
         fun buildTransaction() = LedgerTransaction(
                 inputs,
                 outputs,
@@ -150,7 +152,7 @@ class TransactionTests : TestDependencyInjectionBase() {
                 notary,
                 timeWindow,
                 TransactionType.General,
-                null
+                privacySalt
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction() }

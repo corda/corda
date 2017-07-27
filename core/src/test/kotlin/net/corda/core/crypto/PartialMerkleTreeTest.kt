@@ -123,7 +123,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         assertNull(mt.filteredLeaves.type)
         assertNotNull(mt.filteredLeaves.timeWindow)
         assertNull(mt.filteredLeaves.privacySalt)
-        assertEquals(5, leaves.nonces.size)
+        assertEquals(4, leaves.nonces.size)
         assertTrue(mt.verify())
     }
 
