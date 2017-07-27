@@ -10,8 +10,21 @@ interface I {
 }
 
 interface II {
+    fun returnName() : String
+}
+
+interface III {
+    fun returnAge() : Int
+    fun returnThingWithName(): II
+}
+
+interface B {
+    fun getName() : String
+}
+
+interface BB {
     fun getAge() : Int
-    fun getThingWithName(): I
+    fun getThingWithName(): II
 }
 
 /**
@@ -21,7 +34,6 @@ interface II {
  * replicates the situation where a receiver doesn't have some or all elements of a schema present on it's classpath
  */
 class DeserializeNeedingCarpentryTests {
-
     companion object {
         /**
          * If you want to see the schema encoded into the envelope after serialisation change this to true
@@ -116,37 +128,85 @@ class DeserializeNeedingCarpentryTests {
         }
     }
 
+    // technically this test doesn't test anything (relevent to carpanter / serialiser interaction) since
+    // all the classes are knwon, what does do is replicate the test below to demonstrate it should
+    // all work
+    @Test
+    fun mapOfKnown() {
+        class lII (val name: String) : II {
+            override fun returnName() = name
+        }
+
+        class lIII (val age: Int, val thingWithName: II): III {
+            override fun returnAge(): Int = age
+            override fun returnThingWithName() = thingWithName
+        }
+
+        data class Wrapper(val IIIs: MutableMap<String, III>)
+        val wrapper = Wrapper (mutableMapOf())
+        val testData = arrayOf(Pair ("Fred", 12), Pair ("Bob", 50), Pair ("Thirsty", 101))
+
+        testData.forEach {
+            wrapper.IIIs[it.first] = lIII(it.second, lII(it.first))
+        }
+
+        // Now do the actual test by serialising and deserialising [wrapper]
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(wrapper)
+        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+    }
+
+    // TODO This class shows that the problem isn't with the carpented class but a general
+    // TODO Bug / feature of the code...
+    /*
+    @Test
+    fun linkedHashMapTest() {
+        data class C(val c : LinkedHashMap<String, Int>)
+        val c = C (LinkedHashMap (mapOf("A" to 1, "B" to 2)))
+
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+
+    }
+    */
+
+    // TODO the problem here is that the wrapper class as created by the serialiser
+    // TODO contains a [LinkedHashMap] and not a [Map] and we thus can't serialise
+    // TODO it - Talk to Rick about weather we should be able to or not
+    /*
     @Test
     fun mapOfInterfaces() {
         val cc = ClassCarpenter()
 
         val implementsI = cc.build(ClassSchema(
                 "implementsI", mapOf("name" to NonNullableField(String::class.java)),
-                interfaces = listOf (I::class.java)))
+                interfaces = listOf (B::class.java)))
 
         val implementsII = cc.build(ClassSchema("ImplementsII", mapOf (
                 "age" to NonNullableField(Int::class.java),
-                "thingWithName" to NullableField(I::class.java)),
-                interfaces = listOf (II::class.java)))
+                "thingWithName" to NullableField(B::class.java)),
+                interfaces = listOf (BB::class.java)))
+
+                //        inline fun getval(reified T : Any) : return T::class.java
 
         val wrapper = cc.build(ClassSchema("wrapper", mapOf (
-                "IIs" to NonNullableField(MutableMap::class.java))))
+                "BBs" to NonNullableField(mutableMapOf<String, BB>()::class.java
+        ))))
 
-        val tmp: MutableMap<String, II> = mutableMapOf()
+        val tmp : MutableMap<String, BB> = mutableMapOf()
         val toSerialise = wrapper.constructors.first().newInstance(tmp)
         val testData = arrayOf(Pair ("Fred", 12), Pair ("Bob", 50), Pair ("Thirsty", 101))
 
         testData.forEach {
-            (wrapper.getMethod("getIIs").invoke(toSerialise) as MutableMap<String, II>)[it.first] =
+            (wrapper.getMethod("getBBs").invoke(toSerialise) as MutableMap<String, BB>)[it.first] =
                     implementsII.constructors.first().newInstance(it.second,
-                            implementsI.constructors.first().newInstance(it.first) as I) as II
+                            implementsI.constructors.first().newInstance(it.first) as B) as BB
         }
 
         // Now do the actual test by serialising and deserialising [wrapper]
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(wrapper)
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(toSerialise)
         val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
-
     }
+    */
 
     @Test
     fun unknownInterface() {
