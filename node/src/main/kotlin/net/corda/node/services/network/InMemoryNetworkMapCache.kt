@@ -34,7 +34,6 @@ import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
 import org.bouncycastle.asn1.x500.X500Name
-import org.hibernate.FlushMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -62,7 +61,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
     private var registeredForPush = false
 
     // TODO Small explanation, partyNodes and registeredNodes is left in memory as it was before, because it will be removed in
-    //  next PR that gets rid of services.
+    //  next PR that gets rid of services. These maps are used only for queries by service.
     override val partyNodes: List<NodeInfo> get() = registeredNodes.map { it.value }
     override val networkMapNodes: List<NodeInfo> get() = getNodesWithService(NetworkMapService.type)
     private val _changed = PublishSubject.create<MapChange>()
@@ -85,7 +84,6 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = serviceHub!!.database.transaction { queryByLegalIdentity(party.owningKey) }
-        // TODO Will be removed with services.
         if (nodes.size == 1 && nodes[0].legalIdentity == party) {
             return PartyInfo.Node(nodes[0])
         }
@@ -244,8 +242,14 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
     private fun updateInfoDB(nodeInfo: NodeInfo) {
         val session = createSession()
         session?.use {
+            // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
+            val info = findByLegalIdentity(session, nodeInfo.legalIdentity.owningKey)
+            session.clear()
             val nodeInfoEntry = nodeInfo.generateMappedObject(NodeInfoSchemaV1)
             val tx = it.beginTransaction()
+            if (info.isNotEmpty()) {
+                nodeInfoEntry.id = info[0].id
+            }
             session.saveOrUpdate(nodeInfoEntry)
             tx.commit()
         }

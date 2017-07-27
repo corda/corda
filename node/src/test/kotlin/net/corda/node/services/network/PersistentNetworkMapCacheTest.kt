@@ -69,7 +69,6 @@ class PersistentNetworkMapCacheTest: NodeBasedTest() {
         assertEquals(null, alice.inNodeNetworkMapService)
         assertEquals(infos.size, partyNodes.size)
         assertEquals(infos, partyNodes.toSet())
-        alice.stop()
     }
 
     @Test
@@ -132,9 +131,6 @@ class PersistentNetworkMapCacheTest: NodeBasedTest() {
         assert(infos.any {it == nms.info})
         otherNodes.forEach {
             assert(nms.info in it.services.networkMapCache.partyNodes)
-        }
-        otherNodes.forEach {
-            it.nodeReadyFuture.get()
         }
         charlie.nodeReadyFuture.get() // Finish registration.
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
