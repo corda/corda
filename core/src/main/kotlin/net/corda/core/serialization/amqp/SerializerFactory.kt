@@ -6,7 +6,6 @@ import net.corda.core.serialization.AllWhitelist
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.carpenter.CarpenterSchemas
-import net.corda.core.serialization.carpenter.ClassCarpenter
 import net.corda.core.serialization.carpenter.MetaCarpenter
 import net.corda.core.serialization.carpenter.carpenterSchema
 import org.apache.qpid.proton.amqp.*
@@ -293,6 +292,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
         private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
                 Character::class.java to "char",
+                Char::class.java to "char",
                 Boolean::class.java to "boolean",
                 Byte::class.java to "byte",
                 UnsignedByte::class.java to "ubyte",
@@ -307,7 +307,6 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 Decimal32::class.java to "decimal32",
                 Decimal64::class.java to "decimal62",
                 Decimal128::class.java to "decimal128",
-                Char::class.java to "char",
                 Date::class.java to "timestamp",
                 UUID::class.java to "uuid",
                 ByteArray::class.java to "binary",
