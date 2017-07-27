@@ -49,6 +49,16 @@ interface TraversableTransaction {
     val notary: Party?
     val type: TransactionType?
     val timeWindow: TimeWindow?
+    /**
+     * For privacy purposes, each part of a transaction should be accompanied by a nonce.
+     * To avoid storing a random number (nonce) per component, an initial "salt" is the sole value utilised,
+     * so that all component nonces are deterministically computed in the following way:
+     * nonce1 = H(salt || 1)
+     * nonce2 = H(salt || 2)
+     *
+     * Thus, all of the nonces are "independent" in the sense that knowing one or some of them, you can learn
+     * nothing about the rest.
+     */
     val privacySalt: PrivacySalt?
 
     /**

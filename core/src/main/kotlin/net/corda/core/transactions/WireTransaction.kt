@@ -26,16 +26,6 @@ data class WireTransaction(
         // TODO: remove type
         override val type: TransactionType,
         override val timeWindow: TimeWindow?,
-        /**
-         * For privacy purposes, each part of a transaction should be accompanied by a nonce.
-         * To avoid storing a random number (nonce) per component, an initial "salt" is the sole value utilised,
-         * so that all component nonces are deterministically computed in the following way:
-         * nonce1 = H(salt || 1)
-         * nonce2 = H(salt || 2)
-         *
-         * Thus, all of the nonces are "independent" in the sense that knowing one or some of them, you can learn
-         * nothing about the rest.
-         */
         override val privacySalt: PrivacySalt = PrivacySalt()
 ) : CoreTransaction(), TraversableTransaction {
     init {
@@ -123,11 +113,11 @@ data class WireTransaction(
      */
     fun filterWithFun(filtering: Predicate<Any>): FilteredLeaves {
         val nonces: MutableList<SecureHash> = mutableListOf()
-
-        fun notNullFalseAndNonceUpdate(elem: Any?, index: Int, nonces: MutableList<SecureHash>): Any? {
-            return if (elem == null || !filtering.test(elem))
+        val offsets = indexOffsets()
+        fun notNullFalseAndNoncesUpdate(elem: Any?, index: Int): Any? {
+            return if (elem == null || !filtering.test(elem)) {
                 null
-            else {
+            } else {
                 nonces.add(computeNonce(privacySalt, index))
                 elem
             }
@@ -135,22 +125,23 @@ data class WireTransaction(
 
         fun notNullFalse(elem: Any?): Any? = if (elem == null || !filtering.test(elem)) null else elem
 
-        fun<T : Any> filterAndNoncesUpdate(filtering: Predicate<Any>, t: T, index: Int, nonces: MutableList<SecureHash>): Boolean {
+        fun<T : Any> filterAndNoncesUpdate(filtering: Predicate<Any>, t: T, index: Int): Boolean {
             return if (filtering.test(t)) {
                 nonces.add(computeNonce(privacySalt, index))
                 true
-            } else
+            } else {
                 false
+            }
         }
 
         return FilteredLeaves(
-                inputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index, nonces) },
-                attachments.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[0], nonces) },
-                outputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[1], nonces) },
-                commands.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[2], nonces) },
-                notNullFalseAndNonceUpdate(notary, offsets[3], nonces) as Party?,
-                notNullFalseAndNonceUpdate(type, offsets[4], nonces) as TransactionType?,
-                notNullFalseAndNonceUpdate(timeWindow, offsets[5], nonces) as TimeWindow?,
+                inputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index) },
+                attachments.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[0]) },
+                outputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[1]) },
+                commands.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[2]) },
+                notNullFalseAndNoncesUpdate(notary, offsets[3]) as Party?,
+                notNullFalseAndNoncesUpdate(type, offsets[4]) as TransactionType?,
+                notNullFalseAndNoncesUpdate(timeWindow, offsets[5]) as TimeWindow?,
                 notNullFalse(privacySalt) as PrivacySalt?, // PrivacySalt doesn't need an accompanied nonce.
                 nonces
         )
@@ -161,20 +152,20 @@ data class WireTransaction(
         val offsets = mutableListOf(inputs.size, inputs.size + attachments.size)
         offsets.add(offsets.last() + outputs.size)
         offsets.add(offsets.last() + commands.size)
-        if (notary != null)
+        if (notary != null) {
             offsets.add(offsets.last() + 1)
-        else
+        } else {
             offsets.add(offsets.last())
+        }
         offsets.add(offsets.last() + 1) // For tx type.
-        if (timeWindow != null)
+        if (timeWindow != null) {
             offsets.add(offsets.last() + 1)
-        else
+        } else {
             offsets.add(offsets.last())
+        }
         // No need to add offset for privacySalt as it doesn't require a nonce.
         return offsets
     }
-
-    val offsets: List<Int> by lazy { indexOffsets() }
 
     /**
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
