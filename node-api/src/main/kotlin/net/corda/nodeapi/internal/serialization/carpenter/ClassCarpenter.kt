@@ -129,7 +129,7 @@ class ClassCarpenter {
     private fun generateClass(classSchema: Schema): Class<*> {
         return generate(classSchema) { cw, schema ->
             val superName = schema.superclass?.jvmName ?: "java/lang/Object"
-            var interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
+            val interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
 
             if (SimpleFieldAccess::class.java !in schema.interfaces) interfaces.add(SimpleFieldAccess::class.java.name.jvm)
 
@@ -309,7 +309,6 @@ class ClassCarpenter {
                 // If we're trying to carpent a class that prior to serialisation / deserialisation
                 // was made by a carpenter then we can ignore this (it will implement a plain get
                 // method from SimpleFieldAccess).
-                // method from SimpleFieldAccess)
                 if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) return@forEach
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields))

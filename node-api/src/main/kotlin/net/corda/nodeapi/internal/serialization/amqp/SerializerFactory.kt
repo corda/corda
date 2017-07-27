@@ -219,8 +219,8 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> {
-        return serializersByType.computeIfAbsent(type) {
+    private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> =
+            serializersByType.computeIfAbsent(type) {
             if (isPrimitive(clazz)) {
                 AMQPPrimitiveSerializer(clazz)
             } else {
@@ -238,7 +238,6 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                     }
                 }
             }
-        }
     }
 
     internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
@@ -319,10 +318,10 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         fun nameForType(type: Type) : String = when (type) {
                 is Class<*> -> {
                     primitiveTypeName(type) ?: if (type.isArray) {
-                        "${nameForType(type.componentType)}${if(type.componentType.isPrimitive)"[p]" else "[]"}"
+                        "${nameForType(type.componentType)}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
                     } else type.name
                 }
-                is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
+                is ParameterizedType -> "${nameForType(type.rawType)ype.actualTypeArguments.joinToString { nameForType(it) }}>"
                 is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
                 else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
