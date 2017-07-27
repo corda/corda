@@ -113,13 +113,16 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
      * casting back to a char otherwise it's treated as an Integer and a TypeMismatch occurs
      */
     class AMQPCharPropertySerializer(name: String, readMethod: Method) :
-            PropertySerializer(name, readMethod, Char::class.java) {
+            PropertySerializer(name, readMethod, Character::class.java) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
-        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput) = (obj as Int).toChar()
+        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
+            return if(obj == null) null else (obj as Short).toChar()
+        }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            data.putChar((readMethod.invoke(obj) as Char).toInt())
+            val input = readMethod.invoke(obj)
+            if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
         }
     }
 }
