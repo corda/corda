@@ -21,6 +21,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -349,7 +350,7 @@ class FlowFrameworkTests {
         sessionTransfers.expectEvents(isStrict = false) {
             sequence(
                     // First Pay
-                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java }) {
+                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -359,7 +360,7 @@ class FlowFrameworkTests {
                         assertEquals(notary1.id, it.from)
                     },
                     // Second pay
-                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java }) {
+                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -369,7 +370,7 @@ class FlowFrameworkTests {
                         assertEquals(notary2.id, it.from)
                     },
                     // Third pay
-                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java }) {
+                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -653,9 +654,36 @@ class FlowFrameworkTests {
                 track = false)
         val result = node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity)).resultFuture
         mockNet.runNetwork()
-        assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
-            result.getOrThrow()
-        }.withMessageContaining("Version")
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java)
+                .isThrownBy { result.getOrThrow() }
+                .withMessageContaining("Version")
+    }
+
+    @Test
+    fun `unregistered flow`() {
+        val future = node1.services.startFlow(SendFlow("Hello", node2.info.legalIdentity)).resultFuture
+        mockNet.runNetwork()
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java)
+                .isThrownBy { future.getOrThrow() }
+                .withMessageEndingWith("${SendFlow::class.java.name} is not registered")
+    }
+
+    @Test
+    fun `unknown class in session init`() {
+        node1.sendSessionMessage(SessionInit(random63BitValue(), "not.a.real.Class", 1, null), node2)
+        mockNet.runNetwork()
+        assertThat(sessionTransfers).hasSize(2) // Only the session-init and session-reject are expected
+        val reject = sessionTransfers.last().message as SessionReject
+        assertThat(reject.errorMessage).isEqualTo("Don't know not.a.real.Class")
+    }
+
+    @Test
+    fun `non-flow class in session init`() {
+        node1.sendSessionMessage(SessionInit(random63BitValue(), String::class.java.name, 1, null), node2)
+        mockNet.runNetwork()
+        assertThat(sessionTransfers).hasSize(2) // Only the session-init and session-reject are expected
+        val reject = sessionTransfers.last().message as SessionReject
+        assertThat(reject.errorMessage).isEqualTo("${String::class.java.name} is not a flow")
     }
 
     @Test
@@ -705,12 +733,19 @@ class FlowFrameworkTests {
     }
 
     private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): SessionInit {
-        return SessionInit(0, clientFlowClass.java, flowVersion, payload)
+        return SessionInit(0, clientFlowClass.java.name, flowVersion, payload)
     }
     private val sessionConfirm = SessionConfirm(0, 0)
     private fun sessionData(payload: Any) = SessionData(0, payload)
     private val normalEnd = NormalSessionEnd(0)
     private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
+
+    private fun MockNode.sendSessionMessage(message: SessionMessage, destination: MockNode) {
+        services.networkService.apply {
+            val address = getAddressOfParty(PartyInfo.Node(destination.info))
+            send(createMessage(StateMachineManager.sessionTopic, message.serialize().bytes), address)
+        }
+    }
 
     private fun assertSessionTransfers(vararg expected: SessionTransfer) {
         assertThat(sessionTransfers).containsExactly(*expected)
