@@ -5,7 +5,7 @@ import net.corda.nodeapi.internal.serialization.amqp.Field as AMQPField
 import net.corda.nodeapi.internal.serialization.amqp.Schema as AMQPSchema
 
 fun AMQPSchema.carpenterSchema(
-        loaders : List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader()))
+        loaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader()))
         : CarpenterSchemas {
     val rtn = CarpenterSchemas.newInstance()
 
@@ -20,13 +20,13 @@ fun AMQPSchema.carpenterSchema(
  * if we can load the class then we MUST know about all of it's composite elements
  */
 private fun CompositeType.validatePropertyTypes(
-        classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())){
+        classLoaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader())) {
     fields.forEach {
-        if (!it.validateType(classLoaders)) throw UncarpentableException (name, it.name, it.type)
+        if (!it.validateType(classLoaders)) throw UncarpentableException(name, it.name, it.type)
     }
 }
 
-fun AMQPField.typeAsString() = if (type =="*") requires[0] else type
+fun AMQPField.typeAsString() = if (type == "*") requires[0] else type
 
 /**
  * based upon this AMQP schema either
@@ -42,9 +42,9 @@ fun AMQPField.typeAsString() = if (type =="*") requires[0] else type
  *  on the class path. For testing purposes schema generation can be forced
  */
 fun CompositeType.carpenterSchema(
-        classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader()),
+        classLoaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader()),
         carpenterSchemas: CarpenterSchemas,
-        force : Boolean = false) {
+        force: Boolean = false) {
     if (classLoaders.exists(name)) {
         validatePropertyTypes(classLoaders)
         if (!force) return
@@ -62,9 +62,8 @@ fun CompositeType.carpenterSchema(
         }
 
         try {
-            providesList.add (classLoaders.loadIfExists(it))
-        }
-        catch (e: ClassNotFoundException) {
+            providesList.add(classLoaders.loadIfExists(it))
+        } catch (e: ClassNotFoundException) {
             carpenterSchemas.addDepPair(this, name, it)
             isCreatable = false
         }
@@ -75,15 +74,14 @@ fun CompositeType.carpenterSchema(
     fields.forEach {
         try {
             m[it.name] = FieldFactory.newInstance(it.mandatory, it.name, it.getTypeAsClass(classLoaders))
-        }
-        catch (e: ClassNotFoundException) {
+        } catch (e: ClassNotFoundException) {
             carpenterSchemas.addDepPair(this, name, it.typeAsString())
             isCreatable = false
         }
     }
 
     if (isCreatable) {
-        carpenterSchemas.carpenterSchemas.add (CarpenterSchemaFactory.newInstance(
+        carpenterSchemas.carpenterSchemas.add(CarpenterSchemaFactory.newInstance(
                 name = name,
                 fields = m,
                 interfaces = providesList,
@@ -91,33 +89,48 @@ fun CompositeType.carpenterSchema(
     }
 }
 
+// map a pair of (typename, mandatory) to the corresponding class type
+// where the mandatory AMQP flag maps to the types nullability
+val typeStrToType: Map<Pair<String, Boolean>, Class<out Any?>> = mapOf(
+        Pair("int", true) to Int::class.javaPrimitiveType!!,
+        Pair("int", false) to Integer::class.javaObjectType,
+        Pair("short", true) to Short::class.javaPrimitiveType!!,
+        Pair("short", false) to Short::class.javaObjectType,
+        Pair("long", true) to Long::class.javaPrimitiveType!!,
+        Pair("long", false) to Long::class.javaObjectType,
+        Pair("char", true) to Char::class.javaPrimitiveType!!,
+        Pair("char", false) to java.lang.Character::class.java,
+        Pair("boolean", true) to Boolean::class.javaPrimitiveType!!,
+        Pair("boolean", false) to Boolean::class.javaObjectType,
+        Pair("double", true) to Double::class.javaPrimitiveType!!,
+        Pair("double", false) to Double::class.javaObjectType,
+        Pair("float", true) to Float::class.javaPrimitiveType!!,
+        Pair("float", false) to Float::class.javaObjectType,
+        Pair("byte", true) to Byte::class.javaPrimitiveType!!,
+        Pair("byte", false) to Byte::class.javaObjectType
+)
+
 fun AMQPField.getTypeAsClass(
-        classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())
-) = when (type) {
-    "int"     -> if (mandatory) Integer::class.java else Int::class.javaPrimitiveType!!
-    "string"  -> String::class.java
-    "short"   -> Short::class.javaPrimitiveType!!
-    "long"    -> Long::class.javaPrimitiveType!!
-    "char"    -> Char::class.javaPrimitiveType!!
-    "boolean" -> Boolean::class.javaPrimitiveType!!
-    "double"  -> Double::class.javaPrimitiveType!!
-    "float"   -> Float::class.javaPrimitiveType!!
-    "*"       -> classLoaders.loadIfExists(requires[0])
-    else      -> classLoaders.loadIfExists(type)
+        classLoaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader())
+) = typeStrToType[Pair(type, mandatory)] ?: when (type) {
+    "string" -> String::class.java
+    "*" -> classLoaders.loadIfExists(requires[0])
+    else -> classLoaders.loadIfExists(type)
 }
 
 fun AMQPField.validateType(
-        classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())
+        classLoaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader())
 ) = when (type) {
-    "int", "string", "short", "long", "char", "boolean", "double", "float" -> true
-    "*"  -> classLoaders.exists(requires[0])
-    else -> classLoaders.exists (type)
+    "byte", "int", "string", "short", "long", "char", "boolean", "double", "float" -> true
+    "*" -> classLoaders.exists(requires[0])
+    else -> classLoaders.exists(type)
 }
 
-private fun List<ClassLoader>.exists (clazz: String) =
-        this.find { try { it.loadClass(clazz); true } catch (e: ClassNotFoundException) { false } } != null
+private fun List<ClassLoader>.exists(clazz: String) = this.find {
+    try { it.loadClass(clazz); true } catch (e: ClassNotFoundException) { false }
+} != null
 
-private fun List<ClassLoader>.loadIfExists (clazz: String) : Class<*> {
+private fun List<ClassLoader>.loadIfExists(clazz: String): Class<*> {
     this.forEach {
         try {
             return it.loadClass(clazz)
