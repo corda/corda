@@ -1,7 +1,10 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.MerkleTree
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServicesForResolution
@@ -123,8 +126,6 @@ data class WireTransaction(
             }
         }
 
-        fun notNullFalse(elem: Any?): Any? = if (elem == null || !filtering.test(elem)) null else elem
-
         fun<T : Any> filterAndNoncesUpdate(filtering: Predicate<Any>, t: T, index: Int): Boolean {
             return if (filtering.test(t)) {
                 nonces.add(computeNonce(privacySalt, index))
@@ -134,7 +135,7 @@ data class WireTransaction(
             }
         }
 
-        return FilteredLeaves(
+        val filteredLeaves = FilteredLeaves(
                 inputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index) },
                 attachments.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[0]) },
                 outputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[1]) },
@@ -142,9 +143,11 @@ data class WireTransaction(
                 notNullFalseAndNoncesUpdate(notary, offsets[3]) as Party?,
                 notNullFalseAndNoncesUpdate(type, offsets[4]) as TransactionType?,
                 notNullFalseAndNoncesUpdate(timeWindow, offsets[5]) as TimeWindow?,
-                notNullFalse(privacySalt) as PrivacySalt?, // PrivacySalt doesn't need an accompanied nonce.
                 nonces
         )
+        // This.availableComponents.size - 1 is required to exclude privacySalt from calculations.
+        require(filteredLeaves.availableComponents.size < this.availableComponents.size - 1) { "All transaction components are still visible after filtering. Consider using a WireTransaction instead." }
+        return filteredLeaves
     }
 
     private fun indexOffsets(): List<Int> {

@@ -96,7 +96,8 @@ interface TraversableTransaction {
 
 /**
  * Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaf types, notice that every
- * field from [WireTransaction] can be used in [PartialMerkleTree] calculation.
+ * field from [WireTransaction] can be used in [PartialMerkleTree] calculation, except for the privacySalt.
+ * A list of nonces is also required to (re)construct component hashes.
  */
 @CordaSerializable
 class FilteredLeaves(
@@ -107,21 +108,13 @@ class FilteredLeaves(
         override val notary: Party?,
         override val type: TransactionType?,
         override val timeWindow: TimeWindow?,
-        // In practice, the only reason for having a non-null privacy salt,
-        // is when there is no filtering at all and every leaf is sent in clear.
-        // TODO: show a warning when a privacySalt is sent, but not all leaves are visible.
-        override val privacySalt: PrivacySalt?,
         val nonces: List<SecureHash>
 ) : TraversableTransaction {
 
+    override val privacySalt: PrivacySalt? get() = null
+
     init {
-        if (privacySalt == null) {
-            require(availableComponents.size == nonces.size)
-        }
-        // PrivacySalt is the only component not requiring a nonce.
-        else {
-            require(availableComponents.size - 1 == nonces.size)
-        }
+        require(availableComponents.size == nonces.size)
     }
 
     /**

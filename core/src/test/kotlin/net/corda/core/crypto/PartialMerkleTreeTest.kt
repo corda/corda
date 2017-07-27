@@ -142,10 +142,31 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         assertTrue(mt.filteredLeaves.inputs.isEmpty())
         assertTrue(mt.filteredLeaves.outputs.isEmpty())
         assertTrue(mt.filteredLeaves.timeWindow == null)
+        assertTrue(mt.filteredLeaves.availableComponents.isEmpty())
+        assertTrue(mt.filteredLeaves.availableComponentHashes.isEmpty())
+        assertTrue(mt.filteredLeaves.nonces.isEmpty())
         assertFailsWith<MerkleTreeException> { mt.verify() }
+
+        // Including only privacySalt still results to an empty FilteredTransaction.
+        fun filterPrivacySalt(elem: Any): Boolean = elem is PrivacySalt
+        val mt2 = testTx.buildFilteredTransaction(Predicate(::filterPrivacySalt))
+        assertTrue(mt2.filteredLeaves.privacySalt == null)
+        assertTrue(mt2.filteredLeaves.availableComponents.isEmpty())
+        assertTrue(mt2.filteredLeaves.availableComponentHashes.isEmpty())
+        assertTrue(mt2.filteredLeaves.nonces.isEmpty())
+        assertFailsWith<MerkleTreeException> { mt2.verify() }
     }
 
-    // Partial Merkle Tree building tests
+    @Test
+    fun `all visible`() {
+        assertFailsWith<IllegalArgumentException> { testTx.buildFilteredTransaction(Predicate { true }) }
+
+        // PrivacySalt is not included, but still anything else is visible.
+        fun excludePrivacySalt(elem: Any): Boolean = elem !is PrivacySalt
+        assertFailsWith<IllegalArgumentException> { testTx.buildFilteredTransaction(Predicate(::excludePrivacySalt)) }
+    }
+
+    // Partial Merkle Tree building tests.
     @Test
     fun `build Partial Merkle Tree, only left nodes branch`() {
         val inclHashes = listOf(hashed[3], hashed[5])
