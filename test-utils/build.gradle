@@ -67,3 +67,9 @@ jar {
 publish {
     name jar.baseName
 }
+
+task dummyContractJar(type: Jar, dependsOn: compileKotlin) {
+    from sourceSets.main.output
+    include '**/AnotherDummyContract*'
+    baseName 'test-contracts'
+}
