@@ -28,11 +28,11 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
     // Corda integration dependencies
-    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    corda project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
-    corda project(':core')
-    corda project(':finance')
-    corda project(':webserver')
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':finance')
+    cordaCompile project(':webserver')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"

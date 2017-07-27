@@ -26,11 +26,11 @@ dependencies {
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
-    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    corda project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
-    corda project(':core')
-    corda project(':webserver')
-    corda project(':test-utils')
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':webserver')
+    cordaCompile project(':test-utils')
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {

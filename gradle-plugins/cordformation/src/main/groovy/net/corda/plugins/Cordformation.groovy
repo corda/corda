@@ -11,7 +11,7 @@ import org.gradle.api.artifacts.Configuration
 class Cordformation implements Plugin<Project> {
     void apply(Project project) {
         createCompileConfiguration("cordapp", project)
-        createCompileConfiguration("corda", project)
+        createCompileConfiguration("cordaCompile", project)
 
         Configuration configuration = project.configurations.create("cordaRuntime")
         configuration.transitive = false
@@ -65,7 +65,7 @@ class Cordformation implements Plugin<Project> {
 
         project.with {
             // The direct dependencies of this project
-            def excludeDeps = configurations.cordapp.allDependencies + configurations.corda.allDependencies + configurations.cordaRuntime.allDependencies
+            def excludeDeps = configurations.cordapp.allDependencies + configurations.cordaCompile.allDependencies + configurations.cordaRuntime.allDependencies
             def directDeps = configurations.runtime.allDependencies - excludeDeps
             // We want to filter out anything Corda related or provided by Corda, like kotlin-stdlib and quasar
             def filteredDeps = directDeps.findAll { excludes.collect { exclude -> (exclude.group == it.group) && (exclude.name == it.name) }.findAll { it }.isEmpty() }
