@@ -2,11 +2,11 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.requireThat
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.contracts.DummyContract
@@ -84,7 +84,7 @@ class CollectSignaturesFlowTests {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
                 val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
-                val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
+                val builder = TransactionBuilder(notary).withItems(state, command)
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx))
                 val ftx = subFlow(FinalityFlow(stx)).single()
@@ -104,7 +104,7 @@ class CollectSignaturesFlowTests {
             override fun call(): SignedTransaction {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
                 val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
-                val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
+                val builder = TransactionBuilder(notary).withItems(state, command)
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx))
                 val ftx = subFlow(FinalityFlow(stx)).single()

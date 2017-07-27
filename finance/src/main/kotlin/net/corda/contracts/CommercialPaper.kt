@@ -200,7 +200,7 @@ class CommercialPaper : Contract {
      */
     fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant, notary: Party): TransactionBuilder {
         val state = TransactionState(State(issuance, issuance.party, faceValue, maturityDate), notary)
-        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
+        return TransactionBuilder(notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**

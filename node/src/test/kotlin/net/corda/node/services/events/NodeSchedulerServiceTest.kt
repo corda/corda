@@ -9,6 +9,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.ALICE_KEY
 import net.corda.testing.DUMMY_CA
 import net.corda.testing.DUMMY_NOTARY
@@ -280,7 +281,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
                 val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant)
-                val builder = TransactionType.General.Builder(null).apply {
+                val builder = TransactionBuilder(null).apply {
                     addOutputState(state, DUMMY_NOTARY)
                     addCommand(Command(), freshKey)
                 }

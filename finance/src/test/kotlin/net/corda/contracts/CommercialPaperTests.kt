@@ -10,6 +10,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
@@ -263,7 +264,7 @@ class CommercialPaperTestsGeneric {
         databaseAlice.transaction {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
-                val builder = TransactionType.General.Builder(DUMMY_NOTARY)
+                val builder = TransactionBuilder(DUMMY_NOTARY)
                 aliceVaultService.generateSpend(builder, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
                 CommercialPaper().generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(aliceServices.key.public))
                 val ptx = aliceServices.signInitialTransaction(builder)
@@ -284,7 +285,7 @@ class CommercialPaperTestsGeneric {
 
         databaseBigCorp.transaction {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
-                val builder = TransactionType.General.Builder(DUMMY_NOTARY)
+                val builder = TransactionBuilder(DUMMY_NOTARY)
                 builder.setTimeWindow(time, 30.seconds)
                 CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), bigCorpVaultService)
                 val ptx = aliceServices.signInitialTransaction(builder)

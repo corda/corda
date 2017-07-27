@@ -783,7 +783,7 @@ class InterestRateSwap : Contract {
 
         // Put all the above into a new State object.
         val state = State(fixedLeg, floatingLeg, newCalculation, common)
-        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
+        return TransactionBuilder(notary).withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
     }
 
     private fun calcFixingDate(date: LocalDate, fixingPeriodOffset: Int, calendar: BusinessCalendar): LocalDate {
