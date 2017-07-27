@@ -30,20 +30,20 @@ interface FlowStateMachine<R> {
     fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
 
     @Suspendable
-    fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>)
+    fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>): Unit
 
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
 
-    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>)
+    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>): Unit
 
-    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>)
+    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>): Unit
 
     @Suspendable
     fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot
 
     @Suspendable
-    fun persistFlowStackSnapshot(flowClass: Class<*>)
+    fun persistFlowStackSnapshot(flowClass: Class<*>): Unit
 
     val serviceHub: ServiceHub
     val logger: Logger

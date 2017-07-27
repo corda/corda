@@ -21,10 +21,11 @@ import kotlin.test.assertTrue
 @CordaSerializable
 data class StackSnapshotFrame(val method: String, val clazz: String, val dataTypes: List<String?>, val flowId: String? = null)
 
-/*
+/**
  * Calculates the count of full and empty frames. We consider frame to be empty if there is no stack data
  * associated with it (i.e. the stackObjects is an empty list). Otherwise (i.e. when the stackObjects is not
- * an empty list the frame is considered to be full. */
+ * an empty list the frame is considered to be full.
+ */
 fun convertToStackSnapshotFrames(snapshot: FlowStackSnapshot): List<StackSnapshotFrame> {
     return snapshot.stackFrames.map {
         val dataTypes = it.stackObjects.map {
@@ -35,7 +36,7 @@ fun convertToStackSnapshotFrames(snapshot: FlowStackSnapshot): List<StackSnapsho
     }
 }
 
-/*
+/**
  * Flow that during its execution performs calls with side effects in terms of Quasar. The presence of
  * side effect calls drives Quasar decision on stack optimisation application. The stack optimisation method aims
  * to reduce the amount of data stored on Quasar stack to minimum and is based on static code analyses performed during
@@ -67,7 +68,7 @@ class SideEffectFlow : FlowLogic<List<StackSnapshotFrame>>() {
 
 }
 
-/*
+/**
  * Flow that during its execution performs calls with no side effects in terms of Quasar.
  * Thus empty frames are expected on in the stack snapshot as Quasar will optimise.
  */
@@ -100,7 +101,7 @@ object Constants {
 
 }
 
-/*
+/**
  * No side effect flow that stores the partial snapshot into a file, path to which is passed in the flow constructor.
  */
 @StartableByRPC
@@ -122,7 +123,7 @@ class PersistingNoSideEffectFlow : FlowLogic<String>() {
     }
 }
 
-/*
+/**
  * Flow with side effects that stores the partial snapshot into a file, path to which is passed in the flow constructor.
  */
 @StartableByRPC
