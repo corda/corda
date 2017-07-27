@@ -120,7 +120,6 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         assertEquals(1, leaves.outputs.size)
         assertEquals(1, leaves.commands.size)
         assertNull(mt.filteredLeaves.notary)
-        assertEquals(1, leaves.mustSign.size)
         assertNull(mt.filteredLeaves.type)
         assertNotNull(mt.filteredLeaves.timeWindow)
         assertNull(mt.filteredLeaves.privacySalt)
