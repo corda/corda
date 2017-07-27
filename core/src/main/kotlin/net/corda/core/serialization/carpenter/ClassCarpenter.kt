@@ -129,10 +129,12 @@ class ClassCarpenter {
     private fun generateClass(classSchema: Schema): Class<*> {
         return generate(classSchema) { cw, schema ->
             val superName = schema.superclass?.jvmName ?: "java/lang/Object"
-            val interfaces = arrayOf(SimpleFieldAccess::class.java.name.jvm) + schema.interfaces.map { it.name.jvm }
+            var interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
+
+            if (SimpleFieldAccess::class.java !in schema.interfaces) interfaces.add(SimpleFieldAccess::class.java.name.jvm)
 
             with(cw) {
-                visit(V1_8, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName, interfaces)
+                visit(V1_8, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName, interfaces.toTypedArray())
 
                 generateFields(schema)
                 generateConstructor(schema)
@@ -303,6 +305,11 @@ class ClassCarpenter {
                             "Requested interfaces must consist only of methods that start "
                             + "with 'get': ${itf.name}.${it.name}")
                 }
+
+                // if we're trying to carpent a class that prior to serialisation / deserialisation
+                // was made by a carpenter then we can ignore this (it will implement a plain get
+                // method from SimpleFieldAccess)
+                if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) return@forEach
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields))
                     throw InterfaceMismatchException(
