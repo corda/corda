@@ -51,6 +51,17 @@ class DeserializeSimpleTypesTests {
     }
 
     @Test
+    fun testNullCharacter() {
+        data class C(val c: Char?)
+
+        val c = C(null)
+        val serialisedC = SerializationOutput().serialize(c)
+        val deserializedC = DeserializationInput().deserialize(serialisedC)
+
+        assertEquals(c.c, deserializedC.c)
+    }
+
+    @Test
     fun testArrayOfInt() {
         class IA(val ia: Array<Int>)
 
