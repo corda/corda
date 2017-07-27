@@ -83,5 +83,4 @@ class InMemoryNetworkMapCacheTest {
             assert(node0Cache.getNodeByLegalName(n1.info.legalIdentity.name) == null)
         }
     }
-    // TODO Add some tests with distributed services.
 }

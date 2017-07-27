@@ -338,6 +338,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * TODO : Create the bridge directly from the list of queues on start up when we have a persisted network map service.
      */
     private fun updateBridgesOnNetworkChange(change: MapChange) {
+        log.debug("Updating bridges on network map change: ${change.node}, my legal name: ${config.myLegalName}")
         fun gatherAddresses(node: NodeInfo): Sequence<ArtemisPeerAddress> {
             val peerAddress = getArtemisPeerAddress(node)
             val addresses = mutableListOf(peerAddress)
