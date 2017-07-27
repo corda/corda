@@ -292,7 +292,7 @@ object FlowCookbook {
             progressTracker.currentStep = TX_BUILDING
 
             // DOCSTART 19
-            val txBuilder: TransactionBuilder = TransactionBuilder(General, specificNotary)
+            val txBuilder: TransactionBuilder = TransactionBuilder(specificNotary)
             // DOCEND 19
 
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:

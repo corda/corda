@@ -73,7 +73,6 @@ class WiredTransactionGenerator : Generator<WireTransaction>(WireTransaction::cl
                 outputs = TransactionStateGenerator(ContractStateGenerator()).generateList(random, status),
                 commands = commands,
                 notary = PartyGenerator().generate(random, status),
-                type = TransactionType.General,
                 timeWindow = TimeWindowGenerator().generate(random, status)
         )
     }

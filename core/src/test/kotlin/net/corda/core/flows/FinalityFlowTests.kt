@@ -40,7 +40,7 @@ class FinalityFlowTests {
     @Test
     fun `finalise a simple transaction`() {
         val amount = Amount(1000, Issued(nodeA.info.legalIdentity.ref(0), GBP))
-        val builder = TransactionBuilder(TransactionType.General, notary)
+        val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, nodeB.info.legalIdentity, notary)
         val stx = nodeA.services.signInitialTransaction(builder)
         val flow = nodeA.services.startFlow(FinalityFlow(stx))

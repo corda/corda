@@ -47,7 +47,6 @@ interface TraversableTransaction {
     val outputs: List<TransactionState<ContractState>>
     val commands: List<Command<*>>
     val notary: Party?
-    val type: TransactionType?
     val timeWindow: TimeWindow?
     /**
      * For privacy purposes, each part of a transaction should be accompanied by a nonce.
@@ -69,7 +68,6 @@ interface TraversableTransaction {
      * - Each output that is present
      * - Each command that is present
      * - The notary [Party], if present
-     * - The type of the transaction, if present
      * - The time-window of the transaction, if present
      * - The privacy salt required for nonces, always presented in [WireTransaction] and always null in [FilteredLeaves]
      */
@@ -82,7 +80,6 @@ interface TraversableTransaction {
             // torn-off transaction and id calculation.
             val result = mutableListOf(inputs, attachments, outputs, commands).flatten().toMutableList()
             notary?.let { result += it }
-            type?.let { result += it }
             timeWindow?.let { result += it }
             privacySalt?.let { result += it }
             return result
@@ -108,7 +105,6 @@ class FilteredLeaves(
         override val outputs: List<TransactionState<ContractState>>,
         override val commands: List<Command<*>>,
         override val notary: Party?,
-        override val type: TransactionType?,
         override val timeWindow: TimeWindow?,
         val nonces: List<SecureHash>
 ) : TraversableTransaction {

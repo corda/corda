@@ -39,7 +39,6 @@ class TransactionTests : TestDependencyInjectionBase() {
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(compKey, DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = DUMMY_NOTARY,
-                type = TransactionType.General,
                 timeWindow = null
         )
         assertEquals(
@@ -66,7 +65,6 @@ class TransactionTests : TestDependencyInjectionBase() {
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = DUMMY_NOTARY,
-                type = TransactionType.General,
                 timeWindow = null
         )
         assertFailsWith<IllegalArgumentException> { makeSigned(wtx, notarySig = false).verifyRequiredSignatures() }
@@ -108,7 +106,6 @@ class TransactionTests : TestDependencyInjectionBase() {
                 id,
                 null,
                 timeWindow,
-                TransactionType.General,
                 privacySalt
         )
 
@@ -124,7 +121,6 @@ class TransactionTests : TestDependencyInjectionBase() {
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = DUMMY_NOTARY,
-                type = TransactionType.General,
                 timeWindow = null
         )
 
@@ -151,7 +147,6 @@ class TransactionTests : TestDependencyInjectionBase() {
                 id,
                 notary,
                 timeWindow,
-                TransactionType.General,
                 privacySalt
         )
 
