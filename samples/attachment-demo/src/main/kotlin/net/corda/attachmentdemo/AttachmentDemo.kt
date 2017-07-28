@@ -1,6 +1,7 @@
 package net.corda.attachmentdemo
 
 import co.paralleluniverse.fibers.Suspendable
+import com.google.common.util.concurrent.ListenableFuture
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Contract
@@ -28,6 +29,7 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.jar.JarInputStream
 import javax.servlet.http.HttpServletResponse.SC_OK
 import javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION
@@ -73,13 +75,19 @@ fun main(args: Array<String>) {
 /** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
 fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
     val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(numOfClearBytes, 0)
-    sender(rpc, inputStream, hash)
+    val executor = Executors.newScheduledThreadPool(2)
+    try {
+        sender(rpc, inputStream, hash, executor)
+    } finally {
+        executor.shutdown()
+    }
 }
 
-fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {
+private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256, executor: ScheduledExecutorService) {
+
     // Get the identity key of the other side (the recipient).
-    val executor = Executors.newScheduledThreadPool(1)
-    val otherSide: Party = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }.get()
+    val notaryFuture: ListenableFuture<Party> = poll(executor, DUMMY_NOTARY.name.toString()) { rpc.partyFromX500Name(DUMMY_NOTARY.name) }
+    val otherSideFuture: ListenableFuture<Party> = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }
 
     // Make sure we have the file in storage
     if (!rpc.attachmentExists(hash)) {
@@ -90,14 +98,14 @@ fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) 
         require(rpc.attachmentExists(hash))
     }
 
-    val flowHandle = rpc.startTrackedFlow(::AttachmentDemoFlow, otherSide, hash)
+    val flowHandle = rpc.startTrackedFlow(::AttachmentDemoFlow, otherSideFuture.get(), notaryFuture.get(), hash)
     flowHandle.progress.subscribe(::println)
     val stx = flowHandle.returnValue.getOrThrow()
     println("Sent ${stx.id}")
 }
 
 @StartableByRPC
-class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
+class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
 
     object SIGNING : ProgressTracker.Step("Signing transaction")
 
@@ -106,7 +114,7 @@ class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : Fl
     @Suspendable
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
-        val ptx = TransactionBuilder(notary = DUMMY_NOTARY)
+        val ptx = TransactionBuilder(notary)
         ptx.addOutputState(AttachmentContract.State(hash))
         ptx.addAttachment(hash)
 
