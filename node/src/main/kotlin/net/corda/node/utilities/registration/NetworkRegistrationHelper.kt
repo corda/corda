@@ -9,9 +9,9 @@ import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.crypto.cert
 import net.corda.core.internal.*
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.validateX500Name
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.*
-import org.bouncycastle.cert.path.CertPath
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
@@ -39,6 +39,7 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
     private val privateKeyPassword = config.keyStorePassword
 
     fun buildKeystore() {
+        validateX500Name(config.myLegalName)
         config.certificatesDirectory.createDirectories()
         val caKeyStore = loadOrCreateKeyStore(config.nodeKeystore, keystorePassword)
         if (!caKeyStore.containsAlias(CORDA_CLIENT_CA)) {
