@@ -8,6 +8,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.testing.DUMMY_NOTARY
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 
 class VaultUpdateTests {
@@ -82,5 +83,12 @@ class VaultUpdateTests {
         val after = before + Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef4))
         val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef4))
         assertEquals(expected, after)
+    }
+
+    @Test
+    fun `can't combine updates of different types`() {
+        val regularUpdate = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef4))
+        val notaryChangeUpdate = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1), type = Vault.UpdateType.NOTARY_CHANGE)
+        assertFailsWith<IllegalArgumentException> { regularUpdate + notaryChangeUpdate }
     }
 }
