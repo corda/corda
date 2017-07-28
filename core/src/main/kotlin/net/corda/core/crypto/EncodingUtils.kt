@@ -66,3 +66,5 @@ fun String.hexToBase64(): String = hexToByteArray().toBase64()
 fun parsePublicKeyBase58(base58String: String): PublicKey = base58String.base58ToByteArray().deserialize<PublicKey>()
 fun PublicKey.toBase58String(): String = this.serialize().bytes.toBase58()
 fun PublicKey.toSHA256Bytes(): ByteArray = this.serialize().bytes.sha256().bytes // TODO: decide on the format of hashed key (encoded Vs serialised).
+
+fun ByteArray.allZeros() = this.all { it == 0.toByte() }

@@ -74,6 +74,8 @@ interface TraversableTransaction {
      * - The privacy salt required for nonces, always presented in [WireTransaction] and always null in [FilteredLeaves]
      */
     val availableComponents: List<Any>
+        // NOTE: if the order below is altered or components are added/removed in the future, one should also reflect
+        //      this change to the indexOffsets() method in WireTransaction.
         get() {
             // We may want to specify our own behaviour on certain tx fields.
             // Like if we include them at all, what to do with null values, if we treat list as one or not etc. for building
@@ -111,10 +113,15 @@ class FilteredLeaves(
         val nonces: List<SecureHash>
 ) : TraversableTransaction {
 
+    /**
+     * PrivacySalt should be always null for FilteredLeaves, because making it accidentally visible would expose all
+     * nonces (including filtered out components) causing privacy issues, see [serializedHash] and
+     * [TraversableTransaction.privacySalt].
+     */
     override val privacySalt: PrivacySalt? get() = null
 
     init {
-        require(availableComponents.size == nonces.size)
+        require(availableComponents.size == nonces.size) { "Each visible component should be accompanied by a nonce." }
     }
 
     /**

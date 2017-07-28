@@ -1,6 +1,8 @@
 package net.corda.core.flows
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.identity.Party
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -37,7 +39,7 @@ class NotaryChangeFlow<out T : ContractState>(
         val mySignature = serviceHub.keyManagementService.sign(tx.id.bytes, myKey)
         val stx = SignedTransaction(tx, listOf(mySignature))
 
-        return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey, PrivacySalt())
+        return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey)
     }
 
     /** Resolves the encumbrance state chain for the given [state] */

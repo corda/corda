@@ -30,7 +30,11 @@ data class NotaryChangeWireTransaction(
         check(notary != newNotary) { "The old and new notaries must be different – $newNotary" }
     }
 
-    override val id: SecureHash by lazy { serializedHash(inputs + notary + newNotary) } // TODO: do we need a nonce here?
+    /**
+     * A privacy salt is not really required in this case, because we already used nonces in normal transactions and
+     * thus input state refs will always be unique. Also, filtering doesn't apply on this type of transactions.
+     */
+    override val id: SecureHash by lazy { serializedHash(inputs + notary + newNotary) }
 
     fun resolve(services: ServiceHub, sigs: List<DigitalSignature.WithKey>): NotaryChangeLedgerTransaction {
         val resolvedInputs = inputs.map { ref ->

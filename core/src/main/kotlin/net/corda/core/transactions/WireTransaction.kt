@@ -135,8 +135,8 @@ data class WireTransaction(
             }
         }
         // TODO: We should have a warning (require) if all leaves (excluding salt) are visible after filtering.
-        //      consider the above after refactoring FilteredTransaction to implement TraversableTransaction
-        //      so if someone wants to send a full tx (e.g. RatesFixFlow in Oracles), a WireTransaction can be used.
+        //      Consider the above after refactoring FilteredTransaction to implement TraversableTransaction,
+        //      so that a WireTransaction can be used when required to send a full tx (e.g. RatesFixFlow in Oracles).
         return FilteredLeaves(
                 inputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index) },
                 attachments.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[0]) },
@@ -149,8 +149,11 @@ data class WireTransaction(
         )
     }
 
+    // We use index offsets, to get the actual leaf-index per transaction component required for nonce computation.
     private fun indexOffsets(): List<Int> {
-        // No need to add zero index for inputs, thus offsets[0] corresponds to attachments and offsets[1] to outputs.
+        // There is no need to add an index offset for inputs, because they are the first components in the
+        // transaction format and it is always zero. Thus, offsets[0] corresponds to attachments,
+        // offsets[1] to outputs, offsets[2] to commands and so on.
         val offsets = mutableListOf(inputs.size, inputs.size + attachments.size)
         offsets.add(offsets.last() + outputs.size)
         offsets.add(offsets.last() + commands.size)

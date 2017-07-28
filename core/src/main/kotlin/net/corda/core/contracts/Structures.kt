@@ -2,6 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.allZeros
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
@@ -445,12 +446,12 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
  * The latter is required in cases where the salt value needs to be pre-generated (agreed between transacting parties),
  * but it is highlighted that one should always ensure it has sufficient entropy.
  */
-
 @CordaSerializable
 class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
     constructor() : this(secureRandomBytes(32))
 
     init {
-        require(bytes.size == 32)
+        require(bytes.size == 32) { "Privacy salt should be 32 bytes." }
+        require(!bytes.allZeros()) { "Privacy salt should not be all zeros." }
     }
 }

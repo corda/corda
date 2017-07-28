@@ -62,12 +62,11 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
     }
 
     override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
-        val privacySalt = PrivacySalt()
-        val baseTx = assembleBareTx(originalState, modification, privacySalt)
+        val baseTx = assembleBareTx(originalState, modification, PrivacySalt())
         val participantKeys = originalState.state.data.participants.map { it.owningKey }.toSet()
         // TODO: We need a much faster way of finding our key in the transaction
         val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()
         val stx = serviceHub.signInitialTransaction(baseTx, myKey)
-        return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey, privacySalt)
+        return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey)
     }
 }
