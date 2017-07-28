@@ -94,7 +94,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun run(): Unit {
+    override fun run() {
         createTransaction()
         logger.debug { "Calling flow: $logic" }
         val startTime = System.nanoTime()
@@ -191,7 +191,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>): Unit {
+    override fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>) {
         logger.debug { "send($otherParty, ${payload.toString().abbreviate(300)})" }
         val session = getConfirmedSessionIfPresent(otherParty, sessionFlow)
         if (session == null) {
@@ -224,7 +224,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     // TODO Dummy implementation of access to application specific permission controls and audit logging
-    override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>): Unit {
+    override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
         val permissionGranted = true // TODO define permission control service on ServiceHubInternal and actually check authorization.
         val checkPermissionEvent = FlowPermissionAuditEvent(
                 serviceHub.clock.instant(),
@@ -252,17 +252,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 id,
                 eventType)
         serviceHub.auditService.recordAuditEvent(flowAuditEvent)
-    }
-
-    @Suspendable
-    override fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot {
-        val factory = FlowStackSnapshotDefaults.FLOW_STACK_SNAPSHOT_FACTORY
-        return factory.getFlowStackSnapshot(flowClass)
-    }
-
-    override fun persistFlowStackSnapshot(flowClass: Class<*>): Unit {
-        val factory = FlowStackSnapshotDefaults.FLOW_STACK_SNAPSHOT_FACTORY
-        factory.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id.toString())
     }
 
     /**

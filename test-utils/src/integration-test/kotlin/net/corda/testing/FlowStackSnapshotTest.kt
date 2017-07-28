@@ -3,7 +3,6 @@ package net.corda.testing
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
@@ -143,9 +142,36 @@ class PersistingSideEffectFlow : FlowLogic<String>() {
     }
 }
 
+/**
+ * Similar to [PersistingSideEffectFlow] but aims to produce multiple snapshot files.
+ */
+@StartableByRPC
+class MultiplePersistingSideEffectFlow(val persistCallCount: Int) : FlowLogic<String>() {
+
+    @Suspendable
+    override fun call(): String {
+        val unusedVar = Constants.IN_CALL_VALUE
+        for (i in 1..persistCallCount) {
+            persist()
+        }
+        return stateMachine.id.toString()
+    }
+
+    @Suspendable
+    fun persist() {
+        val unusedVar = Constants.IN_PERSIST_VALUE
+        persistFlowStackSnapshot()
+    }
+}
+
 fun readFlowStackSnapshotFromDir(baseDir: Path, flowId: String): FlowStackSnapshot {
     val snapshotFile = File(baseDir.toFile(), "flowStackSnapshots/${LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}/$flowId/flowStackSnapshot.json")
     return ObjectMapper().readValue(snapshotFile.inputStream(), FlowStackSnapshot::class.java)
+}
+
+fun countFilesInDir(baseDir: Path, flowId: String): Int {
+    val flowDir = File(baseDir.toFile(), "flowStackSnapshots/${LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}/$flowId/")
+    return flowDir.listFiles().size
 }
 
 fun assertFrame(expectedMethod: String, expectedEmpty: Boolean, frame: StackSnapshotFrame) {
@@ -198,6 +224,20 @@ class FlowStackSnapshotTest {
                 assertFrame("call", true, iterator.next())
                 assertFrame("persist", true, iterator.next())
                 assertFrame("persistFlowStackSnapshot", false, iterator.next())
+            }
+        }
+    }
+
+    @Test
+    fun `persistFlowStackSnapshot persists multiple snapshots in different files`() {
+        driver(startNodesInProcess = true) {
+            val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlowPermission<MultiplePersistingSideEffectFlow>())))).get()
+
+            a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
+                val numberOfFlowSnapshots = 5
+                val flowId = connection.proxy.startFlow(::MultiplePersistingSideEffectFlow, 5).returnValue.get()
+                val fileCount = countFilesInDir(a.configuration.baseDirectory, flowId)
+                assertEquals(numberOfFlowSnapshots, fileCount)
             }
         }
     }

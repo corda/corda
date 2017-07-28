@@ -6,7 +6,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowContext
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -38,12 +37,6 @@ interface FlowStateMachine<R> {
     fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>): Unit
 
     fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>): Unit
-
-    @Suspendable
-    fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot
-
-    @Suspendable
-    fun persistFlowStackSnapshot(flowClass: Class<*>): Unit
 
     val serviceHub: ServiceHub
     val logger: Logger
