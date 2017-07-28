@@ -266,8 +266,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
             return Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet(), null, Vault.UpdateType.NOTARY_CHANGE)
         }
 
-        val emptyUpdate = Vault.Update(emptySet(), emptySet(), null, Vault.UpdateType.NOTARY_CHANGE)
-        val netDelta = txns.fold(emptyUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
+        val netDelta = txns.fold(Vault.NoNotaryUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
         processAndNotify(netDelta)
     }
 
