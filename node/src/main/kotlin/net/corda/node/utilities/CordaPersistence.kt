@@ -15,10 +15,11 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 
 //HikariDataSource implements also Closeable which allows CordaPersistence to be Closeable
-class CordaPersistence(var dataSource: HikariDataSource): Closeable {
+class CordaPersistence(var dataSource: HikariDataSource, dbTransactionIsolationLevel : String = ""): Closeable {
 
     /** Holds Exposed database, the field will be removed once Exposed library is removed */
     lateinit var database: Database
+    var transactionIsolationLevel = parserTransactionIsolationLevel(dbTransactionIsolationLevel)
 
     companion object {
         fun connect(dataSource: HikariDataSource): CordaPersistence {
@@ -31,7 +32,7 @@ class CordaPersistence(var dataSource: HikariDataSource): Closeable {
     fun createTransaction(): DatabaseTransaction {
         // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
         DatabaseTransactionManager.dataSource = this
-        return DatabaseTransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
+        return DatabaseTransactionManager.currentOrNew(transactionIsolationLevel)
     }
 
     fun <T> isolatedTransaction(block: DatabaseTransaction.() -> T): T {
@@ -45,7 +46,7 @@ class CordaPersistence(var dataSource: HikariDataSource): Closeable {
 
     fun <T> transaction(statement: DatabaseTransaction.() -> T): T {
         DatabaseTransactionManager.dataSource = this
-        return transaction(Connection.TRANSACTION_REPEATABLE_READ, 3, statement)
+        return transaction(transactionIsolationLevel, 3, statement)
     }
 
     private fun <T> transaction(transactionIsolation: Int, repetitionAttempts: Int, statement: DatabaseTransaction.() -> T): T {
@@ -191,3 +192,16 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
         }
     }
 }
+
+
+fun parserTransactionIsolationLevel(property: String?) =
+    when (property) {
+        "none" -> Connection.TRANSACTION_NONE
+        "readUncommitted" -> Connection.TRANSACTION_READ_UNCOMMITTED
+        "readCommitted" -> Connection.TRANSACTION_READ_COMMITTED
+        "repeatableRead" -> Connection.TRANSACTION_REPEATABLE_READ
+        "serializable" -> Connection.TRANSACTION_SERIALIZABLE
+        else -> {
+            Connection.TRANSACTION_REPEATABLE_READ
+        }
+    }

@@ -33,7 +33,7 @@ import java.util.*
         JDBCHashMapTestSuite.SetConstrained::class)
 class JDBCHashMapTestSuite {
     companion object {
-        lateinit var transaction: Transaction
+        lateinit var transaction: DatabaseTransaction
         lateinit var database: CordaPersistence
         lateinit var loadOnInitFalseMap: JDBCHashMap<String, String>
         lateinit var memoryConstrainedMap: JDBCHashMap<String, String>
@@ -105,7 +105,7 @@ class JDBCHashMapTestSuite {
                 .createTestSuite()
 
         private fun setUpDatabaseTx() {
-            transaction = TransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
+            transaction = DatabaseTransactionManager.currentOrNew()
         }
 
         private fun closeDatabaseTx() {

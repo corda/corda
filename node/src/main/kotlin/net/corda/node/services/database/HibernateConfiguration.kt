@@ -102,7 +102,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
         override fun supportsAggressiveRelease(): Boolean = true
 
         override fun getConnection(): Connection {
-            return DatabaseTransactionManager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ).connection
+            return DatabaseTransactionManager.newTransaction().connection
         }
 
         override fun <T : Any?> unwrap(unwrapType: Class<T>): T {

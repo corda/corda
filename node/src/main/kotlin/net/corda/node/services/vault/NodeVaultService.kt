@@ -37,6 +37,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.database.RequeryConfiguration
+import net.corda.node.services.database.parserTransactionIsolationLevel
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.vault.schemas.requery.Models
 import net.corda.node.services.vault.schemas.requery.VaultSchema
@@ -63,7 +64,7 @@ import kotlin.concurrent.withLock
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val services: ServiceHub, dataSourceProperties: Properties) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService(private val services: ServiceHub, dataSourceProperties: Properties, dbTransactionIsolationLevel: String?) : SingletonSerializeAsToken(), VaultService {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -74,6 +75,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     val configuration = RequeryConfiguration(dataSourceProperties)
     val session = configuration.sessionForModel(Models.VAULT)
+    private val transactionIsolationLevel = parserTransactionIsolationLevel(dbTransactionIsolationLevel)
 
     private class InnerState {
         val _updatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()!!
@@ -92,7 +94,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
             val consumedStateRefs = update.consumed.map { it.ref }
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
-            session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+            session.withTransaction(transactionIsolationLevel) {
                 producedStateRefsMap.forEach { it ->
                     val state = VaultStatesEntity().apply {
                         txId = it.key.txhash.toString()
@@ -145,7 +147,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     override fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean): Iterable<StateAndRef<T>> {
         val stateAndRefs =
-                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                session.withTransaction(transactionIsolationLevel) {
                     val query = select(VaultSchema.VaultStates::class)
                             .where(VaultSchema.VaultStates::stateStatus `in` statuses)
                     // TODO: temporary fix to continue supporting track() function (until becomes Typed)
@@ -167,7 +169,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     override fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {
         val stateAndRefs =
-                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                session.withTransaction(transactionIsolationLevel) {
                     var results: List<StateAndRef<*>> = emptyList()
                     refs.forEach {
                         val result = select(VaultSchema.VaultStates::class)
@@ -276,7 +278,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     private fun loadStates(refs: Collection<StateRef>): HashSet<StateAndRef<ContractState>> {
         val states = HashSet<StateAndRef<ContractState>>()
         if (refs.isNotEmpty()) {
-            session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+            session.withTransaction(transactionIsolationLevel) {
                 val result = select(VaultStatesEntity::class).
                         where(stateRefCompositeColumn.`in`(stateRefArgs(refs))).
                         and(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
@@ -304,7 +306,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
-        session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+        session.withTransaction(transactionIsolationLevel) {
             val txnNoteEntity = VaultTxnNoteEntity()
             txnNoteEntity.txId = txnId.toString()
             txnNoteEntity.note = noteText
@@ -313,7 +315,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
-        return session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+        return session.withTransaction(transactionIsolationLevel) {
             (select(VaultSchema.VaultTxnNote::class) where (VaultSchema.VaultTxnNote::txId eq txnId.toString())).get().asIterable().map { it.note }
         }
     }
@@ -323,7 +325,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         val softLockTimestamp = services.clock.instant()
         val stateRefArgs = stateRefArgs(stateRefs)
         try {
-            session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+            session.withTransaction(transactionIsolationLevel) {
                 val updatedRows = update(VaultStatesEntity::class)
                         .set(VaultStatesEntity.LOCK_ID, lockId.toString())
                         .set(VaultStatesEntity.LOCK_UPDATE_TIME, softLockTimestamp)
@@ -356,7 +358,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
         if (stateRefs == null) {
-            session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+            session.withTransaction(transactionIsolationLevel) {
                 val update = update(VaultStatesEntity::class)
                         .set(VaultStatesEntity.LOCK_ID, null)
                         .set(VaultStatesEntity.LOCK_UPDATE_TIME, services.clock.instant())
@@ -368,7 +370,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
             }
         } else {
             try {
-                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                session.withTransaction(transactionIsolationLevel) {
                     val updatedRows = update(VaultStatesEntity::class)
                             .set(VaultStatesEntity.LOCK_ID, null)
                             .set(VaultStatesEntity.LOCK_UPDATE_TIME, services.clock.instant())
@@ -485,7 +487,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     override fun <T : ContractState> softLockedStates(lockId: UUID?): List<StateAndRef<T>> {
         val stateAndRefs =
-                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                session.withTransaction(transactionIsolationLevel) {
                     val query = select(VaultSchema.VaultStates::class)
                             .where(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
                             .and(VaultSchema.VaultStates::contractStateClassName eq Cash.State::class.java.name)

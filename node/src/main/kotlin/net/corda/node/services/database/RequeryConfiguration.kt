@@ -3,6 +3,7 @@ package net.corda.node.services.database
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.requery.Persistable
+import io.requery.TransactionIsolation
 import io.requery.meta.EntityModel
 import io.requery.sql.KotlinEntityDataStore
 import io.requery.sql.SchemaModifier
@@ -48,3 +49,15 @@ class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Bo
     // TODO: remove once Requery supports QUERY WITH COMPOSITE_KEY IN
     fun jdbcSession(): Connection = DatabaseTransactionManager.current().connection
 }
+
+fun parserTransactionIsolationLevel(property: String?) =
+        when (property) {
+            "none" -> TransactionIsolation.NONE
+            "readUncommitted" -> TransactionIsolation.READ_UNCOMMITTED
+            "readCommitted" -> TransactionIsolation.READ_COMMITTED
+            "repeatableRead" ->  TransactionIsolation.REPEATABLE_READ
+            "serializable" -> TransactionIsolation.SERIALIZABLE
+            else -> {
+                TransactionIsolation.REPEATABLE_READ
+            }
+        }

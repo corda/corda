@@ -21,12 +21,10 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
 import net.corda.testing.getTestX509Name
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockKeyManagementService
-import net.corda.testing.node.TestClock
-import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
 import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.node.*
+import net.corda.testing.node.TestClock
 import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
@@ -92,7 +90,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
-                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)
+                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps, testDbTransactionIsolationLevel())
                 override val testReference = this@NodeSchedulerServiceTest
             }
             scheduler = NodeSchedulerService(services, schedulerGatedExecutor)

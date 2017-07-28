@@ -14,6 +14,7 @@ import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.testDbTransactionIsolationLevel
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.jetbrains.exposed.sql.transactions.TransactionManager

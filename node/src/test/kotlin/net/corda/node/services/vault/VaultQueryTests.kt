@@ -30,6 +30,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.testDbTransactionIsolationLevel
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat

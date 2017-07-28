@@ -52,6 +52,7 @@ import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.node.utilities.CordaPersistenceKt.configureDatabase;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.node.MockServicesKt.makeTestDataSourceProperties;
+import static net.corda.testing.node.MockServicesKt.testDbTransactionIsolationLevel;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests extends TestDependencyInjectionBase {
