@@ -69,9 +69,9 @@ interface TraversableTransaction {
      * - Each output that is present
      * - Each command that is present
      * - The notary [Party], if present
-     * - Each required signer ([mustSign]) that is present
      * - The type of the transaction, if present
      * - The time-window of the transaction, if present
+     * - The privacy salt required for nonces, always presented in [WireTransaction] and always null in [FilteredLeaves]
      */
     val availableComponents: List<Any>
         get() {

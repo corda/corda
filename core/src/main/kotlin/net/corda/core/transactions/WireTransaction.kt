@@ -134,8 +134,10 @@ data class WireTransaction(
                 false
             }
         }
-
-        val filteredLeaves = FilteredLeaves(
+        // TODO: We should have a warning (require) if all leaves (excluding salt) are visible after filtering.
+        //      consider the above after refactoring FilteredTransaction to implement TraversableTransaction
+        //      so if someone wants to send a full tx (e.g. RatesFixFlow in Oracles), a WireTransaction can be used.
+        return FilteredLeaves(
                 inputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index) },
                 attachments.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[0]) },
                 outputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[1]) },
@@ -145,9 +147,6 @@ data class WireTransaction(
                 notNullFalseAndNoncesUpdate(timeWindow, offsets[5]) as TimeWindow?,
                 nonces
         )
-        // This.availableComponents.size - 1 is required to exclude privacySalt from calculations.
-        require(filteredLeaves.availableComponents.size < this.availableComponents.size - 1) { "All transaction components are still visible after filtering. Consider using a WireTransaction instead." }
-        return filteredLeaves
     }
 
     private fun indexOffsets(): List<Int> {

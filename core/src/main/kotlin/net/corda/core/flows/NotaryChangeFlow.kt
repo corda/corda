@@ -37,7 +37,7 @@ class NotaryChangeFlow<out T : ContractState>(
         val mySignature = serviceHub.keyManagementService.sign(tx.id.bytes, myKey)
         val stx = SignedTransaction(tx, listOf(mySignature))
 
-        return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey)
+        return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey, PrivacySalt())
     }
 
     /** Resolves the encumbrance state chain for the given [state] */

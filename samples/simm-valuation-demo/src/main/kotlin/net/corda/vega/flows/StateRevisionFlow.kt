@@ -1,15 +1,16 @@
 package net.corda.vega.flows
 
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.identity.Party
-import net.corda.core.utilities.seconds
 import net.corda.core.flows.AbstractStateReplacementFlow
 import net.corda.core.flows.StateReplacementException
+import net.corda.core.identity.Party
+import net.corda.core.utilities.seconds
 import net.corda.vega.contracts.RevisionedState
 
 /**
  * Flow that generates an update on a mutable deal state and commits the resulting transaction reaching consensus
- * on the update between two parties
+ * on the update between two parties.
  */
 object StateRevisionFlow {
     class Requester<T>(curStateRef: StateAndRef<RevisionedState<T>>,
@@ -18,12 +19,14 @@ object StateRevisionFlow {
             val state = originalState.state.data
             val tx = state.generateRevision(originalState.state.notary, originalState, modification)
             tx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
+            val privacySalt = PrivacySalt()
+            tx.setPrivacySalt(privacySalt)
 
             val stx = serviceHub.signInitialTransaction(tx)
             val participantKeys = state.participants.map { it.owningKey }
             // TODO: We need a much faster way of finding our key in the transaction
             val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()
-            return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey)
+            return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey, privacySalt)
         }
     }
 

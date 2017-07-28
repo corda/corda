@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.DigitalSignature
@@ -27,7 +28,7 @@ abstract class AbstractStateReplacementFlow {
      * @param M the type of a class representing proposed modification by the instigator.
      */
     @CordaSerializable
-    data class Proposal<out M>(val stateRef: StateRef, val modification: M, val stx: SignedTransaction)
+    data class Proposal<out M>(val stateRef: StateRef, val modification: M, val stx: SignedTransaction, val privacySalt: PrivacySalt)
 
     /**
      * The assembled transaction for upgrading a contract.
@@ -36,7 +37,7 @@ abstract class AbstractStateReplacementFlow {
      * @param participants the parties involved in the upgrade transaction.
      * @param myKey key
      */
-    data class UpgradeTx(val stx: SignedTransaction, val participants: Iterable<PublicKey>, val myKey: PublicKey)
+    data class UpgradeTx(val stx: SignedTransaction, val participants: Iterable<PublicKey>, val myKey: PublicKey, val privacySalt: PrivacySalt)
 
     /**
      * The [Instigator] assembles the transaction for state replacement and sends out change proposals to all participants
@@ -62,14 +63,14 @@ abstract class AbstractStateReplacementFlow {
         @Suspendable
         @Throws(StateReplacementException::class)
         override fun call(): StateAndRef<T> {
-            val (stx, participantKeys, myKey) = assembleTx()
+            val (stx, participantKeys, myKey, privacySalt) = assembleTx()
 
             progressTracker.currentStep = SIGNING
 
             val signatures = if (participantKeys.singleOrNull() == myKey) {
                 getNotarySignatures(stx)
             } else {
-                collectSignatures(participantKeys - myKey, stx)
+                collectSignatures(participantKeys - myKey, stx, privacySalt)
             }
 
             val finalTx = stx + signatures
@@ -95,14 +96,14 @@ abstract class AbstractStateReplacementFlow {
         abstract protected fun assembleTx(): UpgradeTx
 
         @Suspendable
-        private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
+        private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction, privacySalt: PrivacySalt): List<DigitalSignature.WithKey> {
             val parties = participants.map {
                 val participantNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
                 participantNode.legalIdentity
             }
 
-            val participantSignatures = parties.map { getParticipantSignature(it, stx) }
+            val participantSignatures = parties.map { getParticipantSignature(it, stx, privacySalt) }
 
             val allPartySignedTx = stx + participantSignatures
 
@@ -113,8 +114,8 @@ abstract class AbstractStateReplacementFlow {
         }
 
         @Suspendable
-        private fun getParticipantSignature(party: Party, stx: SignedTransaction): DigitalSignature.WithKey {
-            val proposal = Proposal(originalState.ref, modification, stx)
+        private fun getParticipantSignature(party: Party, stx: SignedTransaction, privacySalt: PrivacySalt): DigitalSignature.WithKey {
+            val proposal = Proposal(originalState.ref, modification, stx, privacySalt)
             val response = sendAndReceive<DigitalSignature.WithKey>(party, proposal)
             return response.unwrap {
                 check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
