@@ -32,8 +32,12 @@ dependencies {
     cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
-    cordaCompile project(':webserver')
     cordaCompile project(':finance')
+    cordaCompile project(':webserver')
+    cordaCompile project(':test-utils')
+
+    // Javax is required for webapis
+    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
@@ -48,7 +52,7 @@ dependencies {
     compile "com.opengamma.strata:strata-loader:${strata_version}"
     compile "com.opengamma.strata:strata-math:${strata_version}"
 
-    testCompile project(':test-utils')
+    // Test dependencies
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }
