@@ -35,6 +35,7 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -73,7 +74,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
@@ -90,7 +91,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
-                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps, testDbTransactionIsolationLevel())
+                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
                 override val testReference = this@NodeSchedulerServiceTest
             }
             scheduler = NodeSchedulerService(services, schedulerGatedExecutor)

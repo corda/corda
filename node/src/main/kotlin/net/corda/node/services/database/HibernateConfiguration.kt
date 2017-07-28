@@ -15,10 +15,11 @@ import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import java.sql.Connection
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLogging: Boolean = false) {
-    constructor(schemaService: SchemaService) : this(schemaService, false)
+class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLogging: Boolean = false, val databaseProperties: Properties) {
+    constructor(schemaService: SchemaService, databaseProperties: Properties) : this(schemaService, false, databaseProperties)
 
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
@@ -57,7 +58,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.hbm2ddl.auto", "update")
+                .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase","true") == "true") "update" else "validate")
                 .setProperty("hibernate.show_sql", "$useDefaultLogging")
                 .setProperty("hibernate.format_sql", "$useDefaultLogging")
         schemas.forEach { schema ->

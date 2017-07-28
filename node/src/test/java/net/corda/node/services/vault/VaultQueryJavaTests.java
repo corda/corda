@@ -52,7 +52,7 @@ import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.node.utilities.CordaPersistenceKt.configureDatabase;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.node.MockServicesKt.makeTestDataSourceProperties;
-import static net.corda.testing.node.MockServicesKt.testDbTransactionIsolationLevel;
+import static net.corda.testing.node.MockServicesKt.makeTestDatabaseProperties;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests extends TestDependencyInjectionBase {
@@ -65,10 +65,10 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     @Before
     public void setUp() {
         Properties dataSourceProps = makeTestDataSourceProperties(SecureHash.randomSHA256().toString());
-        database = configureDatabase(dataSourceProps);
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties());
 
         Set<MappedSchema> customSchemas = new HashSet<>(Collections.singletonList(DummyLinearStateSchemaV1.INSTANCE));
-        HibernateConfiguration hibernateConfig = new HibernateConfiguration(new NodeSchemaService(customSchemas));
+        HibernateConfiguration hibernateConfig = new HibernateConfiguration(new NodeSchemaService(customSchemas), makeTestDatabaseProperties());
         database.transaction(
                     statement -> { services = new MockServices(getMEGA_CORP_KEY()) {
                         @NotNull

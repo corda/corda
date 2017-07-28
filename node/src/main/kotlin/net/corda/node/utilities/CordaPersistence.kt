@@ -14,16 +14,16 @@ import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 
 
-//HikariDataSource implements also Closeable which allows CordaPersistence to be Closeable
-class CordaPersistence(var dataSource: HikariDataSource, dbTransactionIsolationLevel : String = ""): Closeable {
+//HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
+class CordaPersistence(var dataSource: HikariDataSource, databaseProperties: Properties): Closeable {
 
     /** Holds Exposed database, the field will be removed once Exposed library is removed */
     lateinit var database: Database
-    var transactionIsolationLevel = parserTransactionIsolationLevel(dbTransactionIsolationLevel)
+    var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
     companion object {
-        fun connect(dataSource: HikariDataSource): CordaPersistence {
-            return CordaPersistence(dataSource).apply {
+        fun connect(dataSource: HikariDataSource, databaseProperties: Properties): CordaPersistence {
+            return CordaPersistence(dataSource, databaseProperties).apply {
                 DatabaseTransactionManager(this)
             }
         }
@@ -91,10 +91,10 @@ class CordaPersistence(var dataSource: HikariDataSource, dbTransactionIsolationL
     }
 }
 
-fun configureDatabase(props: Properties): CordaPersistence {
-    val config = HikariConfig(props)
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?): CordaPersistence {
+    val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
-    val persistence = CordaPersistence.connect(dataSource)
+    val persistence = CordaPersistence.connect(dataSource, databaseProperties ?: Properties())
 
     //org.jetbrains.exposed.sql.Database will be removed once Exposed library is removed
     val database = Database.connect(dataSource) { _ -> ExposedTransactionManager() }

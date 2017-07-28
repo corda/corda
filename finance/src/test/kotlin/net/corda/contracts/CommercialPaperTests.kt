@@ -15,6 +15,7 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -212,7 +213,7 @@ class CommercialPaperTestsGeneric {
     fun `issue move and then redeem`() {
         initialiseTestSerialization()
         val dataSourcePropsAlice = makeTestDataSourceProperties()
-        val databaseAlice = configureDatabase(dataSourcePropsAlice)
+        val databaseAlice = configureDatabase(dataSourcePropsAlice, makeTestDatabaseProperties())
         databaseAlice.transaction {
 
             aliceServices = object : MockServices(ALICE_KEY) {
@@ -231,7 +232,7 @@ class CommercialPaperTestsGeneric {
         }
 
         val dataSourcePropsBigCorp = makeTestDataSourceProperties()
-        val databaseBigCorp = configureDatabase(dataSourcePropsBigCorp)
+        val databaseBigCorp = configureDatabase(dataSourcePropsBigCorp, makeTestDatabaseProperties())
         databaseBigCorp.transaction {
 
             bigCorpServices = object : MockServices(BIG_CORP_KEY) {

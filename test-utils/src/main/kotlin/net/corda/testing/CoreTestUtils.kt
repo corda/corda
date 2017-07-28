@@ -21,6 +21,7 @@ import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -163,6 +164,7 @@ fun testNodeConfiguration(
     whenever(nc.trustStorePassword).thenReturn("trustpass")
     whenever(nc.rpcUsers).thenReturn(emptyList())
     whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.commonName))
+    whenever(nc.database).thenReturn(makeTestDatabaseProperties())
     whenever(nc.emailAddress).thenReturn("")
     whenever(nc.exportJMXto).thenReturn("")
     whenever(nc.devMode).thenReturn(true)

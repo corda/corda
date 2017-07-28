@@ -25,7 +25,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val emailAddress: String
     val exportJMXto: String
     val dataSourceProperties: Properties
-    val dbTransactionIsolationLevel: String
+    val database: Properties?
     val rpcUsers: List<User>
     val devMode: Boolean
     val certificateSigningService: URL
@@ -48,7 +48,7 @@ data class FullNodeConfiguration(
         override val keyStorePassword: String,
         override val trustStorePassword: String,
         override val dataSourceProperties: Properties,
-        override val dbTransactionIsolationLevel: String,
+        override val database: Properties?,
         override val certificateSigningService: URL,
         override val networkMapService: NetworkMapInfo?,
         override val minimumPlatformVersion: Int = 1,

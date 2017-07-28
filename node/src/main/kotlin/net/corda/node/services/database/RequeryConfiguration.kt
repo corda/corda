@@ -14,7 +14,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Boolean = false) {
+class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Boolean = false, val databaseProperties: Properties) {
 
     companion object {
         val logger = loggerFor<RequeryConfiguration>()
@@ -41,8 +41,10 @@ class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Bo
     fun makeSessionFactoryForModel(model: EntityModel): KotlinEntityDataStore<Persistable> {
         val configuration = KotlinConfigurationTransactionWrapper(model, dataSource, useDefaultLogging = this.useDefaultLogging)
         val tables = SchemaModifier(configuration)
-        val mode = TableCreationMode.CREATE_NOT_EXISTS
-        tables.createTables(mode)
+        if (databaseProperties.getProperty("initDatabase","true") == "true" ) {
+            val mode = TableCreationMode.CREATE_NOT_EXISTS
+            tables.createTables(mode)
+        }
         return KotlinEntityDataStore(configuration)
     }
 

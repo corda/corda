@@ -64,7 +64,7 @@ import kotlin.concurrent.withLock
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val services: ServiceHub, dataSourceProperties: Properties, dbTransactionIsolationLevel: String?) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService(private val services: ServiceHub, dataSourceProperties: Properties, databaseProperties: Properties?) : SingletonSerializeAsToken(), VaultService {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -73,9 +73,9 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         val stateRefCompositeColumn: RowExpression = RowExpression.of(listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX))
     }
 
-    val configuration = RequeryConfiguration(dataSourceProperties)
+    val configuration = RequeryConfiguration(dataSourceProperties, databaseProperties = databaseProperties ?: Properties())
     val session = configuration.sessionForModel(Models.VAULT)
-    private val transactionIsolationLevel = parserTransactionIsolationLevel(dbTransactionIsolationLevel)
+    private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties?.getProperty("transactionIsolationLevel") ?:"")
 
     private class InnerState {
         val _updatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()!!
