@@ -413,7 +413,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         _services = ServiceHubInternalImpl()
-        attachments = createAttachmentStorage()
+        attachments = NodeAttachmentService(configuration.dataSourceProperties, services.monitoringService.metrics)
         network = makeMessagingService()
         info = makeInfo()
 
@@ -761,11 +761,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
-
-    private fun createAttachmentStorage(): NodeAttachmentService {
-        val attachmentsDir = (configuration.baseDirectory / "attachments").createDirectories()
-        return NodeAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics)
-    }
 
     private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
