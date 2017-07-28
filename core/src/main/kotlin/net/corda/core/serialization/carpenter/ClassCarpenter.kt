@@ -306,9 +306,9 @@ class ClassCarpenter {
                             + "with 'get': ${itf.name}.${it.name}")
                 }
 
-                // if we're trying to carpent a class that prior to serialisation / deserialisation
+                // If we're trying to carpent a class that prior to serialisation / deserialisation
                 // was made by a carpenter then we can ignore this (it will implement a plain get
-                // method from SimpleFieldAccess)
+                // method from SimpleFieldAccess).
                 if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) return@forEach
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields))
