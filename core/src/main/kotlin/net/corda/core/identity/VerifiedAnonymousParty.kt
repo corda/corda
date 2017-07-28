@@ -23,7 +23,7 @@ data class VerifiedAnonymousParty(
     constructor(party: PublicKey, certPath: CertPath)
             : this(AnonymousParty(party), certPath)
     init {
-        require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
+        require(certPath.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
     }
 
     /**
@@ -35,10 +35,8 @@ data class VerifiedAnonymousParty(
         get() = (certPath.certificates.first() as? X509Certificate)?.subject
 
     override fun equals(other: Any?): Boolean {
-        return if (other is VerifiedAnonymousParty)
-            party == other.party
-        else
-            false
+        return other === this
+                || (other is VerifiedAnonymousParty && party == other.party)
     }
 
     override fun hashCode(): Int = party.hashCode()

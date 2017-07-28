@@ -61,7 +61,6 @@ class InMemoryIdentityService(identities: Iterable<VerifiedParty> = emptySet(),
     // TODO: Check the certificate validation logic
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun registerIdentity(verifiedParty: VerifiedParty) {
-        require(verifiedParty.certPath.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         // Validate the chain first, before we do anything clever with it
         validateCertificatePath(verifiedParty.party, verifiedParty.certPath)
 

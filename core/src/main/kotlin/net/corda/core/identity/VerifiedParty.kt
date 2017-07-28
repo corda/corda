@@ -22,10 +22,11 @@ data class VerifiedParty(val party: Party,
     constructor(name: X500Name, owningKey: PublicKey, certificate: X509CertificateHolder, certPath: CertPath) : this(Party(name, owningKey), certificate, certPath)
 
     init {
-        require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
+        require(certPath.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         val targetCert = certPath.certificates.first() as X509Certificate
         val subjectX500Name = X500Name(targetCert.subjectDN.name)
-        require(subjectX500Name == certificate.subject) { "Certificate path must end with the subject ${certificate.subject}" }
+        require(subjectX500Name == certificate.subject) { "Certificate path must end with the certificate subject ${certificate.subject}" }
+        require(party.name == certificate.subject) { "Party name ${party.name} with the subject ${certificate.subject}" }
     }
 
     val name: X500Name
@@ -34,19 +35,9 @@ data class VerifiedParty(val party: Party,
         get() = party.owningKey
 
     override fun equals(other: Any?): Boolean {
-        return if (other is VerifiedParty)
-            party == other.party
-        else
-            false
+        return this === other || (other is VerifiedParty && party == other.party)
     }
 
     override fun hashCode(): Int = party.hashCode()
-    /**
-     * Convert this party and certificate into an anomymised identity. This exists primarily for example cases which
-     * want to use well known identities as if they're anonymous identities.
-     */
-    fun toAnonymisedIdentity(): VerifiedAnonymousParty {
-        return VerifiedAnonymousParty(party.owningKey, certPath)
-    }
     override fun toString(): String = party.toString()
 }
