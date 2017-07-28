@@ -31,10 +31,7 @@ import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.CoreTransaction
-import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.corda.core.utilities.*
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -86,7 +83,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     private val mutex = ThreadBox(InnerState())
 
     private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
-        if (update != Vault.NoUpdate) {
+        if (!update.isEmpty()) {
             val producedStateRefs = update.produced.map { it.ref }
             val producedStateRefsMap = update.produced.associateBy { it.ref }
             val consumedStateRefs = update.consumed.map { it.ref }
@@ -248,7 +245,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         fun makeUpdate(tx: NotaryChangeWireTransaction): Vault.Update<ContractState> {
             // We need to resolve the full transaction here because outputs are calculated from inputs
             // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
-            // input position
+            // input positions
             val ltx = tx.resolve(services, emptyList())
 
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
@@ -263,13 +260,13 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
             if (consumedStateAndRefs.isEmpty() && producedStateAndRefs.isEmpty()) {
                 log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
-                return Vault.NoUpdate
+                return Vault.NoNotaryUpdate
             }
 
-            return  Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet())
+            return Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet(), null, Vault.UpdateType.NOTARY_CHANGE)
         }
 
-        val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
+        val netDelta = txns.fold(Vault.NoNotaryUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
         processAndNotify(netDelta)
     }
 
@@ -292,7 +289,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     private fun processAndNotify(update: Vault.Update<ContractState>) {
-        if (update != Vault.NoUpdate) {
+        if (!update.isEmpty()) {
             recordUpdate(update)
             mutex.locked {
                 // flowId required by SoftLockManager to perform auto-registration of soft locks for new states
