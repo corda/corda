@@ -34,7 +34,6 @@ import java.util.*
  */
 @CordaSerializable
 class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
-
     /**
      * Represents an update observed by the vault that will be notified to observers.  Include the [StateRef]s of
      * transaction outputs that were consumed (inputs) and the [ContractState]s produced (outputs) to/by the transaction
@@ -44,15 +43,17 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * other transactions observed, then the changes are observed "net" of those.
      */
     @CordaSerializable
-    data class Update<U : ContractState>(val consumed: Set<StateAndRef<U>>,
-                      val produced: Set<StateAndRef<U>>,
-                      val flowId: UUID? = null,
-                      /**
-                       * Specifies the type of update, currently supported types are general and notary change. Notary
-                       * change transactions only modify the notary field on states, and potentially need to be handled
-                       * differently.
-                       */
-                      val type: UpdateType = UpdateType.GENERAL) {
+    data class Update<U : ContractState>(
+            val consumed: Set<StateAndRef<U>>,
+            val produced: Set<StateAndRef<U>>,
+            val flowId: UUID? = null,
+            /**
+             * Specifies the type of update, currently supported types are general and notary change. Notary
+             * change transactions only modify the notary field on states, and potentially need to be handled
+             * differently.
+             */
+            val type: UpdateType = UpdateType.GENERAL
+    ) {
         /** Checks whether the update contains a state of the specified type. */
         inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
 
@@ -72,16 +73,21 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
          * i.e. the net effect in terms of state live-ness of receiving the combined update is the same as receiving this followed by rhs.
          */
         operator fun plus(rhs: Update<U>): Update<U> {
-            val combined = Vault.Update<U>(
-                    consumed + (rhs.consumed - produced),
-                    // The ordering below matters to preserve ordering of consumed/produced Sets when they are insertion order dependent implementations.
-                    produced.filter { it !in rhs.consumed }.toSet() + rhs.produced)
-            return combined
+            require(rhs.type == type) { "Cannot combine updates of different types" }
+            val combinedConsumed = consumed + (rhs.consumed - produced)
+            // The ordering below matters to preserve ordering of consumed/produced Sets when they are insertion order dependent implementations.
+            val combinedProduced = produced.filter { it !in rhs.consumed }.toSet() + rhs.produced
+            return copy(consumed = combinedConsumed, produced = combinedProduced)
         }
 
         override fun toString(): String {
             val sb = StringBuilder()
             sb.appendln("${consumed.size} consumed, ${produced.size} produced")
+            sb.appendln("")
+            sb.appendln("Consumed:")
+            consumed.forEach {
+                sb.appendln("${it.ref}: ${it.state}")
+            }
             sb.appendln("")
             sb.appendln("Produced:")
             produced.forEach {
@@ -92,7 +98,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     companion object {
-        val NoUpdate = Update<ContractState>(emptySet(), emptySet())
+        val NoUpdate = Update(emptySet(), emptySet())
     }
 
     @CordaSerializable

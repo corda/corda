@@ -31,10 +31,7 @@ import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.CoreTransaction
-import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.corda.core.utilities.*
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -248,7 +245,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         fun makeUpdate(tx: NotaryChangeWireTransaction): Vault.Update<ContractState> {
             // We need to resolve the full transaction here because outputs are calculated from inputs
             // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
-            // input position
+            // input positions
             val ltx = tx.resolve(services, emptyList())
 
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
@@ -266,10 +263,11 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 return Vault.NoUpdate
             }
 
-            return  Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet())
+            return Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet(), null, Vault.UpdateType.NOTARY_CHANGE)
         }
 
-        val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
+        val emptyUpdate = Vault.Update(emptySet(), emptySet(), null, Vault.UpdateType.NOTARY_CHANGE)
+        val netDelta = txns.fold(emptyUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
         processAndNotify(netDelta)
     }
 

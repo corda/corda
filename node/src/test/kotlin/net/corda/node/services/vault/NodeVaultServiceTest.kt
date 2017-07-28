@@ -5,8 +5,10 @@ import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sign
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.*
+import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
@@ -447,7 +449,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     // TODO: Unit test linear state relevancy checks
 
     @Test
-    fun `make update`() {
+    fun `correct updates are generated for general transactions`() {
         val service = (services.vaultService as NodeVaultService)
         val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {
             service.updates.subscribe(this)
@@ -477,5 +479,57 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         val observedUpdates = vaultSubscriber.onNextEvents
         assertEquals(observedUpdates, listOf(expectedIssueUpdate, expectedMoveUpdate))
+    }
+
+    @Test
+    fun `correct updates are generated when changing notaries`() {
+        val service = (services.vaultService as NodeVaultService)
+        val notary = services.myInfo.legalIdentity
+
+        val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {
+            service.updates.subscribe(this)
+        }
+
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+        val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
+        val amount = Amount(1000, Issued(BOC.ref(1), GBP))
+
+        // Issue some cash
+        val issueTx = TransactionBuilder(TransactionType.General, notary).apply {
+            Cash().generateIssue(this, amount, anonymousIdentity.party, notary)
+        }.toWireTransaction()
+
+        // We need to record the issue transaction so inputs can be resolved for the notary change transaction
+        val signedIssueTx = SignedTransaction(issueTx, listOf(BOC_KEY.sign(issueTx.id)))
+        services.validatedTransactions.addTransaction(signedIssueTx)
+
+        val initialCashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
+
+        // Change notary
+        val newNotary = DUMMY_NOTARY
+        val changeNotaryTx = NotaryChangeWireTransaction(listOf(initialCashState.ref), issueTx.notary!!, newNotary)
+        val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))
+
+        database.transaction {
+            service.notifyAll(listOf(issueTx, changeNotaryTx))
+        }
+
+        // Move cash
+        val moveTx = database.transaction {
+            TransactionBuilder(TransactionType.General, newNotary).apply {
+                service.generateSpend(this, Amount(1000, GBP), thirdPartyIdentity)
+            }.toWireTransaction()
+        }
+
+        database.transaction {
+            service.notify(moveTx)
+        }
+
+        val expectedIssueUpdate = Vault.Update(emptySet(), setOf(initialCashState), null)
+        val expectedNotaryChangeUpdate = Vault.Update(setOf(initialCashState), setOf(cashStateWithNewNotary), null, Vault.UpdateType.NOTARY_CHANGE)
+        val expectedMoveUpdate = Vault.Update(setOf(cashStateWithNewNotary), emptySet(), null)
+
+        val observedUpdates = vaultSubscriber.onNextEvents
+        assertEquals(observedUpdates, listOf(expectedIssueUpdate, expectedNotaryChangeUpdate, expectedMoveUpdate))
     }
 }
