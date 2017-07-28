@@ -1,48 +1,40 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 
 /**
  * The [ReceiveTransactionFlow] should be called in response to the [SendTransactionFlow].
  *
  * This flow is a combination of [receive] and [ResolveTransactionsFlow], the flow is expecting a [SignedTransaction]
- * from the [otherParty]. This flow will resolve the [SignedTransaction] and return the [SignedTransaction] after its resolved.
+ * from the [otherParty]. This flow will resolve the [SignedTransaction] and return the [SignedTransaction] after it is resolved.
  */
-class ReceiveTransactionFlow
-@JvmOverloads
-constructor(private val otherParty: Party,
-            private val verifySignatures: Boolean = true,
-            private val verifyTransaction: Boolean = true) : FlowLogic<SignedTransaction>() {
-
+class ReceiveTransactionFlow(private val otherParty: Party) : FlowLogic<SignedTransaction>() {
     @Suspendable
-    @SuppressWarnings
     override fun call(): SignedTransaction {
         return receive<SignedTransaction>(otherParty).unwrap {
-            subFlow(ResolveTransactionsFlow(otherParty, it, verifySignatures, verifyTransaction))
+            subFlow(ResolveTransactionsFlow(it, otherParty))
             it
         }
     }
 }
 
 /**
- * The [ReceiveProposalFlow] should be called in response to the [SendProposalFlow].
+ * The [ReceiveStateAndRefFlow] should be called in response to the [SendStateAndRefFlow].
  *
- * This flow is a combination of [receive] and [ResolveTransactionsFlow], the flow is expecting a [TradeProposal] from
- * the [otherParty]. This flow will resolve the [TradeProposal.inputStates] and return a [UntrustworthyData] for
- * further verification.
+ * This flow is a combination of [receive] and [ResolveTransactionsFlow], the flow is expecting a list of [StateAndRef] from
+ * the [otherParty]. This flow will resolve the list of [StateAndRef] and return the list of [StateAndRef] after it is resolved.
  */
-class ReceiveProposalFlow<out T : TradeProposal<*>>(private val expectedClass: Class<T>, private val otherParty: Party) : FlowLogic<UntrustworthyData<T>>() {
+class ReceiveStateAndRefFlow<out T : ContractState>(private val otherParty: Party) : FlowLogic<List<StateAndRef<T>>>() {
     @Suspendable
-    @SuppressWarnings
-    override fun call(): UntrustworthyData<T> {
-        return receive(expectedClass, otherParty).unwrap {
-            subFlow(ResolveTransactionsFlow(otherParty, it.inputStates.map { it.ref.txhash }.toSet()))
-            UntrustworthyData(it)
+    override fun call(): List<StateAndRef<T>> {
+        return receive<List<StateAndRef<T>>>(otherParty).unwrap {
+            subFlow(ResolveTransactionsFlow(it.map { it.ref.txhash }.toSet(), otherParty))
+            it
         }
     }
 }
-

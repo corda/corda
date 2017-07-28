@@ -1,7 +1,10 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.UpgradeCommand
+import net.corda.core.contracts.UpgradedContract
+import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.Party
@@ -17,6 +20,7 @@ class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val stx = subFlow(ReceiveTransactionFlow(otherParty))
+        stx.verify(serviceHub)
         serviceHub.recordTransactions(stx)
     }
 }
@@ -29,9 +33,9 @@ class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Accep
      * and is also in a geographically convenient location we can just automatically approve the change.
      * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
      */
-    override fun verifyProposal(stx:SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
+    override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
         val state = proposal.stateRef
-        val proposedTx = proposal.stx.resolveNotaryChangeTransaction(serviceHub)
+        val proposedTx = stx.resolveNotaryChangeTransaction(serviceHub)
         val newNotary = proposal.modification
 
         if (state !in proposedTx.inputs.map { it.ref }) {
@@ -49,7 +53,7 @@ class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Accep
 class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Class<out UpgradedContract<ContractState, *>>>(otherSide) {
     @Suspendable
     @Throws(StateReplacementException::class)
-    override fun verifyProposal(stx:SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Class<out UpgradedContract<ContractState, *>>>) {
+    override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Class<out UpgradedContract<ContractState, *>>>) {
         // Retrieve signed transaction from our side, we will apply the upgrade logic to the transaction on our side, and
         // verify outputs matches the proposed upgrade.
         val ourSTX = serviceHub.validatedTransactions.getTransaction(proposal.stateRef.txhash)

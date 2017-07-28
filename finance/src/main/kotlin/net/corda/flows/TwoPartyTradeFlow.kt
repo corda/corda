@@ -47,10 +47,9 @@ object TwoPartyTradeFlow {
     // This object is serialised to the network and is the first flow message the seller sends to the buyer.
     @CordaSerializable
     data class SellerTradeInfo(
-            override val inputStates: List<StateAndRef<OwnableState>>,
             val price: Amount<Currency>,
             val sellerOwner: AbstractParty
-    ) : TradeProposal<OwnableState>
+    )
 
     open class Seller(val otherParty: Party,
                       val notaryNode: NodeInfo,
@@ -75,11 +74,12 @@ object TwoPartyTradeFlow {
         override fun call(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
-            val hello = SellerTradeInfo(listOf(assetToSell), price, me)
+            val hello = SellerTradeInfo(price, me)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
             // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
-            subFlow(SendProposalFlow(otherParty, hello))
+            subFlow(SendStateAndRefFlow(otherParty, listOf(assetToSell)))
+            send(otherParty, hello)
             // Verify and sign the transaction.
             progressTracker.currentStep = VERIFYING_AND_SIGNING
             // DOCSTART 5
@@ -133,11 +133,11 @@ object TwoPartyTradeFlow {
         override fun call(): SignedTransaction {
             // Wait for a trade request to come in from the other party.
             progressTracker.currentStep = RECEIVING
-            val tradeRequest = receiveAndValidateTradeRequest()
+            val (assetForSale, tradeRequest) = receiveAndValidateTradeRequest()
 
             // Put together a proposed transaction that performs the trade, and sign it.
             progressTracker.currentStep = SIGNING
-            val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
+            val (ptx, cashSigningPubKeys) = assembleSharedTX(assetForSale, tradeRequest)
             val partSignedTx = signWithOurKeys(cashSigningPubKeys, ptx)
 
             // Send the signed transaction to the seller, who must then sign it themselves and commit
@@ -150,9 +150,9 @@ object TwoPartyTradeFlow {
         }
 
         @Suspendable
-        private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
-            return subFlow(ReceiveProposalFlow(SellerTradeInfo::class.java, otherParty)).unwrap {
-                val assetForSale = it.inputStates.single()
+        private fun receiveAndValidateTradeRequest(): Pair<StateAndRef<OwnableState>,SellerTradeInfo> {
+            val assetForSale = subFlow(ReceiveStateAndRefFlow<OwnableState>(otherParty)).single()
+            return assetForSale to receive<SellerTradeInfo>(otherParty).unwrap {
                 progressTracker.currentStep = VERIFYING
                 val asset = assetForSale.state.data
                 val assetTypeName = asset.javaClass.name
@@ -170,8 +170,7 @@ object TwoPartyTradeFlow {
         }
 
         @Suspendable
-        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
-            val assetForSale = tradeRequest.inputStates.single()
+        private fun assembleSharedTX(assetForSale:StateAndRef<OwnableState>, tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionBuilder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states

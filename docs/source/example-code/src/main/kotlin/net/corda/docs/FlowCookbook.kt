@@ -63,7 +63,6 @@ object FlowCookbook {
                 // subflow's progress steps in our flow's progress tracker.
                 override fun childProgressTracker() = CollectSignaturesFlow.tracker()
             }
-
             object VERIFYING_SIGS : Step("Verifying a transaction's signatures.")
             object FINALISATION : Step("Finalising a transaction.") {
                 override fun childProgressTracker() = FinalityFlow.tracker()
@@ -385,12 +384,12 @@ object FlowCookbook {
             // dependencies, we'd need to download all of these dependencies
             // using``ResolveTransactionsFlow`` before verifying it.
             // DOCSTART 13
-            subFlow(ResolveTransactionsFlow(counterparty, twiceSignedTx))
+            subFlow(ResolveTransactionsFlow(twiceSignedTx, counterparty))
             // DOCEND 13
 
             // We can also resolve a `StateRef` dependency chain.
             // DOCSTART 14
-            subFlow(ResolveTransactionsFlow(counterparty, setOf(ourStateRef.txhash)))
+            subFlow(ResolveTransactionsFlow(setOf(ourStateRef.txhash), counterparty))
             // DOCEND 14
 
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``

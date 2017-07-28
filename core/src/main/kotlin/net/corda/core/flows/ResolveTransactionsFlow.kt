@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.utilities.exactAdd
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
@@ -61,7 +62,6 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             require(result.size == transactions.size)
             return result
         }
-
     }
 
     @CordaSerializable
@@ -83,23 +83,23 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     override fun call(): List<SignedTransaction> {
         // Start fetching data.
         val newTxns = downloadDependencies(txHashes)
-        fetchMissingAttachments(newTxns + signedTransaction)
+        fetchMissingAttachments(signedTransaction?.let { newTxns + it } ?: newTxns)
         send(otherSide, FetchDataFlow.Request.End)
         // Finish fetching data.
 
-        val result = topologicalSort(newTxns).map {
+        val result = topologicalSort(newTxns)
+        result.forEach {
             // For each transaction, verify it and insert it into the database. As we are iterating over them in a
             // depth-first order, we should not encounter any verification failures due to missing data. If we fail
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
             it.verify(serviceHub)
             serviceHub.recordTransactions(it)
-            it
         }
 
         return signedTransaction?.let {
             result + it
-        }?:result
+        } ?: result
     }
 
     @Suspendable
@@ -130,19 +130,19 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
             // graph we're traversing.
             val notAlreadyFetched = nextRequests.filterNot { it in resultQ }.toSet()
-            if (notAlreadyFetched.isEmpty())
-                break // Done early.
+            nextRequests.clear()
+
+            if (notAlreadyFetched.isEmpty())   // Done early.
+                break
 
             // Request the standalone transaction data (which may refer to things we don't yet have).
-            val downloads = subFlow(FetchTransactionsFlow(notAlreadyFetched, otherSide)).downloaded
+            val downloads: List<SignedTransaction> = subFlow(FetchTransactionsFlow(notAlreadyFetched, otherSide)).downloaded
 
             for (stx in downloads)
                 check(resultQ.putIfAbsent(stx.id, stx) == null)   // Assert checks the filter at the start.
 
             // Add all input states to the work queue.
-            val inputHashes = downloads.flatMap { it.tx.inputs }.map { it.txhash }
-
-            nextRequests.clear()
+            val inputHashes = downloads.flatMap { it.inputs }.map { it.txhash }
             nextRequests.addAll(inputHashes)
 
             limitCounter = limitCounter exactAdd nextRequests.size

@@ -46,7 +46,6 @@ private fun Attachment.extractContent() = ByteArrayOutputStream().apply { extrac
 private fun MockNetwork.MockNode.saveAttachment(content: String) = database.transaction {
     attachments.importAttachment(createAttachmentData(content).inputStream())
 }
-
 private fun MockNetwork.MockNode.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
     attachments.updateAttachment(attachmentId, createAttachmentData(content))
 }

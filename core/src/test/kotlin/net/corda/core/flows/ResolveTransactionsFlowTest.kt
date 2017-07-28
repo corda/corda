@@ -4,10 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.sequence
 import net.corda.testing.*
+import net.corda.testing.DataVendingFlow
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
@@ -186,12 +186,12 @@ class ResolveTransactionsFlowTest {
     // DOCEND 2
 
     @InitiatingFlow
-    private class TestFlow(private val resolveTransactionsFlow: ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<List<LedgerTransaction>>() {
-        constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(ResolveTransactionsFlow(otherSide, txHashes), txCountLimit = txCountLimit)
-        constructor(stx: SignedTransaction, otherSide: Party) : this(ResolveTransactionsFlow(otherSide, stx))
+    private class TestFlow(private val resolveTransactionsFlow: ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<List<SignedTransaction>>() {
+        constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(ResolveTransactionsFlow(txHashes, otherSide), txCountLimit = txCountLimit)
+        constructor(stx: SignedTransaction, otherSide: Party) : this(ResolveTransactionsFlow(stx, otherSide))
 
         @Suspendable
-        override fun call(): List<LedgerTransaction> {
+        override fun call(): List<SignedTransaction> {
             txCountLimit?.let { resolveTransactionsFlow.transactionCountLimit = it }
             return subFlow(resolveTransactionsFlow)
         }

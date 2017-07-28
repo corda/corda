@@ -188,7 +188,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
     @Suspendable override fun call(): SignedTransaction {
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check signatures is disabled as we don't have all signatures.
-        val stx = subFlow(ReceiveTransactionFlow(otherParty, verifySignatures = false))
+        val stx = subFlow(ReceiveTransactionFlow(otherParty))
         progressTracker.currentStep = VERIFYING
         // Check that the Responder actually needs to sign.
         checkMySignatureRequired(stx)

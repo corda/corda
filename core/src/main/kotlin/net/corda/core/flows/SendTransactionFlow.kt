@@ -26,7 +26,7 @@ import net.corda.core.utilities.unwrap
 class SendTransactionFlow(otherSide: Party, stx: SignedTransaction) : DataVendingFlow<SignedTransaction>(otherSide, stx)
 
 /**
- * The [SendProposalFlow] should be called in response to the [ReceiveProposalFlow]. This flow sends the [TradeProposal]
+ * The [SendStateAndRefFlow] should be called in response to the [ReceiveProposalFlow]. This flow sends the [TradeProposal]
  * to the [otherSide].
  *
  * After sending the [TradeProposal], the [SendProposalFlow] will listen for incoming [FetchDataFlow.Request]
@@ -38,11 +38,11 @@ class SendTransactionFlow(otherSide: Party, stx: SignedTransaction) : DataVendin
  * sent from the [otherSide] to indicate end of data request.
  *
  * @param otherSide the target party.
- * @param tradeProposal the [TradeProposal] being sent to the [otherSide].
+ * @param stateAndRefs the list of [StateAndRef] being sent to the [otherSide].
  */
-class SendProposalFlow(otherSide: Party, tradeProposal: TradeProposal<*>) : DataVendingFlow<TradeProposal<*>>(otherSide, tradeProposal)
+class SendStateAndRefFlow(otherSide: Party, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow<List<StateAndRef<*>>>(otherSide, stateAndRefs)
 
-open class DataVendingFlow<out T : Any>(val otherSide: Party, val payload: T) : FlowLogic<Unit>() {
+abstract class DataVendingFlow<out T : Any>(val otherSide: Party, val payload: T) : FlowLogic<Unit>() {
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any) = sendAndReceive<FetchDataFlow.Request>(otherSide, payload)
 
@@ -78,11 +78,4 @@ open class DataVendingFlow<out T : Any>(val otherSide: Party, val payload: T) : 
             }
         }
     }
-}
-
-/**
- * TODO: API DOCs
- */
-interface TradeProposal<out T : ContractState> {
-    val inputStates: List<StateAndRef<T>>
 }

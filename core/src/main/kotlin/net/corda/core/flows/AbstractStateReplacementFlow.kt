@@ -149,9 +149,8 @@ abstract class AbstractStateReplacementFlow {
         @Throws(StateReplacementException::class)
         override fun call(): Void? {
             progressTracker.currentStep = VERIFYING
-            val stx = subFlow(ReceiveTransactionFlow(otherSide, verifySignatures = false)).apply {
-                verifyTx(this)
-            }
+            val stx = subFlow(ReceiveTransactionFlow(otherSide))
+            verifyTx(stx)
             receive<Proposal<T>>(otherSide).unwrap {
                 verifyProposal(stx, it)
             }
