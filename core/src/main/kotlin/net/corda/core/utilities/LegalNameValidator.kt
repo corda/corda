@@ -113,7 +113,7 @@ private class X500NameRule : Rule<String> {
 private class MustHaveAtLeastTwoLettersRule : Rule<String> {
     override fun validate(legalName: String) {
         // Try to exclude names like "/", "£", "X" etc.
-        require(legalName.count { it.isLetter() } >= 3) { "Illegal input legal name '$legalName'. Legal name must have at least two letters" }
+        require(legalName.count { it.isLetter() } >= 2) { "Illegal input legal name '$legalName'. Legal name must have at least two letters" }
     }
 }
 
