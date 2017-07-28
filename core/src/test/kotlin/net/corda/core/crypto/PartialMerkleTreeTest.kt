@@ -157,15 +157,6 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         assertFailsWith<MerkleTreeException> { mt2.verify() }
     }
 
-    @Test
-    fun `all visible`() {
-        assertFailsWith<IllegalArgumentException> { testTx.buildFilteredTransaction(Predicate { true }) }
-
-        // PrivacySalt is not included, but still anything else is visible.
-        fun excludePrivacySalt(elem: Any): Boolean = elem !is PrivacySalt
-        assertFailsWith<IllegalArgumentException> { testTx.buildFilteredTransaction(Predicate(::excludePrivacySalt)) }
-    }
-
     // Partial Merkle Tree building tests.
     @Test
     fun `build Partial Merkle Tree, only left nodes branch`() {
