@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
@@ -151,7 +152,8 @@ abstract class AbstractStateReplacementFlow {
             progressTracker.currentStep = VERIFYING
             val stx = subFlow(ReceiveTransactionFlow(otherSide))
             verifyTx(stx)
-            receive<Proposal<T>>(otherSide).unwrap {
+            val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
+            maybeProposal.unwrap {
                 verifyProposal(stx, it)
             }
             approve(stx)
