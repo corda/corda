@@ -123,7 +123,9 @@ interface ServiceHubInternal : PluginServiceHub {
         } else {
             log.warn("Transactions recorded from outside of a state machine")
         }
-        vaultService.notifyAll(recordedTransactions.map { it.tx })
+
+        val toNotify = txs.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
+        vaultService.notifyAll(toNotify)
     }
 
     /**

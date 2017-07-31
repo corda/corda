@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.castIfPossible
@@ -16,7 +15,7 @@ import net.corda.core.utilities.UntrustworthyData
 interface SessionMessage
 
 data class SessionInit(val initiatorSessionId: Long,
-                       val initiatingFlowClass: Class<out FlowLogic<*>>,
+                       val initiatingFlowClass: String,
                        val flowVerison: Int,
                        val firstPayload: Any?) : SessionMessage
 

@@ -7,9 +7,7 @@ import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.KryoException
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.MoreExecutors
-import net.corda.core.internal.ThreadBox
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowException
@@ -17,6 +15,8 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
@@ -26,7 +26,6 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.internal.SessionRejectException
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
@@ -341,14 +340,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(otherPartySessionId, message))
 
-        val initiatedFlowFactory = serviceHub.getFlowFactory(sessionInit.initiatingFlowClass)
-        if (initiatedFlowFactory == null) {
-            logger.warn("${sessionInit.initiatingFlowClass} has not been registered: $sessionInit")
-            sendSessionReject("${sessionInit.initiatingFlowClass.name} has not been registered")
-            return
-        }
-
         val session = try {
+            val initiatedFlowFactory = serviceHub.getFlowFactory(sessionInit.loadInitiatingFlowClass())
+                    ?: throw SessionRejectException("${sessionInit.initiatingFlowClass} is not registered")
             val flow = initiatedFlowFactory.createFlow(receivedMessage.platformVersion, sender, sessionInit)
             val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
@@ -370,9 +364,19 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
 
         sendSessionMessage(sender, SessionConfirm(otherPartySessionId, session.ourSessionId), session.fiber)
-        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.initiatingFlowClass.name}" }
+        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.initiatingFlowClass}" }
         session.fiber.logger.trace { "Initiated from $sessionInit on $session" }
         resumeFiber(session.fiber)
+    }
+
+    private fun SessionInit.loadInitiatingFlowClass(): Class<out FlowLogic<*>> {
+        return try {
+            Class.forName(initiatingFlowClass).asSubclass(FlowLogic::class.java)
+        } catch (e: ClassNotFoundException) {
+            throw SessionRejectException("Don't know $initiatingFlowClass")
+        } catch (e: ClassCastException) {
+            throw SessionRejectException("$initiatingFlowClass is not a flow")
+        }
     }
 
     private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
@@ -578,4 +582,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId)
         }
     }
+}
+
+class SessionRejectException(val rejectMessage: String, val logMessage: String) : Exception() {
+    constructor(message: String) : this(message, message)
 }

@@ -1,19 +1,15 @@
 package net.corda.core.transactions
 
-import net.corda.core.contracts.AttachmentResolutionException
-import net.corda.core.contracts.NamedByHash
-import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.toNonEmptySet
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
@@ -32,104 +28,50 @@ import java.util.*
  * sign.
  */
 // DOCSTART 1
-data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
-                             val sigs: List<DigitalSignature.WithKey>
-) : NamedByHash {
-// DOCEND 1
-    constructor(wtx: WireTransaction, sigs: List<DigitalSignature.WithKey>) : this(wtx.serialize(), sigs) {
-        cachedTransaction = wtx
+data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
+                             override val sigs: List<DigitalSignature.WithKey>
+) : TransactionWithSignatures {
+    // DOCEND 1
+    constructor(ctx: CoreTransaction, sigs: List<DigitalSignature.WithKey>) : this(ctx.serialize(), sigs) {
+        cachedTransaction = ctx
     }
 
     init {
-        require(sigs.isNotEmpty())
+        require(sigs.isNotEmpty()) { "Tried to instantiate a ${SignedTransaction::class.java.simpleName} without any signatures " }
     }
 
     /** Cache the deserialized form of the transaction. This is useful when building a transaction or collecting signatures. */
-    @Volatile @Transient private var cachedTransaction: WireTransaction? = null
+    @Volatile @Transient private var cachedTransaction: CoreTransaction? = null
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
-    val tx: WireTransaction get() = cachedTransaction ?: txBits.deserialize().apply { cachedTransaction = this }
+    private val transaction: CoreTransaction get() = cachedTransaction ?: txBits.deserialize().apply { cachedTransaction = this }
 
     /** The id of the contained [WireTransaction]. */
-    override val id: SecureHash get() = tx.id
+    override val id: SecureHash get() = transaction.id
 
-    @CordaSerializable
-    class SignaturesMissingException(val missing: NonEmptySet<PublicKey>, val descriptions: List<String>, override val id: SecureHash)
-        : NamedByHash, SignatureException("Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}")
+    /** Returns the contained [WireTransaction], or throws if this is a notary change transaction */
+    val tx: WireTransaction get() = transaction as WireTransaction
 
-    /**
-     * Verifies the signatures on this transaction and throws if any are missing. In this context, "verifying" means
-     * checking they are valid signatures and that their public keys are in the contained transactions
-     * [BaseTransaction.mustSign] property.
-     *
-     * @throws SignatureException if any signatures are invalid or unrecognised.
-     * @throws SignaturesMissingException if any signatures should have been present but were not.
-     */
-    @Throws(SignatureException::class)
-    fun verifyRequiredSignatures() = verifySignaturesExcept()
+    /** Returns the contained [NotaryChangeWireTransaction], or throws if this is a normal transaction */
+    val notaryChangeTx: NotaryChangeWireTransaction get() = transaction as NotaryChangeWireTransaction
 
-    /**
-     * Verifies the signatures on this transaction and throws if any are missing which aren't passed as parameters.
-     * In this context, "verifying" means checking they are valid signatures and that their public keys are in
-     * the contained transactions [BaseTransaction.mustSign] property.
-     *
-     * Normally you would not provide any keys to this function, but if you're in the process of building a partial
-     * transaction and you want to access the contents before you've signed it, you can specify your own keys here
-     * to bypass that check.
-     *
-     * @throws SignatureException if any signatures are invalid or unrecognised.
-     * @throws SignaturesMissingException if any signatures should have been present but were not.
-     */
-    // DOCSTART 2
-    @Throws(SignatureException::class)
-    fun verifySignaturesExcept(vararg allowedToBeMissing: PublicKey): WireTransaction {
-    // DOCEND 2
-        // Embedded WireTransaction is not deserialised until after we check the signatures.
-        checkSignaturesAreValid()
+    /** Helper to access the inputs of the contained transaction */
+    val inputs: List<StateRef> get() = transaction.inputs
+    /** Helper to access the notary of the contained transaction */
+    val notary: Party? get() = transaction.notary
 
-        val needed = getMissingSignatures() - allowedToBeMissing
-        if (needed.isNotEmpty())
-                throw SignaturesMissingException(needed.toNonEmptySet(), getMissingKeyDescriptions(needed), id)
-        return tx
-    }
+    override val requiredSigningKeys: Set<PublicKey> get() = tx.requiredSigningKeys
 
-    /**
-     * Mathematically validates the signatures that are present on this transaction. This does not imply that
-     * the signatures are by the right keys, or that there are sufficient signatures, just that they aren't
-     * corrupt. If you use this function directly you'll need to do the other checks yourself. Probably you
-     * want [verifySignaturesExcept] instead.
-     *
-     * @throws SignatureException if a signature fails to verify.
-     */
-    @Throws(SignatureException::class)
-    fun checkSignaturesAreValid() {
-        for (sig in sigs) {
-            sig.verify(id.bytes)
-        }
-    }
-
-    private fun getMissingSignatures(): Set<PublicKey> {
-        val sigKeys = sigs.map { it.by }.toSet()
-        // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign
-        //  equals on CompositeKey won't catch this case (do we want to single PublicKey be equal to the same key wrapped in CompositeKey with threshold 1?)
-        val missing = tx.mustSign.filter { !it.isFulfilledBy(sigKeys) }.toSet()
-        return missing
-    }
-
-    /**
-     * Get a human readable description of where signatures are required from, and are missing, to assist in debugging
-     * the underlying cause.
-     */
-    private fun getMissingKeyDescriptions(missing: Set<PublicKey>): ArrayList<String> {
+    override fun getKeyDescriptions(keys: Set<PublicKey>): ArrayList<String> {
         // TODO: We need a much better way of structuring this data
-        val missingElements = ArrayList<String>()
+        val descriptions = ArrayList<String>()
         this.tx.commands.forEach { command ->
-            if (command.signers.any { it in missing })
-                missingElements.add(command.toString())
+            if (command.signers.any { it in keys })
+                descriptions.add(command.toString())
         }
-        if (this.tx.notary?.owningKey in missing)
-            missingElements.add("notary")
-        return missingElements
+        if (this.tx.notary?.owningKey in keys)
+            descriptions.add("notary")
+        return descriptions
     }
 
     /** Returns the same transaction but with an additional (unchecked) signature. */
@@ -179,10 +121,9 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     }
 
     /**
-     * Checks the transaction's signatures are valid, optionally calls [verifyRequiredSignatures]
-     * to check all required signatures are present, calls [WireTransaction.toLedgerTransaction]
-     * with the passed in [ServiceHub] to resolve the dependencies and return an unverified
-     * LedgerTransaction, then verifies the LedgerTransaction.
+     * Checks the transaction's signatures are valid, optionally calls [verifyRequiredSignatures] to check
+     * all required signatures are present. Resolves inputs and attachments from the local storage and performs full
+     * transaction verification, including running the contracts.
      *
      * @throws AttachmentResolutionException if a required attachment was not found in storage.
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
@@ -192,10 +133,41 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     @JvmOverloads
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
+        if (isNotaryChangeTransaction()) {
+            verifyNotaryChangeTransaction(checkSufficientSignatures, services)
+        } else {
+            verifyRegularTransaction(checkSufficientSignatures, services)
+        }
+    }
+
+    private fun verifyRegularTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
         checkSignaturesAreValid()
         if (checkSufficientSignatures) verifyRequiredSignatures()
-        tx.toLedgerTransaction(services).verify()
+        val ltx = tx.toLedgerTransaction(services)
+        // TODO: allow non-blocking verification
+        services.transactionVerifierService.verify(ltx).getOrThrow()
+    }
+
+    private fun verifyNotaryChangeTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
+        val ntx = resolveNotaryChangeTransaction(services)
+        if (checkSufficientSignatures) ntx.verifyRequiredSignatures()
+    }
+
+    fun isNotaryChangeTransaction() = transaction is NotaryChangeWireTransaction
+
+    /**
+     * If [transaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
+     * [NotaryChangeLedgerTransaction] so the signatures can be verified.
+     */
+    fun resolveNotaryChangeTransaction(services: ServiceHub): NotaryChangeLedgerTransaction {
+        val ntx = transaction as? NotaryChangeWireTransaction
+                ?: throw IllegalStateException("Expected a ${NotaryChangeWireTransaction::class.simpleName} but found ${transaction::class.simpleName}")
+        return ntx.resolve(services, sigs)
     }
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
+
+    @CordaSerializable
+    class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash)
+        : NamedByHash, SignatureException("Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}")
 }

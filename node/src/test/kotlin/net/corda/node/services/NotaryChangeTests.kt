@@ -6,6 +6,7 @@ import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.utilities.seconds
@@ -106,7 +107,8 @@ class NotaryChangeTests {
         val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
 
-        val notaryChangeTx = clientNodeA.services.validatedTransactions.getTransaction(newState.ref.txhash)!!.tx
+        val recordedTx = clientNodeA.services.validatedTransactions.getTransaction(newState.ref.txhash)!!
+        val notaryChangeTx = recordedTx.resolveNotaryChangeTransaction(clientNodeA.services)
 
         // Check that all encumbrances have been propagated to the outputs
         val originalOutputs = issueTx.outputStates
@@ -166,7 +168,7 @@ fun issueState(node: AbstractNode, notaryNode: AbstractNode): StateAndRef<*> {
 fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: AbstractNode): StateAndRef<DummyContract.MultiOwnerState> {
     val state = TransactionState(DummyContract.MultiOwnerState(0,
             listOf(nodeA.info.legalIdentity, nodeB.info.legalIdentity)), notaryNode.info.notaryIdentity)
-    val tx = TransactionType.NotaryChange.Builder(notaryNode.info.notaryIdentity).withItems(state)
+    val tx = TransactionBuilder(notary = notaryNode.info.notaryIdentity).withItems(state)
     val signedByA = nodeA.services.signInitialTransaction(tx)
     val signedByAB = nodeB.services.addSignature(signedByA)
     val stx = notaryNode.services.addSignature(signedByAB, notaryNode.services.notaryIdentityKey)

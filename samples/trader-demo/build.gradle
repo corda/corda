@@ -25,10 +25,10 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
     // Corda integration dependencies
-    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    corda project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
-    corda project(':core')
-    corda project(':finance')
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':finance')
 
     // Corda Plugins: dependent flows and services
     cordapp project(':samples:bank-of-corda-demo')

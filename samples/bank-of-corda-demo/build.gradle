@@ -26,14 +26,14 @@ dependencies {
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
-    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    corda project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
-    corda project(':core')
-    corda project(':client:jfx')
-    corda project(':client:rpc')
-    corda project(':finance')
-    corda project(':webserver')
-    corda project(':test-utils')
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':client:jfx')
+    cordaCompile project(':client:rpc')
+    cordaCompile project(':finance')
+    cordaCompile project(':webserver')
+    cordaCompile project(':test-utils')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"

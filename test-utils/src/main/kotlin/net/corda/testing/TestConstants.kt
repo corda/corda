@@ -2,6 +2,8 @@
 
 package net.corda.testing
 
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.*
 import net.corda.core.crypto.testing.DummyPublicKey
 import net.corda.core.identity.Party
@@ -72,6 +74,8 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
     val cert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Dummy CA,OU=Corda,O=R3 Ltd,L=London,C=GB"), DUMMY_CA_KEY)
     CertificateAndKeyPair(cert, DUMMY_CA_KEY)
 }
+
+fun dummyCommand(vararg signers: PublicKey) = Command<TypeOnlyCommandData>(object : TypeOnlyCommandData() {}, signers.toList())
 
 //
 // Extensions to the Driver DSL to auto-manufacture nodes by name.

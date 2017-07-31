@@ -3,6 +3,7 @@ package net.corda.node.internal
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.node.services.statemachine.SessionInit
+import net.corda.node.services.statemachine.SessionRejectException
 
 interface InitiatedFlowFactory<out F : FlowLogic<*>> {
     fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): F
@@ -24,4 +25,3 @@ interface InitiatedFlowFactory<out F : FlowLogic<*>> {
     }
 }
 
-class SessionRejectException(val rejectMessage: String, val logMessage: String) : Exception()
