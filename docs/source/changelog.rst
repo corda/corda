@@ -60,6 +60,18 @@ UNRELEASED
    * ``Cordformation`` adds a ``corda`` and ``cordaRuntime`` configuration to projects which cordapp developers should
      use to exclude core Corda JARs from being built into Cordapp fat JARs.
 
+.. Milestone 15:
+
+* Following deprecated methods have been removed:
+  * In ``DataFeed``
+    * ``first`` and ``current``, replaced by ``snapshot``
+    * ``second`` and ``future``, replaced by ``updates``
+  * In ``CordaRPCOps``
+    * ``stateMachinesAndUpdates``, replaced by ``stateMachinesFeed``
+    * ``verifiedTransactions``, replaced by ``verifiedTransactionsFeed``
+    * ``stateMachineRecordedTransactionMapping``, replaced by ``stateMachineRecordedTransactionMappingFeed``
+    * ``networkMapUpdates``, replaced by ``networkMapFeed``
+
 Milestone 13
 ------------
 

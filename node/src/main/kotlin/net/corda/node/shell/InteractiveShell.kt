@@ -308,7 +308,7 @@ object InteractiveShell {
     @JvmStatic
     fun runStateMachinesView(out: RenderPrintWriter): Any? {
         val proxy = node.rpcOps
-        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
+        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
         stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)

@@ -9,17 +9,17 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.serialization.SerializationCustomization
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.ALICE
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.ALICE
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
@@ -63,7 +63,7 @@ fun main(args: Array<String>) {
         // END 2
 
         // START 3
-        val (transactions: List<SignedTransaction>, futureTransactions: Observable<SignedTransaction>) = proxy.verifiedTransactions()
+        val (transactions: List<SignedTransaction>, futureTransactions: Observable<SignedTransaction>) = proxy.verifiedTransactionsFeed()
         // END 3
 
         // START 4
@@ -71,8 +71,8 @@ fun main(args: Array<String>) {
             PrintOrVisualise.Print -> {
                 futureTransactions.startWith(transactions).subscribe { transaction ->
                     println("NODE ${transaction.id}")
-                    transaction.tx.inputs.forEach { input ->
-                        println("EDGE ${input.txhash} ${transaction.id}")
+                    transaction.tx.inputs.forEach { (txhash) ->
+                        println("EDGE $txhash ${transaction.id}")
                     }
                 }
             }
@@ -111,7 +111,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
         sum + (state.state.data as Cash.State).amount.quantity
     }
     val issueRef = OpaqueBytes.of(0)
-    val (parties, partyUpdates) = proxy.networkMapUpdates()
+    val (parties, partyUpdates) = proxy.networkMapFeed()
     partyUpdates.notUsed()
     val notary = parties.first { it.advertisedServices.any { it.info.type.isNotary() } }.notaryIdentity
     val me = proxy.nodeIdentity().legalIdentity

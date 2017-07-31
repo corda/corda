@@ -11,9 +11,9 @@ import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.Vault
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
 import rx.Observable
 import rx.subjects.PublishSubject
 
@@ -63,7 +63,7 @@ class NodeMonitorModel {
         val connection = client.start(username, password)
         val proxy = connection.proxy
 
-        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
+        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         // Extract the flow tracking stream
         // TODO is there a nicer way of doing this? Stream of streams in general results in code like this...
         val currentProgressTrackerUpdates = stateMachines.mapNotNull { stateMachine ->
@@ -86,19 +86,19 @@ class NodeMonitorModel {
 
         // Vault updates
         val (vault, vaultUpdates) = proxy.vaultAndUpdates()
-        val initialVaultUpdate = Vault.Update<ContractState>(setOf(), vault.toSet())
+        val initialVaultUpdate = Vault.Update(setOf(), vault.toSet())
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
 
         // Transactions
-        val (transactions, newTransactions) = proxy.verifiedTransactions()
+        val (transactions, newTransactions) = proxy.verifiedTransactionsFeed()
         newTransactions.startWith(transactions).subscribe(transactionsSubject)
 
         // SM -> TX mapping
-        val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMapping()
+        val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMappingFeed()
         futureSmTxMappings.startWith(smTxMappings).subscribe(stateMachineTransactionMappingSubject)
 
         // Parties on network
-        val (parties, futurePartyUpdate) = proxy.networkMapUpdates()
+        val (parties, futurePartyUpdate) = proxy.networkMapFeed()
         futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).subscribe(networkMapSubject)
 
         proxyObservable.set(proxy)

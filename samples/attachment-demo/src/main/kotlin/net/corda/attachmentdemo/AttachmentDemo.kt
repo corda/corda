@@ -121,7 +121,7 @@ class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : Fl
 
 fun recipient(rpc: CordaRPCOps) {
     println("Waiting to receive transaction ...")
-    val stx = rpc.verifiedTransactions().second.toBlocking().first()
+    val stx = rpc.verifiedTransactionsFeed().updates.toBlocking().first()
     val wtx = stx.tx
     if (wtx.attachments.isNotEmpty()) {
         if (wtx.outputs.isNotEmpty()) {
