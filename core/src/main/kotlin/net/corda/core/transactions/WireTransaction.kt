@@ -38,9 +38,6 @@ data class WireTransaction(
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */
     override val id: SecureHash get() = merkleTree.hash
 
-    override val availableComponents: List<Any>
-        get() = listOf(inputs, attachments, outputs, commands).flatten() + listOf(notary, timeWindow).filterNotNull()
-
     /** Public keys that need to be fulfilled by signatures in order for the transaction to be valid. */
     val requiredSigningKeys: Set<PublicKey> get() {
         val commandKeys = commands.flatMap { it.signers }.toSet()
