@@ -447,6 +447,7 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
  */
 @CordaSerializable
 class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
+    /** Constructs a salt with a randomly-generated 32 byte value. */
     constructor() : this(secureRandomBytes(32))
 
     init {

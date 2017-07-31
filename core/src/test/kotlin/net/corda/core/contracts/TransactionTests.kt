@@ -155,7 +155,7 @@ class TransactionTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `transactions with identical outputs must have different ids`() {
+    fun `transactions with identical contents must have different ids`() {
         val outputState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
         fun buildTransaction() = WireTransaction(
                 inputs = emptyList(),
@@ -163,7 +163,8 @@ class TransactionTests : TestDependencyInjectionBase() {
                 outputs = listOf(outputState),
                 commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = null,
-                timeWindow = null
+                timeWindow = null,
+                privacySalt = PrivacySalt() // Randomly-generated – used for calculating the id
         )
 
         val issueTx1 = buildTransaction()
