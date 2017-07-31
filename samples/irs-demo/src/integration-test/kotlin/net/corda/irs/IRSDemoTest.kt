@@ -81,7 +81,7 @@ class IRSDemoTest : IntegrationTestCategory {
     fun getFixingDateObservable(config: FullNodeConfiguration): Observable<LocalDate?> {
         val client = CordaRPCClient(config.rpcAddress!!, initialiseSerialization = false)
         val proxy = client.start("user", "password").proxy
-        val vaultUpdates = proxy.vaultAndUpdates().second
+        val vaultUpdates = proxy.vaultAndUpdates().updates
 
         return vaultUpdates.map { update ->
             val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State>()

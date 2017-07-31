@@ -52,10 +52,7 @@ sealed class StateMachineUpdate {
 @CordaSerializable
 data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRunId, val transactionId: SecureHash)
 
-/**
- * RPC operations that the node exposes to clients using the Java client library. These can be called from
- * client apps and are implemented by the node in the [net.corda.node.internal.CordaRPCOpsImpl] class.
- */
+/** RPC operations that the node exposes to clients. */
 interface CordaRPCOps : RPCOps {
     /**
      * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
@@ -68,9 +65,6 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate>
-
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("stateMachinesFeed()"))
-    fun stateMachinesAndUpdates() = stateMachinesFeed()
 
     /**
      * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
@@ -171,10 +165,6 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction>
 
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("verifiedTransactionFeed()"))
-    fun verifiedTransactions() = verifiedTransactionsFeed()
-
-
     /**
      * Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
      * such mappings as well.
@@ -182,17 +172,11 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping>
 
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("stateMachineRecordedTransactionMappingFeed()"))
-    fun stateMachineRecordedTransactionMapping() = stateMachineRecordedTransactionMappingFeed()
-
     /**
      * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
      */
     @RPCReturnsObservables
     fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
-
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("networkMapFeed()"))
-    fun networkMapUpdates() = networkMapFeed()
 
     /**
      * Start the given flow with the given arguments. [logicType] must be annotated with [net.corda.core.flows.StartableByRPC].
@@ -430,13 +414,4 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startTrac
  * The Data feed contains a snapshot of the requested data and an [Observable] of future updates.
  */
 @CordaSerializable
-data class DataFeed<out A, B>(val snapshot: A, val updates: Observable<B>) {
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("snapshot"))
-    val first: A get() = snapshot
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("updates"))
-    val second: Observable<B> get() = updates
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("snapshot"))
-    val current: A get() = snapshot
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("updates"))
-    val future: Observable<B> get() = updates
-}
+data class DataFeed<out A, B>(val snapshot: A, val updates: Observable<B>)
