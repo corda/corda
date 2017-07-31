@@ -194,7 +194,7 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
 }
 
 
-fun parserTransactionIsolationLevel(property: String?) =
+fun parserTransactionIsolationLevel(property: String?) : Int =
     when (property) {
         "none" -> Connection.TRANSACTION_NONE
         "readUncommitted" -> Connection.TRANSACTION_READ_UNCOMMITTED

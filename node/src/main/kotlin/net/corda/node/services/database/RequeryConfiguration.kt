@@ -52,7 +52,7 @@ class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Bo
     fun jdbcSession(): Connection = DatabaseTransactionManager.current().connection
 }
 
-fun parserTransactionIsolationLevel(property: String?) =
+fun parserTransactionIsolationLevel(property: String?) : TransactionIsolation =
         when (property) {
             "none" -> TransactionIsolation.NONE
             "readUncommitted" -> TransactionIsolation.READ_UNCOMMITTED
