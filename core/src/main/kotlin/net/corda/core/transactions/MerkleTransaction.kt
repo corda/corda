@@ -9,7 +9,6 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.serialize
-import java.security.PublicKey
 import java.util.function.Predicate
 
 fun <T : Any> serializedHash(x: T): SecureHash {
@@ -31,7 +30,6 @@ interface TraversableTransaction {
     val outputs: List<TransactionState<ContractState>>
     val commands: List<Command<*>>
     val notary: Party?
-    val mustSign: List<PublicKey>
     val type: TransactionType?
     val timeWindow: TimeWindow?
 
@@ -54,7 +52,6 @@ interface TraversableTransaction {
             // torn-off transaction and id calculation.
             val result = mutableListOf(inputs, attachments, outputs, commands).flatten().toMutableList()
             notary?.let { result += it }
-            result.addAll(mustSign)
             type?.let { result += it }
             timeWindow?.let { result += it }
             return result
@@ -79,7 +76,6 @@ class FilteredLeaves(
         override val outputs: List<TransactionState<ContractState>>,
         override val commands: List<Command<*>>,
         override val notary: Party?,
-        override val mustSign: List<PublicKey>,
         override val type: TransactionType?,
         override val timeWindow: TimeWindow?
 ) : TraversableTransaction {

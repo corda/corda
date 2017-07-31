@@ -5,7 +5,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.castIfPossible
 import net.corda.core.serialization.CordaSerializable
-import java.security.PublicKey
 import java.util.*
 import java.util.function.Predicate
 
@@ -24,24 +23,26 @@ import java.util.function.Predicate
 // currently sends this across to out-of-process verifiers. We'll need to change that first.
 // DOCSTART 1
 @CordaSerializable
-class LedgerTransaction(
+data class LedgerTransaction(
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
-        override val inputs: List<StateAndRef<*>>,
-        outputs: List<TransactionState<ContractState>>,
+        override val inputs: List<StateAndRef<ContractState>>,
+        override val outputs: List<TransactionState<ContractState>>,
         /** Arbitrary data passed to the program of each input state. */
         val commands: List<AuthenticatedObject<CommandData>>,
         /** A list of [Attachment] objects identified by the transaction that are needed for this transaction to verify. */
         val attachments: List<Attachment>,
         /** The hash of the original serialised WireTransaction. */
         override val id: SecureHash,
-        notary: Party?,
-        signers: List<PublicKey>,
-        timeWindow: TimeWindow?,
-        type: TransactionType
-) : BaseTransaction(inputs, outputs, notary, signers, type, timeWindow) {
+        override val notary: Party?,
+        val timeWindow: TimeWindow?,
+        val type: TransactionType
+) : FullTransaction() {
     //DOCEND 1
     init {
-        checkInvariants()
+        checkBaseInvariants()
+        if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
+        checkNoNotaryChange()
+        checkEncumbrancesValid()
     }
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
@@ -55,42 +56,72 @@ class LedgerTransaction(
     fun <T : ContractState> inRef(index: Int): StateAndRef<T> = inputs[index] as StateAndRef<T>
 
     /**
-     * Verifies this transaction and throws an exception if not valid, depending on the type. For general transactions:
-     *
-     * - The contracts are run with the transaction as the input.
-     * - The list of keys mentioned in commands is compared against the signers list.
+     * Verifies this transaction and runs contract code. At this stage it is assumed that signatures have already been verified.
      *
      * @throws TransactionVerificationException if anything goes wrong.
      */
     @Throws(TransactionVerificationException::class)
-    fun verify() = type.verify(this)
+    fun verify() = verifyContracts()
 
-    // TODO: When we upgrade to Kotlin 1.1 we can make this a data class again and have the compiler generate these.
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other?.javaClass != javaClass) return false
-        if (!super.equals(other)) return false
-
-        other as LedgerTransaction
-
-        if (inputs != other.inputs) return false
-        if (outputs != other.outputs) return false
-        if (commands != other.commands) return false
-        if (attachments != other.attachments) return false
-        if (id != other.id) return false
-
-        return true
+    /**
+     * Check the transaction is contract-valid by running the verify() for each input and output state contract.
+     * If any contract fails to verify, the whole transaction is considered to be invalid.
+     */
+    private fun verifyContracts() {
+        val contracts = (inputs.map { it.state.data.contract } + outputs.map { it.data.contract }).toSet()
+        for (contract in contracts) {
+            try {
+                contract.verify(this)
+            } catch(e: Throwable) {
+                throw TransactionVerificationException.ContractRejection(id, contract, e)
+            }
+        }
     }
 
-    override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + inputs.hashCode()
-        result = 31 * result + outputs.hashCode()
-        result = 31 * result + commands.hashCode()
-        result = 31 * result + attachments.hashCode()
-        result = 31 * result + id.hashCode()
-        return result
+    /**
+     * Make sure the notary has stayed the same. As we can't tell how inputs and outputs connect, if there
+     * are any inputs, all outputs must have the same notary.
+     *
+     * TODO: Is that the correct set of restrictions? May need to come back to this, see if we can be more
+     *       flexible on output notaries.
+     */
+    private fun checkNoNotaryChange() {
+        if (notary != null && inputs.isNotEmpty()) {
+            outputs.forEach {
+                if (it.notary != notary) {
+                    throw TransactionVerificationException.NotaryChangeInWrongTransactionType(id, notary, it.notary)
+                }
+            }
+        }
+    }
+
+    private fun checkEncumbrancesValid() {
+        // Validate that all encumbrances exist within the set of input states.
+        val encumberedInputs = inputs.filter { it.state.encumbrance != null }
+        encumberedInputs.forEach { (state, ref) ->
+            val encumbranceStateExists = inputs.any {
+                it.ref.txhash == ref.txhash && it.ref.index == state.encumbrance
+            }
+            if (!encumbranceStateExists) {
+                throw TransactionVerificationException.TransactionMissingEncumbranceException(
+                        id,
+                        state.encumbrance!!,
+                        TransactionVerificationException.Direction.INPUT
+                )
+            }
+        }
+
+        // Check that, in the outputs, an encumbered state does not refer to itself as the encumbrance,
+        // and that the number of outputs can contain the encumbrance.
+        for ((i, output) in outputs.withIndex()) {
+            val encumbranceIndex = output.encumbrance ?: continue
+            if (encumbranceIndex == i || encumbranceIndex >= outputs.size) {
+                throw TransactionVerificationException.TransactionMissingEncumbranceException(
+                        id,
+                        encumbranceIndex,
+                        TransactionVerificationException.Direction.OUTPUT)
+            }
+        }
     }
 
     /**

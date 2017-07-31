@@ -12,14 +12,15 @@ import io.requery.kotlin.notNull
 import io.requery.query.RowExpression
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.OnLedgerAsset
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.tee
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
@@ -30,7 +31,8 @@ import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.internal.tee
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
@@ -184,15 +186,118 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         return stateAndRefs.associateBy({ it.ref }, { it.state })
     }
 
-    override fun notifyAll(txns: Iterable<WireTransaction>) {
+    /**
+     * Splits the provided [txns] into batches of [WireTransaction] and [NotaryChangeWireTransaction].
+     * This is required because the batches get aggregated into single updates, and we want to be able to
+     * indicate whether an update consists entirely of regular or notary change transactions, which may require
+     * different processing logic.
+     */
+    override fun notifyAll(txns: Iterable<CoreTransaction>) {
+        // It'd be easier to just group by type, but then we'd lose ordering.
+        val regularTxns = mutableListOf<WireTransaction>()
+        val notaryChangeTxns = mutableListOf<NotaryChangeWireTransaction>()
+
+        for (tx in txns) {
+            when (tx) {
+                is WireTransaction -> {
+                    regularTxns.add(tx)
+                    if (notaryChangeTxns.isNotEmpty()) {
+                        notifyNotaryChange(notaryChangeTxns.toList())
+                        notaryChangeTxns.clear()
+                    }
+                }
+                is NotaryChangeWireTransaction -> {
+                    notaryChangeTxns.add(tx)
+                    if (regularTxns.isNotEmpty()) {
+                        notifyRegular(regularTxns.toList())
+                        regularTxns.clear()
+                    }
+                }
+            }
+        }
+
+        if (regularTxns.isNotEmpty()) notifyRegular(regularTxns.toList())
+        if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList())
+    }
+
+    private fun notifyRegular(txns: Iterable<WireTransaction>) {
         val ourKeys = services.keyManagementService.keys
-        val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn, ourKeys) }
-        if (netDelta != Vault.NoUpdate) {
-            recordUpdate(netDelta)
+        fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
+            val ourNewStates = tx.outputs.
+                    filter { isRelevant(it.data, ourKeys) }.
+                    map { tx.outRef<ContractState>(it.data) }
+
+            // Retrieve all unconsumed states for this transaction's inputs
+            val consumedStates = loadStates(tx.inputs)
+
+            // Is transaction irrelevant?
+            if (consumedStates.isEmpty() && ourNewStates.isEmpty()) {
+                log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
+                return Vault.NoUpdate
+            }
+
+            return Vault.Update(consumedStates, ourNewStates.toHashSet())
+        }
+
+        val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
+        processAndNotify(netDelta)
+    }
+
+    private fun notifyNotaryChange(txns: Iterable<NotaryChangeWireTransaction>) {
+        val ourKeys = services.keyManagementService.keys
+        fun makeUpdate(tx: NotaryChangeWireTransaction): Vault.Update<ContractState> {
+            // We need to resolve the full transaction here because outputs are calculated from inputs
+            // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
+            // input position
+            val ltx = tx.resolve(services, emptyList())
+
+            val (consumedStateAndRefs, producedStates) = ltx.inputs.
+                    zip(ltx.outputs).
+                    filter {
+                        (_, output) ->
+                        isRelevant(output.data, ourKeys)
+                    }.
+                    unzip()
+
+            val producedStateAndRefs = producedStates.map { ltx.outRef<ContractState>(it.data) }
+
+            if (consumedStateAndRefs.isEmpty() && producedStateAndRefs.isEmpty()) {
+                log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
+                return Vault.NoUpdate
+            }
+
+            return  Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet())
+        }
+
+        val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
+        processAndNotify(netDelta)
+    }
+
+    private fun loadStates(refs: Collection<StateRef>): HashSet<StateAndRef<ContractState>> {
+        val states = HashSet<StateAndRef<ContractState>>()
+        if (refs.isNotEmpty()) {
+            session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                val result = select(VaultStatesEntity::class).
+                        where(stateRefCompositeColumn.`in`(stateRefArgs(refs))).
+                        and(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
+                result.get().forEach {
+                    val txHash = SecureHash.parse(it.txId)
+                    val index = it.index
+                    val state = it.contractState.deserialize<TransactionState<ContractState>>(context = STORAGE_CONTEXT)
+                    states.add(StateAndRef(state, StateRef(txHash, index)))
+                }
+            }
+        }
+        return states
+    }
+
+    private fun processAndNotify(update: Vault.Update<ContractState>) {
+        if (update != Vault.NoUpdate) {
+            recordUpdate(update)
             mutex.locked {
                 // flowId required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
-                val vaultUpdate = if (uuid != null) netDelta.copy(flowId = uuid) else netDelta
+                val vaultUpdate = if (uuid != null) update.copy(flowId = uuid) else update
                 updatesPublisher.onNext(vaultUpdate)
             }
         }
@@ -419,35 +524,6 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
-
-    @VisibleForTesting
-    internal fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update<ContractState> {
-        val ourNewStates = tx.filterOutRefs<ContractState> { isRelevant(it, ourKeys) }
-
-        // Retrieve all unconsumed states for this transaction's inputs
-        val consumedStates = HashSet<StateAndRef<ContractState>>()
-        if (tx.inputs.isNotEmpty()) {
-            session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
-                val result = select(VaultStatesEntity::class).
-                        where(stateRefCompositeColumn.`in`(stateRefArgs(tx.inputs))).
-                        and(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
-                result.get().forEach {
-                    val txHash = SecureHash.parse(it.txId)
-                    val index = it.index
-                    val state = it.contractState.deserialize<TransactionState<ContractState>>(context = STORAGE_CONTEXT)
-                    consumedStates.add(StateAndRef(state, StateRef(txHash, index)))
-                }
-            }
-        }
-
-        // Is transaction irrelevant?
-        if (consumedStates.isEmpty() && ourNewStates.isEmpty()) {
-            log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
-            return Vault.NoUpdate
-        }
-
-        return Vault.Update(consumedStates, ourNewStates.toHashSet())
-    }
 
     // TODO : Persists this in DB.
     private val authorisedUpgrade = mutableMapOf<StateRef, Class<out UpgradedContract<*, *>>>()

@@ -68,14 +68,12 @@ data class GeneratedLedger(
             )
         }
         attachmentsGenerator.combine(outputsGen, commandsGenerator) { txAttachments, outputs, commands ->
-            val signers = commands.flatMap { it.first.signers }
             val newTransaction = WireTransaction(
                     emptyList(),
                     txAttachments.map { it.id },
                     outputs,
                     commands.map { it.first },
                     null,
-                    signers,
                     TransactionType.General,
                     null
             )
@@ -103,14 +101,12 @@ data class GeneratedLedger(
         }
         val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
         return inputsGen.combine(attachmentsGenerator, outputsGen, commandsGenerator) { inputs, txAttachments, outputs, commands ->
-            val signers = commands.flatMap { it.first.signers } + inputNotary.owningKey
             val newTransaction = WireTransaction(
                     inputs.map { it.ref },
                     txAttachments.map { it.id },
                     outputs,
                     commands.map { it.first },
                     inputNotary,
-                    signers,
                     TransactionType.General,
                     null
             )
@@ -132,45 +128,7 @@ data class GeneratedLedger(
     }
 
     /**
-     * Generates a notary change transaction.
-     * Invariants:
-     *   * Input notary must be different from the output ones.
-     *   * All other data must stay the same.
-     */
-    fun notaryChangeTransactionGenerator(inputNotary: Party, inputsToChooseFrom: List<StateAndRef<ContractState>>): Generator<Pair<WireTransaction, GeneratedLedger>> {
-        val newNotaryGen = pickOneOrMaybeNew(identities - inputNotary, partyGenerator)
-        val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
-        return inputsGen.flatMap { inputs ->
-            val signers: List<PublicKey> = (inputs.flatMap { it.state.data.participants } + inputNotary).map { it.owningKey }
-            val outputsGen = Generator.sequence(inputs.map { input -> newNotaryGen.map { TransactionState(input.state.data, it, null) } })
-            outputsGen.combine(attachmentsGenerator) { outputs, txAttachments ->
-                val newNotaries = outputs.map { it.notary }
-                val newTransaction = WireTransaction(
-                        inputs.map { it.ref },
-                        txAttachments.map { it.id },
-                        outputs,
-                        emptyList(),
-                        inputNotary,
-                        signers,
-                        TransactionType.NotaryChange,
-                        null
-                )
-                val newOutputStateAndRefs = outputs.mapIndexed { i, state ->
-                    StateAndRef(state, StateRef(newTransaction.id, i))
-                }
-                val availableOutputsMinusConsumed = HashMap(availableOutputs)
-                availableOutputsMinusConsumed[inputNotary] = inputsToChooseFrom - inputs
-                val newAvailableOutputs = availableOutputsMinusConsumed + newOutputStateAndRefs.groupBy { it.state.notary }
-                val newAttachments = attachments + txAttachments
-                val newIdentities = identities + newNotaries
-                val newLedger = GeneratedLedger(transactions + newTransaction, newAvailableOutputs, newAttachments, newIdentities)
-                Pair(newTransaction, newLedger)
-            }
-        }
-    }
-
-    /**
-     * Generates a valid transaction. It may be one of three types of issuance, regular and notary change. These have
+     * Generates a valid transaction. It may be either an issuance or a regular spend transaction. These have
      * different invariants on notary fields.
      */
     val transactionGenerator: Generator<Pair<WireTransaction, GeneratedLedger>> by lazy {
@@ -180,9 +138,8 @@ data class GeneratedLedger(
             Generator.pickOne(availableOutputs.keys.toList()).flatMap { inputNotary ->
                 val inputsToChooseFrom = availableOutputs[inputNotary]!!
                 Generator.frequency(
-                        0.3 to issuanceGenerator,
-                        0.4 to regularTransactionGenerator(inputNotary, inputsToChooseFrom),
-                        0.3 to notaryChangeTransactionGenerator(inputNotary, inputsToChooseFrom)
+                        0.5 to issuanceGenerator,
+                        0.5 to regularTransactionGenerator(inputNotary, inputsToChooseFrom)
                 )
             }
         }

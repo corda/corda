@@ -9,6 +9,8 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
@@ -37,6 +39,7 @@ import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaType
 
 /**
@@ -112,6 +115,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
         output.writeInt(hashParameters(constructor.parameters))
         for (param in constructor.parameters) {
             val kProperty = propsByName[param.name!!]!!
+            kProperty.isAccessible = true
             when (param.type.javaType.typeName) {
                 "int" -> output.writeVarInt(kProperty.get(obj) as Int, true)
                 "long" -> output.writeVarLong(kProperty.get(obj) as Long, true)
@@ -239,7 +243,6 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.outputs)
         kryo.writeClassAndObject(output, obj.commands)
         kryo.writeClassAndObject(output, obj.notary)
-        kryo.writeClassAndObject(output, obj.mustSign)
         kryo.writeClassAndObject(output, obj.type)
         kryo.writeClassAndObject(output, obj.timeWindow)
     }
@@ -267,11 +270,28 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command<*>>
             val notary = kryo.readClassAndObject(input) as Party?
-            val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timeWindow = kryo.readClassAndObject(input) as TimeWindow?
-            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, signers, transactionType, timeWindow)
+            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, transactionType, timeWindow)
         }
+    }
+}
+
+@ThreadSafe
+object NotaryChangeWireTransactionSerializer : Serializer<NotaryChangeWireTransaction>() {
+    override fun write(kryo: Kryo, output: Output, obj: NotaryChangeWireTransaction) {
+        kryo.writeClassAndObject(output, obj.inputs)
+        kryo.writeClassAndObject(output, obj.notary)
+        kryo.writeClassAndObject(output, obj.newNotary)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun read(kryo: Kryo, input: Input, type: Class<NotaryChangeWireTransaction>): NotaryChangeWireTransaction {
+        val inputs = kryo.readClassAndObject(input) as List<StateRef>
+        val notary = kryo.readClassAndObject(input) as Party
+        val newNotary = kryo.readClassAndObject(input) as Party
+
+        return NotaryChangeWireTransaction(inputs, notary, newNotary)
     }
 }
 
@@ -285,7 +305,7 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
     @Suppress("UNCHECKED_CAST")
     override fun read(kryo: Kryo, input: Input, type: Class<SignedTransaction>): SignedTransaction {
         return SignedTransaction(
-                kryo.readClassAndObject(input) as SerializedBytes<WireTransaction>,
+                kryo.readClassAndObject(input) as SerializedBytes<CoreTransaction>,
                 kryo.readClassAndObject(input) as List<DigitalSignature.WithKey>
         )
     }
