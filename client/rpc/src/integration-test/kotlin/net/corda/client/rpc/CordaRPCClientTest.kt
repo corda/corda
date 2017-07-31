@@ -128,10 +128,9 @@ class CordaRPCClientTest : NodeBasedTest() {
     fun `flow initiator via RPC`() {
         login(rpcUser.username, rpcUser.password)
         val proxy = connection!!.proxy
-        val smUpdates = proxy.stateMachinesAndUpdates()
         var countRpcFlows = 0
         var countShellFlows = 0
-        smUpdates.second.subscribe {
+        proxy.stateMachinesFeed().updates.subscribe {
             if (it is StateMachineUpdate.Added) {
                 val initiator = it.stateMachineInfo.initiator
                 if (initiator is FlowInitiator.RPC)

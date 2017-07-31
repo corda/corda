@@ -103,9 +103,8 @@ class ScheduledFlowTests {
 
     @Test
     fun `create and run scheduled flow then wait for result`() {
-        val stateMachines = nodeA.smm.track()
         var countScheduledFlows = 0
-        stateMachines.second.subscribe {
+        nodeA.smm.track().updates.subscribe {
             if (it is StateMachineManager.Change.Add) {
                 val initiator = it.logic.stateMachine.flowInitiator
                 if (initiator is FlowInitiator.Scheduled)

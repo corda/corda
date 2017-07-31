@@ -118,7 +118,7 @@ class StandaloneCordaRPClientTest {
 
     @Test
     fun `test state machines`() {
-        val (stateMachines, updates) = rpcProxy.stateMachinesAndUpdates()
+        val (stateMachines, updates) = rpcProxy.stateMachinesFeed()
         assertEquals(0, stateMachines.size)
 
         val updateCount = AtomicInteger(0)
