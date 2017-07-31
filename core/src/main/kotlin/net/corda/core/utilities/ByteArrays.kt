@@ -2,9 +2,9 @@
 
 package net.corda.core.utilities
 
-import com.google.common.io.BaseEncoding
 import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
+import javax.xml.bind.DatatypeConverter
 
 /**
  * An abstraction of a byte array, with offset and size that does no copying of bytes unless asked to.
@@ -109,7 +109,7 @@ sealed class ByteSequence : Comparable<ByteSequence> {
         return result
     }
 
-    override fun toString(): String = "[${BaseEncoding.base16().encode(bytes, offset, size)}]"
+    override fun toString(): String = "[${bytes.copyOfRange(offset, offset + size).toHexString()}]"
 }
 
 /**
@@ -136,8 +136,8 @@ fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
 
 fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of(this, offset, size)
 
-fun ByteArray.toHexString(): String = BaseEncoding.base16().encode(this)
-fun String.parseAsHex(): ByteArray = BaseEncoding.base16().decode(this)
+fun ByteArray.toHexString(): String = DatatypeConverter.printHexBinary(this)
+fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
 
 private class OpaqueBytesSubSequence(override val bytes: ByteArray, override val offset: Int, override val size: Int) : ByteSequence() {
     init {
