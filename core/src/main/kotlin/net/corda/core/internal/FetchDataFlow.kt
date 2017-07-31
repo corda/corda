@@ -37,7 +37,7 @@ import java.util.*
  * @param T The ultimate type of the data being fetched.
  * @param W The wire type of the data being fetched, for when it isn't the same as the ultimate type.
  */
-abstract class FetchDataFlow<T : NamedByHash, W : Any>(
+sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         protected val requests: Set<SecureHash>,
         protected val otherSide: Party,
         protected val dataType: DataType) : FlowLogic<FetchDataFlow.Result<T>>() {

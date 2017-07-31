@@ -80,14 +80,15 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxReques
     // Build and an output state for the counterparty
     val transferedFundsOutput = Cash.State(sellAmount, request.counterparty)
 
-    if (residual > 0L) {
+    val outputs = if (residual > 0L) {
         // Build an output state for the residual change back to us
         val residualAmount = Amount(residual, sellAmount.token)
         val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.legalIdentity)
-        return inputs to listOf(transferedFundsOutput, residualOutput)
+        listOf(transferedFundsOutput, residualOutput)
     } else {
-        return inputs to listOf(transferedFundsOutput)
+        listOf(transferedFundsOutput)
     }
+    return Pair(inputs, outputs)
     // DOCEND 2
 }
 
@@ -231,11 +232,10 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
 
         // Send back our proposed states and await the full transaction to verify
         val ourKey = serviceHub.keyManagementService.filterMyKeys(ourInputState.flatMap { it.state.data.participants }.map { it.owningKey }).single()
-        // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
-
+        // SendStateAndRefFlow allows otherParty to access our transaction data to resolve the transaction.
         subFlow(SendStateAndRefFlow(source, ourInputState))
         send(source, ourOutputState)
-        val proposedTrade = subFlow(ReceiveTransactionFlow(source)).let {
+        val proposedTrade = subFlow(ReceiveTransactionFlow(source, checkSufficientSignatures = false)).let {
             val wtx = it.tx
             // check all signatures are present except our own and the notary
             it.verifySignaturesExcept(ourKey, wtx.notary!!.owningKey)

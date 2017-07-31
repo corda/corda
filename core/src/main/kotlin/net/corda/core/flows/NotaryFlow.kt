@@ -69,7 +69,7 @@ object NotaryFlow {
                     subFlow(SendTransactionWithRetry(notaryParty, stx))
                     receive<List<DigitalSignature.WithKey>>(notaryParty)
                 } else {
-                    val tx = if (stx.isNotaryChangeTransaction()) {
+                    val tx: Any = if (stx.isNotaryChangeTransaction()) {
                         stx.notaryChangeTx
                     } else {
                         stx.tx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
@@ -156,7 +156,7 @@ sealed class NotaryError {
  * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [sendAndReceiveWithRetry]
  * instead of [sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
  */
-private class SendTransactionWithRetry(otherSide: Party, stx: SignedTransaction) : DataVendingFlow<SignedTransaction>(otherSide, stx) {
+private class SendTransactionWithRetry(otherSide: Party, stx: SignedTransaction) : SendTransactionFlow(otherSide, stx) {
     @Suspendable
     override fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any) = sendAndReceiveWithRetry<FetchDataFlow.Request>(otherSide, payload)
 }

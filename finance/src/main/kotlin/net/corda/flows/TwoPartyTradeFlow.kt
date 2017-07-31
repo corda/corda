@@ -150,7 +150,7 @@ object TwoPartyTradeFlow {
         }
 
         @Suspendable
-        private fun receiveAndValidateTradeRequest(): Pair<StateAndRef<OwnableState>,SellerTradeInfo> {
+        private fun receiveAndValidateTradeRequest(): Pair<StateAndRef<OwnableState>, SellerTradeInfo> {
             val assetForSale = subFlow(ReceiveStateAndRefFlow<OwnableState>(otherParty)).single()
             return assetForSale to receive<SellerTradeInfo>(otherParty).unwrap {
                 progressTracker.currentStep = VERIFYING
@@ -170,7 +170,7 @@ object TwoPartyTradeFlow {
         }
 
         @Suspendable
-        private fun assembleSharedTX(assetForSale:StateAndRef<OwnableState>, tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
+        private fun assembleSharedTX(assetForSale: StateAndRef<OwnableState>, tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionBuilder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states

@@ -10,14 +10,18 @@ import net.corda.core.utilities.unwrap
 /**
  * The [ReceiveTransactionFlow] should be called in response to the [SendTransactionFlow].
  *
- * This flow is a combination of [receive] and [ResolveTransactionsFlow], the flow is expecting a [SignedTransaction]
- * from the [otherParty]. This flow will resolve the [SignedTransaction] and return the [SignedTransaction] after it is resolved.
+ * This flow is a combination of [receive] and [ResolveTransactionsFlow]. This flow will receive the [SignedTransaction]
+ * and perform the resolution back-and-forth required to check the dependencies and download any missing attachments.
+ * The flow will return the [SignedTransaction] after it is resolved and verified.
  */
-class ReceiveTransactionFlow(private val otherParty: Party) : FlowLogic<SignedTransaction>() {
+class ReceiveTransactionFlow
+@JvmOverloads
+constructor(private val otherParty: Party, private val checkSufficientSignatures: Boolean = true) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
         return receive<SignedTransaction>(otherParty).unwrap {
             subFlow(ResolveTransactionsFlow(it, otherParty))
+            it.verify(serviceHub, checkSufficientSignatures)
             it
         }
     }
@@ -26,8 +30,9 @@ class ReceiveTransactionFlow(private val otherParty: Party) : FlowLogic<SignedTr
 /**
  * The [ReceiveStateAndRefFlow] should be called in response to the [SendStateAndRefFlow].
  *
- * This flow is a combination of [receive] and [ResolveTransactionsFlow], the flow is expecting a list of [StateAndRef] from
- * the [otherParty]. This flow will resolve the list of [StateAndRef] and return the list of [StateAndRef] after it is resolved.
+ * This flow is a combination of [receive] and [ResolveTransactionsFlow]. This flow will receive a list of [StateAndRef]
+ * and perform the resolution back-and-forth required to check the dependencies.
+ * The flow will return the list of [StateAndRef] after it is resolved.
  */
 class ReceiveStateAndRefFlow<out T : ContractState>(private val otherParty: Party) : FlowLogic<List<StateAndRef<T>>>() {
     @Suspendable

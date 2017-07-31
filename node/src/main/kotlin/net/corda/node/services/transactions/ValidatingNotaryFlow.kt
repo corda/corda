@@ -23,9 +23,8 @@ class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryServ
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
         try {
-            val stx = subFlow(ReceiveTransactionFlow(otherSide))
+            val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false))
             checkSignatures(stx)
-            stx.verify(serviceHub, false)
             val wtx = stx.tx
             return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow)
         } catch (e: Exception) {

@@ -116,8 +116,7 @@ abstract class AbstractStateReplacementFlow {
         private fun getParticipantSignature(party: Party, stx: SignedTransaction): DigitalSignature.WithKey {
             val proposal = Proposal(originalState.ref, modification)
             subFlow(SendTransactionFlow(party, stx))
-            send(party, proposal)
-            return receive<DigitalSignature.WithKey>(party).unwrap {
+            return sendAndReceive<DigitalSignature.WithKey>(party, proposal).unwrap {
                 check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verify(stx.id)
                 it
@@ -150,21 +149,15 @@ abstract class AbstractStateReplacementFlow {
         @Throws(StateReplacementException::class)
         override fun call(): Void? {
             progressTracker.currentStep = VERIFYING
-            val stx = subFlow(ReceiveTransactionFlow(otherSide))
-            verifyTx(stx)
+            // We expect stx to have insufficient signatures here
+            val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false))
+            checkMySignatureRequired(stx)
             val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
             maybeProposal.unwrap {
                 verifyProposal(stx, it)
             }
             approve(stx)
             return null
-        }
-
-        @Suspendable
-        private fun verifyTx(stx: SignedTransaction) {
-            checkMySignatureRequired(stx)
-            // We expect stx to have insufficient signatures here
-            stx.verify(serviceHub, checkSufficientSignatures = false)
         }
 
         @Suspendable
@@ -190,9 +183,9 @@ abstract class AbstractStateReplacementFlow {
         }
 
         /**
-         * Check the state change proposal to confirm that it's acceptable to this node. Rules for verification depend
-         * on the change proposed, and may further depend on the node itself (for example configuration). The
-         * proposal is returned if acceptable, otherwise a [StateReplacementException] is thrown.
+         * Check the state change proposal and the signed transaction to confirm that it's acceptable to this node.
+         * Rules for verification depend on the change proposed, and may further depend on the node itself (for example configuration).
+         * The proposal is returned if acceptable, otherwise a [StateReplacementException] is thrown.
          */
         @Throws(StateReplacementException::class)
         abstract protected fun verifyProposal(stx: SignedTransaction, proposal: Proposal<T>)
