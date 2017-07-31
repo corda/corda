@@ -14,6 +14,7 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.LogHelper
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -28,7 +29,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
         newTransactionStorage()
     }
 

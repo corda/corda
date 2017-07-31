@@ -13,6 +13,7 @@ import junit.framework.TestSuite
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.sql.Transaction
@@ -33,7 +34,7 @@ import java.util.*
         JDBCHashMapTestSuite.SetConstrained::class)
 class JDBCHashMapTestSuite {
     companion object {
-        lateinit var transaction: Transaction
+        lateinit var transaction: DatabaseTransaction
         lateinit var database: CordaPersistence
         lateinit var loadOnInitFalseMap: JDBCHashMap<String, String>
         lateinit var memoryConstrainedMap: JDBCHashMap<String, String>
@@ -46,7 +47,7 @@ class JDBCHashMapTestSuite {
         @BeforeClass
         fun before() {
             initialiseTestSerialization()
-            database = configureDatabase(makeTestDataSourceProperties())
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
             memoryConstrainedMap = JDBCHashMap<String, String>("test_map_constrained", loadOnInit = false, maxBuckets = 1)
@@ -105,7 +106,7 @@ class JDBCHashMapTestSuite {
                 .createTestSuite()
 
         private fun setUpDatabaseTx() {
-            transaction = TransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
+            transaction = DatabaseTransactionManager.currentOrNew()
         }
 
         private fun closeDatabaseTx() {
@@ -232,7 +233,7 @@ class JDBCHashMapTestSuite {
 
         @Before
         fun before() {
-            database = configureDatabase(makeTestDataSourceProperties())
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
         }
 
         @After

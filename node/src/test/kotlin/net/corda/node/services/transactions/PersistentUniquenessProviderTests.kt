@@ -9,6 +9,7 @@ import net.corda.testing.MEGA_CORP
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.generateStateRef
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -24,7 +25,7 @@ class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
     }
 
     @After

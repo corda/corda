@@ -14,15 +14,16 @@ import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 
 
-//HikariDataSource implements also Closeable which allows CordaPersistence to be Closeable
-class CordaPersistence(var dataSource: HikariDataSource): Closeable {
+//HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
+class CordaPersistence(var dataSource: HikariDataSource, databaseProperties: Properties): Closeable {
 
     /** Holds Exposed database, the field will be removed once Exposed library is removed */
     lateinit var database: Database
+    var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
     companion object {
-        fun connect(dataSource: HikariDataSource): CordaPersistence {
-            return CordaPersistence(dataSource).apply {
+        fun connect(dataSource: HikariDataSource, databaseProperties: Properties): CordaPersistence {
+            return CordaPersistence(dataSource, databaseProperties).apply {
                 DatabaseTransactionManager(this)
             }
         }
@@ -31,7 +32,7 @@ class CordaPersistence(var dataSource: HikariDataSource): Closeable {
     fun createTransaction(): DatabaseTransaction {
         // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
         DatabaseTransactionManager.dataSource = this
-        return DatabaseTransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
+        return DatabaseTransactionManager.currentOrNew(transactionIsolationLevel)
     }
 
     fun <T> isolatedTransaction(block: DatabaseTransaction.() -> T): T {
@@ -45,7 +46,7 @@ class CordaPersistence(var dataSource: HikariDataSource): Closeable {
 
     fun <T> transaction(statement: DatabaseTransaction.() -> T): T {
         DatabaseTransactionManager.dataSource = this
-        return transaction(Connection.TRANSACTION_REPEATABLE_READ, 3, statement)
+        return transaction(transactionIsolationLevel, 3, statement)
     }
 
     private fun <T> transaction(transactionIsolation: Int, repetitionAttempts: Int, statement: DatabaseTransaction.() -> T): T {
@@ -90,10 +91,10 @@ class CordaPersistence(var dataSource: HikariDataSource): Closeable {
     }
 }
 
-fun configureDatabase(props: Properties): CordaPersistence {
-    val config = HikariConfig(props)
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?): CordaPersistence {
+    val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
-    val persistence = CordaPersistence.connect(dataSource)
+    val persistence = CordaPersistence.connect(dataSource, databaseProperties ?: Properties())
 
     //org.jetbrains.exposed.sql.Database will be removed once Exposed library is removed
     val database = Database.connect(dataSource) { _ -> ExposedTransactionManager() }
@@ -191,3 +192,16 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
         }
     }
 }
+
+
+fun parserTransactionIsolationLevel(property: String?) : Int =
+    when (property) {
+        "none" -> Connection.TRANSACTION_NONE
+        "readUncommitted" -> Connection.TRANSACTION_READ_UNCOMMITTED
+        "readCommitted" -> Connection.TRANSACTION_READ_COMMITTED
+        "repeatableRead" -> Connection.TRANSACTION_REPEATABLE_READ
+        "serializable" -> Connection.TRANSACTION_SERIALIZABLE
+        else -> {
+            Connection.TRANSACTION_REPEATABLE_READ
+        }
+    }
