@@ -5,9 +5,7 @@ import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
 @CordaSerializable
-class MerkleTreeException(val reason: String) : Exception() {
-    override fun toString() = "Partial Merkle Tree exception. Reason: $reason"
-}
+class MerkleTreeException(val reason: String) : Exception("Partial Merkle Tree exception. Reason: $reason")
 
 /**
  * Building and verification of Partial Merkle Tree.

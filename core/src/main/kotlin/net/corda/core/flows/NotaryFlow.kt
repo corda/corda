@@ -8,7 +8,9 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
-import net.corda.core.node.services.*
+import net.corda.core.node.services.NotaryService
+import net.corda.core.node.services.TrustedAuthorityNotaryService
+import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -45,13 +47,18 @@ object NotaryFlow {
         @Throws(NotaryException::class)
         override fun call(): List<DigitalSignature.WithKey> {
             progressTracker.currentStep = REQUESTING
-            val wtx = stx.tx
-            notaryParty = wtx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
-            check(wtx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) {
+
+            notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
+            check(stx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) {
                 "Input states must have the same Notary"
             }
+
             try {
-                stx.verifySignaturesExcept(notaryParty.owningKey)
+                if (stx.isNotaryChangeTransaction()) {
+                    stx.resolveNotaryChangeTransaction(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
+                } else {
+                    stx.verifySignaturesExcept(notaryParty.owningKey)
+                }
             } catch (ex: SignatureException) {
                 throw NotaryException(NotaryError.TransactionInvalid(ex))
             }
@@ -59,7 +66,11 @@ object NotaryFlow {
             val payload: Any = if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
                 stx
             } else {
-                wtx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
+                if (stx.isNotaryChangeTransaction()) {
+                    stx.notaryChangeTx
+                } else {
+                    stx.tx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
+                }
             }
 
             val response = try {

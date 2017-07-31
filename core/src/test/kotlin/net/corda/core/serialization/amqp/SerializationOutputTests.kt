@@ -156,7 +156,6 @@ class SerializationOutputTests {
         // Check that a vanilla AMQP decoder can deserialize without schema.
         val result = decoder.readObject() as Envelope
         assertNotNull(result)
-        println(result.schema)
 
         val des = DeserializationInput(freshDeserializationFactory)
         val desObj = des.deserialize(bytes)

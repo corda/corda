@@ -18,6 +18,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.statemachine.FlowSessionState.Initiating
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DatabaseTransaction
 import net.corda.node.utilities.DatabaseTransactionManager
@@ -98,7 +99,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         logger.debug { "Calling flow: $logic" }
         val startTime = System.nanoTime()
         val result = try {
-            logic.call()
+            val r = logic.call()
+            // Only sessions which have done a single send and nothing else will block here
+            openSessions.values
+                    .filter { it.state is Initiating }
+                    .forEach { it.waitForConfirmation() }
+            r
         } catch (e: FlowException) {
             recordDuration(startTime, success = false)
             // Check if the FlowException was propagated by looking at where the stack trace originates (see suspendAndExpectReceive).
@@ -114,10 +120,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
 
         recordDuration(startTime)
-        // Only sessions which have done a single send and nothing else will block here
-        openSessions.values
-                .filter { it.state is FlowSessionState.Initiating }
-                .forEach { it.waitForConfirmation() }
         // This is to prevent actionOnEnd being called twice if it throws an exception
         actionOnEnd(Try.Success(result), false)
         _resultFuture?.set(result)
@@ -314,7 +316,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), retryable)
         openSessions[Pair(sessionFlow, otherParty)] = session
         val (version, initiatingFlowClass) = sessionFlow.javaClass.flowVersionAndInitiatingClass
-        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass, version, firstPayload)
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, firstPayload)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()

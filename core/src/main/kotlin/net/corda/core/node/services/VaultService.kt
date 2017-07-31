@@ -10,8 +10,8 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import rx.Observable
@@ -44,7 +44,15 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * other transactions observed, then the changes are observed "net" of those.
      */
     @CordaSerializable
-    data class Update<U : ContractState>(val consumed: Set<StateAndRef<U>>, val produced: Set<StateAndRef<U>>, val flowId: UUID? = null) {
+    data class Update<U : ContractState>(val consumed: Set<StateAndRef<U>>,
+                      val produced: Set<StateAndRef<U>>,
+                      val flowId: UUID? = null,
+                      /**
+                       * Specifies the type of update, currently supported types are general and notary change. Notary
+                       * change transactions only modify the notary field on states, and potentially need to be handled
+                       * differently.
+                       */
+                      val type: UpdateType = UpdateType.GENERAL) {
         /** Checks whether the update contains a state of the specified type. */
         inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
 
@@ -90,6 +98,11 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     @CordaSerializable
     enum class StateStatus {
         UNCONSUMED, CONSUMED, ALL
+    }
+
+    @CordaSerializable
+    enum class UpdateType {
+        GENERAL, NOTARY_CHANGE
     }
 
     /**
@@ -177,10 +190,10 @@ interface VaultService {
      *
      * TODO: Consider if there's a good way to enforce the must-be-verified requirement in the type system.
      */
-    fun notifyAll(txns: Iterable<WireTransaction>)
+    fun notifyAll(txns: Iterable<CoreTransaction>)
 
     /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: WireTransaction) = notifyAll(listOf(tx))
+    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
 
     /**
      * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.

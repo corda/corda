@@ -10,10 +10,7 @@ import net.corda.core.internal.*
 import net.corda.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.loggerFor
-import net.corda.node.ArgsParser
-import net.corda.node.CmdLineOptions
-import net.corda.node.SerialFilter
-import net.corda.node.defaultSerialFilter
+import net.corda.node.*
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
@@ -318,8 +315,6 @@ open class NodeStartup(val args: Array<String>) {
                     """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
                     a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").
                     newline().
-                    newline().
-                    a("${Emoji.books}New! ").reset().a("Training now available worldwide, see https://corda.net/corda-training/").
                     newline().
                     reset())
         }

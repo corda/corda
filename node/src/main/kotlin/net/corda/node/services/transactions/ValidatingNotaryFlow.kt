@@ -26,8 +26,8 @@ class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryServ
     override fun receiveAndVerifyTx(): TransactionParts {
         val stx = receive<SignedTransaction>(otherSide).unwrap { it }
         checkSignatures(stx)
+        validateTransaction(stx)
         val wtx = stx.tx
-        validateTransaction(wtx)
         return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow)
     }
 
@@ -40,10 +40,10 @@ class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryServ
     }
 
     @Suspendable
-    fun validateTransaction(wtx: WireTransaction) {
+    fun validateTransaction(stx: SignedTransaction) {
         try {
-            resolveTransaction(wtx)
-            wtx.toLedgerTransaction(serviceHub).verify()
+            resolveTransaction(stx)
+            stx.verify(serviceHub, false)
         } catch (e: Exception) {
             throw when (e) {
                 is TransactionVerificationException,
@@ -54,5 +54,5 @@ class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryServ
     }
 
     @Suspendable
-    private fun resolveTransaction(wtx: WireTransaction) = subFlow(ResolveTransactionsFlow(wtx, otherSide))
+    private fun resolveTransaction(stx: SignedTransaction) = subFlow(ResolveTransactionsFlow(stx, otherSide))
 }

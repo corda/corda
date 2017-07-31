@@ -227,16 +227,17 @@ class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
         // First we receive the verdict transaction signed by their single key
         val completeTx = receive<SignedTransaction>(source).unwrap {
             // Check the transaction is signed apart from our own key and the notary
-            val wtx = it.verifySignaturesExcept(serviceHub.myInfo.legalIdentity.owningKey, it.tx.notary!!.owningKey)
+            it.verifySignaturesExcept(serviceHub.myInfo.legalIdentity.owningKey, it.tx.notary!!.owningKey)
             // Check the transaction data is correctly formed
-            wtx.toLedgerTransaction(serviceHub).verify()
+            val ltx = it.toLedgerTransaction(serviceHub, false)
+            ltx.verify()
             // Confirm that this is the expected type of transaction
-            require(wtx.commands.single().value is TradeApprovalContract.Commands.Completed) {
+            require(ltx.commands.single().value is TradeApprovalContract.Commands.Completed) {
                 "Transaction must represent a workflow completion"
             }
             // Check the context dependent parts of the transaction as the
             // Contract verify method must not use serviceHub queries.
-            val state = wtx.outRef<TradeApprovalContract.State>(0)
+            val state = ltx.outRef<TradeApprovalContract.State>(0)
             require(state.state.data.source == serviceHub.myInfo.legalIdentity) {
                 "Proposal not one of our original proposals"
             }

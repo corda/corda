@@ -43,6 +43,3 @@ open class AmqpCarpenterBase {
     fun testName() = Thread.currentThread().stackTrace[2].methodName
     inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 }
-
-/**********************************************************************************************************************/
-

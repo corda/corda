@@ -1,7 +1,10 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.UpgradeCommand
+import net.corda.core.contracts.UpgradedContract
+import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousPartyAndPath
@@ -63,6 +66,7 @@ class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
     override fun call() {
         val request = receive<BroadcastTransactionFlow.NotifyTxRequest>(otherParty).unwrap { it }
         subFlow(ResolveTransactionsFlow(request.tx, otherParty))
+        request.tx.verify(serviceHub)
         serviceHub.recordTransactions(request.tx)
     }
 }
@@ -77,26 +81,18 @@ class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Accep
      */
     override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
         val state = proposal.stateRef
-        val proposedTx = proposal.stx.tx
+        val proposedTx = proposal.stx.resolveNotaryChangeTransaction(serviceHub)
+        val newNotary = proposal.modification
 
-        if (proposedTx.type !is TransactionType.NotaryChange) {
-            throw StateReplacementException("The proposed transaction is not a notary change transaction.")
+        if (state !in proposedTx.inputs.map { it.ref }) {
+            throw StateReplacementException("The proposed state $state is not in the proposed transaction inputs")
         }
 
-        val newNotary = proposal.modification
+        // TODO: load and compare against notary whitelist from config. Remove the check below
         val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.notaryIdentity == newNotary }
         if (!isNotary) {
             throw StateReplacementException("The proposed node $newNotary does not run a Notary service")
         }
-        if (state !in proposedTx.inputs) {
-            throw StateReplacementException("The proposed state $state is not in the proposed transaction inputs")
-        }
-
-//            // An example requirement
-//            val blacklist = listOf("Evil Notary")
-//            checkProposal(newNotary.name !in blacklist) {
-//                "The proposed new notary $newNotary is not trusted by the party"
-//            }
     }
 }
 

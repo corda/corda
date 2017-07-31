@@ -23,8 +23,10 @@ sealed class MerkleTree {
         /**
          * Merkle tree building using hashes, with zero hash padding to full power of 2.
          */
-        @Throws(IllegalArgumentException::class)
+        @Throws(MerkleTreeException::class)
         fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree {
+            if (allLeavesHashes.isEmpty())
+                throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")
             val leaves = padWithZeros(allLeavesHashes).map { Leaf(it) }
             return buildMerkleTree(leaves)
         }
@@ -46,8 +48,6 @@ sealed class MerkleTree {
          * @return Tree root.
          */
         private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
-            if (lastNodesList.isEmpty())
-                throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")
             if (lastNodesList.size == 1) {
                 return lastNodesList[0] //Root reached.
             } else {

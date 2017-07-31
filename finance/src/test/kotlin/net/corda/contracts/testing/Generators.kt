@@ -73,7 +73,6 @@ class WiredTransactionGenerator : Generator<WireTransaction>(WireTransaction::cl
                 outputs = TransactionStateGenerator(ContractStateGenerator()).generateList(random, status),
                 commands = commands,
                 notary = PartyGenerator().generate(random, status),
-                signers = commands.flatMap { it.signers },
                 type = TransactionType.General,
                 timeWindow = TimeWindowGenerator().generate(random, status)
         )
@@ -84,7 +83,7 @@ class SignedTransactionGenerator : Generator<SignedTransaction>(SignedTransactio
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): SignedTransaction {
         val wireTransaction = WiredTransactionGenerator().generate(random, status)
         return SignedTransaction(
-                wtx = wireTransaction,
+                ctx = wireTransaction,
                 sigs = listOf(NullSignature)
         )
     }

@@ -116,7 +116,6 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timeWindow: TimeWindow? = null
         transaction = LedgerTransaction(
                 inputs,
@@ -125,7 +124,6 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
                 attachments,
                 id,
                 notary,
-                signers,
                 timeWindow,
                 TransactionType.General
         )
@@ -148,7 +146,6 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timeWindow: TimeWindow? = null
         return LedgerTransaction(
                 inputs,
@@ -157,7 +154,6 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
                 attachments,
                 id,
                 notary,
-                signers,
                 timeWindow,
                 TransactionType.General
         )
