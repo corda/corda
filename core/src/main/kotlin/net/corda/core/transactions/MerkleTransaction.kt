@@ -1,19 +1,36 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.MerkleTree
-import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.crypto.PartialMerkleTree
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.serialize
+import java.nio.ByteBuffer
 import java.util.function.Predicate
 
-fun <T : Any> serializedHash(x: T): SecureHash {
-    return x.serialize(context = P2P_CONTEXT.withoutReferences()).hash
+/**
+ * If a privacy salt is provided, the resulted output (merkle-leaf) is computed as
+ * Hash(serializedObject || Hash(privacy_salt || obj_index_in_merkle_tree)).
+ */
+fun <T : Any> serializedHash(x: T, privacySalt: PrivacySalt?, index: Int): SecureHash {
+    return if (privacySalt != null)
+        serializedHash(x, computeNonce(privacySalt, index))
+    else
+        serializedHash(x)
 }
+
+fun <T : Any> serializedHash(x: T, nonce: SecureHash): SecureHash {
+    return if (x !is PrivacySalt) // PrivacySalt is not required to have an accompanied nonce.
+        (x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes + nonce.bytes).sha256()
+    else
+        serializedHash(x)
+}
+
+fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes.sha256()
+
+/** The nonce is computed as Hash(privacySalt || index). */
+fun computeNonce(privacySalt: PrivacySalt, index: Int) = (privacySalt.bytes + ByteBuffer.allocate(4).putInt(index).array()).sha256()
 
 /**
  * Implemented by [WireTransaction] and [FilteredLeaves]. A TraversableTransaction allows you to iterate
@@ -32,6 +49,17 @@ interface TraversableTransaction {
     val notary: Party?
     val type: TransactionType?
     val timeWindow: TimeWindow?
+    /**
+     * For privacy purposes, each part of a transaction should be accompanied by a nonce.
+     * To avoid storing a random number (nonce) per component, an initial "salt" is the sole value utilised,
+     * so that all component nonces are deterministically computed in the following way:
+     * nonce1 = H(salt || 1)
+     * nonce2 = H(salt || 2)
+     *
+     * Thus, all of the nonces are "independent" in the sense that knowing one or some of them, you can learn
+     * nothing about the rest.
+     */
+    val privacySalt: PrivacySalt?
 
     /**
      * Returns a flattened list of all the components that are present in the transaction, in the following order:
@@ -41,11 +69,13 @@ interface TraversableTransaction {
      * - Each output that is present
      * - Each command that is present
      * - The notary [Party], if present
-     * - Each required signer ([mustSign]) that is present
      * - The type of the transaction, if present
      * - The time-window of the transaction, if present
+     * - The privacy salt required for nonces, always presented in [WireTransaction] and always null in [FilteredLeaves]
      */
     val availableComponents: List<Any>
+        // NOTE: if the order below is altered or components are added/removed in the future, one should also reflect
+        //      this change to the indexOffsets() method in WireTransaction.
         get() {
             // We may want to specify our own behaviour on certain tx fields.
             // Like if we include them at all, what to do with null values, if we treat list as one or not etc. for building
@@ -54,6 +84,7 @@ interface TraversableTransaction {
             notary?.let { result += it }
             type?.let { result += it }
             timeWindow?.let { result += it }
+            privacySalt?.let { result += it }
             return result
         }
 
@@ -62,12 +93,13 @@ interface TraversableTransaction {
      * The root of the tree is the transaction identifier. The tree structure is helpful for privacy, please
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
-    val availableComponentHashes: List<SecureHash> get() = availableComponents.map { serializedHash(it) }
+    val availableComponentHashes: List<SecureHash> get() = availableComponents.mapIndexed { index, it -> serializedHash(it, privacySalt, index) }
 }
 
 /**
  * Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaf types, notice that every
- * field from [WireTransaction] can be used in [PartialMerkleTree] calculation.
+ * field from [WireTransaction] can be used in [PartialMerkleTree] calculation, except for the privacySalt.
+ * A list of nonces is also required to (re)construct component hashes.
  */
 @CordaSerializable
 class FilteredLeaves(
@@ -77,8 +109,21 @@ class FilteredLeaves(
         override val commands: List<Command<*>>,
         override val notary: Party?,
         override val type: TransactionType?,
-        override val timeWindow: TimeWindow?
+        override val timeWindow: TimeWindow?,
+        val nonces: List<SecureHash>
 ) : TraversableTransaction {
+
+    /**
+     * PrivacySalt should be always null for FilteredLeaves, because making it accidentally visible would expose all
+     * nonces (including filtered out components) causing privacy issues, see [serializedHash] and
+     * [TraversableTransaction.privacySalt].
+     */
+    override val privacySalt: PrivacySalt? get() = null
+
+    init {
+        require(availableComponents.size == nonces.size) { "Each visible component should be accompanied by a nonce." }
+    }
+
     /**
      * Function that checks the whole filtered structure.
      * Force type checking on a structure that we obtained, so we don't sign more than expected.
@@ -92,6 +137,8 @@ class FilteredLeaves(
         val checkList = availableComponents.map { checkingFun(it) }
         return (!checkList.isEmpty()) && checkList.all { it }
     }
+
+    override val availableComponentHashes: List<SecureHash> get() = availableComponents.mapIndexed { index, it -> serializedHash(it, nonces[index]) }
 }
 
 /**

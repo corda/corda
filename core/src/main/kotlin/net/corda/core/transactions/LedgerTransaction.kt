@@ -35,7 +35,8 @@ data class LedgerTransaction(
         override val id: SecureHash,
         override val notary: Party?,
         val timeWindow: TimeWindow?,
-        val type: TransactionType
+        val type: TransactionType,
+        val privacySalt: PrivacySalt
 ) : FullTransaction() {
     //DOCEND 1
     init {
