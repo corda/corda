@@ -34,7 +34,6 @@ dependencies {
     cordaCompile project(':core')
     cordaCompile project(':finance')
     cordaCompile project(':webserver')
-    cordaCompile project(':test-utils')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
@@ -53,6 +52,7 @@ dependencies {
     compile "com.opengamma.strata:strata-math:${strata_version}"
 
     // Test dependencies
+    testCompile project(':test-utils')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }
