@@ -39,9 +39,9 @@ a JVM client.
 Protocol
 --------
 
-Normally attachments on transactions are fetched automatically via the ``ResolveTransactionsFlow``. Attachments
+Normally attachments on transactions are fetched automatically via the ``ReceiveTransactionFlow``. Attachments
 are needed in order to validate a transaction (they include, for example, the contract code), so must be fetched
-before the validation process can run. ``ResolveTransactionsFlow`` calls ``FetchTransactionsFlow`` to perform the
+before the validation process can run. ``ReceiveTransactionFlow`` calls ``ResolveTransactionsFlow`` to perform the
 actual retrieval.
 
 .. note:: Future versions of Corda may support non-critical attachments that are not used for transaction verification
