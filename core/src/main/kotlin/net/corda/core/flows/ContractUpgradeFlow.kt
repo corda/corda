@@ -47,19 +47,22 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
 
         fun <OldState : ContractState, NewState : ContractState> assembleBareTx(
                 stateRef: StateAndRef<OldState>,
-                upgradedContractClass: Class<out UpgradedContract<OldState, NewState>>
+                upgradedContractClass: Class<out UpgradedContract<OldState, NewState>>,
+                privacySalt: PrivacySalt
         ): TransactionBuilder {
             val contractUpgrade = upgradedContractClass.newInstance()
             return TransactionType.General.Builder(stateRef.state.notary)
                     .withItems(
                             stateRef,
                             contractUpgrade.upgrade(stateRef.state.data),
-                            Command(UpgradeCommand(upgradedContractClass), stateRef.state.data.participants.map { it.owningKey }))
+                            Command(UpgradeCommand(upgradedContractClass), stateRef.state.data.participants.map { it.owningKey }),
+                            privacySalt
+                    )
         }
     }
 
     override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
-        val baseTx = assembleBareTx(originalState, modification)
+        val baseTx = assembleBareTx(originalState, modification, PrivacySalt())
         val participantKeys = originalState.state.data.participants.map { it.owningKey }.toSet()
         // TODO: We need a much faster way of finding our key in the transaction
         val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()

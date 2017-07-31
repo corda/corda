@@ -13,6 +13,7 @@ import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
@@ -245,6 +246,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.notary)
         kryo.writeClassAndObject(output, obj.type)
         kryo.writeClassAndObject(output, obj.timeWindow)
+        kryo.writeClassAndObject(output, obj.privacySalt)
     }
 
     private fun attachmentsClassLoader(kryo: Kryo, attachmentHashes: List<SecureHash>): ClassLoader? {
@@ -272,7 +274,8 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
             val notary = kryo.readClassAndObject(input) as Party?
             val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timeWindow = kryo.readClassAndObject(input) as TimeWindow?
-            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, transactionType, timeWindow)
+            val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
+            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, transactionType, timeWindow, privacySalt)
         }
     }
 }
