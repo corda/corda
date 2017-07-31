@@ -2,7 +2,6 @@ package net.corda.core.contracts
 
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.allZeros
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
@@ -452,6 +451,6 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
 
     init {
         require(bytes.size == 32) { "Privacy salt should be 32 bytes." }
-        require(!bytes.allZeros()) { "Privacy salt should not be all zeros." }
+        require(!bytes.all { it == 0.toByte() }) { "Privacy salt should not be all zeros." }
     }
 }
