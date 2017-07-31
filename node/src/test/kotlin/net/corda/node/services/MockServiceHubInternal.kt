@@ -33,7 +33,6 @@ open class MockServiceHubInternal(
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
         override val attachments: AttachmentStorage = MockAttachmentStorage(),
         override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage(),
-        override val uploaders: List<FileUploader> = listOf<FileUploader>(),
         override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage(),
         val mapCache: NetworkMapCacheInternal? = null,
         val scheduler: SchedulerService? = null,

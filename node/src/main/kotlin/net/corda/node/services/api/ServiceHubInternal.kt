@@ -23,7 +23,6 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.CordaPersistence
-import java.io.InputStream
 
 /**
  * Session ID to use for services listening for the first message in a session (before a
@@ -68,24 +67,6 @@ sealed class NetworkCacheError : Exception() {
     class DeregistrationFailed : NetworkCacheError()
 }
 
-/**
- * An interface that denotes a service that can accept file uploads.
- */
-// TODO This is no longer used and can be removed
-interface FileUploader {
-    /**
-     * Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
-     * back to the user in the response.
-     */
-    fun upload(file: InputStream): String
-
-    /**
-     * Check if this service accepts this type of upload. For example if you are uploading interest rates this could
-     * be "my-service-interest-rates". Type here does not refer to file extentions or MIME types.
-     */
-    fun accepts(type: String): Boolean
-}
-
 interface ServiceHubInternal : PluginServiceHub {
     companion object {
         private val log = loggerFor<ServiceHubInternal>()
@@ -107,10 +88,6 @@ interface ServiceHubInternal : PluginServiceHub {
     val networkService: MessagingService
     val database: CordaPersistence
     val configuration: NodeConfiguration
-
-    @Suppress("DEPRECATION")
-    @Deprecated("This service will be removed in a future milestone")
-    val uploaders: List<FileUploader>
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }

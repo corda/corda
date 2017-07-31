@@ -221,10 +221,6 @@ interface CordaRPCOps : RPCOps {
      */
     fun uploadAttachment(jar: InputStream): SecureHash
 
-    // TODO: Remove this from the interface
-    @Deprecated("This service will be removed in a future milestone")
-    fun uploadFile(dataType: String, name: String?, file: InputStream): String
-
     /**
      * Authorise a contract state upgrade.
      * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
