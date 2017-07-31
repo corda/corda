@@ -1,6 +1,6 @@
 package net.corda.core.concurrent
 
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.match
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.getOrThrow

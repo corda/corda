@@ -7,6 +7,9 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* The concept of ``TransactionType`` has been removed. Transactions no longer carry a `type` property. All usages of
+  ``TransactionType.General.Builder()`` have to be replaced with ``TransactionBuilder()``.
+
 * Changes in ``NodeInfo``:
 
    * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical

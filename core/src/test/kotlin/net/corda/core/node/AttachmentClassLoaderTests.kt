@@ -67,7 +67,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
         fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
             val state = State(magicNumber)
-            return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
+            return TransactionBuilder(notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
         }
     }
 

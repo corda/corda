@@ -137,7 +137,7 @@ class NotaryChangeTests {
         val stateB = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
         val stateC = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
 
-        val tx = TransactionType.General.Builder(null).apply {
+        val tx = TransactionBuilder(null).apply {
             addCommand(Command(DummyContract.Commands.Create(), owner.party.owningKey))
             addOutputState(stateA, notary, encumbrance = 2) // Encumbered by stateB
             addOutputState(stateC, notary)

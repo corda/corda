@@ -3,7 +3,6 @@ package net.corda.node.services
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.internal.div
@@ -13,6 +12,7 @@ import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.node.internal.AbstractNode
@@ -138,8 +138,8 @@ class BFTNotaryServiceTests {
 private fun AbstractNode.signInitialTransaction(
         notary: Party,
         makeUnique: Boolean = false,
-        block: TransactionType.General.Builder.() -> Any?
-) = services.signInitialTransaction(TransactionType.General.Builder(notary).apply {
+        block: TransactionBuilder.() -> Any?
+) = services.signInitialTransaction(TransactionBuilder(notary).apply {
     block()
     if (makeUnique) {
         addAttachment(SecureHash.randomSHA256())

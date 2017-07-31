@@ -26,8 +26,6 @@ data class WireTransaction(
         /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
         override val commands: List<Command<*>>,
         override val notary: Party?,
-        // TODO: remove type
-        override val type: TransactionType,
         override val timeWindow: TimeWindow?,
         override val privacySalt: PrivacySalt = PrivacySalt()
 ) : CoreTransaction(), TraversableTransaction {
@@ -39,9 +37,6 @@ data class WireTransaction(
 
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */
     override val id: SecureHash get() = merkleTree.hash
-
-    override val availableComponents: List<Any>
-        get() = listOf(inputs, attachments, outputs, commands).flatten() + listOf(notary, type, timeWindow).filterNotNull()
 
     /** Public keys that need to be fulfilled by signatures in order for the transaction to be valid. */
     val requiredSigningKeys: Set<PublicKey> get() {
@@ -93,7 +88,7 @@ data class WireTransaction(
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, type, privacySalt)
+        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
     }
 
     /**
@@ -143,8 +138,7 @@ data class WireTransaction(
                 outputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[1]) },
                 commands.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[2]) },
                 notNullFalseAndNoncesUpdate(notary, offsets[3]) as Party?,
-                notNullFalseAndNoncesUpdate(type, offsets[4]) as TransactionType?,
-                notNullFalseAndNoncesUpdate(timeWindow, offsets[5]) as TimeWindow?,
+                notNullFalseAndNoncesUpdate(timeWindow, offsets[4]) as TimeWindow?,
                 nonces
         )
     }
@@ -162,7 +156,6 @@ data class WireTransaction(
         } else {
             offsets.add(offsets.last())
         }
-        offsets.add(offsets.last() + 1) // For tx type.
         if (timeWindow != null) {
             offsets.add(offsets.last() + 1)
         } else {
