@@ -54,7 +54,7 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
 
     @Before
     fun setup() {
-        tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(
+        tx = TransactionBuilder(DUMMY_NOTARY).withItems(
                 inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey))
         )
     }
@@ -86,7 +86,7 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
 
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
-            val tx2 = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState, outputState, changeState,
+            val tx2 = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState,
                     Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
 
             val ptx2 = notaryServices.signInitialTransaction(tx2)

@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
-import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.USD
 import net.corda.core.flows.BroadcastTransactionFlow.NotifyTxRequest
 import net.corda.core.flows.FlowLogic
@@ -13,6 +12,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
@@ -50,7 +50,7 @@ class DataVendingServiceTests {
         mockNet.runNetwork()
 
         // Generate an issuance transaction
-        val ptx = TransactionType.General.Builder(null)
+        val ptx = TransactionBuilder(null)
         Cash().generateIssue(ptx, Amount(100, Issued(deposit, USD)), beneficiary, DUMMY_NOTARY)
 
         // Complete the cash transaction, and then manually relay it
@@ -80,7 +80,7 @@ class DataVendingServiceTests {
         mockNet.runNetwork()
 
         // Generate an issuance transaction
-        val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
+        val ptx = TransactionBuilder(DUMMY_NOTARY)
         Cash().generateIssue(ptx, Amount(100, Issued(deposit, USD)), beneficiary, DUMMY_NOTARY)
 
         // The transaction tries issuing MEGA_CORP cash, but we aren't the issuer, so it's invalid

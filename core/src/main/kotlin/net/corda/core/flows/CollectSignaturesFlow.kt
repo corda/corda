@@ -42,7 +42,7 @@ import java.security.PublicKey
  *
  * Example - issuing a multi-lateral agreement which requires N signatures:
  *
- *     val builder = TransactionType.General.Builder(notaryRef)
+ *     val builder = TransactionBuilder(notaryRef)
  *     val issueCommand = Command(Agreement.Commands.Issue(), state.participants)
  *
  *     builder.withItems(state, issueCommand)

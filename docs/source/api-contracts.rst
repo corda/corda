@@ -96,7 +96,6 @@ Where:
 * ``id`` is the transaction's merkle root hash'
 * ``notary`` is the transaction's notary. If there are inputs these must have the same notary on their source transactions.
 * ``timeWindow`` is the transaction's timestamp and defines the acceptable delay for notarisation.
-* ``type`` is the class of Transaction. Normal ledger data transactions are ``TransactionType.General``, but migration of states to a new notary uses ``TransactionType.NotaryChange``.
 
 requireThat()
 ^^^^^^^^^^^^^

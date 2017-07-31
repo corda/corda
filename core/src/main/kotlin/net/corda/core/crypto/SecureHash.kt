@@ -1,8 +1,9 @@
 package net.corda.core.crypto
 
-import com.google.common.io.BaseEncoding
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.parseAsHex
+import net.corda.core.utilities.toHexString
 import java.security.MessageDigest
 
 /**
@@ -18,7 +19,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         }
     }
 
-    override fun toString(): String = BaseEncoding.base16().encode(bytes)
+    override fun toString(): String = bytes.toHexString()
 
     fun prefixChars(prefixLen: Int = 6) = toString().substring(0, prefixLen)
     fun hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
@@ -26,7 +27,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
         @JvmStatic
-        fun parse(str: String) = BaseEncoding.base16().decode(str.toUpperCase()).let {
+        fun parse(str: String) = str.toUpperCase().parseAsHex().let {
             when (it.size) {
                 32 -> SHA256(it)
                 else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 32 bytes in hex: $str")

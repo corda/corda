@@ -74,7 +74,6 @@ data class GeneratedLedger(
                     outputs,
                     commands.map { it.first },
                     null,
-                    TransactionType.General,
                     null
             )
             val newOutputStateAndRefs = outputs.mapIndexed { i, state ->
@@ -107,7 +106,6 @@ data class GeneratedLedger(
                     outputs,
                     commands.map { it.first },
                     inputNotary,
-                    TransactionType.General,
                     null
             )
             val newOutputStateAndRefs = outputs.mapIndexed { i, state ->

@@ -26,7 +26,6 @@ import java.util.*
  * [TransactionState] with this notary specified will be generated automatically.
  */
 open class TransactionBuilder(
-        protected val type: TransactionType = TransactionType.General,
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
@@ -36,13 +35,12 @@ open class TransactionBuilder(
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt()
     ) {
-    constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
+    constructor(notary: Party) : this (notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
     /**
      * Creates a copy of the builder.
      */
     fun copy() = TransactionBuilder(
-            type = type,
             notary = notary,
             inputs = ArrayList(inputs),
             attachments = ArrayList(attachments),
@@ -73,7 +71,7 @@ open class TransactionBuilder(
     // DOCEND 1
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), notary, type, window, privacySalt)
+            ArrayList(outputs), ArrayList(commands), notary, window, privacySalt)
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)

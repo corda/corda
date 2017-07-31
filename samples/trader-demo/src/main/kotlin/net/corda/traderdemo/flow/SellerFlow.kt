@@ -16,6 +16,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.flows.TwoPartyTradeFlow
 import net.corda.testing.BOC
@@ -91,7 +92,7 @@ class SellerFlow(val otherParty: Party,
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
         val move: SignedTransaction = run {
-            val builder = TransactionType.General.Builder(notaryNode.notaryIdentity)
+            val builder = TransactionBuilder(notaryNode.notaryIdentity)
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             val stx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(stx)).single()

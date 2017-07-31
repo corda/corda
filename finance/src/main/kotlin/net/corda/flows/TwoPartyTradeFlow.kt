@@ -178,7 +178,7 @@ object TwoPartyTradeFlow {
 
         @Suspendable
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
-            val ptx = TransactionType.General.Builder(notary)
+            val ptx = TransactionBuilder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
             val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwner)

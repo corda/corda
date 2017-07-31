@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.TransactionType.General;
 import net.corda.core.crypto.DigitalSignature;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
@@ -311,7 +310,7 @@ public class FlowCookbookJava {
             progressTracker.setCurrentStep(TX_BUILDING);
 
             // DOCSTART 19
-            TransactionBuilder txBuilder = new TransactionBuilder(General.INSTANCE, specificNotary);
+            TransactionBuilder txBuilder = new TransactionBuilder(specificNotary);
             // DOCEND 19
 
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:
