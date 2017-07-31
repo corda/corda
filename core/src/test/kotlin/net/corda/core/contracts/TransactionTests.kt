@@ -15,6 +15,7 @@ import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 
 class TransactionTests : TestDependencyInjectionBase() {
     private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair, notarySig: Boolean = true): SignedTransaction {
@@ -151,5 +152,23 @@ class TransactionTests : TestDependencyInjectionBase() {
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction() }
+    }
+
+    @Test
+    fun `transactions with identical outputs must have different ids`() {
+        val outputState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
+        fun buildTransaction() = WireTransaction(
+                inputs = emptyList(),
+                attachments = emptyList(),
+                outputs = listOf(outputState),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = null,
+                timeWindow = null
+        )
+
+        val issueTx1 = buildTransaction()
+        val issueTx2 = buildTransaction()
+
+        assertNotEquals(issueTx1.id, issueTx2.id)
     }
 }
