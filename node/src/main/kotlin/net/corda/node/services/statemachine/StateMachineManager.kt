@@ -468,11 +468,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
-        // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
-        // on the flow completion future inside that context. The problem is that any progress checkpoints are
-        // unable to acquire the table lock and move forward till the calling transaction finishes.
-        // Committing in line here on a fresh context ensure we can progress.
-        val fiber = database.isolatedTransaction {
+        val fiber = database.transaction {
             val fiber = createFiber(logic, flowInitiator)
             updateCheckpoint(fiber)
             fiber

@@ -42,7 +42,8 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class NodeSchedulerService(private val services: ServiceHubInternal,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
-                           private val unfinishedSchedules: ReusableLatch = ReusableLatch())
+                           private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
+                           private val serverThread: AffinityExecutor)
     : SchedulerService, SingletonSerializeAsToken() {
 
     companion object {
@@ -156,16 +157,18 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        services.database.transaction {
-            val scheduledFlow = getScheduledFlow(scheduledState)
-            if (scheduledFlow != null) {
-                // TODO Because the flow is executed asynchronously, there is a small window between this tx we're in
-                // committing and the flow's first checkpoint when it starts in which we can lose the flow if the node
-                // goes down.
-                // See discussion in https://github.com/corda/corda/pull/639#discussion_r115257437
-                val future = services.startFlow(scheduledFlow, FlowInitiator.Scheduled(scheduledState)).resultFuture
-                future.then {
-                    unfinishedSchedules.countDown()
+        serverThread.execute {
+            services.database.transaction {
+                val scheduledFlow = getScheduledFlow(scheduledState)
+                if (scheduledFlow != null) {
+                    // TODO Because the flow is executed asynchronously, there is a small window between this tx we're in
+                    // committing and the flow's first checkpoint when it starts in which we can lose the flow if the node
+                    // goes down.
+                    // See discussion in https://github.com/corda/corda/pull/639#discussion_r115257437
+                    val future = services.startFlow(scheduledFlow, FlowInitiator.Scheduled(scheduledState)).resultFuture
+                    future.then {
+                        unfinishedSchedules.countDown()
+                    }
                 }
             }
         }

@@ -97,8 +97,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 override val vaultService: VaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
                 override val testReference = this@NodeSchedulerServiceTest
             }
-            scheduler = NodeSchedulerService(services, schedulerGatedExecutor)
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
+            scheduler = NodeSchedulerService(services, schedulerGatedExecutor, serverThread = smmExecutor)
             val mockSMM = StateMachineManager(services, DBCheckpointStorage(), smmExecutor, database)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
