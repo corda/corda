@@ -67,7 +67,7 @@ UNRELEASED
 
   * ``registerAnonymousIdentity`` is now ``verifyAndRegisterAnonymousIdentity`` to indicate it performs sanity checks on
     the identity provided. A separate ``verifyAnonymousIdentity`` function has been added for use-cases where verification
-    is performed indepdently of registration.
+    is performed independently of registration.
 
 .. Milestone 15:
 
