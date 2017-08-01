@@ -6,8 +6,8 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.POUNDS
 import net.corda.core.contracts.`issued by`
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.random63BitValue
 import net.corda.core.serialization.serialize
 import net.corda.testing.MEGA_CORP_PUBKEY
 import net.corda.testing.MINI_CORP_PUBKEY
