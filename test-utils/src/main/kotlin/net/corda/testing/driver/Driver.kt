@@ -514,7 +514,7 @@ class DriverDSL(
         _executorService?.shutdownNow()
     }
 
-    private fun establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration, processDeathFuture: CordaFuture<out Throwable>): CordaFuture<CordaRPCOps> {
+    private fun establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val client = CordaRPCClient(nodeAddress, sslConfig, initialiseSerialization = false)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
@@ -527,7 +527,7 @@ class DriverDSL(
         }
         return firstOf(connectionFuture, processDeathFuture) {
             if (it == processDeathFuture) {
-                throw processDeathFuture.getOrThrow()
+                throw ListenProcessDeathException(nodeAddress, processDeathFuture.getOrThrow())
             }
             val connection = connectionFuture.getOrThrow()
             shutdownManager.registerShutdown(connection::close)
@@ -725,7 +725,7 @@ class DriverDSL(
             registerProcess(processFuture)
             return processFuture.flatMap { process ->
                 val processDeathFuture = poll(executorService, "process death") {
-                    if (process.isAlive) null else ListenProcessDeathException(nodeConfiguration.p2pAddress, process)
+                    if (process.isAlive) null else process
                 }
                 // We continue to use SSL enabled port for RPC when its for node user.
                 establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, processDeathFuture).flatMap { rpc ->
@@ -735,7 +735,7 @@ class DriverDSL(
                     }.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
-                            throw processDeathFuture.getOrThrow()
+                            throw ListenProcessDeathException(nodeConfiguration.p2pAddress, process)
                         }
                         processDeathFuture.cancel(false)
                         NodeHandle.OutOfProcess(rpc.nodeIdentity(), rpc, nodeConfiguration, webAddress, debugPort, process)
