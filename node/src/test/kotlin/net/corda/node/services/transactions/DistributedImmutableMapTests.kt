@@ -15,6 +15,7 @@ import net.corda.testing.LogHelper
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.jetbrains.exposed.sql.Transaction
 import org.junit.After
 import org.junit.Before
@@ -34,7 +35,7 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
         LogHelper.setLevel(NetworkMapService::class)
-        database = configureDatabase(makeTestDataSourceProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
         cluster = setUpCluster()
     }
 

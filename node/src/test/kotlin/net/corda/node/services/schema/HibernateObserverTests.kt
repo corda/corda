@@ -14,6 +14,7 @@ import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -31,7 +32,7 @@ class HibernateObserverTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(HibernateObserver::class)
-        database = configureDatabase(makeTestDataSourceProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
     }
 
     @After
@@ -101,7 +102,7 @@ class HibernateObserverTests {
         }
 
         @Suppress("UNUSED_VARIABLE")
-        val observer = HibernateObserver(rawUpdatesPublisher, HibernateConfiguration(schemaService))
+        val observer = HibernateObserver(rawUpdatesPublisher, HibernateConfiguration(schemaService, makeTestDatabaseProperties()))
         database.transaction {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
             val parentRowCountResult = TransactionManager.current().connection.prepareStatement("select count(*) from Parents").executeQuery()

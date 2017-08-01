@@ -37,13 +37,8 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.*
 import net.corda.testing.node.MOCK_VERSION_INFO
-import net.corda.testing.initialiseTestSerialization
-import net.corda.testing.resetTestSerialization
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
@@ -270,7 +265,8 @@ fun <A> driver(
                 isDebug = isDebug
         ),
         coerce = { it },
-        dsl = dsl
+        dsl = dsl,
+        initialiseSerialization = initialiseSerialization
 )
 
 /**

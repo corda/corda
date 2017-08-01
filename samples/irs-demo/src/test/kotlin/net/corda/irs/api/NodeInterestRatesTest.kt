@@ -21,6 +21,7 @@ import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Assert
@@ -59,7 +60,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        database = configureDatabase(makeTestDataSourceProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
         database.transaction {
             oracle = NodeInterestRates.Oracle(
                     MEGA_CORP,

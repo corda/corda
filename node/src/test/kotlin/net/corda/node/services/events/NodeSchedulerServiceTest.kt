@@ -21,12 +21,10 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
 import net.corda.testing.getTestX509Name
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockKeyManagementService
-import net.corda.testing.node.TestClock
-import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
 import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.node.*
+import net.corda.testing.node.TestClock
 import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
@@ -37,6 +35,7 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -75,7 +74,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
@@ -92,7 +91,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
-                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)
+                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
                 override val testReference = this@NodeSchedulerServiceTest
             }
             scheduler = NodeSchedulerService(services, schedulerGatedExecutor)

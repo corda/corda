@@ -15,6 +15,7 @@ import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -35,7 +36,7 @@ class AttachmentTests {
     fun setUp() {
         mockNet = MockNetwork()
         val dataSourceProperties = makeTestDataSourceProperties()
-        configuration = RequeryConfiguration(dataSourceProperties)
+        configuration = RequeryConfiguration(dataSourceProperties, databaseProperties = makeTestDatabaseProperties())
     }
 
     @After

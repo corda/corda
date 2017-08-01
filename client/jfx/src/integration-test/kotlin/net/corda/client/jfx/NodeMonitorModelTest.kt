@@ -52,7 +52,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     lateinit var newNode: (X500Name) -> NodeInfo
 
-    override fun setup() = driver(initialiseSerialization = false) {
+    override fun setup() = driver {
         val cashUser = User("user1", "test", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>(),

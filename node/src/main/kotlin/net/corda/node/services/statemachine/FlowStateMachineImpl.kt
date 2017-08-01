@@ -58,7 +58,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 DatabaseTransactionManager.current().close()
                 Strand.sleep(millis)
                 DatabaseTransactionManager.dataSource = db
-                DatabaseTransactionManager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
+                DatabaseTransactionManager.newTransaction()
             } else Strand.sleep(millis)
         }
     }

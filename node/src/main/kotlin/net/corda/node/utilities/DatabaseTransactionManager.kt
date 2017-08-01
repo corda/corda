@@ -74,11 +74,11 @@ class DatabaseTransactionManager(initDataSource: CordaPersistence) {
 
         fun currentOrNull(): DatabaseTransaction? = manager.currentOrNull()
 
-        fun currentOrNew(isolation: Int) = currentOrNull() ?: manager.newTransaction(isolation)
+        fun currentOrNew(isolation: Int = dataSource.transactionIsolationLevel) = currentOrNull() ?: manager.newTransaction(isolation)
 
         fun current(): DatabaseTransaction = currentOrNull() ?: error("No transaction in context.")
 
-        fun newTransaction(isolation: Int) = manager.newTransaction(isolation)
+        fun newTransaction(isolation: Int = dataSource.transactionIsolationLevel) = manager.newTransaction(isolation)
     }
 
     data class Boundary(val txId: UUID)

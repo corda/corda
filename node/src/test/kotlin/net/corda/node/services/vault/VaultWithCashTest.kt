@@ -20,6 +20,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -43,10 +44,10 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
         database.transaction {
             val customSchemas = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1)
-            val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas))
+            val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
             services = object : MockServices() {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
