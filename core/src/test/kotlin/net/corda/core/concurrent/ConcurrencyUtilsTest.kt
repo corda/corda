@@ -1,8 +1,8 @@
 package net.corda.core.concurrent
 
 import com.nhaarman.mockito_kotlin.*
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.slf4j.Logger
@@ -47,7 +47,7 @@ class ConcurrencyUtilsTest {
         assertEquals(100, g.getOrThrow())
         assertEquals(1, invocations) // Handler didn't run as g was already done.
         verifyNoMoreInteractions(log) // CancellationException is not logged (if due to cancel).
-        assertTrue(f2.isCancelled())
+        assertTrue(f2.isCancelled)
     }
 
     /**

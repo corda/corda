@@ -10,7 +10,7 @@ import rx.Observer
 
 // TODO Delete this file once the Future stuff is out of here
 
-fun <A> CordaFuture<A>.toObservable(): Observable<A> {
+fun <A> CordaFuture<out A>.toObservable(): Observable<A> {
     return Observable.create { subscriber ->
         thenMatch({
             subscriber.onNext(it)
@@ -39,7 +39,7 @@ fun <T> Observable<T>.toFuture(): CordaFuture<T> = openFuture<T>().also {
         override fun onCompleted() {}
     })
     it.then {
-        if (it.isCancelled()) {
+        if (it.isCancelled) {
             subscription.unsubscribe()
         }
     }

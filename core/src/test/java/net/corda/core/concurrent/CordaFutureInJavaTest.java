@@ -31,7 +31,7 @@ public class CordaFutureInJavaTest {
             assertEquals(100, f.get());
         }
         {
-            Future<? extends Integer> f = doneFuture(100).unwrap();
+            Future<Integer> f = doneFuture(100);
             assertEquals(Integer.valueOf(100), f.get());
         }
         {

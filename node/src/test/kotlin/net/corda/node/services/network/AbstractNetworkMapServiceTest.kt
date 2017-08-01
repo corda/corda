@@ -1,12 +1,12 @@
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.send

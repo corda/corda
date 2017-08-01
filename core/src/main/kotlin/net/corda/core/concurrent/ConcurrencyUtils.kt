@@ -1,7 +1,6 @@
 package net.corda.core.concurrent
 
 import com.google.common.annotations.VisibleForTesting
-import net.corda.core.internal.concurrent.match
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.getOrThrow
 import org.slf4j.Logger
@@ -24,20 +23,20 @@ fun <V, W> Future<V>.match(success: (V) -> W, failure: (Throwable) -> W): W {
  * The result of the handler is copied into the result future, and the handler isn't invoked again.
  * If a given future errors after the result future is done, the error is automatically logged.
  */
-fun <V, W> firstOf(vararg futures: CordaFuture<V>, handler: (CordaFuture<V>) -> W) = firstOf(futures, defaultLog, handler)
+fun <V, W> firstOf(vararg futures: CordaFuture<out V>, handler: (CordaFuture<out V>) -> W) = firstOf(futures, defaultLog, handler)
 
 private val defaultLog = LoggerFactory.getLogger("net.corda.core.concurrent")
 @VisibleForTesting
 internal val shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 
-internal fun <V, W> firstOf(futures: Array<out CordaFuture<V>>, log: Logger, handler: (CordaFuture<V>) -> W): CordaFuture<W> {
+internal fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger, handler: (CordaFuture<out V>) -> W): CordaFuture<W> {
     val resultFuture = openFuture<W>()
     val winnerChosen = AtomicBoolean()
     futures.forEach {
         it.then {
             if (winnerChosen.compareAndSet(false, true)) {
                 resultFuture.capture { handler(it) }
-            } else if (it.isCancelled()) {
+            } else if (it.isCancelled) {
                 // Do nothing.
             } else {
                 it.match({}, { log.error(shortCircuitedTaskFailedMessage, it) })

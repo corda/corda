@@ -1,8 +1,8 @@
 package net.corda.irs.api
 
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.irs.flows.UpdateBusinessDayFlow
 import java.time.LocalDate

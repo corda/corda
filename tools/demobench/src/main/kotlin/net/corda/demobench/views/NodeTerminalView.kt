@@ -14,9 +14,9 @@ import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.util.Duration
 import net.corda.contracts.getCashBalances
+import net.corda.core.concurrent.match
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.commonName
-import net.corda.core.internal.concurrent.match
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.vault.PageSpecification

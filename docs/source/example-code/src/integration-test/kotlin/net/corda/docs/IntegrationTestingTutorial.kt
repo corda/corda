@@ -3,13 +3,13 @@ package net.corda.docs
 import net.corda.contracts.asset.Cash
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission

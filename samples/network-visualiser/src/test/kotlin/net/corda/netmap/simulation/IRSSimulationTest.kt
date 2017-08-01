@@ -1,6 +1,6 @@
 package net.corda.netmap.simulation
 
-import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.LogHelper
 import org.junit.Test
 
@@ -11,7 +11,7 @@ class IRSSimulationTest {
         LogHelper.setLevel("+messages")
         val sim = IRSSimulation(false, false, null)
         val future = sim.start()
-        while (!future.isDone()) sim.iterate()
+        while (!future.isDone) sim.iterate()
         future.getOrThrow()
     }
 }

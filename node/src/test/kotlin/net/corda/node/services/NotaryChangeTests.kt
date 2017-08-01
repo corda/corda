@@ -8,7 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.internal.concurrent.getOrThrow
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService

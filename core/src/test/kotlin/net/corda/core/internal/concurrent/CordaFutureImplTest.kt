@@ -2,6 +2,7 @@ package net.corda.core.internal.concurrent
 
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import org.slf4j.Logger
@@ -127,7 +128,7 @@ class TransposeTest {
     fun `transpose values are in the same order as the collection of futures`() {
         b.set(2)
         c.set(3)
-        assertFalse(f.isDone())
+        assertFalse(f.isDone)
         a.set(1)
         assertEquals(listOf(1, 2, 3), f.getOrThrow())
     }
@@ -139,7 +140,7 @@ class TransposeTest {
         val cx = Exception()
         b.setException(bx)
         c.setException(cx)
-        assertFalse(f.isDone())
+        assertFalse(f.isDone)
         a.setException(ax)
         Assertions.assertThatThrownBy { f.getOrThrow() }.isSameAs(bx)
         assertEquals(listOf(cx, ax), bx.suppressed.asList())
@@ -153,7 +154,7 @@ class TransposeTest {
         val cx = Exception()
         b.setException(bx)
         c.setException(cx)
-        assertFalse(f.isDone())
+        assertFalse(f.isDone)
         a.set(100) // Discarded.
         Assertions.assertThatThrownBy { f.getOrThrow() }.isSameAs(bx)
         assertEquals(listOf(cx), bx.suppressed.asList())

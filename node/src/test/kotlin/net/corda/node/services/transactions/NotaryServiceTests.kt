@@ -8,10 +8,10 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.DUMMY_NOTARY

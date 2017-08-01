@@ -9,9 +9,9 @@ import net.corda.testing.DUMMY_BANK_A
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.AbstractNode
 import net.corda.testing.node.NodeBasedTest
 import org.bouncycastle.asn1.x500.X500Name

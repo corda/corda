@@ -9,7 +9,6 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.div

@@ -1,7 +1,6 @@
 package net.corda.core.internal.concurrent
 
 import com.google.common.annotations.VisibleForTesting
-import net.corda.core.concurrent.ApiFuture
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.match
 import net.corda.core.utilities.getOrThrow
@@ -22,14 +21,8 @@ fun <V> doneFuture(value: V): CordaFuture<V> = CordaFutureImpl<V>().apply { set(
 /** @return a future that will have the same outcome as the given block, when this executor has finished running it. */
 fun <V> Executor.fork(block: () -> V): CordaFuture<V> = CordaFutureImpl<V>().also { execute { it.capture(block) } }
 
-/** @see [net.corda.core.utilities.getOrThrow] */
-fun <V> CordaFuture<V>.getOrThrow(timeout: Duration? = null): V = unwrap().getOrThrow(timeout)
-
-/** Same as [net.corda.core.concurrent.match], which blocks if this isn't done. See [thenMatch] for non-blocking behaviour. */
-fun <V, W> CordaFuture<V>.match(success: (V) -> W, failure: (Throwable) -> W) = unwrap().match(success, failure)
-
 /** When this future is done, do [match]. */
-fun <V, W, X> CordaFuture<V>.thenMatch(success: (V) -> W, failure: (Throwable) -> X) = then { match(success, failure) }
+fun <V, W, X> CordaFuture<out V>.thenMatch(success: (V) -> W, failure: (Throwable) -> X) = then { match(success, failure) }
 
 /** When this future is done and the outcome is failure, log the throwable. */
 fun CordaFuture<*>.andForget(log: Logger) = thenMatch({}, { log.error("Background task failed:", it) })
@@ -38,7 +31,7 @@ fun CordaFuture<*>.andForget(log: Logger) = thenMatch({}, { log.error("Backgroun
  * Returns a future that will have an outcome of applying the given transform to this future's value.
  * But if this future fails, the transform is not invoked and the returned future becomes done with the same throwable.
  */
-fun <V, W> CordaFuture<V>.map(transform: (V) -> W): CordaFuture<W> = CordaFutureImpl<W>().also { result ->
+fun <V, W> CordaFuture<out V>.map(transform: (V) -> W): CordaFuture<W> = CordaFutureImpl<W>().also { result ->
     thenMatch({
         result.capture { transform(it) }
     }, {
@@ -51,7 +44,7 @@ fun <V, W> CordaFuture<V>.map(transform: (V) -> W): CordaFuture<W> = CordaFuture
  * But if this future or the transform fails, the returned future's outcome is the same throwable.
  * In the case where this future fails, the transform is not invoked.
  */
-fun <V, W> CordaFuture<V>.flatMap(transform: (V) -> CordaFuture<W>): CordaFuture<W> = CordaFutureImpl<W>().also { result ->
+fun <V, W> CordaFuture<out V>.flatMap(transform: (V) -> CordaFuture<out W>): CordaFuture<W> = CordaFutureImpl<W>().also { result ->
     thenMatch(success@ {
         result.captureLater(try {
             transform(it)
@@ -73,7 +66,7 @@ fun <V, W> CordaFuture<V>.flatMap(transform: (V) -> CordaFuture<W>): CordaFuture
  * Otherwise the returned future does not have an outcome until all given futures have an outcome.
  * Unlike Guava's Futures.allAsList, this method never hides failures/hangs subsequent to the first failure.
  */
-fun <V> Collection<CordaFuture<V>>.transpose(): CordaFuture<List<V>> {
+fun <V> Collection<CordaFuture<out V>>.transpose(): CordaFuture<List<V>> {
     if (isEmpty()) return doneFuture(emptyList())
     val transpose = CordaFutureImpl<List<V>>()
     val stateLock = Any()
@@ -96,9 +89,6 @@ fun <V> Collection<CordaFuture<V>>.transpose(): CordaFuture<List<V>> {
 
 /** The contravariant members of [OpenFuture]. */
 interface ValueOrException<in V> {
-    /** @return the underlying [Future], for JDK interoperability. */
-    fun unwrap(): CompletableFuture<in V>
-
     /** @return whether this future actually changed. */
     fun set(value: V): Boolean
 
@@ -106,7 +96,7 @@ interface ValueOrException<in V> {
     fun setException(t: Throwable): Boolean
 
     /** When the given future has an outcome, make this future have the same outcome. */
-    fun captureLater(f: CordaFuture<V>) = f.then { capture { f.getOrThrow() } }
+    fun captureLater(f: CordaFuture<out V>) = f.then { capture { f.getOrThrow() } }
 
     /** Run the given block (in the foreground) and set this future to its outcome. */
     fun capture(block: () -> V): Boolean {
@@ -119,9 +109,7 @@ interface ValueOrException<in V> {
 }
 
 /** A [CordaFuture] with additional methods to complete it with a value, exception or the outcome of another future. */
-interface OpenFuture<V> : ValueOrException<V>, ApiFuture<V> {
-    override fun unwrap(): CompletableFuture<V>
-}
+interface OpenFuture<V> : ValueOrException<V>, CordaFuture<V>
 
 /** Unless you really want this particular implementation, use [openFuture] to make one. */
 @VisibleForTesting
@@ -131,7 +119,6 @@ internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = Compl
         internal val listenerFailedMessage = "Future listener failed:"
     }
 
-    override fun unwrap() = impl
     override fun set(value: V) = impl.complete(value)
     override fun setException(t: Throwable) = impl.completeExceptionally(t)
     override fun <W> then(callback: (CordaFuture<V>) -> W) = thenImpl(defaultLog, callback)

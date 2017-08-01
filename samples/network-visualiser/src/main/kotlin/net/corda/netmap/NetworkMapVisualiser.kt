@@ -165,7 +165,7 @@ class NetworkMapVisualiser : Application() {
     private fun bindTopbar() {
         view.resetButton.setOnAction({ reset() })
         view.nextButton.setOnAction {
-            if (!view.simulateInitialisationCheckbox.isSelected && !viewModel.simulation.networkInitialisationFinished.isDone()) {
+            if (!view.simulateInitialisationCheckbox.isSelected && !viewModel.simulation.networkInitialisationFinished.isDone) {
                 skipNetworkInitialisation()
             } else {
                 onNextInvoked()
@@ -195,7 +195,7 @@ class NetworkMapVisualiser : Application() {
                     view.nextButton.isDisable = true
                     view.resetButton.isDisable = true
 
-                    if (!view.simulateInitialisationCheckbox.isSelected && !viewModel.simulation.networkInitialisationFinished.isDone()) {
+                    if (!view.simulateInitialisationCheckbox.isSelected && !viewModel.simulation.networkInitialisationFinished.isDone) {
                         skipNetworkInitialisation()
                     }
 
@@ -317,7 +317,7 @@ class NetworkMapVisualiser : Application() {
 
     private fun skipNetworkInitialisation() {
         startSimulation()
-        while (!viewModel.simulation.networkInitialisationFinished.isDone()) {
+        while (!viewModel.simulation.networkInitialisationFinished.isDone) {
             iterateSimulation()
         }
     }

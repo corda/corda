@@ -13,7 +13,6 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
@@ -28,6 +27,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow

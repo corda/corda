@@ -12,7 +12,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.CordaRPCOps
@@ -21,6 +20,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.poll

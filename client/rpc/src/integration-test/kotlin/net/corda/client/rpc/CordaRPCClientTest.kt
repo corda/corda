@@ -6,10 +6,10 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.internal.concurrent.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.flows.CashException
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
