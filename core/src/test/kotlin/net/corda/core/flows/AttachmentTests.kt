@@ -15,7 +15,6 @@ import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.testing.DataVendingFlow
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
@@ -163,6 +162,6 @@ class AttachmentTests {
     @InitiatedBy(InitiatingFetchAttachmentsFlow::class)
     private class FetchAttachmentsResponse(val otherSide: Party) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(DataVendingFlow(otherSide))
+        override fun call() = subFlow(TestDataVendingFlow(otherSide))
     }
 }

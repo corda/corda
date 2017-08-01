@@ -19,7 +19,8 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.statemachine.SessionInit
-import net.corda.testing.DataVendingFlow
+import net.corda.core.flows.DataVendingFlow
+import net.corda.core.flows.TestDataVendingFlow
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -87,7 +88,7 @@ class AttachmentSerializationTest {
         @Suspendable
         override fun call() {
             if (sendData) {
-                subFlow(DataVendingFlow(client))
+                subFlow(TestDataVendingFlow(client))
             }
             receive<String>(client).unwrap { assertEquals("ping one", it) }
             sendAndReceive<String>(client, "pong").unwrap { assertEquals("ping two", it) }

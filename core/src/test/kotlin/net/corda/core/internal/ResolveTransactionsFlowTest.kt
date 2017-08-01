@@ -1,14 +1,19 @@
-package net.corda.core.flows
+package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.TestDataVendingFlow
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
-import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.sequence
-import net.corda.testing.*
-import net.corda.testing.DataVendingFlow
+import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.MEGA_CORP
+import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.MINI_CORP
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
@@ -201,6 +206,6 @@ class ResolveTransactionsFlowTest {
     @InitiatedBy(TestFlow::class)
     private class TestResponseFlow(val otherSide: Party) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(DataVendingFlow(otherSide))
+        override fun call() = subFlow(TestDataVendingFlow(otherSide))
     }
 }

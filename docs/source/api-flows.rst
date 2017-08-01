@@ -481,10 +481,10 @@ transaction and provide their signature if they are satisfied:
 
 SendTransactionFlow/ReceiveTransactionFlow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Verifying a transaction will also verify every transaction in the transaction's dependency chain, which will require
-transaction data access on counterparty's node. The ``SendTransactionFlow`` can be used to automate the sending
-and data vending process. The ``SendTransactionFlow`` will listen for data request until the transaction
-is resolved and verified on the other side:
+Verifying a transaction received from a counterparty also requires verification of every transaction in its
+dependency chain. This means the receiving party needs to be able to ask the sender all the details of the chain.
+The sender will use ``SendTransactionFlow`` for sending the transaction and then for processing all subsequent
+transaction data vending requests as the receiver walks the dependency chain using ``ReceiveTransactionFlow``:
 
 .. container:: codeset
 
@@ -517,7 +517,7 @@ dependencies and verify the transaction:
         :end-before: DOCEND 13
         :dedent: 12
 
-We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies:
+We can also send and receive a ``StateAndRef`` dependency chain and automatically resolve its dependencies:
 
 .. container:: codeset
 

@@ -72,12 +72,11 @@ UNRELEASED
     * ``stateMachineRecordedTransactionMapping``, replaced by ``stateMachineRecordedTransactionMappingFeed``
     * ``networkMapUpdates``, replaced by ``networkMapFeed``
 
-* Data Vending service has been removed in this release to enhance data security, ``FetchTransactionFlow`` and
-  ``FetchAttachmentFlow`` have become internal and should not be used directly to fetch data from counterparty nodes.
-  CorDapp developers should use the new ``SendTransactionFlow`` and ``ReceiveTransactionFlow`` in the flow logic
-  to send and receive ``SignedTransaction``, the ``ReceiveTransactionFlow`` will receive the sent transaction and
-  perform the resolution back-and-forth required to check the dependencies and download any missing attachments.
-  Same applies to sending ``StateAndRef``, ``SendStateAndRefFlow`` and ``ReceiveStateAndRefFlow`` should be used instead.
+* Due to security concerns and the need to remove the concept of state relevancy (which isn't needed in Corda),
+  ``ResolveTransactionsFlow`` has been made internal. Instead merge the receipt of the ``SignedTransaction`` and the subsequent
+  sub-flow call to ``ResolveTransactionsFlow`` with a single call to ``ReceiveTransactionFlow``. The flow running on the counterparty
+  must use ``SendTransactionFlow`` at the correct place. There is also ``ReceiveStateAndRefFlow`` and ``SendStateAndRefFlow`` for
+  dealing with ``StateAndRef``s.
 
 
 Milestone 13
