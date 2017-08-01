@@ -5,15 +5,14 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
-import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.OpaqueBytes
 import java.util.*
 
 /**
  * A command to initiate the cash flow with.
  */
 sealed class CashFlowCommand {
-    abstract fun startFlow(proxy: CordaRPCOps): FlowHandle<SignedTransaction>
+    abstract fun startFlow(proxy: CordaRPCOps): FlowHandle<AbstractCashFlow.Result>
 
     /**
      * A command to initiate the Cash flow with.
@@ -21,8 +20,9 @@ sealed class CashFlowCommand {
     data class IssueCash(val amount: Amount<Currency>,
                          val issueRef: OpaqueBytes,
                          val recipient: Party,
-                         val notary: Party) : CashFlowCommand() {
-        override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(::CashIssueFlow, amount, issueRef, recipient, notary)
+                         val notary: Party,
+                         val anonymous: Boolean) : CashFlowCommand() {
+        override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(::CashIssueFlow, amount, issueRef, recipient, notary, anonymous)
     }
 
     /**
@@ -31,8 +31,9 @@ sealed class CashFlowCommand {
      * @param amount the amount of currency to issue on to the ledger.
      * @param recipient the party to issue the cash to.
      */
-    data class PayCash(val amount: Amount<Currency>, val recipient: Party, val issuerConstraint: Party? = null) : CashFlowCommand() {
-        override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(::CashPaymentFlow, amount, recipient)
+    data class PayCash(val amount: Amount<Currency>, val recipient: Party, val issuerConstraint: Party? = null,
+                       val anonymous: Boolean) : CashFlowCommand() {
+        override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(::CashPaymentFlow, amount, recipient, anonymous)
     }
 
     /**

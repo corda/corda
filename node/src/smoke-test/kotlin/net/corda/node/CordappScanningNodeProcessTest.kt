@@ -3,11 +3,11 @@ package net.corda.node
 import net.corda.core.copyToDirectory
 import net.corda.core.createDirectories
 import net.corda.core.div
-import net.corda.core.utilities.ALICE
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
@@ -21,7 +21,7 @@ class CordappScanningNodeProcessTest {
     private val factory = NodeProcess.Factory()
 
     private val aliceConfig = NodeConfig(
-            party = ALICE,
+            legalName = X500Name("CN=Alice Corp,O=Alice Corp,L=Madrid,C=ES"),
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             webPort = port.andIncrement,

@@ -1,7 +1,7 @@
 package net.corda.contracts
 
 import net.corda.contracts.asset.*
-import net.corda.contracts.testing.fillWithSomeTestCash
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.days
 import net.corda.core.identity.AnonymousParty
@@ -10,7 +10,6 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.*
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.*
@@ -205,6 +204,8 @@ class CommercialPaperTestsGeneric {
     private lateinit var aliceVaultService: VaultService
     private lateinit var alicesVault: Vault<ContractState>
 
+    private val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+
     private lateinit var moveTX: SignedTransaction
 
     @Test
@@ -215,12 +216,12 @@ class CommercialPaperTestsGeneric {
         val databaseAlice = dataSourceAndDatabaseAlice.second
         databaseAlice.transaction {
 
-            aliceServices = object : MockServices() {
+            aliceServices = object : MockServices(ALICE_KEY) {
                 override val vaultService: VaultService = makeVaultService(dataSourcePropsAlice)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
@@ -235,12 +236,12 @@ class CommercialPaperTestsGeneric {
         val databaseBigCorp = dataSourceAndDatabaseBigCorp.second
         databaseBigCorp.transaction {
 
-            bigCorpServices = object : MockServices() {
+            bigCorpServices = object : MockServices(BIG_CORP_KEY) {
                 override val vaultService: VaultService = makeVaultService(dataSourcePropsBigCorp)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
@@ -251,35 +252,33 @@ class CommercialPaperTestsGeneric {
         }
 
         // Propagate the cash transactions to each side.
-        aliceServices.recordTransactions(bigCorpVault.states.map { bigCorpServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
-        bigCorpServices.recordTransactions(alicesVault.states.map { aliceServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
+        aliceServices.recordTransactions(bigCorpVault.states.map { bigCorpServices.validatedTransactions.getTransaction(it.ref.txhash)!! })
+        bigCorpServices.recordTransactions(alicesVault.states.map { aliceServices.validatedTransactions.getTransaction(it.ref.txhash)!! })
 
         // BigCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
         val issuance = bigCorpServices.myInfo.legalIdentity.ref(1)
-        val issueTX: SignedTransaction =
-                CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                    addTimeWindow(TEST_TX_TIME, 30.seconds)
-                    signWith(bigCorpServices.key)
-                    signWith(DUMMY_NOTARY_KEY)
-                }.toSignedTransaction()
+        val issueBuilder = CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY)
+        issueBuilder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+        val issuePtx = bigCorpServices.signInitialTransaction(issueBuilder)
+        val issueTx = notaryServices.addSignature(issuePtx)
 
         databaseAlice.transaction {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
-                val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-                aliceVaultService.generateSpend(ptx, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
-                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), AnonymousParty(aliceServices.key.public))
-                ptx.signWith(bigCorpServices.key)
-                ptx.signWith(aliceServices.key)
-                ptx.signWith(DUMMY_NOTARY_KEY)
-                ptx.toSignedTransaction()
+                val builder = TransactionType.General.Builder(DUMMY_NOTARY)
+                aliceVaultService.generateSpend(builder, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
+                CommercialPaper().generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(aliceServices.key.public))
+                val ptx = aliceServices.signInitialTransaction(builder)
+                val ptx2 = bigCorpServices.addSignature(ptx)
+                val stx = notaryServices.addSignature(ptx2)
+                stx
             }
         }
 
         databaseBigCorp.transaction {
             // Verify the txns are valid and insert into both sides.
-            listOf(issueTX, moveTX).forEach {
+            listOf(issueTx, moveTX).forEach {
                 it.toLedgerTransaction(aliceServices).verify()
                 aliceServices.recordTransactions(it)
                 bigCorpServices.recordTransactions(it)
@@ -288,13 +287,13 @@ class CommercialPaperTestsGeneric {
 
         databaseBigCorp.transaction {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
-                val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-                ptx.addTimeWindow(time, 30.seconds)
-                CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpVaultService)
-                ptx.signWith(aliceServices.key)
-                ptx.signWith(bigCorpServices.key)
-                ptx.signWith(DUMMY_NOTARY_KEY)
-                return Pair(ptx.toSignedTransaction(), ptx.lockId)
+                val builder = TransactionType.General.Builder(DUMMY_NOTARY)
+                builder.setTimeWindow(time, 30.seconds)
+                CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), bigCorpVaultService)
+                val ptx = aliceServices.signInitialTransaction(builder)
+                val ptx2 = bigCorpServices.addSignature(ptx)
+                val stx = notaryServices.addSignature(ptx2)
+                return Pair(stx, builder.lockId)
             }
 
             val redeemTX = makeRedeemTX(TEST_TX_TIME + 10.days)

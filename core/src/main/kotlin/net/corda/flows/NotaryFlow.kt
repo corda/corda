@@ -11,11 +11,8 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
-import net.corda.core.node.services.TimeWindowChecker
-import net.corda.core.node.services.UniquenessException
-import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.node.services.*
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -97,14 +94,13 @@ object NotaryFlow {
      * Additional transaction validation logic can be added when implementing [receiveAndVerifyTx].
      */
     // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-    abstract class Service(val otherSide: Party,
-                           val timeWindowChecker: TimeWindowChecker,
-                           val uniquenessProvider: UniquenessProvider) : FlowLogic<Void?>() {
+    abstract class Service(val otherSide: Party, val service: TrustedAuthorityNotaryService) : FlowLogic<Void?>() {
+
         @Suspendable
         override fun call(): Void? {
             val (id, inputs, timeWindow) = receiveAndVerifyTx()
-            validateTimeWindow(timeWindow)
-            commitInputStates(inputs, id)
+            service.validateTimeWindow(timeWindow)
+            service.commitInputStates(inputs, id, otherSide)
             signAndSendResponse(id)
             return null
         }
@@ -118,43 +114,8 @@ object NotaryFlow {
 
         @Suspendable
         private fun signAndSendResponse(txId: SecureHash) {
-            val signature = sign(txId.bytes)
+            val signature = service.sign(txId.bytes)
             send(otherSide, listOf(signature))
-        }
-
-        private fun validateTimeWindow(t: TimeWindow?) {
-            if (t != null && !timeWindowChecker.isValid(t))
-                throw NotaryException(NotaryError.TimeWindowInvalid)
-        }
-
-        /**
-         * A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
-         * this method does not throw an exception when input states are present multiple times within the transaction.
-         */
-        private fun commitInputStates(inputs: List<StateRef>, txId: SecureHash) {
-            try {
-                uniquenessProvider.commit(inputs, txId, otherSide)
-            } catch (e: UniquenessException) {
-                val conflicts = inputs.filterIndexed { i, stateRef ->
-                    val consumingTx = e.error.stateHistory[stateRef]
-                    consumingTx != null && consumingTx != UniquenessProvider.ConsumingTx(txId, i, otherSide)
-                }
-                if (conflicts.isNotEmpty()) {
-                    // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
-                    logger.warn("Notary conflicts for $txId: $conflicts")
-                    throw notaryException(txId, e)
-                }
-            }
-        }
-
-        private fun sign(bits: ByteArray): DigitalSignature.WithKey {
-            return serviceHub.keyManagementService.sign(bits, serviceHub.notaryIdentityKey)
-        }
-
-        private fun notaryException(txId: SecureHash, e: UniquenessException): NotaryException {
-            val conflictData = e.error.serialize()
-            val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
-            return NotaryException(NotaryError.Conflict(txId, signedConflict))
         }
     }
 }

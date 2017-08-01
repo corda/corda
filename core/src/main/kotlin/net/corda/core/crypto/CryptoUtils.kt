@@ -2,41 +2,11 @@
 
 package net.corda.core.crypto
 
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.utilities.OpaqueBytes
 import java.math.BigInteger
 import net.corda.core.utilities.SgxSupport
 import java.security.*
-
-@CordaSerializable
-object NullPublicKey : PublicKey, Comparable<PublicKey> {
-    override fun getAlgorithm() = "NULL"
-    override fun getEncoded() = byteArrayOf(0)
-    override fun getFormat() = "NULL"
-    override fun compareTo(other: PublicKey): Int = if (other == NullPublicKey) 0 else -1
-    override fun toString() = "NULL_KEY"
-}
-
-val NULL_PARTY = AnonymousParty(NullPublicKey)
-
-// TODO: Clean up this duplication between Null and Dummy public key
-@CordaSerializable
-@Deprecated("Has encoding format problems, consider entropyToKeyPair() instead")
-class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
-    override fun getAlgorithm() = "DUMMY"
-    override fun getEncoded() = s.toByteArray()
-    override fun getFormat() = "ASN.1"
-    override fun compareTo(other: PublicKey): Int = BigInteger(encoded).compareTo(BigInteger(other.encoded))
-    override fun equals(other: Any?) = other is DummyPublicKey && other.s == s
-    override fun hashCode(): Int = s.hashCode()
-    override fun toString() = "PUBKEY[$s]"
-}
-
-/** A signature with a key and value of zero. Useful when you want a signature object that you know won't ever be used. */
-@CordaSerializable
-object NullSignature : DigitalSignature.WithKey(NullPublicKey, ByteArray(32))
 
 /**
  * Utility to simplify the act of signing a byte array.
@@ -66,17 +36,6 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignat
 @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: ByteArray) = private.sign(bytesToSign, public)
 fun KeyPair.sign(bytesToSign: OpaqueBytes) = private.sign(bytesToSign.bytes, public)
-fun KeyPair.sign(bytesToSign: OpaqueBytes, party: Party) = sign(bytesToSign.bytes, party)
-
-// TODO This case will need more careful thinking, as party owningKey can be a CompositeKey. One way of doing that is
-//  implementation of CompositeSignature.
-@Throws(InvalidKeyException::class)
-fun KeyPair.sign(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
-    // Quick workaround when we have CompositeKey as Party owningKey.
-    if (party.owningKey is CompositeKey) throw InvalidKeyException("Signing for parties with CompositeKey not supported.")
-    val sig = sign(bytesToSign)
-    return DigitalSignature.LegallyIdentifiable(party, sig.bytes)
-}
 
 /**
  * Utility to simplify the act of verifying a signature.
@@ -262,3 +221,17 @@ private val _newSecureRandom: () -> SecureRandom by lazy {
  */
 @Throws(NoSuchAlgorithmException::class)
 fun newSecureRandom() = _newSecureRandom()
+
+/**
+ * Returns a random positive non-zero long generated using a secure RNG. This function sacrifies a bit of entropy in order
+ * to avoid potential bugs where the value is used in a context where negative numbers or zero are not expected.
+ */
+fun random63BitValue(): Long {
+    while (true) {
+        val candidate = Math.abs(newSecureRandom().nextLong())
+        // No need to check for -0L
+        if (candidate != 0L && candidate != Long.MIN_VALUE) {
+            return candidate
+        }
+    }
+}

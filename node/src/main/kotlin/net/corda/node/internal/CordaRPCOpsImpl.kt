@@ -8,13 +8,12 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
@@ -43,16 +42,16 @@ class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val database: Database
 ) : CordaRPCOps {
-    override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
+    override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
         return database.transaction {
             services.networkMapCache.track()
         }
     }
 
-    override fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>> {
+    override fun vaultAndUpdates(): DataFeed<List<StateAndRef<ContractState>>, Vault.Update> {
         return database.transaction {
             val (vault, updates) = services.vaultService.track()
-            Pair(vault.states.toList(), updates)
+            DataFeed(vault.states.toList(), updates)
         }
     }
 
@@ -69,31 +68,31 @@ class CordaRPCOpsImpl(
     override fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
                                                   sorting: Sort,
-                                                  contractType: Class<out T>): Vault.PageAndUpdates<T> {
+                                                  contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update> {
         return database.transaction {
-            services.vaultQueryService._trackBy<T>(criteria, paging, sorting, contractType)
+            services.vaultQueryService._trackBy(criteria, paging, sorting, contractType)
         }
     }
 
-    override fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+    override fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
-            services.storageService.validatedTransactions.track()
+            services.validatedTransactions.track()
         }
     }
 
-    override fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>> {
+    override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
         return database.transaction {
             val (allStateMachines, changes) = smm.track()
-            Pair(
+            DataFeed(
                     allStateMachines.map { stateMachineInfoFromFlowLogic(it.logic) },
                     changes.map { stateMachineUpdateFromStateMachineChange(it) }
             )
         }
     }
 
-    override fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>> {
+    override fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
         return database.transaction {
-            services.storageService.stateMachineRecordedTransactionMapping.track()
+            services.stateMachineRecordedTransactionMapping.track()
         }
     }
 
@@ -144,21 +143,21 @@ class CordaRPCOpsImpl(
     override fun attachmentExists(id: SecureHash): Boolean {
         // TODO: this operation should not require an explicit transaction
         return database.transaction {
-            services.storageService.attachments.openAttachment(id) != null
+            services.attachments.openAttachment(id) != null
         }
     }
 
     override fun openAttachment(id: SecureHash): InputStream {
         // TODO: this operation should not require an explicit transaction
         return database.transaction {
-            services.storageService.attachments.openAttachment(id)!!.open()
+            services.attachments.openAttachment(id)!!.open()
         }
     }
 
     override fun uploadAttachment(jar: InputStream): SecureHash {
         // TODO: this operation should not require an explicit transaction
         return database.transaction {
-            services.storageService.attachments.importAttachment(jar)
+            services.attachments.importAttachment(jar)
         }
     }
 
@@ -167,7 +166,7 @@ class CordaRPCOpsImpl(
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
     @Suppress("OverridingDeprecatedMember", "DEPRECATION")
     override fun uploadFile(dataType: String, name: String?, file: InputStream): String {
-        val acceptor = services.storageService.uploaders.firstOrNull { it.accepts(dataType) }
+        val acceptor = services.uploaders.firstOrNull { it.accepts(dataType) }
         return database.transaction {
             acceptor?.upload(file) ?: throw RuntimeException("Cannot find file upload acceptor for $dataType")
         }
@@ -180,6 +179,7 @@ class CordaRPCOpsImpl(
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
     override fun partyFromX500Name(x500Name: X500Name) = services.identityService.partyFromX500Name(x500Name)
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = services.identityService.partiesFromName(query, exactMatch)
+    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? = services.networkMapCache.getNodeByLegalIdentity(party)
 
     override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
 

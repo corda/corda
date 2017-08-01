@@ -14,16 +14,12 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -164,7 +160,7 @@ class NodeInterestRatesTest {
             val wtx = tx.toWireTransaction()
             val ftx = wtx.buildFilteredTransaction(Predicate { x -> fixCmdFilter(x) })
             val signature = oracle.sign(ftx)
-            tx.checkAndAddSignature(signature)
+            wtx.checkSignature(signature)
         }
     }
 
@@ -213,7 +209,7 @@ class NodeInterestRatesTest {
     fun `network tearoff`() {
         val mockNet = MockNetwork()
         val n1 = mockNet.createNotaryNode()
-        val n2 = mockNet.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
+        val n2 = mockNet.createNode(n1.network.myAddress, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
         n2.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
         n2.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
         n2.database.transaction {
@@ -228,10 +224,11 @@ class NodeInterestRatesTest {
         val future = n1.services.startFlow(flow).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
-        // We should now have a valid signature over our tx from the oracle.
-        val fix = tx.toSignedTransaction(true).tx.commands.map { it.value as Fix }.first()
+        // We should now have a valid fix of our tx from the oracle.
+        val fix = tx.toWireTransaction().commands.map { it.value as Fix }.first()
         assertEquals(fixOf, fix.of)
         assertEquals("0.678".bd, fix.value)
+        mockNet.stopNodes()
     }
 
     class FilteredRatesFlow(tx: TransactionBuilder,

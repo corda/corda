@@ -1,11 +1,11 @@
 package net.corda.client.rpc.internal
 
-import com.google.common.net.HostAndPort
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.RPCOps
 import net.corda.core.minutes
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.seconds
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
@@ -88,7 +88,7 @@ class RPCClient<I : RPCOps>(
         val rpcConfiguration: RPCClientConfiguration = RPCClientConfiguration.default
 ) {
     constructor(
-            hostAndPort: HostAndPort,
+            hostAndPort: NetworkHostAndPort,
             sslConfiguration: SSLConfiguration? = null,
             configuration: RPCClientConfiguration = RPCClientConfiguration.default
     ) : this(tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration), configuration)

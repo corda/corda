@@ -8,7 +8,7 @@ import joptsimple.OptionException
 import net.corda.core.*
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.orgName
-import net.corda.core.node.VersionInfo
+import net.corda.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
@@ -75,7 +75,7 @@ open class NodeStartup(val args: Array<String>) {
         banJavaSerialisation(conf)
         // TODO: Move this to EnterpriseNode.Startup
         conf.relay?.let { connectToRelay(it, conf.p2pAddress.port) }
-        preNetworkRegistration()
+        preNetworkRegistration(conf)
         maybeRegisterWithNetworkAndExit(cmdlineOptions, conf)
         logStartupInfo(versionInfo, cmdlineOptions, conf)
 
@@ -94,7 +94,7 @@ open class NodeStartup(val args: Array<String>) {
         exitProcess(0)
     }
 
-    open protected fun preNetworkRegistration() = Unit
+    open protected fun preNetworkRegistration(conf: FullNodeConfiguration) = Unit
 
     open protected fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, services: Set<ServiceInfo>): Node {
         return Node(conf, services, versionInfo, if (conf.useTestClock) TestClock() else NodeClock())
@@ -106,7 +106,7 @@ open class NodeStartup(val args: Array<String>) {
         node.start()
         printPluginsAndServices(node)
 
-        node.networkMapRegistrationFuture.success {
+        node.networkMapRegistrationFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             // TODO: Replace this with a standard function to get an unambiguous rendering of the X.500 name.
             val name = node.info.legalIdentity.name.orgName ?: node.info.legalIdentity.name.commonName
@@ -114,17 +114,14 @@ open class NodeStartup(val args: Array<String>) {
 
             // Don't start the shell if there's no console attached.
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
-            node.startupComplete then {
+            node.startupComplete.then {
                 try {
                     InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, node)
                 } catch(e: Throwable) {
                     logger.error("Shell failed to start", e)
                 }
             }
-        } failure {
-            logger.error("Error during network map registration", it)
-            exitProcess(1)
-        }
+        }, {})
         node.run()
     }
 

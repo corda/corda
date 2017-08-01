@@ -3,8 +3,7 @@ package net.corda.core.node.services
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.keys
@@ -12,20 +11,22 @@ import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import org.bouncycastle.cert.X509CertificateHolder
+import net.corda.flows.AnonymisedIdentity
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.InputStream
 import java.security.PublicKey
-import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.time.Instant
 import java.util.*
@@ -71,9 +72,9 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
         /** Checks whether the update contains a state of the specified type and state status */
         fun <T : ContractState> containsType(clazz: Class<T>, status: StateStatus) =
-                when(status) {
+                when (status) {
                     StateStatus.UNCONSUMED -> produced.any { clazz.isAssignableFrom(it.state.data.javaClass) }
-                    StateStatus.CONSUMED -> consumed.any { clazz.isAssignableFrom(it.state.data.javaClass)  }
+                    StateStatus.CONSUMED -> consumed.any { clazz.isAssignableFrom(it.state.data.javaClass) }
                     else -> consumed.any { clazz.isAssignableFrom(it.state.data.javaClass) }
                             || produced.any { clazz.isAssignableFrom(it.state.data.javaClass) }
                 }
@@ -118,17 +119,20 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * A Page contains:
      *  1) a [List] of actual [StateAndRef] requested by the specified [QueryCriteria] to a maximum of [MAX_PAGE_SIZE]
      *  2) a [List] of associated [Vault.StateMetadata], one per [StateAndRef] result
-     *  3) the [PageSpecification] definition used to bound this result set
-     *  4) a total number of states that met the given [QueryCriteria]
-     *     Note that this may be more than the specified [PageSpecification.pageSize], and should be used to perform
-     *     further pagination (by issuing new queries).
+     *  3) a total number of states that met the given [QueryCriteria] if a [PageSpecification] was provided
+     *     (otherwise defaults to -1)
+     *  4) Status types used in this query: UNCONSUMED, CONSUMED, ALL
+     *  5) Other results as a [List] of any type (eg. aggregate function results with/without group by)
+     *
+     *  Note: currently otherResults are used only for Aggregate Functions (in which case, the states and statesMetadata
+     *  results will be empty)
      */
     @CordaSerializable
     data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
                                            val statesMetadata: List<StateMetadata>,
-                                           val pageable: PageSpecification,
-                                           val totalStatesAvailable: Int,
-                                           val stateTypes: StateStatus)
+                                           val totalStatesAvailable: Long,
+                                           val stateTypes: StateStatus,
+                                           val otherResults: List<Any>)
 
     @CordaSerializable
     data class StateMetadata(val ref: StateRef,
@@ -140,9 +144,6 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                              val notaryKey: String,
                              val lockId: String?,
                              val lockUpdateTime: Instant?)
-
-    @CordaSerializable
-    data class PageAndUpdates<out T : ContractState> (val current: Vault.Page<T>, val future: Observable<Vault.Update>)
 }
 
 /**
@@ -189,7 +190,7 @@ interface VaultService {
      */
     // TODO: Remove this from the interface
     @Deprecated("This function will be removed in a future milestone", ReplaceWith("trackBy(QueryCriteria())"))
-    fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>>
+    fun track(): DataFeed<Vault<ContractState>, Vault.Update>
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s
@@ -274,7 +275,7 @@ interface VaultService {
      * Optionally may specify whether to include [StateRef] that have been marked as soft locked (default is true)
      */
     // TODO: Remove this from the interface
-     @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(QueryCriteria())"))
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(QueryCriteria())"))
     fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>>
     // DOCEND VaultStatesQuery
 
@@ -350,15 +351,18 @@ interface VaultQueryService {
      * and returns a [Vault.Page] object containing the following:
      *  1. states as a List of <StateAndRef> (page number and size defined by [PageSpecification])
      *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
-     *  3. the [PageSpecification] used in the query
-     *  4. a total number of results available (for subsequent paging if necessary)
+     *  3. total number of results available if [PageSpecification] supplied (otherwise returns -1)
+     *  4. status types used in this query: UNCONSUMED, CONSUMED, ALL
+     *  5. other results (aggregate functions with/without using value groups)
      *
      * @throws VaultQueryException if the query cannot be executed for any reason
-     *        (missing criteria or parsing error, invalid operator, unsupported query, underlying database error)
+     *        (missing criteria or parsing error, paging errors, unsupported query, underlying database error)
      *
-     * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with up to 200 entries.
-     *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
-     * Note2: you can also annotate entity fields with JPA OrderBy annotation to achieve the same effect as explicit sorting
+     * Notes
+     *   If no [PageSpecification] is provided, a maximum of [DEFAULT_PAGE_SIZE] results will be returned.
+     *   API users must specify a [PageSpecification] if they are expecting more than [DEFAULT_PAGE_SIZE] results,
+     *   otherwise a [VaultQueryException] will be thrown alerting to this condition.
+     *   It is the responsibility of the API user to request further pages and/or specify a more suitable [PageSpecification].
      */
     @Throws(VaultQueryException::class)
     fun <T : ContractState> _queryBy(criteria: QueryCriteria,
@@ -381,7 +385,7 @@ interface VaultQueryService {
     fun <T : ContractState> _trackBy(criteria: QueryCriteria,
                                      paging: PageSpecification,
                                      sorting: Sort,
-                                     contractType: Class<out T>): Vault.PageAndUpdates<T>
+                                     contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update>
     // DOCEND VaultQueryAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
@@ -402,19 +406,19 @@ interface VaultQueryService {
         return _queryBy(criteria, paging, sorting, contractType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>): Vault.Page<T> {
-        return _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
+    fun <T : ContractState> trackBy(contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update> {
+        return _trackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
     }
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria): Vault.PageAndUpdates<T> {
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update> {
         return _trackBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
     }
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> {
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update> {
         return _trackBy(criteria, paging, Sort(emptySet()), contractType)
     }
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> {
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
         return _trackBy(criteria, PageSpecification(), sorting, contractType)
     }
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.PageAndUpdates<T> {
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
         return _trackBy(criteria, paging, sorting, contractType)
     }
 }
@@ -439,23 +443,23 @@ inline fun <reified T : ContractState> VaultQueryService.queryBy(criteria: Query
     return _queryBy(criteria, paging, sorting, T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(): Vault.PageAndUpdates<T> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(): DataFeed<Vault.Page<T>, Vault.Update> {
     return _trackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria): Vault.PageAndUpdates<T> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update> {
     return _trackBy(criteria, PageSpecification(), Sort(emptySet()), T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update> {
     return _trackBy(criteria, paging, Sort(emptySet()), T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
     return _trackBy(criteria, PageSpecification(), sorting, T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.PageAndUpdates<T> {
+inline fun <reified T : ContractState> VaultQueryService.trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
     return _trackBy(criteria, paging, sorting, T::class.java)
 }
 
@@ -488,9 +492,17 @@ interface KeyManagementService {
      * @return X.509 certificate and path to the trust root.
      */
     @Suspendable
-    fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): Pair<X509CertificateHolder, CertPath>
+    fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity
 
-    /** Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
+    /**
+     * Filter some keys down to the set that this node owns (has private keys for).
+     *
+     * @param candidateKeys keys which this node may own.
+     */
+    fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey>
+
+    /**
+     * Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
      * @param bytes The data to sign over using the chosen key.
      * @param publicKey The [PublicKey] partner to an internally held [PrivateKey], either derived from the node's primary identity,
      * or previously generated via the [freshKey] method.
@@ -519,44 +531,6 @@ interface FileUploader {
      * be "my-service-interest-rates". Type here does not refer to file extentions or MIME types.
      */
     fun accepts(type: String): Boolean
-}
-
-interface AttachmentsStorageService {
-    /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
-    val attachments: AttachmentStorage
-    val attachmentsClassLoaderEnabled: Boolean
-}
-
-/**
- * A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
- * transactions, serialised flow state machines and so on. Again, this isn't intended to imply lack of SQL or
- * anything like that, this interface is only big enough to support the prototyping work.
- */
-interface StorageService : AttachmentsStorageService {
-    /**
-     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
-     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
-     * the transaction data to other nodes that need it.
-     */
-    val validatedTransactions: ReadOnlyTransactionStorage
-
-    @Suppress("DEPRECATION")
-    @Deprecated("This service will be removed in a future milestone")
-    val uploaders: List<FileUploader>
-
-    val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
-}
-
-/**
- * Storage service, with extensions to allow validated transactions to be added to. For use only within [ServiceHub].
- */
-interface TxWritableStorageService : StorageService {
-    /**
-     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
-     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
-     * the transaction data to other nodes that need it.
-     */
-    override val validatedTransactions: TransactionStorage
 }
 
 /**

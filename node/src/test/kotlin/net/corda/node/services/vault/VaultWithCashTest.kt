@@ -1,19 +1,22 @@
 package net.corda.node.services.vault
 
-import net.corda.contracts.DummyDealContract
+import net.corda.testing.contracts.DummyDealContract
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.testing.*
+import net.corda.testing.contracts.fillWithSomeTestCash
+import net.corda.testing.contracts.fillWithSomeTestDeals
+import net.corda.testing.contracts.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
+import net.corda.testing.contracts.DummyLinearContract
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.consumedStates
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.LogHelper
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP
@@ -40,6 +43,7 @@ class VaultWithCashTest {
     val vault: VaultService get() = services.vaultService
     lateinit var dataSource: Closeable
     lateinit var database: Database
+    val notaryServices = MockServices(DUMMY_NOTARY_KEY)
 
     @Before
     fun setUp() {
@@ -54,7 +58,7 @@ class VaultWithCashTest {
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
@@ -89,32 +93,32 @@ class VaultWithCashTest {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
+        val megaCorpServices = MockServices(MEGA_CORP_KEY)
+
         database.transaction {
             // A tx that sends us money.
             val freshKey = services.keyManagementService.freshKey()
-            val usefulTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
-                signWith(MEGA_CORP_KEY)
-            }.toSignedTransaction()
+            val usefulBuilder = TransactionType.General.Builder(null)
+            Cash().generateIssue(usefulBuilder, 100.DOLLARS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
+            val usefulTX = megaCorpServices.signInitialTransaction(usefulBuilder)
 
             assertNull(vault.cashBalances[USD])
             services.recordTransactions(usefulTX)
 
             // A tx that spends our money.
-            val spendTXBuilder = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                vault.generateSpend(this, 80.DOLLARS, BOB)
-                signWith(DUMMY_NOTARY_KEY)
-            }
-            val spendTX = services.signInitialTransaction(spendTXBuilder, freshKey)
+            val spendTXBuilder = TransactionType.General.Builder(DUMMY_NOTARY)
+            vault.generateSpend(spendTXBuilder, 80.DOLLARS, BOB)
+            val spendPTX = services.signInitialTransaction(spendTXBuilder, freshKey)
+            val spendTX = notaryServices.addSignature(spendPTX)
 
             assertEquals(100.DOLLARS, vault.cashBalances[USD])
 
             // A tx that doesn't send us anything.
-            val irrelevantTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB, DUMMY_NOTARY)
-                signWith(MEGA_CORP_KEY)
-                signWith(DUMMY_NOTARY_KEY)
-            }.toSignedTransaction()
+            val irrelevantBuilder = TransactionType.General.Builder(DUMMY_NOTARY)
+            Cash().generateIssue(irrelevantBuilder, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB, DUMMY_NOTARY)
+
+            val irrelevantPTX = megaCorpServices.signInitialTransaction(irrelevantBuilder)
+            val irrelevantTX = notaryServices.addSignature(irrelevantPTX)
 
             services.recordTransactions(irrelevantTX)
             assertEquals(100.DOLLARS, vault.cashBalances[USD])
@@ -148,12 +152,10 @@ class VaultWithCashTest {
         backgroundExecutor.submit {
             database.transaction {
                 try {
-                    val txn1Builder =
-                            TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                                vault.generateSpend(this, 60.DOLLARS, BOB)
-                                signWith(DUMMY_NOTARY_KEY)
-                            }
-                    val txn1 = services.signInitialTransaction(txn1Builder, freshKey)
+                    val txn1Builder = TransactionType.General.Builder(DUMMY_NOTARY)
+                    vault.generateSpend(txn1Builder, 60.DOLLARS, BOB)
+                    val ptxn1 = notaryServices.signInitialTransaction(txn1Builder)
+                    val txn1 = services.addSignature(ptxn1, freshKey)
                     println("txn1: ${txn1.id} spent ${((txn1.tx.outputs[0].data) as Cash.State).amount}")
                     println("""txn1 states:
                                 UNCONSUMED: ${vault.unconsumedStates<Cash.State>().count()} : ${vault.unconsumedStates<Cash.State>()},
@@ -180,12 +182,10 @@ class VaultWithCashTest {
         backgroundExecutor.submit {
             database.transaction {
                 try {
-                    val txn2Builder =
-                            TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                                vault.generateSpend(this, 80.DOLLARS, BOB)
-                                signWith(DUMMY_NOTARY_KEY)
-                            }
-                    val txn2 = services.signInitialTransaction(txn2Builder, freshKey)
+                    val txn2Builder = TransactionType.General.Builder(DUMMY_NOTARY)
+                    vault.generateSpend(txn2Builder, 80.DOLLARS, BOB)
+                    val ptxn2 = notaryServices.signInitialTransaction(txn2Builder)
+                    val txn2 = services.addSignature(ptxn2, freshKey)
                     println("txn2: ${txn2.id} spent ${((txn2.tx.outputs[0].data) as Cash.State).amount}")
                     println("""txn2 states:
                                 UNCONSUMED: ${vault.unconsumedStates<Cash.State>().count()} : ${vault.unconsumedStates<Cash.State>()},
@@ -227,9 +227,8 @@ class VaultWithCashTest {
             val dummyIssueBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
                 addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
                 addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
-                signWith(DUMMY_NOTARY_KEY)
             }
-            val dummyIssue = services.signInitialTransaction(dummyIssueBuilder)
+            val dummyIssue = notaryServices.signInitialTransaction(dummyIssueBuilder)
 
             assertThatThrownBy {
                 dummyIssue.toLedgerTransaction(services).verify()
@@ -246,11 +245,10 @@ class VaultWithCashTest {
             val linearId = UniqueIdentifier()
 
             // Issue a linear state
-            val dummyIssueBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
-                signWith(DUMMY_NOTARY_KEY)
-            }
-            val dummyIssue = services.signInitialTransaction(dummyIssueBuilder, services.legalIdentityKey)
+            val dummyIssueBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+            dummyIssueBuilder.addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
+            val dummyIssuePtx = notaryServices.signInitialTransaction(dummyIssueBuilder)
+            val dummyIssue = services.addSignature(dummyIssuePtx)
 
             dummyIssue.toLedgerTransaction(services).verify()
 
@@ -258,11 +256,12 @@ class VaultWithCashTest {
             assertThat(vault.unconsumedStates<DummyLinearContract.State>()).hasSize(1)
 
             // Move the same state
-            val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+            val dummyMoveBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
                 addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
                 addInputState(dummyIssue.tx.outRef<LinearState>(0))
-                signWith(DUMMY_NOTARY_KEY)
-            }.toSignedTransaction()
+            }
+
+            val dummyMove = notaryServices.signInitialTransaction(dummyMoveBuilder)
 
             dummyIssue.toLedgerTransaction(services).verify()
 
@@ -289,11 +288,10 @@ class VaultWithCashTest {
 
         database.transaction {
             // A tx that spends our money.
-            val spendTXBuilder = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                vault.generateSpend(this, 80.DOLLARS, BOB)
-                signWith(DUMMY_NOTARY_KEY)
-            }
-            val spendTX = services.signInitialTransaction(spendTXBuilder, freshKey)
+            val spendTXBuilder = TransactionType.General.Builder(DUMMY_NOTARY)
+            vault.generateSpend(spendTXBuilder, 80.DOLLARS, BOB)
+            val spendPTX = notaryServices.signInitialTransaction(spendTXBuilder)
+            val spendTX = services.addSignature(spendPTX, freshKey)
             services.recordTransactions(spendTX)
 
             val consumedStates = vault.consumedStates<ContractState>()
@@ -320,13 +318,14 @@ class VaultWithCashTest {
             linearStates.forEach { println(it.state.data.linearId) }
 
             // Create a txn consuming different contract types
-            val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+            val dummyMoveBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
                 addOutputState(DummyLinearContract.State(participants = listOf(freshIdentity)))
                 addOutputState(DummyDealContract.State(ref = "999", participants = listOf(freshIdentity)))
                 addInputState(linearStates.first())
                 addInputState(deals.first())
-                signWith(DUMMY_NOTARY_KEY)
-            }.toSignedTransaction()
+            }
+
+            val dummyMove = notaryServices.signInitialTransaction(dummyMoveBuilder)
 
             dummyMove.toLedgerTransaction(services).verify()
             services.recordTransactions(dummyMove)

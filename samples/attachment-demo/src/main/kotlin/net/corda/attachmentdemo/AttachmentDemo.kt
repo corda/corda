@@ -1,7 +1,6 @@
 package net.corda.attachmentdemo
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Contract
@@ -20,6 +19,8 @@ import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.flows.FinalityFlow
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.poll
 import java.io.InputStream
 import java.net.HttpURLConnection
@@ -51,14 +52,14 @@ fun main(args: Array<String>) {
     val role = options.valueOf(roleArg)!!
     when (role) {
         Role.SENDER -> {
-            val host = HostAndPort.fromString("localhost:10006")
+            val host = NetworkHostAndPort("localhost", 10006)
             println("Connecting to sender node ($host)")
             CordaRPCClient(host).start("demo", "demo").use {
                 sender(it.proxy)
             }
         }
         Role.RECIPIENT -> {
-            val host = HostAndPort.fromString("localhost:10009")
+            val host = NetworkHostAndPort("localhost", 10009)
             println("Connecting to the recipient node ($host)")
             CordaRPCClient(host).start("demo", "demo").use {
                 recipient(it.proxy)
@@ -108,11 +109,9 @@ class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : Fl
         ptx.addAttachment(hash)
 
         progressTracker.currentStep = SIGNING
-        // Sign with the notary key
-        ptx.signWith(DUMMY_NOTARY_KEY)
 
         // Send the transaction to the other recipient
-        val stx = ptx.toSignedTransaction()
+        val stx = serviceHub.signInitialTransaction(ptx)
 
         return subFlow(FinalityFlow(stx, setOf(otherSide))).single()
     }

@@ -3,34 +3,41 @@ package net.corda.node.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.*
-import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.*
+import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.Vault
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.*
+import net.corda.testing.LogHelper
+import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow.Buyer
 import net.corda.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.StorageServiceImpl
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.utilities.transaction
 import net.corda.testing.*
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
@@ -70,6 +77,7 @@ class TwoPartyTradeFlowTests {
 
     @After
     fun after() {
+        mockNet.stopNodes()
         LogHelper.reset("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
@@ -127,8 +135,8 @@ class TwoPartyTradeFlowTests {
 
         ledger {
             val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-            val aliceNode = mockNet.createPartyNode(notaryNode.info.address, ALICE.name)
-            val bobNode = mockNet.createPartyNode(notaryNode.info.address, BOB.name)
+            val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+            val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
 
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
@@ -147,7 +155,7 @@ class TwoPartyTradeFlowTests {
             val cashLockId = UUID.randomUUID()
             bobNode.database.transaction {
                 // lock the cash states with an arbitrary lockId (to prevent the Buyer flow from claiming the states)
-                bobNode.vault.softLockReserve(cashLockId, cashStates.states.map { it.ref }.toSet())
+                bobNode.services.vaultService.softLockReserve(cashLockId, cashStates.states.map { it.ref }.toSet())
             }
 
             val (bobStateMachine, aliceResult) = runBuyerAndSeller(notaryNode, aliceNode, bobNode,
@@ -173,13 +181,13 @@ class TwoPartyTradeFlowTests {
     fun `shutdown and restore`() {
         ledger {
             val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-            val aliceNode = mockNet.createPartyNode(notaryNode.info.address, ALICE.name)
-            var bobNode = mockNet.createPartyNode(notaryNode.info.address, BOB.name)
+            val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+            var bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
             val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
-            val networkMapAddr = notaryNode.info.address
+            val networkMapAddr = notaryNode.network.myAddress
 
             mockNet.runNetwork() // Clear network map registration messages
 
@@ -210,7 +218,7 @@ class TwoPartyTradeFlowTests {
                 assertThat(bobNode.checkpointStorage.checkpoints()).hasSize(1)
             }
 
-            val storage = bobNode.storage.validatedTransactions
+            val storage = bobNode.services.validatedTransactions
             val bobTransactionsBeforeCrash = bobNode.database.transaction {
                 (storage as DBTransactionStorage).transactions
             }
@@ -251,7 +259,9 @@ class TwoPartyTradeFlowTests {
             }
 
             bobNode.database.transaction {
-                val restoredBobTransactions = bobTransactionsBeforeCrash.filter { bobNode.storage.validatedTransactions.getTransaction(it.id) != null }
+                val restoredBobTransactions = bobTransactionsBeforeCrash.filter {
+                    bobNode.services.validatedTransactions.getTransaction(it.id) != null
+                }
                 assertThat(restoredBobTransactions).containsAll(bobTransactionsBeforeCrash)
             }
 
@@ -275,13 +285,9 @@ class TwoPartyTradeFlowTests {
                                 overrideServices: Map<ServiceInfo, KeyPair>?,
                                 entropyRoot: BigInteger): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
-                    // That constructs the storage service object in a customised way ...
-                    override fun constructStorageService(
-                            attachments: AttachmentStorage,
-                            transactionStorage: TransactionStorage,
-                            stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage
-                    ): StorageServiceImpl {
-                        return StorageServiceImpl(attachments, RecordingTransactionStorage(database, transactionStorage), stateMachineRecordedTransactionMappingStorage)
+                    // That constructs a recording tx storage
+                    override fun makeTransactionStorage(): WritableTransactionStorage {
+                        return RecordingTransactionStorage(database, super.makeTransactionStorage())
                     }
                 }
             }
@@ -291,8 +297,8 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `check dependencies of sale asset are resolved`() {
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name)
-        val bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name)
+        val aliceNode = makeNodeWithTracking(notaryNode.network.myAddress, ALICE.name)
+        val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
 
         ledger(aliceNode.services) {
 
@@ -307,7 +313,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val extraKey = bobNode.keyManagement.keys.single()
+            val extraKey = bobNode.services.keyManagementService.keys.single()
             val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(extraKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
@@ -325,7 +331,7 @@ class TwoPartyTradeFlowTests {
             mockNet.runNetwork()
 
             run {
-                val records = (bobNode.storage.validatedTransactions as RecordingTransactionStorage).records
+                val records = (bobNode.services.validatedTransactions as RecordingTransactionStorage).records
                 // Check Bobs's database accesses as Bob's cash transactions are downloaded by Alice.
                 records.expectEvents(isStrict = false) {
                     sequence(
@@ -343,7 +349,7 @@ class TwoPartyTradeFlowTests {
 
                 // Bob has downloaded the attachment.
                 bobNode.database.transaction {
-                    bobNode.storage.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
+                    bobNode.services.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
                         it.nextJarEntry
                         val contents = it.reader().readText()
                         assertTrue(contents.contains("Our commercial paper is top notch stuff"))
@@ -353,7 +359,7 @@ class TwoPartyTradeFlowTests {
 
             // And from Alice's perspective ...
             run {
-                val records = (aliceNode.storage.validatedTransactions as RecordingTransactionStorage).records
+                val records = (aliceNode.services.validatedTransactions as RecordingTransactionStorage).records
                 records.expectEvents(isStrict = false) {
                     sequence(
                             // Seller Alice sends her seller info to Bob, who wants to check the asset for sale.
@@ -390,8 +396,8 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `track works`() {
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name)
-        val bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name)
+        val aliceNode = makeNodeWithTracking(notaryNode.network.myAddress, ALICE.name)
+        val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
 
         ledger(aliceNode.services) {
 
@@ -406,7 +412,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val bobsKey = bobNode.keyManagement.keys.single()
+            val bobsKey = bobNode.services.keyManagementService.keys.single()
             val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(bobsKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
@@ -421,8 +427,10 @@ class TwoPartyTradeFlowTests {
 
             mockNet.runNetwork() // Clear network map registration messages
 
-            val aliceTxStream = aliceNode.storage.validatedTransactions.track().second
-            val aliceTxMappings = with(aliceNode) { database.transaction { storage.stateMachineRecordedTransactionMapping.track().second } }
+            val aliceTxStream = aliceNode.services.validatedTransactions.track().updates
+            val aliceTxMappings = with(aliceNode) {
+                database.transaction { services.stateMachineRecordedTransactionMapping.track().updates }
+            }
             val aliceSmId = runBuyerAndSeller(notaryNode, aliceNode, bobNode,
                     "alice's paper".outputStateAndRef()).sellerId
 
@@ -442,7 +450,7 @@ class TwoPartyTradeFlowTests {
             )
             aliceTxStream.expectEvents { aliceTxExpectations }
             val aliceMappingExpectations = sequence(
-                    expect { (stateMachineRunId, transactionId) ->
+                    expect<StateMachineTransactionMapping> { (stateMachineRunId, transactionId) ->
                         require(stateMachineRunId == aliceSmId)
                         require(transactionId == bobsFakeCash[0].id)
                     },
@@ -450,9 +458,9 @@ class TwoPartyTradeFlowTests {
                         require(stateMachineRunId == aliceSmId)
                         require(transactionId == bobsFakeCash[2].id)
                     },
-                    expect { mapping: StateMachineTransactionMapping ->
-                        require(mapping.stateMachineRunId == aliceSmId)
-                        require(mapping.transactionId == bobsFakeCash[1].id)
+                    expect { (stateMachineRunId, transactionId) ->
+                        require(stateMachineRunId == aliceSmId)
+                        require(transactionId == bobsFakeCash[1].id)
                     }
             )
             aliceTxMappings.expectEvents { aliceMappingExpectations }
@@ -501,12 +509,13 @@ class TwoPartyTradeFlowTests {
         @Suspendable
         override fun call(): SignedTransaction {
             send(buyer, Pair(notary.notaryIdentity, price))
+            val key = serviceHub.keyManagementService.freshKey()
             return subFlow(Seller(
                 buyer,
                 notary,
                 assetToSell,
                 price,
-                serviceHub.legalIdentityKey))
+                AnonymousParty(key)))
         }
     }
 
@@ -528,8 +537,8 @@ class TwoPartyTradeFlowTests {
             expectedMessageSubstring: String
     ) {
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = mockNet.createPartyNode(notaryNode.info.address, ALICE.name)
-        val bobNode = mockNet.createPartyNode(notaryNode.info.address, BOB.name)
+        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+        val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
         val bobsBadCash = bobNode.database.transaction {
@@ -588,7 +597,7 @@ class TwoPartyTradeFlowTests {
         }
         return node.database.transaction {
             node.services.recordTransactions(signed)
-            val validatedTransactions = node.services.storageService.validatedTransactions
+            val validatedTransactions = node.services.validatedTransactions
             if (validatedTransactions is RecordingTransactionStorage) {
                 validatedTransactions.records.clear()
             }
@@ -669,8 +678,8 @@ class TwoPartyTradeFlowTests {
     }
 
 
-    class RecordingTransactionStorage(val database: Database, val delegate: TransactionStorage) : TransactionStorage {
-        override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+    class RecordingTransactionStorage(val database: Database, val delegate: WritableTransactionStorage) : WritableTransactionStorage {
+        override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
             return database.transaction {
                 delegate.track()
             }

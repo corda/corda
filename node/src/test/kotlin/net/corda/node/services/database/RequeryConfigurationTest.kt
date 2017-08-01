@@ -3,12 +3,12 @@ package net.corda.node.services.database
 import io.requery.Persistable
 import io.requery.kotlin.eq
 import io.requery.sql.KotlinEntityDataStore
-import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.NullPublicKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.testing.NullPublicKey
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.Vault
@@ -16,8 +16,8 @@ import net.corda.core.serialization.serialize
 import net.corda.core.serialization.storageKryo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_PUBKEY_1
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_PUBKEY_1
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.schemas.requery.Models
 import net.corda.node.services.vault.schemas.requery.VaultCashBalancesEntity

@@ -6,7 +6,6 @@ import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.node.utilities.StrandLocalTransactionManager.Boundary
 import org.bouncycastle.cert.X509CertificateHolder
 import org.h2.jdbc.JdbcBlob
@@ -23,7 +22,6 @@ import java.io.Closeable
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Instant
 import java.time.LocalDate
@@ -268,7 +266,7 @@ private class NoOpSubscriber<U>(t: Subscriber<in U>) : Subscriber<U>(t) {
  * that might be in place.
  */
 fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: Database? = null): rx.Observable<T> {
-    val wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
+    var wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
     // Use lift to add subscribers to a special subscriber that wraps a database transaction around observations.
     // Each subscriber will be passed to this lambda when they subscribe, at which point we add them to wrapping subscriber.
     return this.lift { toBeWrappedInDbTx: Subscriber<in T> ->
@@ -277,7 +275,13 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: Database? = null)
         // If we are the first subscriber, return the shared subscriber, otherwise return a subscriber that does nothing.
         if (wrappingSubscriber.delegates.size == 1) wrappingSubscriber else NoOpSubscriber(toBeWrappedInDbTx)
         // Clean up the shared list of subscribers when they unsubscribe.
-    }.doOnUnsubscribe { wrappingSubscriber.cleanUp() }
+    }.doOnUnsubscribe {
+        wrappingSubscriber.cleanUp()
+        // If cleanup removed the last subscriber reset the system, as future subscribers might need the stream again
+        if (wrappingSubscriber.delegates.isEmpty()) {
+            wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
+        }
+    }
 }
 
 // Composite columns for use with below Exposed helpers.

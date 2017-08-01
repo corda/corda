@@ -2,8 +2,8 @@
 
 package net.corda.irs
 
-import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
+import net.corda.core.utilities.NetworkHostAndPort
 import kotlin.system.exitProcess
 
 enum class Role {
@@ -29,9 +29,9 @@ fun main(args: Array<String>) {
     val role = options.valueOf(roleArg)!!
     val value = options.valueOf(valueArg)
     when (role) {
-        Role.UploadRates -> IRSDemoClientApi(HostAndPort.fromString("localhost:10004")).runUploadRates()
-        Role.Trade -> IRSDemoClientApi(HostAndPort.fromString("localhost:10007")).runTrade(value)
-        Role.Date -> IRSDemoClientApi(HostAndPort.fromString("localhost:10010")).runDateChange(value)
+        Role.UploadRates -> IRSDemoClientApi(NetworkHostAndPort("localhost", 10004)).runUploadRates()
+        Role.Trade -> IRSDemoClientApi(NetworkHostAndPort("localhost", 10007)).runTrade(value)
+        Role.Date -> IRSDemoClientApi(NetworkHostAndPort("localhost", 10010)).runDateChange(value)
     }
 }
 

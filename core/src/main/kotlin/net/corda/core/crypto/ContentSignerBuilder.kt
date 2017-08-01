@@ -14,7 +14,7 @@ import java.security.Signature
  */
 object ContentSignerBuilder {
     fun build(signatureScheme: SignatureScheme, privateKey: PrivateKey, provider: Provider?, random: SecureRandom? = null): ContentSigner {
-        val sigAlgId = AlgorithmIdentifier(signatureScheme.signatureOID)
+        val sigAlgId = signatureScheme.signatureOID
         val sig = Signature.getInstance(signatureScheme.signatureName, provider).apply {
             if (random != null) {
                 initSign(privateKey, random)

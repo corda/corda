@@ -1,21 +1,20 @@
 package net.corda.node.services.messaging
 
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.ThreadBox
+import net.corda.core.*
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.random63BitValue
-import net.corda.core.serialization.opaque
-import net.corda.core.success
+import net.corda.core.utilities.opaque
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.VersionInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
@@ -72,13 +71,13 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
                           val versionInfo: VersionInfo,
-                          val serverAddress: HostAndPort,
+                          val serverAddress: NetworkHostAndPort,
                           val myIdentity: PublicKey?,
                           val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                           val database: Database,
                           val networkMapRegistrationFuture: ListenableFuture<Unit>,
                           val monitoringService: MonitoringService,
-                          advertisedAddress: HostAndPort = serverAddress
+                          advertisedAddress: NetworkHostAndPort = serverAddress
 ) : ArtemisMessagingComponent(), MessagingService {
     companion object {
         private val log = loggerFor<NodeMessagingClient>()
@@ -160,7 +159,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             check(!started) { "start can't be called twice" }
             started = true
 
-            log.info("Connecting to server: $serverAddress")
+            log.info("Connecting to message broker: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
@@ -185,7 +184,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
             // Create a queue, consumer and producer for handling P2P network messages.
             p2pConsumer = makeP2PConsumer(session, true)
-            networkMapRegistrationFuture.success {
+            networkMapRegistrationFuture.thenMatch({
                 state.locked {
                     log.info("Network map is complete, so removing filter from P2P consumer.")
                     try {
@@ -195,7 +194,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     }
                     p2pConsumer = makeP2PConsumer(session, false)
                 }
-            }
+            }, {})
 
             rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, config.myLegalName)
 
@@ -236,7 +235,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
     }
 
-    private var shutdownLatch = CountDownLatch(1)
+    private val shutdownLatch = CountDownLatch(1)
 
     private fun processMessage(consumer: ClientConsumer): Boolean {
         // Two possibilities here:
@@ -286,6 +285,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
         while (!networkMapRegistrationFuture.isDone && processMessage(consumer)) {
         }
+        with(networkMapRegistrationFuture) {
+            if (isDone) getOrThrow() else andForget(log) // Trigger node shutdown here to avoid deadlock in shutdown hooks.
+        }
     }
 
     private fun runPostNetworkMap() {
@@ -306,11 +308,14 @@ class NodeMessagingClient(override val config: NodeConfiguration,
      * consume all messages via a new consumer without a filter applied.
      */
     fun run(serverControl: ActiveMQServerControl) {
-        // Build the network map.
-        runPreNetworkMap(serverControl)
-        // Process everything else once we have the network map.
-        runPostNetworkMap()
-        shutdownLatch.countDown()
+        try {
+            // Build the network map.
+            runPreNetworkMap(serverControl)
+            // Process everything else once we have the network map.
+            runPostNetworkMap()
+        } finally {
+            shutdownLatch.countDown()
+        }
     }
 
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
@@ -564,11 +569,10 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
     }
 
-
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
         return when (partyInfo) {
-            is PartyInfo.Node -> partyInfo.node.address
-            is PartyInfo.Service -> ArtemisMessagingComponent.ServiceAddress(partyInfo.service.identity.owningKey)
+            is PartyInfo.Node -> getArtemisPeerAddress(partyInfo.node)
+            is PartyInfo.Service -> ServiceAddress(partyInfo.service.identity.owningKey)
         }
     }
 }

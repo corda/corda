@@ -18,7 +18,7 @@ import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.exists
 import net.corda.core.node.CityDatabase
-import net.corda.core.node.PhysicalLocation
+import net.corda.core.node.WorldMapLocation
 import net.corda.core.readAllLines
 import net.corda.core.utilities.normaliseLegalName
 import net.corda.core.utilities.validateLegalName
@@ -211,7 +211,7 @@ class NodeTabView : Fragment() {
         CityDatabase.cityMap.values.map { it.countryCode }.toSet().map { it to Image(resources["/net/corda/demobench/flags/$it.png"]) }.toMap()
     }
 
-    private fun Pane.nearestCityField(): ComboBox<PhysicalLocation> {
+    private fun Pane.nearestCityField(): ComboBox<WorldMapLocation> {
         return combobox(model.nearestCity, CityDatabase.cityMap.values.toList().sortedBy { it.description }) {
             minWidth = textWidth
             styleClass += "city-picker"
@@ -229,9 +229,9 @@ class NodeTabView : Fragment() {
                 if (it == null) error("Please select a city") else null
             }
 
-            converter = object : StringConverter<PhysicalLocation>() {
-                override fun toString(loc: PhysicalLocation?) = loc?.description ?: ""
-                override fun fromString(string: String): PhysicalLocation? = CityDatabase[string]
+            converter = object : StringConverter<WorldMapLocation>() {
+                override fun toString(loc: WorldMapLocation?) = loc?.description ?: ""
+                override fun fromString(string: String): WorldMapLocation? = CityDatabase[string]
             }
 
             value = CityDatabase["London"]

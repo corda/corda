@@ -5,11 +5,9 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.*
-import net.corda.flows.TxKeyFlow
+import net.corda.flows.AnonymisedIdentity
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.BOB_PUBKEY
+import net.corda.testing.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.security.cert.CertificateFactory
@@ -28,13 +26,13 @@ class InMemoryIdentityServiceTests {
         assertNull(service.getAllIdentities().firstOrNull())
 
         service.registerIdentity(ALICE_IDENTITY)
-        var expected = setOf<Party>(ALICE)
+        var expected = setOf(ALICE)
         var actual = service.getAllIdentities().map { it.party }.toHashSet()
         assertEquals(expected, actual)
 
         // Add a second party and check we get both back
         service.registerIdentity(BOB_IDENTITY)
-        expected = setOf<Party>(ALICE, BOB)
+        expected = setOf(ALICE, BOB)
         actual = service.getAllIdentities().map { it.party }.toHashSet()
         assertEquals(expected, actual)
     }
@@ -136,14 +134,14 @@ class InMemoryIdentityServiceTests {
         }
     }
 
-    private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, TxKeyFlow.AnonymousIdentity> {
+    private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, AnonymisedIdentity> {
         val certFactory = CertificateFactory.getInstance("X509")
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name, txKey.public)
         val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
-        return Pair(issuer, TxKeyFlow.AnonymousIdentity(txCertPath, txCert, AnonymousParty(txKey.public)))
+        return Pair(issuer, AnonymisedIdentity(txCertPath, txCert, AnonymousParty(txKey.public)))
     }
 
     /**

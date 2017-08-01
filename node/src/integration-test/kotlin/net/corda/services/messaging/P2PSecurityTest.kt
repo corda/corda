@@ -6,9 +6,8 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.cert
 import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.seconds
-import net.corda.core.utilities.*
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.sendRequest
@@ -16,10 +15,9 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.utilities.AddOrRemove
-import net.corda.testing.MOCK_VERSION_INFO
+import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import net.corda.testing.node.SimpleNode
-import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.x500.X500Name
@@ -32,7 +30,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `incorrect legal name for the network map service config`() {
-        val incorrectNetworkMapName = X509Utilities.getDevX509Name(random63BitValue().toString())
+        val incorrectNetworkMapName = X509Utilities.getDevX509Name("NetworkMap-${random63BitValue()}")
         val node = startNode(BOB.name, configOverrides = mapOf(
                 "networkMapService" to mapOf(
                         "address" to networkMapNode.configuration.p2pAddress.toString(),
@@ -69,7 +67,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     private fun SimpleNode.registerWithNetworkMap(registrationName: X500Name): ListenableFuture<NetworkMapService.RegistrationResponse> {
         val legalIdentity = getTestPartyAndCertificate(registrationName, identity.public)
-        val nodeInfo = NodeInfo(network.myAddress, legalIdentity, MOCK_VERSION_INFO.platformVersion)
+        val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), legalIdentity, setOf(legalIdentity), 1)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
         val request = RegistrationRequest(registration.toWire(keyService, identity.public), network.myAddress)
         return network.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.network.myAddress)

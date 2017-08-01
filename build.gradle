@@ -1,11 +1,10 @@
-
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "0.13-SNAPSHOT"
+    ext.corda_release_version = "0.14-SNAPSHOT"
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     // TODO This is going to be difficult until we have a clear separation throughout the code of what is public and what is internal
     ext.corda_platform_version = 1
@@ -75,6 +74,7 @@ plugins {
     // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
     // Version 1.0.2 of this plugin uses capsule:1.0.1
     id "us.kirchmeier.capsule" version "1.0.2"
+    id "com.jfrog.artifactory" version "4.4.18"
 }
 
 ext {
@@ -85,6 +85,7 @@ apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'maven-publish'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -102,12 +103,6 @@ allprojects {
 
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
-
-    // Use manual resource copying of log4j2.xml rather than source sets.
-    // This prevents problems in IntelliJ with regard to duplicate source roots.
-    processTestResources {
-        from file("$rootDir/config/test/log4j2.xml")
-    }
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
@@ -254,7 +249,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver']
+    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -278,4 +273,18 @@ task buildCordappDependenciesZip(type: Zip) {
     from buildscript.configurations.classpath
     from 'node/capsule/NOTICE' // CDDL notice
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+artifactory {
+    publish {
+        contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+        repository {
+            repoKey = 'corda-releases'
+            username = 'teamcity'
+            password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+        }
+        defaults {
+            publications('corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver')
+        }
+    }
 }

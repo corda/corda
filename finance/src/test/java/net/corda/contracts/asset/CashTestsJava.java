@@ -3,13 +3,13 @@ package net.corda.contracts.asset;
 import kotlin.Unit;
 import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.identity.AnonymousParty;
-import net.corda.core.serialization.OpaqueBytes;
+import net.corda.core.utilities.OpaqueBytes;
 import org.junit.Test;
 
 import static net.corda.core.contracts.ContractsDSL.DOLLARS;
 import static net.corda.core.contracts.ContractsDSL.issuedBy;
-import static net.corda.core.utilities.TestConstants.getDUMMY_PUBKEY_1;
-import static net.corda.core.utilities.TestConstants.getDUMMY_PUBKEY_2;
+import static net.corda.testing.TestConstants.getDUMMY_PUBKEY_1;
+import static net.corda.testing.TestConstants.getDUMMY_PUBKEY_2;
 import static net.corda.testing.CoreTestUtils.*;
 
 /**

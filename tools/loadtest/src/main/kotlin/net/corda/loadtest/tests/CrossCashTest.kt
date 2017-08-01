@@ -7,10 +7,9 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
-import net.corda.core.failure
 import net.corda.core.identity.AbstractParty
-import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.success
+import net.corda.core.thenMatch
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
@@ -117,13 +116,14 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
 
         generate = { (nodeVaults), parallelism ->
             val nodeMap = simpleNodes.associateBy { it.info.legalIdentity }
-            Generator.pickN(parallelism, simpleNodes).bind { nodes ->
+            val anonymous = true
+            Generator.pickN(parallelism, simpleNodes).flatMap { nodes ->
                 Generator.sequence(
                         nodes.map { node ->
                             val quantities = nodeVaults[node.info.legalIdentity] ?: mapOf()
                             val possibleRecipients = nodeMap.keys.toList()
                             val moves = quantities.map {
-                                it.value.toDouble() / 1000 to generateMove(it.value, USD, node.info.legalIdentity, possibleRecipients)
+                                it.value.toDouble() / 1000 to generateMove(it.value, USD, node.info.legalIdentity, possibleRecipients, anonymous)
                             }
                             val exits = quantities.mapNotNull {
                                 if (it.key == node.info.legalIdentity) {
@@ -133,7 +133,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                                 }
                             }
                             val command = Generator.frequency(
-                                    listOf(1.0 to generateIssue(10000, USD, notary.info.notaryIdentity, possibleRecipients)) + moves + exits
+                                    listOf(1.0 to generateIssue(10000, USD, notary.info.notaryIdentity, possibleRecipients, anonymous)) + moves + exits
                             )
                             command.map { CrossCashCommand(it, nodeMap[node.info.legalIdentity]!!) }
                         }
@@ -206,12 +206,11 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
 
         execute = { command ->
             val result = command.command.startFlow(command.node.proxy).returnValue
-            result.failure {
-                log.error("Failure[$command]", it)
-            }
-            result.success {
+            result.thenMatch({
                 log.info("Success[$command]: $result")
-            }
+            }, {
+                log.error("Failure[$command]", it)
+            })
         },
 
         gatherRemoteState = { previousState ->

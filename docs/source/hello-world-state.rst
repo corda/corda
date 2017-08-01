@@ -38,11 +38,6 @@ If you do want to dive into Kotlin, there's an official
 `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
 `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_.
 
-If not, here's a quick primer on the Kotlinisms in the declaration of ``ContractState``:
-
-* ``val`` declares a read-only property, similar to Java's ``final`` keyword
-* The syntax ``varName: varType`` declares ``varName`` as being of type ``varType``
-
 We can see that the ``ContractState`` interface declares two properties:
 
 * ``contract``: the contract controlling transactions involving this state
@@ -53,15 +48,15 @@ Beyond this, our state is free to define any properties, methods, helpers or inn
 represent a given class of shared facts on the ledger.
 
 ``ContractState`` also has several child interfaces that you may wish to implement depending on your state, such as
-``LinearState`` and ``OwnableState``.
+``LinearState`` and ``OwnableState``. See :doc:`api-states` for more information.
 
 Modelling IOUs
 --------------
 How should we define the ``IOUState`` representing IOUs on the ledger? Beyond implementing the ``ContractState``
 interface, our ``IOUState`` will also need properties to track the relevant features of the IOU:
 
-* The sender of the IOU
-* The IOU's recipient
+* The lender of the IOU
+* The borrower of the IOU
 * The value of the IOU
 
 There are many more fields you could include, such as the IOU's currency. We'll abstract them away for now. If
@@ -76,23 +71,22 @@ define an ``IOUState``:
 
     .. code-block:: kotlin
 
-        package com.template
+        package com.iou
 
         import net.corda.core.contracts.ContractState
         import net.corda.core.identity.Party
 
         class IOUState(val value: Int,
-                       val sender: Party,
-                       val recipient: Party,
-                       // TODO: Once we've defined IOUContract, come back and update this.
-                       override val contract: TemplateContract = TemplateContract()) : ContractState {
+                       val lender: Party,
+                       val borrower: Party) : ContractState {
+            override val contract: IOUContract = IOUContract()
 
-            override val participants get() = listOf(sender, recipient)
+            override val participants get() = listOf(lender, borrower)
         }
 
     .. code-block:: java
 
-        package com.template;
+        package com.iou;
 
         import com.google.common.collect.ImmutableList;
         import net.corda.core.contracts.ContractState;
@@ -103,53 +97,52 @@ define an ``IOUState``:
 
         public class IOUState implements ContractState {
             private final int value;
-            private final Party sender;
-            private final Party recipient;
-            // TODO: Once we've defined IOUContract, come back and update this.
-            private final TemplateContract contract;
+            private final Party lender;
+            private final Party borrower;
+            private final IOUContract contract = new IOUContract();
 
-            public IOUState(int value, Party sender, Party recipient, IOUContract contract) {
+            public IOUState(int value, Party lender, Party borrower) {
                 this.value = value;
-                this.sender = sender;
-                this.recipient = recipient;
-                this.contract = contract;
+                this.lender = lender;
+                this.borrower = borrower;
             }
 
             public int getValue() {
                 return value;
             }
 
-            public Party getSender() {
-                return sender;
+            public Party getLender() {
+                return lender;
             }
 
-            public Party getRecipient() {
-                return recipient;
+            public Party getBorrower() {
+                return borrower;
             }
 
             @Override
             // TODO: Once we've defined IOUContract, come back and update this.
-            public TemplateContract getContract() {
+            public IOUContract getContract() {
                 return contract;
             }
 
             @Override
             public List<AbstractParty> getParticipants() {
-                return ImmutableList.of(sender, recipient);
+                return ImmutableList.of(lender, borrower);
             }
         }
 
 We've made the following changes:
 
 * We've renamed ``TemplateState`` to ``IOUState``
-* We've added properties for ``value``, ``sender`` and ``recipient`` (along with any getters and setters in Java):
+* We've added properties for ``value``, ``lender`` and ``borrower`` (along with any getters and setters in Java):
 
-  * ``value`` is just a standard int (in Java)/Int (in Kotlin), but ``sender`` and ``recipient`` are of type
-    ``Party``. ``Party`` is a built-in Corda type that represents an entity on the network.
+  * ``value`` is just a standard int (in Java)/Int (in Kotlin)
+  * ``lender`` and ``borrower`` are of type ``Party``. ``Party`` is a built-in Corda type that represents an entity on
+    the network.
 
-* We've overridden ``participants`` to return a list of the ``sender`` and ``recipient``
-* This means that actions such as changing the state's contract or its notary will require approval from both the
-  ``sender`` and the ``recipient``
+* We've overridden ``participants`` to return a list of the ``lender`` and ``borrower``
+
+  * Actions such as changing a state's contract or notary will require approval from all the ``participants``
 
 We've left ``IOUState``'s contract as ``TemplateContract`` for now. We'll update this once we've defined the
 ``IOUContract``.

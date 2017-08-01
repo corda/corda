@@ -8,10 +8,10 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
-import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.testing.driver.driver
@@ -51,6 +51,9 @@ class IntegrationTestingTutorial {
 
             val bobClient = bob.rpcClientToNode()
             val bobProxy = bobClient.start("bobUser", "testPassword2").proxy
+
+            aliceProxy.waitUntilRegisteredWithNetworkMap().getOrThrow()
+            bobProxy.waitUntilRegisteredWithNetworkMap().getOrThrow()
             // END 2
 
             // START 3
@@ -67,7 +70,8 @@ class IntegrationTestingTutorial {
                             i.DOLLARS,
                             issueRef,
                             bob.nodeInfo.legalIdentity,
-                            notary.nodeInfo.notaryIdentity
+                            notary.nodeInfo.notaryIdentity,
+                            false // Not anonymised
                     ).returnValue)
                 }
             }.forEach(Thread::join) // Ensure the stack of futures is populated.
@@ -90,7 +94,7 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1..10) {
-                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
+                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity, false).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

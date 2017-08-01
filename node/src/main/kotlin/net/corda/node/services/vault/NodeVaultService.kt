@@ -2,6 +2,7 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import com.google.common.annotations.VisibleForTesting
 import io.requery.PersistenceException
 import io.requery.TransactionIsolation
 import io.requery.kotlin.`in`
@@ -19,17 +20,27 @@ import net.corda.core.crypto.containsAny
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.*
-import net.corda.core.serialization.*
+import net.corda.core.node.services.StatesNotAvailableException
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.unconsumedStates
+import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
+import net.corda.core.serialization.storageKryo
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.vault.schemas.requery.*
+import net.corda.node.services.vault.schemas.requery.VaultSchema
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
 import rx.Observable
@@ -170,9 +181,9 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     override val updatesPublisher: PublishSubject<Vault.Update>
         get() = mutex.locked { _updatesPublisher }
 
-    override fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>> {
+    override fun track(): DataFeed<Vault<ContractState>, Vault.Update> {
         return mutex.locked {
-            Pair(Vault(unconsumedStates<ContractState>()), _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            DataFeed(Vault(unconsumedStates<ContractState>()), _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 
@@ -458,7 +469,8 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
-    private fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
+    @VisibleForTesting
+    internal fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
         val ourNewStates = tx.outputs.
                 filter { isRelevant(it.data, ourKeys) }.
                 map { tx.outRef<ContractState>(it.data) }
@@ -505,7 +517,8 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         authorisedUpgrade.remove(stateAndRef.ref)
     }
 
-    private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
+    @VisibleForTesting
+    internal fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
         is OwnableState -> state.owner.owningKey.containsAny(ourKeys)
         is LinearState -> state.isRelevant(ourKeys)
         else -> ourKeys.intersect(state.participants.map { it.owningKey }).isNotEmpty()

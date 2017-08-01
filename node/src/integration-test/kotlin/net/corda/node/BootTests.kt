@@ -6,11 +6,15 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.ALICE
+import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.ServiceType
+import net.corda.testing.ALICE
 import net.corda.testing.driver.driver
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.startFlowPermission
 import net.corda.nodeapi.User
+import net.corda.testing.driver.ListenProcessDeathException
+import net.corda.testing.driver.NetworkMapStartStrategy
 import net.corda.testing.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -18,6 +22,7 @@ import org.junit.Test
 import java.io.*
 import java.nio.file.Files
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class BootTests {
 
@@ -37,7 +42,7 @@ class BootTests {
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val alice = startNode(ALICE.name).get()
-            val logFolder = alice.configuration.baseDirectory / "logs"
+            val logFolder = alice.configuration.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.toFile().listFiles { _, name -> name.endsWith(".log") }.single()
             // Start second Alice, should fail
             assertThatThrownBy {
@@ -46,6 +51,15 @@ class BootTests {
             // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
             val numberOfNodesThatLogged = Files.lines(logFile.toPath()).filter { NodeStartup.LOGS_CAN_BE_FOUND_IN_STRING in it }.count()
             assertEquals(1, numberOfNodesThatLogged)
+        }
+    }
+
+    @Test
+    fun `node quits on failure to register with network map`() {
+        val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.regulator.getSubType("$it")) }.toSet()
+        driver(networkMapStartStrategy = NetworkMapStartStrategy.Nominated(ALICE.name)) {
+            val future = startNode(ALICE.name, advertisedServices = tooManyAdvertisedServices)
+            assertFailsWith(ListenProcessDeathException::class) { future.getOrThrow() }
         }
     }
 }

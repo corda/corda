@@ -9,9 +9,9 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_PUBKEY_1
+import net.corda.testing.TEST_TX_TIME
 import net.corda.testing.*
 import org.junit.Test
 import java.security.PublicKey

@@ -17,7 +17,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.time.Instant
@@ -43,7 +42,6 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class NodeSchedulerService(private val services: ServiceHubInternal,
-                           private val database: Database,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch())
     : SchedulerService, SingletonSerializeAsToken() {
@@ -159,7 +157,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        database.transaction {
+        services.database.transaction {
             val scheduledFlow = getScheduledFlow(scheduledState)
             if (scheduledFlow != null) {
                 // TODO Because the flow is executed asynchronously, there is a small window between this tx we're in

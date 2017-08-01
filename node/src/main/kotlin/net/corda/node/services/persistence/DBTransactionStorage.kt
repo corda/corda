@@ -3,8 +3,10 @@ package net.corda.node.services.persistence
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
-import net.corda.core.node.services.TransactionStorage
+import net.corda.core.messaging.DataFeed
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.utilities.*
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.exposedLogger
@@ -13,7 +15,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.util.Collections.synchronizedMap
 
-class DBTransactionStorage : TransactionStorage {
+class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
     private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}transactions") {
         val txId = secureHash("tx_id")
         val transaction = blob("transaction")
@@ -58,12 +60,12 @@ class DBTransactionStorage : TransactionStorage {
         }
     }
 
-    val updatesPublisher = PublishSubject.create<SignedTransaction>().toSerialized()
+    private val updatesPublisher = PublishSubject.create<SignedTransaction>().toSerialized()
     override val updates: Observable<SignedTransaction> = updatesPublisher.wrapWithDatabaseTransaction()
 
-    override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+    override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         synchronized(txStorage) {
-            return Pair(txStorage.values.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            return DataFeed(txStorage.values.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 

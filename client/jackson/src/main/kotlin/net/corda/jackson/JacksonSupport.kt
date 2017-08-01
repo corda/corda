@@ -10,13 +10,14 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.contracts.BusinessCalendar
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.*
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey

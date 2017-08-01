@@ -2,13 +2,14 @@ package net.corda.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.crypto.composite.expandedCompositeKeys
+import net.corda.core.crypto.testing.NullSignature
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PublicKey
@@ -116,11 +117,12 @@ data class TestTransactionDSLInterpreter private constructor(
     }
 
     override fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState) {
-        val outputIndex = transactionBuilder.addOutputState(contractState, notary, encumbrance)
+        transactionBuilder.addOutputState(contractState, notary, encumbrance)
         if (label != null) {
             if (label in labelToIndexMap) {
                 throw DuplicateOutputLabel(label)
             } else {
+                val outputIndex = transactionBuilder.outputStates().size - 1
                 labelToIndexMap[label] = outputIndex
             }
         }
@@ -139,14 +141,13 @@ data class TestTransactionDSLInterpreter private constructor(
         // Verify on a copy of the transaction builder, so if it's then further modified it doesn't error due to
         // the existing signature
         transactionBuilder.copy().apply {
-            signWith(DUMMY_NOTARY_KEY)
             toWireTransaction().toLedgerTransaction(services).verify()
         }
         return EnforceVerifyOrFail.Token
     }
 
     override fun timeWindow(data: TimeWindow) {
-        transactionBuilder.addTimeWindow(data)
+        transactionBuilder.setTimeWindow(data)
     }
 
     override fun tweak(
@@ -211,8 +212,9 @@ data class TestLedgerDSLInterpreter private constructor(
         }
     }
 
-    internal fun resolveAttachment(attachmentId: SecureHash): Attachment =
-            services.storageService.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
+    internal fun resolveAttachment(attachmentId: SecureHash): Attachment {
+        return services.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
+    }
 
     private fun <R> interpretTransactionDsl(
             transactionBuilder: TransactionBuilder,
@@ -276,7 +278,7 @@ data class TestLedgerDSLInterpreter private constructor(
             dsl(LedgerDSL(copy()))
 
     override fun attachment(attachment: InputStream): SecureHash {
-        return services.storageService.attachments.importAttachment(attachment)
+        return services.attachments.importAttachment(attachment)
     }
 
     override fun verifies(): EnforceVerifyOrFail {

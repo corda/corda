@@ -1,0 +1,9 @@
+apply plugin: 'net.corda.plugins.publish-utils'
+
+jar {
+    baseName 'corda-test-common'
+}
+
+publish {
+    name = jar.baseName
+}

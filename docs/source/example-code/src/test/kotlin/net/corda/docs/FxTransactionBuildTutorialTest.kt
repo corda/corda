@@ -3,10 +3,10 @@ package net.corda.docs
 import net.corda.core.contracts.*
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.toFuture
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.flows.CashIssueFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -31,8 +31,8 @@ class FxTransactionBuildTutorialTest {
                 legalName = DUMMY_NOTARY.name,
                 overrideServices = mapOf(notaryService to DUMMY_NOTARY_KEY),
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
-        nodeA = mockNet.createPartyNode(notaryNode.info.address)
-        nodeB = mockNet.createPartyNode(notaryNode.info.address)
+        nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
+        nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
     }
 
@@ -48,7 +48,8 @@ class FxTransactionBuildTutorialTest {
         val flowHandle1 = nodeA.services.startFlow(CashIssueFlow(DOLLARS(1000),
                 OpaqueBytes.of(0x01),
                 nodeA.info.legalIdentity,
-                notaryNode.info.notaryIdentity))
+                notaryNode.info.notaryIdentity,
+                false))
         // Wait for the flow to stop and print
         flowHandle1.resultFuture.getOrThrow()
         printBalances()
@@ -57,7 +58,8 @@ class FxTransactionBuildTutorialTest {
         val flowHandle2 = nodeB.services.startFlow(CashIssueFlow(POUNDS(1000),
                 OpaqueBytes.of(0x01),
                 nodeB.info.legalIdentity,
-                notaryNode.info.notaryIdentity))
+                notaryNode.info.notaryIdentity,
+                false))
         // Wait for flow to come to an end and print
         flowHandle2.resultFuture.getOrThrow()
         printBalances()

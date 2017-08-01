@@ -8,7 +8,7 @@ import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.MetaData
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.transactions.SignedTransaction
@@ -25,14 +25,16 @@ import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateCrtKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
+import org.objenesis.instantiator.ObjectInstantiator
+import org.objenesis.strategy.InstantiatorStrategy
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import sun.security.provider.certpath.X509CertPath
 import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.InputStream
+import java.lang.reflect.Modifier.isPublic
 import java.security.cert.CertPath
-import java.security.cert.X509Certificate
 import java.util.*
 
 object DefaultKryoCustomizer {
@@ -51,9 +53,7 @@ object DefaultKryoCustomizer {
             // Take the safest route here and allow subclasses to have fields named the same as super classes.
             fieldSerializerConfig.cachedFieldNameStrategy = FieldSerializer.CachedFieldNameStrategy.EXTENDED
 
-            // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no
-            // no-arg constructor available.
-            instantiatorStrategy = Kryo.DefaultInstantiatorStrategy(StdInstantiatorStrategy())
+            instantiatorStrategy = CustomInstantiatorStrategy()
 
             register(Arrays.asList("").javaClass, ArraysAsListSerializer())
             register(SignedTransaction::class.java, ImmutableClassSerializer(SignedTransaction::class))
@@ -73,7 +73,7 @@ object DefaultKryoCustomizer {
 
             noReferencesWithin<WireTransaction>()
 
-            register(sun.security.ec.ECPublicKeyImpl::class.java, PublicKeySerializer)
+            register(sun.security.ec.ECPublicKeyImpl::class.java, ECPublicKeyImplSerializer)
             register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
             register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
 
@@ -85,9 +85,6 @@ object DefaultKryoCustomizer {
 
             // This ensures a NonEmptySetSerializer is constructed with an initial value.
             register(NonEmptySet::class.java, NonEmptySetSerializer)
-
-            /** This ensures any kotlin objects that implement [DeserializeAsKotlinObjectDef] are read back in as singletons. */
-            addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
 
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
 
@@ -113,9 +110,22 @@ object DefaultKryoCustomizer {
             register(BCRSAPublicKey::class.java, PublicKeySerializer)
             register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
             register(BCSphincs256PublicKey::class.java, PublicKeySerializer)
+            register(sun.security.ec.ECPublicKeyImpl::class.java, PublicKeySerializer)
 
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }
+        }
+    }
+
+    private class CustomInstantiatorStrategy : InstantiatorStrategy {
+        private val fallbackStrategy = StdInstantiatorStrategy()
+        // Use this to allow construction of objects using a JVM backdoor that skips invoking the constructors, if there
+        // is no no-arg constructor available.
+        private val defaultStrategy = Kryo.DefaultInstantiatorStrategy(fallbackStrategy)
+        override fun <T> newInstantiatorOf(type: Class<T>): ObjectInstantiator<T> {
+            // However this doesn't work for non-public classes in the java. namespace
+            val strat = if (type.name.startsWith("java.") && !isPublic(type.modifiers)) fallbackStrategy else defaultStrategy
+            return strat.newInstantiatorOf(type)
         }
     }
 }

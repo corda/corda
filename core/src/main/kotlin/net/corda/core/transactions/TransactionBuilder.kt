@@ -3,11 +3,13 @@ package net.corda.core.transactions
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.SignatureException
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -37,46 +39,22 @@ open class TransactionBuilder(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command> = arrayListOf(),
         protected val signers: MutableSet<PublicKey> = mutableSetOf(),
-        protected var timeWindow: TimeWindow? = null) {
+        protected var window: TimeWindow? = null) {
     constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
-
-    val time: TimeWindow? get() = timeWindow // TODO: rename using a more descriptive name (i.e. timeWindowGetter) or remove if unused.
 
     /**
      * Creates a copy of the builder.
      */
-    fun copy(): TransactionBuilder =
-            TransactionBuilder(
-                    type = type,
-                    notary = notary,
-                    inputs = ArrayList(inputs),
-                    attachments = ArrayList(attachments),
-                    outputs = ArrayList(outputs),
-                    commands = ArrayList(commands),
-                    signers = LinkedHashSet(signers),
-                    timeWindow = timeWindow
-            )
-
-    /**
-     * Places a [TimeWindow] in this transaction, removing any existing command if there is one.
-     * The command requires a signature from the Notary service, which acts as a Timestamp Authority.
-     * The signature can be obtained using [NotaryFlow].
-     *
-     * The window of time in which the final time-window may lie is defined as [time] +/- [timeTolerance].
-     * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance
-     * should be chosen such that your code can finish building the transaction and sending it to the TSA within that
-     * window of time, taking into account factors such as network latency. Transactions being built by a group of
-     * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
-     * node.
-     */
-    fun addTimeWindow(time: Instant, timeTolerance: Duration) = addTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
-
-    fun addTimeWindow(timeWindow: TimeWindow) {
-        check(notary != null) { "Only notarised transactions can have a time-window" }
-        signers.add(notary!!.owningKey)
-        check(currentSigs.isEmpty()) { "Cannot change time-window after signing" }
-        this.timeWindow = timeWindow
-    }
+    fun copy() = TransactionBuilder(
+            type = type,
+            notary = notary,
+            inputs = ArrayList(inputs),
+            attachments = ArrayList(attachments),
+            outputs = ArrayList(outputs),
+            commands = ArrayList(commands),
+            signers = LinkedHashSet(signers),
+            window = window
+    )
 
     // DOCSTART 1
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
@@ -84,10 +62,12 @@ open class TransactionBuilder(
         for (t in items) {
             when (t) {
                 is StateAndRef<*> -> addInputState(t)
+                is SecureHash -> addAttachment(t)
                 is TransactionState<*> -> addOutputState(t)
                 is ContractState -> addOutputState(t)
                 is Command -> addCommand(t)
                 is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
+                is TimeWindow -> setTimeWindow(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
         }
@@ -95,49 +75,101 @@ open class TransactionBuilder(
     }
     // DOCEND 1
 
+    fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
+            ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, window)
+
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
+
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
+    fun verify(services: ServiceHub) {
+        toLedgerTransaction(services).verify()
+    }
+
+    open fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder {
+        val notary = stateAndRef.state.notary
+        require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
+        signers.add(notary.owningKey)
+        inputs.add(stateAndRef.ref)
+        return this
+    }
+
+    fun addAttachment(attachmentId: SecureHash): TransactionBuilder {
+        attachments.add(attachmentId)
+        return this
+    }
+
+    fun addOutputState(state: TransactionState<*>): TransactionBuilder {
+        outputs.add(state)
+        return this
+    }
+
+    @JvmOverloads
+    fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null) = addOutputState(TransactionState(state, notary, encumbrance))
+
+    /** A default notary must be specified during builder construction to use this method */
+    fun addOutputState(state: ContractState): TransactionBuilder {
+        checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
+        addOutputState(state, notary!!)
+        return this
+    }
+
+    fun addCommand(arg: Command): TransactionBuilder {
+        // TODO: replace pubkeys in commands with 'pointers' to keys in signers
+        signers.addAll(arg.signers)
+        commands.add(arg)
+        return this
+    }
+
+    fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
+    fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
+
+    /**
+     * Sets the [TimeWindow] for this transaction, replacing the existing [TimeWindow] if there is one. To be valid, the
+     * transaction must then be signed by the notary service within this window of time. In this way, the notary acts as
+     * the Timestamp Authority.
+     */
+    fun setTimeWindow(timeWindow: TimeWindow): TransactionBuilder {
+        check(notary != null) { "Only notarised transactions can have a time-window" }
+        signers.add(notary!!.owningKey)
+        window = timeWindow
+        return this
+    }
+
+    /**
+     * The [TimeWindow] for the transaction can also be defined as [time] +/- [timeTolerance]. The tolerance should be
+     * chosen such that your code can finish building the transaction and sending it to the Timestamp Authority within
+     * that window of time, taking into account factors such as network latency. Transactions being built by a group of
+     * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
+     * node.
+     */
+    fun setTimeWindow(time: Instant, timeTolerance: Duration) = setTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
+
+    // Accessors that yield immutable snapshots.
+    fun inputStates(): List<StateRef> = ArrayList(inputs)
+    fun attachments(): List<SecureHash> = ArrayList(attachments)
+    fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
+    fun commands(): List<Command> = ArrayList(commands)
+
     /** The signatures that have been collected so far - might be incomplete! */
+    @Deprecated("Signatures should be gathered on a SignedTransaction instead.")
     protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
 
     @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun signWith(key: KeyPair): TransactionBuilder {
-        check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         val data = toWireTransaction().id
         addSignatureUnchecked(key.sign(data.bytes))
         return this
     }
 
-    /**
-     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx, then
-     * adds it.
-     *
-     * @throws SignatureException if the signature didn't match the transaction contents.
-     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
-     */
-    fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
-        checkSignature(sig)
-        addSignatureUnchecked(sig)
-    }
-
-    /**
-     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
-     *
-     * @throws SignatureException if the signature didn't match the transaction contents.
-     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
-     */
-    fun checkSignature(sig: DigitalSignature.WithKey) {
-        require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
-        sig.verify(toWireTransaction().id)
-    }
-
     /** Adds the signature directly to the transaction, without checking it for validity. */
+    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun addSignatureUnchecked(sig: DigitalSignature.WithKey): TransactionBuilder {
         currentSigs.add(sig)
         return this
     }
 
-    fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, timeWindow)
-
+    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
@@ -149,48 +181,28 @@ open class TransactionBuilder(
         return SignedTransaction(wtx.serialize(), ArrayList(currentSigs))
     }
 
-    open fun addInputState(stateAndRef: StateAndRef<*>) {
-        check(currentSigs.isEmpty())
-        val notary = stateAndRef.state.notary
-        require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
-        signers.add(notary.owningKey)
-        inputs.add(stateAndRef.ref)
+    /**
+     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx, then
+     * adds it.
+     *
+     * @throws SignatureException if the signature didn't match the transaction contents.
+     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
+     */
+    @Deprecated("Use WireTransaction.checkSignature() instead.")
+    fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
+        checkSignature(sig)
+        addSignatureUnchecked(sig)
     }
 
-    fun addAttachment(attachmentId: SecureHash) {
-        check(currentSigs.isEmpty())
-        attachments.add(attachmentId)
+    /**
+     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
+     *
+     * @throws SignatureException if the signature didn't match the transaction contents.
+     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
+     */
+    @Deprecated("Use WireTransaction.checkSignature() instead.")
+    fun checkSignature(sig: DigitalSignature.WithKey) {
+        require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
+        sig.verify(toWireTransaction().id)
     }
-
-    fun addOutputState(state: TransactionState<*>): Int {
-        check(currentSigs.isEmpty())
-        outputs.add(state)
-        return outputs.size - 1
-    }
-
-    @JvmOverloads
-    fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null) = addOutputState(TransactionState(state, notary, encumbrance))
-
-    /** A default notary must be specified during builder construction to use this method */
-    fun addOutputState(state: ContractState): Int {
-        checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
-        return addOutputState(state, notary!!)
-    }
-
-    fun addCommand(arg: Command) {
-        check(currentSigs.isEmpty())
-        // TODO: replace pubkeys in commands with 'pointers' to keys in signers
-        signers.addAll(arg.signers)
-        commands.add(arg)
-    }
-
-    fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
-    fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
-
-    // Accessors that yield immutable snapshots.
-    fun inputStates(): List<StateRef> = ArrayList(inputs)
-
-    fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
-    fun commands(): List<Command> = ArrayList(commands)
-    fun attachments(): List<SecureHash> = ArrayList(attachments)
 }

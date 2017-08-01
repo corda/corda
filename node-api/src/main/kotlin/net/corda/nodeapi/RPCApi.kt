@@ -1,13 +1,14 @@
 package net.corda.nodeapi
 
 import com.esotericsoftware.kryo.pool.KryoPool
-import net.corda.core.ErrorOr
 import net.corda.core.serialization.KryoPoolWithContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.Try
 import net.corda.nodeapi.RPCApi.ClientToServer
 import net.corda.nodeapi.RPCApi.ObservableId
 import net.corda.nodeapi.RPCApi.RPC_CLIENT_BINDING_REMOVALS
+import net.corda.nodeapi.RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION
 import net.corda.nodeapi.RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX
 import net.corda.nodeapi.RPCApi.RPC_SERVER_QUEUE_NAME
 import net.corda.nodeapi.RPCApi.RpcRequestId
@@ -151,7 +152,7 @@ object RPCApi {
 
         data class RpcReply(
                 val id: RpcRequestId,
-                val result: ErrorOr<Any?>
+                val result: Try<Any?>
         ) : ServerToClient() {
             override fun writeToClientMessage(kryoPool: KryoPool, message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REPLY.ordinal)

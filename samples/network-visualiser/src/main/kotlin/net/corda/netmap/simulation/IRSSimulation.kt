@@ -3,10 +3,7 @@ package net.corda.netmap.simulation
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.google.common.util.concurrent.FutureCallback
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
+import com.google.common.util.concurrent.*
 import net.corda.core.*
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
@@ -17,7 +14,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_CA
+import net.corda.testing.DUMMY_CA
 import net.corda.flows.TwoPartyDealFlow.Acceptor
 import net.corda.flows.TwoPartyDealFlow.AutoOffer
 import net.corda.flows.TwoPartyDealFlow.Instigator
@@ -49,7 +46,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val future = SettableFuture.create<Unit>()
         om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap).map { it.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
 
-        startIRSDealBetween(0, 1).success {
+        startIRSDealBetween(0, 1).thenMatch({
             // Next iteration is a pause.
             executeOnNextIteration.add {}
             executeOnNextIteration.add {
@@ -67,16 +64,16 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
                         executeOnNextIteration.add {
                             val f = doNextFixing(0, 1)
                             if (f != null) {
-                                Futures.addCallback(f, this, RunOnCallerThread)
+                                Futures.addCallback(f, this, MoreExecutors.directExecutor())
                             } else {
                                 // All done!
                                 future.set(Unit)
                             }
                         }
                     }
-                }, RunOnCallerThread)
+                }, MoreExecutors.directExecutor())
             }
-        }
+        }, {})
         return future
     }
 

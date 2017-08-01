@@ -1,15 +1,15 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.DEFAULT_SESSION_ID
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.LogHelper
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.testing.ALICE
+import net.corda.testing.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MonitoringService
@@ -21,9 +21,9 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.freePort
+import net.corda.testing.node.MOCK_VERSION_INFO
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
@@ -60,7 +60,8 @@ class ArtemisMessagingTests {
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
 
-    val networkMapCache = InMemoryNetworkMapCache()
+    // TODO: We should have a dummy service hub rather than change behaviour in tests
+    val networkMapCache = InMemoryNetworkMapCache(serviceHub = null)
 
     val rpcOps = object : RPCOps {
         override val protocolVersion: Int get() = throw UnsupportedOperationException()
@@ -217,7 +218,7 @@ class ArtemisMessagingTests {
         return messagingClient
     }
 
-    private fun createMessagingClient(server: HostAndPort = HostAndPort.fromParts("localhost", serverPort)): NodeMessagingClient {
+    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort)): NodeMessagingClient {
         return database.transaction {
             NodeMessagingClient(
                     config,

@@ -1,14 +1,13 @@
 package net.corda.bank
 
-import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow
@@ -68,17 +67,18 @@ private class BankOfCordaDriver {
             }, isDebug = true)
         } else {
             try {
-                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name)
+                val anonymous = true
+                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name, DUMMY_NOTARY.name, anonymous)
                 when (role) {
                     Role.ISSUE_CASH_RPC -> {
                         println("Requesting Cash via RPC ...")
-                        val result = BankOfCordaClientApi(HostAndPort.fromString("localhost:10006")).requestRPCIssue(requestParams)
+                        val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10006)).requestRPCIssue(requestParams)
                         if (result is SignedTransaction)
                             println("Success!! You transaction receipt is ${result.tx.id}")
                     }
                     Role.ISSUE_CASH_WEB -> {
                         println("Requesting Cash via Web ...")
-                        val result = BankOfCordaClientApi(HostAndPort.fromString("localhost:10007")).requestWebIssue(requestParams)
+                        val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10007)).requestWebIssue(requestParams)
                         if (result)
                             println("Successfully processed Cash Issue request")
                     }

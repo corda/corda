@@ -2,9 +2,9 @@ package net.corda.attachmentdemo
 
 import net.corda.core.div
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.DUMMY_BANK_A
-import net.corda.core.utilities.DUMMY_BANK_B
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver

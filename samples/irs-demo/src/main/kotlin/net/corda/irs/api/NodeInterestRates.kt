@@ -146,7 +146,7 @@ object NodeInterestRates {
         //      Oracle gets signing request for only some of them with a valid partial tree? We sign over a whole transaction.
         //      It will be fixed by adding partial signatures later.
         // DOCSTART 1
-        fun sign(ftx: FilteredTransaction): DigitalSignature.LegallyIdentifiable {
+        fun sign(ftx: FilteredTransaction): DigitalSignature.WithKey {
             if (!ftx.verify()) {
                 throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
             }
@@ -178,7 +178,7 @@ object NodeInterestRates {
             // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
             // an invalid transaction the signature is worthless.
             val signature = services.keyManagementService.sign(ftx.rootHash.bytes, signingKey)
-            return DigitalSignature.LegallyIdentifiable(identity, signature.bytes)
+            return DigitalSignature.WithKey(signingKey, signature.bytes)
         }
         // DOCEND 1
 

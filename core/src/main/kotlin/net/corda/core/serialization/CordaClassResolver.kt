@@ -1,6 +1,8 @@
 package net.corda.core.serialization
 
 import com.esotericsoftware.kryo.*
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.node.AttachmentsClassLoader
@@ -29,7 +31,11 @@ fun makeAllButBlacklistedClassResolver(): ClassResolver {
     return CordaClassResolver(AllButBlacklisted)
 }
 
-class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver() {
+/**
+ * @param amqpEnabled Setting this to true turns on experimental AMQP serialization for any class annotated with
+ * [CordaSerializable].
+ */
+class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean = false) : DefaultClassResolver() {
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
         return super.getRegistration(type) ?: checkClass(type)
@@ -59,7 +65,7 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
             return checkClass(type.superclass)
         }
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
-        // If we use a whitelist with blacklisting capabilities, whitelist.hasListed(type) may throw a NotSerializableException if input class is blacklisted.
+        // If we use a whitelist with blacklisting capabilities, whitelist.hasListed(type) may throw an IllegalStateException if input class is blacklisted.
         // Thus, blacklisting precedes annotation checking.
         if (!whitelist.hasListed(type) && !checkForAnnotation(type)) {
             throw KryoException("Class ${Util.className(type)} is not annotated or on the whitelist, so cannot be used in serialization")
@@ -68,14 +74,36 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
     }
 
     override fun registerImplicit(type: Class<*>): Registration {
-        // We have to set reference to true, since the flag influences how String fields are treated and we want it to be consistent.
-        val references = kryo.references
-        try {
-            kryo.references = true
-            return register(Registration(type, kryo.getDefaultSerializer(type), NAME.toInt()))
-        } finally {
-            kryo.references = references
+        val hasAnnotation = checkForAnnotation(type)
+        // If something is not annotated, or AMQP is disabled, we stay serializing with Kryo.  This will typically be the
+        // case for flow checkpoints (ignoring all cases where AMQP is disabled) since our top level messaging data structures
+        // are annotated and once we enter AMQP serialisation we stay with it for the entire object subgraph.
+        if (!hasAnnotation || !amqpEnabled) {
+            val objectInstance = try {
+                type.kotlin.objectInstance
+            } catch (t: Throwable) {
+                // objectInstance will throw if the type is something like a lambda
+                null
+            }
+            // We have to set reference to true, since the flag influences how String fields are treated and we want it to be consistent.
+            val references = kryo.references
+            try {
+                kryo.references = true
+                val serializer = if (objectInstance != null) KotlinObjectSerializer(objectInstance) else kryo.getDefaultSerializer(type)
+                return register(Registration(type, serializer, NAME.toInt()))
+            } finally {
+                kryo.references = references
+            }
+        } else {
+            // Build AMQP serializer
+            return register(Registration(type, KryoAMQPSerializer, NAME.toInt()))
         }
+    }
+
+    // Trivial Serializer which simply returns the given instance which we already know is a Kotlin object
+    private class KotlinObjectSerializer(val objectInstance: Any) : Serializer<Any>() {
+        override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any = objectInstance
+        override fun write(kryo: Kryo, output: Output, obj: Any) = Unit
     }
 
     // We don't allow the annotation for classes in attachments for now.  The class will be on the main classpath if we have the CorDapp installed.
@@ -85,13 +113,13 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
         return (type.classLoader !is AttachmentsClassLoader)
                 && !KryoSerializable::class.java.isAssignableFrom(type)
                 && !type.isAnnotationPresent(DefaultSerializer::class.java)
-                && (type.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationOnInterface(type))
+                && (type.isAnnotationPresent(CordaSerializable::class.java) || hasInheritedAnnotation(type))
     }
 
     // Recursively check interfaces for our annotation.
-    private fun hasAnnotationOnInterface(type: Class<*>): Boolean {
-        return type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationOnInterface(it) }
-                || (type.superclass != null && hasAnnotationOnInterface(type.superclass))
+    private fun hasInheritedAnnotation(type: Class<*>): Boolean {
+        return type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasInheritedAnnotation(it) }
+                || (type.superclass != null && hasInheritedAnnotation(type.superclass))
     }
 
     // Need to clear out class names from attachments.
@@ -152,8 +180,6 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
 /**
  * This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
  * and was used to track down the initial set.
- *
- * @suppress
  */
 @Suppress("unused")
 class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true) : MutableClassWhitelist {

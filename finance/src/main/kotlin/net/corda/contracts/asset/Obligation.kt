@@ -8,19 +8,17 @@ import net.corda.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.contracts.clause.*
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
-import net.corda.core.crypto.NULL_PARTY
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.TEST_TX_TIME
-import net.corda.core.utilities.nonEmptySetOf
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
@@ -429,7 +427,7 @@ class Obligation<P : Any> : Contract {
     /**
      * Generate a transaction performing close-out netting of two or more states.
      *
-     * @param signer the party who will sign the transaction. Must be one of the obligor or beneficiary.
+     * @param signer the party which will sign the transaction. Must be one of the obligor or beneficiary.
      * @param states two or more states, which must be compatible for bilateral netting (same issuance definitions,
      * and same parties involved).
      */
@@ -458,7 +456,7 @@ class Obligation<P : Any> : Contract {
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
-     * @return the public keys who must sign the transaction for it to be valid.
+     * @return the public keys which must sign the transaction for it to be valid.
      */
     @Suppress("unused")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
@@ -543,7 +541,7 @@ class Obligation<P : Any> : Contract {
             }
             tx.addCommand(Commands.SetLifecycle(lifecycle), partiesUsed.map { it.owningKey }.distinct())
         }
-        tx.addTimeWindow(issuanceDef.dueBefore, issuanceDef.timeTolerance)
+        tx.setTimeWindow(issuanceDef.dueBefore, issuanceDef.timeTolerance)
     }
 
     /**
@@ -727,8 +725,3 @@ infix fun <T : Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
 val DUMMY_OBLIGATION_ISSUER by lazy { Party(X500Name("CN=Snake Oil Issuer,O=R3,OU=corda,L=London,C=GB"), DUMMY_OBLIGATION_ISSUER_KEY.public) }
-
-val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
-    get() = Obligation.Terms(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)
-val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
-    get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NULL_PARTY)

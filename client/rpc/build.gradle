@@ -1,6 +1,7 @@
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda client RPC modules'
 
@@ -36,10 +37,7 @@ sourceSets {
 }
 
 processSmokeTestResources {
-    from(file("$rootDir/config/test/log4j2.xml")) {
-        rename 'log4j2\\.xml', 'log4j2-test.xml'
-    }
-    from(project(':node:capsule').tasks.buildCordaJAR) {
+    from(project(':node:capsule').tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
     }
 }

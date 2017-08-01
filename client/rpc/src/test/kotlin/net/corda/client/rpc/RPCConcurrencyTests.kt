@@ -4,7 +4,7 @@ import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.future
 import net.corda.core.messaging.RPCOps
 import net.corda.core.millis
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.testing.RPCDriverExposedDSLInterface

@@ -26,6 +26,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.Try
 import net.corda.explorer.formatters.FlowInitiatorFormatter
 import net.corda.explorer.formatters.FlowNameFormatter
 import net.corda.explorer.formatters.PartyNameFormatter
@@ -120,7 +121,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
                 val addRm = it.first.value
                 val progress = it.second.value.status ?: "No progress data"
                 if (addRm is StateMachineStatus.Removed) {
-                    if (addRm.result.error == null) {
+                    if (addRm.result is Try.Success) {
                         makeIconLabel(FontAwesomeIcon.CHECK, "Success", "-fx-fill: green")
                     } else {
                         makeIconLabel(FontAwesomeIcon.BOLT, progress, "-fx-fill: -color-4")
@@ -143,13 +144,13 @@ class StateMachineViewer : CordaView("Flow Triage") {
                 "Error" to { sm, _ ->
                     val smAddRm = sm.smmStatus.first.value
                     if (smAddRm is StateMachineStatus.Removed)
-                        smAddRm.result.error != null
+                        smAddRm.result is Try.Failure
                     else false
                 },
                 "Done" to { sm, _ ->
                     val smAddRm = sm.smmStatus.first.value
                     if (smAddRm is StateMachineStatus.Removed)
-                        smAddRm.result.error == null
+                        smAddRm.result is Try.Success
                     else false
                 },
                 "In progress" to { sm, _ -> sm.smmStatus.first.value !is StateMachineStatus.Removed },
@@ -177,7 +178,11 @@ class StateMachineViewer : CordaView("Flow Triage") {
             }
             val status = smmData.smmStatus.first.value
             if (status is StateMachineStatus.Removed) {
-                status.result.match(onValue = { makeResultVBox(flowResultVBox, it) }, onError = { makeErrorVBox(flowResultVBox, it) })
+                val result = status.result
+                when (result) {
+                    is Try.Success -> makeResultVBox(flowResultVBox, result.value)
+                    is Try.Failure -> makeErrorVBox(flowResultVBox, result.exception)
+                }
             }
         }
     }

@@ -193,7 +193,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     private fun fetchMissingAttachments(downloads: List<WireTransaction>) {
         // TODO: This could be done in parallel with other fetches for extra speed.
         val missingAttachments = downloads.flatMap { wtx ->
-            wtx.attachments.filter { serviceHub.storageService.attachments.openAttachment(it) == null }
+            wtx.attachments.filter { serviceHub.attachments.openAttachment(it) == null }
         }
         if (missingAttachments.isNotEmpty())
             subFlow(FetchAttachmentsFlow(missingAttachments.toSet(), otherSide))

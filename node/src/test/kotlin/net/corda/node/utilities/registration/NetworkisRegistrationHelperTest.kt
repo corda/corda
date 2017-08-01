@@ -6,7 +6,7 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.*
 import net.corda.core.exists
 import net.corda.core.toTypedArray
-import net.corda.core.utilities.ALICE
+import net.corda.testing.ALICE
 import net.corda.testing.getTestX509Name
 import net.corda.testing.testNodeConfiguration
 import org.bouncycastle.cert.X509CertificateHolder

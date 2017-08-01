@@ -1,36 +1,39 @@
 package net.corda.node.services.database
 
 import net.corda.contracts.asset.Cash
+import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DummyFungibleContract
-import net.corda.contracts.testing.consumeCash
-import net.corda.contracts.testing.fillWithSomeTestCash
-import net.corda.contracts.testing.fillWithSomeTestDeals
-import net.corda.contracts.testing.fillWithSomeTestLinearStates
+import net.corda.testing.contracts.consumeCash
+import net.corda.testing.contracts.fillWithSomeTestCash
+import net.corda.testing.contracts.fillWithSomeTestDeals
+import net.corda.testing.contracts.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
 import net.corda.core.crypto.toBase58String
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
-import net.corda.core.schemas.DummyLinearStateSchemaV1
-import net.corda.core.schemas.DummyLinearStateSchemaV2
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.testing.schemas.DummyLinearStateSchemaV1
+import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.storageKryo
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.BOB_KEY
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.BOB_KEY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.services.vault.schemas.jpa.CommonSchemaV1
-import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
+import net.corda.core.schemas.CommonSchemaV1
+import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.schemas.CashSchemaV1
 import net.corda.schemas.SampleCashSchemaV2
 import net.corda.schemas.SampleCashSchemaV3
 import net.corda.testing.BOB_PUBKEY
+import net.corda.testing.BOC
+import net.corda.testing.BOC_KEY
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions
@@ -85,7 +88,7 @@ class HibernateConfigurationTest {
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
@@ -200,6 +203,67 @@ class HibernateConfigurationTest {
     }
 
     @Test
+    fun `with sorting by state ref desc and asc`() {
+        // generate additional state ref indexes
+        database.transaction {
+            services.consumeCash(1.DOLLARS)
+            services.consumeCash(2.DOLLARS)
+            services.consumeCash(3.DOLLARS)
+            services.consumeCash(4.DOLLARS)
+            services.consumeCash(5.DOLLARS)
+        }
+
+        // structure query
+        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
+        val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+
+        val sortByStateRef = vaultStates.get<PersistentStateRef>("stateRef")
+
+        // order by DESC
+        criteriaQuery.orderBy(criteriaBuilder.desc(sortByStateRef))
+        val queryResults = entityManager.createQuery(criteriaQuery).resultList
+        println("DESC by stateRef")
+        queryResults.map { println(it.stateRef) }
+
+        // order by ASC
+        criteriaQuery.orderBy(criteriaBuilder.asc(sortByStateRef))
+        val queryResultsAsc = entityManager.createQuery(criteriaQuery).resultList
+        println("ASC by stateRef")
+        queryResultsAsc.map { println(it.stateRef) }
+    }
+
+    @Test
+    fun `with sorting by state ref index and txId desc and asc`() {
+        // generate additional state ref indexes
+        database.transaction {
+            services.consumeCash(1.DOLLARS)
+            services.consumeCash(2.DOLLARS)
+            services.consumeCash(3.DOLLARS)
+            services.consumeCash(4.DOLLARS)
+            services.consumeCash(5.DOLLARS)
+        }
+
+        // structure query
+        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
+        val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+
+        val sortByIndex = vaultStates.get<PersistentStateRef>("stateRef").get<String>("index")
+        val sortByTxId = vaultStates.get<PersistentStateRef>("stateRef").get<String>("txId")
+
+        // order by DESC
+        criteriaQuery.orderBy(criteriaBuilder.desc(sortByIndex), criteriaBuilder.desc(sortByTxId))
+        val queryResults = entityManager.createQuery(criteriaQuery).resultList
+        println("DESC by index txId")
+        queryResults.map { println(it.stateRef) }
+
+        // order by ASC
+        criteriaQuery.orderBy(criteriaBuilder.asc(sortByIndex), criteriaBuilder.asc(sortByTxId))
+        val queryResultsAsc = entityManager.createQuery(criteriaQuery).resultList
+        println("ASC by index txId")
+        queryResultsAsc.map { println(it.stateRef) }
+    }
+
+    @Test
     fun `with pagination`() {
         // add 100 additional cash entries
         database.transaction {
@@ -299,6 +363,109 @@ class HibernateConfigurationTest {
             val queryResults = entityManager.createQuery(criteriaQuery).resultList
             assertThat(queryResults).hasSize(10)
         }
+    }
+
+    @Test
+    fun `calculate cash balances`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L))        // +$100 = $200
+            services.fillWithSomeTestCash(50.POUNDS, DUMMY_NOTARY, 5, 5, Random(0L))            // £50 = £50
+            services.fillWithSomeTestCash(25.POUNDS, DUMMY_NOTARY, 5, 5, Random(0L))            // +£25 = £175
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 10, 10, Random(0L))   // CHF500 = CHF500
+            services.fillWithSomeTestCash(250.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))     // +CHF250 = CHF750
+        }
+
+        // structure query
+        val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
+        val cashStates = criteriaQuery.from(CashSchemaV1.PersistentCashState::class.java)
+
+        // aggregate function
+        criteriaQuery.multiselect(cashStates.get<String>("currency"),
+                                  criteriaBuilder.sum(cashStates.get<Long>("pennies")))
+        // group by
+        criteriaQuery.groupBy(cashStates.get<String>("currency"))
+
+        // execute query
+        val queryResults = entityManager.createQuery(criteriaQuery).resultList
+
+        queryResults.forEach { tuple -> println("${tuple.get(0)} = ${tuple.get(1)}") }
+
+        assertThat(queryResults[0].get(0)).isEqualTo("CHF")
+        assertThat(queryResults[0].get(1)).isEqualTo(75000L)
+        assertThat(queryResults[1].get(0)).isEqualTo("GBP")
+        assertThat(queryResults[1].get(1)).isEqualTo(7500L)
+        assertThat(queryResults[2].get(0)).isEqualTo("USD")
+        assertThat(queryResults[2].get(1)).isEqualTo(20000L)
+    }
+
+    @Test
+    fun `calculate cash balance for single currency`() {
+        database.transaction {
+            services.fillWithSomeTestCash(50.POUNDS, DUMMY_NOTARY, 5, 5, Random(0L))            // £50 = £50
+            services.fillWithSomeTestCash(25.POUNDS, DUMMY_NOTARY, 5, 5, Random(0L))            // +£25 = £175
+        }
+
+        // structure query
+        val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
+        val cashStates = criteriaQuery.from(CashSchemaV1.PersistentCashState::class.java)
+
+        // aggregate function
+        criteriaQuery.multiselect(cashStates.get<String>("currency"),
+                criteriaBuilder.sum(cashStates.get<Long>("pennies")))
+
+        // where
+        criteriaQuery.where(criteriaBuilder.equal(cashStates.get<String>("currency"), "GBP"))
+
+        // group by
+        criteriaQuery.groupBy(cashStates.get<String>("currency"))
+
+        // execute query
+        val queryResults = entityManager.createQuery(criteriaQuery).resultList
+
+        queryResults.forEach { tuple -> println("${tuple.get(0)} = ${tuple.get(1)}") }
+
+        assertThat(queryResults[0].get(0)).isEqualTo("GBP")
+        assertThat(queryResults[0].get(1)).isEqualTo(7500L)
+    }
+
+    @Test
+    fun `calculate and order by cash balance for owner and currency`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1), issuerKey = BOC_KEY)
+            services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2), issuerKey = BOC_KEY)
+        }
+
+        // structure query
+        val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
+        val cashStates = criteriaQuery.from(CashSchemaV1.PersistentCashState::class.java)
+
+        // aggregate function
+        criteriaQuery.multiselect(cashStates.get<String>("currency"),
+                criteriaBuilder.sum(cashStates.get<Long>("pennies")))
+
+        // group by
+        criteriaQuery.groupBy(cashStates.get<String>("issuerParty"), cashStates.get<String>("currency"))
+
+        // order by
+        criteriaQuery.orderBy(criteriaBuilder.desc(criteriaBuilder.sum(cashStates.get<Long>("pennies"))))
+
+        // execute query
+        val queryResults = entityManager.createQuery(criteriaQuery).resultList
+
+        queryResults.forEach { tuple -> println("${tuple.get(0)} = ${tuple.get(1)}") }
+
+        assertThat(queryResults).hasSize(4)
+        assertThat(queryResults[0].get(0)).isEqualTo("GBP")
+        assertThat(queryResults[0].get(1)).isEqualTo(40000L)
+        assertThat(queryResults[1].get(0)).isEqualTo("GBP")
+        assertThat(queryResults[1].get(1)).isEqualTo(30000L)
+        assertThat(queryResults[2].get(0)).isEqualTo("USD")
+        assertThat(queryResults[2].get(1)).isEqualTo(20000L)
+        assertThat(queryResults[3].get(0)).isEqualTo("USD")
+        assertThat(queryResults[3].get(1)).isEqualTo(10000L)
     }
 
     /**
@@ -482,7 +649,7 @@ class HibernateConfigurationTest {
         // search predicate
         val cashStatesSchema = criteriaQuery.from(SampleCashSchemaV3.PersistentCashState::class.java)
 
-        val joinCashToParty = cashStatesSchema.join<SampleCashSchemaV3.PersistentCashState,CommonSchemaV1.Party>("owner")
+        val joinCashToParty = cashStatesSchema.join<SampleCashSchemaV3.PersistentCashState, CommonSchemaV1.Party>("owner")
         val queryOwnerKey = BOB_PUBKEY.toBase58String()
         criteriaQuery.where(criteriaBuilder.equal(joinCashToParty.get<CommonSchemaV1.Party>("key"), queryOwnerKey))
 

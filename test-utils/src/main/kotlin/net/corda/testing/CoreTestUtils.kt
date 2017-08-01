@@ -3,24 +3,20 @@
 
 package net.corda.testing
 
-import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.spy
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.commonName
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.IdentityService
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
-import net.corda.node.services.config.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockServices
@@ -33,6 +29,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.cert.CertificateFactory
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -52,6 +49,8 @@ import java.util.concurrent.atomic.AtomicInteger
  *   - varargs are exposed as array types in Java. Define overloads for common cases.
  *   - The Int.DOLLARS syntax doesn't work from Java.  Use the DOLLARS(int) function instead.
  */
+
+// TODO: Refactor these dummies to work with the new identities framework.
 
 // A few dummy values for testing.
 val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
@@ -89,7 +88,7 @@ val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, AL
 val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTARY_IDENTITY)
 val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptyMap(), DUMMY_CA.certificate.cert)
 
-val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
+val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
@@ -100,7 +99,7 @@ private val freePortCounter = AtomicInteger(30000)
  * Unsafe for getting multiple ports!
  * Use [getFreeLocalPorts] for getting multiple ports.
  */
-fun freeLocalHostAndPort(): HostAndPort = HostAndPort.fromParts("localhost", freePort())
+fun freeLocalHostAndPort() = NetworkHostAndPort("localhost", freePort())
 
 /**
  * Returns a free port.
@@ -116,9 +115,9 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  * Unlikely, but in the time between running this function and handing the ports
  * to the Node, some other process else could allocate the returned ports.
  */
-fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
+fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
     val freePort =  freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
-    return (freePort .. freePort + numberToAlloc - 1).map { HostAndPort.fromParts(hostName, it) }
+    return (freePort .. freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
 }
 
 /**
@@ -191,4 +190,18 @@ fun getTestX509Name(commonName: String): X500Name {
     nameBuilder.addRDN(BCStyle.L, "New York")
     nameBuilder.addRDN(BCStyle.C, "US")
     return nameBuilder.build()
+}
+
+fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+    val certFactory = CertificateFactory.getInstance("X509")
+    val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
+    val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
+    return PartyAndCertificate(party, certHolder, certPath)
+}
+
+/**
+ * Build a test party with a nonsense certificate authority for testing purposes.
+ */
+fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+    return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
 }
