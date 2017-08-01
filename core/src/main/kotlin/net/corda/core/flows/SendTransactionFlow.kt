@@ -16,7 +16,7 @@ import net.corda.core.utilities.unwrap
  * @param otherSide the target party.
  * @param stx the [SignedTransaction] being sent to the [otherSide].
  */
-open class SendTransactionFlow(otherSide: Party, stx: SignedTransaction) : DataVendingFlow<SignedTransaction>(otherSide, stx)
+open class SendTransactionFlow(otherSide: Party, stx: SignedTransaction) : DataVendingFlow(otherSide, stx)
 
 /**
  * The [SendStateAndRefFlow] should be used to send a list of input [StateAndRef] to another peer that wishes to verify
@@ -27,21 +27,21 @@ open class SendTransactionFlow(otherSide: Party, stx: SignedTransaction) : DataV
  * @param otherSide the target party.
  * @param stateAndRefs the list of [StateAndRef] being sent to the [otherSide].
  */
-open class SendStateAndRefFlow(otherSide: Party, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow<List<StateAndRef<*>>>(otherSide, stateAndRefs)
+open class SendStateAndRefFlow(otherSide: Party, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow(otherSide, stateAndRefs)
 
-sealed class DataVendingFlow<out T : Any>(val otherSide: Party, val payload: T) : FlowLogic<Unit>() {
+sealed class DataVendingFlow(val otherSide: Party, val payload: Any) : FlowLogic<Void?>() {
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any) = sendAndReceive<FetchDataFlow.Request>(otherSide, payload)
 
     @Suspendable
     protected open fun verifyDataRequest(dataRequest: FetchDataFlow.Request.Data) {
-        // Security TODO: Check for abnormally large or malformed data requests
+        // User can override this method to perform custom request verification.
     }
 
     @Suspendable
-    override fun call() {
+    override fun call(): Void? {
         // The first payload will be the transaction data, subsequent payload will be the transaction/attachment data.
-        var payload: Any = payload
+        var payload = payload
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSide` has all the data they need
         // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `otherSide` to indicate end of
         // data request.
@@ -49,10 +49,11 @@ sealed class DataVendingFlow<out T : Any>(val otherSide: Party, val payload: T) 
             val dataRequest = sendPayloadAndReceiveDataRequest(otherSide, payload).unwrap { request ->
                 when (request) {
                     is FetchDataFlow.Request.Data -> {
+                        // Security TODO: Check for abnormally large or malformed data requests
                         verifyDataRequest(request)
                         request
                     }
-                    FetchDataFlow.Request.End -> return
+                    FetchDataFlow.Request.End -> return null
                 }
             }
             payload = when (dataRequest.dataType) {

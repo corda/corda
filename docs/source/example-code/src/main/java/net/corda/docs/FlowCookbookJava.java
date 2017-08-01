@@ -403,10 +403,9 @@ public class FlowCookbookJava {
             subFlow(new SendTransactionFlow(counterparty, twiceSignedTx));
 
             // Optional request verification to further restrict data access.
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx) {
+            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx){
                 @Override
                 protected void verifyDataRequest(@NotNull FetchDataFlow.Request.Data dataRequest) {
-                    super.verifyDataRequest(dataRequest);
                     // Extra request verification.
                 }
             });

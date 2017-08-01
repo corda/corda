@@ -20,7 +20,6 @@ class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val stx = subFlow(ReceiveTransactionFlow(otherParty))
-        stx.verify(serviceHub)
         serviceHub.recordTransactions(stx)
     }
 }

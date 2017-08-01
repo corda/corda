@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.sequence
 import net.corda.testing.*
@@ -198,7 +199,7 @@ class ResolveTransactionsFlowTest {
     }
 
     @InitiatedBy(TestFlow::class)
-    private class TestResponseFlow(val otherSide: Party) : FlowLogic<Unit>() {
+    private class TestResponseFlow(val otherSide: Party) : FlowLogic<Void?>() {
         @Suspendable
         override fun call() = subFlow(DataVendingFlow(otherSide))
     }

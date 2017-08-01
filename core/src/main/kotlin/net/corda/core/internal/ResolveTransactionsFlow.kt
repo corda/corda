@@ -1,14 +1,12 @@
-package net.corda.core.flows
+package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.utilities.exactAdd
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchAttachmentsFlow
-import net.corda.core.internal.FetchDataFlow
-import net.corda.core.internal.FetchTransactionsFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.exactAdd
 import java.util.*
 
 // TODO: This code is currently unit tested by TwoPartyTradeFlowTests, it should have its own tests.
