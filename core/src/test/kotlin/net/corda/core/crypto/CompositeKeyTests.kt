@@ -86,7 +86,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `kryo encoded tree decodes correctly`() {
+    fun `encoded tree decodes correctly`() {
         val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
         val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
 

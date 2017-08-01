@@ -53,10 +53,6 @@ dependencies {
     // RxJava: observable streams of events.
     compile "io.reactivex:rxjava:$rxjava_version"
 
-    // Kryo: object graph serialization.
-    compile "com.esotericsoftware:kryo:4.0.0"
-    compile "de.javakaffee:kryo-serializers:0.41"
-
     // Apache JEXL: An embeddable expression evaluation library.
     // This may be temporary until we experiment with other ways to do on-the-fly contract specialisation via an API.
     compile "org.apache.commons:commons-jexl3:3.0"

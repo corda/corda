@@ -19,9 +19,11 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -35,6 +37,8 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
+import net.corda.nodeapi.internal.serialization.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -137,7 +141,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     internal val tokenizableServices = ArrayList<Any>()
     // Context for tokenized services in checkpoints
     private val serializationContext by lazy {
-        SerializeAsTokenContext(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
+        SerializeAsTokenContextImpl(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
     }
 
     fun findServices(predicate: (Any) -> Boolean) = tokenizableServices.filter(predicate)

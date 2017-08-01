@@ -9,9 +9,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.config.SSLConfiguration
-import net.corda.nodeapi.serialization.KRYO_P2P_CONTEXT
-import net.corda.nodeapi.serialization.KRYO_RPC_CLIENT_CONTEXT
-import net.corda.nodeapi.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import java.time.Duration
 
 /** @see RPCClient.RPCConnection */

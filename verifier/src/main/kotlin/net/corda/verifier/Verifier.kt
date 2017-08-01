@@ -18,10 +18,10 @@ import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.serialization.AbstractKryoSerializationScheme
-import net.corda.nodeapi.serialization.KRYO_P2P_CONTEXT
-import net.corda.nodeapi.serialization.KryoHeaderV0_1
-import net.corda.nodeapi.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.AbstractKryoSerializationScheme
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
 import java.nio.file.Paths

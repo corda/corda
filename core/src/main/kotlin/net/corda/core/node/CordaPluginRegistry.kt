@@ -1,12 +1,12 @@
 package net.corda.core.node
 
+import net.corda.core.contracts.ContractState
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.services.VaultQueryService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.SerializationCustomization
 import java.util.function.Function
-import net.corda.core.schemas.QueryableState
-import net.corda.core.contracts.ContractState
-import net.corda.core.node.services.VaultQueryService
 
 /**
  * Implement this interface on a class advertised in a META-INF/services/net.corda.core.node.CordaPluginRegistry file
