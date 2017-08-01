@@ -1,66 +1,71 @@
 package net.corda.node.services.persistence
 
-import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
+import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.utilities.*
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.subjects.PublishSubject
+import java.util.*
 import javax.annotation.concurrent.ThreadSafe
+import javax.persistence.*
 
 /**
  * Database storage of a txhash -> state machine id mapping.
  *
  * Mappings are added as transactions are persisted by [ServiceHub.recordTransaction], and never deleted.  Used in the
  * RPC API to correlate transaction creation with flows.
- *
  */
 @ThreadSafe
 class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorage {
 
-    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}transaction_mappings") {
-        val txId = secureHash("tx_id")
-        val stateMachineRunId = uuidString("state_machine_run_id")
+    object TransactionMappingSchema
+
+    object TransactionMappingSchemaV1 : MappedSchema(schemaFamily = TransactionMappingSchema.javaClass, version = 1,
+            mappedTypes = listOf(Transaction::class.java)) {
+
+        @Entity
+        @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}transaction_mappings")
+        class Transaction(
+                @Id
+                @Column(name = "tx_id", length = 64)
+                var txId: String = "",
+
+                @Column(name = "state_machine_run_id", length = 36)
+                var stateMachineRunId: String = ""
+        )
     }
 
-    private class TransactionMappingsMap : AbstractJDBCHashMap<SecureHash, StateMachineRunId, Table>(Table, loadOnInit = false) {
-        override fun keyFromRow(row: ResultRow): SecureHash = row[table.txId]
-
-        override fun valueFromRow(row: ResultRow): StateMachineRunId = StateMachineRunId(row[table.stateMachineRunId])
-
-        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, StateMachineRunId>, finalizables: MutableList<() -> Unit>) {
-            insert[table.txId] = entry.key
-        }
-
-        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, StateMachineRunId>, finalizables: MutableList<() -> Unit>) {
-            insert[table.stateMachineRunId] = entry.value.uuid
-        }
-    }
-
-    private class InnerState {
-        val stateMachineTransactionMap = TransactionMappingsMap()
-        val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
-    }
-    private val mutex = ThreadBox(InnerState())
-
-    override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
-        mutex.locked {
-            stateMachineTransactionMap[transactionId] = stateMachineRunId
-            updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
-        }
-    }
-
-    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
-        mutex.locked {
-            return DataFeed(
-                    stateMachineTransactionMap.map { StateMachineTransactionMapping(it.value, it.key) },
-                    updates.bufferUntilSubscribed().wrapWithDatabaseTransaction()
+    private companion object {
+        fun createTransactionMappingMap(): AppendOnlyPersistentMap<SecureHash, StateMachineRunId, TransactionMappingSchemaV1.Transaction, String> {
+            return AppendOnlyPersistentMap(
+                    cacheBound = 1024,
+                    toPersistentEntityKey = { it.toString() },
+                    fromPersistentEntity = { Pair(SecureHash.parse(it.txId), StateMachineRunId(UUID.fromString(it.stateMachineRunId))) },
+                    toPersistentEntity = { key: SecureHash, value: StateMachineRunId ->
+                        TransactionMappingSchemaV1.Transaction().apply {
+                            txId = key.toString()
+                            stateMachineRunId = value.uuid.toString()
+                        }
+                    },
+                    persistentEntityClass = TransactionMappingSchemaV1.Transaction::class.java
             )
         }
     }
+
+    val stateMachineTransactionMap = createTransactionMappingMap()
+    val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
+
+    override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
+        stateMachineTransactionMap[transactionId] = stateMachineRunId
+        updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
+    }
+
+    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> =
+            DataFeed(stateMachineTransactionMap.loadAll().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
+                    updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+
 }
