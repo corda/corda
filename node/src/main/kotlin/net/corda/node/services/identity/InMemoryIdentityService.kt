@@ -18,6 +18,7 @@ import java.security.cert.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.LinkedHashSet
 
 /**
  * Simple identity service which caches parties and provides functionality for efficient lookup.
@@ -96,7 +97,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
-        val results = HashSet<Party>()
+        val results = LinkedHashSet<Party>()
         for ((x500name, partyAndCertificate) in principalToParties) {
             val party = partyAndCertificate.party
             for (rdn in x500name.rdNs) {

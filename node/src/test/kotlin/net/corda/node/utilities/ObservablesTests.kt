@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
@@ -19,7 +20,7 @@ class ObservablesTests {
     val toBeClosed = mutableListOf<Closeable>()
 
     fun createDatabase(): CordaPersistence {
-        val database = configureDatabase(makeTestDataSourceProperties())
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
         toBeClosed += database
         return database
     }
