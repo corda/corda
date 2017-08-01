@@ -39,7 +39,7 @@ import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.sendRequest
-import net.corda.node.services.network.InMemoryNetworkMapCache
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
@@ -139,7 +139,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         private set
 
     protected val _nodeReadyFuture = openFuture<Unit>()
-    /** Completes once the node has successfully registered with the network map service */
+    /** Completes once the node has successfully registered with the network map service
+     * or has loaded network map data from local database */
     val nodeReadyFuture: CordaFuture<Unit>
         get() = _nodeReadyFuture
 
@@ -208,7 +209,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
 
             runOnStop += network::stop
-            // If we succesfuly loaded network data from database, we set this future to Unit.
+            // If we successfully  loaded network data from database, we set this future to Unit.
             _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
             smm.start()
             // Shut down the SMM so no Fibers are scheduled.
@@ -585,9 +586,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // We may want to start node immediately with database data and not wait for network map registration (but send it either way).
             // So we are ready to go.
             if (services.networkMapCache.loadDBSuccess) {
-                log.info("Node successfully loaded node info data from the database, completing networkMapRegistration future.")
+                log.info("Node successfully loaded network map data from the database.")
                 Futures.immediateFuture(Unit)
-            } else netMapRegistration
+            } else {
+                netMapRegistration
+            }
         }
     }
 
@@ -766,7 +769,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
-        override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
+        override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(this) }
         override val vaultQueryService by lazy {
             HibernateVaultQueryImpl(database.hibernateConfig, vaultService)

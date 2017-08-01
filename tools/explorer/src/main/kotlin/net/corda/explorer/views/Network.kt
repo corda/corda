@@ -99,7 +99,7 @@ class Network : CordaView() {
                         copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())).apply { minWidth = 400.0 }
                     }
                     row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
-                    node.worldMapLocation?.apply { row("Location :") { label(this@apply.description) } }
+                    node.worldMapLocation?.apply { row("Location :") { label(this@apply.description!!) } }
                 }
             }
             setOnMouseClicked {

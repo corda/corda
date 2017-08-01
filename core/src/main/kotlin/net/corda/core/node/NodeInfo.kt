@@ -41,21 +41,4 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
     fun serviceIdentities(type: ServiceType): List<Party> {
         return advertisedServices.mapNotNull { if (it.info.type.isSubTypeOf(type)) it.identity.party else null }
     }
-
-    /** Object Relational Mapping support. */
-    fun generateMappedObject(schema: MappedSchema): NodeInfoSchemaV1.PersistentNodeInfo {
-        return when (schema) {
-            is NodeInfoSchemaV1 -> NodeInfoSchemaV1.PersistentNodeInfo(
-                    id = 0,
-                    addresses = this.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
-                    legalIdentitiesAndCerts = this.legalIdentitiesAndCerts.map { NodeInfoSchemaV1.DBPartyAndCertificate(it) }.toSet()
-                            // TODO It's workaround to keep the main identity, will be removed in future PR getting rid of services.
-                            + NodeInfoSchemaV1.DBPartyAndCertificate(this.legalIdentityAndCert, isMain = true),
-                    platformVersion = this.platformVersion,
-                    advertisedServices = this.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it.serialize().bytes) },
-                    worldMapLocation = this.worldMapLocation?.let { NodeInfoSchemaV1.DBWorldMapLocation(it) }
-            )
-            else -> throw IllegalArgumentException("Unrecognised schema $schema")
-        }
-    }
 }

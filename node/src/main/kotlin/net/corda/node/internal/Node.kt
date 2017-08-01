@@ -23,7 +23,6 @@ import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDete
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectResponseProperty
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.TestClock
@@ -219,7 +218,8 @@ open class Node(override val configuration: FullNodeConfiguration,
         val clientFactory = try {
             locator.createSessionFactory()
         } catch (e: ActiveMQNotConnectedException) {
-            log.info("Unable to connect to the Network Map Service at $serverAddress for IP address discovery. Using configuration address.")
+            log.warn("Unable to connect to the Network Map Service at $serverAddress for IP address discovery. " +
+                    "Using the provided \"${configuration.p2pAddress.host}\" as the advertised address.")
             return null
         }
 

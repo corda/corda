@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
@@ -21,6 +20,7 @@ import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configOf
 import net.corda.node.services.config.plus
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
@@ -78,6 +78,13 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
     }
 
     /**
+     *  Clear network map data from nodes' databases.
+     */
+    fun clearAllNodeInfoDb() {
+        nodes.forEach { (it.services.networkMapCache as PersistentNetworkMapCache).clearAllNodeInfos() }
+    }
+
+    /**
      * You can use this method to start the network map node in a more customised manner. Otherwise it
      * will automatically be started with the default parameters.
      */
@@ -100,14 +107,16 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                   configOverrides: Map<String, Any> = emptyMap(),
                   noNetworkMap: Boolean = false,
                   waitForConnection: Boolean = true): CordaFuture<Node> {
-        val networkMapConf = if (!noNetworkMap) {
+        val networkMapConf = if (noNetworkMap) {
+            mapOf()
+        } else {
             mapOf(
                     "networkMapService" to mapOf(
                             "address" to networkMapNode.configuration.p2pAddress.toString(),
                             "legalName" to networkMapNode.info.legalIdentity.name.toString()
                     )
             )
-        } else mapOf()
+        }
         val node = startNodeInternal(
                 legalName,
                 platformVersion,

@@ -85,7 +85,7 @@ class VisualiserViewModel {
         // bottom left: -23.2031,29.8406
         // top right: 33.0469,64.3209
         try {
-            return node.place.coordinate.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
+            return node.place.coordinate!!.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
         } catch(e: Exception) {
             throw Exception("Cannot project ${node.info.legalIdentity}", e)
         }

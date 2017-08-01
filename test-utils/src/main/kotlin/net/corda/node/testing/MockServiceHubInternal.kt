@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.testing
 
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.flows.FlowInitiator
