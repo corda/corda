@@ -21,7 +21,10 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.node.services.vault.schemas.requery.*
-import net.corda.testing.*
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.contracts.DummyContract
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.After
@@ -117,6 +120,7 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
+        val privacySalt: PrivacySalt = PrivacySalt()
         transaction = LedgerTransaction(
                 inputs,
                 outputs,
@@ -125,7 +129,7 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
                 id,
                 notary,
                 timeWindow,
-                TransactionType.General
+                privacySalt
         )
     }
 
@@ -147,6 +151,7 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
+        val privacySalt: PrivacySalt = PrivacySalt()
         return LedgerTransaction(
                 inputs,
                 outputs,
@@ -155,7 +160,7 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
                 id,
                 notary,
                 timeWindow,
-                TransactionType.General
+                privacySalt
         )
     }
 

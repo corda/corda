@@ -32,13 +32,13 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in H2 database.
  */
 @ThreadSafe
-class NodeAttachmentService(val storePath: Path, dataSourceProperties: Properties, metrics: MetricRegistry)
+class NodeAttachmentService(val storePath: Path, dataSourceProperties: Properties, metrics: MetricRegistry, databaseProperties: Properties?)
     : AttachmentStorage, AcceptsFileUpload, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<NodeAttachmentService>()
     }
 
-    val configuration = RequeryConfiguration(dataSourceProperties)
+    val configuration = RequeryConfiguration(dataSourceProperties, databaseProperties = databaseProperties ?: Properties())
     val session = configuration.sessionForModel(Models.PERSISTENCE)
 
     @VisibleForTesting

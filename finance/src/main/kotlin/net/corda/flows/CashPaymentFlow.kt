@@ -3,7 +3,6 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.contracts.TransactionType
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionKeyFlow
 import net.corda.core.identity.AnonymousPartyAndPath
@@ -43,7 +42,7 @@ open class CashPaymentFlow(
         }
         val anonymousRecipient = txIdentities.get(recipient)?.party ?: recipient
         progressTracker.currentStep = GENERATING_TX
-        val builder: TransactionBuilder = TransactionType.General.Builder(null as Party?)
+        val builder: TransactionBuilder = TransactionBuilder(null as Party?)
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
             serviceHub.vaultService.generateSpend(

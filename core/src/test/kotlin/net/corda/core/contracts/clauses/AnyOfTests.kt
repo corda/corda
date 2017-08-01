@@ -2,7 +2,7 @@ package net.corda.core.contracts.clauses
 
 import net.corda.core.contracts.AuthenticatedObject
 import net.corda.core.contracts.CommandData
-import net.corda.core.contracts.TransactionType
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.LedgerTransaction
 import org.junit.Test
@@ -15,7 +15,7 @@ class AnyOfTests {
     fun minimal() {
         val counter = AtomicInteger(0)
         val clause = AnyOf(matchedClause(counter), matchedClause(counter))
-        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General)
+        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, PrivacySalt())
         verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
 
         // Check that we've run the verify() function of two clauses
@@ -26,7 +26,7 @@ class AnyOfTests {
     fun `not all match`() {
         val counter = AtomicInteger(0)
         val clause = AnyOf(matchedClause(counter), unmatchedClause(counter))
-        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General)
+        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, PrivacySalt())
         verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
 
         // Check that we've run the verify() function of one clause
@@ -37,7 +37,7 @@ class AnyOfTests {
     fun `none match`() {
         val counter = AtomicInteger(0)
         val clause = AnyOf(unmatchedClause(counter), unmatchedClause(counter))
-        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General)
+        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, PrivacySalt())
         assertFailsWith(IllegalArgumentException::class) {
             verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
         }

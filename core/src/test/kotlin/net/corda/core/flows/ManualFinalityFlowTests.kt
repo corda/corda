@@ -4,7 +4,6 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.Issued
-import net.corda.core.contracts.TransactionType
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -43,7 +42,7 @@ class ManualFinalityFlowTests {
     @Test
     fun `finalise a simple transaction`() {
         val amount = Amount(1000, Issued(nodeA.info.legalIdentity.ref(0), GBP))
-        val builder = TransactionBuilder(TransactionType.General, notary)
+        val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, nodeB.info.legalIdentity, notary)
         val stx = nodeA.services.signInitialTransaction(builder)
         val flow = nodeA.services.startFlow(ManualFinalityFlow(stx, setOf(nodeC.info.legalIdentity)))

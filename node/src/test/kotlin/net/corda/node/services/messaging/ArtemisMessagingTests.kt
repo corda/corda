@@ -22,6 +22,7 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.node.MOCK_VERSION_INFO
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -68,7 +69,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
         networkMapRegistrationFuture = doneFuture(Unit)
     }
 

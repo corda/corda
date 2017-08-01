@@ -9,36 +9,6 @@ API: Transactions
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-transactions`.
 
-Transaction types
------------------
-There are two types of transaction in Corda:
-
-* ``TransactionType.NotaryChange``, used to change the notary for a set of states
-* ``TransactionType.General``, for transactions other than notary-change transactions
-
-Notary-change transactions
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-A single Corda network will usually have multiple notary services. To commit a transaction, we require a signature
-from the notary service associated with each input state. If we tried to commit a transaction where the input
-states were associated with different notary services, the transaction would require a signature from multiple notary
-services, creating a complicated multi-phase commit scenario. To prevent this, every input state in a transaction
-must be associated the same notary.
-
-However, we will often need to create a transaction involving input states associated with different notaries. Before
-we can create this transaction, we will need to change the notary service associated with each state by:
-
-* Deciding which notary service we want to notarise the transaction
-* For each set of inputs states that point to the same notary service that isn't the desired notary service, creating a
-  ``TransactionType.NotaryChange`` transaction that:
-
-  * Consumes the input states pointing to the old notary
-  * Outputs the same states, but that now point to the new notary
-
-* Using the outputs of the notary-change transactions as inputs to a standard ``TransactionType.General`` transaction
-
-In practice, this process is handled automatically by a built-in flow called ``NotaryChangeFlow``. See
-:doc:`api-flows` for more details.
-
 Transaction workflow
 --------------------
 There are four states the transaction can occupy:
@@ -589,4 +559,23 @@ Or using another one of our public keys, as follows:
 Notarising and recording
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Notarising and recording a transaction is handled by a built-in flow called ``FinalityFlow``. See
+:doc:`api-flows` for more details.
+
+Notary-change transactions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+A single Corda network will usually have multiple notary services. To commit a transaction, we require a signature
+from the notary service associated with each input state. If we tried to commit a transaction where the input
+states were associated with different notary services, the transaction would require a signature from multiple notary
+services, creating a complicated multi-phase commit scenario. To prevent this, every input state in a transaction
+must be associated with the same notary.
+
+However, we will often need to create a transaction involving input states associated with different notaries. Before
+we can create this transaction, we will need to change the notary service associated with each state by:
+
+* Deciding which notary service we want to notarise the transaction
+* Creating a special ``NotaryChangeWireTransaction`` that consumes the input states pointing to the old notary and
+  produces outputs which are identical but point to the new notary service
+* Using the outputs of the notary-change transactions as inputs to a standard transaction
+
+In practice, this process is handled automatically by a built-in flow called ``NotaryChangeFlow``. See
 :doc:`api-flows` for more details.

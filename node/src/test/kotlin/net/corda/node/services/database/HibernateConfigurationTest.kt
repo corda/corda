@@ -27,6 +27,7 @@ import net.corda.testing.contracts.fillWithSomeTestDeals
 import net.corda.testing.contracts.fillWithSomeTestLinearStates
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import org.assertj.core.api.Assertions
@@ -60,16 +61,17 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps)
+        val defaultDatabaseProperties = makeTestDatabaseProperties()
+        database = configureDatabase(dataSourceProps, defaultDatabaseProperties)
         val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
 
         database.transaction {
 
-            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas))
+            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
 
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultService get() {
-                    val vaultService = NodeVaultService(this, dataSourceProps)
+                    val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
                     hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
                     return vaultService
                 }

@@ -39,7 +39,7 @@ Then we initialise the transaction builder:
 
 .. sourcecode:: kotlin
 
-    val builder: TransactionBuilder = TransactionType.General.Builder(notary = ourNotary)
+    val builder: TransactionBuilder = TransactionBuilder(notary = ourNotary)
 
 For any output state we add to this transaction builder, ``ourNotary`` will be assigned as its notary.
 Next we create a state object and assign ourselves as the owner. For this example we'll use a

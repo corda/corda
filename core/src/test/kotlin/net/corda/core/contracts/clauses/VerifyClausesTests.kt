@@ -1,9 +1,6 @@
 package net.corda.core.contracts.clauses
 
-import net.corda.core.contracts.AuthenticatedObject
-import net.corda.core.contracts.CommandData
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionType
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.testing.contracts.DummyContract
@@ -23,7 +20,7 @@ class VerifyClausesTests {
                                 outputs: List<ContractState>,
                                 commands: List<AuthenticatedObject<CommandData>>, groupingKey: Unit?): Set<CommandData> = emptySet()
         }
-        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General)
+        val tx = LedgerTransaction(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256(), null, null, PrivacySalt())
         verifyClause(tx, clause, emptyList<AuthenticatedObject<CommandData>>())
     }
 
@@ -36,7 +33,7 @@ class VerifyClausesTests {
                                 commands: List<AuthenticatedObject<CommandData>>, groupingKey: Unit?): Set<CommandData> = emptySet()
         }
         val command = AuthenticatedObject(emptyList(), emptyList(), DummyContract.Commands.Create())
-        val tx = LedgerTransaction(emptyList(), emptyList(), listOf(command), emptyList(), SecureHash.randomSHA256(), null, null, TransactionType.General)
+        val tx = LedgerTransaction(emptyList(), emptyList(), listOf(command), emptyList(), SecureHash.randomSHA256(), null, null, PrivacySalt())
         // The clause is matched, but doesn't mark the command as consumed, so this should error
         assertFailsWith<IllegalStateException> { verifyClause(tx, clause, listOf(command)) }
     }

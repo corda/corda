@@ -2,6 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
@@ -79,7 +80,7 @@ interface ContractState {
      * A _participant_ is any party that is able to consume this state in a valid transaction.
      *
      * The list of participants is required for certain types of transactions. For example, when changing the notary
-     * for this state ([TransactionType.NotaryChange]), every participant has to be involved and approve the transaction
+     * for this state, every participant has to be involved and approve the transaction
      * so that they receive the updated state, and don't end up in a situation where they can no longer use a state
      * they possess, since someone consumed that state during the notary change process.
      *
@@ -433,4 +434,24 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
         closeEntry()
     }
     throw FileNotFoundException(path)
+}
+
+/**
+ * A privacy salt is required to compute nonces per transaction component in order to ensure that an adversary cannot
+ * use brute force techniques and reveal the content of a merkle-leaf hashed value.
+ * Because this salt serves the role of the seed to compute nonces, its size and entropy should be equal to the
+ * underlying hash function used for Merkle tree generation, currently [SHA256], which has an output of 32 bytes.
+ * There are two constructors, one that generates a new 32-bytes random salt, and another that takes a [ByteArray] input.
+ * The latter is required in cases where the salt value needs to be pre-generated (agreed between transacting parties),
+ * but it is highlighted that one should always ensure it has sufficient entropy.
+ */
+@CordaSerializable
+class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
+    /** Constructs a salt with a randomly-generated 32 byte value. */
+    constructor() : this(secureRandomBytes(32))
+
+    init {
+        require(bytes.size == 32) { "Privacy salt should be 32 bytes." }
+        require(!bytes.all { it == 0.toByte() }) { "Privacy salt should not be all zeros." }
+    }
 }

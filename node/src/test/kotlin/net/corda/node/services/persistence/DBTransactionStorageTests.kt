@@ -1,7 +1,6 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.testing.NullPublicKey
@@ -15,6 +14,7 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.LogHelper
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -29,7 +29,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
         newTransactionStorage()
     }
 
@@ -148,7 +148,6 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
                 outputs = emptyList(),
                 commands = emptyList(),
                 notary = DUMMY_NOTARY,
-                type = TransactionType.General,
                 timeWindow = null
         )
         return SignedTransaction(wtx, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))

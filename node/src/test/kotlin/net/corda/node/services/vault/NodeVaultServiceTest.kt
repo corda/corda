@@ -5,8 +5,10 @@ import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sign
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.*
+import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
@@ -21,6 +23,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -44,10 +47,10 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
         database.transaction {
             val customSchemas = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1)
-            val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas))
+            val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
             services = object : MockServices() {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
@@ -403,7 +406,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val freshKey = services.legalIdentityKey
 
             // Issue a txn to Send us some Money
-            val usefulBuilder = TransactionType.General.Builder(null).apply {
+            val usefulBuilder = TransactionBuilder(null).apply {
                 Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
             }
             val usefulTX = megaCorpServices.signInitialTransaction(usefulBuilder)
@@ -416,7 +419,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             assertEquals(3, vaultSvc.getTransactionNotes(usefulTX.id).count())
 
             // Issue more Money (GBP)
-            val anotherBuilder = TransactionType.General.Builder(null).apply {
+            val anotherBuilder = TransactionBuilder(null).apply {
                 Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
             }
             val anotherTX = megaCorpServices.signInitialTransaction(anotherBuilder)
@@ -447,7 +450,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     // TODO: Unit test linear state relevancy checks
 
     @Test
-    fun `make update`() {
+    fun `correct updates are generated for general transactions`() {
         val service = (services.vaultService as NodeVaultService)
         val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {
             service.updates.subscribe(this)
@@ -458,7 +461,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 
         // Issue then move some cash
-        val issueTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
+        val issueTx = TransactionBuilder(services.myInfo.legalIdentity).apply {
             Cash().generateIssue(this,
                     amount, anonymousIdentity.party, services.myInfo.legalIdentity)
         }.toWireTransaction()
@@ -468,7 +471,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(cashState), null)
 
         database.transaction {
-            val moveTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
+            val moveTx = TransactionBuilder(services.myInfo.legalIdentity).apply {
                 service.generateSpend(this, Amount(1000, GBP), thirdPartyIdentity)
             }.toWireTransaction()
             service.notify(moveTx)
@@ -477,5 +480,57 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         val observedUpdates = vaultSubscriber.onNextEvents
         assertEquals(observedUpdates, listOf(expectedIssueUpdate, expectedMoveUpdate))
+    }
+
+    @Test
+    fun `correct updates are generated when changing notaries`() {
+        val service = (services.vaultService as NodeVaultService)
+        val notary = services.myInfo.legalIdentity
+
+        val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {
+            service.updates.subscribe(this)
+        }
+
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+        val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
+        val amount = Amount(1000, Issued(BOC.ref(1), GBP))
+
+        // Issue some cash
+        val issueTx = TransactionBuilder(notary).apply {
+            Cash().generateIssue(this, amount, anonymousIdentity.party, notary)
+        }.toWireTransaction()
+
+        // We need to record the issue transaction so inputs can be resolved for the notary change transaction
+        val signedIssueTx = SignedTransaction(issueTx, listOf(BOC_KEY.sign(issueTx.id)))
+        services.validatedTransactions.addTransaction(signedIssueTx)
+
+        val initialCashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
+
+        // Change notary
+        val newNotary = DUMMY_NOTARY
+        val changeNotaryTx = NotaryChangeWireTransaction(listOf(initialCashState.ref), issueTx.notary!!, newNotary)
+        val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))
+
+        database.transaction {
+            service.notifyAll(listOf(issueTx, changeNotaryTx))
+        }
+
+        // Move cash
+        val moveTx = database.transaction {
+            TransactionBuilder(newNotary).apply {
+                service.generateSpend(this, Amount(1000, GBP), thirdPartyIdentity)
+            }.toWireTransaction()
+        }
+
+        database.transaction {
+            service.notify(moveTx)
+        }
+
+        val expectedIssueUpdate = Vault.Update(emptySet(), setOf(initialCashState), null)
+        val expectedNotaryChangeUpdate = Vault.Update(setOf(initialCashState), setOf(cashStateWithNewNotary), null, Vault.UpdateType.NOTARY_CHANGE)
+        val expectedMoveUpdate = Vault.Update(setOf(cashStateWithNewNotary), emptySet(), null)
+
+        val observedUpdates = vaultSubscriber.onNextEvents
+        assertEquals(observedUpdates, listOf(expectedIssueUpdate, expectedNotaryChangeUpdate, expectedMoveUpdate))
     }
 }

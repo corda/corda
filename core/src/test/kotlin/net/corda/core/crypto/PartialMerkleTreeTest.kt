@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-
 import com.esotericsoftware.kryo.KryoException
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
@@ -97,7 +96,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `building Merkle tree for a transaction`() {
+    fun `building Merkle tree for a tx and nonce test`() {
         fun filtering(elem: Any): Boolean {
             return when (elem) {
                 is StateRef -> true
@@ -109,24 +108,30 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
             }
         }
 
-        val mt = testTx.buildFilteredTransaction(Predicate(::filtering))
-        val leaves = mt.filteredLeaves
         val d = testTx.serialize().deserialize()
         assertEquals(testTx.id, d.id)
-        assertEquals(1, leaves.commands.size)
-        assertEquals(1, leaves.outputs.size)
+
+        val mt = testTx.buildFilteredTransaction(Predicate(::filtering))
+        val leaves = mt.filteredLeaves
+
         assertEquals(1, leaves.inputs.size)
         assertEquals(0, leaves.attachments.size)
-        assertTrue(mt.filteredLeaves.timeWindow != null)
-        assertEquals(null, mt.filteredLeaves.type)
-        assertEquals(null, mt.filteredLeaves.notary)
+        assertEquals(1, leaves.outputs.size)
+        assertEquals(1, leaves.commands.size)
+        assertNull(mt.filteredLeaves.notary)
+        assertNotNull(mt.filteredLeaves.timeWindow)
+        assertNull(mt.filteredLeaves.privacySalt)
+        assertEquals(4, leaves.nonces.size)
         assertTrue(mt.verify())
     }
 
     @Test
     fun `same transactions with different notaries have different ids`() {
-        val wtx1 = makeSimpleCashWtx(DUMMY_NOTARY)
-        val wtx2 = makeSimpleCashWtx(MEGA_CORP)
+        // We even use the same privacySalt, and thus the only difference between the two transactions is the notary party.
+        val privacySalt = PrivacySalt()
+        val wtx1 = makeSimpleCashWtx(DUMMY_NOTARY, privacySalt)
+        val wtx2 = makeSimpleCashWtx(MEGA_CORP, privacySalt)
+        assertEquals(wtx1.privacySalt, wtx2.privacySalt)
         assertNotEquals(wtx1.id, wtx2.id)
     }
 
@@ -138,10 +143,22 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         assertTrue(mt.filteredLeaves.inputs.isEmpty())
         assertTrue(mt.filteredLeaves.outputs.isEmpty())
         assertTrue(mt.filteredLeaves.timeWindow == null)
+        assertTrue(mt.filteredLeaves.availableComponents.isEmpty())
+        assertTrue(mt.filteredLeaves.availableComponentHashes.isEmpty())
+        assertTrue(mt.filteredLeaves.nonces.isEmpty())
         assertFailsWith<MerkleTreeException> { mt.verify() }
+
+        // Including only privacySalt still results to an empty FilteredTransaction.
+        fun filterPrivacySalt(elem: Any): Boolean = elem is PrivacySalt
+        val mt2 = testTx.buildFilteredTransaction(Predicate(::filterPrivacySalt))
+        assertTrue(mt2.filteredLeaves.privacySalt == null)
+        assertTrue(mt2.filteredLeaves.availableComponents.isEmpty())
+        assertTrue(mt2.filteredLeaves.availableComponentHashes.isEmpty())
+        assertTrue(mt2.filteredLeaves.nonces.isEmpty())
+        assertFailsWith<MerkleTreeException> { mt2.verify() }
     }
 
-    // Partial Merkle Tree building tests
+    // Partial Merkle Tree building tests.
     @Test
     fun `build Partial Merkle Tree, only left nodes branch`() {
         val inclHashes = listOf(hashed[3], hashed[5])
@@ -221,15 +238,20 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         hm1.serialize()
     }
 
-    private fun makeSimpleCashWtx(notary: Party, timeWindow: TimeWindow? = null, attachments: List<SecureHash> = emptyList()): WireTransaction {
+    private fun makeSimpleCashWtx(
+            notary: Party,
+            privacySalt: PrivacySalt = PrivacySalt(),
+            timeWindow: TimeWindow? = null,
+            attachments: List<SecureHash> = emptyList()
+    ): WireTransaction {
         return WireTransaction(
                 inputs = testTx.inputs,
                 attachments = attachments,
                 outputs = testTx.outputs,
                 commands = testTx.commands,
                 notary = notary,
-                type = TransactionType.General,
-                timeWindow = timeWindow
+                timeWindow = timeWindow,
+                privacySalt = privacySalt
         )
     }
 }

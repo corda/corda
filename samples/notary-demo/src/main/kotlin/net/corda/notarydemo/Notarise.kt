@@ -27,14 +27,14 @@ fun main(args: Array<String>) {
 /** Interface for using the notary demo API from a client. */
 private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val notary by lazy {
-        val (parties, partyUpdates) = rpc.networkMapUpdates()
+        val (parties, partyUpdates) = rpc.networkMapFeed()
         partyUpdates.notUsed()
         val id = parties.stream().filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().asSequence().singleOrNull()
         checkNotNull(id) { "No unique notary identity, try cleaning the node directories." }
     }
 
     private val counterpartyNode by lazy {
-        val (parties, partyUpdates) = rpc.networkMapUpdates()
+        val (parties, partyUpdates) = rpc.networkMapFeed()
         partyUpdates.notUsed()
         parties.single { it.legalIdentity.name == BOB.name }
     }

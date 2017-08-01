@@ -26,27 +26,28 @@ import java.util.*
  * [TransactionState] with this notary specified will be generated automatically.
  */
 open class TransactionBuilder(
-        protected val type: TransactionType = TransactionType.General,
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
-        protected var window: TimeWindow? = null) {
-    constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
+        protected var window: TimeWindow? = null,
+        protected var privacySalt: PrivacySalt = PrivacySalt()
+    ) {
+    constructor(notary: Party) : this (notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
     /**
      * Creates a copy of the builder.
      */
     fun copy() = TransactionBuilder(
-            type = type,
             notary = notary,
             inputs = ArrayList(inputs),
             attachments = ArrayList(attachments),
             outputs = ArrayList(outputs),
             commands = ArrayList(commands),
-            window = window
+            window = window,
+            privacySalt = privacySalt
     )
 
     // DOCSTART 1
@@ -61,6 +62,7 @@ open class TransactionBuilder(
                 is Command<*> -> addCommand(t)
                 is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
                 is TimeWindow -> setTimeWindow(t)
+                is PrivacySalt -> setPrivacySalt(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
         }
@@ -69,7 +71,7 @@ open class TransactionBuilder(
     // DOCEND 1
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), notary, type, window)
+            ArrayList(outputs), ArrayList(commands), notary, window, privacySalt)
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
@@ -135,6 +137,11 @@ open class TransactionBuilder(
      * node.
      */
     fun setTimeWindow(time: Instant, timeTolerance: Duration) = setTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
+
+    fun setPrivacySalt(privacySalt: PrivacySalt): TransactionBuilder {
+        this.privacySalt = privacySalt
+        return this
+    }
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)

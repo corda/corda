@@ -4,11 +4,11 @@ import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import com.google.common.annotations.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -243,8 +243,8 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.outputs)
         kryo.writeClassAndObject(output, obj.commands)
         kryo.writeClassAndObject(output, obj.notary)
-        kryo.writeClassAndObject(output, obj.type)
         kryo.writeClassAndObject(output, obj.timeWindow)
+        kryo.writeClassAndObject(output, obj.privacySalt)
     }
 
     private fun attachmentsClassLoader(kryo: Kryo, attachmentHashes: List<SecureHash>): ClassLoader? {
@@ -270,9 +270,9 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command<*>>
             val notary = kryo.readClassAndObject(input) as Party?
-            val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timeWindow = kryo.readClassAndObject(input) as TimeWindow?
-            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, transactionType, timeWindow)
+            val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
+            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, timeWindow, privacySalt)
         }
     }
 }

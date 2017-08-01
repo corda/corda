@@ -2,7 +2,6 @@ package net.corda.node.services
 
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
 import net.corda.testing.contracts.DummyContract
 import net.corda.core.identity.Party
 import net.corda.testing.DUMMY_BANK_A
@@ -12,6 +11,7 @@ import net.corda.core.flows.NotaryFlow
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.AbstractNode
 import net.corda.testing.node.NodeBasedTest
 import org.bouncycastle.asn1.x500.X500Name
@@ -34,13 +34,13 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
         val inputState = issueState(bankA, notaryParty)
 
-        val firstTxBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState)
+        val firstTxBuilder = TransactionBuilder(notaryParty).withItems(inputState)
         val firstSpendTx = bankA.services.signInitialTransaction(firstTxBuilder)
 
         val firstSpend = bankA.services.startFlow(NotaryFlow.Client(firstSpendTx))
         firstSpend.resultFuture.getOrThrow()
 
-        val secondSpendBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
+        val secondSpendBuilder = TransactionBuilder(notaryParty).withItems(inputState).run {
             val dummyState = DummyContract.SingleOwnerState(0, bankA.info.legalIdentity)
             addOutputState(dummyState)
             this

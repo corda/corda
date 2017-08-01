@@ -15,6 +15,7 @@ import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 
 class TransactionTests : TestDependencyInjectionBase() {
     private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair, notarySig: Boolean = true): SignedTransaction {
@@ -39,7 +40,6 @@ class TransactionTests : TestDependencyInjectionBase() {
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(compKey, DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = DUMMY_NOTARY,
-                type = TransactionType.General,
                 timeWindow = null
         )
         assertEquals(
@@ -66,7 +66,6 @@ class TransactionTests : TestDependencyInjectionBase() {
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = DUMMY_NOTARY,
-                type = TransactionType.General,
                 timeWindow = null
         )
         assertFailsWith<IllegalArgumentException> { makeSigned(wtx, notarySig = false).verifyRequiredSignatures() }
@@ -99,6 +98,7 @@ class TransactionTests : TestDependencyInjectionBase() {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
+        val privacySalt: PrivacySalt = PrivacySalt()
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
                 outputs,
@@ -107,7 +107,7 @@ class TransactionTests : TestDependencyInjectionBase() {
                 id,
                 null,
                 timeWindow,
-                TransactionType.General
+                privacySalt
         )
 
         transaction.verify()
@@ -122,7 +122,6 @@ class TransactionTests : TestDependencyInjectionBase() {
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = DUMMY_NOTARY,
-                type = TransactionType.General,
                 timeWindow = null
         )
 
@@ -140,6 +139,7 @@ class TransactionTests : TestDependencyInjectionBase() {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
+        val privacySalt: PrivacySalt = PrivacySalt()
         fun buildTransaction() = LedgerTransaction(
                 inputs,
                 outputs,
@@ -148,9 +148,28 @@ class TransactionTests : TestDependencyInjectionBase() {
                 id,
                 notary,
                 timeWindow,
-                TransactionType.General
+                privacySalt
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction() }
+    }
+
+    @Test
+    fun `transactions with identical contents must have different ids`() {
+        val outputState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
+        fun buildTransaction() = WireTransaction(
+                inputs = emptyList(),
+                attachments = emptyList(),
+                outputs = listOf(outputState),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = null,
+                timeWindow = null,
+                privacySalt = PrivacySalt() // Randomly-generated – used for calculating the id
+        )
+
+        val issueTx1 = buildTransaction()
+        val issueTx2 = buildTransaction()
+
+        assertNotEquals(issueTx1.id, issueTx2.id)
     }
 }

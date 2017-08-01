@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
@@ -51,7 +52,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
         require(states.isNotEmpty())
 
         val signees: Set<AbstractParty> = states.flatMap { it.state.data.participants }.distinct().toSet()
-        return Pair(TransactionType.General.Builder(notary).apply {
+        return Pair(TransactionBuilder(notary).apply {
             states.forEach {
                 addInputState(it)
                 addOutputState(upgrade(it.state.data))

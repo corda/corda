@@ -8,7 +8,6 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.testing.NullSignature
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.testing.*
@@ -73,7 +72,6 @@ class WiredTransactionGenerator : Generator<WireTransaction>(WireTransaction::cl
                 outputs = TransactionStateGenerator(ContractStateGenerator()).generateList(random, status),
                 commands = commands,
                 notary = PartyGenerator().generate(random, status),
-                type = TransactionType.General,
                 timeWindow = TimeWindowGenerator().generate(random, status)
         )
     }

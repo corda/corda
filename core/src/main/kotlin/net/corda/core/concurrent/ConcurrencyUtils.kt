@@ -1,8 +1,8 @@
 package net.corda.core.concurrent
 
-import com.google.common.annotations.VisibleForTesting
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.internal.VisibleForTesting
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Future

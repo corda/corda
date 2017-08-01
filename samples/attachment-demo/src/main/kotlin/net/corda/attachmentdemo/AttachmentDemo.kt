@@ -5,7 +5,6 @@ import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -18,6 +17,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
@@ -106,7 +106,7 @@ class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : Fl
     @Suspendable
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
-        val ptx = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+        val ptx = TransactionBuilder(notary = DUMMY_NOTARY)
         ptx.addOutputState(AttachmentContract.State(hash))
         ptx.addAttachment(hash)
 
@@ -121,7 +121,7 @@ class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : Fl
 
 fun recipient(rpc: CordaRPCOps) {
     println("Waiting to receive transaction ...")
-    val stx = rpc.verifiedTransactions().second.toBlocking().first()
+    val stx = rpc.verifiedTransactionsFeed().updates.toBlocking().first()
     val wtx = stx.tx
     if (wtx.attachments.isNotEmpty()) {
         if (wtx.outputs.isNotEmpty()) {

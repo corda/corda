@@ -114,7 +114,7 @@ class CordaRPCOpsImpl(
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
-                progress = stateMachine.logic.track()?.second ?: Observable.empty()
+                progress = stateMachine.logic.track()?.updates ?: Observable.empty()
         )
     }
 

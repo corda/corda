@@ -7,6 +7,9 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* The concept of ``TransactionType`` has been removed. Transactions no longer carry a `type` property. All usages of
+  ``TransactionType.General.Builder()`` have to be replaced with ``TransactionBuilder()``.
+
 * Changes in ``NodeInfo``:
 
    * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical
@@ -56,6 +59,18 @@ UNRELEASED
      except other cordapps and Corda core dependencies.
    * ``Cordformation`` adds a ``corda`` and ``cordaRuntime`` configuration to projects which cordapp developers should
      use to exclude core Corda JARs from being built into Cordapp fat JARs.
+
+.. Milestone 15:
+
+* Following deprecated methods have been removed:
+  * In ``DataFeed``
+    * ``first`` and ``current``, replaced by ``snapshot``
+    * ``second`` and ``future``, replaced by ``updates``
+  * In ``CordaRPCOps``
+    * ``stateMachinesAndUpdates``, replaced by ``stateMachinesFeed``
+    * ``verifiedTransactions``, replaced by ``verifiedTransactionsFeed``
+    * ``stateMachineRecordedTransactionMapping``, replaced by ``stateMachineRecordedTransactionMappingFeed``
+    * ``networkMapUpdates``, replaced by ``networkMapFeed``
 
 Milestone 13
 ------------

@@ -4,7 +4,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
@@ -12,6 +11,7 @@ import net.corda.core.flows.NotaryFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.issueInvalidState
 import net.corda.node.services.network.NetworkMapService
@@ -52,7 +52,7 @@ class ValidatingNotaryServiceTests {
     fun `should report error for invalid transaction dependency`() {
         val stx = run {
             val inputState = issueInvalidState(clientNode, notaryNode.info.notaryIdentity)
-            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
+            val tx = TransactionBuilder(notaryNode.info.notaryIdentity).withItems(inputState)
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -70,7 +70,7 @@ class ValidatingNotaryServiceTests {
             val inputState = issueState(clientNode)
 
             val command = Command(DummyContract.Commands.Move(), expectedMissingKey)
-            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState, command)
+            val tx = TransactionBuilder(notaryNode.info.notaryIdentity).withItems(inputState, command)
             clientNode.services.signInitialTransaction(tx)
         }
 

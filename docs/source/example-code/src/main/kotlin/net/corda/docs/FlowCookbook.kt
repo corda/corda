@@ -3,7 +3,6 @@ package net.corda.docs
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.contracts.TransactionType.General
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
@@ -292,7 +291,7 @@ object FlowCookbook {
             progressTracker.currentStep = TX_BUILDING
 
             // DOCSTART 19
-            val txBuilder: TransactionBuilder = TransactionBuilder(General, specificNotary)
+            val txBuilder: TransactionBuilder = TransactionBuilder(specificNotary)
             // DOCEND 19
 
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:

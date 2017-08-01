@@ -1,6 +1,5 @@
 package net.corda.core.internal
 
-import com.google.common.base.Throwables
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import org.slf4j.Logger
@@ -8,10 +7,7 @@ import rx.Observable
 import rx.Observer
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
-import java.io.OutputStream
+import java.io.*
 import java.lang.reflect.Field
 import java.math.BigDecimal
 import java.nio.charset.Charset
@@ -30,7 +26,8 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.reflect.KClass
 
-inline val Throwable.rootCause: Throwable get() = Throwables.getRootCause(this)
+val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
+fun Throwable.getStackTraceAsString() = StringWriter().also { printStackTrace(PrintWriter(it)) }.toString()
 
 infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
 
@@ -249,3 +246,13 @@ class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?
         get() = javaField.get(receiver) as T
         set(value) = javaField.set(receiver, value)
 }
+
+/** The annotated object would have a more restricted visibility were it not needed in tests. */
+@Target(AnnotationTarget.CLASS,
+        AnnotationTarget.PROPERTY,
+        AnnotationTarget.CONSTRUCTOR,
+        AnnotationTarget.FUNCTION,
+        AnnotationTarget.TYPEALIAS)
+@Retention(AnnotationRetention.SOURCE)
+@MustBeDocumented
+annotation class VisibleForTesting

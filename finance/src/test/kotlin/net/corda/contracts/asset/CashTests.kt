@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.services.vault.NodeVaultService
@@ -20,6 +21,7 @@ import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.junit.Before
 import org.junit.Test
 import java.security.KeyPair
@@ -50,7 +52,7 @@ class CashTests : TestDependencyInjectionBase() {
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
         database.transaction {
             miniCorpServices = object : MockServices(MINI_CORP_KEY) {
                 override val keyManagementService: MockKeyManagementService = MockKeyManagementService(identityService, MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY)
@@ -155,7 +157,7 @@ class CashTests : TestDependencyInjectionBase() {
     fun generateIssueRaw() {
         initialiseTestSerialization()
         // Test generation works.
-        val tx: WireTransaction = TransactionType.General.Builder(notary = null).apply {
+        val tx: WireTransaction = TransactionBuilder(notary = null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = AnonymousParty(DUMMY_PUBKEY_1), notary = DUMMY_NOTARY)
         }.toWireTransaction()
         assertTrue(tx.inputs.isEmpty())
@@ -172,7 +174,7 @@ class CashTests : TestDependencyInjectionBase() {
         initialiseTestSerialization()
         // Test issuance from an issued amount
         val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
-        val tx: WireTransaction = TransactionType.General.Builder(notary = null).apply {
+        val tx: WireTransaction = TransactionBuilder(notary = null).apply {
             Cash().generateIssue(this, amount, owner = AnonymousParty(DUMMY_PUBKEY_1), notary = DUMMY_NOTARY)
         }.toWireTransaction()
         assertTrue(tx.inputs.isEmpty())
@@ -244,13 +246,13 @@ class CashTests : TestDependencyInjectionBase() {
     fun `reject issuance with inputs`() {
         initialiseTestSerialization()
         // Issue some cash
-        var ptx = TransactionType.General.Builder(DUMMY_NOTARY)
+        var ptx = TransactionBuilder(DUMMY_NOTARY)
 
         Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
         val tx = miniCorpServices.signInitialTransaction(ptx)
 
         // Include the previously issued cash in a new issuance command
-        ptx = TransactionType.General.Builder(DUMMY_NOTARY)
+        ptx = TransactionBuilder(DUMMY_NOTARY)
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
         Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
     }
@@ -476,13 +478,13 @@ class CashTests : TestDependencyInjectionBase() {
      * Generate an exit transaction, removing some amount of cash from the ledger.
      */
     fun makeExit(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1): WireTransaction {
-        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
+        val tx = TransactionBuilder(DUMMY_NOTARY)
         Cash().generateExit(tx, Amount(amount.quantity, Issued(corp.ref(depositRef), amount.token)), WALLET)
         return tx.toWireTransaction()
     }
 
     fun makeSpend(amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
-        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
+        val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
             vault.generateSpend(tx, amount, dest)
         }
@@ -560,7 +562,7 @@ class CashTests : TestDependencyInjectionBase() {
     fun generateExitWithEmptyVault() {
         initialiseTestSerialization()
         assertFailsWith<InsufficientBalanceException> {
-            val tx = TransactionType.General.Builder(DUMMY_NOTARY)
+            val tx = TransactionBuilder(DUMMY_NOTARY)
             Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList())
         }
     }
@@ -584,7 +586,7 @@ class CashTests : TestDependencyInjectionBase() {
         initialiseTestSerialization()
         database.transaction {
 
-            val tx = TransactionType.General.Builder(DUMMY_NOTARY)
+            val tx = TransactionBuilder(DUMMY_NOTARY)
             vault.generateSpend(tx, 80.DOLLARS, ALICE, setOf(MINI_CORP))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])

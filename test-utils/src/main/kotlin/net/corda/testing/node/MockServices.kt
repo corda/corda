@@ -80,8 +80,8 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
-    fun makeVaultService(dataSourceProps: Properties, hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService())): VaultService {
-        val vaultService = NodeVaultService(this, dataSourceProps)
+    fun makeVaultService(dataSourceProps: Properties, hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties())): VaultService {
+        val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
         HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
@@ -193,6 +193,12 @@ fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().to
     props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
     props.setProperty("dataSource.user", "sa")
     props.setProperty("dataSource.password", "")
+    return props
+}
+
+fun makeTestDatabaseProperties(): Properties {
+    val props = Properties()
+    props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
     return props
 }
 

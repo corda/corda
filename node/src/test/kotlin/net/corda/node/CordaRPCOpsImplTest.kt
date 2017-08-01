@@ -11,9 +11,9 @@ import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl
@@ -69,10 +69,10 @@ class CordaRPCOpsImplTest {
         ))))
 
         aliceNode.database.transaction {
-            stateMachineUpdates = rpc.stateMachinesAndUpdates().second
-            transactions = rpc.verifiedTransactions().second
-            vaultUpdates = rpc.vaultAndUpdates().second
-            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().future
+            stateMachineUpdates = rpc.stateMachinesFeed().updates
+            transactions = rpc.verifiedTransactionsFeed().updates
+            vaultUpdates = rpc.vaultAndUpdates().updates
+            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
         }
     }
 
@@ -110,7 +110,7 @@ class CordaRPCOpsImplTest {
             )
         }
 
-        val tx = result.returnValue.getOrThrow()
+        result.returnValue.getOrThrow()
         val expectedState = Cash.State(Amount(quantity,
                 Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
                 recipient)
@@ -139,7 +139,7 @@ class CordaRPCOpsImplTest {
     fun `issue and move`() {
         val anonymous = false
         val result = rpc.startFlow(::CashIssueFlow,
-                Amount(100, USD),
+                100.DOLLARS,
                 OpaqueBytes(ByteArray(1, { 1 })),
                 aliceNode.info.legalIdentity,
                 notaryNode.info.notaryIdentity,
@@ -148,13 +148,13 @@ class CordaRPCOpsImplTest {
 
         mockNet.runNetwork()
 
-        rpc.startFlow(::CashPaymentFlow, Amount(100, USD), aliceNode.info.legalIdentity, anonymous)
+        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.info.legalIdentity, anonymous)
 
         mockNet.runNetwork()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
-        stateMachineUpdates.expectEvents() {
+        stateMachineUpdates.expectEvents {
             sequence(
                     // ISSUE
                     expect { add: StateMachineUpdate.Added ->
@@ -202,14 +202,14 @@ class CordaRPCOpsImplTest {
         vaultUpdates.expectEvents {
             sequence(
                     // ISSUE
-                    expect { update ->
-                        require(update.consumed.isEmpty()) { update.consumed.size }
-                        require(update.produced.size == 1) { update.produced.size }
+                    expect { (consumed, produced) ->
+                        require(consumed.isEmpty()) { consumed.size }
+                        require(produced.size == 1) { produced.size }
                     },
                     // MOVE
-                    expect { update ->
-                        require(update.consumed.size == 1) { update.consumed.size }
-                        require(update.produced.size == 1) { update.produced.size }
+                    expect { (consumed, produced) ->
+                        require(consumed.size == 1) { consumed.size }
+                        require(produced.size == 1) { produced.size }
                     }
             )
         }
@@ -217,14 +217,14 @@ class CordaRPCOpsImplTest {
         vaultTrackCash.expectEvents {
             sequence(
                     // ISSUE
-                    expect { update ->
-                        require(update.consumed.isEmpty()) { update.consumed.size }
-                        require(update.produced.size == 1) { update.produced.size }
+                    expect { (consumed, produced) ->
+                        require(consumed.isEmpty()) { consumed.size }
+                        require(produced.size == 1) { produced.size }
                     },
                     // MOVE
-                    expect { update ->
-                        require(update.consumed.size == 1) { update.consumed.size }
-                        require(update.produced.size == 1) { update.produced.size }
+                    expect { (consumed, produced) ->
+                        require(consumed.size == 1) { consumed.size }
+                        require(produced.size == 1) { produced.size }
                     }
             )
         }

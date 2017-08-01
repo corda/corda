@@ -4,7 +4,6 @@ import io.requery.Persistable
 import io.requery.kotlin.eq
 import io.requery.sql.KotlinEntityDataStore
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.testing.NullPublicKey
@@ -26,6 +25,7 @@ import net.corda.testing.DUMMY_PUBKEY_1
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -44,7 +44,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties)
+        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties())
         newTransactionStorage()
         newRequeryStorage(dataSourceProperties)
     }
@@ -158,7 +158,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
         val nativeQuery = "SELECT v.transaction_id, v.output_index FROM vault_states v WHERE v.state_status = 0"
 
         database.transaction {
-            val configuration = RequeryConfiguration(dataSourceProperties, true)
+            val configuration = RequeryConfiguration(dataSourceProperties, true, makeTestDatabaseProperties())
             val jdbcSession = configuration.jdbcSession()
             val prepStatement = jdbcSession.prepareStatement(nativeQuery)
             val rs = prepStatement.executeQuery()
@@ -198,7 +198,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
 
     private fun newRequeryStorage(dataSourceProperties: Properties) {
         database.transaction {
-            val configuration = RequeryConfiguration(dataSourceProperties, true)
+            val configuration = RequeryConfiguration(dataSourceProperties, true, makeTestDatabaseProperties())
             requerySession = configuration.sessionForModel(Models.VAULT)
         }
     }
@@ -210,7 +210,6 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
                 outputs = emptyList(),
                 commands = emptyList(),
                 notary = DUMMY_NOTARY,
-                type = TransactionType.General,
                 timeWindow = null
         )
         return SignedTransaction(wtx, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))
