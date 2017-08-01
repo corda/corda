@@ -10,6 +10,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.http.HttpApi
 
 /**
@@ -33,20 +34,22 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
         val client = CordaRPCClient(hostAndPort)
         // TODO: privileged security controls required
         client.start("bankUser", "test").use { connection ->
-            val proxy = connection.proxy
+            val rpc = connection.proxy
 
             // Resolve parties via RPC
-            val issueToParty = proxy.partyFromX500Name(params.issueToPartyName)
+            val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)
                     ?: throw Exception("Unable to locate ${params.issueToPartyName} in Network Map Service")
-            val issuerBankParty = proxy.partyFromX500Name(params.issuerBankName)
+            val issuerBankParty = rpc.partyFromX500Name(params.issuerBankName)
                     ?: throw Exception("Unable to locate ${params.issuerBankName} in Network Map Service")
-            val notaryParty = proxy.partyFromX500Name(params.notaryName)
-                    ?: throw Exception("Unable to locate ${params.notaryName} in Network Map Service")
+            val notaryLegalIdentity = rpc.partyFromX500Name(params.notaryName)
+                    ?: throw IllegalStateException("Unable to locate ${params.notaryName} in Network Map Service")
+            val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
+                    ?: throw IllegalStateException("Unable to locate notary node in network map cache")
 
             val amount = Amount(params.amount, currency(params.currency))
             val issuerToPartyRef = OpaqueBytes.of(params.issueToPartyRefAsString.toByte())
 
-            return proxy.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty, notaryParty, params.anonymous)
+            return rpc.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty, notaryNode.notaryIdentity, params.anonymous)
                     .returnValue.getOrThrow().stx
         }
     }
