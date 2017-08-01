@@ -24,6 +24,8 @@ data class VerifiedAnonymousParty(
             : this(AnonymousParty(party), certPath)
     init {
         require(certPath.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
+        val targetCert = certPath.certificates.first() as? X509Certificate ?: throw IllegalArgumentException("Certificate path must start with an X.509 certificate")
+        require(targetCert.publicKey == party.owningKey) { "Certificate path must start with a certificate matching the party owning key" }
     }
 
     /**

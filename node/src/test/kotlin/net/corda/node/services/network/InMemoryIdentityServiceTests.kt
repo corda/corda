@@ -134,14 +134,14 @@ class InMemoryIdentityServiceTests {
             val bobRootCert = bobRoot.certificate
             val bobTxKey = Crypto.generateKeyPair()
             val bobTxCert = X509Utilities.createCertificate(CertificateType.IDENTITY, bobRootCert, bobRootKey, BOB.name, bobTxKey.public)
-            val bobCertPath = certFactory.generateCertPath(listOf(bobTxCert.cert, bobRootCert.cert))
-            val bob = VerifiedParty(BOB.name, bobRootKey.public, bobRootCert, bobCertPath)
+            val bob = VerifiedParty(BOB.name, bobRootKey.public, bobRootCert, certFactory.generateCertPath(listOf(bobRootCert.cert)))
 
             // Now we have identities, construct the service and let it know about both
             val service = InMemoryIdentityService(setOf(alice, bob), emptyMap(), trustRoot.certificate.cert)
             service.verifyAndRegisterAnonymousIdentity(aliceTxIdentity, alice.party)
 
-            val anonymousBob = VerifiedAnonymousParty(AnonymousParty(bobTxKey.public),bobCertPath)
+            val bobTxCertPath = certFactory.generateCertPath(listOf(bobTxCert.cert, bobRootCert.cert))
+            val anonymousBob = VerifiedAnonymousParty(AnonymousParty(bobTxKey.public), bobTxCertPath)
             service.verifyAndRegisterAnonymousIdentity(anonymousBob, bob.party)
 
             // Verify that paths are verified

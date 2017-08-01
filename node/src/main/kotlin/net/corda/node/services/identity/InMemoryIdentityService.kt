@@ -122,10 +122,10 @@ class InMemoryIdentityService(identities: Iterable<VerifiedParty> = emptySet(),
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
         val path = partyToPath[anonymousParty]?.first ?: throw IdentityService.UnknownAnonymousPartyException("Unknown anonymous party ${anonymousParty.owningKey.toStringShort()}")
         require(path.certificates.size > 1) { "Certificate path must contain at least two certificates" }
-        val actual = path.certificates[1]
-        require(actual is X509Certificate && actual.publicKey == party.owningKey) { "Next certificate in the path must match the party key ${party.owningKey.toStringShort()}." }
-        val target = path.certificates.first()
-        require(target is X509Certificate && target.publicKey == anonymousParty.owningKey) { "Certificate path starts with a certificate for the anonymous party" }
+        val wellKnownCert = path.certificates[1]
+        require(wellKnownCert is X509Certificate && wellKnownCert.publicKey == party.owningKey) { "Next certificate in the path must match the party key ${party.owningKey.toStringShort()}." }
+        val anonymousCert = path.certificates.first()
+        require(anonymousCert is X509Certificate && anonymousCert.publicKey == anonymousParty.owningKey) { "Certificate path starts with a certificate for the anonymous party" }
     }
 
     override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = partyToPath[anonymousParty]?.first

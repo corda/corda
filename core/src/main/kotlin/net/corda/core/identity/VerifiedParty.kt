@@ -23,9 +23,10 @@ data class VerifiedParty(val party: Party,
 
     init {
         require(certPath.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
-        val targetCert = certPath.certificates.first() as X509Certificate
+        val targetCert = certPath.certificates.first() as? X509Certificate ?: throw IllegalArgumentException("Certificate path must start with an X.509 certificate")
         val subjectX500Name = X500Name(targetCert.subjectDN.name)
-        require(subjectX500Name == certificate.subject) { "Certificate path must end with the certificate subject ${certificate.subject}" }
+        require(subjectX500Name == certificate.subject) { "Certificate path must start with the certificate subject ${certificate.subject}" }
+        require(targetCert.publicKey == party.owningKey) { "Certificate path must start with a certificate matching the party owning key" }
         require(party.name == certificate.subject) { "Party name ${party.name} with the subject ${certificate.subject}" }
     }
 
