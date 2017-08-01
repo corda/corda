@@ -127,8 +127,11 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
 
     @Test
     fun `same transactions with different notaries have different ids`() {
-        val wtx1 = makeSimpleCashWtx(DUMMY_NOTARY)
-        val wtx2 = makeSimpleCashWtx(MEGA_CORP)
+        // We even use the same privacySalt, and thus the only difference between the two transactions is the notary party.
+        val privacySalt = PrivacySalt()
+        val wtx1 = makeSimpleCashWtx(DUMMY_NOTARY, privacySalt)
+        val wtx2 = makeSimpleCashWtx(MEGA_CORP, privacySalt)
+        assertEquals(wtx1.privacySalt, wtx2.privacySalt)
         assertNotEquals(wtx1.id, wtx2.id)
     }
 
@@ -235,14 +238,20 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         hm1.serialize()
     }
 
-    private fun makeSimpleCashWtx(notary: Party, timeWindow: TimeWindow? = null, attachments: List<SecureHash> = emptyList()): WireTransaction {
+    private fun makeSimpleCashWtx(
+            notary: Party,
+            privacySalt: PrivacySalt = PrivacySalt(),
+            timeWindow: TimeWindow? = null,
+            attachments: List<SecureHash> = emptyList()
+    ): WireTransaction {
         return WireTransaction(
                 inputs = testTx.inputs,
                 attachments = attachments,
                 outputs = testTx.outputs,
                 commands = testTx.commands,
                 notary = notary,
-                timeWindow = timeWindow
+                timeWindow = timeWindow,
+                privacySalt = privacySalt
         )
     }
 }
