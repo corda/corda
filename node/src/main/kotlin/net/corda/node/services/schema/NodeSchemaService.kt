@@ -10,6 +10,7 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.api.SchemaService
 import net.corda.core.schemas.CommonSchemaV1
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.VaultSchemaV1
@@ -34,7 +35,8 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                   Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
                   Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
                   Pair(DBTransactionStorage.TransactionSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(DBTransactionMappingStorage.TransactionMappingSchemaV1, SchemaService.SchemaOptions()))
+                  Pair(DBTransactionMappingStorage.TransactionMappingSchemaV1, SchemaService.SchemaOptions()),
+                  Pair(DBCheckpointStorage.CheckpointSchemaV1, SchemaService.SchemaOptions()))
 
 
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {

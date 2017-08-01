@@ -1,57 +1,63 @@
 package net.corda.node.services.persistence
 
-import net.corda.core.crypto.SecureHash
-import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.utilities.*
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.statements.InsertStatement
-import java.util.Collections.synchronizedMap
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
 
 /**
- * Simple checkpoint key value storage in DB using the underlying JDBCHashMap and transactional context of the call sites.
+ * Simple checkpoint key value storage in DB.
  */
 class DBCheckpointStorage : CheckpointStorage {
 
-    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}checkpoints") {
-        val checkpointId = secureHash("checkpoint_id")
-        val checkpoint = blob("checkpoint")
+    object CheckpointSchema
+
+    object CheckpointSchemaV1 : MappedSchema(schemaFamily = CheckpointSchema.javaClass, version = 1,
+            mappedTypes = listOf(Checkpoint::class.java)) {
+
+        @Entity
+        @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
+        class Checkpoint(
+                @Id
+                @Column(name = "checkpoint_id", length = 64)
+                var checkpointId: String = "",
+
+                @Lob
+                @Column(name = "checkpoint")
+                var checkpoint: ByteArray = ByteArray(0)
+        )
     }
 
-    private class CheckpointMap : AbstractJDBCHashMap<SecureHash, SerializedBytes<Checkpoint>, Table>(Table, loadOnInit = false) {
-        override fun keyFromRow(row: ResultRow): SecureHash = row[table.checkpointId]
-
-        override fun valueFromRow(row: ResultRow): SerializedBytes<Checkpoint> = bytesFromBlob(row[table.checkpoint])
-
-        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, SerializedBytes<Checkpoint>>, finalizables: MutableList<() -> Unit>) {
-            insert[table.checkpointId] = entry.key
-        }
-
-        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, SerializedBytes<Checkpoint>>, finalizables: MutableList<() -> Unit>) {
-            insert[table.checkpoint] = bytesToBlob(entry.value, finalizables)
-        }
-    }
-
-    private val checkpointStorage = synchronizedMap(CheckpointMap())
-
-    override fun addCheckpoint(checkpoint: Checkpoint) {
-        checkpointStorage.put(checkpoint.id, checkpoint.serialize(context = CHECKPOINT_CONTEXT))
+    override fun addCheckpoint(value: Checkpoint) {
+        val session = DatabaseTransactionManager.current().session
+        session.save(CheckpointSchemaV1.Checkpoint().apply {
+            checkpointId = value.id.toString()
+            checkpoint = serializeToByteArray(value, SerializationDefaults.CHECKPOINT_CONTEXT)
+        })
     }
 
     override fun removeCheckpoint(checkpoint: Checkpoint) {
-        checkpointStorage.remove(checkpoint.id) ?: throw IllegalArgumentException("Checkpoint not found")
+        val session = DatabaseTransactionManager.current().session
+        val elem = session.find(CheckpointSchemaV1.Checkpoint::class.java, checkpoint.id.toString()) ?: throw IllegalArgumentException("Checkpoint not found")
+        if (elem != null) {
+            session.remove(elem)
+        }
     }
 
     override fun forEach(block: (Checkpoint) -> Boolean) {
-        synchronized(checkpointStorage) {
-            for (checkpoint in checkpointStorage.values) {
-                if (!block(checkpoint.deserialize(context = CHECKPOINT_CONTEXT))) {
-                    break
-                }
+        val criteriaQuery = DatabaseTransactionManager.current().session.criteriaBuilder.createQuery(CheckpointSchemaV1.Checkpoint::class.java)
+        val root = criteriaQuery.from(CheckpointSchemaV1.Checkpoint::class.java)
+        criteriaQuery.select(root)
+        val query = DatabaseTransactionManager.current().session.createQuery(criteriaQuery)
+        val checkpoints = query.resultList.map { e -> deserializeFromByteArray<Checkpoint>(e.checkpoint, SerializationDefaults.CHECKPOINT_CONTEXT) }.asSequence()
+        for (e in checkpoints) {
+            if (!block(e)) {
+                break
             }
         }
     }
