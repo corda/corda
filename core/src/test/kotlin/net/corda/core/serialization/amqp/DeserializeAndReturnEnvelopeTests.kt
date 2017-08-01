@@ -1,11 +1,14 @@
 package net.corda.core.serialization.amqp
 
 import org.junit.Test
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class DeserializeAndReturnEnvelopeTests {
 
-    fun testName() = Thread.currentThread().stackTrace[2].methodName
+    fun testName(): String = Thread.currentThread().stackTrace[2].methodName
+    @Suppress("NOTHING_TO_INLINE")
     inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 
     @Test
@@ -14,7 +17,7 @@ class DeserializeAndReturnEnvelopeTests {
 
         val a = A(10, "20")
 
-        var factory = SerializerFactory()
+        val factory = SerializerFactory()
         fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
@@ -30,7 +33,7 @@ class DeserializeAndReturnEnvelopeTests {
 
         val b = B(A(10, "20"), 30.0F)
 
-        var factory = SerializerFactory()
+        val factory = SerializerFactory()
         fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 

@@ -40,13 +40,12 @@ fun setupJSchWithSshAgent(): JSch {
             override fun getName() = connector.name
             override fun getIdentities(): Vector<Identity> = Vector(listOf(
                     object : Identity {
-                        override fun clear() {
-                        }
-
+                        override fun clear() {}
                         override fun getAlgName() = String(Buffer(identity.blob).string)
                         override fun getName() = String(identity.comment)
                         override fun isEncrypted() = false
                         override fun getSignature(data: ByteArray?) = agentProxy.sign(identity.blob, data)
+                        @Suppress("OverridingDeprecatedMember")
                         override fun decrypt() = true
                         override fun getPublicKeyBlob() = identity.blob
                         override fun setPassphrase(passphrase: ByteArray?) = true
@@ -55,7 +54,7 @@ fun setupJSchWithSshAgent(): JSch {
 
             override fun remove(blob: ByteArray?) = throw UnsupportedOperationException()
             override fun removeAll() = throw UnsupportedOperationException()
-            override fun add(identity: ByteArray?) = throw UnsupportedOperationException()
+            override fun add(bytes: ByteArray?) = throw UnsupportedOperationException()
         }
     }
 }
@@ -85,9 +84,6 @@ class ConnectionManager(private val jSch: JSch) {
  * Connects to a list of nodes and executes the passed in action with the connections as parameter. The connections are
  * safely cleaned up if an exception is thrown.
  *
- * @param username The UNIX username to use for SSH authentication.
- * @param nodeHosts The list of hosts.
- * @param remoteMessagingPort The Artemis messaging port nodes are listening on.
  * @param tunnelPortAllocation A local port allocation strategy for creating SSH tunnels.
  * @param withConnections An action to run once we're connected to the nodes.
  * @return The return value of [withConnections]

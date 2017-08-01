@@ -26,8 +26,8 @@ class VisualiserViewModel {
     inner class NodeWidget(val node: MockNetwork.MockNode, val innerDot: Circle, val outerDot: Circle, val longPulseDot: Circle,
                            val pulseAnim: Animation, val longPulseAnim: Animation,
                            val nameLabel: Label, val statusLabel: Label) {
-        fun position(index: Int, nodeCoords: (node: MockNetwork.MockNode, index: Int) -> Pair<Double, Double>) {
-            val (x, y) = nodeCoords(node, index)
+        fun position(nodeCoords: (node: MockNetwork.MockNode) -> Pair<Double, Double>) {
+            val (x, y) = nodeCoords(node)
             innerDot.centerX = x
             innerDot.centerY = y
             outerDot.centerX = x
@@ -63,15 +63,15 @@ class VisualiserViewModel {
 
     fun repositionNodes() {
         for ((index, bank) in simulation.banks.withIndex()) {
-            nodesToWidgets[bank]!!.position(index, when (displayStyle) {
-                Style.MAP -> { node, _ -> nodeMapCoords(node) }
-                Style.CIRCLE -> { _, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.BANK, index) }
+            nodesToWidgets[bank]!!.position(when (displayStyle) {
+                Style.MAP -> { node -> nodeMapCoords(node) }
+                Style.CIRCLE -> { _ -> nodeCircleCoords(NetworkMapVisualiser.NodeType.BANK, index) }
             })
         }
         for ((index, serviceProvider) in (simulation.serviceProviders + simulation.regulators).withIndex()) {
-            nodesToWidgets[serviceProvider]!!.position(index, when (displayStyle) {
-                Style.MAP -> { node, _ -> nodeMapCoords(node) }
-                Style.CIRCLE -> { _, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.SERVICE, index) }
+            nodesToWidgets[serviceProvider]!!.position(when (displayStyle) {
+                Style.MAP -> { node -> nodeMapCoords(node) }
+                Style.CIRCLE -> { _ -> nodeCircleCoords(NetworkMapVisualiser.NodeType.SERVICE, index) }
             })
         }
     }
@@ -172,8 +172,8 @@ class VisualiserViewModel {
 
         val widget = NodeWidget(forNode, innerDot, outerDot, longPulseOuterDot, pulseAnim, longPulseAnim, nameLabel, statusLabel)
         when (displayStyle) {
-            Style.CIRCLE -> widget.position(index, { _, index -> nodeCircleCoords(nodeType, index) })
-            Style.MAP -> widget.position(index, { node, _ -> nodeMapCoords(node) })
+            Style.CIRCLE -> widget.position { _ -> nodeCircleCoords(nodeType, index) }
+            Style.MAP -> widget.position { node -> nodeMapCoords(node) }
         }
         return widget
     }

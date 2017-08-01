@@ -211,45 +211,43 @@ class Network : CordaView() {
     private fun List<ContractState>.getParties() = map { it.participants.map { getModel<NetworkIdentityModel>().lookup(it.owningKey) } }.flatten()
 
     private fun fireBulletBetweenNodes(senderNode: Party, destNode: Party, startType: String, endType: String) {
-        allComponentMap[senderNode]?.let { senderNode ->
-            allComponentMap[destNode]?.let { destNode ->
-                val sender = senderNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
-                val receiver = destNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
-                val bullet = Circle(3.0)
-                bullet.styleClass += "bullet"
-                bullet.styleClass += "connection-$startType-to-$endType"
-                with(TranslateTransition(stepDuration, bullet)) {
-                    fromXProperty().bind(sender.map { it.x })
-                    fromYProperty().bind(sender.map { it.y })
-                    toXProperty().bind(receiver.map { it.x })
-                    toYProperty().bind(receiver.map { it.y })
-                    setOnFinished { mapPane.children.remove(bullet) }
+        val senderNodeComp = allComponentMap[senderNode] ?: return
+        val destNodeComp = allComponentMap[destNode] ?: return
+        val sender = senderNodeComp.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
+        val receiver = destNodeComp.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
+        val bullet = Circle(3.0)
+        bullet.styleClass += "bullet"
+        bullet.styleClass += "connection-$startType-to-$endType"
+        with(TranslateTransition(stepDuration, bullet)) {
+            fromXProperty().bind(sender.map { it.x })
+            fromYProperty().bind(sender.map { it.y })
+            toXProperty().bind(receiver.map { it.x })
+            toYProperty().bind(receiver.map { it.y })
+            setOnFinished { mapPane.children.remove(bullet) }
+            play()
+        }
+        val line = Line().apply {
+            styleClass += "message-line"
+            startXProperty().bind(sender.map { it.x })
+            startYProperty().bind(sender.map { it.y })
+            endXProperty().bind(receiver.map { it.x })
+            endYProperty().bind(receiver.map { it.y })
+        }
+        // Fade in quick, then fade out slow.
+        with(FadeTransition(stepDuration.divide(5.0), line)) {
+            fromValue = 0.0
+            toValue = 1.0
+            play()
+            setOnFinished {
+                with(FadeTransition(stepDuration.multiply(6.0), line)) {
+                    fromValue = 1.0
+                    toValue = 0.0
                     play()
+                    setOnFinished { mapPane.children.remove(line) }
                 }
-                val line = Line().apply {
-                    styleClass += "message-line"
-                    startXProperty().bind(sender.map { it.x })
-                    startYProperty().bind(sender.map { it.y })
-                    endXProperty().bind(receiver.map { it.x })
-                    endYProperty().bind(receiver.map { it.y })
-                }
-                // Fade in quick, then fade out slow.
-                with(FadeTransition(stepDuration.divide(5.0), line)) {
-                    fromValue = 0.0
-                    toValue = 1.0
-                    play()
-                    setOnFinished {
-                        with(FadeTransition(stepDuration.multiply(6.0), line)) {
-                            fromValue = 1.0
-                            toValue = 0.0
-                            play()
-                            setOnFinished { mapPane.children.remove(line) }
-                        }
-                    }
-                }
-                mapPane.children.add(1, line)
-                mapPane.children.add(bullet)
             }
         }
+        mapPane.children.add(1, line)
+        mapPane.children.add(bullet)
     }
 }
