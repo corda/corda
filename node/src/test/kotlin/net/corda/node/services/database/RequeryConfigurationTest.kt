@@ -42,7 +42,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties())
+        database = configureDatabase(dataSourceProperties, databaseProperties = makeTestDatabaseProperties())
         newTransactionStorage()
         newRequeryStorage(dataSourceProperties)
     }

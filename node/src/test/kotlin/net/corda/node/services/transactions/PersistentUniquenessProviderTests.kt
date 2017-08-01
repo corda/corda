@@ -25,7 +25,7 @@ class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), databaseProperties = makeTestDatabaseProperties())
     }
 
     @After

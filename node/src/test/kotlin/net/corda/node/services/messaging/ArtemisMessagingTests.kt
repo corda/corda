@@ -69,7 +69,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), databaseProperties = makeTestDatabaseProperties())
         networkMapRegistrationFuture = doneFuture(Unit)
     }
 

@@ -35,7 +35,7 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
         LogHelper.setLevel(NetworkMapService::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), databaseProperties = makeTestDatabaseProperties())
         cluster = setUpCluster()
     }
 

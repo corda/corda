@@ -3,18 +3,30 @@ package net.corda.node.services.persistence
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.node.services.VaultService
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.schema.HibernateObserver
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.services.persistence.DBTransactionStorage.TransactionSchemaV1
+import net.corda.node.services.vault.NodeVaultService
+import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.schemas.CashSchemaV1
+import net.corda.schemas.SampleCashSchemaV2
+import net.corda.schemas.SampleCashSchemaV3
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.LogHelper
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.BOB_KEY
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -27,11 +39,40 @@ import kotlin.test.assertEquals
 class DBTransactionStorageTests : TestDependencyInjectionBase() {
     lateinit var database: CordaPersistence
     lateinit var transactionStorage: DBTransactionStorage
+    lateinit var services: MockServices
+    val vault: VaultService get() = services.vaultService
+    // Hibernate configuration objects
+    lateinit var hibernateConfig: HibernateConfiguration
+    lateinit var hibernatePersister: HibernateObserver
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+        val dataSourceProps = makeTestDataSourceProperties()
+        val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, TransactionSchemaV1)
+
+        database = configureDatabase(dataSourceProps, customSchemas, makeTestDatabaseProperties())
+
+        database.transaction {
+
+            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
+
+            services = object : MockServices(BOB_KEY) {
+                override val vaultService: VaultService get() {
+                    val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
+                    hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
+                    return vaultService
+                }
+
+                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                    for (stx in txs) {
+                        validatedTransactions.addTransaction(stx)
+                    }
+                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                    vaultService.notifyAll(txs.map { it.tx })
+                }
+            }
+        }
         newTransactionStorage()
     }
 
@@ -115,6 +156,37 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
         }
         assertTransactionIsRetrievable(firstTransaction)
         assertTransactionIsRetrievable(secondTransaction)
+        database.transaction {
+            assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
+        }
+    }
+
+    @Test
+    fun `transaction saved twice in same DB transaction scope`() {
+        val firstTransaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(firstTransaction)
+            transactionStorage.addTransaction(firstTransaction)
+        }
+        assertTransactionIsRetrievable(firstTransaction)
+        database.transaction {
+            assertThat(transactionStorage.transactions).containsOnly(firstTransaction)
+        }
+    }
+
+    @Test
+    fun `transaction saved twice in two DB transaction scopes`() {
+        val firstTransaction = newTransaction()
+        val secondTransaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(firstTransaction)
+        }
+
+        database.transaction {
+            transactionStorage.addTransaction(secondTransaction)
+            transactionStorage.addTransaction(firstTransaction)
+        }
+        assertTransactionIsRetrievable(firstTransaction)
         database.transaction {
             assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
         }

@@ -35,7 +35,7 @@ class HibernateObserverTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(HibernateObserver::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), databaseProperties = makeTestDatabaseProperties())
     }
 
     @After

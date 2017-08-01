@@ -2,6 +2,11 @@ package net.corda.node.utilities
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.*
+import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.schema.NodeSchemaService
+import org.hibernate.SessionFactory
 import org.jetbrains.exposed.sql.Database
 
 import rx.Observable
@@ -15,15 +20,21 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
-class CordaPersistence(var dataSource: HikariDataSource, databaseProperties: Properties): Closeable {
+class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: NodeSchemaService, databaseProperties: Properties): Closeable {
 
     /** Holds Exposed database, the field will be removed once Exposed library is removed */
     lateinit var database: Database
     var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
+    val entityManagerFactory: SessionFactory by lazy(LazyThreadSafetyMode.NONE) {
+        transaction {
+            HibernateConfiguration(nodeSchemaService, databaseProperties = databaseProperties).sessionFactoryForRegisteredSchemas()
+        }
+    }
+
     companion object {
-        fun connect(dataSource: HikariDataSource, databaseProperties: Properties): CordaPersistence {
-            return CordaPersistence(dataSource, databaseProperties).apply {
+        fun connect(dataSource: HikariDataSource, nodeSchemaService: NodeSchemaService, databaseProperties: Properties): CordaPersistence {
+            return CordaPersistence(dataSource, nodeSchemaService, databaseProperties).apply {
                 DatabaseTransactionManager(this)
             }
         }
@@ -89,10 +100,10 @@ class CordaPersistence(var dataSource: HikariDataSource, databaseProperties: Pro
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, entitySchemas : Set<MappedSchema> = emptySet<MappedSchema>(), databaseProperties: Properties?): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
-    val persistence = CordaPersistence.connect(dataSource, databaseProperties ?: Properties())
+    val persistence = CordaPersistence.connect(dataSource, NodeSchemaService(entitySchemas), databaseProperties ?: Properties())
 
     //org.jetbrains.exposed.sql.Database will be removed once Exposed library is removed
     val database = Database.connect(dataSource) { _ -> ExposedTransactionManager() }
@@ -191,15 +202,17 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
     }
 }
 
-
 fun parserTransactionIsolationLevel(property: String?) : Int =
-    when (property) {
-        "none" -> Connection.TRANSACTION_NONE
-        "readUncommitted" -> Connection.TRANSACTION_READ_UNCOMMITTED
-        "readCommitted" -> Connection.TRANSACTION_READ_COMMITTED
-        "repeatableRead" -> Connection.TRANSACTION_REPEATABLE_READ
-        "serializable" -> Connection.TRANSACTION_SERIALIZABLE
-        else -> {
-            Connection.TRANSACTION_REPEATABLE_READ
+        when (property) {
+            "none" -> Connection.TRANSACTION_NONE
+            "readUncommitted" -> Connection.TRANSACTION_READ_UNCOMMITTED
+            "readCommitted" -> Connection.TRANSACTION_READ_COMMITTED
+            "repeatableRead" -> Connection.TRANSACTION_REPEATABLE_READ
+            "serializable" -> Connection.TRANSACTION_SERIALIZABLE
+            else -> {
+                Connection.TRANSACTION_REPEATABLE_READ
+            }
         }
-    }
+
+fun <T: Any> deserializeFromByteArray(blob: ByteArray, context: SerializationContext): T = SerializedBytes<Any>(blob).deserialize(context = context) as T
+fun <T: Any> serializeToByteArray(value: T, context: SerializationContext): ByteArray = value.serialize(context = context).bytes

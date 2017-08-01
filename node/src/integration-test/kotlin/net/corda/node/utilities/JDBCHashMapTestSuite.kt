@@ -16,12 +16,9 @@ import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
 import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
-import java.sql.Connection
 import java.util.*
 
 @RunWith(Suite::class)
@@ -47,7 +44,7 @@ class JDBCHashMapTestSuite {
         @BeforeClass
         fun before() {
             initialiseTestSerialization()
-            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+            database = configureDatabase(makeTestDataSourceProperties(), databaseProperties = makeTestDatabaseProperties())
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
             memoryConstrainedMap = JDBCHashMap<String, String>("test_map_constrained", loadOnInit = false, maxBuckets = 1)
@@ -233,7 +230,7 @@ class JDBCHashMapTestSuite {
 
         @Before
         fun before() {
-            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+            database = configureDatabase(makeTestDataSourceProperties(), databaseProperties = makeTestDatabaseProperties())
         }
 
         @After
