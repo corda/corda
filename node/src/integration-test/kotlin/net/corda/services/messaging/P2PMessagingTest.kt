@@ -16,7 +16,6 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.Node
 import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.messaging.*
-import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
@@ -30,7 +29,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.test.assertEquals
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
@@ -46,8 +44,9 @@ class P2PMessagingTest : NodeBasedTest() {
         val startUpDuration = elapsedTime { startNodes().getOrThrow() }
         // Start the network map a second time - this will restore message queues from the journal.
         // This will hang and fail prior the fix. https://github.com/corda/corda/issues/37
+        clearAllNodeInfoDb() // Clear network map data from nodes databases.
         stopAllNodes()
-        startNodes().getOrThrow(timeout = startUpDuration * 3) //TODO This test doesn't make sense anymore.
+        startNodes().getOrThrow(timeout = startUpDuration * 3)
     }
 
     // https://github.com/corda/corda/issues/71
@@ -151,8 +150,6 @@ class P2PMessagingTest : NodeBasedTest() {
 
         // Restart the node and expect a response
         val aliceRestarted = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
-        val netMapCache = networkMapNode.services.networkMapCache as InMemoryNetworkMapCache
-        val aliceNodeFromCache = netMapCache.getNodeByLegalIdentity(alice.info.legalIdentity)
         val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
         assertThat(requestsReceived.get()).isGreaterThanOrEqualTo(2)
         assertThat(response).isEqualTo(responseMessage)

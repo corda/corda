@@ -51,7 +51,7 @@ object NodeInfoSchemaV1 : MappedSchema(
 
             @Column(name = "legal_identities_certs")
             @ManyToMany(cascade = arrayOf(CascadeType.ALL))
-            @JoinTable(name = "link_nodeInfo_party",
+            @JoinTable(name = "link_nodeinfo_party",
                     joinColumns = arrayOf(JoinColumn(name="node_info_id")),
                     inverseJoinColumns = arrayOf(JoinColumn(name="party_name")))
             val legalIdentitiesAndCerts: Set<DBPartyAndCertificate>,
@@ -64,8 +64,8 @@ object NodeInfoSchemaV1 : MappedSchema(
             var advertisedServices: List<DBServiceEntry> = emptyList(),
 
             @Column(name = "world_map_location", nullable = true)
-            val worldMapLocation: DBWorldMapLocation?
-    ) : Serializable {
+            val worldMapLocation: WorldMapLocation?
+    ) {
         fun toNodeInfo(): NodeInfo {
             return NodeInfo(
                     this.addresses.map { it.toHostAndPort() },
@@ -73,8 +73,9 @@ object NodeInfoSchemaV1 : MappedSchema(
                     this.legalIdentitiesAndCerts.filter { !it.isMain }.map { it.toLegalIdentityAndCert() }.toSet(),
                     this.platformVersion,
                     this.advertisedServices.map {
-                        it.serviceEntry?.deserialize<ServiceEntry>() ?: throw IllegalStateException("Service entry shouldn't be null") },
-                    this.worldMapLocation?.toWorldMapLocation())
+                        it.serviceEntry?.deserialize<ServiceEntry>() ?: throw IllegalStateException("Service entry shouldn't be null")
+                    },
+                    this.worldMapLocation)
         }
     }
 
@@ -84,11 +85,11 @@ object NodeInfoSchemaV1 : MappedSchema(
             val port: Int? = null
     ) : Serializable
 
-    @Entity // I am not sure if we really need proliferation of entities, but design doc says about queries on address.
+    @Entity
     data class DBHostAndPort(
                 @EmbeddedId
                 private val pk: PKHostAndPort
-    ) : Serializable {
+    ) {
         companion object {
             fun fromHostAndPort(hostAndPort: NetworkHostAndPort) = DBHostAndPort(
                     PKHostAndPort(hostAndPort.host, hostAndPort.port)
@@ -104,28 +105,6 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(length = 65535)
             val serviceEntry: ByteArray? = null
     )
-
-    // TODO It's probably not worth storing this way.
-    @Embeddable
-    class DBWorldMapLocation(
-            val latitude: Double? = null,
-            val longitude: Double? = null,
-            val description: String? = null,
-            val countryCode: String? = null
-    ) {
-        constructor(location: WorldMapLocation): this(
-                location.coordinate.latitude,
-                location.coordinate.longitude,
-                location.description,
-                location.countryCode
-        )
-        fun toWorldMapLocation(): WorldMapLocation {
-            if (latitude == null || longitude == null || description == null || countryCode == null)
-                throw IllegalStateException("Any entry in WorldMapLocation shouldn't be null")
-            else
-                return WorldMapLocation(WorldCoordinate(latitude, longitude), description, countryCode)
-        }
-    }
 
     /**
      *  PartyAndCertificate entity (to be replaced by referencing final Identity Schema).

@@ -23,7 +23,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 
-class PersistentNetworkMapCacheTest: NodeBasedTest() {
+class PersistentNetworkMapCacheTest : NodeBasedTest() {
     val partiesList = listOf(DUMMY_NOTARY, ALICE, BOB)
     val addressesMap: HashMap<X500Name, NetworkHostAndPort> = HashMap()
     val infos: MutableSet<NodeInfo> = HashSet()
@@ -42,7 +42,7 @@ class PersistentNetworkMapCacheTest: NodeBasedTest() {
     @Test
     fun `get nodes by owning key and by name, no network map service`() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
-        val netCache = alice.services.networkMapCache as InMemoryNetworkMapCache
+        val netCache = alice.services.networkMapCache as PersistentNetworkMapCache
         alice.database.transaction {
             val res = netCache.getNodeByLegalIdentity(alice.info.legalIdentity)
             assertEquals(alice.info, res)
@@ -54,7 +54,7 @@ class PersistentNetworkMapCacheTest: NodeBasedTest() {
     @Test
     fun `get nodes by address no network map service`() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
-        val netCache = alice.services.networkMapCache as InMemoryNetworkMapCache
+        val netCache = alice.services.networkMapCache as PersistentNetworkMapCache
         alice.database.transaction {
             val res = netCache.getNodeByAddress(alice.info.addresses[0])
             assertEquals(alice.info, res)
@@ -148,19 +148,23 @@ class PersistentNetworkMapCacheTest: NodeBasedTest() {
     private fun startNodesWithPort(nodesToStart: List<Party>, noNetworkMap: Boolean = false): List<Node> {
         return nodesToStart.map { party ->
             val configOverrides = addressesMap[party.name]?.let { mapOf("p2pAddress" to it.toString()) } ?: emptyMap()
-            if (party == DUMMY_NOTARY) startNetworkMapNode(party.name, configOverrides = configOverrides)
-            else startNode(party.name,
-                    configOverrides = configOverrides,
-                    noNetworkMap = noNetworkMap,
-                    waitForConnection = false).getOrThrow()
+            if (party == DUMMY_NOTARY) {
+                startNetworkMapNode(party.name, configOverrides = configOverrides)
+            }
+            else {
+                startNode(party.name,
+                        configOverrides = configOverrides,
+                        noNetworkMap = noNetworkMap,
+                        waitForConnection = false).getOrThrow()
+            }
         }
     }
 
     // Check that nodes are functional, communicate each with each.
     private fun checkConnectivity(nodes: List<Node>) {
-        nodes.forEach { it.registerInitiatedFlow(SendBackFlow::class.java) }
         nodes.forEach { node1 ->
             nodes.forEach { node2 ->
+                node2.registerInitiatedFlow(SendBackFlow::class.java)
                 val resultFuture = node1.services.startFlow(SendFlow(node2.info.legalIdentity)).resultFuture
                 assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")
             }

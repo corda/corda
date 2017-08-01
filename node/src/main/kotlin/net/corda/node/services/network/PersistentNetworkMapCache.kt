@@ -52,12 +52,12 @@ import javax.annotation.concurrent.ThreadSafe
  * and identity services depend on each other). Should always be provided except for unit test cases.
  */
 @ThreadSafe
-open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
-        val logger = loggerFor<InMemoryNetworkMapCache>()
+        val logger = loggerFor<PersistentNetworkMapCache>()
     }
 
-    private var sessionFactory: SessionFactory? = null
+    private var sessionFactory: SessionFactory = HibernateConfiguration(serviceHub.schemaService).sessionFactoryForRegisteredSchemas()
     private var registeredForPush = false
 
     // TODO Small explanation, partyNodes and registeredNodes is left in memory as it was before, because it will be removed in
@@ -76,14 +76,11 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
     override val loadDBSuccess get() = _loadDBSuccess
 
     init {
-        serviceHub?.schemaService?.let {
-            sessionFactory = HibernateConfiguration(it).sessionFactoryForRegisteredSchemas()
-        }
-        loadFromDB()
+        serviceHub.database.transaction { loadFromDB() }
     }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
-        val nodes = serviceHub!!.database.transaction { queryByLegalIdentity(party.owningKey) }
+        val nodes = serviceHub.database.transaction { queryByIdentityKey(party.owningKey) }
         if (nodes.size == 1 && nodes[0].legalIdentity == party) {
             return PartyInfo.Node(nodes[0])
         }
@@ -101,19 +98,15 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
     override fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == principal }
             //serviceHub!!.database.transaction { queryByLegalName(principal).firstOrNull() }
     override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? =
-            serviceHub!!.database.transaction { queryByLegalIdentity(identityKey).firstOrNull() }
+            serviceHub.database.transaction { queryByIdentityKey(identityKey).firstOrNull() }
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
-        val wellKnownParty = if (serviceHub != null) {
-            serviceHub.identityService.partyFromAnonymous(party)
-        } else {
-            party
-        }
+        val wellKnownParty = serviceHub.identityService.partyFromAnonymous(party)
         return wellKnownParty?.let {
             getNodeByLegalIdentityKey(it.owningKey)
         }
     }
 
-    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = serviceHub!!.database.transaction { queryByAddress(address) }
+    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = serviceHub.database.transaction { queryByAddress(address) }
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
@@ -216,101 +209,136 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHubInternal?) 
     // Changes related to NetworkMap redesign
     // TODO It will be properly merged into network map cache after services removal.
 
+    private inline fun <T> createSession(block: (Session) -> T): T {
+        val session = sessionFactory.withOptions().
+                connection(TransactionManager.current().connection).
+                openSession()
+        return session.use { block(it) }
+    }
+
+    private fun getAllInfos(session: Session): List<NodeInfoSchemaV1.PersistentNodeInfo> {
+        val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java)
+        criteria.select(criteria.from(NodeInfoSchemaV1.PersistentNodeInfo::class.java))
+        return session.createQuery(criteria).resultList
+    }
+
     /**
      * Load NetworkMap data from the database if present. Node can start without having NetworkMapService configured.
      */
     private fun loadFromDB() {
-        logger.info("Loading node infos from database...")
-        val session = createSession()
-        session?.use {
-            val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java)
-            criteria.select(criteria.from(NodeInfoSchemaV1.PersistentNodeInfo::class.java))
-            val result = session.createQuery(criteria).resultList
-            if (result.isNotEmpty()) _loadDBSuccess = true
+        logger.info("Loading network map from database...")
+        createSession {
+            val result = getAllInfos(it)
             for (nodeInfo in result) {
-                logger.info("Loaded node info: $nodeInfo")
-                val publicKey = parsePublicKeyBase58(nodeInfo.legalIdentitiesAndCerts.filter { it.isMain }.single().owningKey)
-                val node = nodeInfo.toNodeInfo()
-                registeredNodes.put(publicKey, node)
-                changePublisher.onNext(MapChange.Added(node)) // Redeploy bridges after reading from DB on startup.
+                try {
+                    logger.info("Loaded node info: $nodeInfo")
+                    val publicKey = parsePublicKeyBase58(nodeInfo.legalIdentitiesAndCerts.single { it.isMain }.owningKey)
+                    val node = nodeInfo.toNodeInfo()
+                    registeredNodes.put(publicKey, node)
+                    changePublisher.onNext(MapChange.Added(node)) // Redeploy bridges after reading from DB on startup.
+                    _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
+                } catch (e: Exception) {
+                    logger.warn("Exception parsing network map from the database.", e)
+                }
             }
-            if (loadDBSuccess) // Useful only if we don't have NetworkMapService configured so StateMachineManager can start.
-                _registrationFuture.set(Unit)
+            if (loadDBSuccess) {
+                _registrationFuture.set(Unit) // Useful only if we don't have NetworkMapService configured so StateMachineManager can start.
+            }
         }
     }
 
     private fun updateInfoDB(nodeInfo: NodeInfo) {
-        val session = createSession()
-        session?.use {
+        createSession {
             // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
-            val info = findByLegalIdentity(session, nodeInfo.legalIdentity.owningKey)
-            session.clear()
-            val nodeInfoEntry = nodeInfo.generateMappedObject(NodeInfoSchemaV1)
+            val info = findByIdentityKey(it, nodeInfo.legalIdentity.owningKey)
+            it.clear()
+            val nodeInfoEntry = generateMappedObject(nodeInfo)
             val tx = it.beginTransaction()
             if (info.isNotEmpty()) {
                 nodeInfoEntry.id = info[0].id
             }
-            session.saveOrUpdate(nodeInfoEntry)
+            it.saveOrUpdate(nodeInfoEntry)
             tx.commit()
         }
     }
 
     private fun removeInfoDB(nodeInfo: NodeInfo) {
-        val session = createSession()
-        session?.use {
-            val info = findByLegalIdentity(session, nodeInfo.legalIdentity.owningKey).single()
+        createSession {
+            val info = findByIdentityKey(it, nodeInfo.legalIdentity.owningKey).single()
             val tx = it.beginTransaction()
-            session.remove(info)
+            it.remove(info)
             tx.commit()
         }
     }
 
-    private fun createSession(): Session? {
-        return sessionFactory?.withOptions()?.
-                connection(TransactionManager.current().connection)?.
-                openSession()
-    }
-
-    private fun findByLegalIdentity(session: Session, identityKey: PublicKey): List<NodeInfoSchemaV1.PersistentNodeInfo> {
-        val query = session.createQuery("SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKey = :owningKey")
+    private fun findByIdentityKey(session: Session, identityKey: PublicKey): List<NodeInfoSchemaV1.PersistentNodeInfo> {
+        val query = session.createQuery(
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKey = :owningKey",
+                NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("owningKey", identityKey.toBase58String())
-        @Suppress("UNCHECKED_CAST")
-        return query.resultList as List<NodeInfoSchemaV1.PersistentNodeInfo>
+        return query.resultList
     }
 
-    private fun queryByLegalIdentity(identityKey: PublicKey): List<NodeInfo> {
-        val session = createSession()
-        return session?.use {
-            val result = findByLegalIdentity(session, identityKey)
+    private fun queryByIdentityKey(identityKey: PublicKey): List<NodeInfo> {
+        createSession {
+            val result = findByIdentityKey(it, identityKey)
             return result.map { it.toNodeInfo() }
-        } ?: emptyList<NodeInfo>()
+        }
     }
-
 
     // TODO It's useless for now, because toString on X500 names is inconsistent and we have:
     //    C=ES,L=Madrid,O=Alice Corp,CN=Alice Corp
     //    CN=Alice Corp,O=Alice Corp,L=Madrid,C=ES
     private fun queryByLegalName(name: X500Name): List<NodeInfo> {
-        val session = createSession()
-        return session?.use {
-            val query = session.createQuery("SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name")
+        createSession {
+            val query = it.createQuery(
+                    "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                    NodeInfoSchemaV1.PersistentNodeInfo::class.java)
             query.setParameter("name", name.toString())
-            @Suppress("UNCHECKED_CAST")
-            val result = query.resultList as List<NodeInfoSchemaV1.PersistentNodeInfo>
+            val result = query.resultList
             return result.map { it.toNodeInfo() }
-        } ?: emptyList<NodeInfo>()
+        }
     }
 
     private fun queryByAddress(hostAndPort: NetworkHostAndPort): NodeInfo? {
-        val session = createSession()
-        return session?.use {
-            val query = session.createQuery("SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.pk.host = :host AND a.pk.port = :port")
+        createSession {
+            val query = it.createQuery(
+                    "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.pk.host = :host AND a.pk.port = :port",
+                    NodeInfoSchemaV1.PersistentNodeInfo::class.java)
             query.setParameter("host", hostAndPort.host)
             query.setParameter("port", hostAndPort.port)
-            @Suppress("UNCHECKED_CAST")
-            val result = query.resultList as List<NodeInfoSchemaV1.PersistentNodeInfo>
+            val result = query.resultList
             return if (result.isEmpty()) null
             else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
+        }
+    }
+
+    /** Object Relational Mapping support. */
+    private fun generateMappedObject(nodeInfo: NodeInfo): NodeInfoSchemaV1.PersistentNodeInfo {
+        return NodeInfoSchemaV1.PersistentNodeInfo(
+                id = 0,
+                addresses = nodeInfo.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
+                legalIdentitiesAndCerts = nodeInfo.legalIdentitiesAndCerts.map { NodeInfoSchemaV1.DBPartyAndCertificate(it) }.toSet()
+                        // TODO It's workaround to keep the main identity, will be removed in future PR getting rid of services.
+                        + NodeInfoSchemaV1.DBPartyAndCertificate(nodeInfo.legalIdentityAndCert, isMain = true),
+                platformVersion = nodeInfo.platformVersion,
+                advertisedServices = nodeInfo.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it.serialize().bytes) },
+                worldMapLocation = nodeInfo.worldMapLocation
+        )
+    }
+
+    /**
+     * Clear all network map data in nodes' databases.
+     */
+    @VisibleForTesting
+    fun clearAllNodeInfos() {
+        serviceHub.database.transaction {
+            createSession {
+                val result = getAllInfos(it)
+                val tx = it.beginTransaction()
+                for (nodeInfo in result) it.remove(nodeInfo)
+                tx.commit()
+            }
         }
     }
 }
