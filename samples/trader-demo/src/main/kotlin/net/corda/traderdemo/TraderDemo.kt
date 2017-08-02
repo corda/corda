@@ -4,8 +4,10 @@ import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.DUMMY_BANK_A
 import net.corda.core.utilities.loggerFor
+import net.corda.testing.BOC
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_NOTARY
 import org.slf4j.Logger
 import kotlin.system.exitProcess
 
@@ -49,7 +51,7 @@ private class TraderDemo {
         } else {
             val host = NetworkHostAndPort("localhost", 10009)
             CordaRPCClient(host).use("demo", "demo") {
-                TraderDemoClientApi(it.proxy).runSeller(1000.DOLLARS, DUMMY_BANK_A.name)
+                TraderDemoClientApi(it.proxy).runSeller(1000.DOLLARS, DUMMY_BANK_A.name, BOC.name)
             }
         }
     }

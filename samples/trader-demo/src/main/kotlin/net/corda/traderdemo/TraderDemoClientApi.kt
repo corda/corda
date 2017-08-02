@@ -64,8 +64,12 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         resultFutures.transpose().getOrThrow()
     }
 
-    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, counterparty: X500Name) {
+    /**
+     * @param cpIssuer the name of the party who will issue commercial paper to be sold.
+     */
+    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, counterparty: X500Name, cpIssuer: X500Name) {
         val otherParty = rpc.partyFromX500Name(counterparty) ?: throw IllegalStateException("Don't know $counterparty")
+        val issuerParty = rpc.partyFromX500Name(cpIssuer) ?: throw IllegalStateException("Don't know $cpIssuer")
         // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
         //
         // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -80,7 +84,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         }
 
         // The line below blocks and waits for the future to resolve.
-        val stx = rpc.startFlow(::SellerFlow, otherParty, amount).returnValue.getOrThrow()
+        val stx = rpc.startFlow(::SellerFlow, otherParty, issuerParty.name, amount).returnValue.getOrThrow()
         println("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(stx.tx)}")
     }
 }

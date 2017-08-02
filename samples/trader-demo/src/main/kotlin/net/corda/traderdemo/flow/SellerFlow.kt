@@ -5,7 +5,6 @@ import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.days
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
@@ -14,10 +13,11 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.days
+import net.corda.core.utilities.seconds
 import net.corda.flows.TwoPartyTradeFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
@@ -26,9 +26,10 @@ import java.util.*
 @InitiatingFlow
 @StartableByRPC
 class SellerFlow(val otherParty: Party,
+                 val cpIssuerName: X500Name,
                  val amount: Amount<Currency>,
                  override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
-    constructor(otherParty: Party, amount: Amount<Currency>) : this(otherParty, amount, tracker())
+    constructor(otherParty: Party, cpIssuerName: X500Name, amount: Amount<Currency>) : this(otherParty, cpIssuerName, amount, tracker())
 
     companion object {
         val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
@@ -70,8 +71,9 @@ class SellerFlow(val otherParty: Party,
     @Suspendable
     fun selfIssueSomeCommercialPaper(ownedBy: AbstractParty, notaryNode: NodeInfo): StateAndRef<CommercialPaper.State> {
         // Make a fake company that's issued its own paper.
-        val party = Party(X500Name("CN=BankOfCorda,O=R3,L=New York,C=US"), serviceHub.legalIdentityKey)
-
+        // TODO: We should be actually getting the Bank of Corda node to do this issuance, not self-issue with magic keys
+        // that just happen to work
+        val party = Party(cpIssuerName, serviceHub.legalIdentityKey)
         val issuance: SignedTransaction = run {
             val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
                     Instant.now() + 10.days, notaryNode.notaryIdentity)

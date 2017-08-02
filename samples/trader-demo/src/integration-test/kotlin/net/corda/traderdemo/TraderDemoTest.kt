@@ -30,7 +30,7 @@ class TraderDemoTest : NodeBasedTest() {
                 startFlowPermission<SellerFlow>())
         val demoUser = listOf(User("demo", "demo", permissions))
         val user = User("user1", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
-        val (nodeA, nodeB) = listOf(
+        val (nodeA, nodeB, bankNode) = listOf(
                 startNode(DUMMY_BANK_A.name, rpcUsers = demoUser),
                 startNode(DUMMY_BANK_B.name, rpcUsers = demoUser),
                 startNode(BOC.name, rpcUsers = listOf(user)),
@@ -53,7 +53,7 @@ class TraderDemoTest : NodeBasedTest() {
 
         // TODO: Enable anonymisation
         clientA.runBuyer(amount = 100.DOLLARS, anonymous = false)
-        clientB.runSeller(counterparty = nodeA.info.legalIdentity.name, amount = 5.DOLLARS)
+        clientB.runSeller(counterparty = nodeA.info.legalIdentity.name, cpIssuer = bankNode.info.legalIdentity.name, amount = 5.DOLLARS)
 
         assertThat(clientA.cashCount).isGreaterThan(originalACash)
         assertThat(clientB.cashCount).isEqualTo(expectedBCash)
