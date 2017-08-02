@@ -455,6 +455,6 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
         }
         current = current.superclass
             ?: return found
-            ?: throw IllegalArgumentException("$name as an initiating flow must be annotated with ${InitiatingFlow::class.java.name}")
+            ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with ${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
     }
 }
