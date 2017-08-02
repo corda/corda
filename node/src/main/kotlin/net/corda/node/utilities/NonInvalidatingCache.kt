@@ -20,7 +20,7 @@ class NonInvalidatingCache<K, V> private constructor(
         }
     }
 
-    // TODO look into overriding allPersisted() if we ever use it
+    // TODO look into overriding loadAll() if we ever use it
     private class NonInvalidatingCacheLoader<K, V>(val loadFunction: (K) -> V) : CacheLoader<K, V>() {
         override fun reload(key: K, oldValue: V): ListenableFuture<V> {
             throw IllegalStateException("Non invalidating cache refreshed")
