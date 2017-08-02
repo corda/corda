@@ -43,10 +43,9 @@ class DBCheckpointStorage : CheckpointStorage {
 
     override fun removeCheckpoint(checkpoint: Checkpoint) {
         val session = DatabaseTransactionManager.current().session
-        val elem = session.find(CheckpointSchemaV1.Checkpoint::class.java, checkpoint.id.toString()) ?: throw IllegalArgumentException("Checkpoint not found")
-        if (elem != null) {
-            session.remove(elem)
-        }
+        session.createQuery("delete ${CheckpointSchemaV1.Checkpoint::class.java.name} where checkpointId = :ID")
+        .setParameter("ID", checkpoint.id.toString())
+        .executeUpdate()
     }
 
     override fun forEach(block: (Checkpoint) -> Boolean) {
