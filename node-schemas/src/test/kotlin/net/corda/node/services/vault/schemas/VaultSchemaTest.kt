@@ -464,12 +464,12 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
     fun testInsert() {
         val stateEntity = createStateEntity(transaction!!.inputs[0])
         val latch = CountDownLatch(1)
-        odata.insert(stateEntity).subscribe { stateEntity ->
-            Assert.assertNotNull(stateEntity.txId)
-            Assert.assertTrue(stateEntity.txId.isNotEmpty())
+        odata.insert(stateEntity).subscribe {
+            Assert.assertNotNull(it.txId)
+            Assert.assertTrue(it.txId.isNotEmpty())
             val cached = data.select(VaultSchema.VaultStates::class)
-                    .where(VaultSchema.VaultStates::txId.eq(stateEntity.txId)).get().first()
-            Assert.assertSame(cached, stateEntity)
+                    .where(VaultSchema.VaultStates::txId.eq(it.txId)).get().first()
+            Assert.assertSame(cached, it)
             latch.countDown()
         }
         latch.await()

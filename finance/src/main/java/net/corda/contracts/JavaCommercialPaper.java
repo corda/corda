@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 
-
 /**
  * This is a Java version of the CommercialPaper contract (chosen because it's simple). This demonstrates how the
  * use of Kotlin for implementation of the framework does not impose the same language choice on contract developers.
@@ -105,16 +104,17 @@ public class JavaCommercialPaper implements Contract {
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+        public boolean equals(Object that) {
+            if (this == that) return true;
+            if (that == null || getClass() != that.getClass()) return false;
 
-            State state = (State) o;
+            State state = (State) that;
 
             if (issuance != null ? !issuance.equals(state.issuance) : state.issuance != null) return false;
             if (owner != null ? !owner.equals(state.owner) : state.owner != null) return false;
             if (faceValue != null ? !faceValue.equals(state.faceValue) : state.faceValue != null) return false;
-            return !(maturityDate != null ? !maturityDate.equals(state.maturityDate) : state.maturityDate != null);
+            if (maturityDate != null ? !maturityDate.equals(state.maturityDate) : state.maturityDate != null) return false;
+            return true;
         }
 
         @Override
@@ -316,7 +316,7 @@ public class JavaCommercialPaper implements Contract {
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary, Integer encumbrance) {
         State state = new State(issuance, issuance.getParty(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary, encumbrance);
-        return new TransactionBuilder(notary).withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
+        return new TransactionBuilder(notary).withItems(output, new Command<>(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
@@ -327,12 +327,12 @@ public class JavaCommercialPaper implements Contract {
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, VaultService vault) throws InsufficientBalanceException {
         vault.generateSpend(tx, StructuresKt.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), null);
         tx.addInputState(paper);
-        tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
+        tx.addCommand(new Command<>(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
     }
 
     public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, AbstractParty newOwner) {
         tx.addInputState(paper);
         tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary(), paper.getState().getEncumbrance()));
-        tx.addCommand(new Command(new Commands.Move(), paper.getState().getData().getOwner().getOwningKey()));
+        tx.addCommand(new Command<>(new Commands.Move(), paper.getState().getData().getOwner().getOwningKey()));
     }
 }

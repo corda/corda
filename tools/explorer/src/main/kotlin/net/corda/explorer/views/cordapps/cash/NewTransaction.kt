@@ -22,13 +22,12 @@ import net.corda.core.contracts.sumOrNull
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CashTransaction
 import net.corda.explorer.model.IssuerModel
@@ -111,7 +110,7 @@ class NewTransaction : Fragment() {
                 } finally {
                     dialog.dialogPane.isDisable = false
                 }
-            }.ui { it ->
+            }.ui {
                 val stx: SignedTransaction = it.stx
                 val type = when (command) {
                     is CashFlowCommand.IssueCash -> "Cash Issued"
@@ -193,7 +192,7 @@ class NewTransaction : Fragment() {
         // Issuer
         issuerLabel.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
         issuerChoiceBox.apply {
-            items = issuers.map { it.legalIdentity as Party }.unique().sorted()
+            items = issuers.map { it.legalIdentity }.unique().sorted()
             converter = stringConverter { PartyNameFormatter.short.format(it.name) }
             visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Pay })
         }
@@ -220,7 +219,7 @@ class NewTransaction : Fragment() {
         )
         availableAmount.textProperty()
                 .bind(Bindings.createStringBinding({
-                    val filteredCash = cash.filtered { it.token.issuer.party as AbstractParty == issuer.value && it.token.product == currencyChoiceBox.value }
+                    val filteredCash = cash.filtered { it.token.issuer.party == issuer.value && it.token.product == currencyChoiceBox.value }
                             .map { it.withoutIssuer() }.sumOrNull()
                     "${filteredCash ?: "None"} Available"
                 }, arrayOf(currencyChoiceBox.valueProperty(), issuerChoiceBox.valueProperty())))

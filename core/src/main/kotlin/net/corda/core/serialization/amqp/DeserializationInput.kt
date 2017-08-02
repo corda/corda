@@ -11,7 +11,7 @@ import java.lang.reflect.Type
 import java.nio.ByteBuffer
 import java.util.*
 
-data class objectAndEnvelope<T>(val obj: T, val envelope: Envelope)
+data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
 
 /**
  * Main entry point for deserializing an AMQP encoded object.
@@ -64,7 +64,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
 
 
     @Throws(NotSerializableException::class)
-    inline internal fun <reified T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>): objectAndEnvelope<T> =
+    inline internal fun <reified T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>): ObjectAndEnvelope<T> =
             deserializeAndReturnEnvelope(bytes, T::class.java)
 
 
@@ -84,11 +84,10 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
         return Envelope.get(data)
     }
 
-
     @Throws(NotSerializableException::class)
-    private fun <T : Any, R> des(bytes: SerializedBytes<T>, clazz: Class<T>, generator: (SerializedBytes<T>, Class<T>) -> R): R {
+    private fun <R> des(generator: () -> R): R {
         try {
-            return generator(bytes, clazz)
+            return generator()
         } catch(nse: NotSerializableException) {
             throw nse
         } catch(t: Throwable) {
@@ -105,27 +104,23 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
      */
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(bytes: SerializedBytes<T>, clazz: Class<T>): T {
-        return des<T, T>(bytes, clazz) { bytes, clazz ->
-            var envelope = getEnvelope(bytes)
+        return des {
+            val envelope = getEnvelope(bytes)
             clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz))
         }
     }
 
     @Throws(NotSerializableException::class)
-    internal fun <T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>, clazz: Class<T>): objectAndEnvelope<T> {
-        return des<T, objectAndEnvelope<T>>(bytes, clazz) { bytes, clazz ->
+    internal fun <T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>, clazz: Class<T>): ObjectAndEnvelope<T> {
+        return des {
             val envelope = getEnvelope(bytes)
             // Now pick out the obj and schema from the envelope.
-            objectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz)), envelope)
+            ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz)), envelope)
         }
     }
 
     internal fun readObjectOrNull(obj: Any?, schema: Schema, type: Type): Any? {
-        if (obj == null) {
-            return null
-        } else {
-            return readObject(obj, schema, type)
-        }
+        return if (obj == null) null else readObject(obj, schema, type)
     }
 
     internal fun readObject(obj: Any, schema: Schema, type: Type): Any {
