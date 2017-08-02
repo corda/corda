@@ -807,6 +807,96 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
     }
 
+    @Test
+    fun `aggregate functions count by contract type`() {
+        database.transaction {
+            // create new states
+            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L))
+            services.fillWithSomeTestLinearStates(1, "XYZ")
+            services.fillWithSomeTestLinearStates(2, "JKL")
+            services.fillWithSomeTestLinearStates(3, "ABC")
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+
+            // count fungible assets
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
+            val fungibleStateCount = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteria).otherResults.single() as Long
+            assertThat(fungibleStateCount).isEqualTo(10L)
+
+            // count linear states
+            val linearStateCount = vaultQuerySvc.queryBy<LinearState>(countCriteria).otherResults.single() as Long
+            assertThat(linearStateCount).isEqualTo(9L)
+
+            // count deal states
+            val dealStateCount = vaultQuerySvc.queryBy<DealState>(countCriteria).otherResults.single() as Long
+            assertThat(dealStateCount).isEqualTo(3L)
+        }
+    }
+
+    @Test
+    fun `aggregate functions count by contract type and state status`() {
+        database.transaction {
+            // create new states
+            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L))
+            val linearStatesXYZ = services.fillWithSomeTestLinearStates(1, "XYZ")
+            val linearStatesJKL = services.fillWithSomeTestLinearStates(2, "JKL")
+            services.fillWithSomeTestLinearStates(3, "ABC")
+            val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+
+            // ALL states
+
+            // count fungible assets
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
+            val fungibleStateCount = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteria).otherResults.single() as Long
+            assertThat(fungibleStateCount).isEqualTo(10L)
+
+            // count linear states
+            val linearStateCount = vaultQuerySvc.queryBy<LinearState>(countCriteria).otherResults.single() as Long
+            assertThat(linearStateCount).isEqualTo(9L)
+
+            // count deal states
+            val dealStateCount = vaultQuerySvc.queryBy<DealState>(countCriteria).otherResults.single() as Long
+            assertThat(dealStateCount).isEqualTo(3L)
+
+            // consume some states
+            services.consumeLinearStates(linearStatesXYZ.states.toList())
+            services.consumeLinearStates(linearStatesJKL.states.toList())
+            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
+            services.consumeCash(50.DOLLARS)
+
+            // UNCONSUMED states (default)
+
+            // count fungible assets
+            val countCriteriaUnconsumed = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.UNCONSUMED)
+            val fungibleStateCountUnconsumed = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteriaUnconsumed).otherResults.single() as Long
+            assertThat(fungibleStateCountUnconsumed).isEqualTo(5L)
+
+            // count linear states
+            val linearStateCountUnconsumed = vaultQuerySvc.queryBy<LinearState>(countCriteriaUnconsumed).otherResults.single() as Long
+            assertThat(linearStateCountUnconsumed).isEqualTo(5L)
+
+            // count deal states
+            val dealStateCountUnconsumed = vaultQuerySvc.queryBy<DealState>(countCriteriaUnconsumed).otherResults.single() as Long
+            assertThat(dealStateCountUnconsumed).isEqualTo(2L)
+
+            // CONSUMED states
+
+            // count fungible assets
+            val countCriteriaConsumed = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.CONSUMED)
+            val fungibleStateCountConsumed = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteriaConsumed).otherResults.single() as Long
+            assertThat(fungibleStateCountConsumed).isEqualTo(6L)
+
+            // count linear states
+            val linearStateCountConsumed = vaultQuerySvc.queryBy<LinearState>(countCriteriaConsumed).otherResults.single() as Long
+            assertThat(linearStateCountConsumed).isEqualTo(4L)
+
+            // count deal states
+            val dealStateCountConsumed = vaultQuerySvc.queryBy<DealState>(countCriteriaConsumed).otherResults.single() as Long
+            assertThat(dealStateCountConsumed).isEqualTo(1L)
+        }
+    }
+
     private val TODAY = LocalDate.now().atStartOfDay().toInstant(ZoneOffset.UTC)
 
     @Test
