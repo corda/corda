@@ -110,11 +110,10 @@ class SerializationTokenTest {
     }
 
     private class WrongTypeSerializeAsToken : SerializeAsToken {
-        override fun toToken(context: SerializeAsTokenContext): SerializationToken {
-            return object : SerializationToken {
-                override fun fromToken(context: SerializeAsTokenContext): Any = UnitSerializeAsToken()
-            }
+        object UnitSerializationToken : SerializationToken {
+            override fun fromToken(context: SerializeAsTokenContext): Any = UnitSerializeAsToken()
         }
+        override fun toToken(context: SerializeAsTokenContext): SerializationToken = UnitSerializationToken
     }
 
     @Test(expected = KryoException::class)

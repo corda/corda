@@ -10,7 +10,7 @@ import java.lang.reflect.Type
 open class ArraySerializer(override val type: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     companion object {
         fun make(type: Type, factory: SerializerFactory) = when (type) {
-            Array<Character>::class.java -> CharArraySerializer(factory)
+            Array<Char>::class.java -> CharArraySerializer(factory)
             else -> ArraySerializer(type, factory)
         }
     }
@@ -73,7 +73,7 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
 
 // Boxed Character arrays required a specialisation to handle the type conversion properly when populating
 // the array since Kotlin won't allow an implicit cast from Int (as they're stored as 16bit ints) to Char
-class CharArraySerializer(factory: SerializerFactory) : ArraySerializer(Array<Character>::class.java, factory) {
+class CharArraySerializer(factory: SerializerFactory) : ArraySerializer(Array<Char>::class.java, factory) {
     override fun <T> List<T>.toArrayOfType(type: Type): Any {
         val elementType = type.asClass() ?: throw NotSerializableException("Unexpected array element type $type")
         val list = this

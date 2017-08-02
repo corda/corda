@@ -43,7 +43,7 @@ val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
                 val proxy = node.proxy
                 val issueFlow = proxy.startFlow(::FinalityFlow, issueTx)
                 issueFlow.returnValue.thenMatch({
-                    val moveFlow = proxy.startFlow(::FinalityFlow, moveTx)
+                    proxy.startFlow(::FinalityFlow, moveTx)
                 }, {})
             } catch (e: FlowException) {
                 log.error("Failure", e)

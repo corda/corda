@@ -21,10 +21,9 @@ class AdvertisedServiceTests {
 
     @StartableByRPC
     class ServiceTypeCheckingFlow : FlowLogic<Boolean>() {
-
         @Suspendable
         override fun call(): Boolean {
-            return serviceHub.networkMapCache.getAnyServiceOfType(ServiceType.corda.getSubType("custom")) != null;
+            return serviceHub.networkMapCache.getAnyServiceOfType(ServiceType.corda.getSubType("custom")) != null
         }
     }
 
@@ -32,7 +31,7 @@ class AdvertisedServiceTests {
     fun `service is accessible through getAnyServiceOfType`() {
         driver(startNodesInProcess = true) {
             val bankA = startNode(rpcUsers = listOf(User(user, pass, setOf(startFlowPermission<ServiceTypeCheckingFlow>())))).get()
-            val bankB = startNode(advertisedServices = setOf(ServiceInfo(serviceType, serviceName))).get()
+            startNode(advertisedServices = setOf(ServiceInfo(serviceType, serviceName))).get()
             bankA.rpcClientToNode().use(user, pass) { connection ->
                 val result = connection.proxy.startFlow(::ServiceTypeCheckingFlow).returnValue.get()
                 assertTrue(result)

@@ -1,7 +1,6 @@
 package net.corda.core.serialization.carpenter
 
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.carpenter.test.*
 import net.corda.core.serialization.amqp.*
 
 import org.junit.Test

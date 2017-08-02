@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import net.corda.contracts.asset.CommodityContract
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
@@ -24,7 +25,6 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -83,7 +83,6 @@ data class Tenor(val name: String) {
             TimeUnit.Week -> startDate.plusWeeks(amount.toLong())
             TimeUnit.Month -> startDate.plusMonths(amount.toLong())
             TimeUnit.Year -> startDate.plusYears(amount.toLong())
-            else -> throw IllegalStateException("Invalid tenor time unit: $unit")
         }
         // Move date to the closest business day when it falls on a weekend/holiday
         val adjustedMaturityDate = calendar.applyRollConvention(maturityDate, DateRollConvention.ModifiedFollowing)
