@@ -221,7 +221,9 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         predicateSet.add(joinPredicate)
 
         // contract State Types
-        predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(deriveContractTypes())))
+        val contractTypes = deriveContractTypes()
+        if (contractTypes.isNotEmpty())
+            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
         // owner
         criteria.owner?.let {
@@ -273,7 +275,9 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         joinPredicates.add(joinPredicate)
 
         // contract State Types
-        predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(deriveContractTypes())))
+        val contractTypes = deriveContractTypes()
+        if (contractTypes.isNotEmpty())
+            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
         // linear ids
         criteria.linearId?.let {
@@ -315,7 +319,9 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             joinPredicates.add(joinPredicate)
 
             // contract State Types
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(deriveContractTypes())))
+            val contractTypes = deriveContractTypes()
+            if (contractTypes.isNotEmpty())
+                predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
             // resolve general criteria expressions
             parseExpression(entityRoot, criteria.expression, predicateSet)
