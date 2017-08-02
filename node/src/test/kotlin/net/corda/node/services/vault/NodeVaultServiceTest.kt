@@ -7,33 +7,27 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.sign
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.node.services.*
-import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.*
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.LogHelper
-import net.corda.node.services.database.HibernateConfiguration
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.schemas.CommercialPaperSchemaV1
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
-import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -59,7 +53,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
         database.transaction {
-            val hibernateConfig = HibernateConfiguration(NodeSchemaService())
+            val hibernateConfig = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties())
             services = object : MockServices() {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
