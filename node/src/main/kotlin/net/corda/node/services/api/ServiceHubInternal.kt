@@ -113,8 +113,9 @@ interface ServiceHubInternal : PluginServiceHub {
     val uploaders: List<FileUploader>
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-        val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
-        require(recordedTransactions.isNotEmpty()) { "No transactions passed in for recording" }
+        val inputTxs = txs.toList()
+        require (inputTxs.isNotEmpty()) { "No transactions passed in for recording" }
+        val recordedTransactions = inputTxs.filter { validatedTransactions.addTransaction(it) }
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
         if (stateMachineRunId != null) {
             recordedTransactions.forEach {
