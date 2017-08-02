@@ -79,8 +79,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     }
 
     private fun deriveContractTypes(contractStateTypes: Set<Class<out ContractState>>? = null): List<String> {
-        val combinedContractTypeTypes = contractStateTypes?.plus(contractType) ?: setOf(contractType)
-        combinedContractTypeTypes.filter { it.name != ContractState::class.java.name }.let {
+        val combinedContractStateTypes = contractStateTypes?.plus(contractType) ?: setOf(contractType)
+        combinedContractStateTypes.filter { it.name != ContractState::class.java.name }.let {
             val interfaces = it.flatMap { contractTypeMappings[it.name] ?: emptyList() }
             val concrete = it.filter { !it.isInterface }.map { it.name }
             return interfaces.plus(concrete)
