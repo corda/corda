@@ -132,6 +132,15 @@ internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = Compl
             }
         }
     }
+
+    // We don't simply return impl so that the caller can't interfere with it.
+    override fun toCompletableFuture() = CompletableFuture<V>().also { completable ->
+        thenMatch({
+            completable.complete(it)
+        }, {
+            completable.completeExceptionally(it)
+        })
+    }
 }
 
 internal fun <V> Future<V>.get(timeout: Duration? = null): V = if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)

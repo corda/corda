@@ -1,5 +1,6 @@
 package net.corda.core.concurrent
 
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
 /**
@@ -13,4 +14,9 @@ interface CordaFuture<V> : Future<V> {
      * If callback fails, its throwable is logged.
      */
     fun <W> then(callback: (CordaFuture<V>) -> W): Unit
+
+    /**
+     * @return a new [CompletableFuture] with the same outcome as this Future.
+     */
+    fun toCompletableFuture(): CompletableFuture<V>
 }
