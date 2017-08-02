@@ -22,7 +22,7 @@ class DatabaseTransaction(isolation: Int, val threadLocal: ThreadLocal<DatabaseT
                 }
     }
 
-    val sessionDelegate = lazy {
+    private val sessionDelegate = lazy {
         cordaPersistence.entityManagerFactory.withOptions().connection(connection).openSession()
     }
 

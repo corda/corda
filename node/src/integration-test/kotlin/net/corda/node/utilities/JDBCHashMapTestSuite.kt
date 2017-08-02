@@ -44,7 +44,7 @@ class JDBCHashMapTestSuite {
         @BeforeClass
         fun before() {
             initialiseTestSerialization()
-            database = configureDatabase(makeTestDataSourceProperties(), databaseProperties = makeTestDatabaseProperties())
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
             memoryConstrainedMap = JDBCHashMap<String, String>("test_map_constrained", loadOnInit = false, maxBuckets = 1)
@@ -230,7 +230,7 @@ class JDBCHashMapTestSuite {
 
         @Before
         fun before() {
-            database = configureDatabase(makeTestDataSourceProperties(), databaseProperties = makeTestDatabaseProperties())
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
         }
 
         @After

@@ -43,9 +43,9 @@ class NodeAttachmentStorageTest {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, databaseProperties = makeTestDatabaseProperties())
+        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties())
 
-        configuration = RequeryConfiguration(dataSourceProperties, databaseProperties = makeTestDatabaseProperties())
+        configuration = RequeryConfiguration(dataSourceProperties, makeTestDatabaseProperties())
         fs = Jimfs.newFileSystem(Configuration.unix())
     }
 

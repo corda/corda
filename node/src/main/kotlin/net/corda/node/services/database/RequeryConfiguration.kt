@@ -14,7 +14,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Boolean = false, val databaseProperties: Properties) {
+class RequeryConfiguration(val properties: Properties, val databaseProperties: Properties, val useDefaultLogging: Boolean = false) {
 
     companion object {
         val logger = loggerFor<RequeryConfiguration>()

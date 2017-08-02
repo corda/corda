@@ -100,7 +100,7 @@ class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: 
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, entitySchemas : Set<MappedSchema> = emptySet<MappedSchema>(), databaseProperties: Properties?): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, entitySchemas : Set<MappedSchema> = emptySet<MappedSchema>()): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
     val persistence = CordaPersistence.connect(dataSource, NodeSchemaService(entitySchemas), databaseProperties ?: Properties())

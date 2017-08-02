@@ -51,7 +51,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
         val dataSourceProps = makeTestDataSourceProperties()
         val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, TransactionSchemaV1)
 
-        database = configureDatabase(dataSourceProps, customSchemas, makeTestDatabaseProperties())
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), customSchemas)
 
         database.transaction {
 

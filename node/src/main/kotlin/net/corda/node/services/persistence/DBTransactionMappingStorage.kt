@@ -65,7 +65,7 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     }
 
     override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> =
-            DataFeed(stateMachineTransactionMap.loadAll().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
+            DataFeed(stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
                     updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
 
 }

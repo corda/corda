@@ -10,7 +10,7 @@ import java.util.*
  * ONLY USE THIS IF YOUR TABLE IS APPEND-ONLY
  */
 class AppendOnlyPersistentMap<K, V, E, EK> (
-        val cacheBound: Long,
+        val cacheBound: Long,     //TODO to determine the bound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K,V>,
         val toPersistentEntity: (key: K, value: V) -> E,
@@ -30,7 +30,7 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
         return cache.get(key).orElse(null)
     }
 
-    fun loadAll(): Sequence<Pair<K, V>> {
+    fun allPersisted(): Sequence<Pair<K, V>> {
         val criteriaQuery = DatabaseTransactionManager.current().session.criteriaBuilder.createQuery(persistentEntityClass)
         val root = criteriaQuery.from(persistentEntityClass)
         criteriaQuery.select(root)
@@ -57,7 +57,7 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
             ///storeValue(key, value)
             if (existing.isPresent) {
                 // An existing value is cached, in this case we know for sure that there is a problem.
-                log.warn("Double insert detected in AppendOnlyJDBCMap for key $key, not inserting the second time")
+                log.warn("Double insert detected in AppendOnlyJDBCMap for entity class $persistentEntityClass key $key, not inserting the second time")
             } else {
                 // This happens when the key was queried before with no value associated. We invalidate the cached null
                 // value and recursively call set again. This is to avoid race conditions where another thread queries after

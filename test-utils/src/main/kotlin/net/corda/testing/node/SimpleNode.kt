@@ -32,7 +32,7 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
                  rpcAddress: NetworkHostAndPort = freeLocalHostAndPort(),
                  trustRoot: X509Certificate) : AutoCloseable {
 
-    val database: CordaPersistence = configureDatabase(config.dataSourceProperties,  databaseProperties = config.database)
+    val database: CordaPersistence = configureDatabase(config.dataSourceProperties, config.database)
     val userService = RPCUserServiceImpl(config.rpcUsers)
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()

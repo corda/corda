@@ -65,8 +65,8 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
     override val updates: Observable<SignedTransaction> = updatesPublisher.wrapWithDatabaseTransaction()
 
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> =
-            DataFeed(txStorage.loadAll().map { it.second }.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            DataFeed(txStorage.allPersisted().map { it.second }.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
 
     @VisibleForTesting
-    val transactions: Iterable<SignedTransaction> get() = txStorage.loadAll().map { it.second }.toList()
+    val transactions: Iterable<SignedTransaction> get() = txStorage.allPersisted().map { it.second }.toList()
 }

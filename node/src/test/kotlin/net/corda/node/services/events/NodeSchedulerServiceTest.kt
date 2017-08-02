@@ -77,7 +77,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, databaseProperties = makeTestDatabaseProperties())
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 

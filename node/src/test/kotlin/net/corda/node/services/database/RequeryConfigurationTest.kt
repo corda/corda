@@ -42,7 +42,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, databaseProperties = makeTestDatabaseProperties())
+        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties())
         newTransactionStorage()
         newRequeryStorage(dataSourceProperties)
     }
@@ -156,7 +156,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
         val nativeQuery = "SELECT v.transaction_id, v.output_index FROM vault_states v WHERE v.state_status = 0"
 
         database.transaction {
-            val configuration = RequeryConfiguration(dataSourceProperties, true, makeTestDatabaseProperties())
+            val configuration = RequeryConfiguration(dataSourceProperties, makeTestDatabaseProperties(), true)
             val jdbcSession = configuration.jdbcSession()
             val prepStatement = jdbcSession.prepareStatement(nativeQuery)
             val rs = prepStatement.executeQuery()
@@ -196,7 +196,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
 
     private fun newRequeryStorage(dataSourceProperties: Properties) {
         database.transaction {
-            val configuration = RequeryConfiguration(dataSourceProperties, true, makeTestDatabaseProperties())
+            val configuration = RequeryConfiguration(dataSourceProperties, makeTestDatabaseProperties(), true)
             requerySession = configuration.sessionForModel(Models.VAULT)
         }
     }
