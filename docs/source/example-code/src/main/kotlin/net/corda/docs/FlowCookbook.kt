@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_VARIABLE", "unused")
+
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
@@ -83,6 +85,7 @@ object FlowCookbook {
 
         override val progressTracker: ProgressTracker = tracker()
 
+        @Suppress("RemoveExplicitTypeArguments")
         @Suspendable
         override fun call() {
             // We'll be using a dummy public key for demonstration purposes.

@@ -15,9 +15,11 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.flows.IssuerFlow.IssuanceRequester
-import net.corda.testing.*
+import net.corda.testing.expect
+import net.corda.testing.expectEvents
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.sequence
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -79,7 +81,7 @@ class IssuerFlowTest(val anonymous: Boolean) {
                     expect { update ->
                         require(update.consumed.isEmpty()) { "Expected 0 consumed states, actual: $update" }
                         require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
-                        val issued = update.produced.single().state.data as Cash.State
+                        val issued = update.produced.single().state.data
                         require(issued.owner.owningKey in bankOfCordaNode.services.keyManagementService.keys)
                     },
                     // MOVE
@@ -93,10 +95,10 @@ class IssuerFlowTest(val anonymous: Boolean) {
         // Check Bank Client Vault Updates
         vaultUpdatesBankClient.expectEvents {
             // MOVE
-            expect { update ->
-                require(update.consumed.isEmpty()) { update.consumed.size }
-                require(update.produced.size == 1) { update.produced.size }
-                val paidState = update.produced.single().state.data as Cash.State
+            expect { (consumed, produced) ->
+                require(consumed.isEmpty()) { consumed.size }
+                require(produced.size == 1) { produced.size }
+                val paidState = produced.single().state.data
                 require(paidState.owner.owningKey in bankClientNode.services.keyManagementService.keys)
             }
         }

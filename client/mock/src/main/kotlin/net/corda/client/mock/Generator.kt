@@ -172,7 +172,7 @@ fun <A> Generator.Companion.replicatePoisson(meanSize: Double, generator: Genera
     val result = mutableListOf<A>()
     var finish = false
     while (!finish) {
-        val result = Generator.doubleRange(0.0, 1.0).generate(it).flatMap { value ->
+        val res = Generator.doubleRange(0.0, 1.0).generate(it).flatMap { value ->
             if (value < chance) {
                 generator.generate(it).map { result.add(it) }
             } else {
@@ -180,8 +180,8 @@ fun <A> Generator.Companion.replicatePoisson(meanSize: Double, generator: Genera
                 Try.Success(Unit)
             }
         }
-        if (result is Try.Failure) {
-            return@Generator result
+        if (res is Try.Failure) {
+            return@Generator res
         }
     }
     Try.Success(result)

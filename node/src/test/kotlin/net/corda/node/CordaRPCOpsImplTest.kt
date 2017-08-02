@@ -173,7 +173,7 @@ class CordaRPCOpsImplTest {
             )
         }
 
-        val tx = result.returnValue.getOrThrow()
+        result.returnValue.getOrThrow()
         transactions.expectEvents {
             sequence(
                     // ISSUE

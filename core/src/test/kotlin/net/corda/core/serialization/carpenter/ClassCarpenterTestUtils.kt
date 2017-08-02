@@ -1,11 +1,8 @@
-package net.corda.core.serialization.carpenter.test
+package net.corda.core.serialization.carpenter
 
-import net.corda.core.serialization.amqp.CompositeType
+import net.corda.core.serialization.amqp.*
 import net.corda.core.serialization.amqp.Field
 import net.corda.core.serialization.amqp.Schema
-import net.corda.core.serialization.amqp.TypeNotation
-import net.corda.core.serialization.amqp.SerializerFactory
-import net.corda.core.serialization.amqp.SerializationOutput
 
 fun mangleName(name: String) = "${name}__carpenter"
 
@@ -18,7 +15,7 @@ fun Schema.mangleNames(names: List<String>): Schema {
 
     for (type in types) {
         val newName = if (type.name in names) mangleName(type.name) else type.name
-        val newProvides = type.provides.map { it -> if (it in names) mangleName(it) else it }
+        val newProvides = type.provides.map { if (it in names) mangleName(it) else it }
         val newFields = mutableListOf<Field>()
 
         (type as CompositeType).fields.forEach {
@@ -40,6 +37,7 @@ open class AmqpCarpenterBase {
     var factory = SerializerFactory()
 
     fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
-    fun testName() = Thread.currentThread().stackTrace[2].methodName
+    fun testName(): String = Thread.currentThread().stackTrace[2].methodName
+    @Suppress("NOTHING_TO_INLINE")
     inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 }

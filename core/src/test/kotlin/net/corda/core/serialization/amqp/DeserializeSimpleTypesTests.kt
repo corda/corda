@@ -1,8 +1,8 @@
 package net.corda.core.serialization.amqp
 
+import org.apache.qpid.proton.codec.Data
 import org.junit.Test
 import kotlin.test.assertEquals
-import org.apache.qpid.proton.codec.Data
 
 // Prior to certain fixes being made within the [PropertySerializaer] classes these simple
 // deserialization operations would've blown up with type mismatch errors where the deserlized
@@ -52,6 +52,7 @@ class DeserializeSimpleTypesTests {
         assertEquals('আ', deserializedC.c)
     }
 
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     @Test
     fun testCharacter() {
         data class C(val c: Character)
@@ -92,6 +93,7 @@ class DeserializeSimpleTypesTests {
         assertEquals(ia.ia[2], deserializedIA.ia[2])
     }
 
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     @Test
     fun testArrayOfInteger() {
         class IA(val ia: Array<Integer>)

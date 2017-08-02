@@ -257,9 +257,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                             if (minimum == null) {
                                 HashMap(next)
                             } else {
-                                next.forEach { entry ->
-                                    minimum.merge(entry.key, entry.value, Math::min)
-                                }
+                                next.forEach { minimum.merge(it.key, it.value, Math::min) }
                                 minimum
                             }
                         }!!

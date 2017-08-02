@@ -56,12 +56,12 @@ fun InitialMarginTriple.toCordaCompatible() = InitialMarginTriple(twoDecimalPlac
  * Utility function to ensure that [CurrencyParameterSensitivities] can be sent over corda and compared
  */
 fun CurrencyParameterSensitivities.toCordaCompatible(): CurrencyParameterSensitivities {
-    return CurrencyParameterSensitivities.of(this.sensitivities.map {
-        it.metaBean().builder()
-                .set("marketDataName", it.marketDataName)
-                .set("parameterMetadata", it.parameterMetadata)
-                .set("currency", Currency.of(it.currency.code).serialize().deserialize())
-                .set("sensitivity", it.sensitivity.map { it -> twoDecimalPlaces(it) })
+    return CurrencyParameterSensitivities.of(this.sensitivities.map { sensitivity ->
+        sensitivity.metaBean().builder()
+                .set("marketDataName", sensitivity.marketDataName)
+                .set("parameterMetadata", sensitivity.parameterMetadata)
+                .set("currency", Currency.of(sensitivity.currency.code).serialize().deserialize())
+                .set("sensitivity", sensitivity.sensitivity.map { twoDecimalPlaces(it) })
                 .build()
     })
 }
