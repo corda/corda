@@ -10,7 +10,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.crypto.toBase58String
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.node.ServiceHub
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
 import net.corda.vega.portfolio.Portfolio
@@ -169,7 +168,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
                 ),
                 common = mapOf(
                         "valuationDate" to trade.product.startDate.unadjusted,
-                        "hashLegalDocs" to state.contract.legalContractReference.toString(),
+                        "hashLegalDocs" to "put hash here", // TODO
                         "interestRate" to mapOf(
                                 "name" to "TODO",
                                 "oracle" to "TODO",

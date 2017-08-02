@@ -3,7 +3,6 @@ package net.corda.contracts
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -23,9 +22,6 @@ val CP_LEGACY_PROGRAM_ID = CommercialPaperLegacy()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 class CommercialPaperLegacy : Contract {
-    // TODO: should reference the content of the legal agreement, not its URI
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
-
     data class State(
             val issuance: PartyAndReference,
             override val owner: AbstractParty,

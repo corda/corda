@@ -1,7 +1,6 @@
 package net.corda.core.serialization
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -19,8 +18,6 @@ val TEST_PROGRAM_ID = TransactionSerializationTests.TestCash()
 
 class TransactionSerializationTests : TestDependencyInjectionBase() {
     class TestCash : Contract {
-        override val legalContractReference = SecureHash.sha256("TestCash")
-
         override fun verify(tx: LedgerTransaction) {
         }
 

@@ -42,19 +42,6 @@ val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
  * @param P the product the obligation is for payment of.
  */
 class Obligation<P : Any> : Contract {
-
-    /**
-     * TODO:
-     * 1) hash should be of the contents, not the URI
-     * 2) allow the content to be specified at time of instance creation?
-     *
-     * Motivation: it's the difference between a state object referencing a programRef, which references a
-     * legalContractReference and a state object which directly references both.  The latter allows the legal wording
-     * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
-     * that is inconsistent with the legal contract.
-     */
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
-
     interface Clauses {
         /**
          * Parent clause for clauses that operate on grouped states (those which are fungible).
@@ -128,6 +115,10 @@ class Obligation<P : Any> : Contract {
          * change of ownership of other states to fulfil
          */
         class Settle<P : Any> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
+            companion object {
+                internal val legalContractReference = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
+            }
+
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Settle::class.java)
             override fun verify(tx: LedgerTransaction,
                                 inputs: List<State<P>>,
@@ -160,15 +151,15 @@ class Obligation<P : Any> : Contract {
                 //
                 // That would pass this check. Ensuring they do not is best addressed in the transaction generation stage.
                 val assetStates = tx.outputsOfType<FungibleAsset<*>>()
-                val acceptableAssetStates = assetStates
-                        // TODO: This filter is nonsense, because it just checks there is an asset contract loaded, we need to
-                        // verify the asset contract is the asset contract we expect.
-                        // Something like:
-                        //    attachments.mustHaveOneOf(key.acceptableAssetContract)
-                        .filter { it.contract.legalContractReference in template.acceptableContracts }
-                        // Restrict the states to those of the correct issuance definition (this normally
-                        // covers issued product and obligor, but is opaque to us)
-                        .filter { it.amount.token in template.acceptableIssuedProducts }
+                val acceptableContract = tx.attachments.any { it.id in template.acceptableContracts }
+                requireThat {
+                    "an acceptable contract is attached" using acceptableContract
+                }
+                val acceptableAssetStates = assetStates.filter {
+                    // Restrict the states to those of the correct issuance definition (this normally
+                    // covers issued product and obligor, but is opaque to us)
+                    it.amount.token in template.acceptableIssuedProducts
+                }
                 // Catch that there's nothing useful here, so we can dump out a useful error
                 requireThat {
                     "there are fungible asset state outputs" using (assetStates.isNotEmpty())
@@ -196,7 +187,7 @@ class Obligation<P : Any> : Contract {
                     // Insist that we can be the only contract consuming inputs, to ensure no other contract can think it's being
                     // settled as well
                     "all move commands relate to this contract" using (moveCommands.map { it.value.contractHash }
-                            .all { it == null || it == Obligation<P>().legalContractReference })
+                            .all { it == null || it == legalContractReference })
                     // Settle commands exclude all other commands, so we don't need to check for contracts moving at the same
                     // time.
                     "amounts paid must match recipients to settle" using inputs.map { it.owner }.containsAll(amountReceivedByOwner.keys)
@@ -216,7 +207,7 @@ class Obligation<P : Any> : Contract {
          * any lifecycle change clause, which is the only clause that involve
          * non-standard lifecycle states on input/output.
          */
-        class VerifyLifecycle<S : ContractState, C : CommandData, T : Any, P : Any> : Clause<S, C, T>() {
+        class VerifyLifecycle<in S : ContractState, C : CommandData, in T : Any, P : Any> : Clause<S, C, T>() {
             override fun verify(tx: LedgerTransaction,
                                 inputs: List<S>,
                                 outputs: List<S>,
@@ -386,7 +377,7 @@ class Obligation<P : Any> : Contract {
         data class Exit<P : Any>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 
-    override fun verify(tx: LedgerTransaction) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
+    override fun verify(tx: LedgerTransaction) = verifyClause(tx, FirstOf(
             Clauses.Net<Commands, P>(),
             Clauses.Group<P>()
     ), tx.commands.select<Obligation.Commands>())
@@ -489,11 +480,12 @@ class Obligation<P : Any> : Contract {
      */
     fun generateCashIssue(tx: TransactionBuilder,
                       obligor: AbstractParty,
+                      acceptableContract: SecureHash,
                       amount: Amount<Issued<Currency>>,
                       dueBefore: Instant,
                       beneficiary: AbstractParty,
                       notary: Party) {
-        val issuanceDef = Terms(NonEmptySet.of(Cash().legalContractReference), NonEmptySet.of(amount.token), dueBefore)
+        val issuanceDef = Terms(NonEmptySet.of(acceptableContract), NonEmptySet.of(amount.token), dueBefore)
         OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, amount.quantity, beneficiary), notary), Commands.Issue())
     }
 

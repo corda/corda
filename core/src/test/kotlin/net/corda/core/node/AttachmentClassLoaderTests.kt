@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.declaredField
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
@@ -62,9 +63,6 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
             // Always accepts.
         }
 
-        // The "empty contract"
-        override val legalContractReference: SecureHash = SecureHash.sha256("")
-
         fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
             val state = State(magicNumber)
             return TransactionBuilder(notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
@@ -95,7 +93,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as Contract
 
-        assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.legalContractReference)
+        assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.declaredField<Any?>("legalContractReference").value)
     }
 
     fun fakeAttachment(filepath: String, content: String): ByteArray {
@@ -186,7 +184,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl)
         val contract = contractClass.newInstance() as Contract
         assertEquals(cl, contract.javaClass.classLoader)
-        assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.legalContractReference)
+        assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.declaredField<Any?>("legalContractReference").value)
     }
 
 

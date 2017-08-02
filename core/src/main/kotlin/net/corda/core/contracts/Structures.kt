@@ -348,12 +348,6 @@ interface Contract {
      */
     @Throws(IllegalArgumentException::class)
     fun verify(tx: LedgerTransaction)
-
-    /**
-     * Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
-     * the contract's contents).
-     */
-    val legalContractReference: SecureHash
 }
 // DOCEND 5
 

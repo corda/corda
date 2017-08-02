@@ -2,14 +2,13 @@ package net.corda.vega.contracts
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.LedgerTransaction
 import java.math.BigDecimal
 
 /**
  * Specifies the contract between two parties that trade an OpenGamma IRS. Currently can only agree to trade.
  */
-data class OGTrade(override val legalContractReference: SecureHash = SecureHash.sha256("OGTRADE.KT")) : Contract {
+data class OGTrade(private val blank: Void? = null) : Contract {
     override fun verify(tx: LedgerTransaction) = verifyClause(tx, AllOf(Clauses.TimeWindowed(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Commands : CommandData {

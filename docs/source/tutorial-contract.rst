@@ -59,8 +59,6 @@ Kotlin syntax works.
    .. sourcecode:: kotlin
 
       class CommercialPaper : Contract {
-          override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
-
           override fun verify(tx: LedgerTransaction) {
               TODO()
           }
@@ -70,21 +68,15 @@ Kotlin syntax works.
 
       public class CommercialPaper implements Contract {
           @Override
-          public SecureHash getLegalContractReference() {
-              return SecureHash.Companion.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
-          }
-
-          @Override
           public void verify(LedgerTransaction tx) {
               throw new UnsupportedOperationException();
           }
       }
 
-Every contract must have at least a ``getLegalContractReference()`` and a ``verify()`` method. In Kotlin we express
-a getter without a setter as an immutable property (val). The *legal contract reference* is supposed to be a hash
-of a document that describes the legal contract and may take precedence over the code, in case of a dispute.
+Every contract must have at least a ``verify()`` method.
 
-.. note:: The way legal contract prose is bound to a smart contract implementation will change in future.
+.. note:: In the future there will be a way to bind legal contract prose to a smart contract implementation,
+          that may take precedence over the code in case of a dispute.
 
 The verify method returns nothing. This is intentional: the function either completes correctly, or throws an exception,
 in which case the transaction is rejected.

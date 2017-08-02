@@ -80,8 +80,6 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
     }
 
     private class VaultNoopContract : Contract {
-        override val legalContractReference = SecureHash.sha256("")
-
         data class VaultNoopState(override val owner: AbstractParty) : OwnableState {
             override val contract = VaultNoopContract()
             override val participants: List<AbstractParty>

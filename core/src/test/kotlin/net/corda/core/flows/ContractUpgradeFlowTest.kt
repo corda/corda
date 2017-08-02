@@ -3,7 +3,6 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -208,9 +207,6 @@ class ContractUpgradeFlowTest {
         override fun upgrade(state: Cash.State) = CashV2.State(state.amount.times(1000), listOf(state.owner))
 
         override fun verify(tx: LedgerTransaction) {}
-
-        // Dummy Cash contract for testing.
-        override val legalContractReference = SecureHash.sha256("")
     }
 
     @StartableByRPC

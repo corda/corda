@@ -20,8 +20,6 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset.UTC
 
 class DummyLinearContract : Contract {
-    override val legalContractReference: SecureHash = SecureHash.sha256("Test")
-
     val clause: Clause<State, CommandData, Unit> = LinearState.ClauseVerifier()
     override fun verify(tx: LedgerTransaction) = verifyClause(tx,
             FilterOn(clause, { states -> states.filterIsInstance<State>() }),

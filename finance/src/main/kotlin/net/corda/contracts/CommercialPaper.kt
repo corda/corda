@@ -50,9 +50,6 @@ val CP_PROGRAM_ID = CommercialPaper()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 class CommercialPaper : Contract {
-    // TODO: should reference the content of the legal agreement, not its URI
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
-
     data class Terms(
             val asset: Issued<Currency>,
             val maturityDate: Instant

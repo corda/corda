@@ -2,7 +2,6 @@ package net.corda.vega.contracts
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.LedgerTransaction
 
 /**
@@ -10,7 +9,7 @@ import net.corda.core.transactions.LedgerTransaction
  * Implements an agree clause to agree to the portfolio and an update clause to change either the portfolio or valuation
  * of the portfolio arbitrarily.
  */
-data class PortfolioSwap(override val legalContractReference: SecureHash = SecureHash.sha256("swordfish")) : Contract {
+data class PortfolioSwap(private val blank: Void? = null) : Contract {
     override fun verify(tx: LedgerTransaction) = verifyClause(tx, AllOf(Clauses.TimeWindowed(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Commands : CommandData {

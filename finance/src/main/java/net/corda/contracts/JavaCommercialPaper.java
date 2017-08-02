@@ -11,7 +11,6 @@ import net.corda.core.contracts.clauses.AnyOf;
 import net.corda.core.contracts.clauses.Clause;
 import net.corda.core.contracts.clauses.ClauseVerifier;
 import net.corda.core.contracts.clauses.GroupClauseVerifier;
-import net.corda.core.crypto.SecureHash;
 import net.corda.core.crypto.testing.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
@@ -304,13 +303,6 @@ public class JavaCommercialPaper implements Contract {
     @Override
     public void verify(@NotNull LedgerTransaction tx) throws IllegalArgumentException {
         ClauseVerifier.verifyClause(tx, new Clauses.Group(), extractCommands(tx));
-    }
-
-    @NotNull
-    @Override
-    public SecureHash getLegalContractReference() {
-        // TODO: Should return hash of the contract's contents, not its URI
-        return SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
     }
 
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary, Integer encumbrance) {

@@ -1,7 +1,6 @@
 package net.corda.testing.contracts
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
@@ -36,9 +35,6 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
         if (tx.commands.any { it.value is UpgradeCommand }) ContractUpgradeFlow.verify(tx)
         // Other verifications.
     }
-
-    // The "empty contract"
-    override val legalContractReference: SecureHash = SecureHash.sha256("")
     // DOCEND 1
     /**
      * Generate an upgrade transaction from [DummyContract].

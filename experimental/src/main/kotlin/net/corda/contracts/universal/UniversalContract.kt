@@ -3,7 +3,6 @@ package net.corda.contracts.universal
 import net.corda.contracts.BusinessCalendar
 import net.corda.contracts.FixOf
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
@@ -315,9 +314,6 @@ class UniversalContract : Contract {
                 is Continuation -> arr
                 else -> throw NotImplementedError("replaceFixing - " + arr.javaClass.name)
             }
-
-    override val legalContractReference: SecureHash
-        get() = throw UnsupportedOperationException()
 
     fun generateIssue(tx: TransactionBuilder, arrangement: Arrangement, at: PartyAndReference, notary: Party) {
         check(tx.inputStates().isEmpty())

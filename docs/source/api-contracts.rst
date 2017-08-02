@@ -22,9 +22,7 @@ The ``Contract`` interface is defined as follows:
 
 Where:
 
-        * ``verify(tx: LedgerTransaction)`` determines whether transactions involving states which reference this
-  contract type are valid
-* ``legalContractReference`` is the hash of the legal prose contract that ``verify`` seeks to express in code
+* ``verify(tx: LedgerTransaction)`` determines whether transactions involving states which reference this contract type are valid
 
 verify()
 --------
@@ -187,8 +185,6 @@ execution of ``verify()``:
                     }
                 }
             }
-
-            override val legalContractReference: SecureHash = SecureHash.sha256("X contract hash")
         }
 
    .. sourcecode:: java
@@ -209,9 +205,6 @@ execution of ``verify()``:
                     // Transfer verification logic.
                 }
             }
-
-            private final SecureHash legalContractReference = SecureHash.sha256("X contract hash");
-            @Override public final SecureHash getLegalContractReference() { return legalContractReference; }
         }
 
 Grouping states
@@ -297,13 +290,4 @@ We can now verify these groups individually:
 Legal prose
 -----------
 
-Current, ``legalContractReference`` is simply the SHA-256 hash of a contract:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/contracts/asset/Cash.kt
-        :language: kotlin
-        :start-after: DOCSTART 2
-        :end-before: DOCEND 2
-
-In the future, a contract's legal prose will be included as an attachment instead.
+In the future, a contract's legal prose will be included as an attachment.
