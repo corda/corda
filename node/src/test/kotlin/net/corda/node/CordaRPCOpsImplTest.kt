@@ -53,7 +53,6 @@ class CordaRPCOpsImplTest {
     lateinit var rpc: CordaRPCOps
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var transactions: Observable<SignedTransaction>
-    lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>             // TODO: deprecated
     lateinit var vaultTrackCash: Observable<Vault.Update<Cash.State>>
 
     @Before
@@ -71,7 +70,6 @@ class CordaRPCOpsImplTest {
         aliceNode.database.transaction {
             stateMachineUpdates = rpc.stateMachinesFeed().updates
             transactions = rpc.verifiedTransactionsFeed().updates
-            vaultUpdates = rpc.vaultAndUpdates().updates
             vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
         }
     }
@@ -118,14 +116,6 @@ class CordaRPCOpsImplTest {
         // Query vault via RPC
         val cash = rpc.vaultQueryBy<Cash.State>()
         assertEquals(expectedState, cash.states.first().state.data)
-
-        // TODO: deprecated
-        vaultUpdates.expectEvents {
-            expect { update ->
-                val actual = update.produced.single().state.data
-                assertEquals(expectedState, actual)
-            }
-        }
 
         vaultTrackCash.expectEvents {
             expect { update ->
@@ -194,22 +184,6 @@ class CordaRPCOpsImplTest {
                         // Alice and Notary signed
                         require(aliceNode.info.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
                         require(notaryNode.info.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
-                    }
-            )
-        }
-
-        // TODO: deprecated
-        vaultUpdates.expectEvents {
-            sequence(
-                    // ISSUE
-                    expect { (consumed, produced) ->
-                        require(consumed.isEmpty()) { consumed.size }
-                        require(produced.size == 1) { produced.size }
-                    },
-                    // MOVE
-                    expect { (consumed, produced) ->
-                        require(consumed.size == 1) { consumed.size }
-                        require(produced.size == 1) { produced.size }
                     }
             )
         }
