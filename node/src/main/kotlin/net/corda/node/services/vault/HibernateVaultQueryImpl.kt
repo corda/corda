@@ -102,6 +102,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                                 statesAndRefs.add(StateAndRef(state, stateRef))
                             }
                             else {
+                                // TODO: improve typing of returned other results
                                 log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
                                 otherResults.addAll(result.toArray().asList())
                             }

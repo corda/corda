@@ -10,13 +10,14 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.builder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
+import net.corda.schemas.CashSchemaV1
 import java.util.*
 
 @CordaSerializable
@@ -36,18 +37,18 @@ private data class FxResponse(val inputs: List<StateAndRef<Cash.State>>,
 private fun gatherOurInputs(serviceHub: ServiceHub,
                             amountRequired: Amount<Issued<Currency>>,
                             notary: Party?): Pair<List<StateAndRef<Cash.State>>, Long> {
-    // Collect cash type inputs
-    val queryCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, setOf(Cash.State::class.java))
-    val cashStates = serviceHub.vaultQueryService.queryBy<Cash.State>(queryCriteria).states
     // extract our identity for convenience
     val ourKeys = serviceHub.keyManagementService.keys
-    // Filter down to our own cash states with right currency and issuer
-    val suitableCashStates = cashStates.filter {
-        val state = it.state.data
-        // TODO: We may want to have the list of our states pre-cached somewhere for performance
-        (state.owner.owningKey in ourKeys) && (state.amount.token == amountRequired.token)
-    }
+    val ourParties = ourKeys.map { serviceHub.identityService.partyFromKey(it) ?: throw IllegalStateException("Unable to resolve party from key") }
+    val fungibleCriteria = QueryCriteria.FungibleAssetQueryCriteria(owner = ourParties)
+
+    val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal(amountRequired.token.product.currencyCode) }
+    val cashCriteria = QueryCriteria.VaultCustomQueryCriteria(logicalExpression)
+
+    // Collect cash type inputs
+    val suitableCashStates = serviceHub.vaultQueryService.queryBy<Cash.State>(fungibleCriteria.and(cashCriteria)).states
     require(!suitableCashStates.isEmpty()) { "Insufficient funds" }
+
     var remaining = amountRequired.quantity
     // We will need all of the inputs to be on the same notary.
     // For simplicity we just filter on the first notary encountered

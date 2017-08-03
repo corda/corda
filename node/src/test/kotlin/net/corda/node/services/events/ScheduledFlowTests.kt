@@ -7,12 +7,18 @@ import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.node.services.VaultQueryService
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -114,10 +120,10 @@ class ScheduledFlowTests {
         nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity))
         mockNet.waitQuiescent()
         val stateFromA = nodeA.database.transaction {
-            nodeA.services.vaultService.linearHeadsOfType<ScheduledState>().values.first()
+            nodeA.services.vaultQueryService.queryBy<ScheduledState>().states.single()
         }
         val stateFromB = nodeB.database.transaction {
-            nodeB.services.vaultService.linearHeadsOfType<ScheduledState>().values.first()
+            nodeB.services.vaultQueryService.queryBy<ScheduledState>().states.single()
         }
         assertEquals(1, countScheduledFlows)
         assertEquals(stateFromA, stateFromB, "Must be same copy on both nodes")
@@ -132,14 +138,31 @@ class ScheduledFlowTests {
             nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.legalIdentity))
         }
         mockNet.waitQuiescent()
+
         val statesFromA = nodeA.database.transaction {
-            nodeA.services.vaultService.linearHeadsOfType<ScheduledState>()
+            queryStatesWithPaging(nodeA.services.vaultQueryService)
         }
         val statesFromB = nodeB.database.transaction {
-            nodeB.services.vaultService.linearHeadsOfType<ScheduledState>()
+            queryStatesWithPaging(nodeB.services.vaultQueryService)
         }
         assertEquals(2 * N, statesFromA.count(), "Expect all states to be present")
         assertEquals(statesFromA, statesFromB, "Expect identical data on both nodes")
-        assertTrue("Expect all states have run the scheduled task", statesFromB.values.all { it.state.data.processed })
+        assertTrue("Expect all states have run the scheduled task", statesFromB.all { it.state.data.processed })
+    }
+
+    // Demonstrate Vault Query paging and sorting
+    val PAGE_SIZE = 20
+    val sorting = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
+
+    private fun queryStatesWithPaging(vaultQueryService: VaultQueryService): List<StateAndRef<ScheduledState>> {
+        var pageNumber = DEFAULT_PAGE_NUM
+        val states = mutableListOf<StateAndRef<ScheduledState>>()
+        do {
+            val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
+            val results = vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, sorting)
+            states.addAll(results.states)
+            pageNumber++
+        } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)
+        return states.toList()
     }
 }

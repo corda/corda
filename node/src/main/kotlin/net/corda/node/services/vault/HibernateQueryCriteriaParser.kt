@@ -176,21 +176,21 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 @Suppress("UNCHECKED_CAST")
                 column as Path<Long?>?
                 val aggregateExpression =
-                    when (columnPredicate.type) {
-                        AggregateFunctionType.SUM -> criteriaBuilder.sum(column)
-                        AggregateFunctionType.AVG -> criteriaBuilder.avg(column)
-                        AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
-                        AggregateFunctionType.MAX -> criteriaBuilder.max(column)
-                        AggregateFunctionType.MIN -> criteriaBuilder.min(column)
-                    }
+                        when (columnPredicate.type) {
+                            AggregateFunctionType.SUM -> criteriaBuilder.sum(column)
+                            AggregateFunctionType.AVG -> criteriaBuilder.avg(column)
+                            AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
+                            AggregateFunctionType.MAX -> criteriaBuilder.max(column)
+                            AggregateFunctionType.MIN -> criteriaBuilder.min(column)
+                        }
                 aggregateExpressions.add(aggregateExpression)
                 // optionally order by this aggregate function
                 expression.orderBy?.let {
                     val orderCriteria =
-                        when (expression.orderBy!!) {
-                            Sort.Direction.ASC -> criteriaBuilder.asc(aggregateExpression)
-                            Sort.Direction.DESC -> criteriaBuilder.desc(aggregateExpression)
-                        }
+                            when (expression.orderBy!!) {
+                                Sort.Direction.ASC -> criteriaBuilder.asc(aggregateExpression)
+                                Sort.Direction.DESC -> criteriaBuilder.desc(aggregateExpression)
+                            }
                     criteriaQuery.orderBy(orderCriteria)
                 }
                 // add optional group by clauses
@@ -374,10 +374,10 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
 
         val selections =
-            if (aggregateExpressions.isEmpty())
-                listOf(vaultStates).plus(rootEntities.map { it.value })
-            else
-                aggregateExpressions
+                if (aggregateExpressions.isEmpty())
+                    listOf(vaultStates).plus(rootEntities.map { it.value })
+                else
+                    aggregateExpressions
         criteriaQuery.multiselect(selections)
         val combinedPredicates = joinPredicates.plus(predicateSet)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
@@ -439,21 +439,21 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
     private fun parse(sortAttribute: Sort.Attribute): Triple<Class<out PersistentState>, String, String?> {
         val entityClassAndColumnName : Triple<Class<out PersistentState>, String, String?> =
-            when(sortAttribute) {
-                is Sort.CommonStateAttribute -> {
-                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
+                when(sortAttribute) {
+                    is Sort.CommonStateAttribute -> {
+                        Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
+                    }
+                    is Sort.VaultStateAttribute -> {
+                        Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
+                    }
+                    is Sort.LinearStateAttribute -> {
+                        Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
+                    }
+                    is Sort.FungibleStateAttribute -> {
+                        Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
+                    }
+                    else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
                 }
-                is Sort.VaultStateAttribute -> {
-                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
-                }
-                is Sort.LinearStateAttribute -> {
-                    Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
-                }
-                is Sort.FungibleStateAttribute -> {
-                    Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
-                }
-                else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
-            }
         return entityClassAndColumnName
     }
 }

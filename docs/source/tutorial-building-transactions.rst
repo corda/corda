@@ -87,7 +87,7 @@ One of the first steps to forming a transaction is gathering the set of
 input references. This process will clearly vary according to the nature
 of the business process being captured by the smart contract and the
 parameterised details of the request. However, it will generally involve
-searching the Vault via the ``VaultService`` interface on the
+searching the Vault via the ``VaultQueryService`` interface on the
 ``ServiceHub`` to locate the input states.
 
 To give a few more specific details consider two simplified real world
@@ -111,16 +111,16 @@ part of a simulated in-memory network of nodes.
     to the VM options, and set Working directory to ``$PROJECT_DIR$``
     so that the ``Quasar`` instrumentation is correctly configured.
 
-For the Cash transaction let’s assume the cash resources are using the
-standard ``CashState`` in the ``:financial`` Gradle module. The Cash
-contract uses ``FungibleAsset`` states to model holdings of
-interchangeable assets and allow the split/merge and summing of
-states to meet a contractual obligation. We would normally use the
-``generateSpend`` method on the ``VaultService`` to gather the required
-amount of cash into a ``TransactionBuilder``, set the outputs and move
-command. However, to elucidate more clearly example flow code is shown
-here that will manually carry out the inputs queries using the lower
-level ``VaultService``.
+For the Cash transaction let’s assume the cash resources are using the 
+standard ``CashState`` in the ``:financial`` Gradle module. The Cash 
+contract uses ``FungibleAsset`` states to model holdings of 
+interchangeable assets and allow the split/merge and summing of 
+states to meet a contractual obligation. We would normally use the 
+``generateSpend`` method on the ``VaultService`` to gather the required 
+amount of cash into a ``TransactionBuilder``, set the outputs and move 
+command. However, to elucidate more clearly example flow code is shown 
+here that will manually carry out the inputs queries by specifying relevant
+query criteria filters to the ``queryBy`` method of the ``VaultQueryService``.
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/FxTransactionBuildTutorial.kt
     :language: kotlin
@@ -159,20 +159,13 @@ workflows will query the Vault for states of the right contract type and
 in the right workflow state over the RPC interface. The RPC will then
 initiate the relevant flow using ``StateRef``, or ``linearId`` values as
 parameters to the flow to identify the states being operated upon. Thus
-code to gather the latest input state would be:
+code to gather the latest input state for a given ``StateRef`` would use
+the ``VaultQueryService`` as follows:
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/WorkflowTransactionBuildTutorial.kt
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      // Pull in the latest Vault version of the StateRef as a full StateAndRef
-      val latestRecord = serviceHub.latest<TradeApprovalContract.State>(ref)
-
 
 Generating Commands
 -------------------

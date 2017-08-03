@@ -3,11 +3,9 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flatMap
@@ -19,7 +17,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
@@ -598,13 +595,6 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `lazy db iterator left on stack during checkpointing`() {
-        val result = node2.services.startFlow(VaultAccessFlow()).resultFuture
-        mockNet.runNetwork()
-        assertThatThrownBy { result.getOrThrow() }.hasMessageContaining("Vault").hasMessageContaining("private method")
-    }
-
-    @Test
     fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
         ptx.addOutputState(DummyState())
@@ -914,14 +904,6 @@ class FlowFrameworkTests {
                 if (throwException != null) throw throwException.invoke()
                 return subFlow(FinalityFlow(stx, setOf(otherParty))).single()
             }
-        }
-    }
-
-    private class VaultAccessFlow : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            serviceHub.vaultService.unconsumedStates<Cash.State>().filter { true }
-            waitForLedgerCommit(SecureHash.zeroHash)
         }
     }
 
