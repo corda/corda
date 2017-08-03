@@ -3,10 +3,12 @@ package net.corda.node.services.database
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DummyFungibleContract
+import net.corda.contracts.asset.sumCash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.PersistentStateRef
@@ -14,6 +16,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.CordaPersistence
@@ -38,6 +41,7 @@ import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
 import javax.persistence.EntityManager
@@ -126,7 +130,8 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
-        assertThat(queryResults.size).isEqualTo(6)
+        val coins = queryResults.map { it.contractState.deserialize<TransactionState<Cash.State>>().data }.sumCash()
+        assertThat(coins.toDecimal() >= BigDecimal("50.00"))
     }
 
     @Test

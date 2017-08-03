@@ -1,6 +1,7 @@
 package net.corda.contracts
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -9,7 +10,7 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
-import net.corda.core.node.services.VaultService
+import net.corda.core.node.ServiceHub
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -185,9 +186,9 @@ class CommercialPaper : Contract {
      */
     @Throws(InsufficientBalanceException::class)
     @Suspendable
-    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: VaultService) {
+    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub) {
         // Add the cash movement using the states in our vault.
-        vault.generateSpend(tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
+        Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
         tx.addInputState(paper)
         tx.addCommand(Commands.Redeem(), paper.state.data.owner.owningKey)
     }

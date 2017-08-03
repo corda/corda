@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import kotlin.Pair;
 import kotlin.Unit;
+import net.corda.contracts.asset.Cash;
 import net.corda.contracts.asset.CashKt;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.SecureHash;
@@ -12,15 +13,14 @@ import net.corda.core.crypto.testing.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
-import net.corda.core.node.services.VaultService;
+import net.corda.core.node.ServiceHub;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
-import java.util.Currency;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
@@ -255,8 +255,8 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @Suspendable
-    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, VaultService vault) throws InsufficientBalanceException {
-        vault.generateSpend(tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), null);
+    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, ServiceHub services) throws InsufficientBalanceException {
+        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), Collections.EMPTY_SET);
         tx.addInputState(paper);
         tx.addCommand(new Command<>(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
     }

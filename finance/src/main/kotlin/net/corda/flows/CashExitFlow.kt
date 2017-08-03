@@ -11,8 +11,8 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
 
@@ -41,7 +41,7 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionBuilder(notary = null as Party?)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
-        val exitStates = serviceHub.vaultService.unconsumedStatesForSpending<Cash.State>(amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
+        val exitStates = Cash.unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
             Cash().generateExit(
                     builder,

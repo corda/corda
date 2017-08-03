@@ -60,6 +60,10 @@ UNRELEASED
    * ``Cordformation`` adds a ``corda`` and ``cordaRuntime`` configuration to projects which cordapp developers should
      use to exclude core Corda JARs from being built into Cordapp fat JARs.
 
+* Move the original ``Cash`` specific ``generateSpend`` and ``unconsumedStatesForSpending`` methods from ``:core``
+  and onto ``Cash`` contract in the ``:finance`` module. Provide a genuinely generic ``tryLockFungibleStatesForSpending``
+  on ``VaultService``, which in future could be optimised for performance.
+
 .. Milestone 15:
 
 * Vault Query fix: filter by multiple issuer names in ``FungibleAssetQueryCriteria``
