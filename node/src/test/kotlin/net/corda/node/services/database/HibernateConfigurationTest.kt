@@ -66,16 +66,10 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         val defaultDatabaseProperties = makeTestDatabaseProperties()
         database = configureDatabase(dataSourceProps, defaultDatabaseProperties)
         val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
-
-
         database.transaction {
             hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
             services = object : MockServices(BOB_KEY) {
-                override val vaultService: VaultService get() {
-                    val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
-                    hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
-                    return vaultService
-                }
+                override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {

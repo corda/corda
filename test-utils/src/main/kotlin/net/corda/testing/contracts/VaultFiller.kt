@@ -226,7 +226,7 @@ fun ServiceHub.evolveLinearStates(linearStates: List<StateAndRef<LinearState>>) 
 fun ServiceHub.evolveLinearState(linearState: StateAndRef<LinearState>) : StateAndRef<LinearState> = consumeAndProduce(linearState)
 
 @JvmOverloads
-fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): Vault.Update {
+fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): Vault.Update<ContractState> {
     val update =  vaultService.rawUpdates.toFuture()
 
     // A tx that spends our money.

@@ -1,5 +1,6 @@
 package net.corda.docs
 
+import net.corda.contracts.getCashBalances
 import net.corda.core.contracts.*
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
@@ -84,13 +85,13 @@ class CustomVaultQueryTest {
         // Print out the balances
         val balancesNodesA =
             nodeA.database.transaction {
-                nodeA.services.vaultService.cashBalances
+                nodeA.services.getCashBalances()
             }
         println("BalanceA\n" + balancesNodesA)
 
         val balancesNodesB =
             nodeB.database.transaction {
-                nodeB.services.vaultService.cashBalances
+                nodeB.services.getCashBalances()
             }
         println("BalanceB\n" + balancesNodesB)
 
