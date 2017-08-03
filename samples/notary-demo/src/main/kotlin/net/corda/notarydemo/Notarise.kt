@@ -56,7 +56,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      */
     private fun buildTransactions(count: Int): List<SignedTransaction> {
         return Futures.allAsList((1..count).map {
-            rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity).returnValue
+            rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity, it).returnValue
         }).getOrThrow()
     }
 
