@@ -15,9 +15,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TokenizableAssetInfo
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.services.ServiceType
-import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.node.services.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import java.math.BigDecimal

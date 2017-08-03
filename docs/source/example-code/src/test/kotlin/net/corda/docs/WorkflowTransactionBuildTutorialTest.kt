@@ -26,10 +26,9 @@ class WorkflowTransactionBuildTutorialTest {
     lateinit var nodeA: MockNetwork.MockNode
     lateinit var nodeB: MockNetwork.MockNode
 
-    // Helper method to locate the latest Vault version of a LinearState from a possibly out of date StateRef
+    // Helper method to locate the latest Vault version of a LinearState
     private inline fun <reified T : LinearState> ServiceHub.latest(ref: UniqueIdentifier): StateAndRef<T> {
-        val linearHeads = vaultQueryService.queryBy<T>(QueryCriteria.LinearStateQueryCriteria(linearId = listOf(ref))
-                                                  .and(QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)))
+        val linearHeads = vaultQueryService.queryBy<T>(QueryCriteria.LinearStateQueryCriteria(linearId = listOf(ref)))
         return linearHeads.states.single()
     }
 
@@ -48,7 +47,6 @@ class WorkflowTransactionBuildTutorialTest {
 
     @After
     fun cleanUp() {
-        println("Close DB")
         mockNet.stopNodes()
     }
 

@@ -60,7 +60,7 @@ class NodeAttachmentStorageTest {
         val expectedHash = testJar.readAll().sha256()
 
         database.transaction {
-            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
+            val storage = NodeAttachmentService(dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
             val id = testJar.read { storage.importAttachment(it) }
             assertEquals(expectedHash, id)
 
@@ -86,7 +86,7 @@ class NodeAttachmentStorageTest {
     fun `duplicates not allowed`() {
         val testJar = makeTestJar()
         database.transaction {
-            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
+            val storage = NodeAttachmentService(dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
             testJar.read {
                 storage.importAttachment(it)
             }
@@ -102,7 +102,7 @@ class NodeAttachmentStorageTest {
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
         database.transaction {
-            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
+            val storage = NodeAttachmentService(dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
             val id = testJar.read { storage.importAttachment(it) }
 
             // Corrupt the file in the store.
@@ -130,7 +130,7 @@ class NodeAttachmentStorageTest {
     @Test
     fun `non jar rejected`() {
         database.transaction {
-            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
+            val storage = NodeAttachmentService(dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
             val path = fs.getPath("notajar")
             path.writeLines(listOf("Hey", "there!"))
             path.read {
