@@ -60,6 +60,8 @@ UNRELEASED
    * ``Cordformation`` adds a ``corda`` and ``cordaRuntime`` configuration to projects which cordapp developers should
      use to exclude core Corda JARs from being built into Cordapp fat JARs.
 
+* Network visualiser sample removed
+
 .. Milestone 15:
 
 * Following deprecated methods have been removed:

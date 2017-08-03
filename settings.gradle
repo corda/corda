@@ -31,7 +31,6 @@ include 'docs/source/example-code' // Note that we are deliberately choosing to 
 include 'samples:attachment-demo'
 include 'samples:trader-demo'
 include 'samples:irs-demo'
-include 'samples:network-visualiser'
 include 'samples:simm-valuation-demo'
 include 'samples:notary-demo'
 include 'samples:bank-of-corda-demo'
