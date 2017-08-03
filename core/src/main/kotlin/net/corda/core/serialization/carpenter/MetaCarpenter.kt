@@ -44,6 +44,7 @@ data class CarpenterSchemas (
         get() = carpenterSchemas.size
 
     fun isEmpty() = carpenterSchemas.isEmpty()
+    fun isNotEmpty() = carpenterSchemas.isNotEmpty()
 }
 
 /**
