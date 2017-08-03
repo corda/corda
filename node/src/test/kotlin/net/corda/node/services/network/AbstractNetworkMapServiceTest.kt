@@ -1,7 +1,6 @@
 package net.corda.node.services.network
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -53,8 +52,11 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     @Before
     fun setup() {
         mockNet = MockNetwork(defaultFactory = nodeFactory)
-        mapServiceNode = mockNet.createNode(null, -1, nodeFactory, true, DUMMY_MAP.name, null, BigInteger.valueOf(random63BitValue()), ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
-        alice = mockNet.createNode(mapServiceNode.network.myAddress, -1, nodeFactory, true, ALICE.name)
+        mapServiceNode = mockNet.createNode(
+                nodeFactory = nodeFactory,
+                legalName = DUMMY_MAP.name,
+                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
+        alice = mockNet.createNode(mapServiceNode.network.myAddress, nodeFactory = nodeFactory, legalName = ALICE.name)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
     }
@@ -64,7 +66,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         mockNet.stopNodes()
     }
 
-    protected abstract val nodeFactory: MockNetwork.Factory
+    protected abstract val nodeFactory: MockNetwork.Factory<*>
 
     protected abstract val networkMapService: S
 
@@ -249,7 +251,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private fun addNewNodeToNetworkMap(legalName: X500Name): MockNode {
-        val node = mockNet.createNode(networkMapAddress = mapServiceNode.network.myAddress, legalName = legalName)
+        val node = mockNet.createNode(mapServiceNode.network.myAddress, legalName = legalName)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
         return node
@@ -269,7 +271,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         }
     }
 
-    private object NoNMSNodeFactory : MockNetwork.Factory {
+    private object NoNMSNodeFactory : MockNetwork.Factory<MockNode> {
         override fun create(config: NodeConfiguration,
                             network: MockNetwork,
                             networkMapAddr: SingleMessageRecipient?,
