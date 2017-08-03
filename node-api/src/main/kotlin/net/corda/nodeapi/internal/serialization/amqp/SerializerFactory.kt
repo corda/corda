@@ -171,27 +171,25 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun processSchema(
-            schema: Schema,
-            cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
-
+    private fun processSchema(schema: Schema, cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
         val carpenterSchemas = CarpenterSchemas.newInstance()
         for (typeNotation in schema.types) {
             try {
                 processSchemaEntry(typeNotation, cl)
             }
-            catch (e: java.lang.ClassNotFoundException) {
+            catch (e: ClassNotFoundException) {
                 if ((cl != DeserializedParameterizedType::class.java.classLoader)
                         || (typeNotation !is CompositeType)) throw e
                 typeNotation.carpenterSchema(carpenterSchemas = carpenterSchemas)
             }
         }
 
-        if (carpenterSchemas.isEmpty()) return
-        val mc = MetaCarpenter(carpenterSchemas)
-        mc.build()
+        if (carpenterSchemas.isNotEmpty()) {
+            val mc = MetaCarpenter(carpenterSchemas)
+            mc.build()
 
-        processSchema(schema, mc.classloader)
+            processSchema(schema, mc.classloader)
+        }
     }
 
     private fun processSchemaEntry(typeNotation: TypeNotation,
@@ -318,10 +316,10 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         fun nameForType(type: Type) : String = when (type) {
                 is Class<*> -> {
                     primitiveTypeName(type) ?: if (type.isArray) {
-                        "${nameForType(type.componentType)}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
+                        "${nameForType(type.componentType)}${if(type.componentType.isPrimitive) "[p]" else "[]"}"
                     } else type.name
                 }
-                is ParameterizedType -> "${nameForType(type.rawType)ype.actualTypeArguments.joinToString { nameForType(it) }}>"
+                is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
                 is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
                 else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
