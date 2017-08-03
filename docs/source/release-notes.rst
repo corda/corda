@@ -3,11 +3,26 @@ Release notes
 
 Here are release notes for each snapshot release from M9 onwards.
 
-Unreleased
-----------
+Milestone 14
+------------
+
+This release continues with the goal to improve API stability and developer friendliness. There have also been more
+bug fixes and other improvements across the board.
+
+It is now possible to specify multiple IP addresses and legal identities for a single node, allowing node operators
+more flexibility in setting up nodes.
+
+A format has been introduced for CorDapp JARs that standardises the contents of CorDapps across nodes. This new format
+now requires CorDapps now contain their own external dependencies. This paves the way for significantly improved
+dependency management for CorDapps with the release of Jigsaw. For those using non-gradle build systems it is important
+to read :doc:`cordapp-build-systems` to learn more. For those using our ``cordformation`` plugin simply need to update
+to the latest version (``0.14.0``) to get the fixes.
 
 The transaction finalisation flow (``FinalityFlow``) has had hooks for alternative implementations, for example in
 scenarios where no single participant in a transaction is aware of the well known identities of all parties.
+
+DemoBench has a fix for a rare but inconvenient crash that can occur when sharing your display across multiple devices,
+e.g. a projector while performing demonstrations in front of an audience.
 
 Milestone 13
 ------------

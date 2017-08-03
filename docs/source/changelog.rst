@@ -4,8 +4,8 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-UNRELEASED
-----------
+Milestone 14
+------------
 
 * Changes in ``NodeInfo``:
 
@@ -56,6 +56,13 @@ UNRELEASED
      except other cordapps and Corda core dependencies.
    * ``Cordformation`` adds a ``corda`` and ``cordaRuntime`` configuration to projects which cordapp developers should
      use to exclude core Corda JARs from being built into Cordapp fat JARs.
+
+* ‘database’ field in ‘AbstractNode’ class has changed the type from ‘org.jetbrains.exposed.sql.Database’ to
+  ‘net.corda.node.utilities.CordaPersistence’ - no change is needed for the typical use
+  (i.e. services.database.transaction {  code block } ) however a change is required when Database was explicitly declared
+
+* `DigitalSignature.LegallyIdentifiable`, previously used to identify a signer (e.g. in Oracles), has been removed.
+  One can use the public key to derive the corresponding identity.
 
 Milestone 13
 ------------
