@@ -19,7 +19,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.flows.*
 import java.util.*
 
-// TODO: add doc tags and associated tutorial text.
+// DOCSTART CustomVaultQuery
 object CustomVaultQuery {
 
     @CordaService
@@ -28,27 +28,25 @@ object CustomVaultQuery {
             val log = loggerFor<Service>()
         }
         fun rebalanceCurrencyReserves(): List<Amount<Currency>> {
-            //  TODO: change this query to join on a 3rd party custom table (eg. cash_reserves)
             val nativeQuery = """
-            select
-                cashschema.ccy_code,
-                sum(cashschema.pennies)
-            from
-                vault_states vaultschema
-            join
-                contract_cash_states cashschema
-            where
-                vaultschema.output_index=cashschema.output_index
-                and vaultschema.transaction_id=cashschema.transaction_id
-                and vaultschema.state_status=0
-            group by
-                cashschema.ccy_code
-            order by
-                sum(cashschema.pennies) desc
-        """
+                select
+                    cashschema.ccy_code,
+                    sum(cashschema.pennies)
+                from
+                    vault_states vaultschema
+                join
+                    contract_cash_states cashschema
+                where
+                    vaultschema.output_index=cashschema.output_index
+                    and vaultschema.transaction_id=cashschema.transaction_id
+                    and vaultschema.state_status=0
+                group by
+                    cashschema.ccy_code
+                order by
+                    sum(cashschema.pennies) desc
+            """
             log.info("SQL to execute: $nativeQuery")
             val session = services.jdbcSession()
-            // TODO: illustrate and document usage of Native Vs Prepared Vs Callable (Stored Procs) statements
             val prepStatement = session.prepareStatement(nativeQuery)
             val rs = prepStatement.executeQuery()
             var topUpLimits: MutableList<Amount<Currency>> = mutableListOf()
@@ -62,6 +60,7 @@ object CustomVaultQuery {
         }
     }
 }
+// DOCEND CustomVaultQuery
 
 /**
  *  This is a slightly modified version of the IssuerFlow, which uses a 3rd party custom query to
@@ -100,6 +99,7 @@ object TopupIssuerFlow {
 
         override val progressTracker: ProgressTracker = tracker()
 
+        // DOCSTART TopupIssuer
         @Suspendable
         @Throws(CashException::class)
         override fun call(): List<SignedTransaction> {
@@ -122,6 +122,7 @@ object TopupIssuerFlow {
             send(otherParty, txns)
             return txns
         }
+        // DOCEND TopupIssuer
 
         @Suspendable
         private fun issueCashTo(amount: Amount<Currency>,

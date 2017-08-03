@@ -107,3 +107,17 @@ Use the ``ServiceHub`` ``jdbcSession`` function to obtain a JDBC connection as i
 
 JDBC session's can be used in Flows and Service Plugins (see ":doc:`flow-state-machines`")
 
+The following example illustrates the creation of a custom corda service using a jdbcSession:
+
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/CustomVaultQuery.kt
+  :language: kotlin
+  :start-after: DOCSTART CustomVaultQuery
+  :end-before: DOCEND CustomVaultQuery
+
+which is then referenced within a custom flow:
+
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/CustomVaultQuery.kt
+  :language: kotlin
+  :start-after: DOCSTART TopupIssuer
+  :end-before: DOCEND TopupIssuer
+
