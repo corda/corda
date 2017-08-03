@@ -64,6 +64,24 @@ Milestone 14
 * `DigitalSignature.LegallyIdentifiable`, previously used to identify a signer (e.g. in Oracles), has been removed.
   One can use the public key to derive the corresponding identity.
 
+* Vault Query improvements and fixes:
+
+    * FIX inconsistent behaviour: Vault Query defaults to UNCONSUMED in all QueryCriteria types
+
+    * FIX serialization error: Vault Query over RPC when using custom attributes using VaultCustomQueryCriteria.
+
+    * Aggregate function support: extended VaultCustomQueryCriteria and associated DSL to enable specification of
+    Aggregate Functions (sum, max, min, avg, count) with, optional, group by clauses and sorting (on calculated aggregate)
+
+    * Pagination simplification
+    Pagination continues to be optional, but with following changes:
+      - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast with a VaultQueryExceptionto alert the API user to the need to specify a PageSpecification.
+        Internally, we no longer need to calculate a results count (thus eliminating an expensive SQL query) unless a PageSpecification is supplied (note: that a value of -1 is returned for total_results in this scenario).
+        Internally, we now use the AggregateFunction capability to perform the count.
+      - Paging now starts from 1 (was previously 0).
+
+    * Additional Sort criteria: by StateRef (or constituents: txId, index)
+
 Milestone 13
 ------------
 
