@@ -10,6 +10,7 @@ import com.google.common.io.Closeables
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
@@ -184,6 +185,8 @@ object InteractiveShell {
         JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory(), true).apply {
             val rpcModule = SimpleModule()
             rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
+            rpcModule.addDeserializer(UniqueIdentifier::class.java,UniqueIdentifierDeserializer)
+            rpcModule.addDeserializer(UUID::class.java,UUIDDeserializer)
             registerModule(rpcModule)
         }
     }
@@ -496,6 +499,45 @@ object InteractiveShell {
                     // Ignore.
                 }
             }
+        }
+    }
+
+    /**
+     * String value deserialized to [UniqueIdentifier].
+     * Any string value used as [UniqueIdentifier.externalId].
+     * If string contains underscore(i.e. externalId_uuid) then split with it.
+     *      Index 0 as [UniqueIdentifier.externalId]
+     *      Index 1 as [UniqueIdentifier.id]
+     * */
+    object UniqueIdentifierDeserializer : JsonDeserializer<UniqueIdentifier>() {
+        override fun deserialize(p: JsonParser?, ctxt: DeserializationContext?): UniqueIdentifier {
+            //check if externalId and UUID my be sepereted by underscore
+            if(p?.text?.contains("_") == true){
+                val ids = p.text.split("_")
+                val uuid: UUID
+
+                try {
+                    //create UUID object from string
+                    uuid = UUID.fromString(ids[1])
+                }catch (ex: IllegalArgumentException){
+                    // throws message: Invalid UUID string: ids[1]
+                    throw ex
+                }
+                return UniqueIdentifier(ids[0],uuid)
+            }
+            //any other string used as externalId
+            return UniqueIdentifier(p?.text)
+        }
+    }
+
+    /**
+     * String value deserialized to [UUID]
+     * */
+    object UUIDDeserializer : JsonDeserializer<UUID>() {
+        override fun deserialize(p: JsonParser?, ctxt: DeserializationContext?): UUID {
+            //create UUID object from string
+            val uuid = UUID.fromString(p?.text)
+            return uuid
         }
     }
 
