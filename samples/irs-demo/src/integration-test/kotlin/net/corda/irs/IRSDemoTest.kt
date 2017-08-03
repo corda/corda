@@ -1,6 +1,7 @@
 package net.corda.irs
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
 import net.corda.core.internal.concurrent.transpose
@@ -81,7 +82,7 @@ class IRSDemoTest : IntegrationTestCategory {
     fun getFixingDateObservable(config: FullNodeConfiguration): Observable<LocalDate?> {
         val client = CordaRPCClient(config.rpcAddress!!, initialiseSerialization = false)
         val proxy = client.start("user", "password").proxy
-        val vaultUpdates = proxy.vaultAndUpdates().updates
+        val vaultUpdates = proxy.vaultTrackBy<InterestRateSwap.State>().updates
 
         return vaultUpdates.map { update ->
             val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State>()

@@ -151,7 +151,7 @@ class AttachmentSerializationTest {
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.stop()
-        client = mockNet.createNode(server.network.myAddress, client.id, object : MockNetwork.Factory {
+        client = mockNet.createNode(server.network.myAddress, client.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                     override fun startMessagingService(rpcOps: RPCOps) {

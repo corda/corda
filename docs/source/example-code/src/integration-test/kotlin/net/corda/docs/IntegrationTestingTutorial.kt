@@ -5,6 +5,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
@@ -56,9 +57,8 @@ class IntegrationTestingTutorial {
             // END 2
 
             // START 3
-            val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val (_, bobVaultUpdates) = bobProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria)
-            val (_, aliceVaultUpdates) = aliceProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria)
+            val bobVaultUpdates = bobProxy.vaultTrackBy<Cash.State>().updates
+            val aliceVaultUpdates = aliceProxy.vaultTrackBy<Cash.State>().updates
             // END 3
 
             // START 4

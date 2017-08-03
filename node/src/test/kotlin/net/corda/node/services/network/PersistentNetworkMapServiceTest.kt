@@ -15,7 +15,7 @@ import java.security.KeyPair
  */
 class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<PersistentNetworkMapService>() {
 
-    override val nodeFactory: MockNetwork.Factory get() = NodeFactory
+    override val nodeFactory: MockNetwork.Factory<*> get() = NodeFactory
 
     override val networkMapService: PersistentNetworkMapService
         get() = (mapServiceNode.inNodeNetworkMapService as SwizzleNetworkMapService).delegate
@@ -26,7 +26,7 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
         }
     }
 
-    private object NodeFactory : MockNetwork.Factory {
+    private object NodeFactory : MockNetwork.Factory<MockNode> {
         override fun create(config: NodeConfiguration,
                             network: MockNetwork,
                             networkMapAddr: SingleMessageRecipient?,

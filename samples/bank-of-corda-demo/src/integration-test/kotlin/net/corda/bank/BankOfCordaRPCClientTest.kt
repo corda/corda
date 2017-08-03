@@ -3,6 +3,7 @@ package net.corda.bank
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
@@ -37,10 +38,10 @@ class BankOfCordaRPCClientTest {
 
             // Register for Bank of Corda Vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val (_, vaultUpdatesBoc) = bocProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria)
+            val vaultUpdatesBoc = bocProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria).updates
 
             // Register for Big Corporation Vault updates
-            val (_, vaultUpdatesBigCorp) = bigCorpProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria)
+            val vaultUpdatesBigCorp = bigCorpProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria).updates
 
             // Kick-off actual Issuer Flow
             val anonymous = true

@@ -62,12 +62,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    inner class BankFactory : MockNetwork.Factory {
+    inner class BankFactory : MockNetwork.Factory<SimulatedNode> {
         var counter = 0
 
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNetwork.MockNode {
+                            entropyRoot: BigInteger): SimulatedNode {
             val letter = 'A' + counter
             val (city, country) = bankLocations[counter++ % bankLocations.size]
 
@@ -80,17 +80,17 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         fun createAll(): List<SimulatedNode> {
             return bankLocations.mapIndexed { i, _ ->
                 // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
-                mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong())) as SimulatedNode
+                mockNet.createNode(networkMap.network.myAddress, nodeFactory = this, start = false, entropyRoot = BigInteger.valueOf(i.toLong()))
             }
         }
     }
 
     val bankFactory = BankFactory()
 
-    object NetworkMapNodeFactory : MockNetwork.Factory {
+    object NetworkMapNodeFactory : MockNetwork.Factory<SimulatedNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNetwork.MockNode {
+                            entropyRoot: BigInteger): SimulatedNode {
             require(advertisedServices.containsType(NetworkMapService.type))
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
@@ -99,10 +99,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    object NotaryNodeFactory : MockNetwork.Factory {
+    object NotaryNodeFactory : MockNetwork.Factory<SimulatedNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNetwork.MockNode {
+                            entropyRoot: BigInteger): SimulatedNode {
             require(advertisedServices.containsType(SimpleNotaryService.type))
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
@@ -111,13 +111,13 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    object RatesOracleFactory : MockNetwork.Factory {
+    object RatesOracleFactory : MockNetwork.Factory<SimulatedNode> {
         // TODO: Make a more realistic legal name
         val RATES_SERVICE_NAME = X500Name("CN=Rates Service Provider,O=R3,OU=corda,L=Madrid,C=ES")
 
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNetwork.MockNode {
+                            entropyRoot: BigInteger): SimulatedNode {
             require(advertisedServices.containsType(NodeInterestRates.Oracle.type))
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
@@ -137,10 +137,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    object RegulatorFactory : MockNetwork.Factory {
+    object RegulatorFactory : MockNetwork.Factory<SimulatedNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNetwork.MockNode {
+                            entropyRoot: BigInteger): SimulatedNode {
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = DUMMY_REGULATOR.name)
@@ -154,13 +154,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     val mockNet = MockNetwork(networkSendManuallyPumped, runAsync)
     // This one must come first.
-    val networkMap: SimulatedNode
-            = mockNet.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type)) as SimulatedNode
-    val notary: SimulatedNode
-            = mockNet.createNode(networkMap.network.myAddress, nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type)) as SimulatedNode
-    val regulators: List<SimulatedNode> = listOf(mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
-    val ratesOracle: SimulatedNode
-            = mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = RatesOracleFactory, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type)) as SimulatedNode
+    val networkMap = mockNet.createNode(nodeFactory = NetworkMapNodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type))
+    val notary = mockNet.createNode(networkMap.network.myAddress, nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type))
+    val regulators = listOf(mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = RegulatorFactory))
+    val ratesOracle = mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = RatesOracleFactory, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)

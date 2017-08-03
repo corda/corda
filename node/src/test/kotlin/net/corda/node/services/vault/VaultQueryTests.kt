@@ -1,8 +1,6 @@
 package net.corda.node.services.vault
 
-import net.corda.contracts.CommercialPaper
-import net.corda.contracts.Commodity
-import net.corda.contracts.DealState
+import net.corda.contracts.*
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
@@ -807,6 +805,96 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
     }
 
+    @Test
+    fun `aggregate functions count by contract type`() {
+        database.transaction {
+            // create new states
+            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L))
+            services.fillWithSomeTestLinearStates(1, "XYZ")
+            services.fillWithSomeTestLinearStates(2, "JKL")
+            services.fillWithSomeTestLinearStates(3, "ABC")
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+
+            // count fungible assets
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
+            val fungibleStateCount = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteria).otherResults.single() as Long
+            assertThat(fungibleStateCount).isEqualTo(10L)
+
+            // count linear states
+            val linearStateCount = vaultQuerySvc.queryBy<LinearState>(countCriteria).otherResults.single() as Long
+            assertThat(linearStateCount).isEqualTo(9L)
+
+            // count deal states
+            val dealStateCount = vaultQuerySvc.queryBy<DealState>(countCriteria).otherResults.single() as Long
+            assertThat(dealStateCount).isEqualTo(3L)
+        }
+    }
+
+    @Test
+    fun `aggregate functions count by contract type and state status`() {
+        database.transaction {
+            // create new states
+            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L))
+            val linearStatesXYZ = services.fillWithSomeTestLinearStates(1, "XYZ")
+            val linearStatesJKL = services.fillWithSomeTestLinearStates(2, "JKL")
+            services.fillWithSomeTestLinearStates(3, "ABC")
+            val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+
+            // ALL states
+
+            // count fungible assets
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
+            val fungibleStateCount = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteria).otherResults.single() as Long
+            assertThat(fungibleStateCount).isEqualTo(10L)
+
+            // count linear states
+            val linearStateCount = vaultQuerySvc.queryBy<LinearState>(countCriteria).otherResults.single() as Long
+            assertThat(linearStateCount).isEqualTo(9L)
+
+            // count deal states
+            val dealStateCount = vaultQuerySvc.queryBy<DealState>(countCriteria).otherResults.single() as Long
+            assertThat(dealStateCount).isEqualTo(3L)
+
+            // consume some states
+            services.consumeLinearStates(linearStatesXYZ.states.toList())
+            services.consumeLinearStates(linearStatesJKL.states.toList())
+            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
+            services.consumeCash(50.DOLLARS)
+
+            // UNCONSUMED states (default)
+
+            // count fungible assets
+            val countCriteriaUnconsumed = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.UNCONSUMED)
+            val fungibleStateCountUnconsumed = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteriaUnconsumed).otherResults.single() as Long
+            assertThat(fungibleStateCountUnconsumed).isEqualTo(5L)
+
+            // count linear states
+            val linearStateCountUnconsumed = vaultQuerySvc.queryBy<LinearState>(countCriteriaUnconsumed).otherResults.single() as Long
+            assertThat(linearStateCountUnconsumed).isEqualTo(5L)
+
+            // count deal states
+            val dealStateCountUnconsumed = vaultQuerySvc.queryBy<DealState>(countCriteriaUnconsumed).otherResults.single() as Long
+            assertThat(dealStateCountUnconsumed).isEqualTo(2L)
+
+            // CONSUMED states
+
+            // count fungible assets
+            val countCriteriaConsumed = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.CONSUMED)
+            val fungibleStateCountConsumed = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteriaConsumed).otherResults.single() as Long
+            assertThat(fungibleStateCountConsumed).isEqualTo(6L)
+
+            // count linear states
+            val linearStateCountConsumed = vaultQuerySvc.queryBy<LinearState>(countCriteriaConsumed).otherResults.single() as Long
+            assertThat(linearStateCountConsumed).isEqualTo(4L)
+
+            // count deal states
+            val dealStateCountConsumed = vaultQuerySvc.queryBy<DealState>(countCriteriaConsumed).otherResults.single() as Long
+            assertThat(dealStateCountConsumed).isEqualTo(1L)
+        }
+    }
+
     private val TODAY = LocalDate.now().atStartOfDay().toInstant(ZoneOffset.UTC)
 
     @Test
@@ -1164,7 +1252,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `unconsumed deal states paged and sorted`() {
+    fun `unconsumed deal states sorted`() {
         database.transaction {
 
             val linearStates = services.fillWithSomeTestLinearStates(10)
@@ -1292,6 +1380,28 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val results = vaultQuerySvc.queryBy<LinearState>(LinearStateQueryCriteria(linearId = listOf(linearId), status = Vault.StateStatus.ALL))
             assertThat(results.statesMetadata).hasSize(4)
             assertThat(results.states).hasSize(4)
+        }
+    }
+
+    @Test
+    fun `DEPRECATED DealState dealsWith helper method`() {
+        database.transaction {
+
+            // specify a different participant to the node owner (MEGA_CORP)
+            val parties = listOf(MINI_CORP)
+
+            services.fillWithSomeTestLinearStates(2, "TEST")
+            services.fillWithSomeTestDeals(listOf("456"), parties)
+            services.fillWithSomeTestDeals(listOf("123", "789"))
+
+            // DOCSTART VaultQueryExample11
+            val criteria = LinearStateQueryCriteria(participants = parties)
+            val results = vaultQuerySvc.queryBy<DealState>(criteria)
+            // DOCEND
+            assertThat(results.states).hasSize(1)
+
+            val states = vaultSvc.dealsWith<DummyDealContract.State>(MINI_CORP)
+            assertThat(states).hasSize(1)
         }
     }
 
@@ -1744,7 +1854,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
 
             services.fillWithSomeTestLinearStates(1, "TEST1")
-            services.fillWithSomeTestLinearStates(1, "TEST2")
+            val aState = services.fillWithSomeTestLinearStates(1, "TEST2").states
+            services.consumeLinearStates(aState.toList())
             val uuid = services.fillWithSomeTestLinearStates(1, "TEST3").states.first().state.data.linearId.id
 
             // 2 unconsumed states with same external ID, 1 with different external ID

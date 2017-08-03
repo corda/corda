@@ -5,17 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.*
-import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.node.services.queryBy
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_CA
 import net.corda.flows.TwoPartyDealFlow.Acceptor
 import net.corda.flows.TwoPartyDealFlow.AutoOffer
 import net.corda.flows.TwoPartyDealFlow.Instigator
@@ -23,6 +21,7 @@ import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.FixingFlow
 import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.testing.DUMMY_CA
 import net.corda.testing.node.InMemoryMessagingNetwork
 import rx.Observable
 import java.security.PublicKey
@@ -75,19 +74,16 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         return future
     }
 
-    private fun loadLinearHeads(node: SimulatedNode): Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> {
-        return node.database.transaction {
-            node.services.vaultService.linearHeadsOfType<InterestRateSwap.State>()
-        }
-    }
-
     private fun doNextFixing(i: Int, j: Int): CordaFuture<Unit>? {
         println("Doing a fixing between $i and $j")
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
 
-        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> = loadLinearHeads(node1)
-        val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.values.single()
+        val swaps =
+                node1.database.transaction {
+                    node1.services.vaultQueryService.queryBy<InterestRateSwap.State>().states
+                }
+        val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.single()
 
         // Do we have any more days left in this deal's lifetime? If not, return.
         val nextFixingDate = theDealRef.state.data.calculation.nextFixingDate() ?: return null
