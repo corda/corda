@@ -47,15 +47,17 @@ responder side. Types of things you will need to check include:
 
 Typically after calling the ``CollectSignaturesFlow`` you then called the ``FinalityFlow``.
 
-SendTransactionFlow/ReceiveTransactionFlow
-------------------------------------------
+ResolveTransactionsFlow
+-----------------------
 
-The ``SendTransactionFlow`` and ``ReceiveTransactionFlow`` are used to automate the verification of the transaction by
-recursively checking the validity of all the dependencies. Once a transaction is received and checked it's inserted into
-local storage so it can be relayed and won't be checked again.
+This ``ResolveTransactionsFlow`` is used to verify the validity of a transaction by recursively checking the validity of
+all the dependencies. Once a transaction is checked it's inserted into local storage so it can be relayed and won't be
+checked again.
 
-The ``SendTransactionFlow`` sends the transaction to the counterparty and listen for data request as the counterparty
-validating the transaction, extra checks can be implemented to restrict data access by overriding the ``verifyDataRequest``
-method inside ``SendTransactionFlow``.
+A couple of constructors are provided that accept a single transaction. When these are used, the dependencies of that
+transaction are resolved and then the transaction itself is verified. Again, if successful, the results are inserted
+into the database as long as a [SignedTransaction] was provided. If only the ``WireTransaction`` form was provided
+then this isn't enough to put into the local database, so only the dependencies are checked and inserted. This way
+to use the flow is helpful when resolving and verifying an unfinished transaction.
 
-The ``ReceiveTransactionFlow`` returns a verified ``SignedTransaction``.
+The flow returns a list of verified ``LedgerTransaction`` objects, in a depth-first order.

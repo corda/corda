@@ -1,22 +1,12 @@
-package net.corda.core.internal
+package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.AbstractAttachment
-import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FetchDataFlow.DownloadedVsRequestedDataMismatch
+import net.corda.core.flows.FetchDataFlow.HashNotFound
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
-import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationToken
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SerializeAsTokenContext
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import java.util.*
@@ -37,10 +27,10 @@ import java.util.*
  * @param T The ultimate type of the data being fetched.
  * @param W The wire type of the data being fetched, for when it isn't the same as the ultimate type.
  */
-sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
+abstract class FetchDataFlow<T : NamedByHash, W : Any>(
         protected val requests: Set<SecureHash>,
         protected val otherSide: Party,
-        protected val dataType: DataType) : FlowLogic<FetchDataFlow.Result<T>>() {
+        protected val wrapperType: Class<W>) : FlowLogic<FetchDataFlow.Result<T>>() {
 
     @CordaSerializable
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : IllegalArgumentException()
@@ -51,18 +41,10 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     class HashNotFound(val requested: SecureHash) : FlowException()
 
     @CordaSerializable
+    data class Request(val hashes: List<SecureHash>)
+
+    @CordaSerializable
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
-
-    @CordaSerializable
-    sealed class Request {
-        data class Data(val hashes: NonEmptySet<SecureHash>, val dataType: DataType) : Request()
-        object End : Request()
-    }
-
-    @CordaSerializable
-    enum class DataType {
-        TRANSACTION, ATTACHMENT
-    }
 
     @Suspendable
     @Throws(HashNotFound::class)
@@ -83,10 +65,11 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             // Above that, we start losing authentication data on the message fragments and take exceptions in the
             // network layer.
             val maybeItems = ArrayList<W>(toFetch.size)
+            send(otherSide, Request(toFetch))
             for (hash in toFetch) {
                 // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
                 // The only thing checked is the object type. It is a protocol violation to send results out of order.
-                maybeItems += sendAndReceive<List<W>>(otherSide, Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
+                maybeItems += receive(wrapperType, otherSide).unwrap { it }
             }
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
             val downloaded = validateFetchResponse(UntrustworthyData(maybeItems), toFetch)
@@ -133,47 +116,4 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             answers
         }
     }
-}
-
-
-/**
- * Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
- * attachments are saved to local storage automatically.
- */
-class FetchAttachmentsFlow(requests: Set<SecureHash>,
-                           otherSide: Party) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide, DataType.ATTACHMENT) {
-
-    override fun load(txid: SecureHash): Attachment? = serviceHub.attachments.openAttachment(txid)
-
-    override fun convert(wire: ByteArray): Attachment = FetchedAttachment({ wire })
-
-    override fun maybeWriteToDisk(downloaded: List<Attachment>) {
-        for (attachment in downloaded) {
-            serviceHub.attachments.importAttachment(attachment.open())
-        }
-    }
-
-    private class FetchedAttachment(dataLoader: () -> ByteArray) : AbstractAttachment(dataLoader), SerializeAsToken {
-        override val id: SecureHash by lazy { attachmentData.sha256() }
-
-        private class Token(private val id: SecureHash) : SerializationToken {
-            override fun fromToken(context: SerializeAsTokenContext) = FetchedAttachment(context.attachmentDataLoader(id))
-        }
-
-        override fun toToken(context: SerializeAsTokenContext) = Token(id)
-    }
-}
-
-/**
- * Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.
- *
- * A malicious response in which the data provided by the remote peer does not hash to the requested hash results in
- * [FetchDataFlow.DownloadedVsRequestedDataMismatch] being thrown. If the remote peer doesn't have an entry, it
- * results in a [FetchDataFlow.HashNotFound] exception. Note that returned transactions are not inserted into
- * the database, because it's up to the caller to actually verify the transactions are valid.
- */
-class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: Party) :
-        FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, DataType.TRANSACTION) {
-
-    override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
 }

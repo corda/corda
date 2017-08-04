@@ -7,7 +7,6 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction

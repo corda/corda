@@ -47,6 +47,7 @@ object TwoPartyTradeFlow {
     // This object is serialised to the network and is the first flow message the seller sends to the buyer.
     @CordaSerializable
     data class SellerTradeInfo(
+            val assetForSale: StateAndRef<OwnableState>,
             val price: Amount<Currency>,
             val sellerOwner: AbstractParty
     )
@@ -74,12 +75,11 @@ object TwoPartyTradeFlow {
         override fun call(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
-            val hello = SellerTradeInfo(price, me)
+            val hello = SellerTradeInfo(assetToSell, price, me)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
-            // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
-            subFlow(SendStateAndRefFlow(otherParty, listOf(assetToSell)))
             send(otherParty, hello)
+
             // Verify and sign the transaction.
             progressTracker.currentStep = VERIFYING_AND_SIGNING
             // DOCSTART 5
@@ -113,13 +113,11 @@ object TwoPartyTradeFlow {
                      val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
-
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
         object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties") {
             override fun childProgressTracker() = CollectSignaturesFlow.tracker()
         }
-
         object RECORDING : ProgressTracker.Step("Recording completed transaction") {
             // TODO: Currently triggers a race condition on Team City. See https://github.com/corda/corda/issues/733.
             // override fun childProgressTracker() = FinalityFlow.tracker()
@@ -133,34 +131,43 @@ object TwoPartyTradeFlow {
         override fun call(): SignedTransaction {
             // Wait for a trade request to come in from the other party.
             progressTracker.currentStep = RECEIVING
-            val (assetForSale, tradeRequest) = receiveAndValidateTradeRequest()
+            val tradeRequest = receiveAndValidateTradeRequest()
 
             // Put together a proposed transaction that performs the trade, and sign it.
             progressTracker.currentStep = SIGNING
-            val (ptx, cashSigningPubKeys) = assembleSharedTX(assetForSale, tradeRequest)
+            val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
             val partSignedTx = signWithOurKeys(cashSigningPubKeys, ptx)
 
             // Send the signed transaction to the seller, who must then sign it themselves and commit
             // it to the ledger by sending it to the notary.
             progressTracker.currentStep = COLLECTING_SIGNATURES
             val twiceSignedTx = subFlow(CollectSignaturesFlow(partSignedTx, COLLECTING_SIGNATURES.childProgressTracker()))
+
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
             return subFlow(FinalityFlow(twiceSignedTx)).single()
         }
 
         @Suspendable
-        private fun receiveAndValidateTradeRequest(): Pair<StateAndRef<OwnableState>, SellerTradeInfo> {
-            val assetForSale = subFlow(ReceiveStateAndRefFlow<OwnableState>(otherParty)).single()
-            return assetForSale to receive<SellerTradeInfo>(otherParty).unwrap {
-                progressTracker.currentStep = VERIFYING
-                val asset = assetForSale.state.data
+        private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
+            val maybeTradeRequest = receive<SellerTradeInfo>(otherParty)
+
+            progressTracker.currentStep = VERIFYING
+            maybeTradeRequest.unwrap {
+                // What is the seller trying to sell us?
+                val asset = it.assetForSale.state.data
                 val assetTypeName = asset.javaClass.name
+
                 if (it.price > acceptablePrice)
                     throw UnacceptablePriceException(it.price)
                 if (!typeToBuy.isInstance(asset))
                     throw AssetMismatchException(typeToBuy.name, assetTypeName)
-                it
+
+                // Check that the state being sold to us is in a valid chain of transactions, i.e. that the
+                // seller has a valid chain of custody proving that they own the thing they're selling.
+                subFlow(ResolveTransactionsFlow(setOf(it.assetForSale.ref.txhash), otherParty))
+
+                return it
             }
         }
 
@@ -170,23 +177,23 @@ object TwoPartyTradeFlow {
         }
 
         @Suspendable
-        private fun assembleSharedTX(assetForSale: StateAndRef<OwnableState>, tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
+        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionBuilder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
             val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwner)
 
             // Add inputs/outputs/a command for the movement of the asset.
-            tx.addInputState(assetForSale)
+            tx.addInputState(tradeRequest.assetForSale)
 
             // Just pick some new public key for now. This won't be linked with our identity in any way, which is what
             // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
             // reveal who the owner actually is. The key management service is expected to derive a unique key from some
             // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
-            val (command, state) = assetForSale.state.data.withNewOwner(AnonymousParty(freshKey))
-            tx.addOutputState(state, assetForSale.state.notary)
-            tx.addCommand(command, assetForSale.state.data.owner.owningKey)
+            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(AnonymousParty(freshKey))
+            tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
+            tx.addCommand(command, tradeRequest.assetForSale.state.data.owner.owningKey)
 
             // We set the transaction's time-window: it may be that none of the contracts need this!
             // But it can't hurt to have one.

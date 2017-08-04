@@ -6,6 +6,8 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.unwrap
 import java.security.SignatureException
 
 /**
@@ -22,18 +24,11 @@ class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryServ
      */
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
-        try {
-            val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false))
-            checkSignatures(stx)
-            val wtx = stx.tx
-            return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow)
-        } catch (e: Exception) {
-            throw when (e) {
-                is TransactionVerificationException,
-                is SignatureException -> NotaryException(NotaryError.TransactionInvalid(e))
-                else -> e
-            }
-        }
+        val stx = receive<SignedTransaction>(otherSide).unwrap { it }
+        checkSignatures(stx)
+        validateTransaction(stx)
+        val wtx = stx.tx
+        return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow)
     }
 
     private fun checkSignatures(stx: SignedTransaction) {
@@ -43,4 +38,21 @@ class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryServ
             throw NotaryException(NotaryError.TransactionInvalid(e))
         }
     }
+
+    @Suspendable
+    fun validateTransaction(stx: SignedTransaction) {
+        try {
+            resolveTransaction(stx)
+            stx.verify(serviceHub, false)
+        } catch (e: Exception) {
+            throw when (e) {
+                is TransactionVerificationException,
+                is SignatureException -> NotaryException(NotaryError.TransactionInvalid(e))
+                else -> e
+            }
+        }
+    }
+
+    @Suspendable
+    private fun resolveTransaction(stx: SignedTransaction) = subFlow(ResolveTransactionsFlow(stx, otherSide))
 }

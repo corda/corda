@@ -302,8 +302,8 @@ object SimmFlow {
             logger.info("Handshake finished, awaiting Simm update")
             send(replyToParty, Ack) // Hack to state that this party is ready.
             subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {
-                override fun verifyProposal(stx:SignedTransaction, proposal: Proposal<PortfolioState.Update>) {
-                    super.verifyProposal(stx, proposal)
+                override fun verifyProposal(proposal: Proposal<PortfolioState.Update>) {
+                    super.verifyProposal(proposal)
                     if (proposal.modification.portfolio != portfolio.refs) throw StateReplacementException()
                 }
             })
@@ -315,8 +315,8 @@ object SimmFlow {
             val valuer = serviceHub.identityService.partyFromAnonymous(stateRef.state.data.valuer) ?: throw IllegalStateException("Unknown valuer party ${stateRef.state.data.valuer}")
             val valuation = agreeValuation(portfolio, offer.valuationDate, valuer)
             subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {
-                override fun verifyProposal(stx: SignedTransaction, proposal: Proposal<PortfolioState.Update>) {
-                    super.verifyProposal(stx, proposal)
+                override fun verifyProposal(proposal: Proposal<PortfolioState.Update>) {
+                    super.verifyProposal(proposal)
                     if (proposal.modification.valuation != valuation) throw StateReplacementException()
                 }
             })

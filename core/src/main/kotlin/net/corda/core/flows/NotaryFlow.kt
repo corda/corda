@@ -8,7 +8,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchDataFlow
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.UniquenessProvider
@@ -64,18 +63,18 @@ object NotaryFlow {
                 throw NotaryException(NotaryError.TransactionInvalid(ex))
             }
 
-            val response = try {
-                if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
-                    subFlow(SendTransactionWithRetry(notaryParty, stx))
-                    receive<List<DigitalSignature.WithKey>>(notaryParty)
+            val payload: Any = if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
+                stx
+            } else {
+                if (stx.isNotaryChangeTransaction()) {
+                    stx.notaryChangeTx
                 } else {
-                    val tx: Any = if (stx.isNotaryChangeTransaction()) {
-                        stx.notaryChangeTx
-                    } else {
-                        stx.tx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
-                    }
-                    sendAndReceiveWithRetry(notaryParty, tx)
+                    stx.tx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
                 }
+            }
+
+            val response = try {
+                sendAndReceiveWithRetry<List<DigitalSignature.WithKey>>(notaryParty, payload)
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
                     e.error.conflict.verified()
@@ -150,13 +149,4 @@ sealed class NotaryError {
     data class TransactionInvalid(val cause: Throwable) : NotaryError() {
         override fun toString() = cause.toString()
     }
-}
-
-/**
- * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [sendAndReceiveWithRetry]
- * instead of [sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
- */
-private class SendTransactionWithRetry(otherSide: Party, stx: SignedTransaction) : SendTransactionFlow(otherSide, stx) {
-    @Suspendable
-    override fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any) = sendAndReceiveWithRetry<FetchDataFlow.Request>(otherSide, payload)
 }

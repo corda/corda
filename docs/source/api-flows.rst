@@ -396,8 +396,7 @@ Corda provides a number of built-in flows that should be used for handling commo
 
 * ``CollectSignaturesFlow``, which should be used to collect a transaction's required signatures
 * ``FinalityFlow``, which should be used to notarise and record a transaction
-* ``SendTransactionFlow``, which should be used to send a signed transaction if it needed to be resolved on the other side.
-* ``ReceiveTransactionFlow``, which should be used receive a signed transaction
+* ``ResolveTransactionsFlow``, which should be used to verify the chain of inputs to a transaction
 * ``ContractUpgradeFlow``, which should be used to change a state's contract
 * ``NotaryChangeFlow``, which should be used to change a state's notary
 
@@ -479,29 +478,11 @@ transaction and provide their signature if they are satisfied:
         :end-before: DOCEND 16
         :dedent: 12
 
-SendTransactionFlow/ReceiveTransactionFlow
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Verifying a transaction received from a counterparty also requires verification of every transaction in its
-dependency chain. This means the receiving party needs to be able to ask the sender all the details of the chain.
-The sender will use ``SendTransactionFlow`` for sending the transaction and then for processing all subsequent
-transaction data vending requests as the receiver walks the dependency chain using ``ReceiveTransactionFlow``:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-        :language: kotlin
-        :start-after: DOCSTART 12
-        :end-before: DOCEND 12
-        :dedent: 12
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-        :language: java
-        :start-after: DOCSTART 12
-        :end-before: DOCEND 12
-        :dedent: 12
-
-We can receive the transaction using ``ReceiveTransactionFlow``, which will automatically download all the
-dependencies and verify the transaction:
+ResolveTransactionsFlow
+^^^^^^^^^^^^^^^^^^^^^^^
+Verifying a transaction will also verify every transaction in the transaction's dependency chain. So if we receive a
+transaction from a counterparty and it has any dependencies, we'd need to download all of these dependencies
+using``ResolveTransactionsFlow`` before verifying it:
 
 .. container:: codeset
 
@@ -517,7 +498,7 @@ dependencies and verify the transaction:
         :end-before: DOCEND 13
         :dedent: 12
 
-We can also send and receive a ``StateAndRef`` dependency chain and automatically resolve its dependencies:
+We can also resolve a `StateRef` dependency chain:
 
 .. container:: codeset
 

@@ -1,12 +1,11 @@
-package net.corda.core.internal
+package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.utilities.exactAdd
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.exactAdd
 import java.util.*
 
 // TODO: This code is currently unit tested by TwoPartyTradeFlowTests, it should have its own tests.
@@ -71,37 +70,36 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a very bad guess.
     /** The maximum number of transactions this flow will try to download before bailing out. */
     var transactionCountLimit = 5000
-        set(value) {
-            require(value > 0) { "$value is not a valid count limit" }
-            field = value
-        }
 
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class)
     override fun call(): List<SignedTransaction> {
-        // Start fetching data.
-        val newTxns = downloadDependencies(txHashes)
-        fetchMissingAttachments(signedTransaction?.let { newTxns + it } ?: newTxns)
-        send(otherSide, FetchDataFlow.Request.End)
-        // Finish fetching data.
+        val newTxns: Iterable<SignedTransaction> = topologicalSort(downloadDependencies(txHashes))
 
-        val result = topologicalSort(newTxns)
-        result.forEach {
-            // For each transaction, verify it and insert it into the database. As we are iterating over them in a
-            // depth-first order, we should not encounter any verification failures due to missing data. If we fail
-            // half way through, it's no big deal, although it might result in us attempting to re-download data
-            // redundantly next time we attempt verification.
-            it.verify(serviceHub)
-            serviceHub.recordTransactions(it)
+        // For each transaction, verify it and insert it into the database. As we are iterating over them in a
+        // depth-first order, we should not encounter any verification failures due to missing data. If we fail
+        // half way through, it's no big deal, although it might result in us attempting to re-download data
+        // redundantly next time we attempt verification.
+        val result = ArrayList<SignedTransaction>()
+
+        for (stx in newTxns) {
+            // TODO: We could recover some parallelism from the dependency graph.
+            stx.verify(serviceHub)
+            serviceHub.recordTransactions(stx)
+            result += stx
         }
 
-        return signedTransaction?.let {
-            result + it
-        } ?: result
+        // If this flow is resolving a specific transaction, make sure we have its attachments as well
+        signedTransaction?.let {
+            fetchMissingAttachments(listOf(it))
+            result += it
+        }
+
+        return result
     }
 
     @Suspendable
-    private fun downloadDependencies(depsToCheck: Set<SecureHash>): List<SignedTransaction> {
+    private fun downloadDependencies(depsToCheck: Set<SecureHash>): Collection<SignedTransaction> {
         // Maintain a work queue of all hashes to load/download, initialised with our starting set. Then do a breadth
         // first traversal across the dependency graph.
         //
@@ -123,6 +121,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
         val resultQ = LinkedHashMap<SecureHash, SignedTransaction>()
 
         val limit = transactionCountLimit
+        check(limit > 0) { "$limit is not a valid count limit" }
         var limitCounter = 0
         while (nextRequests.isNotEmpty()) {
             // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
@@ -136,6 +135,8 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             // Request the standalone transaction data (which may refer to things we don't yet have).
             val downloads: List<SignedTransaction> = subFlow(FetchTransactionsFlow(notAlreadyFetched, otherSide)).downloaded
 
+            fetchMissingAttachments(downloads)
+
             for (stx in downloads)
                 check(resultQ.putIfAbsent(stx.id, stx) == null)   // Assert checks the filter at the start.
 
@@ -147,7 +148,8 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             if (limitCounter > limit)
                 throw ExcessivelyLargeTransactionGraph()
         }
-        return resultQ.values.toList()
+
+        return resultQ.values
     }
 
     /**

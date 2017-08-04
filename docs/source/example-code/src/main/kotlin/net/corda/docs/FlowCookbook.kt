@@ -9,7 +9,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchDataFlow
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
@@ -379,34 +378,18 @@ object FlowCookbook {
             ---------------------------**/
             progressTracker.currentStep = TX_VERIFICATION
 
-            // Verifying a transaction will also verify every transaction in the transaction's dependency chain, which will require
-            // transaction data access on counterparty's node. The ``SendTransactionFlow`` can be used to automate the sending
-            // and data vending process. The ``SendTransactionFlow`` will listen for data request until the transaction
-            // is resolved and verified on the other side:
-            // DOCSTART 12
-            subFlow(SendTransactionFlow(counterparty, twiceSignedTx))
-
-            // Optional request verification to further restrict data access.
-            subFlow(object :SendTransactionFlow(counterparty, twiceSignedTx){
-                override fun verifyDataRequest(dataRequest: FetchDataFlow.Request.Data) {
-                    // Extra request verification.
-                }
-            })
-            // DOCEND 12
-
-            // We can receive the transaction using ``ReceiveTransactionFlow``,
-            // which will automatically download all the dependencies and verify
-            // the transaction
+            // Verifying a transaction will also verify every transaction in
+            // the transaction's dependency chain. So if this was a
+            // transaction we'd received from a counterparty and it had any
+            // dependencies, we'd need to download all of these dependencies
+            // using``ResolveTransactionsFlow`` before verifying it.
             // DOCSTART 13
-            val verifiedTransaction = subFlow(ReceiveTransactionFlow(counterparty))
+            subFlow(ResolveTransactionsFlow(twiceSignedTx, counterparty))
             // DOCEND 13
 
-            // We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies.
+            // We can also resolve a `StateRef` dependency chain.
             // DOCSTART 14
-            subFlow(SendStateAndRefFlow(counterparty, dummyStates))
-
-            // On the receive side ...
-            val resolvedStateAndRef = subFlow(ReceiveStateAndRefFlow<DummyState>(counterparty))
+            subFlow(ResolveTransactionsFlow(setOf(ourStateRef.txhash), counterparty))
             // DOCEND 14
 
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``

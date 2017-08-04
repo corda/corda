@@ -9,7 +9,6 @@ import net.corda.core.crypto.DigitalSignature;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
-import net.corda.core.internal.FetchDataFlow;
 import net.corda.core.node.services.ServiceType;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.Vault.Page;
@@ -24,13 +23,11 @@ import net.corda.core.utilities.UntrustworthyData;
 import net.corda.testing.contracts.DummyContract;
 import net.corda.testing.contracts.DummyState;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.jetbrains.annotations.NotNull;
 
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -78,15 +75,13 @@ public class FlowCookbookJava {
         private static final Step SIGS_GATHERING = new Step("Gathering a transaction's signatures.") {
             // Wiring up a child progress tracker allows us to see the
             // subflow's progress steps in our flow's progress tracker.
-            @Override
-            public ProgressTracker childProgressTracker() {
+            @Override public ProgressTracker childProgressTracker() {
                 return CollectSignaturesFlow.Companion.tracker();
             }
         };
         private static final Step VERIFYING_SIGS = new Step("Verifying a transaction's signatures.");
         private static final Step FINALISATION = new Step("Finalising a transaction.") {
-            @Override
-            public ProgressTracker childProgressTracker() {
+            @Override public ProgressTracker childProgressTracker() {
                 return FinalityFlow.Companion.tracker();
             }
         };
@@ -395,35 +390,18 @@ public class FlowCookbookJava {
             ----------------------------*/
             progressTracker.setCurrentStep(TX_VERIFICATION);
 
-            // Verifying a transaction will also verify every transaction in the transaction's dependency chain, which will require
-            // transaction data access on counterparty's node. The ``SendTransactionFlow`` can be used to automate the sending
-            // and data vending process. The ``SendTransactionFlow`` will listen for data request until the transaction
-            // is resolved and verified on the other side:
-            // DOCSTART 12
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx));
-
-            // Optional request verification to further restrict data access.
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx){
-                @Override
-                protected void verifyDataRequest(@NotNull FetchDataFlow.Request.Data dataRequest) {
-                    // Extra request verification.
-                }
-            });
-            // DOCEND 12
-
-            // We can receive the transaction using ``ReceiveTransactionFlow``,
-            // which will automatically download all the dependencies and verify
-            // the transaction
+            // Verifying a transaction will also verify every transaction in
+            // the transaction's dependency chain. So if this was a
+            // transaction we'd received from a counterparty and it had any
+            // dependencies, we'd need to download all of these dependencies
+            // using``ResolveTransactionsFlow`` before verifying it.
             // DOCSTART 13
-            SignedTransaction verifiedTransaction = subFlow(new ReceiveTransactionFlow(counterparty));
+            subFlow(new ResolveTransactionsFlow(twiceSignedTx, counterparty));
             // DOCEND 13
 
-            // We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies.
+            // We can also resolve a `StateRef` dependency chain.
             // DOCSTART 14
-            subFlow(new SendStateAndRefFlow(counterparty, dummyStates));
-
-            // On the receive side ...
-            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterparty));
+            subFlow(new ResolveTransactionsFlow(ImmutableSet.of(ourStateRef.getTxhash()), counterparty));
             // DOCEND 14
 
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``
