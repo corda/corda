@@ -243,8 +243,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             stateRefs.addAll(issuedStateRefs)
 
             val spentStates = services.consumeCash(25.DOLLARS)
-            var spentStateRefs = spentStates.states.map { it.ref }.toList()
-            stateRefs.addAll(spentStateRefs)
+            var consumedStateRefs = spentStates.consumed.map { it.ref }.toList()
+            var producedStateRefs = spentStates.produced.map { it.ref }.toList()
+            stateRefs.addAll(consumedStateRefs.plus(producedStateRefs))
 
             val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
             val criteria = VaultQueryCriteria()
@@ -1304,104 +1305,6 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC)))
             val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria), sorting = sorting)
             assertThat(results.states).hasSize(3)
-        }
-    }
-
-    @Test
-    fun `DEPRECATED unconsumed linear states for a given id`() {
-        database.transaction {
-
-            val txns = services.fillWithSomeTestLinearStates(1, "TEST")
-            val linearState = txns.states.first()
-            val linearId = linearState.state.data.linearId
-            val linearState2 = services.evolveLinearState(linearState)  // consume current and produce new state reference
-            val linearState3 = services.evolveLinearState(linearState2)  // consume current and produce new state reference
-            services.evolveLinearState(linearState3)  // consume current and produce new state reference
-
-            // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
-
-            // DOCSTART VaultDeprecatedQueryExample1
-            val states = vaultSvc.linearHeadsOfType<DummyLinearContract.State>().filter { it.key == linearId }
-            // DOCEND VaultDeprecatedQueryExample1
-            assertThat(states).hasSize(1)
-
-            // validate against new query api
-            val results = vaultQuerySvc.queryBy<LinearState>(LinearStateQueryCriteria(linearId = listOf(linearId)))
-            assertThat(results.statesMetadata).hasSize(1)
-            assertThat(results.states).hasSize(1)
-        }
-    }
-
-    @Test
-    fun `DEPRECATED consumed linear states for a given id`() {
-        database.transaction {
-
-            val txns = services.fillWithSomeTestLinearStates(1, "TEST")
-            val linearState = txns.states.first()
-            val linearId = linearState.state.data.linearId
-            val linearState2 = services.evolveLinearState(linearState)  // consume current and produce new state reference
-            val linearState3 = services.evolveLinearState(linearState2)  // consume current and produce new state reference
-            services.evolveLinearState(linearState3)  // consume current and produce new state reference
-
-            // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
-
-            // DOCSTART VaultDeprecatedQueryExample2
-            val states = vaultSvc.consumedStates<DummyLinearContract.State>().filter { it.state.data.linearId == linearId }
-            // DOCEND VaultDeprecatedQueryExample2
-            assertThat(states).hasSize(3)
-
-            // validate against new query api
-            val results = vaultQuerySvc.queryBy<LinearState>(LinearStateQueryCriteria(linearId = listOf(linearId), status = Vault.StateStatus.CONSUMED))
-            assertThat(results.statesMetadata).hasSize(3)
-            assertThat(results.states).hasSize(3)
-        }
-    }
-
-    @Test
-    fun `DEPRECATED all linear states for a given id`() {
-        database.transaction {
-
-            val txns = services.fillWithSomeTestLinearStates(1, "TEST")
-            val linearState = txns.states.first()
-            val linearId = linearState.state.data.linearId
-            services.evolveLinearState(linearState)  // consume current and produce new state reference
-            services.evolveLinearState(linearState)  // consume current and produce new state reference
-            services.evolveLinearState(linearState)  // consume current and produce new state reference
-
-            // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
-
-            // DOCSTART VaultDeprecatedQueryExample3
-            val states = vaultSvc.states(setOf(DummyLinearContract.State::class.java),
-                            EnumSet.of(Vault.StateStatus.CONSUMED, Vault.StateStatus.UNCONSUMED)).filter { it.state.data.linearId == linearId }
-            // DOCEND VaultDeprecatedQueryExample3
-            assertThat(states).hasSize(4)
-
-            // validate against new query api
-            val results = vaultQuerySvc.queryBy<LinearState>(LinearStateQueryCriteria(linearId = listOf(linearId), status = Vault.StateStatus.ALL))
-            assertThat(results.statesMetadata).hasSize(4)
-            assertThat(results.states).hasSize(4)
-        }
-    }
-
-    @Test
-    fun `DEPRECATED DealState dealsWith helper method`() {
-        database.transaction {
-
-            // specify a different participant to the node owner (MEGA_CORP)
-            val parties = listOf(MINI_CORP)
-
-            services.fillWithSomeTestLinearStates(2, "TEST")
-            services.fillWithSomeTestDeals(listOf("456"), parties)
-            services.fillWithSomeTestDeals(listOf("123", "789"))
-
-            // DOCSTART VaultQueryExample11
-            val criteria = LinearStateQueryCriteria(participants = parties)
-            val results = vaultQuerySvc.queryBy<DealState>(criteria)
-            // DOCEND
-            assertThat(results.states).hasSize(1)
-
-            val states = vaultSvc.dealsWith<DummyDealContract.State>(MINI_CORP)
-            assertThat(states).hasSize(1)
         }
     }
 
