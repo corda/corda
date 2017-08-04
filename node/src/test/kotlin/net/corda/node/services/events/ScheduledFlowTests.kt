@@ -139,15 +139,26 @@ class ScheduledFlowTests {
         }
         mockNet.waitQuiescent()
 
-        val statesFromA = nodeA.database.transaction {
+        // Convert the states into maps as order is not important
+        val statesFromA: Map<StateRef, TransactionState<ScheduledState>> = nodeA.database.transaction {
             queryStatesWithPaging(nodeA.services.vaultQueryService)
-        }
-        val statesFromB = nodeB.database.transaction {
+        }.map { it -> Pair(it.ref, it.state) }.toMap()
+        val statesFromB: Map<StateRef, TransactionState<ScheduledState>> = nodeB.database.transaction {
             queryStatesWithPaging(nodeB.services.vaultQueryService)
-        }
+        }.map { it -> Pair(it.ref, it.state) }.toMap()
         assertEquals(2 * N, statesFromA.count(), "Expect all states to be present")
+        statesFromA.keys.forEach { ref ->
+            if (ref !in statesFromB.keys) {
+                throw IllegalStateException("State $ref is only present on node A.")
+            }
+        }
+        statesFromB.keys.forEach { ref ->
+            if (ref !in statesFromA.keys) {
+                throw IllegalStateException("State $ref is only present on node B.")
+            }
+        }
         assertEquals(statesFromA, statesFromB, "Expect identical data on both nodes")
-        assertTrue("Expect all states have run the scheduled task", statesFromB.all { it.state.data.processed })
+        assertTrue("Expect all states have run the scheduled task", statesFromB.values.all { it.data.processed })
     }
 
     // Demonstrate Vault Query paging and sorting
