@@ -707,7 +707,7 @@ from the ledger). Finally, we add a Redeem command that should be signed by the 
 
 A ``TransactionBuilder`` is not by itself ready to be used anywhere, so first, we must convert it to something that
 is recognised by the network. The most important next step is for the participating entities to sign it. Typically,
-an initiating flow will create an initial partially signed ``SignedTransaction`` by calling the ``serviceHub.signInitialTransaction`` method.
+an initiating flow will create an initial partially signed ``SignedTransaction`` by calling the ``serviceHub.toSignedTransaction`` method.
 Then the frozen ``SignedTransaction`` can be passed to other nodes by the flow, these can sign using ``serviceHub.createSignature`` and distribute.
 The ``CollectSignaturesFlow`` provides a generic implementation of this process that can be used as a ``subFlow`` .
 
