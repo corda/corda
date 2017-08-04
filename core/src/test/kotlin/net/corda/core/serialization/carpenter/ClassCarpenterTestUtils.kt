@@ -2,6 +2,7 @@ package net.corda.core.serialization.carpenter
 
 import net.corda.core.serialization.amqp.Field
 import net.corda.core.serialization.amqp.Schema
+import net.corda.core.serialization.amqp.TypeNotation
 import net.corda.core.serialization.amqp.CompositeType
 import net.corda.core.serialization.amqp.SerializerFactory
 import net.corda.core.serialization.amqp.SerializationOutput
