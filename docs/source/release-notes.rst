@@ -9,6 +9,10 @@ Milestone 14
 This release continues with the goal to improve API stability and developer friendliness. There have also been more
 bug fixes and other improvements across the board.
 
+The CorDapp template repository has been replaced with a specific repository for
+`Java <https://github.com/corda/cordapp-template-java>`_ and `Kotlin <https://github.com/corda/cordapp-template-kotlin>`_
+to improve the experience of starting a new project and to simplify the build system.
+
 It is now possible to specify multiple IP addresses and legal identities for a single node, allowing node operators
 more flexibility in setting up nodes.
 
@@ -28,6 +32,8 @@ scenarios where no single participant in a transaction is aware of the well know
 
 DemoBench has a fix for a rare but inconvenient crash that can occur when sharing your display across multiple devices,
 e.g. a projector while performing demonstrations in front of an audience.
+
+Upgrading to this release is strongly recommended in order to keep up with the API changes, removal and additions. 
 
 Milestone 13
 ------------
