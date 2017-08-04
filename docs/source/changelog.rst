@@ -81,6 +81,12 @@ UNRELEASED
   dealing with ``StateAndRef``s.
 
 
+* Vault query soft locking enhancements and deprecations
+  * removed original ``VaultService`` ``softLockedStates` query mechanism.
+  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification
+    of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified
+    by set of lock ids)
+
 Milestone 13
 ------------
 
