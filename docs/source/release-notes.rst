@@ -36,6 +36,10 @@ e.g. a projector while performing demonstrations in front of an audience.
 Guava types are being removed because Guava does not have backwards compatibility across versions, which has serious
 issues when multiple libraries depend on different versions of the library.
 
+The identity service API has been tweaked, primarily so anonymous identity registration now takes in
+AnonymousPartyAndPath rather than the individual components of the identity, as typically the caller will have
+an AnonymousPartyAndPath instance. See change log for further detail.
+
 Upgrading to this release is strongly recommended in order to keep up with the API changes, removal and additions.
 
 Milestone 13

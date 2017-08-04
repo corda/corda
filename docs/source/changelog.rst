@@ -82,6 +82,18 @@ Milestone 14
 
     * Additional Sort criteria: by StateRef (or constituents: txId, index)
 
+* Confidential identities API improvements
+
+    * Registering anonymous identities now takes in AnonymousPartyAndPath
+    * AnonymousParty.toString() now uses toStringShort() to match other toString() functions
+    * Add verifyAnonymousIdentity() function to verify without storing an identity
+    * Replace pathForAnonymous() with anonymousFromKey() which matches actual use-cases better
+    * Add unit test for fetching the anonymous identity from a key
+    * Update verifyAnonymousIdentity() function signature to match registerAnonymousIdentity()
+    * Rename AnonymisedIdentity to AnonymousPartyAndPath
+    * Remove certificate from AnonymousPartyAndPath as it's not actually used.
+    * Rename registerAnonymousIdentity() to verifyAndRegisterAnonymousIdentity()
+
 Milestone 13
 ------------
 
