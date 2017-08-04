@@ -6,6 +6,7 @@ import net.corda.core.serialization.AllWhitelist
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.carpenter.CarpenterSchemas
+import net.corda.core.serialization.carpenter.ClassCarpenter
 import net.corda.core.serialization.carpenter.MetaCarpenter
 import net.corda.core.serialization.carpenter.carpenterSchema
 import org.apache.qpid.proton.amqp.*
@@ -47,6 +48,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
+    private val classCarpenter = ClassCarpenter()
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -170,24 +172,23 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun processSchema(schema: Schema, cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
+    private fun processSchema(schema: Schema, sentinal: Boolean = false) {
         val carpenterSchemas = CarpenterSchemas.newInstance()
         for (typeNotation in schema.types) {
             try {
-                processSchemaEntry(typeNotation, cl)
+                processSchemaEntry(typeNotation, classCarpenter.classloader)
             }
             catch (e: ClassNotFoundException) {
-                if ((cl != DeserializedParameterizedType::class.java.classLoader)
-                        || (typeNotation !is CompositeType)) throw e
-                typeNotation.carpenterSchema(carpenterSchemas = carpenterSchemas)
+                if (sentinal || (typeNotation !is CompositeType)) throw e
+                typeNotation.carpenterSchema(
+                        classLoaders = listOf (classCarpenter.classloader), carpenterSchemas = carpenterSchemas)
             }
         }
 
         if (carpenterSchemas.isNotEmpty()) {
-            val mc = MetaCarpenter(carpenterSchemas)
+            val mc = MetaCarpenter(carpenterSchemas, classCarpenter)
             mc.build()
-
-            processSchema(schema, mc.classloader)
+            processSchema(schema, true)
         }
     }
 
