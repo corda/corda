@@ -1,9 +1,8 @@
-package net.corda.core.serialization.amqp
+package net.corda.nodeapi.internal.serialization.amqp
 
 import org.junit.Test
 import kotlin.test.*
-import net.corda.core.serialization.carpenter.*
-import net.corda.core.serialization.amqp.test.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.carpenter.*
 
 interface I {
     fun getName() : String

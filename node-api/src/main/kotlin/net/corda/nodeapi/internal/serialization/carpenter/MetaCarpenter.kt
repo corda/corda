@@ -97,7 +97,6 @@ class MetaCarpenter(schemas : CarpenterSchemas,
     }
 }
 
-class TestMetaCarpenter(schemas: CarpenterSchemas) : MetaCarpenterBase(schemas) {
 class TestMetaCarpenter(schemas : CarpenterSchemas,
                         cc : ClassCarpenter = ClassCarpenter()) : MetaCarpenterBase(schemas, cc) {
     override fun build() {

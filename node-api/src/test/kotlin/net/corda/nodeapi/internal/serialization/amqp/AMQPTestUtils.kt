@@ -1,9 +1,6 @@
-package net.corda.core.serialization.amqp.test
+package net.corda.nodeapi.internal.serialization.amqp
 
 import org.apache.qpid.proton.codec.Data
-import net.corda.core.serialization.amqp.Schema
-import net.corda.core.serialization.amqp.SerializerFactory
-import net.corda.core.serialization.amqp.SerializationOutput
 
 class TestSerializationOutput(
         private val verbose: Boolean,

@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import org.apache.qpid.proton.codec.Data
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -9,15 +8,6 @@ import kotlin.test.assertEquals
 // char property of the class would've been treated as an Integer and given to the constructor
 // as such
 class DeserializeSimpleTypesTests {
-    class TestSerializationOutput(
-            private val verbose: Boolean,
-            serializerFactory: SerializerFactory = SerializerFactory()) : SerializationOutput(serializerFactory) {
-
-        override fun writeSchema(schema: Schema, data: Data) {
-            if (verbose) println(schema)
-            super.writeSchema(schema, data)
-        }
-    }
 
     companion object {
         /**

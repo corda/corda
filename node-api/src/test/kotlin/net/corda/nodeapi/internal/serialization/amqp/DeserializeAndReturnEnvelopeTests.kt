@@ -8,6 +8,7 @@ import kotlin.test.assertTrue
 class DeserializeAndReturnEnvelopeTests {
 
     fun testName(): String = Thread.currentThread().stackTrace[2].methodName
+
     @Suppress("NOTHING_TO_INLINE")
     inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 
