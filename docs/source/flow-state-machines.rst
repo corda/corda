@@ -388,7 +388,7 @@ returns the result of the flow's execution directly. Behind the scenes all this 
 tracking (discussed more below) and then running the object's ``call`` method. Because the sub-flow might suspend,
 we must mark the method that invokes it as suspendable.
 
-Within FinalityFlow, we use a further sub-flow called ``ResolveTransactionsFlow``. This is responsible for downloading
+Within FinalityFlow, we use a further sub-flow called ``ReceiveTransactionFlow``. This is responsible for downloading
 and checking all the dependencies of a transaction, which in Corda are always retrievable from the party that sent you a
 transaction that uses them. This flow returns a list of ``LedgerTransaction`` objects.
 

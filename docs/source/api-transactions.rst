@@ -359,7 +359,7 @@ Verifying the transaction's contents
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To verify a transaction, we need to retrieve any states in the transaction chain that our node doesn't
 currently have in its local storage from the proposer(s) of the transaction. This process is handled by a built-in flow
-called ``ResolveTransactionsFlow``. See :doc:`api-flows` for more details.
+called ``ReceiveTransactionFlow``. See :doc:`api-flows` for more details.
 
 When verifying a ``SignedTransaction``, we don't verify the ``SignedTransaction`` *per se*, but rather the
 ``WireTransaction`` it contains. We extract this ``WireTransaction`` as follows:
