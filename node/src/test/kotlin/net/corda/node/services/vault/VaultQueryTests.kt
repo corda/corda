@@ -1393,6 +1393,29 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     }
 
     @Test
+    fun `unconsumed fungible assets for selected issuer parties`() {
+        // GBP issuer
+        val GBP_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(15)) }
+        val GBP_CASH_ISSUER by lazy { Party(X500Name("CN=British Pounds Cash Issuer,O=R3,OU=corda,L=London,C=GB"), GBP_CASH_ISSUER_KEY.public).ref(1) }
+        // USD issuer
+        val USD_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
+        val USD_CASH_ISSUER by lazy { Party(X500Name("CN=US Dollars Cash Issuer,O=R3,OU=corda,L=New York,C=US"), USD_CASH_ISSUER_KEY.public).ref(1) }
+        // CHF issuer
+        val CHF_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(30)) }
+        val CHF_CASH_ISSUER by lazy { Party(X500Name("CN=Swiss Francs Cash Issuer,O=R3,OU=corda,L=Zurich,C=CH"), CHF_CASH_ISSUER_KEY.public).ref(1) }
+
+        database.transaction {
+            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (GBP_CASH_ISSUER), issuerKey = (GBP_CASH_ISSUER_KEY))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (USD_CASH_ISSUER), issuerKey = (USD_CASH_ISSUER_KEY))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (CHF_CASH_ISSUER), issuerKey = (CHF_CASH_ISSUER_KEY))
+
+            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(GBP_CASH_ISSUER.party, USD_CASH_ISSUER.party))
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+    @Test
     fun `unconsumed fungible assets by owner`() {
         database.transaction {
 

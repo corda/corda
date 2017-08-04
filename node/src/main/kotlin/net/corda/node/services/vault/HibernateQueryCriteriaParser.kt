@@ -242,8 +242,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         criteria.issuerPartyName?.let {
             val issuerParties = criteria.issuerPartyName as List<AbstractParty>
             val joinFungibleStateToParty = vaultFungibleStates.join<VaultSchemaV1.VaultFungibleStates, CommonSchemaV1.Party>("issuerParty")
-            val dealPartyKeys = issuerParties.map { it.nameOrNull().toString() }
-            predicateSet.add(criteriaBuilder.equal(joinFungibleStateToParty.get<CommonSchemaV1.Party>("name"), dealPartyKeys))
+            val issuerPartyNames = issuerParties.map { it.nameOrNull().toString() }
+            predicateSet.add(criteriaBuilder.and(joinFungibleStateToParty.get<CommonSchemaV1.Party>("name").`in`(issuerPartyNames)))
         }
 
         // issuer reference
