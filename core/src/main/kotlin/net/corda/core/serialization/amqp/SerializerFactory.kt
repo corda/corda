@@ -316,7 +316,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 }
             } else if (name.endsWith("[p]")) {
                 // There is no need to handle the ByteArray case as that type is coercible automatically
-                // to the binary type and is thus handled by the main steriliser and doesn't need a
+                // to the binary type and is thus handled by the main serializer and doesn't need a
                 // special case for a primitive array of bytes
                 when(name) {
                     "int[p]" -> IntArray::class.java
