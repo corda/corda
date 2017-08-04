@@ -62,6 +62,8 @@ UNRELEASED
 
 .. Milestone 15:
 
+* Vault Query fix: filter by multiple issuer names in ``FungibleAssetQueryCriteria``
+
 * Following deprecated methods have been removed:
   * In ``DataFeed``
     * ``first`` and ``current``, replaced by ``snapshot``
