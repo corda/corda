@@ -56,6 +56,10 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                     predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNull))
                 QueryCriteria.SoftLockingType.LOCKED_ONLY ->
                     predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNotNull))
+                QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED -> {
+                    predicateSet.add(criteriaBuilder.or(vaultStates.get<String>("lockId").isNull,
+                                                        vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
+                }
                 QueryCriteria.SoftLockingType.SPECIFIED ->
                     predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
             }

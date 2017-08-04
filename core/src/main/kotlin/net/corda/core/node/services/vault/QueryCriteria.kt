@@ -34,7 +34,8 @@ sealed class QueryCriteria {
     enum class SoftLockingType {
         EXCLUSIVE,      // exclusive of soft locked states
         LOCKED_ONLY,    // only soft locked states
-        SPECIFIED       // only specified soft locked states (specified by lock ids)
+        SPECIFIED,       // only those soft locked states specified by lock id(s)
+        UNLOCKED_AND_SPECIFIED   // all unlocked states plus those soft locked states specified by lock id(s)
     }
     // DOCEND VaultQuerySoftLockingCriteria
 

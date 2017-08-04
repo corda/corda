@@ -463,27 +463,37 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed states with soft locking`() {
         database.transaction {
 
-            val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 6, 6, Random(0L)).states.toList()
+            val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L)).states.toList()
             vaultSvc.softLockReserve(UUID.randomUUID(), NonEmptySet.of(issuedStates[1].ref, issuedStates[2].ref, issuedStates[3].ref))
             val lockId1 = UUID.randomUUID()
-            vaultSvc.softLockReserve(lockId1, NonEmptySet.of(issuedStates[4].ref))
+            vaultSvc.softLockReserve(lockId1, NonEmptySet.of(issuedStates[4].ref, issuedStates[5].ref))
             val lockId2 = UUID.randomUUID()
-            vaultSvc.softLockReserve(lockId2, NonEmptySet.of(issuedStates[5].ref))
+            vaultSvc.softLockReserve(lockId2, NonEmptySet.of(issuedStates[6].ref))
 
             // excluding soft locked states
             val criteriaExclusive = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.EXCLUSIVE))
             val resultsExclusive = vaultQuerySvc.queryBy<ContractState>(criteriaExclusive)
-            assertThat(resultsExclusive.states).hasSize(1)
+            assertThat(resultsExclusive.states).hasSize(4)
 
             // only soft locked states
             val criteriaLockedOnly = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.LOCKED_ONLY))
             val resultsLockedOnly = vaultQuerySvc.queryBy<ContractState>(criteriaLockedOnly)
-            assertThat(resultsLockedOnly.states).hasSize(5)
+            assertThat(resultsLockedOnly.states).hasSize(6)
 
-            // soft locked states by specific lock id
-            val criteriaByLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(lockId1, lockId2)))
+            // soft locked states by single lock id
+            val criteriaByLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(lockId1)))
             val resultsByLockId = vaultQuerySvc.queryBy<ContractState>(criteriaByLockId)
             assertThat(resultsByLockId.states).hasSize(2)
+
+            // soft locked states by multiple lock ids
+            val criteriaByLockIds = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(lockId1, lockId2)))
+            val resultsByLockIds = vaultQuerySvc.queryBy<ContractState>(criteriaByLockIds)
+            assertThat(resultsByLockIds.states).hasSize(3)
+
+            // unlocked and locked by `lockId2`
+            val criteriaUnlockedAndByLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId2)))
+            val resultsUnlockedAndByLockIds = vaultQuerySvc.queryBy<ContractState>(criteriaUnlockedAndByLockId)
+            assertThat(resultsUnlockedAndByLockIds.states).hasSize(5)
         }
     }
 
