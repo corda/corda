@@ -9,24 +9,6 @@ interface I {
     fun getName() : String
 }
 
-interface II {
-    fun returnName() : String
-}
-
-interface III {
-    fun returnAge() : Int
-    fun returnThingWithName(): II
-}
-
-interface B {
-    fun getName() : String
-}
-
-interface BB {
-    fun getAge() : Int
-    fun getThingWithName(): II
-}
-
 /**
  * These tests work by having the class carpenter build the classes we serialise and then deserialise. Because
  * those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
@@ -56,6 +38,36 @@ class DeserializeNeedingCarpentryTests {
     }
 
     @Test
+    fun repeatedTypesAreRecognised() {
+        val testValA = 10
+        val testValB = 20
+        val testValC = 20
+        val clazz = ClassCarpenter().build(ClassSchema("oneType", mapOf("a" to NonNullableField(Int::class.java))))
+        val concreteA = clazz.constructors[0].newInstance(testValA)
+        val concreteB = clazz.constructors[0].newInstance(testValB)
+        val concreteC = clazz.constructors[0].newInstance(testValC)
+
+        val deserialisedA = DeserializationInput(sf).deserialize(TestSerializationOutput(VERBOSE, sf).serialize(concreteA))
+
+        assertEquals (testValA, deserialisedA::class.java.getMethod("getA").invoke(deserialisedA))
+
+        val deserialisedB = DeserializationInput(sf).deserialize(TestSerializationOutput(VERBOSE, sf).serialize(concreteB))
+
+        assertEquals (testValB, deserialisedA::class.java.getMethod("getA").invoke(deserialisedB))
+        assertEquals (deserialisedA::class.java, deserialisedB::class.java)
+
+        // C is deseriliased with a different factory, meaning a different class carpenter, so the type
+        // won't already exist and it will be carpented a second time showing that when A and B are the
+        // same underlying class that we didn't create a second instance of the class with the
+        // second deserialisation
+        val lsf = SerializerFactory()
+        val deserialisedC = DeserializationInput(lsf).deserialize(TestSerializationOutput(VERBOSE, lsf).serialize(concreteC))
+        assertEquals (testValC, deserialisedC::class.java.getMethod("getA").invoke(deserialisedC))
+        assertNotEquals (deserialisedA::class.java, deserialisedC::class.java)
+        assertNotEquals (deserialisedB::class.java, deserialisedC::class.java)
+    }
+
+    @Test
     fun simpleTypeKnownInterface() {
         val clazz = ClassCarpenter().build (ClassSchema(
                 "oneType", mapOf("name" to NonNullableField(String::class.java)),
@@ -68,6 +80,57 @@ class DeserializeNeedingCarpentryTests {
 
         assertTrue(deserializedObj is I)
         assertEquals(testVal, (deserializedObj as I).getName())
+    }
+
+    @Test
+    fun arrayOfTypes() {
+        val clazz = ClassCarpenter().build(ClassSchema("oneType", mapOf("a" to NonNullableField(Int::class.java))))
+
+        data class Outer (val a : Array<Any>)
+
+        val outer = Outer (arrayOf (
+                clazz.constructors[0].newInstance(1),
+                clazz.constructors[0].newInstance(2),
+                clazz.constructors[0].newInstance(3)))
+
+        val deserializedObj = DeserializationInput(sf).deserialize(TestSerializationOutput(VERBOSE, sf).serialize(outer))
+
+        assertNotEquals((deserializedObj.a[0])::class.java, (outer.a[0])::class.java)
+        assertNotEquals((deserializedObj.a[1])::class.java, (outer.a[1])::class.java)
+        assertNotEquals((deserializedObj.a[2])::class.java, (outer.a[2])::class.java)
+
+        assertEquals((deserializedObj.a[0])::class.java, (deserializedObj.a[1])::class.java)
+        assertEquals((deserializedObj.a[0])::class.java, (deserializedObj.a[2])::class.java)
+        assertEquals((deserializedObj.a[1])::class.java, (deserializedObj.a[2])::class.java)
+
+        assertEquals(
+                outer.a[0]::class.java.getMethod("getA").invoke(outer.a[0]),
+                deserializedObj.a[0]::class.java.getMethod("getA").invoke(deserializedObj.a[0]))
+        assertEquals(
+                outer.a[1]::class.java.getMethod("getA").invoke(outer.a[1]),
+                deserializedObj.a[1]::class.java.getMethod("getA").invoke(deserializedObj.a[1]))
+        assertEquals(
+                outer.a[2]::class.java.getMethod("getA").invoke(outer.a[2]),
+                deserializedObj.a[2]::class.java.getMethod("getA").invoke(deserializedObj.a[2]))
+    }
+
+    @Test
+    fun reusedClasses() {
+        val cc = ClassCarpenter()
+
+        val innerType = cc.build(ClassSchema("inner", mapOf("a" to NonNullableField(Int::class.java))))
+        val outerType = cc.build(ClassSchema("outer", mapOf("a" to NonNullableField(innerType))))
+        val inner = innerType.constructors[0].newInstance(1)
+        val outer = outerType.constructors[0].newInstance(innerType.constructors[0].newInstance(2))
+
+        val serializedI = TestSerializationOutput(VERBOSE, sf).serialize(inner)
+        val deserialisedI = DeserializationInput(sf).deserialize(serializedI)
+        val serialisedO   = TestSerializationOutput(VERBOSE, sf).serialize(outer)
+        val deserialisedO = DeserializationInput(sf).deserialize(serialisedO)
+
+        // ensure out carpented version of inner is reused
+        assertEquals (deserialisedI::class.java,
+                (deserialisedO::class.java.getMethod("getA").invoke(deserialisedO))::class.java)
     }
 
     @Test
@@ -127,86 +190,6 @@ class DeserializeNeedingCarpentryTests {
             assertEquals(sentinel++, it::class.java.getMethod("getV2").invoke(it))
         }
     }
-
-    // technically this test doesn't test anything (relevent to carpanter / serialiser interaction) since
-    // all the classes are knwon, what does do is replicate the test below to demonstrate it should
-    // all work
-    @Test
-    fun mapOfKnown() {
-        class lII (val name: String) : II {
-            override fun returnName() = name
-        }
-
-        class lIII (val age: Int, val thingWithName: II): III {
-            override fun returnAge(): Int = age
-            override fun returnThingWithName() = thingWithName
-        }
-
-        data class Wrapper(val IIIs: MutableMap<String, III>)
-        val wrapper = Wrapper (mutableMapOf())
-        val testData = arrayOf(Pair ("Fred", 12), Pair ("Bob", 50), Pair ("Thirsty", 101))
-
-        testData.forEach {
-            wrapper.IIIs[it.first] = lIII(it.second, lII(it.first))
-        }
-
-        // Now do the actual test by serialising and deserialising [wrapper]
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(wrapper)
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
-    }
-
-    // TODO This class shows that the problem isn't with the carpented class but a general
-    // TODO Bug / feature of the code...
-    /*
-    @Test
-    fun linkedHashMapTest() {
-        data class C(val c : LinkedHashMap<String, Int>)
-        val c = C (LinkedHashMap (mapOf("A" to 1, "B" to 2)))
-
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
-
-    }
-    */
-
-    // TODO the problem here is that the wrapper class as created by the serialiser
-    // TODO contains a [LinkedHashMap] and not a [Map] and we thus can't serialise
-    // TODO it - Talk to Rick about weather we should be able to or not
-    /*
-    @Test
-    fun mapOfInterfaces() {
-        val cc = ClassCarpenter()
-
-        val implementsI = cc.build(ClassSchema(
-                "implementsI", mapOf("name" to NonNullableField(String::class.java)),
-                interfaces = listOf (B::class.java)))
-
-        val implementsII = cc.build(ClassSchema("ImplementsII", mapOf (
-                "age" to NonNullableField(Int::class.java),
-                "thingWithName" to NullableField(B::class.java)),
-                interfaces = listOf (BB::class.java)))
-
-                //        inline fun getval(reified T : Any) : return T::class.java
-
-        val wrapper = cc.build(ClassSchema("wrapper", mapOf (
-                "BBs" to NonNullableField(mutableMapOf<String, BB>()::class.java
-        ))))
-
-        val tmp : MutableMap<String, BB> = mutableMapOf()
-        val toSerialise = wrapper.constructors.first().newInstance(tmp)
-        val testData = arrayOf(Pair ("Fred", 12), Pair ("Bob", 50), Pair ("Thirsty", 101))
-
-        testData.forEach {
-            (wrapper.getMethod("getBBs").invoke(toSerialise) as MutableMap<String, BB>)[it.first] =
-                    implementsII.constructors.first().newInstance(it.second,
-                            implementsI.constructors.first().newInstance(it.first) as B) as BB
-        }
-
-        // Now do the actual test by serialising and deserialising [wrapper]
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(toSerialise)
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
-    }
-    */
 
     @Test
     fun unknownInterface() {
