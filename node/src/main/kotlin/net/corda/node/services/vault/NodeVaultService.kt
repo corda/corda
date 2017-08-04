@@ -100,7 +100,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                         notaryKey = it.value.state.notary.owningKey.toBase58String()
                         recordedTime = services.clock.instant()
                     }
-                    insert(state)
+                    upsert(state)
                 }
                 // TODO: awaiting support of UPDATE WHERE <Composite key> IN in Requery DSL
                 consumedStateRefs.forEach { stateRef ->
