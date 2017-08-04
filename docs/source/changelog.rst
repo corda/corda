@@ -34,7 +34,7 @@ Milestone 14
 * Moved the core flows previously found in ``net.corda.flows`` into ``net.corda.core.flows``. This is so that all packages
   in the ``core`` module begin with ``net.corda.core``.
 
-* ``FinalityFlow`` now has can be subclassed, and the ``broadcastTransaction`` and ``lookupParties`` function can be
+* ``FinalityFlow`` can now be subclassed, and the ``broadcastTransaction`` and ``lookupParties`` function can be
   overriden in order to handle cases where no single transaction participant is aware of all parties, and therefore
   the transaction must be relayed between participants rather than sent from a single node.
 
@@ -57,7 +57,11 @@ Milestone 14
    * ``Cordformation`` adds a ``corda`` and ``cordaRuntime`` configuration to projects which cordapp developers should
      use to exclude core Corda JARs from being built into Cordapp fat JARs.
 
-* `DigitalSignature.LegallyIdentifiable`, previously used to identify a signer (e.g. in Oracles), has been removed.
+* ``database`` field in ``AbstractNode`` class has changed the type from ``org.jetbrains.exposed.sql.Database`` to
+  ‘net.corda.node.utilities.CordaPersistence’ - no change is needed for the typical use
+  (i.e. services.database.transaction {  code block } ) however a change is required when Database was explicitly declared
+
+* ``DigitalSignature.LegallyIdentifiable``, previously used to identify a signer (e.g. in Oracles), has been removed.
   One can use the public key to derive the corresponding identity.
 
 * Vault Query improvements and fixes:
