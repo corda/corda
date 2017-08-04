@@ -6,14 +6,15 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.utilities.*
 import org.bouncycastle.operator.ContentSigner
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import javax.persistence.*
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support node re-start.
@@ -25,60 +26,70 @@ import java.security.PublicKey
 class PersistentKeyManagementService(val identityService: IdentityService,
                                      initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
 
-    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}our_key_pairs") {
-        val publicKey = publicKey("public_key")
-        val privateKey = blob("private_key")
+    object PersistentKeyManagementSchema
+
+    object PersistentKeyManagementSchemaV1 : MappedSchema(schemaFamily = PersistentKeyManagementSchema.javaClass, version = 1,
+            mappedTypes = listOf(PersistentKey::class.java)) {
+
+        @Entity
+        @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
+        class PersistentKey(
+                @Id
+                @GeneratedValue(strategy = GenerationType.AUTO)
+                var id: Int = 0,
+
+                @Column(name = "public_key")
+                var publicKey: String = "",
+
+                @Lob
+                @Column(name = "private_key")
+                var privateKey: ByteArray = ByteArray(0)
+        )
     }
 
-    private class InnerState {
-        val keys = object : AbstractJDBCHashMap<PublicKey, PrivateKey, Table>(Table, loadOnInit = false) {
-            override fun keyFromRow(row: ResultRow): PublicKey = row[table.publicKey]
-
-            override fun valueFromRow(row: ResultRow): PrivateKey = deserializeFromBlob(row[table.privateKey])
-
-            override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<PublicKey, PrivateKey>, finalizables: MutableList<() -> Unit>) {
-                insert[table.publicKey] = entry.key
-            }
-
-            override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<PublicKey, PrivateKey>, finalizables: MutableList<() -> Unit>) {
-                insert[table.privateKey] = serializeToBlob(entry.value, finalizables)
-            }
+    private companion object {
+        fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKeyManagementSchemaV1.PersistentKey, String> {
+            return AppendOnlyPersistentMap(
+                    cacheBound = 1024,
+                    toPersistentEntityKey = { it.toString() },
+                    fromPersistentEntity = { Pair(parsePublicKeyBase58(it.publicKey),
+                            deserializeFromByteArray<PrivateKey>(it.privateKey, context = SerializationDefaults.STORAGE_CONTEXT)) },
+                    toPersistentEntity = { key: PublicKey, value: PrivateKey ->
+                        PersistentKeyManagementSchemaV1.PersistentKey().apply {
+                            publicKey = key.toBase58String()
+                            privateKey = serializeToByteArray(value, context = SerializationDefaults.STORAGE_CONTEXT)
+                        }
+                    },
+                    persistentEntityClass = PersistentKeyManagementSchemaV1.PersistentKey::class.java
+            )
         }
     }
 
-    private val mutex = ThreadBox(InnerState())
+    val keysMap = createKeyMap()
 
     init {
-        mutex.locked {
-            keys.putAll(initialKeys.associate { Pair(it.public, it.private) })
-        }
+        initialKeys.forEach({it-> keysMap[it.public] = it.private})
     }
 
-    override val keys: Set<PublicKey> get() = mutex.locked { keys.keys }
+    override val keys: Set<PublicKey> get() = keysMap.allPersisted().map { it.first }.toSet()
 
-    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> {
-        return mutex.locked { candidateKeys.filter { it in this.keys } }
-    }
+    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> =
+            candidateKeys.filter { keysMap[it] != null }
 
     override fun freshKey(): PublicKey {
         val keyPair = generateKeyPair()
-        mutex.locked {
-            keys[keyPair.public] = keyPair.private
-        }
+        keysMap[keyPair.public] = keyPair.private
         return keyPair.public
     }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymousPartyAndPath {
-        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
-    }
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymousPartyAndPath =
+            freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
 
     private fun getSigner(publicKey: PublicKey): ContentSigner  = getSigner(getSigningKeyPair(publicKey))
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
-        return mutex.locked {
-            val pk = publicKey.keys.first { keys.containsKey(it) }
-            KeyPair(pk, keys[pk]!!)
-        }
+        val pk = publicKey.keys.first { keysMap[it] != null }
+        return KeyPair(pk, keysMap[pk]!!)
     }
 
     override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
