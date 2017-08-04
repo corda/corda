@@ -211,8 +211,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // TODO Remove this once the cash stuff is in its own CorDapp
             registerInitiatedFlow(IssuerFlow.Issuer::class.java)
 
-            initUploaders()
-
             runOnStop += network::stop
             _networkMapRegistrationFuture.captureLater(registerWithNetworkMapIfConfigured())
             smm.start()
@@ -476,11 +474,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return getNamesOfClassesWithAnnotation(annotation.java)
                 .mapNotNull { loadClass(it) }
                 .filterNot { isAbstract(it.modifiers) }
-    }
-
-    private fun initUploaders() {
-        _services.uploaders += attachments
-        cordappServices.values.filterIsInstanceTo(_services.uploaders, AcceptsFileUpload::class.java)
     }
 
     private fun makeVaultObservers() {
@@ -765,7 +758,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
-        override val uploaders = ArrayList<FileUploader>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val monitoringService = MonitoringService(MetricRegistry())

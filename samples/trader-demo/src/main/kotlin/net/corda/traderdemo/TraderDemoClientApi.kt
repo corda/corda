@@ -47,7 +47,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
     }
 
-    fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS, anonymous: Boolean = true) {
+    fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS, anonymous: Boolean = false) {
         val bankOfCordaParty = rpc.partyFromX500Name(BOC.name)
                 ?: throw IllegalStateException("Unable to locate ${BOC.name} in Network Map Service")
         val notaryLegalIdentity = rpc.partyFromX500Name(DUMMY_NOTARY.name)
