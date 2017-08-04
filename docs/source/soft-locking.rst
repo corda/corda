@@ -25,12 +25,12 @@ query soft locks associated with states as required by their CorDapp application
 Query
 -----
 By default vault queries will always include locked states in its result sets.
-Custom filterable criteria can be specified using the ``SoftLockingCondition` attribute of ``VaultQueryCriteria``:
+Custom filterable criteria can be specified using the ``SoftLockingCondition`` attribute of ``VaultQueryCriteria``:
 
 .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/vault/QueryCriteria.kt
-:language: kotlin
-        :start-after: DOCSTART VaultQuerySoftLockingCriteria
-        :end-before: DOCEND VaultQuerySoftLockingCriteria
+  :language: kotlin
+  :start-after: DOCSTART VaultQuerySoftLockingCriteria
+  :end-before: DOCEND VaultQuerySoftLockingCriteria
 
 Explicit Usage
 --------------
