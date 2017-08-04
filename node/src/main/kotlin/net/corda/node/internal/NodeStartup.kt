@@ -10,8 +10,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.*
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.then
-import net.corda.core.thenMatch
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
 import net.corda.node.serialization.NodeClock

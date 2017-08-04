@@ -2,9 +2,9 @@ package net.corda.docs
 
 import net.corda.contracts.getCashBalances
 import net.corda.core.contracts.*
-import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.flows.CashIssueFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
