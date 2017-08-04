@@ -33,16 +33,24 @@ class DataUploadServlet : HttpServlet() {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Got an upload request with no files")
             return
         }
-
+        fun reportError(message: String) {
+            println(message) // Show in webserver window.
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, message)
+        }
         while (iterator.hasNext()) {
             val item = iterator.next()
             log.info("Receiving ${item.name}")
             val dataType = req.pathInfo.substring(1).substringBefore('/')
             if (dataType != "attachment") {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Got a file upload request for an unknown data type $dataType")
-                return
+                reportError("Got a file upload request for an unknown data type $dataType")
+                continue
             }
-            messages += rpc.uploadAttachment(item.openStream()).toString()
+            try {
+                messages += rpc.uploadAttachment(item.openStream()).toString()
+            } catch (e: RuntimeException) {
+                reportError(e.toString())
+                continue
+            }
             log.info("${item.name} successfully accepted: ${messages.last()}")
         }
 
