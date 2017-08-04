@@ -1,9 +1,11 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
+import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.*
+import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
@@ -27,9 +29,14 @@ import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
 import java.time.Instant
+import java.util.concurrent.Future
 import kotlin.test.assertEquals
 
 class ScheduledFlowTests {
+    companion object {
+        val PAGE_SIZE = 20
+        val sorting = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
+    }
     lateinit var mockNet: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var nodeA: MockNetwork.MockNode
@@ -117,7 +124,7 @@ class ScheduledFlowTests {
                     countScheduledFlows++
             }
         }
-        nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity))
+        nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity)).resultFuture.getOrThrow()
         mockNet.waitQuiescent()
         val stateFromA = nodeA.database.transaction {
             nodeA.services.vaultQueryService.queryBy<ScheduledState>().states.single()
@@ -133,11 +140,13 @@ class ScheduledFlowTests {
     @Test
     fun `run a whole batch of scheduled flows`() {
         val N = 100
+        val futures = mutableListOf<ListenableFuture<*>>()
         for (i in 0..N - 1) {
-            nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity))
-            nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.legalIdentity))
+            futures.add(nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity)).resultFuture)
+            futures.add(nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.legalIdentity)).resultFuture)
         }
         mockNet.waitQuiescent()
+        futures.forEach { it.getOrThrow() }
 
         val statesFromA = nodeA.database.transaction {
             queryStatesWithPaging(nodeA.services.vaultQueryService)
@@ -150,14 +159,12 @@ class ScheduledFlowTests {
         assertTrue("Expect all states have run the scheduled task", statesFromB.all { it.state.data.processed })
     }
 
-    // Demonstrate Vault Query paging and sorting
-    val PAGE_SIZE = 20
-    val sorting = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
-
+    // Demonstrate Vault Query paging
     private fun queryStatesWithPaging(vaultQueryService: VaultQueryService): List<StateAndRef<ScheduledState>> {
         var pageNumber = DEFAULT_PAGE_NUM
         val states = mutableListOf<StateAndRef<ScheduledState>>()
         do {
+            // Demonstrate Vault Query paging and sorting
             val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
             val results = vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, sorting)
             states.addAll(results.states)
