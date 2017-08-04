@@ -4,8 +4,8 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-UNRELEASED
-----------
+Milestone 14
+------------
 
 * Changes in ``NodeInfo``:
 
@@ -34,7 +34,7 @@ UNRELEASED
 * Moved the core flows previously found in ``net.corda.flows`` into ``net.corda.core.flows``. This is so that all packages
   in the ``core`` module begin with ``net.corda.core``.
 
-* ``FinalityFlow`` now has can be subclassed, and the ``broadcastTransaction`` and ``lookupParties`` function can be
+* ``FinalityFlow`` can now be subclassed, and the ``broadcastTransaction`` and ``lookupParties`` function can be
   overriden in order to handle cases where no single transaction participant is aware of all parties, and therefore
   the transaction must be relayed between participants rather than sent from a single node.
 
@@ -56,6 +56,43 @@ UNRELEASED
      except other cordapps and Corda core dependencies.
    * ``Cordformation`` adds a ``corda`` and ``cordaRuntime`` configuration to projects which cordapp developers should
      use to exclude core Corda JARs from being built into Cordapp fat JARs.
+
+* ``database`` field in ``AbstractNode`` class has changed the type from ``org.jetbrains.exposed.sql.Database`` to
+  ‘net.corda.node.utilities.CordaPersistence’ - no change is needed for the typical use
+  (i.e. services.database.transaction {  code block } ) however a change is required when Database was explicitly declared
+
+* ``DigitalSignature.LegallyIdentifiable``, previously used to identify a signer (e.g. in Oracles), has been removed.
+  One can use the public key to derive the corresponding identity.
+
+* Vault Query improvements and fixes:
+
+    * FIX inconsistent behaviour: Vault Query defaults to UNCONSUMED in all QueryCriteria types
+
+    * FIX serialization error: Vault Query over RPC when using custom attributes using VaultCustomQueryCriteria.
+
+    * Aggregate function support: extended VaultCustomQueryCriteria and associated DSL to enable specification of
+    Aggregate Functions (sum, max, min, avg, count) with, optional, group by clauses and sorting (on calculated aggregate)
+
+    * Pagination simplification
+    Pagination continues to be optional, but with following changes:
+      - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast with a ``VaultQueryException`` to alert the API user to the need to specify a PageSpecification.
+        Internally, we no longer need to calculate a results count (thus eliminating an expensive SQL query) unless a PageSpecification is supplied (note: that a value of -1 is returned for total_results in this scenario).
+        Internally, we now use the AggregateFunction capability to perform the count.
+      - Paging now starts from 1 (was previously 0).
+
+    * Additional Sort criteria: by StateRef (or constituents: txId, index)
+
+* Confidential identities API improvements
+
+    * Registering anonymous identities now takes in AnonymousPartyAndPath
+    * AnonymousParty.toString() now uses toStringShort() to match other toString() functions
+    * Add verifyAnonymousIdentity() function to verify without storing an identity
+    * Replace pathForAnonymous() with anonymousFromKey() which matches actual use-cases better
+    * Add unit test for fetching the anonymous identity from a key
+    * Update verifyAnonymousIdentity() function signature to match registerAnonymousIdentity()
+    * Rename AnonymisedIdentity to AnonymousPartyAndPath
+    * Remove certificate from AnonymousPartyAndPath as it's not actually used.
+    * Rename registerAnonymousIdentity() to verifyAndRegisterAnonymousIdentity()
 
 Milestone 13
 ------------
