@@ -276,7 +276,7 @@ Milestone 12
        with the ``PrivateKey`` kept internally to the service.
      * Flows which used to acquire a node's ``KeyPair``, typically via ``ServiceHub.legalIdentityKey``,
        should instead use the helper methods on ``ServiceHub``. In particular to freeze a ``TransactionBuilder`` and
-       generate an initial partially signed ``SignedTransaction`` the flow should use ``ServiceHub.signInitialTransaction``.
+       generate an initial partially signed ``SignedTransaction`` the flow should use ``ServiceHub.toSignedTransaction``.
        Flows generating additional party signatures should use ``ServiceHub.createSignature``. Each of these methods is
        provided with two signatures. One version that signs with the default node key, the other which allows key selection
        by passing in the ``PublicKey`` partner of the desired signing key.
