@@ -146,7 +146,11 @@ class ScheduledFlowTests {
             futures.add(nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.legalIdentity)).resultFuture)
         }
         mockNet.waitQuiescent()
-        futures.forEach { it.getOrThrow() }
+
+        // The flows have now all finished, but ensure there are no errors reported
+        for (flow in futures) {
+            flow.getOrThrow()
+        }
 
         val statesFromA = nodeA.database.transaction {
             queryStatesWithPaging(nodeA.services.vaultQueryService)
