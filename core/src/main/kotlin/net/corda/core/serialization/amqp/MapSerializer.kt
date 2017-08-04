@@ -5,6 +5,7 @@ import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
+import kotlin.collections.LinkedHashMap
 import kotlin.collections.Map
 import kotlin.collections.iterator
 import kotlin.collections.map
@@ -20,7 +21,11 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
         private val supportedTypes: Map<Class<out Map<*, *>>, (Map<*, *>) -> Map<*, *>> = mapOf(
                 Map::class.java to { map -> Collections.unmodifiableMap(map) },
                 SortedMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) },
-                NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) }
+                NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) },
+                // Collections doesn't have any representation of a linked hash map but our recommendation
+                // for anyone trying to use a hash map is to use a linked one to ensure stable iteration
+                // hence this exception
+                LinkedHashMap::class.java to { map -> LinkedHashMap(map) }
         )
 
         private fun findConcreteType(clazz: Class<*>): (Map<*, *>) -> Map<*, *> {

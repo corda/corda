@@ -71,7 +71,6 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
         return interfaces.map { nameForType(it) }
     }
 
-
     fun construct(properties: List<Any?>): Any {
         if (javaConstructor == null) {
             throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
