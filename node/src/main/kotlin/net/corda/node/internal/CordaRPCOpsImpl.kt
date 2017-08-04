@@ -148,14 +148,6 @@ class CordaRPCOpsImpl(
     override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) = services.vaultService.authoriseContractUpgrade(state, upgradedContractClass)
     override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.vaultService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
-    @Suppress("OverridingDeprecatedMember", "DEPRECATION")
-    override fun uploadFile(dataType: String, name: String?, file: InputStream): String {
-        val acceptor = services.uploaders.firstOrNull { it.accepts(dataType) }
-        return database.transaction {
-            acceptor?.upload(file) ?: throw RuntimeException("Cannot find file upload acceptor for $dataType")
-        }
-    }
-
     override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
     override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
     @Suppress("DEPRECATION")
