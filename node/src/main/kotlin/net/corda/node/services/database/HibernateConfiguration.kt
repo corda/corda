@@ -18,9 +18,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLogging: Boolean = false, val databaseProperties: Properties) {
-    constructor(schemaService: SchemaService, databaseProperties: Properties) : this(schemaService, false, databaseProperties)
-
+class HibernateConfiguration(val schemaService: SchemaService, val databaseProperties: Properties) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
@@ -59,8 +57,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase","true") == "true") "update" else "validate")
-                .setProperty("hibernate.show_sql", "$useDefaultLogging")
-                .setProperty("hibernate.format_sql", "$useDefaultLogging")
+                .setProperty("hibernate.format_sql", "true")
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
