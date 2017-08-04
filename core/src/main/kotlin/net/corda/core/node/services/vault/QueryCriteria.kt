@@ -26,6 +26,18 @@ sealed class QueryCriteria {
     @CordaSerializable
     data class TimeCondition(val type: TimeInstantType, val predicate: ColumnPredicate<Instant>)
 
+    // DOCSTART VaultQuerySoftLockingCriteria
+    @CordaSerializable
+    data class SoftLockingCondition(val type: SoftLockingType, val lockIds: List<UUID> = emptyList())
+
+    @CordaSerializable
+    enum class SoftLockingType {
+        EXCLUSIVE,      // exclusive of soft locked states
+        LOCKED_ONLY,    // only soft locked states
+        SPECIFIED       // only specified soft locked states (specified by lock ids)
+    }
+    // DOCEND VaultQuerySoftLockingCriteria
+
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
@@ -40,7 +52,7 @@ sealed class QueryCriteria {
                                                              val contractStateTypes: Set<Class<out ContractState>>? = null,
                                                              val stateRefs: List<StateRef>? = null,
                                                              val notaryName: List<X500Name>? = null,
-                                                             val includeSoftlockedStates: Boolean = true,
+                                                             val softLockingCondition: SoftLockingCondition? = null,
                                                              val timeCondition: TimeCondition? = null) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))

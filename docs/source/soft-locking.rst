@@ -22,13 +22,15 @@ query soft locks associated with states as required by their CorDapp application
     :start-after: DOCSTART SoftLockAPI
     :end-before: DOCEND SoftLockAPI
 
-You can also control whether soft locked states are retrieved in general vault queries by setting an optional boolean
-`includeSoftLockedStates` flag (which is set to *true* by default)
+Query
+-----
+By default vault queries will always include locked states in its result sets.
+Custom filterable criteria can be specified using the ``SoftLockingCondition` attribute of ``VaultQueryCriteria``:
 
-.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/VaultService.kt
-    :language: kotlin
-    :start-after: DOCSTART VaultStatesQuery
-    :end-before: DOCEND VaultStatesQuery
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/vault/QueryCriteria.kt
+:language: kotlin
+        :start-after: DOCSTART VaultQuerySoftLockingCriteria
+        :end-before: DOCEND VaultQuerySoftLockingCriteria
 
 Explicit Usage
 --------------

@@ -274,12 +274,6 @@ interface VaultService {
      */
     fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>? = null)
 
-    /**
-     * Retrieve softLockStates for a given [UUID] or return all softLockStates in vault for a given
-     * [ContractState] type
-     */
-    fun <T : ContractState> softLockedStates(lockId: UUID? = null): List<StateAndRef<T>>
-
     // DOCEND SoftLockAPI
 
     /**
