@@ -75,7 +75,7 @@ Milestone 14
 
     * Pagination simplification
     Pagination continues to be optional, but with following changes:
-      - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast with a VaultQueryExceptionto alert the API user to the need to specify a PageSpecification.
+      - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast with a ``VaultQueryException`` to alert the API user to the need to specify a PageSpecification.
         Internally, we no longer need to calculate a results count (thus eliminating an expensive SQL query) unless a PageSpecification is supplied (note: that a value of -1 is returned for total_results in this scenario).
         Internally, we now use the AggregateFunction capability to perform the count.
       - Paging now starts from 1 (was previously 0).
