@@ -33,7 +33,10 @@ scenarios where no single participant in a transaction is aware of the well know
 DemoBench has a fix for a rare but inconvenient crash that can occur when sharing your display across multiple devices,
 e.g. a projector while performing demonstrations in front of an audience.
 
-Upgrading to this release is strongly recommended in order to keep up with the API changes, removal and additions. 
+Guava types are being removed because Guava does not have backwards compatibility across versions, which has serious
+issues when multiple libraries depend on different versions of the library.
+
+Upgrading to this release is strongly recommended in order to keep up with the API changes, removal and additions.
 
 Milestone 13
 ------------
