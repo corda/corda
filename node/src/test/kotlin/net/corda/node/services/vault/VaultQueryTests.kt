@@ -1395,13 +1395,13 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed fungible assets for selected issuer parties`() {
         // GBP issuer
-        val GBP_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(15)) }
+        val GBP_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(1001)) }
         val GBP_CASH_ISSUER by lazy { Party(X500Name("CN=British Pounds Cash Issuer,O=R3,OU=corda,L=London,C=GB"), GBP_CASH_ISSUER_KEY.public).ref(1) }
         // USD issuer
-        val USD_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
+        val USD_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(1002)) }
         val USD_CASH_ISSUER by lazy { Party(X500Name("CN=US Dollars Cash Issuer,O=R3,OU=corda,L=New York,C=US"), USD_CASH_ISSUER_KEY.public).ref(1) }
         // CHF issuer
-        val CHF_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(30)) }
+        val CHF_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(1003)) }
         val CHF_CASH_ISSUER by lazy { Party(X500Name("CN=Swiss Francs Cash Issuer,O=R3,OU=corda,L=Zurich,C=CH"), CHF_CASH_ISSUER_KEY.public).ref(1) }
 
         database.transaction {
