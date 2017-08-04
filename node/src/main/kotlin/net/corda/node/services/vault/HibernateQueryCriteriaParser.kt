@@ -52,16 +52,19 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             val softLocking = criteria.softLockingCondition
             val type = softLocking!!.type
             when(type) {
-                QueryCriteria.SoftLockingType.EXCLUSIVE ->
+                QueryCriteria.SoftLockingType.UNLOCKED_ONLY ->
                     predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNull))
                 QueryCriteria.SoftLockingType.LOCKED_ONLY ->
                     predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNotNull))
                 QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED -> {
+                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
                     predicateSet.add(criteriaBuilder.or(vaultStates.get<String>("lockId").isNull,
                                                         vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
                 }
-                QueryCriteria.SoftLockingType.SPECIFIED ->
+                QueryCriteria.SoftLockingType.SPECIFIED -> {
+                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
                     predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
+                }
             }
         }
 

@@ -127,6 +127,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         return props
     }
 
+    @get:Rule
+    val expectedEx = ExpectedException.none()!!
+
     /**
      * Query API tests
      */
@@ -471,7 +474,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             vaultSvc.softLockReserve(lockId2, NonEmptySet.of(issuedStates[6].ref))
 
             // excluding soft locked states
-            val criteriaExclusive = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.EXCLUSIVE))
+            val criteriaExclusive = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))
             val resultsExclusive = vaultQuerySvc.queryBy<ContractState>(criteriaExclusive)
             assertThat(resultsExclusive.states).hasSize(4)
 
@@ -494,6 +497,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val criteriaUnlockedAndByLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId2)))
             val resultsUnlockedAndByLockIds = vaultQuerySvc.queryBy<ContractState>(criteriaUnlockedAndByLockId)
             assertThat(resultsUnlockedAndByLockIds.states).hasSize(5)
+
+            // missing lockId
+            expectedEx.expect(IllegalArgumentException::class.java)
+            expectedEx.expectMessage("Must specify one or more lockIds")
+            val criteriaMissingLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_AND_SPECIFIED))
+            vaultQuerySvc.queryBy<ContractState>(criteriaMissingLockId)
         }
     }
 
@@ -1004,9 +1013,6 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(results.totalStatesAvailable).isEqualTo(95)
         }
     }
-
-    @get:Rule
-    val expectedEx = ExpectedException.none()!!
 
     // pagination: invalid page number
     @Test

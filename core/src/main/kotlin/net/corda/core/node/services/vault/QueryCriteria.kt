@@ -32,9 +32,9 @@ sealed class QueryCriteria {
 
     @CordaSerializable
     enum class SoftLockingType {
-        EXCLUSIVE,      // exclusive of soft locked states
+        UNLOCKED_ONLY,  // only unlocked states
         LOCKED_ONLY,    // only soft locked states
-        SPECIFIED,       // only those soft locked states specified by lock id(s)
+        SPECIFIED,      // only those soft locked states specified by lock id(s)
         UNLOCKED_AND_SPECIFIED   // all unlocked states plus those soft locked states specified by lock id(s)
     }
     // DOCEND VaultQuerySoftLockingCriteria

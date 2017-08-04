@@ -140,17 +140,17 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             assertThat(vaultQuery.queryBy<Cash.State>(criteriaByLockId).states).hasSize(2)
 
             // excluding softlocked states
-            val unlockedStates1 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.EXCLUSIVE))).states
+            val unlockedStates1 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))).states
             assertThat(unlockedStates1).hasSize(1)
 
             // soft lock release one of the states explicitly
             vaultSvc.softLockRelease(softLockId, NonEmptySet.of(unconsumedStates[1].ref))
-            val unlockedStates2 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.EXCLUSIVE))).states
+            val unlockedStates2 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))).states
             assertThat(unlockedStates2).hasSize(2)
 
             // soft lock release the rest by id
             vaultSvc.softLockRelease(softLockId)
-            val unlockedStates = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.EXCLUSIVE))).states
+            val unlockedStates = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))).states
             assertThat(unlockedStates).hasSize(3)
 
             // should be back to original states
