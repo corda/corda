@@ -185,26 +185,12 @@ Query for unconsumed linear states for given linear ids:
     :start-after: DOCSTART VaultQueryExample8
     :end-before: DOCEND VaultQueryExample8
 
-This example was previously executed using the deprecated extension method:
-
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-    :language: kotlin
-    :start-after: DOCSTART VaultDeprecatedQueryExample1
-    :end-before: DOCEND VaultDeprecatedQueryExample1
-
 Query for all linear states associated with a linear id:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample9
     :end-before: DOCEND VaultQueryExample9
-
-This example was previously executed using the deprecated method:
-
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-    :language: kotlin
-    :start-after: DOCSTART VaultDeprecatedQueryExample2
-    :end-before: DOCEND VaultDeprecatedQueryExample2
 
 Query for unconsumed deal states with deals references:
 
@@ -313,26 +299,12 @@ Query for all unconsumed linear states:
     :start-after: DOCSTART VaultJavaQueryExample0
     :end-before: DOCEND VaultJavaQueryExample0
 
-This example was previously executed using the deprecated method:
-
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
-    :language: java
-    :start-after: DOCSTART VaultDeprecatedJavaQueryExample0
-    :end-before: DOCEND VaultDeprecatedJavaQueryExample0
-
 Query for all consumed cash states:
 
 .. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample1
     :end-before: DOCEND VaultJavaQueryExample1
-
-This example was previously executed using the deprecated method:
-
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
-    :language: java
-    :start-after: DOCSTART VaultDeprecatedJavaQueryExample1
-    :end-before: DOCEND VaultDeprecatedJavaQueryExample1
 
 Query for consumed deal states or linear ids, specify a paging specification and sort by unique identifier:
 

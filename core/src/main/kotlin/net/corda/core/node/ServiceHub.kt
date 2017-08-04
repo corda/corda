@@ -7,6 +7,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
+import java.sql.Connection
 import java.time.Clock
 
 /**
@@ -215,4 +216,15 @@ interface ServiceHub : ServicesForResolution {
      * @return A new [SignedTransaction] with the addition of the new signature.
      */
     fun addSignature(signedTransaction: SignedTransaction): SignedTransaction = addSignature(signedTransaction, legalIdentityKey)
+
+    /**
+     * Exposes a JDBC connection (session) object using the currently configured database.
+     * Applications can use this to execute arbitrary SQL queries (native, direct, prepared, callable)
+     * against its Node database tables (including custom contract tables defined by extending [Queryable]).
+     * When used within a flow, this session automatically forms part of the enclosing flow transaction boundary,
+     * and thus queryable data will include everything committed as of the last checkpoint.
+     * @throws IllegalStateException if called outside of a transaction.
+     * @return A new [Connection]
+     */
+    fun jdbcSession(): Connection
 }

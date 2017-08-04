@@ -179,21 +179,6 @@ interface VaultService {
     val updatesPublisher: PublishSubject<Vault.Update<ContractState>>
 
     /**
-     * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
-     * first subscriber is registered so as to avoid racing with early updates.
-     */
-    // TODO: Remove this from the interface
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("trackBy(QueryCriteria())"))
-    fun track(): DataFeed<Vault<ContractState>, Vault.Update<ContractState>>
-
-    /**
-     * Return unconsumed [ContractState]s for a given set of [StateRef]s
-     */
-    // TODO: Remove this from the interface
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(stateRefs = listOf(<StateRef>)))"))
-    fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?>
-
-    /**
      * Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
      * new states that they create. You should only insert transactions that have been successfully verified here!
      *
@@ -263,16 +248,6 @@ interface VaultService {
                       to: AbstractParty,
                       onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<PublicKey>>
 
-    // DOCSTART VaultStatesQuery
-    /**
-     * Return [ContractState]s of a given [Contract] type and [Iterable] of [Vault.StateStatus].
-     * Optionally may specify whether to include [StateRef] that have been marked as soft locked (default is true)
-     */
-    // TODO: Remove this from the interface
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(QueryCriteria())"))
-    fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>>
-    // DOCEND VaultStatesQuery
-
     /**
      * Soft locking is used to prevent multiple transactions trying to use the same output simultaneously.
      * Violation of a soft lock would result in a double spend being created and rejected by the notary.
@@ -318,23 +293,6 @@ interface VaultService {
                                                         lockId: UUID,
                                                         withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<T>>
 }
-
-// TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria())"))
-inline fun <reified T : ContractState> VaultService.unconsumedStates(includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>> =
-        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED), includeSoftLockedStates)
-
-// TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))"))
-inline fun <reified T : ContractState> VaultService.consumedStates(): Iterable<StateAndRef<T>> =
-        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.CONSUMED))
-
-/** Returns the [linearState] heads only when the type of the state would be considered an 'instanceof' the given type. */
-// TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(linearId = listOf(<UniqueIdentifier>)))"))
-inline fun <reified T : LinearState> VaultService.linearHeadsOfType() =
-        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
-                .associateBy { it.state.data.linearId }.mapValues { it.value }
 
 class StatesNotAvailableException(override val message: String?, override val cause: Throwable? = null) : FlowException(message, cause) {
     override fun toString() = "Soft locking error: $message"
