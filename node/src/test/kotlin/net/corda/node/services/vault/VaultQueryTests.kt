@@ -243,8 +243,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             stateRefs.addAll(issuedStateRefs)
 
             val spentStates = services.consumeCash(25.DOLLARS)
-            var spentStateRefs = spentStates.states.map { it.ref }.toList()
-            stateRefs.addAll(spentStateRefs)
+            var consumedStateRefs = spentStates.consumed.map { it.ref }.toList()
+            var producedStateRefs = spentStates.produced.map { it.ref }.toList()
+            stateRefs.addAll(consumedStateRefs.plus(producedStateRefs))
 
             val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
             val criteria = VaultQueryCriteria()
