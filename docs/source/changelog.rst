@@ -72,6 +72,13 @@ UNRELEASED
     * ``stateMachineRecordedTransactionMapping``, replaced by ``stateMachineRecordedTransactionMappingFeed``
     * ``networkMapUpdates``, replaced by ``networkMapFeed``
 
+* Due to security concerns and the need to remove the concept of state relevancy (which isn't needed in Corda),
+  ``ResolveTransactionsFlow`` has been made internal. Instead merge the receipt of the ``SignedTransaction`` and the subsequent
+  sub-flow call to ``ResolveTransactionsFlow`` with a single call to ``ReceiveTransactionFlow``. The flow running on the counterparty
+  must use ``SendTransactionFlow`` at the correct place. There is also ``ReceiveStateAndRefFlow`` and ``SendStateAndRefFlow`` for
+  dealing with ``StateAndRef``s.
+
+
 Milestone 13
 ------------
 
