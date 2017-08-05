@@ -185,8 +185,8 @@ object InteractiveShell {
         JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory(), true).apply {
             val rpcModule = SimpleModule()
             rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
-            rpcModule.addDeserializer(UniqueIdentifier::class.java,UniqueIdentifierDeserializer)
-            rpcModule.addDeserializer(UUID::class.java,UUIDDeserializer)
+            rpcModule.addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
+            rpcModule.addDeserializer(UUID::class.java, UUIDDeserializer)
             registerModule(rpcModule)
         }
     }
@@ -510,34 +510,27 @@ object InteractiveShell {
      *      Index 1 as [UniqueIdentifier.id]
      * */
     object UniqueIdentifierDeserializer : JsonDeserializer<UniqueIdentifier>() {
-        override fun deserialize(p: JsonParser?, ctxt: DeserializationContext?): UniqueIdentifier {
-            //check if externalId and UUID my be sepereted by underscore
-            if(p?.text?.contains("_") == true){
+        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): UniqueIdentifier {
+            //Check if externalId and UUID may be separated by underscore.
+            if (p.text.contains("_")) {
                 val ids = p.text.split("_")
-                val uuid: UUID
-
-                try {
-                    //create UUID object from string
-                    uuid = UUID.fromString(ids[1])
-                }catch (ex: IllegalArgumentException){
-                    // throws message: Invalid UUID string: ids[1]
-                    throw ex
-                }
-                return UniqueIdentifier(ids[0],uuid)
+                //Create UUID object from string.
+                val uuid: UUID = UUID.fromString(ids[1])
+                //Create UniqueIdentifier object using externalId and UUID.
+                return UniqueIdentifier(ids[0], uuid)
             }
-            //any other string used as externalId
-            return UniqueIdentifier(p?.text)
+            //Any other string used as externalId.
+            return UniqueIdentifier(p.text)
         }
     }
 
     /**
-     * String value deserialized to [UUID]
+     * String value deserialized to [UUID].
      * */
     object UUIDDeserializer : JsonDeserializer<UUID>() {
-        override fun deserialize(p: JsonParser?, ctxt: DeserializationContext?): UUID {
-            //create UUID object from string
-            val uuid = UUID.fromString(p?.text)
-            return uuid
+        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): UUID {
+            //Create UUID object from string.
+            return UUID.fromString(p.text)
         }
     }
 
