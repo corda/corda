@@ -1,33 +1,41 @@
 package net.corda.notarydemo.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.GBP
-import net.corda.core.contracts.Issued
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
 @StartableByRPC
-class DummyIssueAndMove(private val notary: Party, private val counterpartyNode: Party) : FlowLogic<SignedTransaction>() {
-    @Suspendable
-    override fun call(): SignedTransaction {
-        // Self issue an asset
-        val amount = Amount(1000000, Issued(serviceHub.myInfo.legalIdentity.ref(0), GBP))
-        val issueTxBuilder = TransactionBuilder(notary = notary)
-        val signers = Cash().generateIssue(issueTxBuilder, amount, serviceHub.myInfo.legalIdentity, notary)
-        val issueTx = serviceHub.signInitialTransaction(issueTxBuilder, signers)
-        serviceHub.recordTransactions(issueTx)
-        // Move ownership of the asset to the counterparty
-        val counterPartyKey = counterpartyNode.owningKey
-        val asset = issueTx.tx.outRef<Cash.State>(0)
-        val moveTxBuilder = TransactionBuilder(notary = notary)
+class DummyIssueAndMove(private val notary: Party, private val counterpartyNode: Party, private val discriminator: Int) : FlowLogic<SignedTransaction>() {
+    object DoNothingContract : Contract {
+        override val legalContractReference = byteArrayOf().sha256()
+        override fun verify(tx: LedgerTransaction) {}
+    }
 
-        val (_, keys) = serviceHub.vaultService.generateSpend(moveTxBuilder, Amount(amount.quantity, GBP), counterpartyNode)
+    data class State(override val participants: List<AbstractParty>, private val discriminator: Int) : ContractState {
+        override val contract = DoNothingContract
+    }
+
+    @Suspendable
+    override fun call() = serviceHub.run {
+        // Self issue an asset
+        val state = State(listOf(myInfo.legalIdentity), discriminator)
+        val issueTx = signInitialTransaction(TransactionBuilder(notary).apply {
+            addOutputState(state)
+        })
+        recordTransactions(issueTx)
+        // Move ownership of the asset to the counterparty
         // We don't check signatures because we know that the notary's signature is missing
-        return serviceHub.signInitialTransaction(moveTxBuilder, keys)
+        signInitialTransaction(TransactionBuilder(notary).apply {
+            addInputState(issueTx.tx.outRef<ContractState>(0))
+            addOutputState(state.copy(participants = listOf(counterpartyNode)))
+        })
     }
 }
