@@ -3,6 +3,7 @@ package net.corda.notarydemo.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -27,13 +28,13 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
     override fun call() = serviceHub.run {
         // Self issue an asset
         val state = State(listOf(myInfo.legalIdentity), discriminator)
-        val issueTx = signInitialTransaction(TransactionBuilder(notary).apply {
+        val issueTx = signInitialTransaction(TransactionBuilder(TransactionType.General, notary).apply {
             addOutputState(state)
         })
         recordTransactions(issueTx)
         // Move ownership of the asset to the counterparty
         // We don't check signatures because we know that the notary's signature is missing
-        signInitialTransaction(TransactionBuilder(notary).apply {
+        signInitialTransaction(TransactionBuilder(TransactionType.General, notary).apply {
             addInputState(issueTx.tx.outRef<ContractState>(0))
             addOutputState(state.copy(participants = listOf(counterpartyNode)))
         })
