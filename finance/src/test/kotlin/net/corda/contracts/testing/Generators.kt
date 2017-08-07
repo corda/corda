@@ -8,7 +8,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
-import net.corda.core.crypto.testing.NullSignature
+import net.corda.core.crypto.testing.NULL_SIGNATURE
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.testing.*
 import net.corda.core.transactions.SignedTransaction
@@ -82,7 +82,7 @@ class SignedTransactionGenerator : Generator<SignedTransaction>(SignedTransactio
         val wireTransaction = WiredTransactionGenerator().generate(random, status)
         return SignedTransaction(
                 ctx = wireTransaction,
-                sigs = listOf(NullSignature)
+                sigs = listOf(NULL_SIGNATURE)
         )
     }
 }

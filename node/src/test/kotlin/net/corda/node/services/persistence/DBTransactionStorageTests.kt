@@ -1,15 +1,17 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.testing.NullPublicKey
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.LogHelper
 import net.corda.testing.TestDependencyInjectionBase
@@ -150,6 +152,6 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
                 notary = DUMMY_NOTARY,
                 timeWindow = null
         )
-        return SignedTransaction(wtx, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))
+        return SignedTransaction(wtx, listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID))))
     }
 }

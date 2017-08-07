@@ -93,7 +93,7 @@ Where:
 * ``outputs`` is a list of the transaction's outputs'
 * ``attachments`` is a list of the transaction's attachments'
 * ``commands`` is a list of the transaction's commands, and their associated signatures'
-* ``id`` is the transaction's merkle root hash'
+* ``id`` is the transaction's Merkle root hash'
 * ``notary`` is the transaction's notary. If there are inputs these must have the same notary on their source transactions.
 * ``timeWindow`` is the transaction's timestamp and defines the acceptable delay for notarisation.
 

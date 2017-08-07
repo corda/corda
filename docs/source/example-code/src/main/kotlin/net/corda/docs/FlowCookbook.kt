@@ -5,8 +5,8 @@ package net.corda.docs
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
@@ -363,11 +363,11 @@ object FlowCookbook {
             // node does not need to check we haven't changed anything in the
             // transaction.
             // DOCSTART 40
-            val sig: DigitalSignature.WithKey = serviceHub.createSignature(onceSignedTx)
+            val sig: TransactionSignature = serviceHub.createSignature(onceSignedTx)
             // DOCEND 40
             // And again, if we wanted to use a different public key:
             // DOCSTART 41
-            val sig2: DigitalSignature.WithKey = serviceHub.createSignature(onceSignedTx, otherKey2)
+            val sig2: TransactionSignature = serviceHub.createSignature(onceSignedTx, otherKey2)
             // DOCEND 41
 
             // In practice, however, the process of gathering every signature
