@@ -62,6 +62,8 @@ UNRELEASED
 
 .. Milestone 15:
 
+* Vault Query fix: filter by multiple issuer names in ``FungibleAssetQueryCriteria``
+
 * Following deprecated methods have been removed:
   * In ``DataFeed``
     * ``first`` and ``current``, replaced by ``snapshot``
@@ -71,6 +73,19 @@ UNRELEASED
     * ``verifiedTransactions``, replaced by ``verifiedTransactionsFeed``
     * ``stateMachineRecordedTransactionMapping``, replaced by ``stateMachineRecordedTransactionMappingFeed``
     * ``networkMapUpdates``, replaced by ``networkMapFeed``
+
+* Due to security concerns and the need to remove the concept of state relevancy (which isn't needed in Corda),
+  ``ResolveTransactionsFlow`` has been made internal. Instead merge the receipt of the ``SignedTransaction`` and the subsequent
+  sub-flow call to ``ResolveTransactionsFlow`` with a single call to ``ReceiveTransactionFlow``. The flow running on the counterparty
+  must use ``SendTransactionFlow`` at the correct place. There is also ``ReceiveStateAndRefFlow`` and ``SendStateAndRefFlow`` for
+  dealing with ``StateAndRef``s.
+
+
+* Vault query soft locking enhancements and deprecations
+  * removed original ``VaultService`` ``softLockedStates` query mechanism.
+  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification
+    of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified
+    by set of lock ids)
 
 Milestone 13
 ------------

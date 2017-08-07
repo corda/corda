@@ -4,10 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.annotations.VisibleForTesting
 import io.requery.PersistenceException
-import io.requery.TransactionIsolation
-import io.requery.kotlin.`in`
 import io.requery.kotlin.eq
-import io.requery.kotlin.isNull
 import io.requery.kotlin.notNull
 import io.requery.query.RowExpression
 import net.corda.contracts.asset.Cash
@@ -19,19 +16,19 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
-import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.*
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.database.parserTransactionIsolationLevel
@@ -135,55 +132,6 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     override val updatesPublisher: PublishSubject<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesPublisher }
-
-    override fun track(): DataFeed<Vault<ContractState>, Vault.Update<ContractState>> {
-        return mutex.locked {
-            DataFeed(Vault(unconsumedStates<ContractState>()), _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
-        }
-    }
-
-    override fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean): Iterable<StateAndRef<T>> {
-        val stateAndRefs =
-                session.withTransaction(transactionIsolationLevel) {
-                    val query = select(VaultSchema.VaultStates::class)
-                            .where(VaultSchema.VaultStates::stateStatus `in` statuses)
-                    // TODO: temporary fix to continue supporting track() function (until becomes Typed)
-                    if (!clazzes.map { it.name }.contains(ContractState::class.java.name))
-                        query.and(VaultSchema.VaultStates::contractStateClassName `in` (clazzes.map { it.name }))
-                    if (!includeSoftLockedStates)
-                        query.and(VaultSchema.VaultStates::lockId.isNull())
-                    val iterator = query.get().iterator()
-                    Sequence { iterator }
-                            .map { it ->
-                                val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                                val state = it.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
-                                Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime)
-                                StateAndRef(state, stateRef)
-                            }
-                }
-        return stateAndRefs.asIterable()
-    }
-
-    override fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {
-        val stateAndRefs =
-                session.withTransaction(transactionIsolationLevel) {
-                    var results: List<StateAndRef<*>> = emptyList()
-                    refs.forEach {
-                        val result = select(VaultSchema.VaultStates::class)
-                                .where(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
-                                .and(VaultSchema.VaultStates::txId eq it.txhash.toString())
-                                .and(VaultSchema.VaultStates::index eq it.index)
-                        result.get()?.each {
-                            val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                            val state = it.contractState.deserialize<TransactionState<*>>(context = STORAGE_CONTEXT)
-                            results += StateAndRef(state, stateRef)
-                        }
-                    }
-                    results
-                }
-
-        return stateAndRefs.associateBy({ it.ref }, { it.state })
-    }
 
     /**
      * Splits the provided [txns] into batches of [WireTransaction] and [NotaryChangeWireTransaction].
@@ -479,26 +427,6 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         }
 
         log.warn("Insufficient spendable states identified for $amount")
-        return stateAndRefs
-    }
-
-    override fun <T : ContractState> softLockedStates(lockId: UUID?): List<StateAndRef<T>> {
-        val stateAndRefs =
-                session.withTransaction(transactionIsolationLevel) {
-                    val query = select(VaultSchema.VaultStates::class)
-                            .where(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
-                            .and(VaultSchema.VaultStates::contractStateClassName eq Cash.State::class.java.name)
-                    if (lockId != null)
-                        query.and(VaultSchema.VaultStates::lockId eq lockId)
-                    else
-                        query.and(VaultSchema.VaultStates::lockId.notNull())
-                    query.get()
-                            .map { it ->
-                                val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                                val state = it.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
-                                StateAndRef(state, stateRef)
-                            }.toList()
-                }
         return stateAndRefs
     }
 

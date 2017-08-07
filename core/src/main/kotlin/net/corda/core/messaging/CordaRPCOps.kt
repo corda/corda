@@ -152,14 +152,6 @@ interface CordaRPCOps : RPCOps {
     // DOCEND VaultTrackAPIHelpers
 
     /**
-     * Returns a data feed of head states in the vault and an observable of future updates to the vault.
-     */
-    @RPCReturnsObservables
-    // TODO: Remove this from the interface
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
-    fun vaultAndUpdates(): DataFeed<List<StateAndRef<ContractState>>, Vault.Update<ContractState>>
-
-    /**
      * Returns a data feed of all recorded transactions and an observable of future recorded ones.
      */
     @RPCReturnsObservables
@@ -220,10 +212,6 @@ interface CordaRPCOps : RPCOps {
      * Uploads a jar to the node, returns it's hash.
      */
     fun uploadAttachment(jar: InputStream): SecureHash
-
-    // TODO: Remove this from the interface
-    @Deprecated("This service will be removed in a future milestone")
-    fun uploadFile(dataType: String, name: String?, file: InputStream): String
 
     /**
      * Authorise a contract state upgrade.

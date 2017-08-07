@@ -9,11 +9,9 @@ import com.google.common.io.CountingInputStream
 import net.corda.core.contracts.AbstractAttachment
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.isDirectory
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.api.AcceptsFileUpload
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.persistence.schemas.requery.Models
@@ -22,7 +20,6 @@ import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 import java.util.jar.JarInputStream
@@ -32,8 +29,8 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in H2 database.
  */
 @ThreadSafe
-class NodeAttachmentService(val storePath: Path, dataSourceProperties: Properties, metrics: MetricRegistry, databaseProperties: Properties?)
-    : AttachmentStorage, AcceptsFileUpload, SingletonSerializeAsToken() {
+class NodeAttachmentService(dataSourceProperties: Properties, metrics: MetricRegistry, databaseProperties: Properties?)
+    : AttachmentStorage, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<NodeAttachmentService>()
     }
@@ -47,8 +44,6 @@ class NodeAttachmentService(val storePath: Path, dataSourceProperties: Propertie
     private val attachmentCount = metrics.counter("Attachments")
 
     init {
-        require(storePath.isDirectory()) { "$storePath must be a directory" }
-
         session.withTransaction {
             attachmentCount.inc(session.count(AttachmentEntity::class).get().value().toLong())
         }
@@ -200,9 +195,4 @@ class NodeAttachmentService(val storePath: Path, dataSourceProperties: Propertie
         }
         require(count > 0) { "Stream is either empty or not a JAR/ZIP" }
     }
-
-    // Implementations for AcceptsFileUpload
-    override val dataTypePrefix = "attachment"
-    override val acceptableFileExtensions = listOf(".jar", ".zip")
-    override fun upload(file: InputStream) = importAttachment(file).toString()
 }

@@ -1,59 +1,42 @@
 package net.corda.node.services.vault;
 
-import com.google.common.collect.ImmutableSet;
-import net.corda.contracts.DealState;
-import net.corda.contracts.asset.Cash;
+import com.google.common.collect.*;
+import net.corda.contracts.*;
+import net.corda.contracts.asset.*;
 import net.corda.core.contracts.*;
-import net.corda.core.crypto.EncodingUtils;
-import net.corda.core.crypto.SecureHash;
-import net.corda.core.identity.AbstractParty;
-import net.corda.core.messaging.DataFeed;
-import net.corda.core.node.services.Vault;
-import net.corda.core.node.services.VaultQueryException;
-import net.corda.core.node.services.VaultQueryService;
-import net.corda.core.node.services.VaultService;
+import net.corda.core.crypto.*;
+import net.corda.core.identity.*;
+import net.corda.core.messaging.*;
+import net.corda.core.node.services.*;
 import net.corda.core.node.services.vault.*;
-import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
-import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
-import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
-import net.corda.core.schemas.MappedSchema;
-import net.corda.core.transactions.SignedTransaction;
-import net.corda.core.transactions.WireTransaction;
-import net.corda.core.utilities.OpaqueBytes;
-import net.corda.node.services.database.HibernateConfiguration;
-import net.corda.node.services.schema.NodeSchemaService;
-import net.corda.node.utilities.CordaPersistence;
-import net.corda.schemas.CashSchemaV1;
-import net.corda.testing.TestConstants;
-import net.corda.testing.TestDependencyInjectionBase;
-import net.corda.testing.contracts.DummyLinearContract;
-import net.corda.testing.contracts.VaultFiller;
-import net.corda.testing.node.MockServices;
-import net.corda.testing.schemas.DummyLinearStateSchemaV1;
-import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import net.corda.core.node.services.vault.QueryCriteria.*;
+import net.corda.core.schemas.*;
+import net.corda.core.transactions.*;
+import net.corda.core.utilities.*;
+import net.corda.node.services.database.*;
+import net.corda.node.services.schema.*;
+import net.corda.node.utilities.*;
+import net.corda.schemas.*;
+import net.corda.testing.*;
+import net.corda.testing.contracts.*;
+import net.corda.testing.node.*;
+import net.corda.testing.schemas.*;
+import org.jetbrains.annotations.*;
+import org.junit.*;
 import rx.Observable;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
+import java.io.*;
+import java.lang.reflect.*;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.stream.*;
 
-import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER;
-import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER_KEY;
-import static net.corda.core.contracts.ContractsDSL.USD;
-import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
-import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
-import static net.corda.core.utilities.ByteArrays.toHexString;
-import static net.corda.node.utilities.CordaPersistenceKt.configureDatabase;
+import static net.corda.contracts.asset.CashKt.*;
+import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
+import static net.corda.core.utilities.ByteArrays.*;
+import static net.corda.node.utilities.CordaPersistenceKt.*;
 import static net.corda.testing.CoreTestUtils.*;
-import static net.corda.testing.node.MockServicesKt.makeTestDataSourceProperties;
-import static net.corda.testing.node.MockServicesKt.makeTestDatabaseProperties;
-import static org.assertj.core.api.Assertions.assertThat;
+import static net.corda.testing.node.MockServicesKt.*;
+import static org.assertj.core.api.Assertions.*;
 
 public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
@@ -66,36 +49,34 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     public void setUp() {
         Properties dataSourceProps = makeTestDataSourceProperties(SecureHash.randomSHA256().toString());
         database = configureDatabase(dataSourceProps, makeTestDatabaseProperties());
-
-        Set<MappedSchema> customSchemas = new HashSet<>(Collections.singletonList(DummyLinearStateSchemaV1.INSTANCE));
-        HibernateConfiguration hibernateConfig = new HibernateConfiguration(new NodeSchemaService(customSchemas), makeTestDatabaseProperties());
-        database.transaction(
-                    statement -> { services = new MockServices(getMEGA_CORP_KEY()) {
+        database.transaction(statement -> {
+            Set<MappedSchema> customSchemas = new HashSet<>(Collections.singletonList(DummyLinearStateSchemaV1.INSTANCE));
+            HibernateConfiguration hibernateConfig = new HibernateConfiguration(new NodeSchemaService(customSchemas), makeTestDatabaseProperties());
+            services = new MockServices(getMEGA_CORP_KEY()) {
                         @NotNull
                         @Override
                         public VaultService getVaultService() {
+                            if (vaultSvc != null) return vaultSvc;
                             return makeVaultService(dataSourceProps, hibernateConfig);
                         }
 
-                        @NotNull
-                        @Override
-                        public VaultQueryService getVaultQueryService() {
-                            return new HibernateVaultQueryImpl(hibernateConfig, getVaultService().getUpdatesPublisher());
-                        }
+                @NotNull
+                @Override
+                public VaultQueryService getVaultQueryService() {
+                    return new HibernateVaultQueryImpl(hibernateConfig, vaultSvc.getUpdatesPublisher());
+                }
 
-                        @Override
-                        public void recordTransactions(@NotNull Iterable<SignedTransaction> txs) {
-                            for (SignedTransaction stx : txs) {
-                                getValidatedTransactions().addTransaction(stx);
-                            }
-
-                            Stream<WireTransaction> wtxn = StreamSupport.stream(txs.spliterator(), false).map(SignedTransaction::getTx);
-                            getVaultService().notifyAll(wtxn.collect(Collectors.toList()));
-                        }
-                    };
+                @Override
+                public void recordTransactions(@NotNull Iterable<SignedTransaction> txs) {
+                    for (SignedTransaction stx : txs) {
+                        getValidatedTransactions().addTransaction(stx);
+                    }
+                    Stream<WireTransaction> wtxn = StreamSupport.stream(txs.spliterator(), false).map(SignedTransaction::getTx);
+                    vaultSvc.notifyAll(wtxn.collect(Collectors.toList()));
+                }
+            };
             vaultSvc = services.getVaultService();
             vaultQuerySvc = services.getVaultQueryService();
-
             return services;
         });
     }
@@ -333,66 +314,6 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             // DOCEND VaultJavaQueryExample5
 
             assertThat(snapshot.getStates()).hasSize(13);
-
-            return tx;
-        });
-    }
-
-    /**
-     * Deprecated usage
-     */
-
-    @Test
-    public void consumedStatesDeprecated() {
-        database.transaction(tx -> {
-            Amount<Currency> amount = new Amount<>(100, USD);
-            VaultFiller.fillWithSomeTestCash(services,
-                    new Amount<>(100, USD),
-                    TestConstants.getDUMMY_NOTARY(),
-                    3,
-                    3,
-                    new Random(),
-                    new OpaqueBytes("1".getBytes()),
-                    null,
-                    getDUMMY_CASH_ISSUER(),
-                    getDUMMY_CASH_ISSUER_KEY() );
-
-            VaultFiller.consumeCash(services, amount);
-
-            // DOCSTART VaultDeprecatedJavaQueryExample1
-            @SuppressWarnings("unchecked")
-            Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
-            EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.CONSUMED);
-
-            // WARNING! unfortunately cannot use inlined reified Kotlin extension methods.
-            Iterable<StateAndRef<ContractState>> results = vaultSvc.states(contractStateTypes, status, true);
-            // DOCEND VaultDeprecatedJavaQueryExample1
-
-            assertThat(results).hasSize(3);
-
-            return tx;
-        });
-    }
-
-    @Test
-    public void consumedStatesForLinearIdDeprecated() {
-        database.transaction(tx -> {
-
-            Vault<LinearState> linearStates = VaultFiller.fillWithSomeTestLinearStates(services, 4,null);
-            linearStates.getStates().iterator().next().component1().getData().getLinearId();
-
-            VaultFiller.consumeLinearStates(services, (List<? extends StateAndRef<? extends LinearState>>) linearStates.getStates());
-
-            // DOCSTART VaultDeprecatedJavaQueryExample0
-            @SuppressWarnings("unchecked")
-            Set<Class<LinearState>> contractStateTypes = new HashSet(Collections.singletonList(DummyLinearContract.State.class));
-            EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.CONSUMED);
-
-            // WARNING! unfortunately cannot use inlined reified Kotlin extension methods.
-            Iterable<StateAndRef<LinearState>> results = vaultSvc.states(contractStateTypes, status, true);
-            // DOCEND VaultDeprecatedJavaQueryExample0
-
-            assertThat(results).hasSize(4);
 
             return tx;
         });

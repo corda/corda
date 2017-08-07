@@ -21,6 +21,7 @@ import net.corda.testing.node.MockAttachmentStorage
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStateMachineRecordedTransactionMappingStorage
 import net.corda.testing.node.MockTransactionStorage
+import java.sql.Connection
 import java.time.Clock
 
 open class MockServiceHubInternal(
@@ -33,7 +34,6 @@ open class MockServiceHubInternal(
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
         override val attachments: AttachmentStorage = MockAttachmentStorage(),
         override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage(),
-        override val uploaders: List<FileUploader> = listOf<FileUploader>(),
         override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage(),
         val mapCache: NetworkMapCacheInternal? = null,
         val scheduler: SchedulerService? = null,
@@ -77,4 +77,6 @@ open class MockServiceHubInternal(
     }
 
     override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? = null
+
+    override fun jdbcSession(): Connection = database.createSession()
 }

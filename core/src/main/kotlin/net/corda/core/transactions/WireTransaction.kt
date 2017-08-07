@@ -121,7 +121,7 @@ data class WireTransaction(
             }
         }
 
-        fun<T : Any> filterAndNoncesUpdate(filtering: Predicate<Any>, t: T, index: Int): Boolean {
+        fun <T : Any> filterAndNoncesUpdate(t: T, index: Int): Boolean {
             return if (filtering.test(t)) {
                 nonces.add(computeNonce(privacySalt, index))
                 true
@@ -129,14 +129,15 @@ data class WireTransaction(
                 false
             }
         }
+
         // TODO: We should have a warning (require) if all leaves (excluding salt) are visible after filtering.
         //      Consider the above after refactoring FilteredTransaction to implement TraversableTransaction,
         //      so that a WireTransaction can be used when required to send a full tx (e.g. RatesFixFlow in Oracles).
         return FilteredLeaves(
-                inputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index) },
-                attachments.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[0]) },
-                outputs.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[1]) },
-                commands.filterIndexed { index, it -> filterAndNoncesUpdate(filtering, it, index + offsets[2]) },
+                inputs.filterIndexed { index, it -> filterAndNoncesUpdate(it, index) },
+                attachments.filterIndexed { index, it -> filterAndNoncesUpdate(it, index + offsets[0]) },
+                outputs.filterIndexed { index, it -> filterAndNoncesUpdate(it, index + offsets[1]) },
+                commands.filterIndexed { index, it -> filterAndNoncesUpdate(it, index + offsets[2]) },
                 notNullFalseAndNoncesUpdate(notary, offsets[3]) as Party?,
                 notNullFalseAndNoncesUpdate(timeWindow, offsets[4]) as TimeWindow?,
                 nonces

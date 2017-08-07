@@ -34,7 +34,9 @@ class LargeTransactionsTest {
                     .addAttachment(hash4)
             val stx = serviceHub.signInitialTransaction(tx, serviceHub.legalIdentityKey)
             // Send to the other side and wait for it to trigger resolution from us.
-            sendAndReceive<Unit>(serviceHub.networkMapCache.getNodeByLegalName(BOB.name)!!.legalIdentity, stx)
+            val bob = serviceHub.networkMapCache.getNodeByLegalName(BOB.name)!!.legalIdentity
+            subFlow(SendTransactionFlow(bob, stx))
+            receive<Unit>(bob)
         }
     }
 
@@ -42,8 +44,7 @@ class LargeTransactionsTest {
     class ReceiveLargeTransactionFlow(private val counterParty: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val stx = receive<SignedTransaction>(counterParty).unwrap { it }
-            subFlow(ResolveTransactionsFlow(stx, counterParty))
+            subFlow(ReceiveTransactionFlow(counterParty))
             // Unblock the other side by sending some dummy object (Unit is fine here as it's a singleton).
             send(counterParty, Unit)
         }
@@ -53,10 +54,10 @@ class LargeTransactionsTest {
     fun checkCanSendLargeTransactions() {
         // These 4 attachments yield a transaction that's got >10mb attached, so it'd push us over the Artemis
         // max message size.
-        val bigFile1 = InputStreamAndHash.createInMemoryTestZip(1024*1024*3, 0)
-        val bigFile2 = InputStreamAndHash.createInMemoryTestZip(1024*1024*3, 1)
-        val bigFile3 = InputStreamAndHash.createInMemoryTestZip(1024*1024*3, 2)
-        val bigFile4 = InputStreamAndHash.createInMemoryTestZip(1024*1024*3, 3)
+        val bigFile1 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 0)
+        val bigFile2 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 1)
+        val bigFile3 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 2)
+        val bigFile4 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 3)
         driver(startNodesInProcess = true) {
             val (alice, _, _) = aliceBobAndNotary()
             alice.useRPC {

@@ -112,7 +112,7 @@ internal fun interfacesForSerialization(type: Type): List<Type> {
 private fun exploreType(type: Type?, interfaces: MutableSet<Type>) {
     val clazz = type?.asClass()
     if (clazz != null) {
-        if (clazz.isInterface) interfaces += type!!
+        if (clazz.isInterface) interfaces += type
         for (newInterface in clazz.genericInterfaces) {
             if (newInterface !in interfaces) {
                 exploreType(resolveTypeVariables(newInterface, type), interfaces)

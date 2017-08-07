@@ -62,6 +62,8 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.configureDatabase
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
@@ -77,6 +79,7 @@ import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.sql.Connection
 import java.time.Clock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -207,8 +210,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             // TODO Remove this once the cash stuff is in its own CorDapp
             registerInitiatedFlow(IssuerFlow.Issuer::class.java)
-
-            initUploaders()
 
             runOnStop += network::stop
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
@@ -398,8 +399,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun installCoreFlows() {
-        installCoreFlow(FetchTransactionsFlow::class) { otherParty, _ -> FetchTransactionsHandler(otherParty) }
-        installCoreFlow(FetchAttachmentsFlow::class) { otherParty, _ -> FetchAttachmentsHandler(otherParty) }
         installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
         installCoreFlow(NotaryChangeFlow::class) { otherParty, _ -> NotaryChangeHandler(otherParty) }
         installCoreFlow(ContractUpgradeFlow::class) { otherParty, _ -> ContractUpgradeHandler(otherParty) }
@@ -413,7 +412,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         _services = ServiceHubInternalImpl()
-        attachments = createAttachmentStorage()
+        attachments = NodeAttachmentService(configuration.dataSourceProperties, services.monitoringService.metrics, configuration.database)
         network = makeMessagingService()
         info = makeInfo()
 
@@ -475,11 +474,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return getNamesOfClassesWithAnnotation(annotation.java)
                 .mapNotNull { loadClass(it) }
                 .filterNot { isAbstract(it.modifiers) }
-    }
-
-    private fun initUploaders() {
-        _services.uploaders += attachments
-        cordappServices.values.filterIsInstanceTo(_services.uploaders, AcceptsFileUpload::class.java)
     }
 
     private fun makeVaultObservers() {
@@ -762,14 +756,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
-    private fun createAttachmentStorage(): NodeAttachmentService {
-        val attachmentsDir = (configuration.baseDirectory / "attachments").createDirectories()
-        return NodeAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics, configuration.database)
-    }
-
     private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
-        override val uploaders = ArrayList<FileUploader>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val monitoringService = MonitoringService(MetricRegistry())
@@ -819,6 +807,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 super.recordTransactions(txs)
             }
         }
+        override fun jdbcSession(): Connection = database.createSession()
     }
 
 }

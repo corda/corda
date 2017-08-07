@@ -6,6 +6,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.USD
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
@@ -105,10 +106,10 @@ fun main(args: Array<String>) {
 
 // START 6
 fun generateTransactions(proxy: CordaRPCOps) {
-    val (vault, vaultUpdates) = proxy.vaultAndUpdates()
-    vaultUpdates.notUsed()
+    val vault = proxy.vaultQueryBy<Cash.State>().states
+
     var ownedQuantity = vault.fold(0L) { sum, state ->
-        sum + (state.state.data as Cash.State).amount.quantity
+        sum + state.state.data.amount.quantity
     }
     val issueRef = OpaqueBytes.of(0)
     val (parties, partyUpdates) = proxy.networkMapFeed()

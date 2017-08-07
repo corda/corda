@@ -43,18 +43,30 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         val predicateSet = mutableSetOf<Predicate>()
 
         // contract State Types
-        val combinedContractTypeTypes = criteria.contractStateTypes?.plus(contractType) ?: setOf(contractType)
-        combinedContractTypeTypes.filter { it.name != ContractState::class.java.name }.let {
-            val interfaces = it.flatMap { contractTypeMappings[it.name] ?: emptyList() }
-            val concrete = it.filter { !it.isInterface }.map { it.name }
-            val all = interfaces.plus(concrete)
-            if (all.isNotEmpty())
-                predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(all)))
-        }
+        val contractTypes = deriveContractTypes(criteria.contractStateTypes)
+        if (contractTypes.isNotEmpty())
+            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
         // soft locking
-        if (!criteria.includeSoftlockedStates)
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNull))
+        criteria.softLockingCondition?.let {
+            val softLocking = criteria.softLockingCondition
+            val type = softLocking!!.type
+            when(type) {
+                QueryCriteria.SoftLockingType.UNLOCKED_ONLY ->
+                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNull))
+                QueryCriteria.SoftLockingType.LOCKED_ONLY ->
+                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNotNull))
+                QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED -> {
+                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
+                    predicateSet.add(criteriaBuilder.or(vaultStates.get<String>("lockId").isNull,
+                                                        vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
+                }
+                QueryCriteria.SoftLockingType.SPECIFIED -> {
+                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
+                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
+                }
+            }
+        }
 
         // notary names
         criteria.notaryName?.let {
@@ -81,6 +93,15 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             predicateSet.add(parseExpression(vaultStates, expression) as Predicate)
         }
         return predicateSet
+    }
+
+    private fun deriveContractTypes(contractStateTypes: Set<Class<out ContractState>>? = null): List<String> {
+        val combinedContractStateTypes = contractStateTypes?.plus(contractType) ?: setOf(contractType)
+        combinedContractStateTypes.filter { it.name != ContractState::class.java.name }.let {
+            val interfaces = it.flatMap { contractTypeMappings[it.name] ?: emptyList() }
+            val concrete = it.filter { !it.isInterface }.map { it.name }
+            return interfaces.plus(concrete)
+        }
     }
 
     private fun columnPredicateToPredicate(column: Path<out Any?>, columnPredicate: ColumnPredicate<*>): Predicate {
@@ -172,21 +193,21 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 @Suppress("UNCHECKED_CAST")
                 column as Path<Long?>?
                 val aggregateExpression =
-                    when (columnPredicate.type) {
-                        AggregateFunctionType.SUM -> criteriaBuilder.sum(column)
-                        AggregateFunctionType.AVG -> criteriaBuilder.avg(column)
-                        AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
-                        AggregateFunctionType.MAX -> criteriaBuilder.max(column)
-                        AggregateFunctionType.MIN -> criteriaBuilder.min(column)
-                    }
+                        when (columnPredicate.type) {
+                            AggregateFunctionType.SUM -> criteriaBuilder.sum(column)
+                            AggregateFunctionType.AVG -> criteriaBuilder.avg(column)
+                            AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
+                            AggregateFunctionType.MAX -> criteriaBuilder.max(column)
+                            AggregateFunctionType.MIN -> criteriaBuilder.min(column)
+                        }
                 aggregateExpressions.add(aggregateExpression)
                 // optionally order by this aggregate function
                 expression.orderBy?.let {
                     val orderCriteria =
-                        when (expression.orderBy!!) {
-                            Sort.Direction.ASC -> criteriaBuilder.asc(aggregateExpression)
-                            Sort.Direction.DESC -> criteriaBuilder.desc(aggregateExpression)
-                        }
+                            when (expression.orderBy!!) {
+                                Sort.Direction.ASC -> criteriaBuilder.asc(aggregateExpression)
+                                Sort.Direction.DESC -> criteriaBuilder.desc(aggregateExpression)
+                            }
                     criteriaQuery.orderBy(orderCriteria)
                 }
                 // add optional group by clauses
@@ -216,6 +237,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultFungibleStates.get<PersistentStateRef>("stateRef"))
         predicateSet.add(joinPredicate)
 
+        // contract State Types
+        val contractTypes = deriveContractTypes()
+        if (contractTypes.isNotEmpty())
+            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
+
         // owner
         criteria.owner?.let {
             val ownerKeys = criteria.owner as List<AbstractParty>
@@ -233,8 +259,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         criteria.issuerPartyName?.let {
             val issuerParties = criteria.issuerPartyName as List<AbstractParty>
             val joinFungibleStateToParty = vaultFungibleStates.join<VaultSchemaV1.VaultFungibleStates, CommonSchemaV1.Party>("issuerParty")
-            val dealPartyKeys = issuerParties.map { it.nameOrNull().toString() }
-            predicateSet.add(criteriaBuilder.equal(joinFungibleStateToParty.get<CommonSchemaV1.Party>("name"), dealPartyKeys))
+            val issuerPartyNames = issuerParties.map { it.nameOrNull().toString() }
+            predicateSet.add(criteriaBuilder.and(joinFungibleStateToParty.get<CommonSchemaV1.Party>("name").`in`(issuerPartyNames)))
         }
 
         // issuer reference
@@ -264,6 +290,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
         joinPredicates.add(joinPredicate)
+
+        // contract State Types
+        val contractTypes = deriveContractTypes()
+        if (contractTypes.isNotEmpty())
+            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
         // linear ids
         criteria.linearId?.let {
@@ -303,6 +334,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
             val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
             joinPredicates.add(joinPredicate)
+
+            // contract State Types
+            val contractTypes = deriveContractTypes()
+            if (contractTypes.isNotEmpty())
+                predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
             // resolve general criteria expressions
             parseExpression(entityRoot, criteria.expression, predicateSet)
@@ -355,10 +391,10 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
 
         val selections =
-            if (aggregateExpressions.isEmpty())
-                listOf(vaultStates).plus(rootEntities.map { it.value })
-            else
-                aggregateExpressions
+                if (aggregateExpressions.isEmpty())
+                    listOf(vaultStates).plus(rootEntities.map { it.value })
+                else
+                    aggregateExpressions
         criteriaQuery.multiselect(selections)
         val combinedPredicates = joinPredicates.plus(predicateSet)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
@@ -420,21 +456,21 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
     private fun parse(sortAttribute: Sort.Attribute): Triple<Class<out PersistentState>, String, String?> {
         val entityClassAndColumnName : Triple<Class<out PersistentState>, String, String?> =
-            when(sortAttribute) {
-                is Sort.CommonStateAttribute -> {
-                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
+                when(sortAttribute) {
+                    is Sort.CommonStateAttribute -> {
+                        Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
+                    }
+                    is Sort.VaultStateAttribute -> {
+                        Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
+                    }
+                    is Sort.LinearStateAttribute -> {
+                        Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
+                    }
+                    is Sort.FungibleStateAttribute -> {
+                        Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
+                    }
+                    else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
                 }
-                is Sort.VaultStateAttribute -> {
-                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
-                }
-                is Sort.LinearStateAttribute -> {
-                    Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
-                }
-                is Sort.FungibleStateAttribute -> {
-                    Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
-                }
-                else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
-            }
         return entityClassAndColumnName
     }
 }

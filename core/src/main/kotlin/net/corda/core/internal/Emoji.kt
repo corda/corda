@@ -9,8 +9,8 @@ object Emoji {
     // Check for that here. DemoBench sets TERM_PROGRAM appropriately.
     val hasEmojiTerminal by lazy {
         System.getenv("CORDA_FORCE_EMOJI") != null ||
-        System.getenv("TERM_PROGRAM") in listOf("Apple_Terminal", "iTerm.app") ||
-        (System.getenv("TERM_PROGRAM") == "JediTerm" && System.getProperty("java.vendor") == "JetBrains s.r.o")
+                System.getenv("TERM_PROGRAM") in listOf("Apple_Terminal", "iTerm.app") ||
+                (System.getenv("TERM_PROGRAM") == "JediTerm" && System.getProperty("java.vendor") == "JetBrains s.r.o")
     }
 
     @JvmStatic val CODE_SANTA_CLAUS: String = codePointsString(0x1F385)
@@ -27,6 +27,9 @@ object Emoji {
     @JvmStatic val CODE_BOOKS: String = codePointsString(0x1F4DA)
     @JvmStatic val CODE_SLEEPING_FACE: String = codePointsString(0x1F634)
     @JvmStatic val CODE_LIGHTBULB: String = codePointsString(0x1F4A1)
+    @JvmStatic val CODE_FREE: String = codePointsString(0x1F193)
+    @JvmStatic val CODE_SOON: String = codePointsString(0x1F51C)
+
 
     /**
      * When non-null, toString() methods are allowed to use emoji in the output as we're going to render them to a
@@ -44,6 +47,8 @@ object Emoji {
     val books: String get() = if (emojiMode.get() != null) "$CODE_BOOKS  " else ""
     val sleepingFace: String get() = if (emojiMode.get() != null) "$CODE_SLEEPING_FACE  " else ""
     val lightBulb: String get() = if (emojiMode.get() != null) "$CODE_LIGHTBULB  " else ""
+    val free: String get() = if (emojiMode.get() != null) "$CODE_FREE  " else ""
+    val soon: String get() = if (emojiMode.get() != null) "$CODE_SOON  " else ""
 
     // These have old/non-emoji symbols with better platform support.
     val greenTick: String get() = if (emojiMode.get() != null) "$CODE_GREEN_TICK  " else "✓"

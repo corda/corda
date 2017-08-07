@@ -136,32 +136,9 @@ class StandaloneCordaRPClientTest {
     }
 
     @Test
-    fun `test vault`() {
-        val (vault, vaultUpdates) = rpcProxy.vaultAndUpdates()
-        assertEquals(0, vault.size)
-
-        val updateCount = AtomicInteger(0)
-        vaultUpdates.subscribe { update ->
-            log.info("Vault>> FlowId=${update.flowId}")
-            updateCount.incrementAndGet()
-        }
-
-        // Now issue some cash
-        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNode.legalIdentity, notaryNode.notaryIdentity)
-            .returnValue.getOrThrow(timeout)
-        assertNotEquals(0, updateCount.get())
-
-        // Check that this cash exists in the vault
-        val cashState = rpcProxy.vaultQueryBy<Cash.State>(QueryCriteria.FungibleAssetQueryCriteria()).states.single()
-        log.info("Cash State: $cashState")
-
-        assertEquals(629.POUNDS, cashState.state.data.amount.withoutIssuer())
-    }
-
-    @Test
     fun `test vault track by`() {
-        val (vault, vaultUpdates) = rpcProxy.vaultTrackBy<Cash.State>()
-        assertEquals(0, vault.states.size)
+        val (vault, vaultUpdates) = rpcProxy.vaultTrackBy<Cash.State>(paging = PageSpecification(DEFAULT_PAGE_NUM))
+        assertEquals(0, vault.totalStatesAvailable)
 
         val updateCount = AtomicInteger(0)
         vaultUpdates.subscribe { update ->

@@ -203,7 +203,7 @@ class TwoPartyTradeFlowTests {
             bobNode.disableDBCloseOnStop()
 
             val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
-            val networkMapAddr = notaryNode.network.myAddress
+            val networkMapAddress = notaryNode.network.myAddress
 
             mockNet.runNetwork() // Clear network map registration messages
 
@@ -249,7 +249,7 @@ class TwoPartyTradeFlowTests {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = mockNet.createNode(networkMapAddr, bobAddr.id, object : MockNetwork.Factory {
+            bobNode = mockNet.createNode(networkMapAddress, bobAddr.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
                 override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                     advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                                     entropyRoot: BigInteger): MockNetwork.MockNode {
@@ -289,11 +289,10 @@ class TwoPartyTradeFlowTests {
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
     private fun makeNodeWithTracking(
-            networkMapAddr: SingleMessageRecipient?,
-            name: X500Name,
-            overrideServices: Map<ServiceInfo, KeyPair>? = null): MockNetwork.MockNode {
+            networkMapAddress: SingleMessageRecipient?,
+            name: X500Name): MockNetwork.MockNode {
         // Create a node in the mock network ...
-        return mockNet.createNode(networkMapAddr, -1, object : MockNetwork.Factory {
+        return mockNet.createNode(networkMapAddress, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration,
                                 network: MockNetwork,
                                 networkMapAddr: SingleMessageRecipient?,
@@ -307,7 +306,7 @@ class TwoPartyTradeFlowTests {
                     }
                 }
             }
-        }, true, name, overrideServices)
+        }, legalName = name)
     }
 
     @Test

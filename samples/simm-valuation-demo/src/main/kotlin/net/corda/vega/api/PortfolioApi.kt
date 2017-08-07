@@ -4,7 +4,6 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import net.corda.client.rpc.notUsed
 import net.corda.contracts.DealState
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
 import net.corda.core.getOrThrow
@@ -12,6 +11,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.ServiceType
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.contracts.IRSState
@@ -38,9 +38,10 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     private val portfolioUtils = PortfolioApiUtils(ownParty)
 
     private inline fun <reified T : DealState> dealsWith(party: AbstractParty): List<StateAndRef<T>> {
-        val (vault, vaultUpdates) = rpc.vaultAndUpdates()
-        vaultUpdates.notUsed()
-        return vault.filterStatesOfType<T>().filter { it.state.data.participants.any { it == party } }
+        val linearStates = rpc.vaultQueryBy<T>().states
+        // TODO: enhancement to Vault Query to check for any participant in participants attribute
+        // QueryCriteria.LinearStateQueryCriteria(participants = anyOf(party))
+        return linearStates.filter { it.state.data.participants.any { it == party } }
     }
 
     /**

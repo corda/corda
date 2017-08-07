@@ -1,11 +1,11 @@
 package net.corda.vega.portfolio
 
-import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.sum
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.node.ServiceHub
+import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.SwapData
 import java.math.BigDecimal
@@ -35,16 +35,5 @@ fun List<StateAndRef<IRSState>>.toPortfolio(): Portfolio {
 }
 
 inline fun <reified T : ContractState> List<StateRef>.toStateAndRef(rpc: CordaRPCOps): List<StateAndRef<T>> {
-    val (vault, vaultUpdates) = rpc.vaultAndUpdates()
-    vaultUpdates.notUsed()
-    val stateRefs = vault.associateBy { it.ref }
-    return mapNotNull { stateRefs[it] }.filterStatesOfType<T>()
-}
-
-// TODO: This should probably have its generics fixed and moved into the core platform API.
-@Suppress("UNCHECKED_CAST")
-fun <T : ContractState> List<StateRef>.toStateAndRef(services: ServiceHub): List<StateAndRef<T>> {
-    return services.vaultService.statesForRefs(this).map {
-        StateAndRef(it.value as TransactionState<T>, it.key)
-    }
+    return rpc.vaultQueryBy<T>(QueryCriteria.VaultQueryCriteria(stateRefs = this)).states
 }

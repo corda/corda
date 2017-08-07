@@ -23,13 +23,14 @@ object AmountBindings {
     ) { sum -> Amount(sum.toLong(), token) }
 
     fun exchange(
-            currency: ObservableValue<Currency>,
-            exchangeRate: ObservableValue<ExchangeRate>
+            observableCurrency: ObservableValue<Currency>,
+            observableExchangeRate: ObservableValue<ExchangeRate>
     ): ObservableValue<Pair<Currency, (Amount<Currency>) -> Long>> {
-        return EasyBind.combine(currency, exchangeRate) { currency, exchangeRate ->
-            Pair(currency) { amount: Amount<Currency> ->
-                (exchangeRate.rate(amount.token, currency) * amount.quantity).toLong()
-            }
+        return EasyBind.combine(observableCurrency, observableExchangeRate) { currency, exchangeRate ->
+            Pair<Currency, (Amount<Currency>) -> Long>(
+                    currency,
+                    { (quantity, _, token) -> (exchangeRate.rate(token, currency) * quantity).toLong() }
+            )
         }
     }
 

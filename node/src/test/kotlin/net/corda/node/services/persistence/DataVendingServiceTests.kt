@@ -5,12 +5,12 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.USD
-import net.corda.core.flows.BroadcastTransactionFlow.NotifyTxRequest
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.identity.Party
-import net.corda.core.node.services.unconsumedStates
+import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.NotifyTransactionHandler
@@ -56,12 +56,12 @@ class DataVendingServiceTests {
         // Complete the cash transaction, and then manually relay it
         val tx = registerNode.services.signInitialTransaction(ptx)
         vaultServiceNode.database.transaction {
-            assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
+            assertThat(vaultServiceNode.services.vaultQueryService.queryBy<Cash.State>().states.isEmpty())
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)
 
             // Check the transaction is in the receiving node
-            val actual = vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>().singleOrNull()
+            val actual = vaultServiceNode.services.vaultQueryService.queryBy<Cash.State>().states.singleOrNull()
             val expected = tx.tx.outRef<Cash.State>(0)
             assertEquals(expected, actual)
         }
@@ -86,12 +86,12 @@ class DataVendingServiceTests {
         // The transaction tries issuing MEGA_CORP cash, but we aren't the issuer, so it's invalid
         val tx = registerNode.services.signInitialTransaction(ptx)
         vaultServiceNode.database.transaction {
-            assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
+            assertThat(vaultServiceNode.services.vaultQueryService.queryBy<Cash.State>().states.isEmpty())
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)
 
             // Check the transaction is not in the receiving node
-            assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
+            assertThat(vaultServiceNode.services.vaultQueryService.queryBy<Cash.State>().states.isEmpty())
         }
     }
 
@@ -102,9 +102,9 @@ class DataVendingServiceTests {
     }
 
     @InitiatingFlow
-    private class NotifyTxFlow(val otherParty: Party, val stx: SignedTransaction) : FlowLogic<Unit>() {
+    private class NotifyTxFlow(val otherParty: Party, val stx: SignedTransaction) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = send(otherParty, NotifyTxRequest(stx))
+        override fun call() = subFlow(SendTransactionFlow(otherParty, stx))
     }
 
     @InitiatedBy(NotifyTxFlow::class)

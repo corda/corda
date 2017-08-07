@@ -16,7 +16,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.internal.Emoji
+import net.corda.core.then
 import net.corda.core.utilities.loggerFor
 import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
@@ -49,7 +49,6 @@ import org.crsh.vfs.spi.url.ClassPathMountFactory
 import rx.Observable
 import rx.Subscriber
 import java.io.*
-import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -277,25 +276,25 @@ object InteractiveShell {
         val errors = ArrayList<String>()
         for (ctor in clazz.constructors) {
             var paramNamesFromConstructor: List<String>? = null
-            fun getPrototype(ctor: Constructor<*>): List<String> {
+            fun getPrototype(): List<String> {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
-                val prototype = paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
-                return prototype
+                return paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
             }
+
             try {
                 // Attempt construction with the given arguments.
                 paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
                 val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.parameterTypes), inputData)
                 if (args.size != ctor.parameterTypes.size) {
-                    errors.add("${getPrototype(ctor)}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
+                    errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
                     continue
                 }
                 val flow = ctor.newInstance(*args) as FlowLogic<*>
                 return invoke(flow)
             } catch(e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
-                errors.add("${getPrototype(ctor)}: missing parameter ${e.paramName}")
+                errors.add("${getPrototype()}: missing parameter ${e.paramName}")
             } catch(e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
-                errors.add("${getPrototype(ctor)}: too many parameters")
+                errors.add("${getPrototype()}: too many parameters")
             } catch(e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
                 errors.add("$argTypes: <constructor missing parameter reflection data>")
