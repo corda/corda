@@ -9,6 +9,7 @@ import net.corda.core.serialization.CordaSerializable
  * application-specific fields.
  *
  * @param platformVersion current DLT version.
+ * @param schemeNumberID number id of the signature scheme used based on signer's key-pair, see [SignatureScheme.schemeNumberID].
  */
 @CordaSerializable
 data class SignatureMetadata(val platformVersion: Int, val schemeNumberID: Int)

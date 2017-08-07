@@ -3,7 +3,6 @@ package net.corda.core.transactions
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable

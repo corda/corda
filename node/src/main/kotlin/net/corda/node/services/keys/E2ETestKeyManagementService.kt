@@ -75,6 +75,8 @@ class E2ETestKeyManagementService(val identityService: IdentityService,
         return keyPair.sign(bytes)
     }
 
+    // TODO: A full KeyManagementService implementation needs to record activity to the Audit Service and to limit
+    //      signing to appropriately authorised contexts and initiating users.
     override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(signableData)

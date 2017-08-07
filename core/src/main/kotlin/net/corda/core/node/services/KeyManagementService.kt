@@ -50,8 +50,6 @@ interface KeyManagementService {
      * or previously generated via the [freshKey] method.
      * If the [PublicKey] is actually a [CompositeKey] the first leaf signing key hosted by the node is used.
      * @throws IllegalArgumentException if the input key is not a member of [keys].
-     * TODO A full [KeyManagementService] implementation needs to record activity to the [AuditService] and to limit signing to
-     * appropriately authorised contexts and initiating users.
      */
     @Suspendable
     fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey
@@ -63,8 +61,6 @@ interface KeyManagementService {
      * or previously generated via the [freshKey] method.
      * If the [PublicKey] is actually a [CompositeKey] the first leaf signing key hosted by the node is used.
      * @throws IllegalArgumentException if the input key is not a member of [keys].
-     * TODO: A full [KeyManagementService] implementation needs to record activity to the Audit Service and to limit signing to
-     *      appropriately authorised contexts and initiating users.
      */
     @Suspendable
     fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature
