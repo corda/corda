@@ -10,7 +10,7 @@ import java.nio.ByteBuffer
 import java.util.function.Predicate
 
 /**
- * If a privacy salt is provided, the resulted output (merkle-leaf) is computed as
+ * If a privacy salt is provided, the resulted output (Merkle-leaf) is computed as
  * Hash(serializedObject || Hash(privacy_salt || obj_index_in_merkle_tree)).
  */
 fun <T : Any> serializedHash(x: T, privacySalt: PrivacySalt?, index: Int): SecureHash {

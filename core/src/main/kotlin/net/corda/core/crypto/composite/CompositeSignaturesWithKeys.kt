@@ -1,6 +1,6 @@
 package net.corda.core.crypto.composite
 
-import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -8,7 +8,7 @@ import net.corda.core.serialization.CordaSerializable
  * serialization format (i.e. not Kryo).
  */
 @CordaSerializable
-data class CompositeSignaturesWithKeys(val sigs: List<DigitalSignature.WithKey>) {
+data class CompositeSignaturesWithKeys(val sigs: List<TransactionSignature>) {
     companion object {
         val EMPTY = CompositeSignaturesWithKeys(emptyList())
     }

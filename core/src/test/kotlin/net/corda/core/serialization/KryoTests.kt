@@ -9,6 +9,7 @@ import net.corda.nodeapi.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.serialization.SerializationContextImpl
 import net.corda.nodeapi.serialization.SerializationFactoryImpl
 import net.corda.testing.ALICE
+import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.BOB
 import net.corda.testing.BOB_PUBKEY
 import org.assertj.core.api.Assertions.assertThat
@@ -117,16 +118,13 @@ class KryoTests {
     }
 
     @Test
-    fun `serialize - deserialize MetaData`() {
+    fun `serialize - deserialize SignableData`() {
         val testString = "Hello World"
         val testBytes = testString.toByteArray()
-        val keyPair1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-        val bitSet = java.util.BitSet(10)
-        bitSet.set(3)
 
-        val meta = MetaData("ECDSA_SECP256K1_SHA256", "M9", SignatureType.FULL, Instant.now(), bitSet, bitSet, testBytes, keyPair1.public)
+        val meta = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID))
         val serializedMetaData = meta.serialize(factory, context).bytes
-        val meta2 = serializedMetaData.deserialize<MetaData>(factory, context)
+        val meta2 = serializedMetaData.deserialize<SignableData>(factory, context)
         assertEquals(meta2, meta)
     }
 

@@ -2,9 +2,7 @@ package net.corda.core.node.services
 
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
@@ -74,5 +72,10 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
 
     fun sign(bits: ByteArray): DigitalSignature.WithKey {
         return services.keyManagementService.sign(bits, services.notaryIdentityKey)
+    }
+
+    fun sign(txId: SecureHash): TransactionSignature {
+        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(services.notaryIdentityKey).schemeNumberID))
+        return services.keyManagementService.sign(signableData, services.notaryIdentityKey)
     }
 }

@@ -11,7 +11,6 @@ import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
-import net.corda.core.crypto.MetaData
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.transactions.NotaryChangeWireTransaction
@@ -98,7 +97,6 @@ object DefaultKryoCustomizer {
 
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
 
-            register(MetaData::class.java, MetaDataSerializer)
             register(BitSet::class.java, BitSetSerializer())
             register(Class::class.java, ClassSerializer)
 

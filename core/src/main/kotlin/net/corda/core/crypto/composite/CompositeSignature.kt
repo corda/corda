@@ -1,8 +1,7 @@
 package net.corda.core.crypto.composite
 
+import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.deserialize
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import java.io.ByteArrayOutputStream
 import java.security.*
 import java.security.spec.AlgorithmParameterSpec
@@ -77,7 +76,7 @@ class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
         fun engineVerify(sigBytes: ByteArray): Boolean {
             val sig = sigBytes.deserialize<CompositeSignaturesWithKeys>()
             return if (verifyKey.isFulfilledBy(sig.sigs.map { it.by })) {
-                val clearData = buffer.toByteArray()
+                val clearData = SecureHash.SHA256(buffer.toByteArray())
                 sig.sigs.all { it.isValid(clearData) }
             } else {
                 false

@@ -438,7 +438,7 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
 
 /**
  * A privacy salt is required to compute nonces per transaction component in order to ensure that an adversary cannot
- * use brute force techniques and reveal the content of a merkle-leaf hashed value.
+ * use brute force techniques and reveal the content of a Merkle-leaf hashed value.
  * Because this salt serves the role of the seed to compute nonces, its size and entropy should be equal to the
  * underlying hash function used for Merkle tree generation, currently [SHA256], which has an output of 32 bytes.
  * There are two constructors, one that generates a new 32-bytes random salt, and another that takes a [ByteArray] input.

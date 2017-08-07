@@ -9,9 +9,7 @@ import net.corda.contracts.math.CubicSplineInterpolator
 import net.corda.contracts.math.Interpolator
 import net.corda.contracts.math.InterpolatorFactory
 import net.corda.core.contracts.Command
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.crypto.keys
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
@@ -146,7 +144,7 @@ object NodeInterestRates {
         //      Oracle gets signing request for only some of them with a valid partial tree? We sign over a whole transaction.
         //      It will be fixed by adding partial signatures later.
         // DOCSTART 1
-        fun sign(ftx: FilteredTransaction): DigitalSignature.WithKey {
+        fun sign(ftx: FilteredTransaction): TransactionSignature {
             if (!ftx.verify()) {
                 throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
             }
@@ -177,8 +175,9 @@ object NodeInterestRates {
             // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
             // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
             // an invalid transaction the signature is worthless.
-            val signature = services.keyManagementService.sign(ftx.rootHash.bytes, signingKey)
-            return DigitalSignature.WithKey(signingKey, signature.bytes)
+            val signableData = SignableData(ftx.rootHash, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(signingKey).schemeNumberID))
+            val signature = services.keyManagementService.sign(signableData, signingKey)
+            return TransactionSignature(signature.bytes, signingKey, signableData.signatureMetadata)
         }
         // DOCEND 1
 

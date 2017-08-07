@@ -5,7 +5,6 @@ import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.sign
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
@@ -509,14 +508,14 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 
         // Issue some cash
-        val issueTx = TransactionBuilder(notary).apply {
+        val issueTxBuilder = TransactionBuilder(notary).apply {
             Cash().generateIssue(this, amount, anonymousIdentity.party, notary)
-        }.toWireTransaction()
-
+            signWith(BOC_KEY)
+        }
         // We need to record the issue transaction so inputs can be resolved for the notary change transaction
-        val signedIssueTx = SignedTransaction(issueTx, listOf(BOC_KEY.sign(issueTx.id)))
-        services.validatedTransactions.addTransaction(signedIssueTx)
+        services.validatedTransactions.addTransaction(issueTxBuilder.toSignedTransaction())
 
+        val issueTx = issueTxBuilder.toWireTransaction()
         val initialCashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
 
         // Change notary

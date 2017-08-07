@@ -1,9 +1,9 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
@@ -172,7 +172,7 @@ data class WireTransaction(
      * @throws SignatureException if the signature didn't match the transaction contents.
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
-    fun checkSignature(sig: DigitalSignature.WithKey) {
+    fun checkSignature(sig: TransactionSignature) {
         require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
         sig.verify(id)
     }

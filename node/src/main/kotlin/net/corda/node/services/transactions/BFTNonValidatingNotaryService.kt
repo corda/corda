@@ -2,7 +2,10 @@ package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.Party
@@ -109,7 +112,8 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
                 commitInputStates(inputs, id, callerIdentity)
 
                 log.debug { "Inputs committed successfully, signing $id" }
-                val sig = sign(id.bytes)
+                val signableData = SignableData(id, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(services.notaryIdentityKey).schemeNumberID))
+                val sig = sign(signableData)
                 BFTSMaRt.ReplicaResponse.Signature(sig)
             } catch (e: NotaryException) {
                 log.debug { "Error processing transaction: ${e.error}" }

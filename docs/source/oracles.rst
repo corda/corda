@@ -112,7 +112,7 @@ Here is an extract from the ``NodeInterestRates.Oracle`` class and supporting ty
    class Oracle {
        fun query(queries: List<FixOf>, deadline: Instant): List<Fix>
 
-       fun sign(ftx: FilteredTransaction, merkleRoot: SecureHash): DigitalSignature.WithKey
+       fun sign(ftx: FilteredTransaction, txId: SecureHash): DigitalSignature.WithKey
    }
 
 Because the fix contains a timestamp (the ``forDay`` field), that identifies the version of the data being requested,

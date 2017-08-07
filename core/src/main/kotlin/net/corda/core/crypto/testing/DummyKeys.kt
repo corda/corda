@@ -1,6 +1,7 @@
 package net.corda.core.crypto.testing
 
-import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.serialization.CordaSerializable
 import java.math.BigInteger
@@ -31,5 +32,4 @@ class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
 }
 
 /** A signature with a key and value of zero. Useful when you want a signature object that you know won't ever be used. */
-@CordaSerializable
-object NullSignature : DigitalSignature.WithKey(NullPublicKey, ByteArray(32))
+val NULL_SIGNATURE = TransactionSignature(ByteArray(32), NullPublicKey, SignatureMetadata(1, -1))
