@@ -430,26 +430,6 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         return stateAndRefs
     }
 
-    override fun <T : ContractState> softLockedStates(lockId: UUID?): List<StateAndRef<T>> {
-        val stateAndRefs =
-                session.withTransaction(transactionIsolationLevel) {
-                    val query = select(VaultSchema.VaultStates::class)
-                            .where(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
-                            .and(VaultSchema.VaultStates::contractStateClassName eq Cash.State::class.java.name)
-                    if (lockId != null)
-                        query.and(VaultSchema.VaultStates::lockId eq lockId)
-                    else
-                        query.and(VaultSchema.VaultStates::lockId.notNull())
-                    query.get()
-                            .map { it ->
-                                val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                                val state = it.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
-                                StateAndRef(state, stateRef)
-                            }.toList()
-                }
-        return stateAndRefs
-    }
-
     /**
      * Generate a transaction that moves an amount of currency to the given pubkey.
      *

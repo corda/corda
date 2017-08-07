@@ -48,8 +48,25 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
         // soft locking
-        if (!criteria.includeSoftlockedStates)
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNull))
+        criteria.softLockingCondition?.let {
+            val softLocking = criteria.softLockingCondition
+            val type = softLocking!!.type
+            when(type) {
+                QueryCriteria.SoftLockingType.UNLOCKED_ONLY ->
+                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNull))
+                QueryCriteria.SoftLockingType.LOCKED_ONLY ->
+                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNotNull))
+                QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED -> {
+                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
+                    predicateSet.add(criteriaBuilder.or(vaultStates.get<String>("lockId").isNull,
+                                                        vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
+                }
+                QueryCriteria.SoftLockingType.SPECIFIED -> {
+                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
+                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
+                }
+            }
+        }
 
         // notary names
         criteria.notaryName?.let {
@@ -242,8 +259,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         criteria.issuerPartyName?.let {
             val issuerParties = criteria.issuerPartyName as List<AbstractParty>
             val joinFungibleStateToParty = vaultFungibleStates.join<VaultSchemaV1.VaultFungibleStates, CommonSchemaV1.Party>("issuerParty")
-            val dealPartyKeys = issuerParties.map { it.nameOrNull().toString() }
-            predicateSet.add(criteriaBuilder.equal(joinFungibleStateToParty.get<CommonSchemaV1.Party>("name"), dealPartyKeys))
+            val issuerPartyNames = issuerParties.map { it.nameOrNull().toString() }
+            predicateSet.add(criteriaBuilder.and(joinFungibleStateToParty.get<CommonSchemaV1.Party>("name").`in`(issuerPartyNames)))
         }
 
         // issuer reference

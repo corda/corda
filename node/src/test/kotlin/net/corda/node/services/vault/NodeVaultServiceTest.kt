@@ -12,6 +12,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -132,22 +133,24 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             vaultSvc.softLockReserve(softLockId, stateRefsToSoftLock)
 
             // all softlocked states
-            assertThat(vaultSvc.softLockedStates<Cash.State>()).hasSize(2)
+            val criteriaLocked = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.LOCKED_ONLY))
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaLocked).states).hasSize(2)
             // my softlocked states
-            assertThat(vaultSvc.softLockedStates<Cash.State>(softLockId)).hasSize(2)
+            val criteriaByLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(softLockId)))
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaByLockId).states).hasSize(2)
 
             // excluding softlocked states
-            val unlockedStates1 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(includeSoftlockedStates = false)).states
+            val unlockedStates1 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))).states
             assertThat(unlockedStates1).hasSize(1)
 
             // soft lock release one of the states explicitly
             vaultSvc.softLockRelease(softLockId, NonEmptySet.of(unconsumedStates[1].ref))
-            val unlockedStates2 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(includeSoftlockedStates = false)).states
+            val unlockedStates2 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))).states
             assertThat(unlockedStates2).hasSize(2)
 
             // soft lock release the rest by id
             vaultSvc.softLockRelease(softLockId)
-            val unlockedStates = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(includeSoftlockedStates = false)).states
+            val unlockedStates = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))).states
             assertThat(unlockedStates).hasSize(3)
 
             // should be back to original states
@@ -157,12 +160,14 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
     @Test
     fun `soft locking attempt concurrent reserve`() {
-
         val backgroundExecutor = Executors.newFixedThreadPool(2)
         val countDown = CountDownLatch(2)
 
         val softLockId1 = UUID.randomUUID()
         val softLockId2 = UUID.randomUUID()
+
+        val criteriaByLockId1 = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(softLockId1)))
+        val criteriaByLockId2 = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(softLockId2)))
 
         val vaultStates =
                 database.transaction {
@@ -177,7 +182,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             try {
                 database.transaction {
                     vaultSvc.softLockReserve(softLockId1, stateRefsToSoftLock)
-                    assertThat(vaultSvc.softLockedStates<Cash.State>(softLockId1)).hasSize(3)
+                    assertThat(vaultQuery.queryBy<Cash.State>(criteriaByLockId1).states).hasSize(3)
                 }
                 println("SOFT LOCK STATES #1 succeeded")
             } catch(e: Throwable) {
@@ -193,7 +198,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
                 Thread.sleep(100)   // let 1st thread soft lock them 1st
                 database.transaction {
                     vaultSvc.softLockReserve(softLockId2, stateRefsToSoftLock)
-                    assertThat(vaultSvc.softLockedStates<Cash.State>(softLockId2)).hasSize(3)
+                    assertThat(vaultQuery.queryBy<Cash.State>(criteriaByLockId2).states).hasSize(3)
                 }
                 println("SOFT LOCK STATES #2 succeeded")
             } catch(e: Throwable) {
@@ -205,10 +210,10 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         countDown.await()
         database.transaction {
-            val lockStatesId1 = vaultSvc.softLockedStates<Cash.State>(softLockId1)
+            val lockStatesId1 = vaultQuery.queryBy<Cash.State>(criteriaByLockId1).states
             println("SOFT LOCK #1 final states: $lockStatesId1")
             assertThat(lockStatesId1.size).isIn(0, 3)
-            val lockStatesId2 = vaultSvc.softLockedStates<Cash.State>(softLockId2)
+            val lockStatesId2 = vaultQuery.queryBy<Cash.State>(criteriaByLockId2).states
             println("SOFT LOCK #2 final states: $lockStatesId2")
             assertThat(lockStatesId2.size).isIn(0, 3)
         }
@@ -216,7 +221,6 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
     @Test
     fun `soft locking partial reserve states fails`() {
-
         val softLockId1 = UUID.randomUUID()
         val softLockId2 = UUID.randomUUID()
 
@@ -231,7 +235,8 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         // lock 1st state with LockId1
         database.transaction {
             vaultSvc.softLockReserve(softLockId1, NonEmptySet.of(stateRefsToSoftLock.first()))
-            assertThat(vaultSvc.softLockedStates<Cash.State>(softLockId1)).hasSize(1)
+            val criteriaByLockId1 = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(softLockId1)))
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaByLockId1).states).hasSize(1)
         }
 
         // attempt to lock all 3 states with LockId2
@@ -244,8 +249,8 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
     @Test
     fun `attempt to lock states already soft locked by me`() {
-
         val softLockId1 = UUID.randomUUID()
+        val criteriaByLockId1 = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(softLockId1)))
 
         val vaultStates =
                 database.transaction {
@@ -258,13 +263,13 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         // lock states with LockId1
         database.transaction {
             vaultSvc.softLockReserve(softLockId1, stateRefsToSoftLock)
-            assertThat(vaultSvc.softLockedStates<Cash.State>(softLockId1)).hasSize(3)
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaByLockId1).states).hasSize(3)
         }
 
         // attempt to relock same states with LockId1
         database.transaction {
             vaultSvc.softLockReserve(softLockId1, stateRefsToSoftLock)
-            assertThat(vaultSvc.softLockedStates<Cash.State>(softLockId1)).hasSize(3)
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaByLockId1).states).hasSize(3)
         }
     }
 
@@ -272,6 +277,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     fun `lock additional states to some already soft locked by me`() {
 
         val softLockId1 = UUID.randomUUID()
+        val criteriaByLockId1 = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(softLockId1)))
 
         val vaultStates =
                 database.transaction {
@@ -284,13 +290,13 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         // lock states with LockId1
         database.transaction {
             vaultSvc.softLockReserve(softLockId1, NonEmptySet.of(stateRefsToSoftLock.first()))
-            assertThat(vaultSvc.softLockedStates<Cash.State>(softLockId1)).hasSize(1)
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaByLockId1).states).hasSize(1)
         }
 
         // attempt to lock all states with LockId1 (including previously already locked one)
         database.transaction {
             vaultSvc.softLockReserve(softLockId1, stateRefsToSoftLock.toNonEmptySet())
-            assertThat(vaultSvc.softLockedStates<Cash.State>(softLockId1)).hasSize(3)
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaByLockId1).states).hasSize(3)
         }
     }
 
@@ -307,7 +313,8 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(1)
             assertThat(spendableStatesUSD[0].state.data.amount.quantity).isEqualTo(100L * 100)
-            assertThat(vaultSvc.softLockedStates<Cash.State>()).hasSize(1)
+            val criteriaLocked = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.LOCKED_ONLY))
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaLocked).states).hasSize(1)
         }
     }
 
@@ -360,7 +367,8 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val spendableStatesUSD = (vaultSvc as NodeVaultService).unconsumedStatesForSpending<Cash.State>(110.DOLLARS, lockId = UUID.randomUUID())
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(1)
-            assertThat(vaultSvc.softLockedStates<Cash.State>()).hasSize(0)
+            val criteriaLocked = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.LOCKED_ONLY))
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaLocked).states).hasSize(0)
         }
     }
 
@@ -377,7 +385,8 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(1)
             assertThat(spendableStatesUSD[0].state.data.amount.quantity).isGreaterThanOrEqualTo(100L)
-            assertThat(vaultSvc.softLockedStates<Cash.State>()).hasSize(1)
+            val criteriaLocked = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.LOCKED_ONLY))
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaLocked).states).hasSize(1)
         }
     }
 
@@ -397,7 +406,8 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
                 spendableStatesUSD.forEach(::println)
             }
             // note only 3 spend attempts succeed with a total of 8 states
-            assertThat(vaultSvc.softLockedStates<Cash.State>()).hasSize(8)
+            val criteriaLocked = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.LOCKED_ONLY))
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaLocked).states).hasSize(8)
         }
     }
 

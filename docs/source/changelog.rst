@@ -62,6 +62,8 @@ UNRELEASED
 
 .. Milestone 15:
 
+* Vault Query fix: filter by multiple issuer names in ``FungibleAssetQueryCriteria``
+
 * Following deprecated methods have been removed:
   * In ``DataFeed``
     * ``first`` and ``current``, replaced by ``snapshot``
@@ -78,6 +80,12 @@ UNRELEASED
   must use ``SendTransactionFlow`` at the correct place. There is also ``ReceiveStateAndRefFlow`` and ``SendStateAndRefFlow`` for
   dealing with ``StateAndRef``s.
 
+
+* Vault query soft locking enhancements and deprecations
+  * removed original ``VaultService`` ``softLockedStates` query mechanism.
+  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification
+    of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified
+    by set of lock ids)
 
 Milestone 13
 ------------
