@@ -157,7 +157,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        serverThread.execute {
+        serverThread.fetchFrom {
             services.database.transaction {
                 val scheduledFlow = getScheduledFlow(scheduledState)
                 if (scheduledFlow != null) {
