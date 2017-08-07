@@ -33,8 +33,9 @@ data class WireTransaction(
 ) : CoreTransaction(), TraversableTransaction {
     init {
         checkBaseInvariants()
+        check(inputs.isNotEmpty() || outputs.isNotEmpty()) { "A transaction must contain at least one input or output state" }
+        check(commands.isNotEmpty()) { "A transaction must contain at least one command" }
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
-        check(availableComponents.isNotEmpty()) { "A WireTransaction cannot be empty" }
     }
 
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */

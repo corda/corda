@@ -27,8 +27,8 @@ abstract class BaseTransaction : NamedByHash {
     }
 
     private fun checkNotarySetIfInputsPresent() {
-        if (notary == null) {
-            check(inputs.isEmpty()) { "The notary must be specified explicitly for any transaction that has inputs" }
+        if (inputs.isNotEmpty()) {
+            check(notary != null) { "The notary must be specified explicitly for any transaction that has inputs" }
         }
     }
 
