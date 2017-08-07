@@ -1,11 +1,10 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.*
-import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
@@ -17,10 +16,11 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -139,12 +139,14 @@ class ScheduledFlowTests {
     @Test
     fun `run a whole batch of scheduled flows`() {
         val N = 100
-        val futures = mutableListOf<ListenableFuture<*>>()
+        val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0..N - 1) {
             futures.add(nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity)).resultFuture)
             futures.add(nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.legalIdentity)).resultFuture)
         }
         mockNet.waitQuiescent()
+
+        // Check all of the flows completed successfully
         futures.forEach { it.getOrThrow() }
 
         // Convert the states into maps to make error reporting easier
