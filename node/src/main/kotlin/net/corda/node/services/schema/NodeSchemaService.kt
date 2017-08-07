@@ -14,6 +14,7 @@ import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.schemas.CashSchemaV1
 
@@ -38,7 +39,8 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                   Pair(DBTransactionStorage.TransactionSchemaV1, SchemaService.SchemaOptions()),
                   Pair(DBTransactionMappingStorage.TransactionMappingSchemaV1, SchemaService.SchemaOptions()),
                   Pair(DBCheckpointStorage.CheckpointSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(PersistentKeyManagementService.PersistentKeyManagementSchemaV1, SchemaService.SchemaOptions()))
+                  Pair(PersistentKeyManagementService.PersistentKeyManagementSchemaV1, SchemaService.SchemaOptions()),
+                  Pair(PersistentUniquenessProvider.PersistentUniquenessSchemaV1, SchemaService.SchemaOptions()))
 
 
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {

@@ -64,7 +64,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
     }
 
     private class InnerState {
-        val committedStates = createTransactionsMap()
+        val committedStates = createMap()
     }
 
     private val mutex = ThreadBox(InnerState())
@@ -72,7 +72,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
     companion object {
         private val log = loggerFor<PersistentUniquenessProvider>()
 
-        fun createTransactionsMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessSchemaV1.PersistentUniqueness, PersistentUniquenessSchemaV1.PersistentUniqueness.StateRef> {
+        fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessSchemaV1.PersistentUniqueness, PersistentUniquenessSchemaV1.PersistentUniqueness.StateRef> {
             return AppendOnlyPersistentMap(
                     cacheBound = 1024,
                     toPersistentEntityKey = { PersistentUniquenessSchemaV1.PersistentUniqueness.StateRef(it.txhash.toString(), it.index) },

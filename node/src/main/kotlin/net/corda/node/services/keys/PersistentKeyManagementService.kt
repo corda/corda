@@ -34,10 +34,8 @@ class PersistentKeyManagementService(val identityService: IdentityService,
         @Entity
         @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
         class PersistentKey(
-                @Id
-                @GeneratedValue(strategy = GenerationType.AUTO)
-                var id: Int = 0,
 
+                @Id
                 @Column(name = "public_key")
                 var publicKey: String = "",
 
@@ -48,10 +46,10 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     }
 
     private companion object {
-        fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKeyManagementSchemaV1.PersistentKey, String> {
-            return AppendOnlyPersistentMap(
+        fun createKeyMap(): PersistentMap<PublicKey, PrivateKey, PersistentKeyManagementSchemaV1.PersistentKey, String> {
+            return PersistentMap(
                     cacheBound = 1024,
-                    toPersistentEntityKey = { it.toString() },
+                    toPersistentEntityKey = { it.toBase58String() },
                     fromPersistentEntity = { Pair(parsePublicKeyBase58(it.publicKey),
                             deserializeFromByteArray<PrivateKey>(it.privateKey, context = SerializationDefaults.STORAGE_CONTEXT)) },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
@@ -68,7 +66,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     val keysMap = createKeyMap()
 
     init {
-        initialKeys.forEach({it-> keysMap[it.public] = it.private})
+        initialKeys.forEach({ it -> keysMap[it.public] = it.private })
     }
 
     override val keys: Set<PublicKey> get() = keysMap.allPersisted().map { it.first }.toSet()
