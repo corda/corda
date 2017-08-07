@@ -29,12 +29,12 @@ import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
 import java.time.Instant
-import java.util.concurrent.Future
 import kotlin.test.assertEquals
 
 class ScheduledFlowTests {
     companion object {
         val PAGE_SIZE = 20
+        val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
     }
     lateinit var mockNet: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
@@ -148,34 +148,39 @@ class ScheduledFlowTests {
         futures.forEach { it.getOrThrow() }
 
         // Convert the states into maps to make error reporting easier
-        val statesFromA: Map<StateRef, TransactionState<ScheduledState>> = nodeA.database.transaction {
+        val statesFromA: List<StateAndRef<ScheduledState>> = nodeA.database.transaction {
             queryStatesWithPaging(nodeA.services.vaultQueryService)
-        }.map { it -> Pair(it.ref, it.state) }.toMap()
-        val statesFromB: Map<StateRef, TransactionState<ScheduledState>> = nodeB.database.transaction {
+        }
+        val statesFromB: List<StateAndRef<ScheduledState>> = nodeB.database.transaction {
             queryStatesWithPaging(nodeB.services.vaultQueryService)
-        }.map { it -> Pair(it.ref, it.state) }.toMap()
+        }
         assertEquals(2 * N, statesFromA.count(), "Expect all states to be present")
-        statesFromA.keys.forEach { ref ->
-            if (ref !in statesFromB.keys) {
+        statesFromA.forEach { ref ->
+            if (ref !in statesFromB) {
                 throw IllegalStateException("State $ref is only present on node A.")
             }
         }
-        statesFromB.keys.forEach { ref ->
-            if (ref !in statesFromA.keys) {
+        statesFromB.forEach { ref ->
+            if (ref !in statesFromA) {
                 throw IllegalStateException("State $ref is only present on node B.")
             }
         }
         assertEquals(statesFromA, statesFromB, "Expect identical data on both nodes")
-        assertTrue("Expect all states have run the scheduled task", statesFromB.values.all { it.data.processed })
+        assertTrue("Expect all states have run the scheduled task", statesFromB.all { it.state.data.processed })
     }
 
-    // Demonstrate Vault Query paging
+    /**
+     * Query all states from the Vault, fetching results as a series of pages with ordered states in order to perform
+     * integration testing of that functionality.
+     *
+     * @return states ordered by the transaction ID.
+     */
     private fun queryStatesWithPaging(vaultQueryService: VaultQueryService): List<StateAndRef<ScheduledState>> {
         var pageNumber = DEFAULT_PAGE_NUM
         val states = mutableListOf<StateAndRef<ScheduledState>>()
         do {
             val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
-            val results = vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec)
+            val results = vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, SORTING)
             states.addAll(results.states)
             pageNumber++
         } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)
