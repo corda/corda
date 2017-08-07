@@ -5,7 +5,6 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotaryException
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker
@@ -13,6 +12,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal

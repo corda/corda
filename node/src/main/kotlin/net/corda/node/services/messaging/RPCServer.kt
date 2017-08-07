@@ -406,7 +406,7 @@ class ObservableContext(
     }
 }
 
-object RpcServerObservableSerializer : Serializer<Observable<Any>>() {
+object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     private object RpcObservableContextKey
     private val log = loggerFor<RpcServerObservableSerializer>()
 
@@ -414,11 +414,11 @@ object RpcServerObservableSerializer : Serializer<Observable<Any>>() {
         return RPC_SERVER_CONTEXT.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
     }
 
-    override fun read(kryo: Kryo?, input: Input?, type: Class<Observable<Any>>?): Observable<Any> {
+    override fun read(kryo: Kryo?, input: Input?, type: Class<Observable<*>>?): Observable<Any> {
         throw UnsupportedOperationException()
     }
 
-    override fun write(kryo: Kryo, output: Output, observable: Observable<Any>) {
+    override fun write(kryo: Kryo, output: Output, observable: Observable<*>) {
         val observableId = RPCApi.ObservableId(random63BitValue())
         val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
         output.writeLong(observableId.toLong, true)
@@ -426,8 +426,8 @@ object RpcServerObservableSerializer : Serializer<Observable<Any>>() {
                 // We capture [observableContext] in the subscriber. Note that all synchronisation/kryo borrowing
                 // must be done again within the subscriber
                 subscription = observable.materialize().subscribe(
-                        object : Subscriber<Notification<Any>>() {
-                            override fun onNext(observation: Notification<Any>) {
+                        object : Subscriber<Notification<*>>() {
+                            override fun onNext(observation: Notification<*>) {
                                 if (!isUnsubscribed) {
                                     observableContext.observationSendExecutor.submit {
                                         observableContext.sendMessage(RPCApi.ServerToClient.Observation(observableId, observation))

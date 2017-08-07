@@ -4,7 +4,8 @@ import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.Session
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.future
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.concurrent.fork
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -13,7 +14,7 @@ import net.corda.nodeapi.internal.addShutdownHook
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.OutputStream
-import java.util.concurrent.Future
+import java.util.concurrent.ForkJoinPool
 
 /**
  * [NodeConnection] allows executing remote shell commands on the node as well as executing RPCs.
@@ -85,9 +86,9 @@ class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Sessio
         return ShellCommandOutput(command, exitCode, stdoutStream.toString(), stderrStream.toString())
     }
 
-    private fun runShellCommand(command: String, stdout: OutputStream, stderr: OutputStream): Future<Int> {
+    private fun runShellCommand(command: String, stdout: OutputStream, stderr: OutputStream): CordaFuture<Int> {
         log.info("Running '$command' on ${remoteNode.hostname}")
-        return future {
+        return ForkJoinPool.commonPool().fork {
             val (exitCode, _) = withChannelExec(command) { channel ->
                 channel.outputStream = stdout
                 channel.setErrStream(stderr)

@@ -6,7 +6,7 @@ import net.corda.contracts.Commodity
 import net.corda.contracts.DealState
 import net.corda.contracts.asset.*
 import net.corda.core.contracts.*
-import net.corda.core.getOrThrow
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party

@@ -1,6 +1,6 @@
 package net.corda.core.node.services
 
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -44,7 +44,7 @@ interface NetworkMapCache {
     /** Tracks changes to the network map cache */
     val changed: Observable<MapChange>
     /** Future to track completion of the NetworkMapService registration. */
-    val mapServiceRegistered: ListenableFuture<Unit>
+    val mapServiceRegistered: CordaFuture<Void?>
 
     /**
      * Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the

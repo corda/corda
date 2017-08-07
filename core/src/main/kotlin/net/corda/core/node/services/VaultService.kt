@@ -1,7 +1,7 @@
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
@@ -190,9 +190,9 @@ interface VaultService {
     fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
 
     /**
-     * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.
+     * Provide a [CordaFuture] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
-    fun whenConsumed(ref: StateRef): ListenableFuture<Vault.Update<ContractState>> {
+    fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
         return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
 

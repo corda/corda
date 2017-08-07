@@ -2,17 +2,16 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flatMap
 import net.corda.core.flows.*
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
-import net.corda.core.map
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
@@ -25,6 +24,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -706,13 +706,13 @@ class FlowFrameworkTests {
         return newNode.getSingleFlow<P>().first
     }
 
-    private inline fun <reified P : FlowLogic<*>> MockNode.getSingleFlow(): Pair<P, ListenableFuture<*>> {
+    private inline fun <reified P : FlowLogic<*>> MockNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
         return smm.findStateMachines(P::class.java).single()
     }
 
     private inline fun <reified P : FlowLogic<*>> MockNode.registerFlowFactory(
         initiatingFlowClass: KClass<out FlowLogic<*>>,
-        noinline flowFactory: (Party) -> P): ListenableFuture<P>
+        noinline flowFactory: (Party) -> P): CordaFuture<P>
     {
         val observable = internalRegisterFlowFactory(initiatingFlowClass.java, object : InitiatedFlowFactory<P> {
             override fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): P {
@@ -772,7 +772,7 @@ class FlowFrameworkTests {
     private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
     private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
-    private val FlowLogic<*>.progressSteps: ListenableFuture<List<Notification<ProgressTracker.Step>>> get() {
+    private val FlowLogic<*>.progressSteps: CordaFuture<List<Notification<ProgressTracker.Step>>> get() {
         return progressTracker!!.changes
                 .ofType(Change.Position::class.java)
                 .map { it.newStep }

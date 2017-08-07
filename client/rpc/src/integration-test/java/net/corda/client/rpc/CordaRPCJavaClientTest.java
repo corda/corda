@@ -1,6 +1,6 @@
 package net.corda.client.rpc;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import net.corda.core.concurrent.CordaFuture;
 import net.corda.client.rpc.internal.RPCClient;
 import net.corda.core.contracts.Amount;
 import net.corda.core.messaging.CordaRPCOps;
@@ -46,7 +46,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     @Before
     public void setUp() throws ExecutionException, InterruptedException {
         Set<ServiceInfo> services = new HashSet<>(Collections.singletonList(new ServiceInfo(ValidatingNotaryService.Companion.getType(), null)));
-        ListenableFuture<Node> nodeFuture = startNode(getALICE().getName(), 1, services, Arrays.asList(rpcUser), Collections.emptyMap());
+        CordaFuture<Node> nodeFuture = startNode(getALICE().getName(), 1, services, Arrays.asList(rpcUser), Collections.emptyMap());
         node = nodeFuture.get();
         client = new CordaRPCClient(node.getConfiguration().getRpcAddress(), null, getDefault(), false);
     }

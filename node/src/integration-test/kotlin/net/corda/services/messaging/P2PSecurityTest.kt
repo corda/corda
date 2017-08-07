@@ -1,13 +1,13 @@
 package net.corda.services.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.sendRequest
@@ -65,7 +65,7 @@ class P2PSecurityTest : NodeBasedTest() {
         return SimpleNode(config, trustRoot = trustRoot).apply { start() }
     }
 
-    private fun SimpleNode.registerWithNetworkMap(registrationName: X500Name): ListenableFuture<NetworkMapService.RegistrationResponse> {
+    private fun SimpleNode.registerWithNetworkMap(registrationName: X500Name): CordaFuture<NetworkMapService.RegistrationResponse> {
         val legalIdentity = getTestPartyAndCertificate(registrationName, identity.public)
         val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), legalIdentity, NonEmptySet.of(legalIdentity), 1)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)

@@ -2,6 +2,7 @@ package net.corda.node.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
+import net.corda.core.concurrent.CordaFuture
 import net.corda.contracts.asset.CASH
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.`issued by`
@@ -13,14 +14,13 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
-import net.corda.core.map
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -32,6 +32,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.days
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow.Buyer
@@ -57,7 +58,6 @@ import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 import java.security.KeyPair
 import java.util.*
-import java.util.concurrent.Future
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -505,8 +505,8 @@ class TwoPartyTradeFlowTests {
 
     private data class RunResult(
             // The buyer is not created immediately, only when the seller starts running
-            val buyer: Future<FlowStateMachine<*>>,
-            val sellerResult: Future<SignedTransaction>,
+            val buyer: CordaFuture<FlowStateMachine<*>>,
+            val sellerResult: CordaFuture<SignedTransaction>,
             val sellerId: StateMachineRunId
     )
 

@@ -1,10 +1,10 @@
 package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.RPCClientConfiguration
-import net.corda.core.future
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.millis
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.concurrent.fork
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.testing.RPCDriverExposedDSLInterface
@@ -17,6 +17,7 @@ import rx.subjects.UnicastSubject
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ForkJoinPool
 
 @RunWith(Parameterized::class)
 class RPCConcurrencyTests : AbstractRPCTest() {
@@ -68,7 +69,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
                 Observable.empty<ObservableRose<Int>>()
             } else {
                 val publish = UnicastSubject.create<ObservableRose<Int>>()
-                future {
+                ForkJoinPool.commonPool().fork {
                     (1..branchingFactor).toList().parallelStream().forEach {
                         publish.onNext(getParallelObservableTree(depth - 1, branchingFactor))
                     }
@@ -105,7 +106,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
             val done = CountDownLatch(numberOfBlockedCalls)
             // Start a couple of blocking RPC calls
             (1..numberOfBlockedCalls).forEach {
-                future {
+                ForkJoinPool.commonPool().fork {
                     proxy.ops.waitLatch(id)
                     done.countDown()
                 }

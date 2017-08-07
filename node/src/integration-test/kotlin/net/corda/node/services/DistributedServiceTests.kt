@@ -2,7 +2,6 @@ package net.corda.node.services
 
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.POUNDS
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
@@ -10,6 +9,9 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
+import net.corda.testing.ALICE
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.transactions.RaftValidatingNotaryService

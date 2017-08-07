@@ -2,10 +2,10 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.base.Stopwatch
-import com.google.common.util.concurrent.Futures
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.minutes
 import net.corda.core.node.services.ServiceInfo
@@ -113,7 +113,7 @@ class NodePerformanceTests {
                 val doneFutures = (1..100).toList().parallelStream().map {
                     connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), a.nodeInfo.legalIdentity, a.nodeInfo.notaryIdentity).returnValue
                 }.toList()
-                Futures.allAsList(doneFutures).get()
+                doneFutures.transpose().get()
                 println("STARTING PAYMENT")
                 startPublishingFixedRateInjector(metricRegistry, 8, 5.minutes, 100L / TimeUnit.SECONDS) {
                     connection.proxy.startFlow(::CashPaymentFlow, 1.DOLLARS, a.nodeInfo.legalIdentity).returnValue.get()

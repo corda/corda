@@ -1,6 +1,6 @@
 package net.corda.core.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
@@ -233,11 +233,11 @@ interface CordaRPCOps : RPCOps {
     fun currentNodeTime(): Instant
 
     /**
-     * Returns a [ListenableFuture] which completes when the node has registered wih the network map service. It can also
+     * Returns a [CordaFuture] which completes when the node has registered wih the network map service. It can also
      * complete with an exception if it is unable to.
      */
     @RPCReturnsObservables
-    fun waitUntilRegisteredWithNetworkMap(): ListenableFuture<Unit>
+    fun waitUntilRegisteredWithNetworkMap(): CordaFuture<Void?>
 
     // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
     // the node's state locally and query that directly.

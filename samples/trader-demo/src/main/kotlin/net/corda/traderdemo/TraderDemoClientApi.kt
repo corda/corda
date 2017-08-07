@@ -1,20 +1,20 @@
 package net.corda.traderdemo
 
-import com.google.common.util.concurrent.Futures
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
-import net.corda.core.getOrThrow
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.services.vault.VaultSchemaV1
@@ -61,7 +61,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
             rpc.startFlow(::IssuanceRequester, Amount(pennies, amount.token), me.legalIdentity, OpaqueBytes.of(1), bankOfCordaParty, notaryNode.notaryIdentity, anonymous).returnValue
         }
 
-        Futures.allAsList(resultFutures).getOrThrow()
+        resultFutures.transpose().getOrThrow()
     }
 
     fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, counterparty: X500Name) {

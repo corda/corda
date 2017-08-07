@@ -5,7 +5,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.internal.ThreadBox
 import net.corda.core.crypto.X509Utilities
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
@@ -14,6 +13,7 @@ import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
 import net.corda.node.services.messaging.*
 import net.corda.node.utilities.AffinityExecutor

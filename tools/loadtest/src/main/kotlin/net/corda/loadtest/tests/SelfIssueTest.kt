@@ -4,12 +4,11 @@ import de.danielbechler.diff.ObjectDifferFactory
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickOne
 import net.corda.client.mock.replicatePoisson
-import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.USD
 import net.corda.core.flows.FlowException
-import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest

@@ -1,12 +1,12 @@
 package net.corda.irs
 
-import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
@@ -37,19 +37,19 @@ class IRSDemoTest : IntegrationTestCategory {
     @Test
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
-            val (controller, nodeA, nodeB) = Futures.allAsList(
+            val (controller, nodeA, nodeB) = listOf(
                     startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
                     startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
                     startNode(DUMMY_BANK_B.name)
-            ).getOrThrow()
+            ).transpose().getOrThrow()
 
             println("All nodes started")
 
-            val (controllerAddr, nodeAAddr, nodeBAddr) = Futures.allAsList(
+            val (controllerAddr, nodeAAddr, nodeBAddr) = listOf(
                     startWebserver(controller),
                     startWebserver(nodeA),
                     startWebserver(nodeB)
-            ).getOrThrow().map { it.listenAddress }
+            ).transpose().getOrThrow().map { it.listenAddress }
 
             println("All webservers started")
 

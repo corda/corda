@@ -1,11 +1,11 @@
 package net.corda.client.rpc
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.getOrThrow
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.RPCOps
-import net.corda.core.thenMatch
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.nodeapi.RPCSinceVersion
 import net.corda.testing.RPCDriverExposedDSLInterface
@@ -43,9 +43,9 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
 
         fun makeComplicatedObservable(): Observable<Pair<String, Observable<String>>>
 
-        fun makeListenableFuture(): ListenableFuture<Int>
+        fun makeListenableFuture(): CordaFuture<Int>
 
-        fun makeComplicatedListenableFuture(): ListenableFuture<Pair<String, ListenableFuture<String>>>
+        fun makeComplicatedListenableFuture(): CordaFuture<Pair<String, CordaFuture<String>>>
 
         @RPCSinceVersion(2)
         fun addedLater()
@@ -54,7 +54,7 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
     }
 
     private lateinit var complicatedObservable: Observable<Pair<String, Observable<String>>>
-    private lateinit var complicatedListenableFuturee: ListenableFuture<Pair<String, ListenableFuture<String>>>
+    private lateinit var complicatedListenableFuturee: CordaFuture<Pair<String, CordaFuture<String>>>
 
     inner class TestOpsImpl : TestOps {
         override val protocolVersion = 1
@@ -62,9 +62,9 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         override fun void() {}
         override fun someCalculation(str: String, num: Int) = "$str $num"
         override fun makeObservable(): Observable<Int> = Observable.just(1, 2, 3, 4)
-        override fun makeListenableFuture(): ListenableFuture<Int> = Futures.immediateFuture(1)
+        override fun makeListenableFuture() = doneFuture(1)
         override fun makeComplicatedObservable() = complicatedObservable
-        override fun makeComplicatedListenableFuture(): ListenableFuture<Pair<String, ListenableFuture<String>>> = complicatedListenableFuturee
+        override fun makeComplicatedListenableFuture() = complicatedListenableFuturee
         override fun addedLater(): Unit = throw IllegalStateException()
         override fun captureUser(): String = getRpcContext().currentUser.username
     }
@@ -152,10 +152,10 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
     fun `complex ListenableFuture`() {
         rpcDriver {
             val proxy = testProxy()
-            val serverQuote = SettableFuture.create<Pair<String, ListenableFuture<String>>>()
+            val serverQuote = openFuture<Pair<String, CordaFuture<String>>>()
             complicatedListenableFuturee = serverQuote
 
-            val twainQuote = "Mark Twain" to Futures.immediateFuture("I have never let my schooling interfere with my education.")
+            val twainQuote = "Mark Twain" to doneFuture("I have never let my schooling interfere with my education.")
 
             val clientQuotes = LinkedBlockingQueue<String>()
             val clientFuture = proxy.makeComplicatedListenableFuture()

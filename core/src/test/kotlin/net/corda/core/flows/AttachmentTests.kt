@@ -4,12 +4,12 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.getOrThrow
+import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.services.ServiceInfo
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.network.NetworkMapService

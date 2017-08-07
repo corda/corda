@@ -6,8 +6,8 @@ import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.KryoException
 import com.google.common.collect.HashMultimap
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowException
@@ -22,7 +22,6 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
-import net.corda.core.then
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -144,7 +143,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     fun findServices(predicate: (Any) -> Boolean) = tokenizableServices.filter(predicate)
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
-    fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
+    fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, CordaFuture<T>>> {
         @Suppress("UNCHECKED_CAST")
         return mutex.locked {
             stateMachines.keys.mapNotNull {

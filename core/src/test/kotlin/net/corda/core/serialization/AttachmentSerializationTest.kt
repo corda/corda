@@ -5,7 +5,6 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
@@ -13,13 +12,13 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.unwrap
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.statemachine.SessionInit
-import net.corda.core.flows.DataVendingFlow
 import net.corda.core.flows.TestDataVendingFlow
 import net.corda.testing.node.MockNetwork
 import org.junit.After
