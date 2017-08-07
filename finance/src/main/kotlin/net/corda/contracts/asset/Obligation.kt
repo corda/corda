@@ -8,7 +8,6 @@ import net.corda.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -178,12 +177,12 @@ class Obligation<P : Any> : Contract {
 
     // Just for grouping
     @CordaSerializable
-    interface Commands : FungibleAsset.Commands {
+    interface Commands : CommandData {
         /**
          * Net two or more obligation states together in a close-out netting style. Limited to bilateral netting
          * as only the beneficiary (not the obligor) needs to sign.
          */
-        data class Net(override val type: NetType) : NetCommand, Commands
+        data class Net(override val type: NetType) : NetCommand
 
         /**
          * A command stating that a debt has been moved, optionally to fulfil another contract.
@@ -192,26 +191,25 @@ class Obligation<P : Any> : Contract {
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
-        data class Move(override val contract: Class<out Contract>? = null) : Commands, FungibleAsset.Commands.Move
+        data class Move(override val contract: Class<out Contract>? = null) : MoveCommand
 
-        /**
-         * Allows new obligation states to be issued into existence: the nonce ("number used once") ensures the
-         * transaction has a unique ID even when there are no inputs.
+                /**
+         * Allows new obligation states to be issued into existence.
          */
-        data class Issue(override val nonce: Long = random63BitValue()) : FungibleAsset.Commands.Issue, Commands
+        class Issue : TypeOnlyCommandData()
 
         /**
          * A command stating that the obligor is settling some or all of the amount owed by transferring a suitable
          * state object to the beneficiary. If this reduces the balance to zero, the state object is destroyed.
          * @see [MoveCommand].
          */
-        data class Settle<P : Any>(val amount: Amount<Issued<Terms<P>>>) : Commands
+        data class Settle<P : Any>(val amount: Amount<Issued<Terms<P>>>) : CommandData
 
         /**
          * A command stating that the beneficiary is moving the contract into the defaulted state as it has not been settled
          * by the due date, or resetting a defaulted contract back to the issued state.
          */
-        data class SetLifecycle(val lifecycle: Lifecycle) : Commands {
+        data class SetLifecycle(val lifecycle: Lifecycle) : CommandData {
             val inverse: Lifecycle
                 get() = when (lifecycle) {
                     Lifecycle.NORMAL -> Lifecycle.DEFAULTED
@@ -223,7 +221,7 @@ class Obligation<P : Any> : Contract {
          * A command stating that the debt is being released by the beneficiary. Normally would indicate
          * either settlement outside of the ledger, or that the obligor is unable to pay.
          */
-        data class Exit<P : Any>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
+        data class Exit<P : Any>(override val amount: Amount<Issued<Terms<P>>>) : FungibleAsset.ExitCommand<Terms<P>>
     }
 
     override fun verify(tx: LedgerTransaction) {
@@ -304,7 +302,6 @@ class Obligation<P : Any> : Contract {
         val outputAmount = outputs.sumObligations<P>()
         val issueCommands = tx.commands.select<Commands.Issue>()
         requireThat {
-            "the issue command has a nonce" using (issueCommand.value.nonce != 0L)
             "output states are issued by a command signer" using (issuer.party in issueCommand.signingParties)
             "output values sum to more than the inputs" using (outputAmount > inputAmount)
             "there is only a single issue command" using (issueCommands.count() == 1)

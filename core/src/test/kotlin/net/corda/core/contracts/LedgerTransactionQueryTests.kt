@@ -187,7 +187,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
         val intCmd2 = ltx.commandsOfType<Commands.Cmd2>()
         assertEquals(5, intCmd2.size)
         assertEquals(listOf(0, 1, 2, 3, 4), intCmd2.map { it.value.id })
-        val notPresentQuery = ltx.commandsOfType(FungibleAsset.Commands.Exit::class.java)
+        val notPresentQuery = ltx.commandsOfType(FungibleAsset.ExitCommand::class.java)
         assertEquals(emptyList(), notPresentQuery)
     }
 

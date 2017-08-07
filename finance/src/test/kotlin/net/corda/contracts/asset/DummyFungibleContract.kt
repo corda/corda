@@ -2,9 +2,9 @@ package net.corda.contracts.asset
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -77,26 +77,19 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(SampleCashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
     }
 
-    interface Commands : FungibleAsset.Commands {
+    interface Commands : CommandData {
 
-        data class Move(override val contract: Class<out Contract>? = null) : FungibleAsset.Commands.Move, Commands
+        data class Move(override val contract: Class<out Contract>? = null) : MoveCommand
 
-        data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue, Commands
+        class Issue : TypeOnlyCommandData()
 
-        data class Exit(override val amount: Amount<Issued<Currency>>) : Commands, FungibleAsset.Commands.Exit<Currency>
+        data class Exit(override val amount: Amount<Issued<Currency>>) : FungibleAsset.ExitCommand<Currency>
     }
-
-    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: AbstractParty, notary: Party)
-            = generateIssue(tx, Amount(pennies, tokenDef), owner, notary)
-
-    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: AbstractParty, notary: Party)
-        = generateIssue(tx, TransactionState(State(amount, owner), notary), generateIssueCommand())
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     override fun generateExitCommand(amount: Amount<Issued<Currency>>) = Commands.Exit(amount)
-    override fun generateIssueCommand() = Commands.Issue()
     override fun generateMoveCommand() = Commands.Move()
 
     override fun verify(tx: LedgerTransaction) {
@@ -155,7 +148,6 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
         val outputAmount = outputs.sumCash()
         val cashCommands = tx.commands.select<Commands.Issue>()
         requireThat {
-            "the issue command has a nonce" using (issueCommand.value.nonce != 0L)
             // TODO: This doesn't work with the trader demo, so use the underlying key instead
             // "output states are issued by a command signer" by (issuer.party in issueCommand.signingParties)
             "output states are issued by a command signer" using (issuer.party.owningKey in issueCommand.signers)

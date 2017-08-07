@@ -262,8 +262,8 @@ object FlowCookbook {
             //    fork the contract's verification logic.
             val typeOnlyCommandData: TypeOnlyCommandData = DummyContract.Commands.Create()
             // 2. Include additional data which can be used by the contract
-            //    during verification, alongside fulfilling the roles above
-            val commandDataWithData: CommandData = Cash.Commands.Issue(nonce = 12345678)
+            //    during verification, alongside fulfilling the roles above.
+            val commandDataWithData: CommandData = Cash.Commands.Issue()
 
             // Attachments are identified by their hash.
             // The attachment with the corresponding hash must have been

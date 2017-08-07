@@ -284,12 +284,6 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) 
     override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString()}"
 }
 
-/** A common issue command, to enforce that issue commands have a nonce value. */
-// TODO: Revisit use of nonce values - should this be part of the TX rather than the command perhaps?
-interface IssueCommand : CommandData {
-    val nonce: Long
-}
-
 /** A common move command for contract states which can change owner. */
 interface MoveCommand : CommandData {
     /**

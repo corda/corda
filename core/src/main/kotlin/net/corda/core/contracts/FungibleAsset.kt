@@ -34,22 +34,7 @@ interface FungibleAsset<T : Any> : OwnableState {
 
     fun move(newAmount: Amount<Issued<T>>, newOwner: AbstractParty): FungibleAsset<T>
 
-    // Just for grouping
-    interface Commands : CommandData {
-        interface Move : MoveCommand, Commands
-
-        /**
-         * Allows new asset states to be issued into existence: the nonce ("number used once") ensures the transaction
-         * has a unique ID even when there are no inputs.
-         */
-        interface Issue : IssueCommand, Commands
-
-        /**
-         * A command stating that money has been withdrawn from the shared ledger and is now accounted for
-         * in some other way.
-         */
-        interface Exit<T : Any> : Commands {
-            val amount: Amount<Issued<T>>
-        }
+    interface ExitCommand<T : Any>: CommandData {
+        val amount: Amount<Issued<T>>
     }
 }

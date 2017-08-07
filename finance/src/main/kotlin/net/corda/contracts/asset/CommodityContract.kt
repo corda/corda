@@ -3,6 +3,7 @@ package net.corda.contracts.asset
 import net.corda.contracts.Commodity
 import net.corda.core.contracts.*
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -58,7 +59,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
 
     // Just for grouping
     @CordaSerializable
-    interface Commands : FungibleAsset.Commands {
+    interface Commands : CommandData {
         /**
          * A command stating that money has been moved, optionally to fulfil another contract.
          *
@@ -66,19 +67,18 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
-        data class Move(override val contract: Class<out Contract>? = null) : FungibleAsset.Commands.Move, Commands
+        data class Move(override val contract: Class<out Contract>? = null) : MoveCommand
 
         /**
-         * Allows new commodity states to be issued into existence: the nonce ("number used once") ensures the transaction
-         * has a unique ID even when there are no inputs.
+         * Allows new commodity states to be issued into existence.
          */
-        data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue, Commands
+        class Issue : TypeOnlyCommandData()
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        data class Exit(override val amount: Amount<Issued<Commodity>>) : Commands, FungibleAsset.Commands.Exit<Commodity>
+        data class Exit(override val amount: Amount<Issued<Commodity>>) : FungibleAsset.ExitCommand<Commodity>
     }
 
     override fun verify(tx: LedgerTransaction) {
@@ -140,7 +140,6 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         val outputAmount = outputs.sumCommodities()
         val commodityCommands = tx.commands.select<CommodityContract.Commands>()
         requireThat {
-            "the issue command has a nonce" using (issueCommand.value.nonce != 0L)
             "output deposits are owned by a command signer" using (issuer.party in issueCommand.signingParties)
             "output values sum to more than the inputs" using (outputAmount > inputAmount)
             "there is only a single issue command" using (commodityCommands.count() == 1)
@@ -160,13 +159,24 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Commodity>>, owner: AbstractParty, notary: Party)
-            = generateIssue(tx, TransactionState(State(amount, owner), notary), generateIssueCommand())
+            = generateIssue(tx, TransactionState(State(amount, owner), notary), Commands.Issue())
 
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Commodity>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     override fun generateExitCommand(amount: Amount<Issued<Commodity>>) = Commands.Exit(amount)
-    override fun generateIssueCommand() = Commands.Issue()
     override fun generateMoveCommand() = Commands.Move()
 }
+
+/**
+ * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
+ * states cannot be added together (i.e. are different currencies).
+ */
+fun Iterable<ContractState>.sumCommodities() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrThrow()
+
+/** Sums the cash states in the list, returning null if there are none. */
+@Suppress("unused") fun Iterable<ContractState>.sumCommoditiesOrNull() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrNull()
+
+/** Sums the cash states in the list, returning zero of the given currency if there are none. */
+fun Iterable<ContractState>.sumCommoditiesOrZero(currency: Issued<Commodity>) = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrZero(currency)
