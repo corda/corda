@@ -4,7 +4,6 @@ import com.google.common.annotations.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.DataFeed
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
@@ -15,38 +14,31 @@ import javax.persistence.*
 
 class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
 
-    object TransactionSchema
+    @Entity
+    @Table(name = "${NODE_DATABASE_PREFIX}transactions")
+    class DBTransaction(
+            @Id
+            @Column(name = "tx_id", length = 64)
+            var txId: String = "",
 
-    object TransactionSchemaV1 : MappedSchema(schemaFamily = TransactionSchema.javaClass, version = 1,
-            mappedTypes = listOf(Transaction::class.java)) {
-
-        @Entity
-        @Table(name = "${NODE_DATABASE_PREFIX}transactions")
-        class Transaction(
-                @Id
-                @Column(name = "tx_id", length = 64)
-                var txId: String = "",
-
-                @Lob
-                @Column
-                var transaction: ByteArray = ByteArray(0)
-        )
-    }
+            @Lob
+            @Column
+            var transaction: ByteArray = ByteArray(0)
+    )
 
     private companion object {
-        fun createTransactionsMap(): AppendOnlyPersistentMap<SecureHash, SignedTransaction, TransactionSchemaV1.Transaction, String> {
+        fun createTransactionsMap(): AppendOnlyPersistentMap<SecureHash, SignedTransaction, DBTransaction, String> {
             return AppendOnlyPersistentMap(
-                    cacheBound = 1024,
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(SecureHash.parse(it.txId),
                             deserializeFromByteArray<SignedTransaction>(it.transaction, context = SerializationDefaults.STORAGE_CONTEXT)) },
                     toPersistentEntity = { key: SecureHash, value: SignedTransaction ->
-                        TransactionSchemaV1.Transaction().apply {
+                        DBTransaction().apply {
                             txId = key.toString()
                             transaction = serializeToByteArray(value, context = SerializationDefaults.STORAGE_CONTEXT)
                         }
                     },
-                    persistentEntityClass = TransactionSchemaV1.Transaction::class.java
+                    persistentEntityClass = DBTransaction::class.java
             )
         }
     }

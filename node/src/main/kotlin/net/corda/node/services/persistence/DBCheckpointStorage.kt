@@ -1,6 +1,5 @@
 package net.corda.node.services.persistence
 
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
@@ -15,27 +14,21 @@ import javax.persistence.Lob
  */
 class DBCheckpointStorage : CheckpointStorage {
 
-    object CheckpointSchema
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
+    class DBCheckpoint(
+            @Id
+            @Column(name = "checkpoint_id", length = 64)
+            var checkpointId: String = "",
 
-    object CheckpointSchemaV1 : MappedSchema(schemaFamily = CheckpointSchema.javaClass, version = 1,
-            mappedTypes = listOf(Checkpoint::class.java)) {
-
-        @Entity
-        @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
-        class Checkpoint(
-                @Id
-                @Column(name = "checkpoint_id", length = 64)
-                var checkpointId: String = "",
-
-                @Lob
-                @Column(name = "checkpoint")
-                var checkpoint: ByteArray = ByteArray(0)
-        )
-    }
+            @Lob
+            @Column(name = "checkpoint")
+            var checkpoint: ByteArray = ByteArray(0)
+    )
 
     override fun addCheckpoint(value: Checkpoint) {
         val session = DatabaseTransactionManager.current().session
-        session.save(CheckpointSchemaV1.Checkpoint().apply {
+        session.save(DBCheckpoint().apply {
             checkpointId = value.id.toString()
             checkpoint = serializeToByteArray(value, SerializationDefaults.CHECKPOINT_CONTEXT)
         })
@@ -43,16 +36,19 @@ class DBCheckpointStorage : CheckpointStorage {
 
     override fun removeCheckpoint(checkpoint: Checkpoint) {
         val session = DatabaseTransactionManager.current().session
-        session.createQuery("delete ${CheckpointSchemaV1.Checkpoint::class.java.name} where checkpointId = :ID")
-        .setParameter("ID", checkpoint.id.toString())
-        .executeUpdate()
+        val criteriaBuilder = session.criteriaBuilder
+        val delete = criteriaBuilder.createCriteriaDelete(DBCheckpoint::class.java)
+        val root = delete.from(DBCheckpoint::class.java)
+        delete.where(criteriaBuilder.equal(root.get<String>("checkpointId"), checkpoint.id.toString()))
+        session.createQuery(delete).executeUpdate()
     }
 
     override fun forEach(block: (Checkpoint) -> Boolean) {
-        val criteriaQuery = DatabaseTransactionManager.current().session.criteriaBuilder.createQuery(CheckpointSchemaV1.Checkpoint::class.java)
-        val root = criteriaQuery.from(CheckpointSchemaV1.Checkpoint::class.java)
+        val session = DatabaseTransactionManager.current().session
+        val criteriaQuery = session.criteriaBuilder.createQuery(DBCheckpoint::class.java)
+        val root = criteriaQuery.from(DBCheckpoint::class.java)
         criteriaQuery.select(root)
-        val query = DatabaseTransactionManager.current().session.createQuery(criteriaQuery)
+        val query = session.createQuery(criteriaQuery)
         val checkpoints = query.resultList.map { e -> deserializeFromByteArray<Checkpoint>(e.checkpoint, SerializationDefaults.CHECKPOINT_CONTEXT) }.asSequence()
         for (e in checkpoints) {
             if (!block(e)) {

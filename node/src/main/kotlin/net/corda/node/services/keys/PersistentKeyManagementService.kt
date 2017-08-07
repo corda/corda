@@ -6,7 +6,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.utilities.*
@@ -26,39 +25,33 @@ import javax.persistence.*
 class PersistentKeyManagementService(val identityService: IdentityService,
                                      initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
 
-    object PersistentKeyManagementSchema
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
+    class PersistentKey(
 
-    object PersistentKeyManagementSchemaV1 : MappedSchema(schemaFamily = PersistentKeyManagementSchema.javaClass, version = 1,
-            mappedTypes = listOf(PersistentKey::class.java)) {
+            @Id
+            @Column(name = "public_key")
+            var publicKey: String = "",
 
-        @Entity
-        @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
-        class PersistentKey(
-
-                @Id
-                @Column(name = "public_key")
-                var publicKey: String = "",
-
-                @Lob
-                @Column(name = "private_key")
-                var privateKey: ByteArray = ByteArray(0)
-        )
-    }
+            @Lob
+            @Column(name = "private_key")
+            var privateKey: ByteArray = ByteArray(0)
+    )
 
     private companion object {
-        fun createKeyMap(): PersistentMap<PublicKey, PrivateKey, PersistentKeyManagementSchemaV1.PersistentKey, String> {
-            return PersistentMap(
+        fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
+            return AppendOnlyPersistentMap(
                     cacheBound = 1024,
                     toPersistentEntityKey = { it.toBase58String() },
                     fromPersistentEntity = { Pair(parsePublicKeyBase58(it.publicKey),
                             deserializeFromByteArray<PrivateKey>(it.privateKey, context = SerializationDefaults.STORAGE_CONTEXT)) },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
-                        PersistentKeyManagementSchemaV1.PersistentKey().apply {
+                        PersistentKey().apply {
                             publicKey = key.toBase58String()
                             privateKey = serializeToByteArray(value, context = SerializationDefaults.STORAGE_CONTEXT)
                         }
                     },
-                    persistentEntityClass = PersistentKeyManagementSchemaV1.PersistentKey::class.java
+                    persistentEntityClass = PersistentKey::class.java
             )
         }
     }
@@ -85,8 +78,9 @@ class PersistentKeyManagementService(val identityService: IdentityService,
 
     private fun getSigner(publicKey: PublicKey): ContentSigner  = getSigner(getSigningKeyPair(publicKey))
 
+    //It looks for the PublicKey in the (potentially) CompositeKey that is ours, and then returns the associated PrivateKey to use in signing
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
-        val pk = publicKey.keys.first { keysMap[it] != null }
+        val pk = publicKey.keys.first { keysMap[it] != null } //TODO here for us to re-write this using an actual query
         return KeyPair(pk, keysMap[pk]!!)
     }
 

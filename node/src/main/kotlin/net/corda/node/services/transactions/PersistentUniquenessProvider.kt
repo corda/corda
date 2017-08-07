@@ -7,7 +7,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.*
@@ -20,48 +19,41 @@ import javax.persistence.*
 @ThreadSafe
 class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsToken() {
 
+   @Entity
+   @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_commit_log")
+   class PersistentUniqueness (
 
-    object PersistentUniquenessSchema
+           @EmbeddedId
+           var id: StateRef = StateRef(),
 
-    object PersistentUniquenessSchemaV1 : MappedSchema(schemaFamily = PersistentUniquenessSchema.javaClass, version = 1,
-            mappedTypes = listOf(PersistentUniqueness::class.java)) {
+           @Column(name = "consuming_transaction_id")
+           var consumingTxHash: String = "",
 
-        @Entity
-        @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_commit_log")
-        class PersistentUniqueness (
+           @Column(name = "consuming_input_index", length = 36)
+           var consumingIndex: Int = 0,
 
-                @EmbeddedId
-                var id: StateRef = StateRef(),
+           @Embedded
+           var party: Party = Party()
+   ) {
 
-                @Column(name = "consuming_transaction_id")
-                var consumingTxHash: String = "",
+       @Embeddable
+       data class StateRef (
+               @Column(name = "transaction_id")
+               var txId: String = "",
 
-                @Column(name = "consuming_input_index", length = 36)
-                var consumingIndex: Int = 0,
+               @Column(name = "output_index", length = 36)
+               var index: Int = 0
+       ) : java.io.Serializable
 
-                @Embedded
-                var party: Party = Party()
-        ) {
+       @Embeddable
+       data class Party  (
+               @Column(name = "requesting_party_name")
+               var name: String = "",
 
-            @Embeddable
-            data class StateRef (
-                    @Column(name = "transaction_id")
-                    var txId: String = "",
-
-                    @Column(name = "output_index", length = 36)
-                    var index: Int = 0
-            ) : java.io.Serializable
-
-            @Embeddable
-            data class Party  (
-                    @Column(name = "requesting_party_name")
-                    var name: String = "",
-
-                    @Column(name = "requesting_party_key", length = 255)
-                    var owningKey: String = ""
-            ) : java.io.Serializable
-        }
-    }
+               @Column(name = "requesting_party_key", length = 255)
+               var owningKey: String = ""
+       ) : java.io.Serializable
+   }
 
     private class InnerState {
         val committedStates = createMap()
@@ -72,24 +64,23 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
     companion object {
         private val log = loggerFor<PersistentUniquenessProvider>()
 
-        fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessSchemaV1.PersistentUniqueness, PersistentUniquenessSchemaV1.PersistentUniqueness.StateRef> {
+        fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniqueness, PersistentUniqueness.StateRef> {
             return AppendOnlyPersistentMap(
-                    cacheBound = 1024,
-                    toPersistentEntityKey = { PersistentUniquenessSchemaV1.PersistentUniqueness.StateRef(it.txhash.toString(), it.index) },
+                    toPersistentEntityKey = { PersistentUniqueness.StateRef(it.txhash.toString(), it.index) },
                     fromPersistentEntity = {
                         Pair(StateRef(SecureHash.parse(it.id.txId), it.id.index),
                                 UniquenessProvider.ConsumingTx(SecureHash.parse(it.consumingTxHash), it.consumingIndex,
                                         Party(X500Name(it.party.name), parsePublicKeyBase58(it.party.owningKey))))
                     },
                     toPersistentEntity = { key: StateRef, value: UniquenessProvider.ConsumingTx ->
-                        PersistentUniquenessSchemaV1.PersistentUniqueness().apply {
-                            id = PersistentUniquenessSchemaV1.PersistentUniqueness.StateRef(key.txhash.toString(), key.index)
+                        PersistentUniqueness().apply {
+                            id = PersistentUniqueness.StateRef(key.txhash.toString(), key.index)
                             consumingTxHash = value.id.toString()
                             consumingIndex = value.inputIndex
-                            party = PersistentUniquenessSchemaV1.PersistentUniqueness.Party(value.requestingParty.name.toString())
+                            party = PersistentUniqueness.Party(value.requestingParty.name.toString())
                         }
                     },
-                    persistentEntityClass = PersistentUniquenessSchemaV1.PersistentUniqueness::class.java
+                    persistentEntityClass = PersistentUniqueness::class.java
             )
         }
     }

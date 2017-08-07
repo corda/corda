@@ -28,7 +28,16 @@ import net.corda.schemas.CashSchemaV1
  */
 class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaService, SingletonSerializeAsToken() {
 
-    // Currently does not support configuring schema options.
+    // Entities for compulsory services
+    object NodeServices
+
+    object NodeServicesV1 : MappedSchema(schemaFamily = NodeServices.javaClass, version = 1,
+            mappedTypes = listOf(DBCheckpointStorage.DBCheckpoint::class.java,
+                    DBTransactionStorage.DBTransaction::class.java,
+                    DBTransactionMappingStorage.DBTransactionMapping::class.java,
+                    PersistentKeyManagementService.PersistentKey::class.java,
+                    PersistentUniquenessProvider.PersistentUniqueness::class.java
+                    ))
 
     // Required schemas are those used by internal Corda services
     // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)
@@ -36,11 +45,7 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
             mapOf(Pair(CashSchemaV1, SchemaService.SchemaOptions()),
                   Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
                   Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(DBTransactionStorage.TransactionSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(DBTransactionMappingStorage.TransactionMappingSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(DBCheckpointStorage.CheckpointSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(PersistentKeyManagementService.PersistentKeyManagementSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(PersistentUniquenessProvider.PersistentUniquenessSchemaV1, SchemaService.SchemaOptions()))
+                  Pair(NodeServicesV1, SchemaService.SchemaOptions()))
 
 
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
