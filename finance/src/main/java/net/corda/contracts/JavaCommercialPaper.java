@@ -68,8 +68,8 @@ public class JavaCommercialPaper implements Contract {
 
         @NotNull
         @Override
-        public Pair<CommandData, OwnableState> withNewOwner(@NotNull AbstractParty newOwner) {
-            return new Pair<>(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
+        public CommandAndState withNewOwner(@NotNull AbstractParty newOwner) {
+            return new CommandAndState(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
         }
 
         public ICommercialPaperState withFaceValue(Amount<Issued<Currency>> newFaceValue) {
