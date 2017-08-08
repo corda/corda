@@ -41,9 +41,15 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                     rpcClientSerializerFactory(context)
                 SerializationContext.UseCase.RPCServer ->
                     rpcServerSerializerFactory(context)
-                else -> SerializerFactory(context.whitelist) // TODO pass class loader also
+                else -> SerializerFactory(context.whitelist, context.deserializationClassLoader)
             }
         }.also { registerCustomSerializers(it) }
+    }
+
+    fun getSerializerFactory(): SerializerFactory {
+        return serializerFactoriesForContexts.computeIfAbsent(Pair(AllWhitelist, deserializationClassLoader)) {
+            SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        }
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {

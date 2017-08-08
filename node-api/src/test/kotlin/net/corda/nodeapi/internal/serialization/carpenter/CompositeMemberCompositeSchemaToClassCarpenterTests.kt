@@ -63,7 +63,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         assertEquals("b", amqpSchemaB.fields[1].name)
         assertEquals("int", amqpSchemaB.fields[1].type)
 
-        val metaSchema = obj.envelope.schema.carpenterSchema()
+        val metaSchema = obj.envelope.schema.carpenterSchema(ClassLoader.getSystemClassLoader())
 
         // if we know all the classes there is nothing to really achieve here
         assert(metaSchema.carpenterSchemas.isEmpty())
@@ -92,7 +92,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         assert(obj.obj is B)
 
-        amqpSchema.carpenterSchema()
+        amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
     }
 
     @Test
@@ -112,7 +112,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         assert(obj.obj is B)
 
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("B")))
-        val carpenterSchema = amqpSchema.carpenterSchema()
+        val carpenterSchema = amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
 
         assertEquals(1, carpenterSchema.size)
 
@@ -140,7 +140,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         assert(obj.obj is B)
 
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
-        val carpenterSchema = amqpSchema.carpenterSchema()
+        val carpenterSchema = amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
 
         // just verify we're in the expected initial state, A is carpentable, B is not because
         // it depends on A and the dependency chains are in place
@@ -200,7 +200,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
 
-        amqpSchema.carpenterSchema()
+        amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
     }
 
     @Test(expected = UncarpentableException::class)
@@ -226,7 +226,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
 
-        amqpSchema.carpenterSchema()
+        amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
     }
 
     @Suppress("UNUSED")
@@ -251,7 +251,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         assert(obj.obj is C)
 
         val carpenterSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
-        TestMetaCarpenter(carpenterSchema.carpenterSchema())
+        TestMetaCarpenter(carpenterSchema.carpenterSchema(ClassLoader.getSystemClassLoader()))
     }
 
     /*

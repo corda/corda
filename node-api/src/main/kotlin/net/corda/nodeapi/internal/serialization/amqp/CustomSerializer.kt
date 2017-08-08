@@ -151,8 +151,10 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      * @param unmake A lambda that extracts the string value for an instance, that defaults to the [toString] method.
      */
     abstract class ToString<T>(clazz: Class<T>, withInheritance: Boolean = false,
-                               private val maker: (String) -> T = clazz.getConstructor(String::class.java).let { `constructor` -> { string -> `constructor`.newInstance(string) } },
-                               private val unmaker: (T) -> String = { obj -> obj.toString() }) : Proxy<T, String>(clazz, String::class.java, /* Unused */ SerializerFactory(), withInheritance) {
+                               private val maker: (String) -> T = clazz.getConstructor(String::class.java).let {
+                                   `constructor` -> { string -> `constructor`.newInstance(string) }
+                               },
+                               private val unmaker: (T) -> String = { obj -> obj.toString() }) : Proxy<T, String>(clazz, String::class.java, /* Unused */ SerializerFactoryFactory.get(), withInheritance) {
 
         override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 

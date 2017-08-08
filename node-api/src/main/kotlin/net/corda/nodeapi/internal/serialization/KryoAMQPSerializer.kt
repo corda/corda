@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.nodeapi.internal.serialization.amqp.SerializerFactoryFactory
 
 /**
  * This [Kryo] custom [Serializer] switches the object graph of anything annotated with `@CordaSerializable`
