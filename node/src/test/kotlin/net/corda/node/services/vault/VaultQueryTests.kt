@@ -1437,16 +1437,15 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets by owner`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = BOC.ref(1))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MEGA_CORP))
+                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MINI_CORP))
 
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
-            assertThat(results.states).hasSize(1)
+            assertThat(results.states).hasSize(1)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
         }
     }
-
 
     @Test
     fun `unconsumed fungible states for owners`() {
@@ -1463,7 +1462,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample5.2
 
-            assertThat(results.states).hasSize(1)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
+            assertThat(results.states).hasSize(2)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
         }
     }
 
@@ -1819,6 +1818,38 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             }
             assertThat(results.statesMetadata).hasSize(3)
             assertThat(results.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `unconsumed linear heads for single participant`() {
+        database.transaction {
+
+            services.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE))
+            services.fillWithSomeTestLinearStates(1)
+            services.fillWithSomeTestLinearStates(1, "TEST3")
+
+            val linearStateCriteria = LinearStateQueryCriteria(participants = listOf(ALICE))
+            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria)
+
+            assertThat(results.states).hasSize(1)
+            assertThat(results.states[0].state.data.linearId.externalId).isEqualTo("TEST1")
+        }
+    }
+
+    @Test
+    fun `unconsumed linear heads for multiple participants`() {
+        database.transaction {
+
+            services.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE,BOB,CHARLIE))
+            services.fillWithSomeTestLinearStates(1)
+            services.fillWithSomeTestLinearStates(1, "TEST3")
+
+            val linearStateCriteria = LinearStateQueryCriteria(participants = listOf(ALICE,BOB,CHARLIE))
+            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria)
+
+            assertThat(results.states).hasSize(1)
+            assertThat(results.states[0].state.data.linearId.externalId).isEqualTo("TEST1")
         }
     }
 

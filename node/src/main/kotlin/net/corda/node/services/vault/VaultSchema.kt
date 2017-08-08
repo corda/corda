@@ -67,9 +67,9 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             indexes = arrayOf(Index(name = "external_id_index", columnList = "external_id"),
                     Index(name = "uuid_index", columnList = "uuid")))
     class VaultLinearStates(
-            /** [ContractState] attributes */
-            @OneToMany(cascade = arrayOf(CascadeType.ALL))
-            var participants: Set<CommonSchemaV1.Party>,
+            /** X500Name of participant parties **/
+            @ElementCollection
+            var participants: Set<String>,
 
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
@@ -83,15 +83,15 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
         constructor(uid: UniqueIdentifier, _participants: List<AbstractParty>) :
                 this(externalId = uid.externalId,
                      uuid = uid.id,
-                     participants = _participants.map{ CommonSchemaV1.Party(it) }.toSet() )
+                     participants = _participants.map{ it.nameOrNull().toString() }.toSet() )
     }
 
     @Entity
     @Table(name = "vault_fungible_states")
     class VaultFungibleStates(
-            /** [ContractState] attributes */
-            @OneToMany(cascade = arrayOf(CascadeType.ALL))
-            var participants: Set<CommonSchemaV1.Party>,
+            /** X500Name of participant parties **/
+            @ElementCollection
+            var participants: Set<String>,
 
             /** [OwnableState] attributes */
             @Column(name = "owner_id")
@@ -108,8 +108,9 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var quantity: Long,
 
             /** Issuer attributes */
-            @OneToOne(cascade = arrayOf(CascadeType.ALL))
-            var issuerParty: CommonSchemaV1.Party,
+
+            /** X500Name of issuer party **/
+            var issuer: String,
 
             @Column(name = "issuer_reference")
             var issuerRef: ByteArray
@@ -117,8 +118,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
                 this(owner = _owner,
                      quantity = _quantity,
-                     issuerParty = CommonSchemaV1.Party(_issuerParty),
+                     issuer = _issuerParty.nameOrNull().toString(),
                      issuerRef = _issuerRef.bytes,
-                     participants =  _participants.map { CommonSchemaV1.Party(it) }.toSet())
+                     participants =  _participants.map { it.nameOrNull().toString() }.toSet())
     }
 }
