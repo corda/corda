@@ -30,6 +30,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ScreenCoordinate
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
 import tornadofx.*
@@ -122,11 +123,11 @@ class Network : CordaView() {
             contentDisplay = ContentDisplay.TOP
             val coordinate = Bindings.createObjectBinding({
                 // These coordinates are obtained when we generate the map using TileMill.
-                node.worldMapLocation?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: Pair(0.0, 0.0)
+                node.worldMapLocation?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: ScreenCoordinate(0.0, 0.0)
             }, arrayOf(mapPane.widthProperty(), mapPane.heightProperty()))
             // Center point of the label.
-            layoutXProperty().bind(coordinate.map { it.first - width / 2 })
-            layoutYProperty().bind(coordinate.map { it.second - height / 4 })
+            layoutXProperty().bind(coordinate.map { it.screenX - width / 2 })
+            layoutYProperty().bind(coordinate.map { it.screenY - height / 4 })
         }
 
         val button = node.renderButton(mapLabel)

@@ -391,10 +391,10 @@ class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
      * relative asset exchange happens, but with each party exchanging versus a central counterparty, or clearing house.
      *
      * @param centralParty The central party to face the exchange against.
-     * @return Returns two new AmountTransfers each between one of the original parties and the centralParty.
+     * @return Returns a list of two new AmountTransfers each between one of the original parties and the centralParty.
      * The net total exchange is the same as in the original input.
      */
-    fun novate(centralParty: P): Pair<AmountTransfer<T, P>, AmountTransfer<T, P>> = Pair(copy(destination = centralParty), copy(source = centralParty))
+    fun novate(centralParty: P): List<AmountTransfer<T, P>> = listOf(copy(destination = centralParty), copy(source = centralParty))
 
     /**
      * Applies this AmountTransfer to a list of [SourceAndAmount] objects representing balances.
