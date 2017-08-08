@@ -1,3 +1,5 @@
+@file:JvmName("Structures")
+
 package net.corda.core.contracts
 
 import net.corda.core.contracts.clauses.Clause
