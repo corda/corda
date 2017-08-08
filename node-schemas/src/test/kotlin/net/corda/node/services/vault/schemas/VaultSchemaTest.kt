@@ -85,7 +85,7 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
             override val participants: List<AbstractParty>
                 get() = listOf(owner)
 
-            override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Create(), copy(owner = newOwner))
+            override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Create(), copy(owner = newOwner))
         }
 
         interface Commands : CommandData {

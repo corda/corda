@@ -69,7 +69,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by $owner)"
 
-        override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {

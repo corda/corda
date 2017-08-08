@@ -147,6 +147,12 @@ data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
 fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
 
 // DOCSTART 3
+
+/**
+ * Return structure for [OwnableState.withNewOwner]
+ */
+data class CommandAndState(val command: CommandData, val ownableState: OwnableState)
+
 /**
  * A contract state that can have a single owner.
  */
@@ -155,7 +161,7 @@ interface OwnableState : ContractState {
     val owner: AbstractParty
 
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
-    fun withNewOwner(newOwner: AbstractParty): Pair<CommandData, OwnableState>
+    fun withNewOwner(newOwner: AbstractParty): CommandAndState
 }
 // DOCEND 3
 
