@@ -333,7 +333,7 @@ class Obligation<P : Any> : Contract {
             }
         }
 
-        override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(beneficiary = newOwner))
+        override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(beneficiary = newOwner))
     }
 
     // Just for grouping
