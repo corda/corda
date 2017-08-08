@@ -27,12 +27,9 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     @Table(name = "vault_states",
             indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status")))
     class VaultStates(
-            /** refers to the notary a state is attached to */
+            /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name")
             var notaryName: String,
-
-            @Column(name = "notary_key", length = 65535) // TODO What is the upper limit on size of CompositeKey?
-            var notaryKey: String,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
             @Column(name = "contract_state_class_name")
