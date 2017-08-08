@@ -1,5 +1,7 @@
 package net.corda.jackson
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
@@ -9,6 +11,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.contracts.BusinessCalendar
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.AbstractParty
@@ -17,9 +21,14 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigDecimal
@@ -109,6 +118,10 @@ object JacksonSupport {
             // For X.500 distinguished names
             addDeserializer(X500Name::class.java, X500NameDeserializer)
             addSerializer(X500Name::class.java, X500NameSerializer)
+
+            // Mixins for transaction types to prevent some properties from being serialized
+            setMixInAnnotation(SignedTransaction::class.java, SignedTransactionMixin::class.java)
+            setMixInAnnotation(WireTransaction::class.java, WireTransactionMixin::class.java)
         }
     }
 
@@ -278,7 +291,7 @@ object JacksonSupport {
     object CalendarSerializer : JsonSerializer<BusinessCalendar>() {
         override fun serialize(obj: BusinessCalendar, generator: JsonGenerator, context: SerializerProvider) {
             val calendarName = BusinessCalendar.calendars.find { BusinessCalendar.getInstance(it) == obj }
-            if(calendarName != null) {
+            if (calendarName != null) {
                 generator.writeString(calendarName)
             } else {
                 generator.writeObject(BusinessCalendarWrapper(obj.holidayDates))
@@ -370,6 +383,25 @@ object JacksonSupport {
         override fun serialize(value: OpaqueBytes, gen: JsonGenerator, serializers: SerializerProvider) {
             gen.writeBinary(value.bytes)
         }
+    }
+
+    abstract class SignedTransactionMixin {
+        @JsonIgnore abstract fun getTxBits(): SerializedBytes<CoreTransaction>
+        @JsonProperty("signatures") protected abstract fun getSigs(): List<TransactionSignature>
+        @JsonProperty protected abstract fun getTransaction(): CoreTransaction
+        @JsonIgnore abstract fun getTx(): WireTransaction
+        @JsonIgnore abstract fun getNotaryChangeTx(): NotaryChangeWireTransaction
+        @JsonIgnore abstract fun getInputs(): List<StateRef>
+        @JsonIgnore abstract fun getNotary(): Party?
+        @JsonIgnore abstract fun getId(): SecureHash
+        @JsonIgnore abstract fun getRequiredSigningKeys(): Set<PublicKey>
+    }
+
+    abstract class WireTransactionMixin {
+        @JsonIgnore abstract fun getMerkleTree(): MerkleTree
+        @JsonIgnore abstract fun getAvailableComponents(): List<Any>
+        @JsonIgnore abstract fun getAvailableComponentHashes(): List<SecureHash>
+        @JsonIgnore abstract fun getOutputStates(): List<ContractState>
     }
 }
 
