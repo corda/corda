@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.node.services.VaultService
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.schemas.MappedSchema
