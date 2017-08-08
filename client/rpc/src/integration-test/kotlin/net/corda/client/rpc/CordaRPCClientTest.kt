@@ -14,6 +14,7 @@ import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
@@ -33,7 +34,7 @@ class CordaRPCClientTest : NodeBasedTest() {
             startFlowPermission<CashIssueFlow>(),
             startFlowPermission<CashPaymentFlow>()
     ))
-    private lateinit var node: Node
+    private lateinit var node: StartedNode<Node>
     private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null
 
@@ -44,7 +45,7 @@ class CordaRPCClientTest : NodeBasedTest() {
     @Before
     fun setUp() {
         node = startNode(ALICE.name, rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
-        client = CordaRPCClient(node.configuration.rpcAddress!!, initialiseSerialization = false)
+        client = CordaRPCClient(node.node.configuration.rpcAddress!!, initialiseSerialization = false)
     }
 
     @After

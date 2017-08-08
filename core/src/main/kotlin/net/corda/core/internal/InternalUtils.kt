@@ -260,3 +260,6 @@ class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?
 @Retention(AnnotationRetention.SOURCE)
 @MustBeDocumented
 annotation class VisibleForTesting
+
+@Suppress("UNCHECKED_CAST")
+fun <T, U : T> uncheckedCast(obj: T) = obj as U

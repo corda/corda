@@ -11,6 +11,7 @@ import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
 import net.corda.finance.flows.CashPaymentFlow;
 import net.corda.node.internal.Node;
+import net.corda.node.internal.StartedNode;
 import net.corda.node.services.transactions.ValidatingNotaryService;
 import net.corda.nodeapi.User;
 import net.corda.testing.node.NodeBasedTest;
@@ -37,7 +38,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
 
-    private Node node;
+    private StartedNode<Node> node;
     private CordaRPCClient client;
     private RPCClient.RPCConnection<CordaRPCOps> connection = null;
     private CordaRPCOps rpcProxy;
@@ -50,9 +51,9 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     @Before
     public void setUp() throws ExecutionException, InterruptedException {
         Set<ServiceInfo> services = new HashSet<>(singletonList(new ServiceInfo(ValidatingNotaryService.Companion.getType(), null)));
-        CordaFuture<Node> nodeFuture = startNode(getALICE().getName(), 1, services, singletonList(rpcUser), emptyMap());
+        CordaFuture<StartedNode<Node>> nodeFuture = startNode(getALICE().getName(), 1, services, singletonList(rpcUser), emptyMap());
         node = nodeFuture.get();
-        client = new CordaRPCClient(requireNonNull(node.getConfiguration().getRpcAddress()), null, getDefault(), false);
+        client = new CordaRPCClient(requireNonNull(node.getNode().getConfiguration().getRpcAddress()), null, getDefault(), false);
     }
 
     @After
@@ -71,7 +72,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
                 DOLLARS(123), OpaqueBytes.of("1".getBytes()),
-                node.info.getLegalIdentity());
+                node.getInfo().getLegalIdentity());
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 

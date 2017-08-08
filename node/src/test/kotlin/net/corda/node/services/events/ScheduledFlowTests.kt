@@ -16,6 +16,7 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -37,9 +38,9 @@ class ScheduledFlowTests {
         val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
     }
     lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: MockNetwork.MockNode
-    lateinit var nodeA: MockNetwork.MockNode
-    lateinit var nodeB: MockNetwork.MockNode
+    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
+    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    lateinit var nodeB: StartedNode<MockNetwork.MockNode>
 
     data class ScheduledState(val creationTime: Instant,
                               val source: Party,
@@ -101,12 +102,14 @@ class ScheduledFlowTests {
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
-        nodeA = mockNet.createNode(notaryNode.network.myAddress, start = false)
-        nodeB = mockNet.createNode(notaryNode.network.myAddress, start = false)
+        val a = mockNet.createUnstartedNode(notaryNode.network.myAddress)
+        val b = mockNet.createUnstartedNode(notaryNode.network.myAddress)
 
-        notaryNode.ensureRegistered()
+        notaryNode.node.ensureRegistered()
 
         mockNet.startNodes()
+        nodeA = a.started!!
+        nodeB = b.started!!
     }
 
     @After

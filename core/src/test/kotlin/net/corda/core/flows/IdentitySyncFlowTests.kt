@@ -41,7 +41,7 @@ class IdentitySyncFlowTests {
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         val alice: Party = aliceNode.services.myInfo.legalIdentity
         val bob: Party = bobNode.services.myInfo.legalIdentity
-        bobNode.registerInitiatedFlow(Receive::class.java)
+        bobNode.node.registerInitiatedFlow(Receive::class.java)
 
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
         val anonymous = true

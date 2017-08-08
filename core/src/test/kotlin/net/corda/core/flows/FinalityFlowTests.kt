@@ -8,6 +8,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.GBP
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE
+import net.corda.node.internal.StartedNode
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import org.junit.After
@@ -18,8 +19,8 @@ import kotlin.test.assertFailsWith
 
 class FinalityFlowTests {
     lateinit var mockNet: MockNetwork
-    lateinit var nodeA: MockNetwork.MockNode
-    lateinit var nodeB: MockNetwork.MockNode
+    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    lateinit var nodeB: StartedNode<MockNetwork.MockNode>
     lateinit var notary: Party
     val services = MockServices()
 
@@ -31,7 +32,7 @@ class FinalityFlowTests {
         nodeB = nodes.partyNodes[1]
         notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
-        nodeA.ensureRegistered()
+        nodeA.node.ensureRegistered()
     }
 
     @After

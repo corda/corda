@@ -33,7 +33,7 @@ class P2PSecurityTest : NodeBasedTest() {
         val incorrectNetworkMapName = getX500Name(O = "NetworkMap-${random63BitValue()}", L = "London", C = "GB")
         val node = startNode(BOB.name, configOverrides = mapOf(
                 "networkMapService" to mapOf(
-                        "address" to networkMapNode.configuration.p2pAddress.toString(),
+                        "address" to networkMapNode.node.configuration.p2pAddress.toString(),
                         "legalName" to incorrectNetworkMapName.toString()
                 )
         ))
@@ -59,7 +59,7 @@ class P2PSecurityTest : NodeBasedTest() {
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(legalName.x500Name),
                 myLegalName = legalName).also {
-            whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
+            whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.node.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
         }
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
         return SimpleNode(config, trustRoot = trustRoot).apply { start() }

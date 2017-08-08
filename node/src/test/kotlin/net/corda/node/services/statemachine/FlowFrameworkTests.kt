@@ -31,6 +31,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -42,6 +43,7 @@ import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.pumpReceive
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -66,10 +68,10 @@ class FlowFrameworkTests {
 
     private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
-    private lateinit var node1: MockNode
-    private lateinit var node2: MockNode
-    private lateinit var notary1: MockNode
-    private lateinit var notary2: MockNode
+    private lateinit var node1: StartedNode<MockNode>
+    private lateinit var node2: StartedNode<MockNode>
+    private lateinit var notary1: StartedNode<MockNode>
+    private lateinit var notary2: StartedNode<MockNode>
 
     @Before
     fun start() {
@@ -77,7 +79,7 @@ class FlowFrameworkTests {
         node2 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
 
         mockNet.runNetwork()
-        node1.ensureRegistered()
+        node1.node.ensureRegistered()
 
         // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
@@ -111,7 +113,7 @@ class FlowFrameworkTests {
     @Test
     fun `newly added flow is preserved on restart`() {
         node1.services.startFlow(NoOpFlow(nonTerminating = true))
-        node1.acceptableLiveFiberCountOnStop = 1
+        node1.node.acceptableLiveFiberCountOnStop = 1
         val restoredFlow = node1.restartAndGetRestoredFlow<NoOpFlow>()
         assertThat(restoredFlow.flowStarted).isTrue()
     }
@@ -149,9 +151,9 @@ class FlowFrameworkTests {
 
         // We push through just enough messages to get only the payload sent
         node2.pumpReceive()
-        node2.disableDBCloseOnStop()
-        node2.acceptableLiveFiberCountOnStop = 1
-        node2.stop()
+        node2.node.disableDBCloseOnStop()
+        node2.node.acceptableLiveFiberCountOnStop = 1
+        node2.dispose()
         mockNet.runNetwork()
         val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveFlow>(node1)
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
@@ -173,22 +175,22 @@ class FlowFrameworkTests {
         val flow = NoOpFlow()
         node3.services.startFlow(flow)
         assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
-        node3.disableDBCloseOnStop()
+        node3.node.disableDBCloseOnStop()
         node3.services.networkMapCache.clearNetworkMapCache() // zap persisted NetworkMapCache to force use of network.
-        node3.stop()
+        node3.dispose()
 
-        node3 = mockNet.createNode(node1.network.myAddress, node3.id)
+        node3 = mockNet.createNode(node1.network.myAddress, node3.node.id)
         val restoredFlow = node3.getSingleFlow<NoOpFlow>().first
         assertEquals(false, restoredFlow.flowStarted) // Not started yet as no network activity has been allowed yet
         mockNet.runNetwork() // Allow network map messages to flow
         node3.smm.executor.flush()
         assertEquals(true, restoredFlow.flowStarted) // Now we should have run the flow and hopefully cleared the init checkpoint
-        node3.disableDBCloseOnStop()
+        node3.node.disableDBCloseOnStop()
         node3.services.networkMapCache.clearNetworkMapCache() // zap persisted NetworkMapCache to force use of network.
-        node3.stop()
+        node3.dispose()
 
         // Now it is completed the flow should leave no Checkpoint.
-        node3 = mockNet.createNode(node1.network.myAddress, node3.id)
+        node3 = mockNet.createNode(node1.network.myAddress, node3.node.id)
         mockNet.runNetwork() // Allow network map messages to flow
         node3.smm.executor.flush()
         assertTrue(node3.smm.findStateMachines(NoOpFlow::class.java).isEmpty())
@@ -200,8 +202,8 @@ class FlowFrameworkTests {
         node2.services.startFlow(ReceiveFlow(node1.info.legalIdentity).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
-        node2.disableDBCloseOnStop()
-        node2.stop() // kill receiver
+        node2.node.disableDBCloseOnStop()
+        node2.dispose() // kill receiver
         val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveFlow>(node1)
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
@@ -225,15 +227,15 @@ class FlowFrameworkTests {
         }
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
-        node2.disableDBCloseOnStop()
+        node2.node.disableDBCloseOnStop()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
-        node2.stop()
+        node2.dispose()
         node2.database.transaction {
             assertEquals(1, node2.checkpointStorage.checkpoints().size) // confirm checkpoint
             node2.services.networkMapCache.clearNetworkMapCache()
         }
-        val node2b = mockNet.createNode(node1.network.myAddress, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
-        node2.manuallyCloseDB()
+        val node2b = mockNet.createNode(node1.network.myAddress, node2.node.id, advertisedServices = *node2.node.advertisedServices.toTypedArray())
+        node2.node.manuallyCloseDB()
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
         mockNet.runNetwork()
@@ -285,8 +287,8 @@ class FlowFrameworkTests {
                 //There's no session end from the other flows as they're manually suspended
         )
 
-        node2.acceptableLiveFiberCountOnStop = 1
-        node3.acceptableLiveFiberCountOnStop = 1
+        node2.node.acceptableLiveFiberCountOnStop = 1
+        node3.node.acceptableLiveFiberCountOnStop = 1
     }
 
     @Test
@@ -299,7 +301,7 @@ class FlowFrameworkTests {
         node3.registerFlowFactory(ReceiveFlow::class) { SendFlow(node3Payload, it) }
         val multiReceiveFlow = ReceiveFlow(node2.info.legalIdentity, node3.info.legalIdentity).nonTerminating()
         node1.services.startFlow(multiReceiveFlow)
-        node1.acceptableLiveFiberCountOnStop = 1
+        node1.node.acceptableLiveFiberCountOnStop = 1
         mockNet.runNetwork()
         assertThat(multiReceiveFlow.receivedPayloads[0]).isEqualTo(node2Payload)
         assertThat(multiReceiveFlow.receivedPayloads[1]).isEqualTo(node3Payload)
@@ -360,32 +362,32 @@ class FlowFrameworkTests {
                     // First Pay
                     expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
                         it.message as SessionInit
-                        assertEquals(node1.id, it.from)
+                        assertEquals(node1.node.id, it.from)
                         assertEquals(notary1Address, it.to)
                     },
                     expect(match = { it.message is SessionConfirm }) {
                         it.message as SessionConfirm
-                        assertEquals(notary1.id, it.from)
+                        assertEquals(notary1.node.id, it.from)
                     },
                     // Second pay
                     expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
                         it.message as SessionInit
-                        assertEquals(node1.id, it.from)
+                        assertEquals(node1.node.id, it.from)
                         assertEquals(notary1Address, it.to)
                     },
                     expect(match = { it.message is SessionConfirm }) {
                         it.message as SessionConfirm
-                        assertEquals(notary2.id, it.from)
+                        assertEquals(notary2.node.id, it.from)
                     },
                     // Third pay
                     expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
                         it.message as SessionInit
-                        assertEquals(node1.id, it.from)
+                        assertEquals(node1.node.id, it.from)
                         assertEquals(notary1Address, it.to)
                     },
                     expect(match = { it.message is SessionConfirm }) {
                         it.message as SessionConfirm
-                        assertEquals(it.from, notary1.id)
+                        assertEquals(it.from, notary1.node.id)
                     }
             )
         }
@@ -740,26 +742,26 @@ class FlowFrameworkTests {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
 
-    private inline fun <reified P : FlowLogic<*>> MockNode.restartAndGetRestoredFlow(networkMapNode: MockNode? = null): P {
+    private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow(networkMapNode: StartedNode<*>? = null) = node.run {
         disableDBCloseOnStop() // Handover DB to new node copy
         stop()
         val newNode = mockNet.createNode(networkMapNode?.network?.myAddress, id, advertisedServices = *advertisedServices.toTypedArray())
-        newNode.acceptableLiveFiberCountOnStop = 1
+        newNode.node.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
         mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine
-        return newNode.getSingleFlow<P>().first
+        newNode.getSingleFlow<P>().first
     }
 
-    private inline fun <reified P : FlowLogic<*>> MockNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
+    private inline fun <reified P : FlowLogic<*>> StartedNode<*>.getSingleFlow(): Pair<P, CordaFuture<*>> {
         return smm.findStateMachines(P::class.java).single()
     }
 
-    private inline fun <reified P : FlowLogic<*>> MockNode.registerFlowFactory(
+    private inline fun <reified P : FlowLogic<*>> StartedNode<*>.registerFlowFactory(
             initiatingFlowClass: KClass<out FlowLogic<*>>,
             initiatedFlowVersion: Int = 1,
             noinline flowFactory: (Party) -> P): CordaFuture<P>
     {
-        val observable = internalRegisterFlowFactory(
+        val observable = node.internalRegisterFlowFactory(
                 initiatingFlowClass.java,
                 InitiatedFlowFactory.CorDapp(initiatedFlowVersion, "", flowFactory),
                 P::class.java,
@@ -775,7 +777,7 @@ class FlowFrameworkTests {
     private val normalEnd = NormalSessionEnd(0)
     private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
 
-    private fun MockNode.sendSessionMessage(message: SessionMessage, destination: MockNode) {
+    private fun StartedNode<*>.sendSessionMessage(message: SessionMessage, destination: StartedNode<*>) {
         services.networkService.apply {
             val address = getAddressOfParty(PartyInfo.Node(destination.info))
             send(createMessage(StateMachineManager.sessionTopic, message.serialize().bytes), address)
@@ -786,8 +788,8 @@ class FlowFrameworkTests {
         assertThat(receivedSessionMessages).containsExactly(*expected)
     }
 
-    private fun assertSessionTransfers(node: MockNode, vararg expected: SessionTransfer): List<SessionTransfer> {
-        val actualForNode = receivedSessionMessages.filter { it.from == node.id || it.to == node.network.myAddress }
+    private fun assertSessionTransfers(node: StartedNode<MockNode>, vararg expected: SessionTransfer): List<SessionTransfer> {
+        val actualForNode = receivedSessionMessages.filter { it.from == node.node.id || it.to == node.network.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
         return actualForNode
     }
@@ -818,8 +820,8 @@ class FlowFrameworkTests {
         else -> message
     }
 
-    private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
-    private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
+    private infix fun StartedNode<MockNode>.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(node.id, message)
+    private infix fun Pair<Int, SessionMessage>.to(node: StartedNode<*>): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
     private val FlowLogic<*>.progressSteps: CordaFuture<List<Notification<ProgressTracker.Step>>> get() {
         return progressTracker!!.changes

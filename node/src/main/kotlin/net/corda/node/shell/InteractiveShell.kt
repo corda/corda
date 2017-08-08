@@ -24,6 +24,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -75,13 +76,13 @@ import kotlin.concurrent.thread
 
 object InteractiveShell {
     private val log = loggerFor<InteractiveShell>()
-    private lateinit var node: Node
+    private lateinit var node: StartedNode<Node>
 
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(dir: Path, runLocalShell: Boolean, runSSHServer: Boolean, node: Node) {
+    fun startShell(dir: Path, runLocalShell: Boolean, runSSHServer: Boolean, node: StartedNode<Node>) {
         this.node = node
         var runSSH = runSSHServer
 
@@ -136,7 +137,7 @@ object InteractiveShell {
             jlineProcessor.closed()
             log.info("Command shell has exited")
             terminal.restore()
-            node.stop()
+            node.dispose()
         }
     }
 
@@ -168,7 +169,7 @@ object InteractiveShell {
                 }
             }
             val attributes = mapOf(
-                    "node" to node,
+                    "node" to node.node,
                     "services" to node.services,
                     "ops" to node.rpcOps,
                     "mapper" to yamlInputMapper

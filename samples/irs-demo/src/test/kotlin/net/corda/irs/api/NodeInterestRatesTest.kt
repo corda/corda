@@ -205,10 +205,10 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         val mockNet = MockNetwork(initialiseSerialization = false)
         val n1 = mockNet.createNotaryNode()
         val n2 = mockNet.createNode(n1.network.myAddress, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
-        n2.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
-        n2.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
+        n2.node.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+        n2.node.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
         n2.database.transaction {
-            n2.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+            n2.node.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
         }
         val tx = makePartialTX()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")

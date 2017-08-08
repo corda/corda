@@ -24,6 +24,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -204,11 +205,11 @@ sealed class NodeHandle {
             override val rpc: CordaRPCOps,
             override val configuration: FullNodeConfiguration,
             override val webAddress: NetworkHostAndPort,
-            val node: Node,
+            val node: StartedNode<Node>,
             val nodeThread: Thread
     ) : NodeHandle() {
         override fun stop(): CordaFuture<Unit> {
-            node.stop()
+            node.dispose()
             with(nodeThread) {
                 interrupt()
                 join()
@@ -823,7 +824,7 @@ class DriverDSL(
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
                         {
-                            node.stop()
+                            node.dispose()
                             thread.interrupt()
                         }
                     }
@@ -880,16 +881,15 @@ class DriverDSL(
                 executorService: ScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
                 config: Config
-        ): CordaFuture<Pair<Node, Thread>> {
+        ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
             return executorService.fork {
                 log.info("Starting in-process Node ${nodeConf.myLegalName.organisation}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
                 // TODO pass the version in?
-                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, initialiseSerialization = false)
-                node.start()
+                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, initialiseSerialization = false).start()
                 val nodeThread = thread(name = nodeConf.myLegalName.organisation) {
-                    node.run()
+                    node.node.run()
                 }
                 node to nodeThread
             }.flatMap { nodeAndThread -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress).map { nodeAndThread } }

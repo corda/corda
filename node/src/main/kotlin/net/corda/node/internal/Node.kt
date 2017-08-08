@@ -8,6 +8,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
@@ -279,7 +280,7 @@ open class Node(override val configuration: FullNodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
+    override fun <T> initialiseDatabasePersistence(insideTransaction: () -> T): T {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
@@ -296,25 +297,24 @@ open class Node(override val configuration: FullNodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
-        super.initialiseDatabasePersistence(insideTransaction)
+        return super.initialiseDatabasePersistence(insideTransaction)
     }
 
     private val _startupComplete = openFuture<Unit>()
     val startupComplete: CordaFuture<Unit> get() = _startupComplete
 
-    override fun start() {
+    override fun start(): StartedNode<Node> {
         if (initialiseSerialization) {
             initialiseSerialization()
         }
-        super.start()
-
+        val started: StartedNode<Node> = uncheckedCast(super.start())
         nodeReadyFuture.thenMatch({
             serverThread.execute {
                 // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
                 //
                 // https://jolokia.org/agent/jvm.html
                 JmxReporter.
-                        forRegistry(services.monitoringService.metrics).
+                        forRegistry(started.services.monitoringService.metrics).
                         inDomain("net.corda").
                         createsObjectNamesWith { _, domain, name ->
                             // Make the JMX hierarchy a bit better organised.
@@ -336,6 +336,7 @@ open class Node(override val configuration: FullNodeConfiguration,
         shutdownHook = addShutdownHook {
             stop()
         }
+        return started
     }
 
     private fun initialiseSerialization() {

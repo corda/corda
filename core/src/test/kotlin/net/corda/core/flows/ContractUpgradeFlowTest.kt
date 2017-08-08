@@ -18,6 +18,7 @@ import net.corda.finance.contracts.asset.CASH_PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.RPCDriverExposedDSLInterface
@@ -37,8 +38,8 @@ import kotlin.test.assertTrue
 
 class ContractUpgradeFlowTest {
     lateinit var mockNet: MockNetwork
-    lateinit var a: MockNetwork.MockNode
-    lateinit var b: MockNetwork.MockNode
+    lateinit var a: StartedNode<MockNetwork.MockNode>
+    lateinit var b: StartedNode<MockNetwork.MockNode>
     lateinit var notary: Party
 
     @Before
@@ -50,7 +51,7 @@ class ContractUpgradeFlowTest {
 
         // Process registration
         mockNet.runNetwork()
-        a.ensureRegistered()
+        a.node.ensureRegistered()
 
         notary = nodes.notaryNode.info.notaryIdentity
 
@@ -107,7 +108,7 @@ class ContractUpgradeFlowTest {
 
         val result = resultFuture.getOrThrow()
 
-        fun check(node: MockNetwork.MockNode) {
+        fun check(node: StartedNode<*>) {
             val nodeStx = node.database.transaction {
                 node.services.validatedTransactions.getTransaction(result.ref.txhash)
             }
@@ -127,7 +128,7 @@ class ContractUpgradeFlowTest {
         check(b)
     }
 
-    private fun RPCDriverExposedDSLInterface.startProxy(node: MockNetwork.MockNode, user: User): CordaRPCOps {
+    private fun RPCDriverExposedDSLInterface.startProxy(node: StartedNode<*>, user: User): CordaRPCOps {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
@@ -234,8 +235,6 @@ class ContractUpgradeFlowTest {
         assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (firstState.state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
         assertEquals<Collection<AbstractParty>>(listOf(anonymisedRecipient), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
     }
-
-    val CASHV2_PROGRAM_ID = "net.corda.core.flows.ContractUpgradeFlowTest.CashV2"
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
         override val legacyContract = CASH_PROGRAM_ID
