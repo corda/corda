@@ -80,7 +80,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
 
     //It looks for the PublicKey in the (potentially) CompositeKey that is ours, and then returns the associated PrivateKey to use in signing
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
-        val pk = publicKey.keys.first { keysMap[it] != null } //TODO here for us to re-write this using an actual query
+        val pk = publicKey.keys.first { keysMap[it] != null } //TODO here for us to re-write this using an actual query if publicKey.keys.size > 1
         return KeyPair(pk, keysMap[pk]!!)
     }
 

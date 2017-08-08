@@ -39,7 +39,7 @@ class DBCheckpointStorage : CheckpointStorage {
         val criteriaBuilder = session.criteriaBuilder
         val delete = criteriaBuilder.createCriteriaDelete(DBCheckpoint::class.java)
         val root = delete.from(DBCheckpoint::class.java)
-        delete.where(criteriaBuilder.equal(root.get<String>("checkpointId"), checkpoint.id.toString()))
+        delete.where(criteriaBuilder.equal(root.get<String>(DBCheckpoint::checkpointId.name), checkpoint.id.toString()))
         session.createQuery(delete).executeUpdate()
     }
 
