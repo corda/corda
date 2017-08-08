@@ -11,6 +11,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.*
 import org.bouncycastle.asn1.x500.X500Name
+import java.io.Serializable
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
@@ -43,7 +44,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
 
                @Column(name = "output_index", length = 36)
                var index: Int = 0
-       ) : java.io.Serializable
+       ) : Serializable
 
        @Embeddable
        data class Party  (
@@ -52,7 +53,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
 
                @Column(name = "requesting_party_key", length = 255)
                var owningKey: String = ""
-       ) : java.io.Serializable
+       ) : Serializable
    }
 
     private class InnerState {
