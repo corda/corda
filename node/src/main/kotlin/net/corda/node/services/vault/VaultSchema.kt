@@ -1,9 +1,9 @@
 package net.corda.node.services.vault
 
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
-import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
@@ -22,7 +22,7 @@ object VaultSchema
  */
 @CordaSerializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
-                                    mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java,  CommonSchemaV1.Party::class.java)) {
+                                    mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java)) {
     @Entity
     @Table(name = "vault_states",
             indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status")))
@@ -67,6 +67,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             indexes = arrayOf(Index(name = "external_id_index", columnList = "external_id"),
                     Index(name = "uuid_index", columnList = "uuid")))
     class VaultLinearStates(
+            /** [ContractState] attributes */
+
             /** X500Name of participant parties **/
             @ElementCollection
             var participants: Set<String>,
@@ -89,6 +91,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     @Entity
     @Table(name = "vault_fungible_states")
     class VaultFungibleStates(
+            /** [ContractState] attributes */
+
             /** X500Name of participant parties **/
             @ElementCollection
             var participants: Set<String>,

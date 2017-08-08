@@ -13,7 +13,7 @@ import javax.persistence.Table
  * [VaultFungibleState] abstract schema
  */
 object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 2,
-                                   mappedTypes = listOf(PersistentCashState::class.java, CommonSchemaV1.Party::class.java)) {
+                                   mappedTypes = listOf(PersistentCashState::class.java)) {
     @Entity
     @Table(name = "cash_states_v2",
            indexes = arrayOf(Index(name = "ccy_code_idx2", columnList = "ccy_code")))

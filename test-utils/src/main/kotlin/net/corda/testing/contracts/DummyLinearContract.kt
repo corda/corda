@@ -50,6 +50,7 @@ class DummyLinearContract : Contract {
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is DummyLinearStateSchemaV1 -> DummyLinearStateSchemaV1.PersistentDummyLinearState(
+                        participants = participants.map { it.nameOrNull().toString() }.toSet(),
                         externalId = linearId.externalId,
                         uuid = linearId.id,
                         linearString = linearString,
@@ -58,6 +59,7 @@ class DummyLinearContract : Contract {
                         linearBoolean = linearBoolean
                 )
                 is DummyLinearStateSchemaV2 -> DummyLinearStateSchemaV2.PersistentDummyLinearState(
+                        _participants = participants.toSet(),
                         uid = linearId,
                         linearString = linearString,
                         linearNumber = linearNumber,

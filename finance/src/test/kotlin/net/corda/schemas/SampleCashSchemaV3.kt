@@ -11,16 +11,18 @@ import javax.persistence.*
  * at the time of writing.
  */
 object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 3,
-                                   mappedTypes = listOf(PersistentCashState::class.java, CommonSchemaV1.Party::class.java)) {
+                                         mappedTypes = listOf(PersistentCashState::class.java)) {
     @Entity
     @Table(name = "cash_states_v3")
     class PersistentCashState(
             /** [ContractState] attributes */
-            @OneToMany(cascade = arrayOf(CascadeType.ALL))
-            var participants: Set<CommonSchemaV1.Party>,
 
-            @OneToOne(cascade = arrayOf(CascadeType.ALL))
-            var owner: CommonSchemaV1.Party,
+            /** X500Name of participant parties **/
+            @ElementCollection
+            var participants: Set<String>,
+
+            /** X500Name of anonymous owner party (after resolution by the IdentityService) **/
+            var owner: String,
 
             @Column(name = "pennies")
             var pennies: Long,
@@ -28,18 +30,18 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             @Column(name = "ccy_code", length = 3)
             var currency: String,
 
-            @OneToOne(cascade = arrayOf(CascadeType.ALL))
-            var issuerParty: CommonSchemaV1.Party,
+            /** X500Name of issuer party **/
+            var issuer: String,
 
             @Column(name = "issuer_ref")
             var issuerRef: ByteArray
     ) : PersistentState() {
         constructor(_participants: Set<AbstractParty>, _owner: AbstractParty, _quantity: Long, _currency: String, _issuerParty: AbstractParty, _issuerRef: ByteArray)
-                : this(participants = _participants.map { CommonSchemaV1.Party(it) }.toSet(),
-                        owner = CommonSchemaV1.Party(_owner),
+                : this(participants = _participants.map { it.nameOrNull().toString() }.toSet(),
+                        owner = _owner.nameOrNull().toString(),
                         pennies = _quantity,
                         currency = _currency,
-                        issuerParty = CommonSchemaV1.Party(_issuerParty),
+                        issuer = _issuerParty.nameOrNull().toString(),
                         issuerRef = _issuerRef)
     }
 }
