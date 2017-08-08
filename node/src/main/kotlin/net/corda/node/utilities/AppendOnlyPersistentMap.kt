@@ -58,7 +58,7 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
             ///storeValue(key, value)
             if (existing.isPresent) {
                 // An existing value is cached, in this case we know for sure that there is a problem.
-                log.warn("Double insert detected in AppendOnlyJDBCMap for entity class $persistentEntityClass key $key, not inserting the second time")
+                log.warn("Double insert detected in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
             } else {
                 // This happens when the key was queried before with no value associated. We invalidate the cached null
                 // value and recursively call set again. This is to avoid race conditions where another thread queries after
