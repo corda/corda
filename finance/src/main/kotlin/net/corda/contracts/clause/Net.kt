@@ -1,6 +1,6 @@
 package net.corda.contracts.clause
 
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import net.corda.contracts.NetCommand
 import net.corda.contracts.NetType
 import net.corda.contracts.asset.Obligation

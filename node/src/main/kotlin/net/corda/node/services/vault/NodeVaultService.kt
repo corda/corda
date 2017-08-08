@@ -2,7 +2,7 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import io.requery.PersistenceException
 import io.requery.kotlin.eq
 import io.requery.kotlin.notNull

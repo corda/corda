@@ -1,6 +1,6 @@
 package net.corda.node.services.statemachine
 
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import com.google.common.primitives.Primitives
 import net.corda.core.flows.*
 import net.corda.core.serialization.CordaSerializable

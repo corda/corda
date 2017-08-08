@@ -1,7 +1,7 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
