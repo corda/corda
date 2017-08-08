@@ -73,9 +73,7 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas, val cc : Class
             // we're out of blockers so  we can now create the type
             if (schemas.dependencies[dependent]?.second?.isEmpty() ?: false) {
                 (schemas.dependencies.remove (dependent)?.first as CompositeType).carpenterSchema (
-                        classLoaders = listOf<ClassLoader> (
-                                ClassLoader.getSystemClassLoader(),
-                                cc.classloader),
+                        classloader = cc.classloader,
                         carpenterSchemas = schemas)
             }
         }

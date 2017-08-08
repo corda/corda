@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 class DeserializeSimpleTypesTests {
     class TestSerializationOutput(
             private val verbose: Boolean,
-            serializerFactory: SerializerFactory = SerializerFactory()) : SerializationOutput(serializerFactory) {
+            serializerFactory: SerializerFactory = SerializerFactoryFactory.get()) : SerializationOutput(serializerFactory) {
 
         override fun writeSchema(schema: Schema, data: Data) {
             if (verbose) println(schema)
@@ -26,7 +26,7 @@ class DeserializeSimpleTypesTests {
         private const val VERBOSE = false
     }
 
-    val sf = SerializerFactory()
+    val sf = SerializerFactoryFactory.get()
 
     @Test
     fun testChar() {

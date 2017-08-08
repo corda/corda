@@ -17,7 +17,7 @@ class DeserializeAndReturnEnvelopeTests {
 
         val a = A(10, "20")
 
-        val factory = SerializerFactory()
+        val factory = SerializerFactoryFactory.get()
         fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
@@ -33,7 +33,7 @@ class DeserializeAndReturnEnvelopeTests {
 
         val b = B(A(10, "20"), 30.0F)
 
-        val factory = SerializerFactory()
+        val factory = SerializerFactoryFactory.get()
         fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
