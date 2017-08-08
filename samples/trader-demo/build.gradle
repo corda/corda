@@ -41,7 +41,8 @@ dependencies {
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
             'StartFlow.net.corda.flows.IssuerFlow$IssuanceRequester',
-            "StartFlow.net.corda.traderdemo.flow.SellerFlow"
+            'StartFlow.net.corda.traderdemo.flow.BankFlow',
+            'StartFlow.net.corda.traderdemo.flow.SellerFlow'
     ]]]
 
     directory "./build/nodes"
@@ -74,7 +75,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "CN=BankOfCorda,O=R3,L=New York,C=US"
         advertisedServices = []
         p2pPort 10011
+        rpcPort 10012
         cordapps = []
+        rpcUsers = ext.rpcUsers
     }
 }
 

@@ -7,6 +7,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
 import org.slf4j.Logger
 import kotlin.system.exitProcess
@@ -49,9 +50,13 @@ private class TraderDemo {
                 TraderDemoClientApi(it.proxy).runBuyer()
             }
         } else {
-            val host = NetworkHostAndPort("localhost", 10009)
-            CordaRPCClient(host).use("demo", "demo") {
-                TraderDemoClientApi(it.proxy).runSeller(1000.DOLLARS, DUMMY_BANK_A.name, BOC.name)
+            val bankHost = NetworkHostAndPort("localhost", 10012)
+            CordaRPCClient(bankHost).use("demo", "demo") {
+                TraderDemoClientApi(it.proxy).runCpIssuer(1100.DOLLARS, DUMMY_BANK_B.name)
+            }
+            val clientHost = NetworkHostAndPort("localhost", 10009)
+            CordaRPCClient(clientHost).use("demo", "demo") {
+                TraderDemoClientApi(it.proxy).runSeller(1000.DOLLARS, DUMMY_BANK_A.name)
             }
         }
     }

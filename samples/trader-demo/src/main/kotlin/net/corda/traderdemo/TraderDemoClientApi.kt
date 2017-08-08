@@ -21,6 +21,7 @@ import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.calculateRandomlySizedAmounts
+import net.corda.traderdemo.flow.BankFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
@@ -47,6 +48,27 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
     }
 
+    fun runCpIssuer(amount: Amount<Currency> = 1100.0.DOLLARS, counterparty: X500Name) {
+        val otherParty = rpc.partyFromX500Name(counterparty) ?: throw IllegalStateException("Don't know $counterparty")
+        // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
+        //
+        // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
+        // attachment. Make sure we have the transaction prospectus attachment loaded into our store.
+        //
+        // This can also be done via an HTTP upload, but here we short-circuit and do it from code.
+        if (!rpc.attachmentExists(SellerFlow.PROSPECTUS_HASH)) {
+            javaClass.classLoader.getResourceAsStream("bank-of-london-cp.jar").use {
+                val id = rpc.uploadAttachment(it)
+                check(SellerFlow.PROSPECTUS_HASH == id)
+            }
+        }
+
+        // The line below blocks and waits for the future to resolve.
+        println("Running bank flow")
+        val stx = rpc.startFlow(::BankFlow, otherParty, amount).returnValue.getOrThrow()
+        println("Commercial paper issued to seller")
+    }
+
     fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS, anonymous: Boolean = false) {
         val bankOfCordaParty = rpc.partyFromX500Name(BOC.name)
                 ?: throw IllegalStateException("Unable to locate ${BOC.name} in Network Map Service")
@@ -67,9 +89,8 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
     /**
      * @param cpIssuer the name of the party who will issue commercial paper to be sold.
      */
-    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, counterparty: X500Name, cpIssuer: X500Name) {
+    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, counterparty: X500Name) {
         val otherParty = rpc.partyFromX500Name(counterparty) ?: throw IllegalStateException("Don't know $counterparty")
-        val issuerParty = rpc.partyFromX500Name(cpIssuer) ?: throw IllegalStateException("Don't know $cpIssuer")
         // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
         //
         // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -84,7 +105,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         }
 
         // The line below blocks and waits for the future to resolve.
-        val stx = rpc.startFlow(::SellerFlow, otherParty, issuerParty.name, amount).returnValue.getOrThrow()
+        val stx = rpc.startFlow(::SellerFlow, otherParty, amount).returnValue.getOrThrow()
         println("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(stx.tx)}")
     }
 }
