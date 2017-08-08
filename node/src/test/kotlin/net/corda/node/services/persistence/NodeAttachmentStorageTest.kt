@@ -45,7 +45,7 @@ class NodeAttachmentStorageTest {
         dataSourceProperties = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties())
 
-        configuration = RequeryConfiguration(dataSourceProperties, makeTestDatabaseProperties())
+        configuration = RequeryConfiguration(dataSourceProperties, databaseProperties = makeTestDatabaseProperties())
         fs = Jimfs.newFileSystem(Configuration.unix())
     }
 

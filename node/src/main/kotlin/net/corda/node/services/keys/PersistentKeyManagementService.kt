@@ -40,7 +40,6 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     private companion object {
         fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
-                    cacheBound = 1024,
                     toPersistentEntityKey = { it.toBase58String() },
                     fromPersistentEntity = { Pair(parsePublicKeyBase58(it.publicKey),
                             it.privateKey.deserialize<PrivateKey>(context = SerializationDefaults.STORAGE_CONTEXT)) },
