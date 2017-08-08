@@ -6,8 +6,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.*
 import net.corda.node.utilities.*
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
@@ -44,11 +43,11 @@ class PersistentKeyManagementService(val identityService: IdentityService,
                     cacheBound = 1024,
                     toPersistentEntityKey = { it.toBase58String() },
                     fromPersistentEntity = { Pair(parsePublicKeyBase58(it.publicKey),
-                            deserializeFromByteArray<PrivateKey>(it.privateKey, context = SerializationDefaults.STORAGE_CONTEXT)) },
+                            it.privateKey.deserialize<PrivateKey>(context = SerializationDefaults.STORAGE_CONTEXT)) },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey().apply {
                             publicKey = key.toBase58String()
-                            privateKey = serializeToByteArray(value, context = SerializationDefaults.STORAGE_CONTEXT)
+                            privateKey = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                         }
                     },
                     persistentEntityClass = PersistentKey::class.java

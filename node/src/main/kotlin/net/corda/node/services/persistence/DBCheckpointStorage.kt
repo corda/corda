@@ -1,6 +1,8 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.utilities.*
@@ -30,7 +32,7 @@ class DBCheckpointStorage : CheckpointStorage {
         val session = DatabaseTransactionManager.current().session
         session.save(DBCheckpoint().apply {
             checkpointId = value.id.toString()
-            checkpoint = serializeToByteArray(value, SerializationDefaults.CHECKPOINT_CONTEXT)
+            checkpoint = value.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT).bytes
         })
     }
 
@@ -49,7 +51,7 @@ class DBCheckpointStorage : CheckpointStorage {
         val root = criteriaQuery.from(DBCheckpoint::class.java)
         criteriaQuery.select(root)
         val query = session.createQuery(criteriaQuery)
-        val checkpoints = query.resultList.map { e -> deserializeFromByteArray<Checkpoint>(e.checkpoint, SerializationDefaults.CHECKPOINT_CONTEXT) }.asSequence()
+        val checkpoints = query.resultList.map { e -> e.checkpoint.deserialize<Checkpoint>(context = SerializationDefaults.CHECKPOINT_CONTEXT) }.asSequence()
         for (e in checkpoints) {
             if (!block(e)) {
                 break

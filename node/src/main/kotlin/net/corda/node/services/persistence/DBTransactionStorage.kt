@@ -31,11 +31,11 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(SecureHash.parse(it.txId),
-                            deserializeFromByteArray<SignedTransaction>(it.transaction, context = SerializationDefaults.STORAGE_CONTEXT)) },
+                            it.transaction.deserialize<SignedTransaction>( context = SerializationDefaults.STORAGE_CONTEXT)) },
                     toPersistentEntity = { key: SecureHash, value: SignedTransaction ->
                         DBTransaction().apply {
                             txId = key.toString()
-                            transaction = serializeToByteArray(value, context = SerializationDefaults.STORAGE_CONTEXT)
+                            transaction = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                         }
                     },
                     persistentEntityClass = DBTransaction::class.java

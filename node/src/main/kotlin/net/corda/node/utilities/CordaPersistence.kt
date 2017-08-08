@@ -3,7 +3,6 @@ package net.corda.node.utilities
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.serialization.*
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import org.hibernate.SessionFactory
@@ -213,6 +212,3 @@ fun parserTransactionIsolationLevel(property: String?) : Int =
                 Connection.TRANSACTION_REPEATABLE_READ
             }
         }
-
-fun <T: Any> deserializeFromByteArray(blob: ByteArray, context: SerializationContext): T = SerializedBytes<Any>(blob).deserialize(context = context) as T
-fun <T: Any> serializeToByteArray(value: T, context: SerializationContext): ByteArray = value.serialize(context = context).bytes
