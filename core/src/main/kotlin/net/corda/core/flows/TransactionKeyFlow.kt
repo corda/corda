@@ -7,8 +7,9 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 
 /**
- * Very basic flow which exchanges transaction key and certificate paths between two parties in a transaction.
- * This is intended for use as a subflow of another flow.
+ * Very basic flow which generates new confidential identities for parties in a transaction and exchanges the transaction
+ * key and certificate paths between the parties. This is intended for use as a subflow of another flow which builds a
+ * transaction.
  */
 @StartableByRPC
 @InitiatingFlow

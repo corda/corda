@@ -33,6 +33,7 @@ interface IdentityService {
      *
      * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
      * @param party well known party the anonymised party must represent.
+     * @return well known identity the anonymous party belongs to.
      * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
      * certificate chain for the anonymous party.
      */
@@ -44,6 +45,7 @@ interface IdentityService {
      * Verify that an anonymous identity's certificate path is valid and then store it.
      *
      * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
+     * @return well known identity the anonymous party belongs to.
      * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
      * certificate chain for the anonymous party.
      */
@@ -56,6 +58,7 @@ interface IdentityService {
      *
      * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
      * @param wellKnownIdentity well known party the anonymised party must represent, if provided.
+     * @return well known identity the anonymous party belongs to.
      * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
      * certificate chain for the anonymous party.
      */

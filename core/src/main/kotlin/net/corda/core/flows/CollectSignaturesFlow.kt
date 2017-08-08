@@ -63,12 +63,11 @@ import java.security.PublicKey
  * just in the output states.
  */
 // TODO: AbstractStateReplacementFlow needs updating to use this flow.
-class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
+class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: SignedTransaction,
                             val outputIdentities: Map<Party, AnonymousPartyAndPath>,
                             val myInputKeys: Iterable<PublicKey>,
                             override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
-    constructor(partiallySignedTx: SignedTransaction, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, emptyMap(), emptyList(), progressTracker)
-    constructor(partiallySignedTx: SignedTransaction, myInputKeys: Iterable<PublicKey>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, emptyMap(), myInputKeys, progressTracker)
+    @JvmOverloads constructor (partiallySignedTx: SignedTransaction, myInputKeys: Iterable<PublicKey>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, emptyMap(), myInputKeys, progressTracker)
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counterparties.")
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")

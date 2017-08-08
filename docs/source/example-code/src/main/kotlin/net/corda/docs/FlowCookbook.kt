@@ -461,7 +461,7 @@ object FlowCookbook {
 
             // The states we use do not have participants, so anonymisation doesn't make sense here
             val identities = listOf(serviceHub.myInfo.legalIdentityAndCert, serviceHub.identityService.certificateFromParty(counterparty))
-                    .associateBy(PartyAndCertificate::party){ it.toAnonymous() }
+                    .associateBy(PartyAndCertificate::party){ it.anonymise() }
             // The list of parties who need to sign a transaction is dictated
             // by the transaction's commands. Once we've signed a transaction
             // ourselves, we can automatically gather the signatures of the

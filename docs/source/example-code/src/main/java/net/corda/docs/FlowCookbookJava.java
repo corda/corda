@@ -478,7 +478,7 @@ public class FlowCookbookJava {
             // TODO: Use actual anonymous identities
             final List<PartyAndCertificate> nodes = Arrays.asList(getServiceHub().getMyInfo().getLegalIdentityAndCert(),
                     getServiceHub().getIdentityService().certificateFromParty(counterparty));
-            final Map<Party, AnonymousPartyAndPath> identities = nodes.stream().collect(Collectors.toMap(PartyAndCertificate::getParty, PartyAndCertificate::toAnonymous));
+            final Map<Party, AnonymousPartyAndPath> identities = nodes.stream().collect(Collectors.toMap(PartyAndCertificate::getParty, PartyAndCertificate::anonymise));
             // The list of parties who need to sign a transaction is dictated
             // by the transaction's commands. Once we've signed a transaction
             // ourselves, we can automatically gather the signatures of the
