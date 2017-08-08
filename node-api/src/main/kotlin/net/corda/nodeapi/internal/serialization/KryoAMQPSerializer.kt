@@ -8,6 +8,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.nodeapi.internal.serialization.amqp.SerializerFactoryFactory
 
 /**
  * This [Kryo] custom [Serializer] switches the object graph of anything annotated with `@CordaSerializable`
@@ -29,7 +30,7 @@ object KryoAMQPSerializer : Serializer<Any>() {
 
     // TODO: need to sort out the whitelist... we currently do not apply the whitelist attached to the [Kryo]
     // instance to the factory.  We need to do this before turning on AMQP serialization.
-    private val serializerFactory = SerializerFactory().apply {
+    private val serializerFactory = SerializerFactoryFactory.get().apply {
         registerCustomSerializers(this)
     }
 
