@@ -89,7 +89,7 @@ class FlowFrameworkTests {
         val nodes = listOf(node1, node2, notary1, notary2)
         nodes.forEach { node ->
             nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
-                node.services.identityService.registerIdentity(identity)
+                node.services.identityService.verifyAndRegisterIdentity(identity)
             }
         }
     }
