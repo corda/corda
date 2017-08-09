@@ -9,6 +9,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.testing.contracts.DummyContract
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PublicKey
@@ -247,6 +248,7 @@ data class TestLedgerDSLInterpreter private constructor(
     ): WireTransaction {
         val transactionLocation = getCallerLocation()
         val transactionInterpreter = interpretTransactionDsl(transactionBuilder, dsl)
+        makeTxValid(transactionBuilder)
         // Create the WireTransaction
         val wireTransaction = transactionInterpreter.toWireTransaction()
         // Record the output states
@@ -260,6 +262,20 @@ data class TestLedgerDSLInterpreter private constructor(
                 WireTransactionWithLocation(transactionLabel, wireTransaction, transactionLocation)
 
         return wireTransaction
+    }
+
+    /**
+     * This method fills the transaction builder with dummy components to satisfy the base transaction validity rules.
+     *
+     * A common pattern in our tests is using a base transaction and expressing the test cases using [tweak]s.
+     * The base transaction may not be valid, but it still gets recorded to the ledger. This causes a test failure,
+     * even though is not being used for anything afterwards.
+     */
+    private fun makeTxValid(transactionBuilder: TransactionBuilder) {
+        if (transactionBuilder.commands().isEmpty()) transactionBuilder.addCommand(dummyCommand())
+        if (transactionBuilder.inputStates().isEmpty() && transactionBuilder.outputStates().isEmpty()) {
+            transactionBuilder.addOutputState(DummyContract.SingleOwnerState(owner = ALICE))
+        }
     }
 
     override fun _transaction(

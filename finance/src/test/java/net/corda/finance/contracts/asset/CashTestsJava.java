@@ -4,6 +4,7 @@ import kotlin.Unit;
 import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.utilities.OpaqueBytes;
+import net.corda.testing.DummyCommandData;
 import org.junit.Test;
 
 import static net.corda.finance.CurrencyUtils.DOLLARS;
@@ -24,16 +25,17 @@ public class CashTestsJava {
         ledger(lg -> {
             lg.transaction(tx -> {
                 tx.input(inState);
-                tx.failsWith("the amounts balance");
 
                 tx.tweak(tw -> {
                     tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), new AnonymousParty(getMINI_CORP_PUBKEY())));
+                    tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
                     return tw.failsWith("the amounts balance");
                 });
 
                 tx.tweak(tw -> {
                     tw.output(outState);
-                    // No command arguments
+                    tw.command(getMEGA_CORP_PUBKEY(), DummyCommandData.INSTANCE);
+                    // Invalid command
                     return tw.failsWith("required net.corda.finance.contracts.asset.Cash.Commands.Move command");
                 });
                 tx.tweak(tw -> {
