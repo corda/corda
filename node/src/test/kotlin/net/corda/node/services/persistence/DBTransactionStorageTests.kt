@@ -4,8 +4,8 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.node.services.VaultService
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -220,7 +220,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
-                commands = emptyList(),
+                commands = listOf(dummyCommand()),
                 notary = DUMMY_NOTARY,
                 timeWindow = null
         )

@@ -74,7 +74,9 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
     CertificateAndKeyPair(cert, DUMMY_CA_KEY)
 }
 
-fun dummyCommand(vararg signers: PublicKey) = Command<TypeOnlyCommandData>(object : TypeOnlyCommandData() {}, signers.toList())
+fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public) ) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
+
+object DummyCommandData : TypeOnlyCommandData()
 
 val DUMMY_IDENTITY_1: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_PARTY)
 val DUMMY_PARTY: Party get() = Party(X500Name("CN=Dummy,O=Dummy,L=Madrid,C=ES"), DUMMY_KEY_1.public)

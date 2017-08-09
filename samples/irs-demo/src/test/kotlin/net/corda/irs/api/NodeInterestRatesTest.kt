@@ -122,7 +122,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     @Test
     fun `refuse to sign with no relevant commands`() {
         database.transaction {
-            val tx = makeTX()
+            val tx = makeFullTx()
             val wtx1 = tx.toWireTransaction()
             fun filterAllOutputs(elem: Any): Boolean {
                 return when (elem) {
@@ -144,7 +144,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     @Test
     fun `sign successfully`() {
         database.transaction {
-            val tx = makeTX()
+            val tx = makePartialTX()
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
             tx.addCommand(fix, oracle.identity.owningKey)
             // Sign successfully.
@@ -158,7 +158,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     @Test
     fun `do not sign with unknown fix`() {
         database.transaction {
-            val tx = makeTX()
+            val tx = makePartialTX()
             val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val badFix = Fix(fixOf, BigDecimal("0.6789"))
             tx.addCommand(badFix, oracle.identity.owningKey)
@@ -172,7 +172,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     @Test
     fun `do not sign too many leaves`() {
         database.transaction {
-            val tx = makeTX()
+            val tx = makePartialTX()
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
             fun filtering(elem: Any): Boolean {
                 return when (elem) {
@@ -190,7 +190,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Test
     fun `empty partial transaction to sign`() {
-        val tx = makeTX()
+        val tx = makeFullTx()
         val wtx = tx.toWireTransaction()
         val ftx = wtx.buildFilteredTransaction(Predicate { false })
         assertFailsWith<MerkleTreeException> { oracle.sign(ftx) }
@@ -206,7 +206,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         n2.database.transaction {
             n2.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
         }
-        val tx = TransactionBuilder(null)
+        val tx = makePartialTX()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val oracle = n2.info.serviceIdentities(NodeInterestRates.Oracle.type).first()
         val flow = FilteredRatesFlow(tx, oracle, fixOf, BigDecimal("0.675"), BigDecimal("0.1"))
@@ -237,6 +237,8 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         }
     }
 
-    private fun makeTX() = TransactionBuilder(DUMMY_NOTARY).withItems(
+    private fun makePartialTX() = TransactionBuilder(DUMMY_NOTARY).withItems(
         1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE `with notary` DUMMY_NOTARY)
+
+    private fun makeFullTx() = makePartialTX().withItems(dummyCommand())
 }

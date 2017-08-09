@@ -4,11 +4,13 @@ package net.corda.testing.contracts
 
 import net.corda.contracts.Commodity
 import net.corda.contracts.DealState
-import net.corda.contracts.asset.*
+import net.corda.contracts.asset.Cash
+import net.corda.contracts.asset.CommodityContract
+import net.corda.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.contracts.asset.DUMMY_OBLIGATION_ISSUER
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -18,9 +20,11 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.CHARLIE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.dummyCommand
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -38,6 +42,7 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
         // Issue a deal state
         val dummyIssue = TransactionBuilder(notary = notary).apply {
             addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)))
+            addCommand(dummyCommand())
         }
         val stx = signInitialTransaction(dummyIssue)
         return@map addSignature(stx, notary.owningKey)
@@ -76,6 +81,7 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
                     linearNumber = linearNumber,
                     linearBoolean = linearBoolean,
                     linearTimestamp = linearTimestamp))
+            addCommand(dummyCommand())
         }
 
         return@map signInitialTransaction(dummyIssue).withAdditionalSignature(issuerKey, signatureMetadata)
@@ -194,6 +200,7 @@ fun <T : LinearState> ServiceHub.consume(states: List<StateAndRef<T>>, notary: P
     states.forEach {
         val builder =  TransactionBuilder(notary = notary).apply {
             addInputState(it)
+            addCommand(dummyCommand(notary.owningKey))
         }
         val consumedTx = signInitialTransaction(builder, notary.owningKey)
 
@@ -205,6 +212,7 @@ fun <T : LinearState> ServiceHub.consumeAndProduce(stateAndRef: StateAndRef<T>, 
     // Create a txn consuming different contract types
     var builder = TransactionBuilder(notary = notary).apply {
         addInputState(stateAndRef)
+        addCommand(dummyCommand(notary.owningKey))
     }
     val consumedTx = signInitialTransaction(builder, notary.owningKey)
 
@@ -214,6 +222,7 @@ fun <T : LinearState> ServiceHub.consumeAndProduce(stateAndRef: StateAndRef<T>, 
     builder = TransactionBuilder(notary = notary).apply {
         addOutputState(DummyLinearContract.State(linearId = stateAndRef.state.data.linearId,
                 participants = stateAndRef.state.data.participants))
+        addCommand(dummyCommand(notary.owningKey))
     }
     val producedTx = signInitialTransaction(builder, notary.owningKey)
 
