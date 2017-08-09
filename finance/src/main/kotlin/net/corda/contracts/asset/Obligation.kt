@@ -5,9 +5,7 @@ import net.corda.contracts.NetCommand
 import net.corda.contracts.NetType
 import net.corda.contracts.NettableState
 import net.corda.contracts.asset.Obligation.Lifecycle.NORMAL
-import net.corda.contracts.clause.*
 import net.corda.core.contracts.*
-import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
@@ -29,6 +27,37 @@ import java.util.*
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
+
+/**
+ * Common interface for the state subsets used when determining nettability of two or more states. Exposes the
+ * underlying issued thing.
+ */
+interface NetState<P : Any> {
+    val template: Obligation.Terms<P>
+}
+
+/**
+ * Subset of state, containing the elements which must match for two obligation transactions to be nettable.
+ * If two obligation state objects produce equal bilateral net states, they are considered safe to net directly.
+ * Bilateral states are used in close-out netting.
+ */
+data class BilateralNetState<P : Any>(
+        val partyKeys: Set<AbstractParty>,
+        override val template: Obligation.Terms<P>
+) : NetState<P>
+
+/**
+ * Subset of state, containing the elements which must match for two or more obligation transactions to be candidates
+ * for netting (this does not include the checks to enforce that everyone's amounts received are the same at the end,
+ * which is handled under the verify() function).
+ * In comparison to [BilateralNetState], this doesn't include the parties' keys, as ensuring balances match on
+ * input and output is handled elsewhere.
+ * Used in cases where all parties (or their proxies) are signing, such as central clearing.
+ */
+data class MultilateralNetState<P : Any>(
+        override val template: Obligation.Terms<P>
+) : NetState<P>
+
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
@@ -54,186 +83,6 @@ class Obligation<P : Any> : Contract {
      * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
-
-    interface Clauses {
-        /**
-         * Parent clause for clauses that operate on grouped states (those which are fungible).
-         */
-        class Group<P : Any> : GroupClauseVerifier<State<P>, Commands, Issued<Terms<P>>>(
-                AllOf(
-                        NoZeroSizedOutputs<State<P>, Commands, Terms<P>>(),
-                        FirstOf(
-                                SetLifecycle<P>(),
-                                AllOf(
-                                        VerifyLifecycle<State<P>, Commands, Issued<Terms<P>>, P>(),
-                                        FirstOf(
-                                                Settle<P>(),
-                                                Issue(),
-                                                ConserveAmount()
-                                        )
-                                )
-                        )
-                )
-        ) {
-            override fun groupStates(tx: LedgerTransaction): List<LedgerTransaction.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
-                    = tx.groupStates<Obligation.State<P>, Issued<Terms<P>>> { it.amount.token }
-        }
-
-        /**
-         * Generic issuance clause
-         */
-        class Issue<P : Any> : AbstractIssue<State<P>, Commands, Terms<P>>({ -> sumObligations() }, { token: Issued<Terms<P>> -> sumObligationsOrZero(token) }) {
-            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
-        }
-
-        /**
-         * Generic move/exit clause for fungible assets
-         */
-        class ConserveAmount<P : Any> : AbstractConserveAmount<State<P>, Commands, Terms<P>>()
-
-        /**
-         * Clause for supporting netting of obligations.
-         */
-        class Net<C : CommandData, P : Any> : NetClause<C, P>() {
-            val lifecycleClause = Clauses.VerifyLifecycle<ContractState, C, Unit, P>()
-            override fun toString(): String = "Net obligations"
-
-            override fun verify(tx: LedgerTransaction, inputs: List<ContractState>, outputs: List<ContractState>, commands: List<AuthenticatedObject<C>>, groupingKey: Unit?): Set<C> {
-                lifecycleClause.verify(tx, inputs, outputs, commands, groupingKey)
-                return super.verify(tx, inputs, outputs, commands, groupingKey)
-            }
-        }
-
-        /**
-         * Obligation-specific clause for changing the lifecycle of one or more states.
-         */
-        class SetLifecycle<P : Any> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
-            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.SetLifecycle::class.java)
-
-            override fun verify(tx: LedgerTransaction,
-                                inputs: List<State<P>>,
-                                outputs: List<State<P>>,
-                                commands: List<AuthenticatedObject<Commands>>,
-                                groupingKey: Issued<Terms<P>>?): Set<Commands> {
-                val command = commands.requireSingleCommand<Commands.SetLifecycle>()
-                Obligation<P>().verifySetLifecycleCommand(inputs, outputs, tx, command)
-                return setOf(command.value)
-            }
-
-            override fun toString(): String = "Set obligation lifecycle"
-        }
-
-        /**
-         * Obligation-specific clause for settling an outstanding obligation by witnessing
-         * change of ownership of other states to fulfil
-         */
-        class Settle<P : Any> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
-            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Settle::class.java)
-            override fun verify(tx: LedgerTransaction,
-                                inputs: List<State<P>>,
-                                outputs: List<State<P>>,
-                                commands: List<AuthenticatedObject<Commands>>,
-                                groupingKey: Issued<Terms<P>>?): Set<Commands> {
-                require(groupingKey != null)
-                val command = commands.requireSingleCommand<Commands.Settle<P>>()
-                val obligor = groupingKey!!.issuer.party
-                val template = groupingKey.product
-                val inputAmount: Amount<Issued<Terms<P>>> = inputs.sumObligationsOrNull<P>() ?: throw IllegalArgumentException("there is at least one obligation input for this group")
-                val outputAmount: Amount<Issued<Terms<P>>> = outputs.sumObligationsOrZero(groupingKey)
-
-                // Sum up all asset state objects that are moving and fulfil our requirements
-
-                // The fungible asset contract verification handles ensuring there's inputs enough to cover the output states,
-                // we only care about counting how much is output in this transaction. We then calculate the difference in
-                // settlement amounts between the transaction inputs and outputs, and the two must match. No elimination is
-                // done of amounts paid in by each beneficiary, as it's presumed the beneficiaries have enough sense to do that
-                // themselves. Therefore if someone actually signed the following transaction (using cash just for an example):
-                //
-                // Inputs:
-                //  £1m cash owned by B
-                //  £1m owed from A to B
-                // Outputs:
-                //  £1m cash owned by B
-                // Commands:
-                //  Settle (signed by A)
-                //  Move (signed by B)
-                //
-                // That would pass this check. Ensuring they do not is best addressed in the transaction generation stage.
-                val assetStates = tx.outputsOfType<FungibleAsset<*>>()
-                val acceptableAssetStates = assetStates
-                        // TODO: This filter is nonsense, because it just checks there is an asset contract loaded, we need to
-                        // verify the asset contract is the asset contract we expect.
-                        // Something like:
-                        //    attachments.mustHaveOneOf(key.acceptableAssetContract)
-                        .filter { it.contract.legalContractReference in template.acceptableContracts }
-                        // Restrict the states to those of the correct issuance definition (this normally
-                        // covers issued product and obligor, but is opaque to us)
-                        .filter { it.amount.token in template.acceptableIssuedProducts }
-                // Catch that there's nothing useful here, so we can dump out a useful error
-                requireThat {
-                    "there are fungible asset state outputs" using (assetStates.isNotEmpty())
-                    "there are defined acceptable fungible asset states" using (acceptableAssetStates.isNotEmpty())
-                }
-
-                val amountReceivedByOwner = acceptableAssetStates.groupBy { it.owner }
-                // Note we really do want to search all commands, because we want move commands of other contracts, not just
-                // this one.
-                val moveCommands = tx.commands.select<MoveCommand>()
-                var totalPenniesSettled = 0L
-                val requiredSigners = inputs.map { it.amount.token.issuer.party.owningKey }.toSet()
-
-                for ((beneficiary, obligations) in inputs.groupBy { it.owner }) {
-                    val settled = amountReceivedByOwner[beneficiary]?.sumFungibleOrNull<P>()
-                    if (settled != null) {
-                        val debt = obligations.sumObligationsOrZero(groupingKey)
-                        require(settled.quantity <= debt.quantity) { "Payment of $settled must not exceed debt $debt" }
-                        totalPenniesSettled += settled.quantity
-                    }
-                }
-
-                val totalAmountSettled = Amount(totalPenniesSettled, command.value.amount.token)
-                requireThat {
-                    // Insist that we can be the only contract consuming inputs, to ensure no other contract can think it's being
-                    // settled as well
-                    "all move commands relate to this contract" using (moveCommands.map { it.value.contractHash }
-                            .all { it == null || it == Obligation<P>().legalContractReference })
-                    // Settle commands exclude all other commands, so we don't need to check for contracts moving at the same
-                    // time.
-                    "amounts paid must match recipients to settle" using inputs.map { it.owner }.containsAll(amountReceivedByOwner.keys)
-                    "amount in settle command ${command.value.amount} matches settled total $totalAmountSettled" using (command.value.amount == totalAmountSettled)
-                    "signatures are present from all obligors" using command.signers.containsAll(requiredSigners)
-                    "there are no zero sized inputs" using inputs.none { it.amount.quantity == 0L }
-                    "at obligor $obligor the obligations after settlement balance" using
-                            (inputAmount == outputAmount + Amount(totalPenniesSettled, groupingKey))
-                }
-                return setOf(command.value)
-            }
-        }
-
-        /**
-         * Obligation-specific clause for verifying that all states are in
-         * normal lifecycle. In a group clause set, this must be run after
-         * any lifecycle change clause, which is the only clause that involve
-         * non-standard lifecycle states on input/output.
-         */
-        class VerifyLifecycle<S : ContractState, C : CommandData, T : Any, P : Any> : Clause<S, C, T>() {
-            override fun verify(tx: LedgerTransaction,
-                                inputs: List<S>,
-                                outputs: List<S>,
-                                commands: List<AuthenticatedObject<C>>,
-                                groupingKey: T?): Set<C>
-                    = verify(inputs.filterIsInstance<State<P>>(), outputs.filterIsInstance<State<P>>())
-
-            private fun verify(inputs: List<State<P>>,
-                               outputs: List<State<P>>): Set<C> {
-                requireThat {
-                    "all inputs are in the normal state " using inputs.all { it.lifecycle == Lifecycle.NORMAL }
-                    "all outputs are in the normal state " using outputs.all { it.lifecycle == Lifecycle.NORMAL }
-                }
-                return emptySet()
-            }
-        }
-    }
 
     /**
      * Represents where in its lifecycle a contract state is, which in turn controls the commands that can be applied
@@ -386,10 +235,209 @@ class Obligation<P : Any> : Contract {
         data class Exit<P : Any>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 
-    override fun verify(tx: LedgerTransaction) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
-            Clauses.Net<Commands, P>(),
-            Clauses.Group<P>()
-    ), tx.commands.select<Obligation.Commands>())
+    override fun verify(tx: LedgerTransaction) {
+        val netCommand = tx.commands.select<Commands.Net>().firstOrNull()
+        if (netCommand != null) {
+            verifyLifecycleCommand(tx.inputStates, tx.outputStates)
+            verifyNetCommand(tx, netCommand)
+        } else {
+            val groups = tx.groupStates { it: Obligation.State<P> -> it.amount.token }
+            for ((inputs, outputs, key) in groups) {
+                requireThat {
+                    "there are no zero sized outputs" using (outputs.none { it.amount.quantity == 0L })
+                }
+                val setLifecycleCommand = tx.commands.select<Commands.SetLifecycle>().firstOrNull()
+                if (setLifecycleCommand != null) {
+                    verifySetLifecycleCommand(inputs, outputs, tx, setLifecycleCommand)
+                } else {
+                    verifyLifecycleCommand(inputs, outputs)
+                    val settleCommand = tx.commands.select<Commands.Settle<P>>().firstOrNull()
+                    if (settleCommand != null) {
+                        verifySettleCommand(tx, inputs, outputs, settleCommand, key)
+                    } else {
+                        val issueCommand = tx.commands.select<Commands.Issue>().firstOrNull()
+                        if (issueCommand != null) {
+                            verifyIssueCommand(tx, inputs, outputs, issueCommand, key)
+                        } else {
+                            conserveAmount(tx, inputs, outputs, key)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun conserveAmount(tx: LedgerTransaction,
+                               inputs: List<FungibleAsset<Terms<P>>>,
+                               outputs: List<FungibleAsset<Terms<P>>>,
+                               key: Issued<Terms<P>>) {
+        val issuer = key.issuer
+        val terms = key.product
+        val inputAmount = inputs.sumObligationsOrNull<P>() ?: throw IllegalArgumentException("there is at least one obligation input for this group")
+        val outputAmount = outputs.sumObligationsOrZero(Issued(issuer, terms))
+
+        // If we want to remove obligations from the ledger, that must be signed for by the issuer.
+        // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
+        val exitKeys: Set<PublicKey> = inputs.flatMap { it.exitKeys }.toSet()
+        val exitCommand = tx.commands.select<Commands.Exit<P>>(parties = null, signers = exitKeys).filter { it.value.amount.token == key }.singleOrNull()
+        val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, Issued(issuer, terms))
+
+        requireThat {
+            "there are no zero sized inputs" using (inputs.none { it.amount.quantity == 0L })
+            "for reference ${issuer.reference} at issuer ${issuer.party.nameOrNull()} the amounts balance" using
+                    (inputAmount == outputAmount + amountExitingLedger)
+        }
+
+        verifyMoveCommand<Commands.Move>(inputs, tx.commands)
+    }
+
+    private fun verifyIssueCommand(tx: LedgerTransaction,
+                                   inputs: List<FungibleAsset<Terms<P>>>,
+                                   outputs: List<FungibleAsset<Terms<P>>>,
+                                   issueCommand: AuthenticatedObject<Commands.Issue>,
+                                   key: Issued<Terms<P>>) {
+        // If we have an issue command, perform special processing: the group is allowed to have no inputs,
+        // and the output states must have a deposit reference owned by the signer.
+        //
+        // Whilst the transaction *may* have no inputs, it can have them, and in this case the outputs must
+        // sum to more than the inputs. An issuance of zero size is not allowed.
+        //
+        // Note that this means literally anyone with access to the network can issue cash claims of arbitrary
+        // amounts! It is up to the recipient to decide if the backing party is trustworthy or not, via some
+        // as-yet-unwritten identity service. See ADP-22 for discussion.
+
+        // The grouping ensures that all outputs have the same deposit reference and currency.
+        val issuer = key.issuer
+        val terms = key.product
+        val inputAmount = inputs.sumObligationsOrZero(Issued(issuer, terms))
+        val outputAmount = outputs.sumObligations<P>()
+        val issueCommands = tx.commands.select<Commands.Issue>()
+        requireThat {
+            "the issue command has a nonce" using (issueCommand.value.nonce != 0L)
+            "output states are issued by a command signer" using (issuer.party in issueCommand.signingParties)
+            "output values sum to more than the inputs" using (outputAmount > inputAmount)
+            "there is only a single issue command" using (issueCommands.count() == 1)
+        }
+    }
+
+    private fun verifySettleCommand(tx: LedgerTransaction,
+                                    inputs: List<FungibleAsset<Terms<P>>>,
+                                    outputs: List<FungibleAsset<Terms<P>>>,
+                                    command: AuthenticatedObject<Commands.Settle<P>>,
+                                    groupingKey: Issued<Terms<P>>) {
+        val obligor = groupingKey.issuer.party
+        val template = groupingKey.product
+        val inputAmount: Amount<Issued<Terms<P>>> = inputs.sumObligationsOrNull<P>() ?: throw IllegalArgumentException("there is at least one obligation input for this group")
+        val outputAmount: Amount<Issued<Terms<P>>> = outputs.sumObligationsOrZero(groupingKey)
+
+        // Sum up all asset state objects that are moving and fulfil our requirements
+
+        // The fungible asset contract verification handles ensuring there's inputs enough to cover the output states,
+        // we only care about counting how much is output in this transaction. We then calculate the difference in
+        // settlement amounts between the transaction inputs and outputs, and the two must match. No elimination is
+        // done of amounts paid in by each beneficiary, as it's presumed the beneficiaries have enough sense to do that
+        // themselves. Therefore if someone actually signed the following transaction (using cash just for an example):
+        //
+        // Inputs:
+        //  £1m cash owned by B
+        //  £1m owed from A to B
+        // Outputs:
+        //  £1m cash owned by B
+        // Commands:
+        //  Settle (signed by A)
+        //  Move (signed by B)
+        //
+        // That would pass this check. Ensuring they do not is best addressed in the transaction generation stage.
+        val assetStates = tx.outputsOfType<FungibleAsset<*>>()
+        val acceptableAssetStates = assetStates
+                // TODO: This filter is nonsense, because it just checks there is an asset contract loaded, we need to
+                // verify the asset contract is the asset contract we expect.
+                // Something like:
+                //    attachments.mustHaveOneOf(key.acceptableAssetContract)
+                .filter { it.contract.legalContractReference in template.acceptableContracts }
+                // Restrict the states to those of the correct issuance definition (this normally
+                // covers issued product and obligor, but is opaque to us)
+                .filter { it.amount.token in template.acceptableIssuedProducts }
+        // Catch that there's nothing useful here, so we can dump out a useful error
+        requireThat {
+            "there are fungible asset state outputs" using (assetStates.isNotEmpty())
+            "there are defined acceptable fungible asset states" using (acceptableAssetStates.isNotEmpty())
+        }
+
+        val amountReceivedByOwner = acceptableAssetStates.groupBy { it.owner }
+        // Note we really do want to search all commands, because we want move commands of other contracts, not just
+        // this one.
+        val moveCommands = tx.commands.select<MoveCommand>()
+        var totalPenniesSettled = 0L
+        val requiredSigners = inputs.map { it.amount.token.issuer.party.owningKey }.toSet()
+
+        for ((beneficiary, obligations) in inputs.groupBy { it.owner }) {
+            val settled = amountReceivedByOwner[beneficiary]?.sumFungibleOrNull<P>()
+            if (settled != null) {
+                val debt = obligations.sumObligationsOrZero(groupingKey)
+                require(settled.quantity <= debt.quantity) { "Payment of $settled must not exceed debt $debt" }
+                totalPenniesSettled += settled.quantity
+            }
+        }
+
+        val totalAmountSettled = Amount(totalPenniesSettled, command.value.amount.token)
+        requireThat {
+            // Insist that we can be the only contract consuming inputs, to ensure no other contract can think it's being
+            // settled as well
+            "all move commands relate to this contract" using (moveCommands.map { it.value.contractHash }
+                    .all { it == null || it == Obligation<P>().legalContractReference })
+            // Settle commands exclude all other commands, so we don't need to check for contracts moving at the same
+            // time.
+            "amounts paid must match recipients to settle" using inputs.map { it.owner }.containsAll(amountReceivedByOwner.keys)
+            "amount in settle command ${command.value.amount} matches settled total $totalAmountSettled" using (command.value.amount == totalAmountSettled)
+            "signatures are present from all obligors" using command.signers.containsAll(requiredSigners)
+            "there are no zero sized inputs" using inputs.none { it.amount.quantity == 0L }
+            "at obligor $obligor the obligations after settlement balance" using
+                    (inputAmount == outputAmount + Amount(totalPenniesSettled, groupingKey))
+        }
+    }
+
+    private fun verifyLifecycleCommand(inputs: List<ContractState>, outputs: List<ContractState>) {
+        val filteredInputs = inputs.filterIsInstance<State<P>>()
+        val filteredOutputs = outputs.filterIsInstance<State<P>>()
+        requireThat {
+            "all inputs are in the normal state " using filteredInputs.all { it.lifecycle == Lifecycle.NORMAL }
+            "all outputs are in the normal state " using filteredOutputs.all { it.lifecycle == Lifecycle.NORMAL }
+        }
+    }
+
+    private fun verifyNetCommand(tx: LedgerTransaction, command: AuthenticatedObject<NetCommand>) {
+        val groups = when (command.value.type) {
+            NetType.CLOSE_OUT -> tx.groupStates { it: Obligation.State<P> -> it.bilateralNetState }
+            NetType.PAYMENT -> tx.groupStates { it: Obligation.State<P> -> it.multilateralNetState }
+        }
+        for ((groupInputs, groupOutputs, key) in groups) {
+
+            val template = key.template
+            // Create two maps of balances from obligors to beneficiaries, one for input states, the other for output states.
+            val inputBalances = extractAmountsDue(template, groupInputs)
+            val outputBalances = extractAmountsDue(template, groupOutputs)
+
+            // Sum the columns of the matrices. This will yield the net amount payable to/from each party to/from all other participants.
+            // The two summaries must match, reflecting that the amounts owed match on both input and output.
+            requireThat {
+                "all input states use the same template" using (groupInputs.all { it.template == template })
+                "all output states use the same template" using (groupOutputs.all { it.template == template })
+                "amounts owed on input and output must match" using (sumAmountsDue(inputBalances) == sumAmountsDue
+                (outputBalances))
+            }
+
+            // TODO: Handle proxies nominated by parties, i.e. a central clearing service
+            val involvedParties: Set<PublicKey> = groupInputs.map { it.beneficiary.owningKey }.union(groupInputs.map { it.obligor.owningKey }).toSet()
+            when (command.value.type) {
+            // For close-out netting, allow any involved party to sign
+                NetType.CLOSE_OUT -> require(command.signers.intersect(involvedParties).isNotEmpty()) { "any involved party has signed" }
+            // Require signatures from all parties (this constraint can be changed for other contracts, and is used as a
+            // placeholder while exact requirements are established), or fail the transaction.
+                NetType.PAYMENT -> require(command.signers.containsAll(involvedParties)) { "all involved parties have signed" }
+            }
+        }
+    }
 
     /**
      * A default command mutates inputs and produces identical outputs, except that the lifecycle changes.
@@ -488,11 +536,11 @@ class Obligation<P : Any> : Contract {
      * @param notary the notary for this transaction's outputs.
      */
     fun generateCashIssue(tx: TransactionBuilder,
-                      obligor: AbstractParty,
-                      amount: Amount<Issued<Currency>>,
-                      dueBefore: Instant,
-                      beneficiary: AbstractParty,
-                      notary: Party) {
+                          obligor: AbstractParty,
+                          amount: Amount<Issued<Currency>>,
+                          dueBefore: Instant,
+                          beneficiary: AbstractParty,
+                          notary: Party) {
         val issuanceDef = Terms(NonEmptySet.of(Cash().legalContractReference), NonEmptySet.of(amount.token), dueBefore)
         OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, amount.quantity, beneficiary), notary), Commands.Issue())
     }
@@ -514,7 +562,7 @@ class Obligation<P : Any> : Contract {
                       pennies: Long,
                       beneficiary: AbstractParty,
                       notary: Party)
-    = OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, pennies, beneficiary), notary), Commands.Issue())
+            = OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, pennies, beneficiary), notary), Commands.Issue())
 
     fun generatePaymentNetting(tx: TransactionBuilder,
                                issued: Issued<Obligation.Terms<P>>,
@@ -682,7 +730,7 @@ fun <P : Any> extractAmountsDue(product: Obligation.Terms<P>, states: Iterable<O
 /**
  * Net off the amounts due between parties.
  */
-fun <P: AbstractParty, T : Any> netAmountsDue(balances: Map<Pair<P, P>, Amount<T>>): Map<Pair<P, P>, Amount<T>> {
+fun <P : AbstractParty, T : Any> netAmountsDue(balances: Map<Pair<P, P>, Amount<T>>): Map<Pair<P, P>, Amount<T>> {
     val nettedBalances = HashMap<Pair<P, P>, Amount<T>>()
 
     balances.forEach { balance ->
@@ -709,7 +757,7 @@ fun <P: AbstractParty, T : Any> netAmountsDue(balances: Map<Pair<P, P>, Amount<T
  * @param P type of party to operate on.
  * @param T token that balances represent
  */
-fun <P: AbstractParty, T : Any> sumAmountsDue(balances: Map<Pair<P, P>, Amount<T>>): Map<P, Long> {
+fun <P : AbstractParty, T : Any> sumAmountsDue(balances: Map<Pair<P, P>, Amount<T>>): Map<P, Long> {
     val sum = HashMap<P, Long>()
 
     // Fill the map with zeroes initially

@@ -70,7 +70,8 @@ class CashTests : TestDependencyInjectionBase() {
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
                 }
-                override val vaultQueryService : VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
+
+                override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
             }
 
             miniCorpServices.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
@@ -100,7 +101,7 @@ class CashTests : TestDependencyInjectionBase() {
             tweak {
                 output { outState }
                 // No command arguments
-                this `fails with` "required net.corda.core.contracts.FungibleAsset.Commands.Move command"
+                this `fails with` "required net.corda.contracts.asset.Cash.Commands.Move command"
             }
             tweak {
                 output { outState }
@@ -111,7 +112,7 @@ class CashTests : TestDependencyInjectionBase() {
                 output { outState }
                 output { outState `issued by` MINI_CORP }
                 command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                this `fails with` "at least one asset input"
+                this `fails with` "at least one cash input"
             }
             // Simple reallocation works.
             tweak {
@@ -130,7 +131,7 @@ class CashTests : TestDependencyInjectionBase() {
             output { outState }
             command(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
 
-            this `fails with` "there is at least one asset input"
+            this `fails with` "there is at least one cash input for this group"
         }
     }
 
@@ -230,15 +231,7 @@ class CashTests : TestDependencyInjectionBase() {
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             tweak {
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
-                this `fails with` "List has more than one element."
-            }
-            tweak {
-                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                this `fails with` "The following commands were not matched at the end of execution"
-            }
-            tweak {
-                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount.splitEvenly(2).first()) }
-                this `fails with` "The following commands were not matched at the end of execution"
+                this `fails with` "there is only a single issue command"
             }
             this.verifies()
         }
@@ -372,7 +365,7 @@ class CashTests : TestDependencyInjectionBase() {
 
             tweak {
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
-                this `fails with` "required net.corda.core.contracts.FungibleAsset.Commands.Move command"
+                this `fails with` "required net.corda.contracts.asset.Cash.Commands.Move command"
 
                 tweak {
                     command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }

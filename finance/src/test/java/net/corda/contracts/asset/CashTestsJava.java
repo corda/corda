@@ -36,7 +36,7 @@ public class CashTestsJava {
                 tx.tweak(tw -> {
                     tw.output(outState);
                     // No command arguments
-                    return tw.failsWith("required net.corda.core.contracts.FungibleAsset.Commands.Move command");
+                    return tw.failsWith("required net.corda.contracts.asset.Cash.Commands.Move command");
                 });
                 tx.tweak(tw -> {
                     tw.output(outState);
@@ -49,7 +49,7 @@ public class CashTestsJava {
                     // with different overloads (for some reason).
                     tw.output(CashKt.issuedBy(outState, getMINI_CORP()));
                     tw.command(getDUMMY_PUBKEY_1(), new Cash.Commands.Move());
-                    return tw.failsWith("at least one asset input");
+                    return tw.failsWith("at least one cash input");
                 });
 
                 // Simple reallocation works.

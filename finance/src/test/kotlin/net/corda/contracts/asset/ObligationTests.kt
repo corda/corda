@@ -14,9 +14,9 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
 import net.corda.core.utilities.hours
 import net.corda.testing.*
-import org.junit.After
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
+import org.junit.After
 import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -77,7 +77,7 @@ class ObligationTests {
             tweak {
                 output { outState }
                 // No command arguments
-                this `fails with` "required net.corda.core.contracts.FungibleAsset.Commands.Move command"
+                this `fails with` "required net.corda.contracts.asset.Obligation.Commands.Move command"
             }
             tweak {
                 output { outState }
@@ -88,7 +88,7 @@ class ObligationTests {
                 output { outState }
                 output { outState `issued by` MINI_CORP }
                 command(CHARLIE.owningKey) { Obligation.Commands.Move() }
-                this `fails with` "at least one asset input"
+                this `fails with` "at least one obligation input"
             }
             // Simple reallocation works.
             tweak {
@@ -107,7 +107,7 @@ class ObligationTests {
             output { outState }
             command(MINI_CORP_PUBKEY) { Obligation.Commands.Move() }
 
-            this `fails with` "there is at least one asset input"
+            this `fails with` "at least one obligation input"
         }
 
         // Check we can issue money only as long as the issuer institution is a command signer, i.e. any recognised
@@ -193,15 +193,7 @@ class ObligationTests {
             command(MEGA_CORP_PUBKEY) { Obligation.Commands.Issue() }
             tweak {
                 command(MEGA_CORP_PUBKEY) { Obligation.Commands.Issue() }
-                this `fails with` "List has more than one element."
-            }
-            tweak {
-                command(MEGA_CORP_PUBKEY) { Obligation.Commands.Move() }
-                this `fails with` "The following commands were not matched at the end of execution"
-            }
-            tweak {
-                command(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit(inState.amount.splitEvenly(2).first()) }
-                this `fails with` "The following commands were not matched at the end of execution"
+                this `fails with` "there is only a single issue command"
             }
             this.verifies()
         }
@@ -668,7 +660,7 @@ class ObligationTests {
 
             tweak {
                 command(CHARLIE.owningKey) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.amount.token)) }
-                this `fails with` "required net.corda.core.contracts.FungibleAsset.Commands.Move command"
+                this `fails with` "required net.corda.contracts.asset.Obligation.Commands.Move command"
 
                 tweak {
                     command(CHARLIE.owningKey) { Obligation.Commands.Move() }
