@@ -124,6 +124,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
                 "byte" -> output.writeByte(kProperty.get(obj) as Byte)
                 "double" -> output.writeDouble(kProperty.get(obj) as Double)
                 "float" -> output.writeFloat(kProperty.get(obj) as Float)
+                "boolean" -> output.writeBoolean(kProperty.get(obj) as Boolean)
                 else -> try {
                     kryo.writeClassAndObject(output, kProperty.get(obj))
                 } catch (e: Exception) {
@@ -157,6 +158,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
                 "byte" -> input.readByte()
                 "double" -> input.readDouble()
                 "float" -> input.readFloat()
+                "boolean" -> input.readBoolean()
                 else -> kryo.readClassAndObject(input)
             }
         }
@@ -169,7 +171,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 }
 
-// TODO This is a temporary inefficient serialiser for sending InputStreams through RPC. This may be done much more
+// TODO This is a temporary inefficient serializer for sending InputStreams through RPC. This may be done much more
 // efficiently using Artemis's large message feature.
 object InputStreamSerializer : Serializer<InputStream>() {
     override fun write(kryo: Kryo, output: Output, stream: InputStream) {
