@@ -47,32 +47,24 @@ object JacksonSupport {
     // If you change this API please update the docs in the docsite (json.rst)
 
     interface PartyObjectMapper {
-        @Deprecated("Use partyFromX500Name instead")
-        fun partyFromName(partyName: String): Party?
         fun partyFromX500Name(name: X500Name): Party?
         fun partyFromKey(owningKey: PublicKey): Party?
         fun partiesFromName(query: String): Set<Party>
     }
 
     class RpcObjectMapper(val rpc: CordaRPCOps, factory: JsonFactory, val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
-        @Suppress("OverridingDeprecatedMember", "DEPRECATION")
-        override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
         override fun partyFromX500Name(name: X500Name): Party? = rpc.partyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = rpc.partiesFromName(query, fuzzyIdentityMatch)
     }
 
     class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory, val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
-        @Suppress("OverridingDeprecatedMember", "DEPRECATION")
-        override fun partyFromName(partyName: String): Party? = identityService.partyFromName(partyName)
         override fun partyFromX500Name(name: X500Name): Party? = identityService.partyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = identityService.partiesFromName(query, fuzzyIdentityMatch)
     }
 
     class NoPartyObjectMapper(factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
-        @Suppress("OverridingDeprecatedMember", "DEPRECATION")
-        override fun partyFromName(partyName: String): Party? = throw UnsupportedOperationException()
         override fun partyFromX500Name(name: X500Name): Party? = throw UnsupportedOperationException()
         override fun partyFromKey(owningKey: PublicKey): Party? = throw UnsupportedOperationException()
         override fun partiesFromName(query: String) = throw UnsupportedOperationException()

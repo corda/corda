@@ -103,8 +103,6 @@ interface IdentityService {
     // but for now this is not supported.
 
     fun partyFromKey(key: PublicKey): Party?
-    @Deprecated("Use partyFromX500Name or partiesFromName")
-    fun partyFromName(name: String): Party?
 
     fun partyFromX500Name(principal: X500Name): Party?
 
