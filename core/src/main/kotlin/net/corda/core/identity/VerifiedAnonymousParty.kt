@@ -12,18 +12,20 @@ import java.security.cert.X509Certificate
  * does not validate the certificate path matches the party, and should not be trusted without being verified, for example
  * using [IdentityService.verifyAnonymousIdentity].
  *
- * Although similar to [PartyAndCertificate], the two distinct types exist in order to minimise risk of mixing up
- * confidential and well known identities. In contrast to [PartyAndCertificate] equality tests are based on the anonymous
+ * Although similar to [VerifiedParty], the two distinct types exist in order to minimise risk of mixing up
+ * confidential and well known identities. In contrast to [VerifiedParty] equality tests are based on the anonymous
  * party's key rather than name, which is the appropriate test for confidential parties but not for well known identities.
  */
 @CordaSerializable
-data class AnonymousPartyAndPath(
+data class VerifiedAnonymousParty(
         val party: AnonymousParty,
         val certPath: CertPath) {
     constructor(party: PublicKey, certPath: CertPath)
             : this(AnonymousParty(party), certPath)
     init {
-        require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
+        require(certPath.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
+        val targetCert = certPath.certificates.first() as? X509Certificate ?: throw IllegalArgumentException("Certificate path must start with an X.509 certificate")
+        require(targetCert.publicKey == party.owningKey) { "Certificate path must start with a certificate matching the party owning key" }
     }
 
     /**
@@ -35,10 +37,8 @@ data class AnonymousPartyAndPath(
         get() = (certPath.certificates.first() as? X509Certificate)?.subject
 
     override fun equals(other: Any?): Boolean {
-        return if (other is AnonymousPartyAndPath)
-            party == other.party
-        else
-            false
+        return other === this
+                || (other is VerifiedAnonymousParty && party == other.party)
     }
 
     override fun hashCode(): Int = party.hashCode()

@@ -3,8 +3,8 @@ package net.corda.testing.node
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.AnonymousPartyAndPath
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.VerifiedAnonymousParty
+import net.corda.core.identity.VerifiedParty
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -28,7 +28,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.testing.DUMMY_CA
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MOCK_IDENTITIES
-import net.corda.testing.getTestPartyAndCertificate
+import net.corda.testing.getTestVerifedParty
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -77,7 +77,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo get() {
-        val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
+        val identity = getTestVerifedParty(MEGA_CORP.name, key.public)
         return NodeInfo(emptyList(), identity, NonEmptySet.of(identity), 1)
     }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
@@ -111,7 +111,7 @@ class MockKeyManagementService(val identityService: IdentityService,
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymousPartyAndPath {
+    override fun freshKeyAndCert(identity: VerifiedParty, revocationEnabled: Boolean): VerifiedAnonymousParty {
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
     }
 

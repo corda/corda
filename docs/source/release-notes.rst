@@ -6,8 +6,11 @@ Here are release notes for each snapshot release from M9 onwards.
 Unreleased
 ----------
 
-The transaction finalisation flow (``FinalityFlow``) has had hooks for alternative implementations, for example in
-scenarios where no single participant in a transaction is aware of the well known identities of all parties.
+* The transaction finalisation flow (``FinalityFlow``) has had hooks for alternative implementations, for example in
+  scenarios where no single participant in a transaction is aware of the well known identities of all parties.
+
+* Improvements to the confidential identities API to make data types used more consistent with other identity APIs, and
+  clarify function names.
 
 Milestone 13
 ------------

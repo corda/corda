@@ -7,7 +7,7 @@ import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.VerifiedParty
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
@@ -68,7 +68,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
-    private val identities = mutableListOf<PartyAndCertificate>()
+    private val identities = mutableListOf<VerifiedParty>()
     private val _nodes = mutableListOf<MockNode>()
     /** A read only view of the current set of executing nodes. */
     val nodes: List<MockNode> get() = _nodes
@@ -164,7 +164,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeIdentityService(trustRoot: X509Certificate,
                                          clientCa: CertificateAndKeyPair?,
-                                         legalIdentity: PartyAndCertificate): IdentityService {
+                                         legalIdentity: VerifiedParty): IdentityService {
             val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
                     .filterNotNull()
                     .toTypedArray()
@@ -193,7 +193,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     val override = overrideServices[it.info]
                     if (override != null) {
                         // TODO: Store the key
-                        ServiceEntry(it.info, getTestPartyAndCertificate(it.identity.name, override.public))
+                        ServiceEntry(it.info, getTestVerifedParty(it.identity.name, override.public))
                     } else {
                         it
                     }

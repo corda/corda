@@ -111,7 +111,7 @@ system.totalordermulticast.sync_ckp = false
 # The number of replicas in this parameter should be equal to that specified in 'system.servers.num'
 system.initial.view = %s
 
-#The ID of the trust third party (TTP)
+#The ID of the trust third verifiedParty (TTP)
 system.ttp.id = 7002
 
 #This sets if the system will function in Byzantine or crash-only mode. Set to "true" to support Byzantine faults

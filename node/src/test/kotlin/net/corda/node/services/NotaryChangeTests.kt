@@ -15,7 +15,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.getTestPartyAndCertificate
+import net.corda.testing.getTestVerifedParty
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x500.X500Name
@@ -84,7 +84,7 @@ class NotaryChangeTests {
     @Test
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
-        val newEvilNotary = getTestPartyAndCertificate(X500Name("CN=Evil Notary,O=Evil R3,OU=corda,L=London,C=GB"), generateKeyPair().public)
+        val newEvilNotary = getTestVerifedParty(X500Name("CN=Evil Notary,O=Evil R3,OU=corda,L=London,C=GB"), generateKeyPair().public)
         val flow = NotaryChangeFlow(state, newEvilNotary.party)
         val future = clientNodeA.services.startFlow(flow)
 

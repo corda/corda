@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousPartyAndPath
+import net.corda.core.identity.VerifiedAnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
@@ -35,7 +35,7 @@ class TransactionKeyFlowTests {
         val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow(bob))
 
         // Get the results
-        val actual: Map<Party, AnonymousPartyAndPath> = requesterFlow.resultFuture.getOrThrow().toMap()
+        val actual: Map<Party, VerifiedAnonymousParty> = requesterFlow.resultFuture.getOrThrow().toMap()
         assertEquals(2, actual.size)
         // Verify that the generated anonymous identities do not match the well known identities
         val aliceAnonymousIdentity = actual[alice] ?: throw IllegalStateException()
