@@ -46,7 +46,7 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
     private val txStorage = createTransactionsMap()
 
     override fun addTransaction(transaction: SignedTransaction): Boolean {
-        txStorage[transaction.id] = transaction
+        txStorage.addWithDuplicatesAllowed(transaction.id, transaction)
         updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
         return true
     }

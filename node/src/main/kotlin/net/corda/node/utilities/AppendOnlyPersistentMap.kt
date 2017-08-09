@@ -40,16 +40,14 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    /**
-     * Puts the value into the map and caches it.
-     */
-    operator tailrec fun set(key: K, value: V) {
+
+    private tailrec fun set(key: K, value: V, store: (K,V) -> Unit) {
         var inserted = false
         val existing = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
             inserted = true
             // Store the value. Note that if the key-value pair is already in the DB
             // but was evicted from the cache then this operation will overwrite the entry in the DB!
-            storeValue(key, value)
+            store(key, value)
             Optional.of(value)
         }
         if (!inserted) {
@@ -69,13 +67,27 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
         }
     }
 
+    /**
+     * Puts the value into the map and caches it.
+     */
+    operator fun set(key: K, value: V) {
+        set(key, value) {
+            key,value -> DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+        }
+    }
+
+    /**
+     * Puts the value or replace existing one in the map and caches it.
+     */
+    fun addWithDuplicatesAllowed(key: K, value: V) {
+        set(key, value) {
+            key, value -> DatabaseTransactionManager.current().session.saveOrUpdate(toPersistentEntity(key,value))
+        }
+    }
+
     private fun loadValue(key: K): V? {
         val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
 
-    private fun storeValue(key: K, value: V) {
-        //this is invoked only by cache.get and it guaranteed that database didn't have a previous row with the same key
-        DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
-    }
 }
