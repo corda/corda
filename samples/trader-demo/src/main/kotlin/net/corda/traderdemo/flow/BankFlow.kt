@@ -21,6 +21,9 @@ import net.corda.core.utilities.seconds
 import java.time.Instant
 import java.util.*
 
+/**
+ * Flow for the Bank of Corda node to issue some commercial paper to the seller's node, to sell to the buyer.
+ */
 @InitiatingFlow
 @StartableByRPC
 class BankFlow(val otherParty: Party,
@@ -39,10 +42,8 @@ class BankFlow(val otherParty: Party,
         progressTracker.currentStep = ISSUING
 
         val notaryNode: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
-        // Make a fake company that's issued its own paper.
-        // TODO: We should be actually getting the Bank of Corda node to do this issuance, not self-issue with magic keys
-        // that just happen to work
         val issuance: SignedTransaction = run {
+            // TODO: Replace dummy cash issuer with Bank of Corda
             val tx = CommercialPaper().generateIssue(serviceHub.myInfo.legalIdentity.ref(1, 2, 3), amount `issued by` DUMMY_CASH_ISSUER,
                     Instant.now() + 10.days, notaryNode.notaryIdentity)
 
