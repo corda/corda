@@ -27,8 +27,8 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
     )
 
     private companion object {
-        fun createTransactionsMap(): AppendOnlyPersistentMap<SecureHash, SignedTransaction, DBTransaction, String> {
-            return AppendOnlyPersistentMap(
+        fun createTransactionsMap(): PersistentMap<SecureHash, SignedTransaction, DBTransaction, String> {
+            return PersistentMap(
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(SecureHash.parse(it.txId),
                             it.transaction.deserialize<SignedTransaction>( context = SerializationDefaults.STORAGE_CONTEXT)) },
@@ -45,11 +45,10 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
 
     private val txStorage = createTransactionsMap()
 
-    override fun addTransaction(transaction: SignedTransaction): Boolean {
-        txStorage.addWithDuplicatesAllowed(transaction.id, transaction)
-        updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
-        return true
-    }
+    override fun addTransaction(transaction: SignedTransaction): Boolean =
+        txStorage.addWithDuplicatesAllowed(transaction.id, transaction).apply {
+            updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
+        }
 
     override fun getTransaction(id: SecureHash): SignedTransaction? = txStorage[id]
 

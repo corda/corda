@@ -43,19 +43,19 @@ class PersistentMap<K, V, E, EK> (
 
     private tailrec fun set(key: K, value: V, store: (K,V) -> Boolean) : Boolean {
         var inserted = false
-        var newValue = true
-        val existing = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
+        var uniqeInDb = true
+        val existingInCache = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
             inserted = true
             // Store the value. Note that if the key-value pair is already in the DB
             // but was evicted from the cache then this operation will overwrite the entry in the DB!
-            newValue = store(key, value)
+            uniqeInDb = store(key, value)
             Optional.of(value)
         }
         if (!inserted) {
             // Value was inserted into cache fine, store the value. Note that if the key-value pair is already in the DB
             // but was evicted from the cache then this operation will overwrite the entry in the DB!
             ///storeValue(key, value)
-            if (existing.isPresent) {
+            if (existingInCache.isPresent || !uniqeInDb) {
                 // An existing value is cached, in this case we know for sure that there is a problem.
                 log.warn("Double insert detected in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
             } else {
@@ -66,7 +66,7 @@ class PersistentMap<K, V, E, EK> (
                 return set(key, value, store)
             }
         }
-        return newValue
+        return uniqeInDb
     }
 
     /**
@@ -81,6 +81,7 @@ class PersistentMap<K, V, E, EK> (
 
     /**
      * Puts the value or replace existing one in the map and caches it.
+     * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
         set(key, value) {
@@ -101,4 +102,6 @@ class PersistentMap<K, V, E, EK> (
         return result?.let(fromPersistentEntity)?.second
     }
 
+
+    //TODO add remove method required for a service
 }
