@@ -6,12 +6,11 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-
-// The dummy contract doesn't do anything useful. It exists for testing purposes.
+import net.corda.nodeapi.DummyContractBackdoor
 
 val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
 
-class AnotherDummyContract : Contract, net.corda.core.node.DummyContractBackdoor {
+class AnotherDummyContract : Contract, DummyContractBackdoor {
     data class State(val magicNumber: Int = 0) : ContractState {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID
         override val participants: List<AbstractParty>

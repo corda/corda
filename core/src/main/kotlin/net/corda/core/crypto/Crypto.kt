@@ -283,7 +283,7 @@ object Crypto {
 
     /**
      * Decode a PKCS8 encoded key to its [PrivateKey] object based on the input scheme code name.
-     * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
+     * This should be used when the type key is known, e.g. during deserialisation or with key caches or key managers.
      * @param schemeCodeName a [String] that should match a key in supportedSignatureSchemes map (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey a PKCS8 encoded private key.
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
@@ -294,7 +294,7 @@ object Crypto {
 
     /**
      * Decode a PKCS8 encoded key to its [PrivateKey] object based on the input scheme code name.
-     * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
+     * This should be used when the type key is known, e.g. during deserialisation or with key caches or key managers.
      * @param signatureScheme a signature scheme (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey a PKCS8 encoded private key.
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
@@ -326,7 +326,7 @@ object Crypto {
 
     /**
      * Decode an X509 encoded key to its [PrivateKey] object based on the input scheme code name.
-     * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
+     * This should be used when the type key is known, e.g. during deserialisation or with key caches or key managers.
      * @param schemeCodeName a [String] that should match a key in supportedSignatureSchemes map (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey an X509 encoded public key.
      * @throws IllegalArgumentException if the requested scheme is not supported.
@@ -338,7 +338,7 @@ object Crypto {
 
     /**
      * Decode an X509 encoded key to its [PrivateKey] object based on the input scheme code name.
-     * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
+     * This should be used when the type key is known, e.g. during deserialisation or with key caches or key managers.
      * @param signatureScheme a signature scheme (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey an X509 encoded public key.
      * @throws IllegalArgumentException if the requested scheme is not supported.

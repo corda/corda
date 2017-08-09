@@ -6,10 +6,12 @@ import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.CordaRuntimeException
-import net.corda.core.serialization.*
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.toObservable
 import net.corda.nodeapi.config.OldConfig
+import net.corda.nodeapi.internal.serialization.*
 import rx.Observable
 import java.io.InputStream
 
