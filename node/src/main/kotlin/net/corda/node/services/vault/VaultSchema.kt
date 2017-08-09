@@ -107,6 +107,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** [OwnableState] attributes */
             @Column(name = "owner_id")
+            @Convert(converter = AbstractPartyConverter::class)
             var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
