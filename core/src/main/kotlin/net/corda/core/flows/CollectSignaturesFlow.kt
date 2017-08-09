@@ -68,6 +68,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
                             val myInputKeys: Iterable<PublicKey>,
                             override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
     @JvmOverloads constructor (partiallySignedTx: SignedTransaction, myInputKeys: Iterable<PublicKey>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, emptyMap(), myInputKeys, progressTracker)
+    @JvmOverloads constructor (partiallySignedTx: SignedTransaction, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, emptyMap(), emptyList(), progressTracker)
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counterparties.")
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")

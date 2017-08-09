@@ -133,7 +133,7 @@ object TopupIssuerFlow {
             // invoke Cash subflow to issue Asset
             progressTracker.currentStep = ISSUING
             val issueRecipient = serviceHub.myInfo.legalIdentity
-            val issueCashFlow = CashIssueFlow(amount, issuerPartyRef, issueRecipient, notaryParty)
+            val issueCashFlow = CashIssueFlow(amount, issuerPartyRef, issueRecipient, notaryParty, anonymous = false)
             val issueTx = subFlow(issueCashFlow)
             // NOTE: issueCashFlow performs a Broadcast (which stores a local copy of the txn to the ledger)
             // short-circuit when issuing to self
@@ -141,7 +141,7 @@ object TopupIssuerFlow {
                 return issueTx
             // now invoke Cash subflow to Move issued assetType to issue requester
             progressTracker.currentStep = TRANSFERRING
-            val moveCashFlow = CashPaymentFlow(amount, issueTo)
+            val moveCashFlow = CashPaymentFlow(amount, issueTo, anonymous = false)
             val moveTx = subFlow(moveCashFlow)
             // NOTE: CashFlow PayCash calls FinalityFlow which performs a Broadcast (which stores a local copy of the txn to the ledger)
             return moveTx
