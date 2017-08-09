@@ -173,7 +173,7 @@ class CommercialPaper : Contract {
     fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: AbstractParty) {
         tx.addInputState(paper)
         tx.addOutputState(paper.state.data.withOwner(newOwner))
-        tx.addCommand(Command(Commands.Move(), paper.state.data.owner.owningKey))
+        tx.addCommand(Commands.Move(), paper.state.data.owner.owningKey)
     }
 
     /**
@@ -189,7 +189,7 @@ class CommercialPaper : Contract {
         // Add the cash movement using the states in our vault.
         vault.generateSpend(tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
         tx.addInputState(paper)
-        tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner.owningKey))
+        tx.addCommand(Commands.Redeem(), paper.state.data.owner.owningKey)
     }
 }
 

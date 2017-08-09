@@ -490,7 +490,7 @@ class TwoPartyTradeFlowTests {
     fun `dependency with error on buyer side`() {
         mockNet = MockNetwork(false)
         ledger(initialiseSerialization = false) {
-            runWithError(true, false, "at least one asset input")
+            runWithError(true, false, "at least one cash input")
         }
     }
 
@@ -498,7 +498,7 @@ class TwoPartyTradeFlowTests {
     fun `dependency with error on seller side`() {
         mockNet = MockNetwork(false)
         ledger(initialiseSerialization = false) {
-            runWithError(false, true, "Issuances must have a time-window")
+            runWithError(false, true, "Issuances have a time-window")
         }
     }
 
