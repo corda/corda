@@ -57,7 +57,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     val keysMap = createKeyMap()
 
     init {
-        initialKeys.forEach({ it -> keysMap[it.public] = it.private })
+        initialKeys.forEach({ it -> keysMap.addWithDuplicatesAllowed(it.public, it.private) })
     }
 
     override val keys: Set<PublicKey> get() = keysMap.allPersisted().map { it.first }.toSet()
