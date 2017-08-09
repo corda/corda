@@ -10,9 +10,9 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.abbreviate
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.abbreviate
 import net.corda.core.internal.staticField
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
@@ -25,7 +25,6 @@ import net.corda.node.utilities.DatabaseTransaction
 import net.corda.node.utilities.DatabaseTransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.sql.Connection
 import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -155,13 +154,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
+    override fun getFlowContext(otherParty: Party, sessionFlow: FlowLogic<*>): FlowContext {
+        val state = getConfirmedSession(otherParty, sessionFlow).state as FlowSessionState.Initiated
+        return state.context
+    }
+
+    @Suspendable
     override fun <T : Any> sendAndReceive(receiveType: Class<T>,
                                           otherParty: Party,
                                           payload: Any,
                                           sessionFlow: FlowLogic<*>,
                                           retrySend: Boolean): UntrustworthyData<T> {
         logger.debug { "sendAndReceive(${receiveType.name}, $otherParty, ${payload.toString().abbreviate(300)}) ..." }
-        val session = getConfirmedSession(otherParty, sessionFlow)
+        val session = getConfirmedSessionIfPresent(otherParty, sessionFlow)
         val sessionData = if (session == null) {
             val newSession = startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = true, retryable = retrySend)
             // Only do a receive here as the session init has carried the payload
@@ -179,8 +184,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                                    otherParty: Party,
                                    sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
         logger.debug { "receive(${receiveType.name}, $otherParty) ..." }
-        val session = getConfirmedSession(otherParty, sessionFlow) ?:
-                startNewSession(otherParty, sessionFlow, null, waitForConfirmation = true)
+        val session = getConfirmedSession(otherParty, sessionFlow)
         val sessionData = receiveInternal<SessionData>(session, receiveType)
         logger.debug { "Received ${sessionData.message.payload.toString().abbreviate(300)}" }
         return sessionData.checkPayloadIs(receiveType)
@@ -189,7 +193,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>) {
         logger.debug { "send($otherParty, ${payload.toString().abbreviate(300)})" }
-        val session = getConfirmedSession(otherParty, sessionFlow)
+        val session = getConfirmedSessionIfPresent(otherParty, sessionFlow)
         if (session == null) {
             // Don't send the payload again if it was already piggy-backed on a session init
             startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = false)
@@ -257,7 +261,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun FlowSession.waitForConfirmation() {
         val (peerParty, sessionInitResponse) = receiveInternal<SessionInitResponse>(this, null)
         if (sessionInitResponse is SessionConfirm) {
-            state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
+            state = FlowSessionState.Initiated(
+                    peerParty,
+                    sessionInitResponse.initiatedSessionId,
+                    FlowContext(sessionInitResponse.flowVersion, sessionInitResponse.appName))
         } else {
             sessionInitResponse as SessionReject
             throw UnexpectedFlowEndException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
@@ -274,9 +281,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    private fun sendInternal(session: FlowSession, message: SessionMessage) {
-        suspend(SendOnly(session, message))
-    }
+    private fun sendInternal(session: FlowSession, message: SessionMessage) = suspend(SendOnly(session, message))
 
     private inline fun <reified M : ExistingSessionMessage> receiveInternal(
             session: FlowSession,
@@ -292,13 +297,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    private fun getConfirmedSession(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession? {
+    private fun getConfirmedSessionIfPresent(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession? {
         return openSessions[Pair(sessionFlow, otherParty)]?.apply {
             if (state is FlowSessionState.Initiating) {
-                // Session still initiating, try to retrieve the init response.
+                // Session still initiating, wait for the confirmation
                 waitForConfirmation()
             }
         }
+    }
+
+    @Suspendable
+    private fun getConfirmedSession(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession {
+        return getConfirmedSessionIfPresent(otherParty, sessionFlow) ?:
+                startNewSession(otherParty, sessionFlow, null, waitForConfirmation = true)
     }
 
     /**
@@ -317,7 +328,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), retryable)
         openSessions[Pair(sessionFlow, otherParty)] = session
         val (version, initiatingFlowClass) = sessionFlow.javaClass.flowVersionAndInitiatingClass
-        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, firstPayload)
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, "not defined", firstPayload)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
@@ -456,6 +467,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
         }
         current = current.superclass
             ?: return found
-            ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with ${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
+            ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
+                "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
     }
 }

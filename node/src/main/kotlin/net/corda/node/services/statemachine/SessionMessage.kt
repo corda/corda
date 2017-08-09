@@ -7,24 +7,11 @@ import net.corda.core.internal.castIfPossible
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.UntrustworthyData
 
-/**
- * These internal messages define the flow session protocol.
- */
-
 @CordaSerializable
 interface SessionMessage
 
-data class SessionInit(val initiatorSessionId: Long,
-                       val initiatingFlowClass: String,
-                       val flowVerison: Int,
-                       val firstPayload: Any?) : SessionMessage
-
 interface ExistingSessionMessage : SessionMessage {
     val recipientSessionId: Long
-}
-
-data class SessionData(override val recipientSessionId: Long, val payload: Any) : ExistingSessionMessage {
-    override fun toString(): String = "${javaClass.simpleName}(recipientSessionId=$recipientSessionId, payload=$payload)"
 }
 
 interface SessionInitResponse : ExistingSessionMessage {
@@ -32,11 +19,25 @@ interface SessionInitResponse : ExistingSessionMessage {
     override val recipientSessionId: Long get() = initiatorSessionId
 }
 
-data class SessionConfirm(override val initiatorSessionId: Long, val initiatedSessionId: Long) : SessionInitResponse
+interface SessionEnd : ExistingSessionMessage
+
+data class SessionInit(val initiatorSessionId: Long,
+                       val initiatingFlowClass: String,
+                       val flowVersion: Int,
+                       val appName: String,
+                       val firstPayload: Any?) : SessionMessage
+
+data class SessionConfirm(override val initiatorSessionId: Long,
+                          val initiatedSessionId: Long,
+                          val flowVersion: Int,
+                          val appName: String) : SessionInitResponse
+
 data class SessionReject(override val initiatorSessionId: Long, val errorMessage: String) : SessionInitResponse
 
-interface SessionEnd : ExistingSessionMessage
+data class SessionData(override val recipientSessionId: Long, val payload: Any) : ExistingSessionMessage
+
 data class NormalSessionEnd(override val recipientSessionId: Long) : SessionEnd
+
 data class ErrorSessionEnd(override val recipientSessionId: Long, val errorResponse: FlowException?) : SessionEnd
 
 data class ReceivedSessionMessage<out M : ExistingSessionMessage>(val sender: Party, val message: M)

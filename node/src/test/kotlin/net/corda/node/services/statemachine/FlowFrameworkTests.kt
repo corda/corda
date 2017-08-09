@@ -260,15 +260,15 @@ class FlowFrameworkTests {
         assertThat(node3Flow.receivedPayloads[0]).isEqualTo(payload)
 
         assertSessionTransfers(node2,
-                node1 sent sessionInit(SendFlow::class, 1, payload) to node2,
-                node2 sent sessionConfirm to node1,
+                node1 sent sessionInit(SendFlow::class, payload = payload) to node2,
+                node2 sent sessionConfirm() to node1,
                 node1 sent normalEnd to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
-                node1 sent sessionInit(SendFlow::class, 1, payload) to node3,
-                node3 sent sessionConfirm to node1,
+                node1 sent sessionInit(SendFlow::class, payload = payload) to node3,
+                node3 sent sessionConfirm() to node1,
                 node1 sent normalEnd to node3
                 //There's no session end from the other flows as they're manually suspended
         )
@@ -294,14 +294,14 @@ class FlowFrameworkTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(node2Payload) to node1,
                 node2 sent normalEnd to node1
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(ReceiveFlow::class) to node3,
-                node3 sent sessionConfirm to node1,
+                node3 sent sessionConfirm() to node1,
                 node3 sent sessionData(node3Payload) to node1,
                 node3 sent normalEnd to node1
         )
@@ -314,8 +314,8 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
 
         assertSessionTransfers(
-                node1 sent sessionInit(PingPongFlow::class, 1, 10L) to node2,
-                node2 sent sessionConfirm to node1,
+                node1 sent sessionInit(PingPongFlow::class, payload = 10L) to node2,
+                node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
                 node2 sent sessionData(21L) to node1,
@@ -419,7 +419,7 @@ class FlowFrameworkTests {
 
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent erroredEnd() to node1
         )
     }
@@ -452,7 +452,7 @@ class FlowFrameworkTests {
 
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent erroredEnd(erroringFlow.get().exceptionThrown) to node1
         )
         // Make sure the original stack trace isn't sent down the wire
@@ -500,7 +500,7 @@ class FlowFrameworkTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent sessionData("Hello") to node1,
                 node1 sent erroredEnd() to node2
         )
@@ -627,26 +627,30 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `upgraded flow`() {
-        node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity))
+    fun `upgraded initiating flow`() {
+        node2.registerFlowFactory(UpgradedFlow::class, initiatedFlowVersion = 1) { SendFlow("Old initiated", it) }
+        val result = node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity)).resultFuture
         mockNet.runNetwork()
         assertThat(sessionTransfers).startsWith(
-                node1 sent sessionInit(UpgradedFlow::class, 2) to node2
+                node1 sent sessionInit(UpgradedFlow::class, flowVersion = 2) to node2,
+                node2 sent sessionConfirm(flowVersion = 1) to node1
         )
+        val (receivedPayload, node2FlowVersion) = result.getOrThrow()
+        assertThat(receivedPayload).isEqualTo("Old initiated")
+        assertThat(node2FlowVersion).isEqualTo(1)
     }
 
     @Test
-    fun `unsupported new flow version`() {
-        node2.internalRegisterFlowFactory(
-                UpgradedFlow::class.java,
-                InitiatedFlowFactory.CorDapp(version = 1, factory = ::DoubleInlinedSubFlow),
-                DoubleInlinedSubFlow::class.java,
-                track = false)
-        val result = node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity)).resultFuture
+    fun `upgraded initiated flow`() {
+        node2.registerFlowFactory(SendFlow::class, initiatedFlowVersion = 2) { UpgradedFlow(it) }
+        val initiatingFlow = SendFlow("Old initiating", node2.info.legalIdentity)
+        node1.services.startFlow(initiatingFlow)
         mockNet.runNetwork()
-        assertThatExceptionOfType(UnexpectedFlowEndException::class.java)
-                .isThrownBy { result.getOrThrow() }
-                .withMessageContaining("Version")
+        assertThat(sessionTransfers).startsWith(
+                node1 sent sessionInit(SendFlow::class, flowVersion = 1, payload = "Old initiating") to node2,
+                node2 sent sessionConfirm(flowVersion = 2) to node1
+        )
+        assertThat(initiatingFlow.getFlowContext(node2.info.legalIdentity).flowVersion).isEqualTo(2)
     }
 
     @Test
@@ -660,7 +664,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `unknown class in session init`() {
-        node1.sendSessionMessage(SessionInit(random63BitValue(), "not.a.real.Class", 1, null), node2)
+        node1.sendSessionMessage(SessionInit(random63BitValue(), "not.a.real.Class", 1, "version", null), node2)
         mockNet.runNetwork()
         assertThat(sessionTransfers).hasSize(2) // Only the session-init and session-reject are expected
         val reject = sessionTransfers.last().message as SessionReject
@@ -669,7 +673,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `non-flow class in session init`() {
-        node1.sendSessionMessage(SessionInit(random63BitValue(), String::class.java.name, 1, null), node2)
+        node1.sendSessionMessage(SessionInit(random63BitValue(), String::class.java.name, 1, "version", null), node2)
         mockNet.runNetwork()
         assertThat(sessionTransfers).hasSize(2) // Only the session-init and session-reject are expected
         val reject = sessionTransfers.last().message as SessionReject
@@ -678,7 +682,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `single inlined sub-flow`() {
-        node2.registerFlowFactory(SendAndReceiveFlow::class, ::SingleInlinedSubFlow)
+        node2.registerFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
         val result = node1.services.startFlow(SendAndReceiveFlow(node2.info.legalIdentity, "Hello")).resultFuture
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
@@ -686,7 +690,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `double inlined sub-flow`() {
-        node2.registerFlowFactory(SendAndReceiveFlow::class, ::DoubleInlinedSubFlow)
+        node2.registerFlowFactory(SendAndReceiveFlow::class) { DoubleInlinedSubFlow(it) }
         val result = node1.services.startFlow(SendAndReceiveFlow(node2.info.legalIdentity, "Hello")).resultFuture
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
@@ -711,21 +715,22 @@ class FlowFrameworkTests {
     }
 
     private inline fun <reified P : FlowLogic<*>> MockNode.registerFlowFactory(
-        initiatingFlowClass: KClass<out FlowLogic<*>>,
-        noinline flowFactory: (Party) -> P): CordaFuture<P>
+            initiatingFlowClass: KClass<out FlowLogic<*>>,
+            initiatedFlowVersion: Int = 1,
+            noinline flowFactory: (Party) -> P): CordaFuture<P>
     {
-        val observable = internalRegisterFlowFactory(initiatingFlowClass.java, object : InitiatedFlowFactory<P> {
-            override fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): P {
-                return flowFactory(otherParty)
-            }
-        }, P::class.java, track = true)
+        val observable = internalRegisterFlowFactory(
+                initiatingFlowClass.java,
+                InitiatedFlowFactory.CorDapp(initiatedFlowVersion, "", flowFactory),
+                P::class.java,
+                track = true)
         return observable.toFuture()
     }
 
     private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): SessionInit {
-        return SessionInit(0, clientFlowClass.java.name, flowVersion, payload)
+        return SessionInit(0, clientFlowClass.java.name, flowVersion, "", payload)
     }
-    private val sessionConfirm = SessionConfirm(0, 0)
+    private fun sessionConfirm(flowVersion: Int = 1) = SessionConfirm(0, 0, flowVersion, "")
     private fun sessionData(payload: Any) = SessionData(0, payload)
     private val normalEnd = NormalSessionEnd(0)
     private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
@@ -762,8 +767,8 @@ class FlowFrameworkTests {
 
     private fun sanitise(message: SessionMessage) = when (message) {
         is SessionData -> message.copy(recipientSessionId = 0)
-        is SessionInit -> message.copy(initiatorSessionId = 0)
-        is SessionConfirm -> message.copy(initiatorSessionId = 0, initiatedSessionId = 0)
+        is SessionInit -> message.copy(initiatorSessionId = 0, appName = "")
+        is SessionConfirm -> message.copy(initiatorSessionId = 0, initiatedSessionId = 0, appName = "")
         is NormalSessionEnd -> message.copy(recipientSessionId = 0)
         is ErrorSessionEnd -> message.copy(recipientSessionId = 0)
         else -> message
@@ -798,7 +803,6 @@ class FlowFrameworkTests {
             }
         }
     }
-
 
     @InitiatingFlow
     private open class SendFlow(val payload: Any, vararg val otherParties: Party) : FlowLogic<Unit>() {
@@ -921,9 +925,13 @@ class FlowFrameworkTests {
     }
 
     @InitiatingFlow(version = 2)
-    private class UpgradedFlow(val otherParty: Party) : FlowLogic<Any>() {
+    private class UpgradedFlow(val otherParty: Party) : FlowLogic<Pair<Any, Int>>() {
         @Suspendable
-        override fun call(): Any = receive<Any>(otherParty).unwrap { it }
+        override fun call(): Pair<Any, Int> {
+            val received = receive<Any>(otherParty).unwrap { it }
+            val otherFlowVersion = getFlowContext(otherParty).flowVersion
+            return Pair(received, otherFlowVersion)
+        }
     }
 
     private class SingleInlinedSubFlow(val otherParty: Party) : FlowLogic<Unit>() {

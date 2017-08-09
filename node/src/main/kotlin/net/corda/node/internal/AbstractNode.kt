@@ -30,7 +30,10 @@ import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow
-import net.corda.node.services.*
+import net.corda.node.services.ContractUpgradeHandler
+import net.corda.node.services.NotaryChangeHandler
+import net.corda.node.services.NotifyTransactionHandler
+import net.corda.node.services.TransactionKeyHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -62,8 +65,6 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.configureDatabase
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
@@ -282,7 +283,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun handleCustomNotaryService(service: NotaryService) {
         runOnStop += service::stop
         service.start()
-        installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
+        installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
     }
 
     private inline fun <reified A : Annotation> Class<*>.requireAnnotation(): A {
@@ -344,9 +345,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
         val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
         require(classWithAnnotation == initiatingFlow) {
-            "${InitiatingFlow::class.java.name} must be annotated on ${initiatingFlow.name} and not on a super-type"
+            "${InitiatedBy::class.java.name} must point to ${classWithAnnotation.name} and not ${initiatingFlow.name}"
         }
-        val flowFactory = InitiatedFlowFactory.CorDapp(version, { ctor.newInstance(it) })
+        val jarFile = Paths.get(initiatedFlow.protectionDomain.codeSource.location.toURI())
+        val appName = if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
+            jarFile.fileName.toString().removeSuffix(".jar")
+        } else {
+            "<unknown>"
+        }
+        val flowFactory = InitiatedFlowFactory.CorDapp(version, appName, { ctor.newInstance(it) })
         val observable = internalRegisterFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
         log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
         return observable
@@ -390,7 +397,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * @suppress
      */
     @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party, Int) -> FlowLogic<*>) {
+    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party) -> FlowLogic<*>) {
         require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
@@ -399,10 +406,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun installCoreFlows() {
-        installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
-        installCoreFlow(NotaryChangeFlow::class) { otherParty, _ -> NotaryChangeHandler(otherParty) }
-        installCoreFlow(ContractUpgradeFlow::class) { otherParty, _ -> ContractUpgradeHandler(otherParty) }
-        installCoreFlow(TransactionKeyFlow::class) { otherParty, _ -> TransactionKeyHandler(otherParty) }
+        installCoreFlow(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
+        installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
+        installCoreFlow(ContractUpgradeFlow::class, ::ContractUpgradeHandler)
+        installCoreFlow(TransactionKeyFlow::class, ::TransactionKeyHandler)
     }
 
     /**
@@ -567,7 +574,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     runOnStop += this::stop
                     start()
                 }
-                installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
+                installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
             } else {
                 log.info("Notary type ${notaryServiceType.id} does not match any built-in notary types. " +
                         "It is expected to be loaded via a CorDapp")
