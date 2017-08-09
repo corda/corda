@@ -8,7 +8,7 @@ import org.bouncycastle.asn1.x500.X500Name
 import javax.persistence.AttributeConverter
 import javax.persistence.Converter
 
-@Converter
+@Converter(autoApply = true)
 class AbstractPartyConverter(val identitySvc: IdentityService) : AttributeConverter<AbstractParty, String> {
 
     override fun convertToDatabaseColumn(party: AbstractParty?): String {
