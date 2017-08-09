@@ -41,21 +41,22 @@ class PersistentMap<K, V, E, EK> (
 
     private tailrec fun set(key: K, value: V, store: (K,V) -> Boolean) : Boolean {
         var inserted = false
-        var uniqeInDb = true
+        var uniqueInDb = true
         val existingInCache = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
             inserted = true
-            // Store the value. Note that if the key-value pair is already in the DB
-            // but was evicted from the cache then this operation may overwrite the entry in the DB!
-            uniqeInDb = store(key, value)
+            // Value wasn't in the cache and might not be in DB.
+            // Store the value, depending on store implementation this may overwrite existing entry in DB.
+            uniqueInDb = store(key, value)
             Optional.of(value)
         }
         if (!inserted) {
-            // Value was inserted into cache fine, store the value. Note that if the key-value pair is already in the DB
-            // but was evicted from the cache then this operation will overwrite the entry in the DB!
-            ///storeValue(key, value)
-            if (existingInCache.isPresent || !uniqeInDb) {
-                // An existing value is cached, in this case we know for sure that there is a problem.
-                log.warn("Double insert detected in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
+            if (existingInCache.isPresent) {
+                // Value was cached already, store the new value in the DB (depends on tore implementation) and refresh cache.
+                synchronized(this) {
+                    cache.put(key, Optional.of(value))
+                    uniqueInDb = store(key, value)
+                }
+                log.warn("Double insert in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
             } else {
                 // This happens when the key was queried before with no value associated. We invalidate the cached null
                 // value and recursively call set again. This is to avoid race conditions where another thread queries after
@@ -64,7 +65,10 @@ class PersistentMap<K, V, E, EK> (
                 return set(key, value, store)
             }
         }
-        return uniqeInDb
+        if(!uniqueInDb) {
+            log.warn("Double insert in ${this.javaClass.name} for entity class $persistentEntityClass key $key, value is overwritten")
+        }
+        return uniqueInDb
     }
 
     /**
@@ -86,7 +90,7 @@ class PersistentMap<K, V, E, EK> (
             key, value ->
             val prev = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
             if (prev != null) {
-                DatabaseTransactionManager.current().session.update(toPersistentEntity(key,value))
+                DatabaseTransactionManager.current().session.merge(toPersistentEntity(key,value))
                 false
             } else {
                 DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
