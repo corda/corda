@@ -144,7 +144,6 @@ class CommercialPaper : Contract {
                         "output values sum to more than the inputs" using (output.faceValue.quantity > 0)
                         "the maturity date is not in the past" using (time < output.maturityDate)
                         // Don't allow an existing CP state to be replaced by this issuance.
-                        // TODO: this has a weird/incorrect assertion string because it doesn't quite match the logic in the clause version.
                         // TODO: Consider how to handle the case of mistaken issuances, or other need to patch.
                         "output values sum to more than the inputs" using inputs.isEmpty()
                     }
