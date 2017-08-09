@@ -151,9 +151,6 @@ class CordaRPCOpsImpl(
     override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
     override fun partyFromAnonymous(party: AbstractParty): Party? = services.identityService.partyFromAnonymous(party)
     override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
-    @Suppress("DEPRECATION")
-    @Deprecated("Use partyFromX500Name instead")
-    override fun partyFromName(name: String) = services.identityService.partyFromName(name)
     override fun partyFromX500Name(x500Name: X500Name) = services.identityService.partyFromX500Name(x500Name)
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = services.identityService.partiesFromName(query, exactMatch)
     override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? = services.networkMapCache.getNodeByLegalIdentity(party)

@@ -256,12 +256,6 @@ interface CordaRPCOps : RPCOps {
     fun partyFromKey(key: PublicKey): Party?
 
     /**
-     * Returns the [Party] with the given name as it's [Party.name]
-     */
-    @Deprecated("Use partyFromX500Name instead")
-    fun partyFromName(name: String): Party?
-
-    /**
      * Returns the [Party] with the X.500 principal as it's [Party.name]
      */
     fun partyFromX500Name(x500Name: X500Name): Party?
