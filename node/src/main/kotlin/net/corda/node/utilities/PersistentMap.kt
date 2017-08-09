@@ -5,9 +5,7 @@ import java.util.*
 
 
 /**
- * Implements a caching layer on top of an *append-only* table accessed via Hibernate mapping. Note that if the same key is [put] twice the
- * behaviour is unpredictable! There is a best-effort check for double inserts, but this should *not* be relied on, so
- * ONLY USE THIS IF YOUR TABLE IS APPEND-ONLY
+ * Implements a caching layer on top of a table accessed via Hibernate mapping.
  */
 class PersistentMap<K, V, E, EK> (
         val toPersistentEntityKey: (K) -> EK,
