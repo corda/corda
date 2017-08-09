@@ -52,7 +52,7 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
         }
         if (!inserted) {
             // Value was inserted into cache fine, store the value. Note that if the key-value pair is already in the DB
-            // but was evicted from the cache then this operation will overwrite the entry in the DB!
+            // but was evicted from the cache then this operation may overwrite the entry in the DB!
             if (existing.isPresent) {
                 // An existing value is cached, in this case we know for sure that there is a problem.
                 log.warn("Double insert detected in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")

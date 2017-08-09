@@ -45,7 +45,7 @@ class PersistentMap<K, V, E, EK> (
         val existingInCache = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
             inserted = true
             // Store the value. Note that if the key-value pair is already in the DB
-            // but was evicted from the cache then this operation will overwrite the entry in the DB!
+            // but was evicted from the cache then this operation may overwrite the entry in the DB!
             uniqeInDb = store(key, value)
             Optional.of(value)
         }
@@ -85,7 +85,7 @@ class PersistentMap<K, V, E, EK> (
         set(key, value) {
             key, value ->
             val prev = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
-            if(prev!=null) {
+            if (prev != null) {
                 DatabaseTransactionManager.current().session.update(toPersistentEntity(key,value))
                 false
             } else {
