@@ -13,6 +13,14 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
+import net.corda.core.utilities.seconds
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.toHexString
+import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.core.utilities.*
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -50,6 +58,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
+        val identityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY))
         database = databaseAndServices.first
         services = databaseAndServices.second

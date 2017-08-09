@@ -6,6 +6,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.converters.AbstractPartyConverter
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.time.Instant
@@ -105,8 +106,9 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var participants: Set<CommonSchemaV1.Party>,
 
             /** [OwnableState] attributes */
-            @OneToOne(cascade = arrayOf(CascadeType.ALL))
-            var owner: CommonSchemaV1.Party,
+            @Column(name = "owner_id")
+            @Convert(converter = AbstractPartyConverter::class)
+            var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
              *
@@ -126,7 +128,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var issuerRef: ByteArray
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
-                this(owner = CommonSchemaV1.Party(_owner),
+                this(owner = _owner,
                      quantity = _quantity,
                      issuerParty = CommonSchemaV1.Party(_issuerParty),
                      issuerRef = _issuerRef.bytes,

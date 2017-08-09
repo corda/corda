@@ -1,7 +1,9 @@
 package net.corda.node.services.database
 
 import net.corda.core.internal.castIfPossible
+import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.converters.AbstractPartyConverter
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
@@ -18,7 +20,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, val databaseProperties: Properties) {
+class HibernateConfiguration(val schemaService: SchemaService, val databaseProperties: Properties, val identitySvc: IdentityService) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
@@ -58,6 +60,9 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase","true") == "true") "update" else "validate")
                 .setProperty("hibernate.format_sql", "true")
+
+        // add custom converters
+        config.addAttributeConverter(AbstractPartyConverter(identitySvc))
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
