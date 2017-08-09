@@ -5,6 +5,7 @@ import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
+import kotlin.collections.LinkedHashMap
 import kotlin.collections.Map
 import kotlin.collections.iterator
 import kotlin.collections.map
@@ -17,10 +18,16 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
     companion object {
-        private val supportedTypes: Map<Class<out Map<*, *>>, (Map<*, *>) -> Map<*, *>> = mapOf(
-                Map::class.java to { map -> Collections.unmodifiableMap(map) },
-                SortedMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) },
-                NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) }
+        private val supportedTypes: Map<Class<out Any>, (Map<*, *>) -> Map<*, *>> = mapOf(
+                Map::class.java to { map -> map },
+                SortedMap::class.java to { map -> TreeMap(map) },
+                NavigableMap::class.java to { map -> TreeMap(map) },
+                Dictionary::class.java to { map -> Hashtable(map) },
+                // concrete types for user convienience
+                HashMap::class.java to { map -> LinkedHashMap(map) },
+                LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
+                TreeMap::class.java to { map -> TreeMap(map) },
+                Hashtable::class.java to { map -> Hashtable(map) }
         )
 
         private fun findConcreteType(clazz: Class<*>): (Map<*, *>) -> Map<*, *> {
