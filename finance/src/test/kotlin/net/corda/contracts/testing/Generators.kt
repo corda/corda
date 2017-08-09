@@ -67,7 +67,7 @@ class WiredTransactionGenerator : Generator<WireTransaction>(WireTransaction::cl
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): WireTransaction {
         val commands = CommandGenerator().generateList(random, status) + listOf(CommandGenerator().generate(random, status))
         return WireTransaction(
-                inputs = StateRefGenerator().generateList(random, status),
+                inputs = StateRefGenerator().generateList(random, status) + listOf(StateRefGenerator().generate(random, status)),
                 attachments = SecureHashGenerator().generateList(random, status),
                 outputs = TransactionStateGenerator(ContractStateGenerator()).generateList(random, status),
                 commands = commands,
