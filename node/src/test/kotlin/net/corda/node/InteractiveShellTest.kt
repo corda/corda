@@ -109,5 +109,13 @@ class InteractiveShellTest {
         override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
             // Do nothing
         }
+
+        override fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot? {
+            return null
+        }
+
+        override fun persistFlowStackSnapshot(flowClass: Class<*>) {
+            // Do nothing
+        }
     }
 }

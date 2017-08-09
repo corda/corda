@@ -254,6 +254,17 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         serviceHub.auditService.recordAuditEvent(flowAuditEvent)
     }
 
+    @Suspendable
+    override fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot? {
+        val factory = FlowStackSnapshotDefaults.FLOW_STACK_SNAPSHOT_FACTORY
+        return factory.getFlowStackSnapshot(flowClass)
+    }
+
+    override fun persistFlowStackSnapshot(flowClass: Class<*>): Unit {
+        val factory = FlowStackSnapshotDefaults.FLOW_STACK_SNAPSHOT_FACTORY
+        factory.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id.toString())
+    }
+
     /**
      * This method will suspend the state machine and wait for incoming session init response from other party.
      */

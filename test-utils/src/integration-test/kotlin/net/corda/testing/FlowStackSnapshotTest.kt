@@ -3,6 +3,7 @@ package net.corda.testing
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
@@ -51,6 +52,7 @@ class SideEffectFlow : FlowLogic<List<StackSnapshotFrame>>() {
     override fun call(): List<StackSnapshotFrame> {
         sideEffectField = "sideEffectInCall"
         // Expected to be on stack
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = Constants.IN_CALL_VALUE
         val numberOfFullFrames = retrieveStackSnapshot()
         return numberOfFullFrames
@@ -60,9 +62,10 @@ class SideEffectFlow : FlowLogic<List<StackSnapshotFrame>>() {
     fun retrieveStackSnapshot(): List<StackSnapshotFrame> {
         sideEffectField = "sideEffectInRetrieveStackSnapshot"
         // Expected to be on stack
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = Constants.IN_RETRIEVE_STACK_SNAPSHOT_VALUE
         val snapshot = flowStackSnapshot()
-        return convertToStackSnapshotFrames(snapshot)
+        return convertToStackSnapshotFrames(snapshot!!)
     }
 
 }
@@ -77,6 +80,7 @@ class NoSideEffectFlow : FlowLogic<List<StackSnapshotFrame>>() {
     @Suspendable
     override fun call(): List<StackSnapshotFrame> {
         // Using the [Constants] object here is considered by Quasar as a side effect. Thus explicit initialization
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = "inCall"
         val numberOfFullFrames = retrieveStackSnapshot()
         return numberOfFullFrames
@@ -85,9 +89,10 @@ class NoSideEffectFlow : FlowLogic<List<StackSnapshotFrame>>() {
     @Suspendable
     fun retrieveStackSnapshot(): List<StackSnapshotFrame> {
         // Using the [Constants] object here is considered by Quasar as a side effect. Thus explicit initialization
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = "inRetrieveStackSnapshot"
-        val flowStackDump = flowStackSnapshot()
-        return convertToStackSnapshotFrames(flowStackDump)
+        val snapshot = flowStackSnapshot()
+        return convertToStackSnapshotFrames(snapshot!!)
     }
 }
 
@@ -109,6 +114,7 @@ class PersistingNoSideEffectFlow : FlowLogic<String>() {
     @Suspendable
     override fun call(): String {
         // Using the [Constants] object here is considered by Quasar as a side effect. Thus explicit initialization
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = "inCall"
         persist()
         return stateMachine.id.toString()
@@ -117,6 +123,7 @@ class PersistingNoSideEffectFlow : FlowLogic<String>() {
     @Suspendable
     fun persist() {
         // Using the [Constants] object here is considered by Quasar as a side effect. Thus explicit initialization
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = "inPersist"
         persistFlowStackSnapshot()
     }
@@ -130,6 +137,7 @@ class PersistingSideEffectFlow : FlowLogic<String>() {
 
     @Suspendable
     override fun call(): String {
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = Constants.IN_CALL_VALUE
         persist()
         return stateMachine.id.toString()
@@ -137,6 +145,7 @@ class PersistingSideEffectFlow : FlowLogic<String>() {
 
     @Suspendable
     fun persist() {
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = Constants.IN_PERSIST_VALUE
         persistFlowStackSnapshot()
     }
@@ -150,6 +159,7 @@ class MultiplePersistingSideEffectFlow(val persistCallCount: Int) : FlowLogic<St
 
     @Suspendable
     override fun call(): String {
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = Constants.IN_CALL_VALUE
         for (i in 1..persistCallCount) {
             persist()
@@ -159,6 +169,7 @@ class MultiplePersistingSideEffectFlow(val persistCallCount: Int) : FlowLogic<St
 
     @Suspendable
     fun persist() {
+        @Suppress("UNUSED_VARIABLE")
         val unusedVar = Constants.IN_PERSIST_VALUE
         persistFlowStackSnapshot()
     }
