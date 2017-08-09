@@ -19,6 +19,8 @@ import java.util.*
  * @param amount the amount of a currency to pay to the recipient.
  * @param recipient the party to pay the currency to.
  * @param issuerConstraint if specified, the payment will be made using only cash issued by the given parties.
+ * @param anonymous whether to anonymous the recipient party. Should be true for normal usage, but may be false
+ * for testing purposes.
  */
 @StartableByRPC
 open class CashPaymentFlow(
