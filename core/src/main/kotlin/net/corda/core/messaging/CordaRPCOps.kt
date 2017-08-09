@@ -242,6 +242,15 @@ interface CordaRPCOps : RPCOps {
     // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
     // the node's state locally and query that directly.
     /**
+     * Returns the well known identity from an abstract party. This is intended to resolve the well known identity
+     * from a confidential identity, however it transparently handles returning the well known identity back if
+     * a well known identity is passed in.
+     *
+     * @param party identity to determine well known identity for.
+     * @return well known identity, if found.
+     */
+    fun partyFromAnonymous(party: AbstractParty): Party?
+    /**
      * Returns the [Party] corresponding to the given key, if found.
      */
     fun partyFromKey(key: PublicKey): Party?

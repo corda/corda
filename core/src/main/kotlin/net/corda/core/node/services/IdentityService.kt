@@ -109,10 +109,12 @@ interface IdentityService {
     fun partyFromX500Name(principal: X500Name): Party?
 
     /**
-     * Resolve the well known identity of a party. If the party passed in is already a well known identity
-     * (i.e. a [Party]) this returns it as-is.
+     * Returns the well known identity from an abstract party. This is intended to resolve the well known identity
+     * from a confidential identity, however it transparently handles returning the well known identity back if
+     * a well known identity is passed in.
      *
-     * @return the well known identity, or null if unknown.
+     * @param party identity to determine well known identity for.
+     * @return well known identity, if found.
      */
     fun partyFromAnonymous(party: AbstractParty): Party?
 

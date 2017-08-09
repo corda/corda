@@ -149,6 +149,7 @@ class CordaRPCOpsImpl(
     override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.vaultService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
     override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
+    override fun partyFromAnonymous(party: AbstractParty): Party? = services.identityService.partyFromAnonymous(party)
     override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
     @Suppress("DEPRECATION")
     @Deprecated("Use partyFromX500Name instead")
