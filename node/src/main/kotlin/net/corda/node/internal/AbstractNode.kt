@@ -772,7 +772,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
         override val keyManagementService by lazy { makeKeyManagementService(identityService) }
-        override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch) }
+        override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch, serverThread = serverThread) }
         override val identityService by lazy {
             val trustStore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
             val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
