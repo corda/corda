@@ -30,6 +30,7 @@ import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import sun.security.ec.ECPublicKeyImpl
+import sun.security.util.DerValue
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.lang.reflect.InvocationTargetException
@@ -345,14 +346,14 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
 /** For serialising an ed25519 public key */
 @ThreadSafe
 object ECPublicKeyImplSerializer : Serializer<ECPublicKeyImpl>() {
-    override fun write(kryo: Kryo, output: Output, obj: sun.security.ec.ECPublicKeyImpl) {
+    override fun write(kryo: Kryo, output: Output, obj: ECPublicKeyImpl) {
         output.writeBytesWithLength(obj.encoded)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<sun.security.ec.ECPublicKeyImpl>): sun.security.ec.ECPublicKeyImpl {
+    override fun read(kryo: Kryo, input: Input, type: Class<ECPublicKeyImpl>): ECPublicKeyImpl {
         val A = input.readBytesWithLength()
-        val der = sun.security.util.DerValue(A)
-        return sun.security.ec.ECPublicKeyImpl.parse(der) as sun.security.ec.ECPublicKeyImpl
+        val der = DerValue(A)
+        return ECPublicKeyImpl.parse(der) as ECPublicKeyImpl
     }
 }
 
