@@ -289,7 +289,7 @@ abstract class TypeOnlyCommandData : CommandData {
 data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) {
     // TODO Introduce NonEmptyList?
     init {
-        require(signers.isNotEmpty())
+        require(signers.isNotEmpty()) { "The list of signers cannot be empty" }
     }
 
     constructor(data: T, key: PublicKey) : this(data, listOf(key))
