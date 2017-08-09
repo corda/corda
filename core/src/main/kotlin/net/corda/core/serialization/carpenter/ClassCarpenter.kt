@@ -18,7 +18,8 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
-class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
+class CarpenterClassLoader (parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
+        ClassLoader(parentClassLoader) {
     fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
 }
 
@@ -66,14 +67,14 @@ class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoad
  *
  * Equals/hashCode methods are not yet supported.
  */
-class ClassCarpenter {
+class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader) {
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.
     // TODO: Support annotations.
     // TODO: isFoo getter patterns for booleans (this is what Kotlin generates)
 
-    val classloader = CarpenterClassLoader()
+    val classloader = CarpenterClassLoader(cl)
 
     private val _loaded = HashMap<String, Class<*>>()
     private val String.jvm: String get() = replace(".", "/")
@@ -129,7 +130,7 @@ class ClassCarpenter {
     private fun generateClass(classSchema: Schema): Class<*> {
         return generate(classSchema) { cw, schema ->
             val superName = schema.superclass?.jvmName ?: "java/lang/Object"
-            var interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
+            val interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
 
             if (SimpleFieldAccess::class.java !in schema.interfaces) interfaces.add(SimpleFieldAccess::class.java.name.jvm)
 

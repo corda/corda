@@ -15,9 +15,6 @@ import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
 import java.util.*
 
-import net.corda.core.serialization.carpenter.Schema as CarpenterSchema
-import net.corda.core.serialization.carpenter.Field as CarpenterField
-
 // TODO: get an assigned number as per AMQP spec
 val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
 
@@ -171,8 +168,6 @@ data class Field(val name: String, val type: String, val requires: List<String>,
         sb.append("/>")
         return sb.toString()
     }
-
-    fun typeAsString() = if (type =="*") requires[0] else type
 }
 
 sealed class TypeNotation : DescribedType {

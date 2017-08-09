@@ -1,5 +1,6 @@
 package net.corda.core.serialization.amqp;
 
+import net.corda.core.serialization.AllWhitelist;
 import net.corda.core.serialization.SerializedBytes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
@@ -167,7 +168,7 @@ public class JavaSerializationOutputTests {
     }
 
     private Object serdes(Object obj) throws NotSerializableException {
-        SerializerFactory factory = new SerializerFactory();
+        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
         SerializationOutput ser = new SerializationOutput(factory);
         SerializedBytes<Object> bytes = ser.serialize(obj);
 

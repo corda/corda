@@ -34,7 +34,7 @@ fun Schema.mangleNames(names: List<String>): Schema {
 }
 
 open class AmqpCarpenterBase {
-    var factory = SerializerFactory()
+    var factory = SerializerFactoryFactory.get()
 
     fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
     fun testName(): String = Thread.currentThread().stackTrace[2].methodName
