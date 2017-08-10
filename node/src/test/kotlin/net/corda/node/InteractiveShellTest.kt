@@ -94,14 +94,6 @@ class InteractiveShellTest {
         override val resultFuture: CordaFuture<Any?> get() = throw UnsupportedOperationException()
         override val flowInitiator: FlowInitiator get() = throw UnsupportedOperationException()
 
-        override fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot {
-            throw UnsupportedOperationException("not implemented")
-        }
-
-        override fun persistFlowStackSnapshot(flowClass: Class<*>) {
-            throw UnsupportedOperationException("not implemented")
-        }
-
         override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
             // Do nothing
         }

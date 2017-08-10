@@ -1,19 +1,22 @@
 package net.corda.core.flows
 
-import net.corda.core.internal.WriteOnceProperty
 import net.corda.core.utilities.loggerFor
 import java.nio.file.Path
-
-/**
- * [FlowStackSnapshotFactory] reference holder. It is initialised with the default implementation that does nothing
- * when called in the production deployment. Once the test-utils module is referenced (i.e.non-production deployment is
- * detected), this reference is replaced with the actual implementation of the flow stack snapshot logic.
- */
-object FlowStackSnapshotDefaults {
-    var FLOW_STACK_SNAPSHOT_FACTORY: FlowStackSnapshotFactory by WriteOnceProperty(FlowStackSnapshotDefaultFactory())
-}
+import java.util.*
 
 interface FlowStackSnapshotFactory {
+    private object Holder {
+        val INSTANCE: FlowStackSnapshotFactory
+
+        init {
+            val serviceFactory = ServiceLoader.load(FlowStackSnapshotFactory::class.java).singleOrNull()
+            INSTANCE = serviceFactory ?: FlowStackSnapshotDefaultFactory()
+        }
+    }
+
+    companion object {
+        val instance: FlowStackSnapshotFactory by lazy { Holder.INSTANCE }
+    }
 
     /**
      * Returns flow stack data snapshot extracted from Quasar stack.
@@ -37,7 +40,6 @@ interface FlowStackSnapshotFactory {
 }
 
 private class FlowStackSnapshotDefaultFactory : FlowStackSnapshotFactory {
-
     val log = loggerFor<FlowStackSnapshotDefaultFactory>()
 
     override fun getFlowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot? {

@@ -256,12 +256,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot? {
-        val factory = FlowStackSnapshotDefaults.FLOW_STACK_SNAPSHOT_FACTORY
+        val factory = FlowStackSnapshotFactory.instance
         return factory.getFlowStackSnapshot(flowClass)
     }
 
     override fun persistFlowStackSnapshot(flowClass: Class<*>): Unit {
-        val factory = FlowStackSnapshotDefaults.FLOW_STACK_SNAPSHOT_FACTORY
+        val factory = FlowStackSnapshotFactory.instance
         factory.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id.toString())
     }
 

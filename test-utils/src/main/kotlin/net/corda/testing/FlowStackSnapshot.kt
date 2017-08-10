@@ -7,8 +7,11 @@ import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.FlowStackSnapshot.Frame
+import net.corda.core.flows.FlowStackSnapshotFactory
+import net.corda.core.flows.StackFrameDataToken
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.serialization.SerializeAsToken
 import java.io.File
@@ -16,30 +19,7 @@ import java.nio.file.Path
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-/**
- * Singleton holding a reference to the [FlowStackSnapshotFactoryImpl].
- */
-class FlowStackSnapshotFactoryProvider private constructor() {
-
-    private object Holder {
-        val INSTANCE = FlowStackSnapshotFactoryImpl()
-    }
-
-    companion object {
-        val instance: FlowStackSnapshotFactory by lazy { Holder.INSTANCE }
-    }
-}
-
-/**
- * Replaces the default implementation (i.e. one that throws [NotImplementedError] exception) of the flow stack
- * snapshot logic with the [FlowStackSnapshotFactoryImpl].
- */
-fun initialiseFlowStackSnapshotFactory() {
-    FlowStackSnapshotDefaults.FLOW_STACK_SNAPSHOT_FACTORY = FlowStackSnapshotFactoryProvider.instance
-}
-
-private class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
-
+class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
     @Suspendable
     override fun getFlowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot? {
         var snapshot: FlowStackSnapshot? = null
@@ -80,7 +60,6 @@ private class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
             val element = StackTraceElement(it.className, it.methodName, it.fileName, it.lineNumber)
             element to getInstrumentedAnnotation(element)
         }
-
         val frameObjectsIterator = frameObjects.listIterator()
         val frames = stackTraceToAnnotation.reversed().map { (element, annotation) ->
             // If annotation is null then the case indicates that this is an entry point - i.e.
