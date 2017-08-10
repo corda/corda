@@ -99,7 +99,7 @@ class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: 
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, entitySchemas : Set<MappedSchema> = emptySet<MappedSchema>()): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, entitySchemas: Set<MappedSchema> = emptySet<MappedSchema>()): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
     val persistence = CordaPersistence.connect(dataSource, NodeSchemaService(entitySchemas), databaseProperties ?: Properties())
@@ -166,7 +166,7 @@ private class DatabaseTransactionWrappingSubscriber<U>(val db: CordaPersistence?
 }
 
 // A subscriber that wraps another but does not pass on observations to it.
-private class NoOpSubscriber<U>(t: Subscriber<in U>) : Subscriber<U>(t) {
+private class NoOpSubscriber<U>(t: Subscriber<in U>): Subscriber<U>(t) {
     override fun onCompleted() {
     }
 
@@ -201,7 +201,7 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
     }
 }
 
-fun parserTransactionIsolationLevel(property: String?) : Int =
+fun parserTransactionIsolationLevel(property: String?): Int =
         when (property) {
             "none" -> Connection.TRANSACTION_NONE
             "readUncommitted" -> Connection.TRANSACTION_READ_UNCOMMITTED
