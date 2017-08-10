@@ -91,6 +91,9 @@ UNRELEASED
     of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified
     by set of lock ids)
 
+* Added JPA ``AbstractPartyConverter`` to ensure identity schema attributes are persisted securely according to type
+  (well known party, resolvable anonymous party, completely anonymous party).
+
 Milestone 13
 ------------
 

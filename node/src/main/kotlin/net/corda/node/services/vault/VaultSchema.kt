@@ -105,8 +105,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var participants: Set<CommonSchemaV1.Party>,
 
             /** [OwnableState] attributes */
-            @OneToOne(cascade = arrayOf(CascadeType.ALL))
-            var owner: CommonSchemaV1.Party,
+            @Column(name = "owner_id")
+            var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
              *
@@ -126,7 +126,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var issuerRef: ByteArray
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
-                this(owner = CommonSchemaV1.Party(_owner),
+                this(owner = _owner,
                      quantity = _quantity,
                      issuerParty = CommonSchemaV1.Party(_issuerParty),
                      issuerRef = _issuerRef.bytes,
