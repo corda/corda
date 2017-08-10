@@ -33,7 +33,12 @@ class DeserializeNeedingCarpentryTests {
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(classInstance)
         val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
 
+        assertNotEquals(clazz::class.java, deserializedObj::class.java)
         assertEquals (testVal, deserializedObj::class.java.getMethod("getA").invoke(deserializedObj))
+
+        val deserializedObj2 = DeserializationInput(sf).deserialize(serialisedBytes)
+
+        assertEquals(deserializedObj::class.java, deserializedObj2::class.java)
     }
 
     @Test
