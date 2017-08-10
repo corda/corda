@@ -348,8 +348,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val polledMessage = pollForMessage()
         return if (polledMessage != null) {
             if (this is SendAndReceive) {
-                // We've already received a message but we suspend so that the send can be performed
-                suspend(this)
+                // Since we've already received the message, we downgrade to a send only to get the payload out and not
+                // inadvertently block
+                suspend(SendOnly(session, message))
             }
             polledMessage
         } else {
