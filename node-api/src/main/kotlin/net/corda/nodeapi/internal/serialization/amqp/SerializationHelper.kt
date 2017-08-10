@@ -35,6 +35,7 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
         val kotlinConstructors = clazz.kotlin.constructors
         val hasDefault = kotlinConstructors.any { it.parameters.isEmpty() }
         for (kotlinConstructor in kotlinConstructors) {
+            println (kotlinConstructor)
             if (preferredCandidate == null && kotlinConstructors.size == 1 && !hasDefault) {
                 preferredCandidate = kotlinConstructor
             } else if (preferredCandidate == null && kotlinConstructors.size == 2 && hasDefault && kotlinConstructor.parameters.isNotEmpty()) {
@@ -44,6 +45,7 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
                     throw NotSerializableException("More than one constructor for $clazz is annotated with @CordaConstructor.")
                 }
                 preferredCandidate = kotlinConstructor
+                println ("  -> $preferredCandidate")
             }
         }
         return preferredCandidate ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")

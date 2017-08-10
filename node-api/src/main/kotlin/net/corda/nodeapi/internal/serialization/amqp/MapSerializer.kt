@@ -18,18 +18,23 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
     companion object {
-        private val supportedTypes: Map<Class<out Any>, (Map<*, *>) -> Map<*, *>> = mapOf(
+        private val supportedTypes: Map<Class<out Any?>, (Map<*, *>) -> Map<*, *>> = mapOf(
+                // Interfaces
                 Map::class.java to { map -> map },
                 SortedMap::class.java to { map -> TreeMap(map) },
                 NavigableMap::class.java to { map -> TreeMap(map) },
+                // Sub types
                 Dictionary::class.java to { map -> Hashtable(map) },
-                // concrete types for user convienience
-                HashMap::class.java to { map -> LinkedHashMap(map) },
+                AbstractMap::class.java to { map -> LinkedHashMap(map) },
+                // concrete types
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
                 TreeMap::class.java to { map -> TreeMap(map) },
-                Hashtable::class.java to { map -> Hashtable(map) }
+                Hashtable::class.java to { map -> Hashtable(map) },
+                WeakHashMap::class.java to { map -> WeakHashMap(map) }
+                // Explicitly disallowed
+                //  - HashMap::class.java
+                //  - EnumMap::class.java
         )
-
         private fun findConcreteType(clazz: Class<*>): (Map<*, *>) -> Map<*, *> {
             return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported map type $clazz.")
         }

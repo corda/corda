@@ -356,7 +356,7 @@ class SerializationOutputTests {
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test
     fun `test TreeMap property`() {
         val obj = TreeMapWrapper(TreeMap<Int, Foo>())
         obj.tree[456] = Foo("Fred", 123)
