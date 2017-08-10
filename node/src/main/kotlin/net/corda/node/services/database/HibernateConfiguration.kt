@@ -60,8 +60,6 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase","true") == "true") "update" else "validate")
                 .setProperty("hibernate.format_sql", "true")
-        // add custom converters
-        config.addAttributeConverter(AbstractPartyConverter(identitySvc))
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
@@ -81,6 +79,9 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
                     return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
                 }
             })
+            // register custom converters
+            applyAttributeConverter(AbstractPartyConverter(identitySvc))
+
             build()
         }
 
