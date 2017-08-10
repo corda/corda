@@ -5,6 +5,10 @@ import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.nodeapi.internal.serialization.carpenter.CarpenterSchemas
+import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
+import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
+import net.corda.nodeapi.internal.serialization.carpenter.carpenterSchema
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.GenericArrayType
@@ -44,6 +48,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
+    private val classCarpenter = ClassCarpenter()
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -167,15 +172,30 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun processSchema(schema: Schema) {
+    private fun processSchema(schema: Schema, sentinal: Boolean = false) {
+        val carpenterSchemas = CarpenterSchemas.newInstance()
         for (typeNotation in schema.types) {
-            processSchemaEntry(typeNotation)
+            try {
+                processSchemaEntry(typeNotation, classCarpenter.classloader)
+            }
+            catch (e: ClassNotFoundException) {
+                if (sentinal || (typeNotation !is CompositeType)) throw e
+                typeNotation.carpenterSchema(
+                        classLoaders = listOf (classCarpenter.classloader), carpenterSchemas = carpenterSchemas)
+            }
+        }
+
+        if (carpenterSchemas.isNotEmpty()) {
+            val mc = MetaCarpenter(carpenterSchemas, classCarpenter)
+            mc.build()
+            processSchema(schema, true)
         }
     }
 
-    private fun processSchemaEntry(typeNotation: TypeNotation) {
+    private fun processSchemaEntry(typeNotation: TypeNotation,
+            cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
         when (typeNotation) {
-            is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
+            is CompositeType -> processCompositeType(typeNotation, cl) // java.lang.Class (whether a class or interface)
             is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
         }
     }
@@ -188,16 +208,17 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun processCompositeType(typeNotation: CompositeType) {
+    private fun processCompositeType(typeNotation: CompositeType,
+                cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
         serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
             // TODO: class loader logic, and compare the schema.
-            val type = typeForName(typeNotation.name)
+            val type = typeForName(typeNotation.name, cl)
             get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
         }
     }
 
-    private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> {
-        return serializersByType.computeIfAbsent(type) {
+    private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> =
+            serializersByType.computeIfAbsent(type) {
             if (isPrimitive(clazz)) {
                 AMQPPrimitiveSerializer(clazz)
             } else {
@@ -215,7 +236,6 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                     }
                 }
             }
-        }
     }
 
     internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
@@ -270,6 +290,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
         private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
                 Character::class.java to "char",
+                Char::class.java to "char",
                 Boolean::class.java to "boolean",
                 Byte::class.java to "byte",
                 UnsignedByte::class.java to "ubyte",
@@ -284,7 +305,6 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 Decimal32::class.java to "decimal32",
                 Decimal64::class.java to "decimal62",
                 Decimal128::class.java to "decimal128",
-                Char::class.java to "char",
                 Date::class.java to "timestamp",
                 UUID::class.java to "uuid",
                 ByteArray::class.java to "binary",
@@ -296,7 +316,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         fun nameForType(type: Type) : String = when (type) {
                 is Class<*> -> {
                     primitiveTypeName(type) ?: if (type.isArray) {
-                        "${nameForType(type.componentType)}${if(type.componentType.isPrimitive)"[p]" else "[]"}"
+                        "${nameForType(type.componentType)}${if(type.componentType.isPrimitive) "[p]" else "[]"}"
                     } else type.name
                 }
                 is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
@@ -304,7 +324,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 
-        private fun typeForName(name: String): Type {
+        private fun typeForName(
+                name: String,
+                cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader): Type {
             return if (name.endsWith("[]")) {
                 val elementType = typeForName(name.substring(0, name.lastIndex - 1))
                 if (elementType is ParameterizedType || elementType is GenericArrayType) {
@@ -329,7 +351,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                     else -> throw NotSerializableException("Not able to deserialize array type: $name")
                 }
             } else {
-                DeserializedParameterizedType.make(name)
+                DeserializedParameterizedType.make(name, cl)
             }
         }
     }

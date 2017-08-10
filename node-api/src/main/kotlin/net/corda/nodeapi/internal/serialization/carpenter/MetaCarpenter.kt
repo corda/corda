@@ -42,6 +42,9 @@ data class CarpenterSchemas (
 
     val size
         get() = carpenterSchemas.size
+
+    fun isEmpty() = carpenterSchemas.isEmpty()
+    fun isNotEmpty() = carpenterSchemas.isNotEmpty()
 }
 
 /**
@@ -53,8 +56,7 @@ data class CarpenterSchemas (
  * @property cc a reference to the actual class carpenter we're using to constuct classes
  * @property objects a list of carpented classes loaded into the carpenters class loader
  */
-abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
-    private val cc = ClassCarpenter()
+abstract class MetaCarpenterBase (val schemas : CarpenterSchemas, val cc : ClassCarpenter = ClassCarpenter()) {
     val objects = mutableMapOf<String, Class<*>>()
 
     fun step(newObject: Schema) {
@@ -80,9 +82,13 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
     }
 
     abstract fun build()
+
+    val classloader : ClassLoader
+            get() = cc.classloader
 }
 
-class MetaCarpenter(schemas: CarpenterSchemas) : MetaCarpenterBase(schemas) {
+class MetaCarpenter(schemas : CarpenterSchemas,
+                    cc : ClassCarpenter = ClassCarpenter()) : MetaCarpenterBase(schemas, cc) {
     override fun build() {
         while (schemas.carpenterSchemas.isNotEmpty()) {
             val newObject = schemas.carpenterSchemas.removeAt(0)
@@ -91,7 +97,8 @@ class MetaCarpenter(schemas: CarpenterSchemas) : MetaCarpenterBase(schemas) {
     }
 }
 
-class TestMetaCarpenter(schemas: CarpenterSchemas) : MetaCarpenterBase(schemas) {
+class TestMetaCarpenter(schemas : CarpenterSchemas,
+                        cc : ClassCarpenter = ClassCarpenter()) : MetaCarpenterBase(schemas, cc) {
     override fun build() {
         if (schemas.carpenterSchemas.isEmpty()) return
         step (schemas.carpenterSchemas.removeAt(0))

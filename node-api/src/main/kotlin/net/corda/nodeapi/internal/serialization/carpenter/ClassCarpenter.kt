@@ -129,7 +129,7 @@ class ClassCarpenter {
     private fun generateClass(classSchema: Schema): Class<*> {
         return generate(classSchema) { cw, schema ->
             val superName = schema.superclass?.jvmName ?: "java/lang/Object"
-            var interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
+            val interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
 
             if (SimpleFieldAccess::class.java !in schema.interfaces) interfaces.add(SimpleFieldAccess::class.java.name.jvm)
 
