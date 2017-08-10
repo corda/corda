@@ -38,8 +38,8 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     )
 
     private companion object {
-        fun createKeyMap(): PersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
-            return PersistentMap(
+        fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
+            return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toBase58String() },
                     fromPersistentEntity = { Pair(parsePublicKeyBase58(it.publicKey),
                             it.privateKey.deserialize<PrivateKey>(context = SerializationDefaults.STORAGE_CONTEXT)) },
