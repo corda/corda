@@ -1,25 +1,33 @@
-package net.corda.core.crypto
+package net.corda.node.utilities
 
+import net.corda.core.crypto.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
-import org.bouncycastle.asn1.ASN1Encodable
+import org.bouncycastle.asn1.ASN1EncodableVector
+import org.bouncycastle.asn1.ASN1Sequence
+import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
-import org.bouncycastle.asn1.x509.KeyPurposeId
-import org.bouncycastle.asn1.x509.KeyUsage
-import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.cert.X509v3CertificateBuilder
+import org.bouncycastle.cert.bc.BcX509ExtensionUtils
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
+import org.bouncycastle.operator.ContentSigner
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
+import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.util.io.pem.PemReader
 import java.io.FileReader
 import java.io.FileWriter
 import java.io.InputStream
+import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.*
+import java.security.cert.Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -69,44 +77,13 @@ object X509Utilities {
         return Pair(notBefore, notAfter)
     }
 
-    /**
-     * Return a bogus X509 for dev purposes. Use [getX509Name] for something more real.
-     */
-    @Deprecated("Full legal names should be specified in all configurations")
-    fun getDevX509Name(commonName: String): X500Name {
-        val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
-        nameBuilder.addRDN(BCStyle.CN, commonName)
-        nameBuilder.addRDN(BCStyle.O, "R3")
-        nameBuilder.addRDN(BCStyle.OU, "corda")
-        nameBuilder.addRDN(BCStyle.L, "London")
-        nameBuilder.addRDN(BCStyle.C, "GB")
-        return nameBuilder.build()
-    }
-
-    /**
-     * Generate a distinguished name from the provided values.
-     *
-     * @see [CoreTestUtils.getTestX509Name] for generating distinguished names for test cases.
-     */
-    @JvmOverloads
-    @JvmStatic
-    fun getX509Name(myLegalName: String, nearestCity: String, email: String, country: String? = null): X500Name {
-        return X500NameBuilder(BCStyle.INSTANCE).let { builder ->
-            builder.addRDN(BCStyle.CN, myLegalName)
-            builder.addRDN(BCStyle.L, nearestCity)
-            country?.let { builder.addRDN(BCStyle.C, it) }
-            builder.addRDN(BCStyle.E, email)
-            builder.build()
-        }
-    }
-
     /*
      * Create a de novo root self-signed X509 v3 CA cert.
      */
     @JvmStatic
     fun createSelfSignedCACertificate(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
-        return Crypto.createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
+        return createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
     }
 
     /**
@@ -126,7 +103,7 @@ object X509Utilities {
                           validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
                           nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, issuerCertificate)
-        return Crypto.createCertificate(certificateType, issuerCertificate.subject, issuerKeyPair, subject, subjectPublicKey, window, nameConstraints)
+        return createCertificate(certificateType, issuerCertificate.subject, issuerKeyPair, subject, subjectPublicKey, window, nameConstraints)
     }
 
     fun validateCertificateChain(trustedRoot: X509CertificateHolder, vararg certificates: Certificate) {
@@ -168,62 +145,99 @@ object X509Utilities {
         }
     }
 
-    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME) = Crypto.createCertificateSigningRequest(subject, keyPair, signatureScheme)
-}
+    /**
+     * Build a partial X.509 certificate ready for signing.
+     *
+     * @param issuer name of the issuing entity.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     */
+    fun createCertificate(certificateType: CertificateType, issuer: X500Name,
+                          subject: X500Name, subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Date, Date>,
+                          nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
 
-/**
- * Rebuild the distinguished name, adding a postfix to the common name. If no common name is present.
- * @throws IllegalArgumentException if the distinguished name does not contain a common name element.
- */
-fun X500Name.appendToCommonName(commonName: String): X500Name = mutateCommonName { attr -> attr.toString() + commonName }
+        val serial = BigInteger.valueOf(random63BitValue())
+        val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
+        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
 
-/**
- * Rebuild the distinguished name, replacing the common name with the given value. If no common name is present, this
- * adds one.
- * @throws IllegalArgumentException if the distinguished name does not contain a common name element.
- */
-fun X500Name.replaceCommonName(commonName: String): X500Name = mutateCommonName { _ -> commonName }
+        val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
+                .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(subjectPublicKeyInfo))
+                .addExtension(Extension.basicConstraints, certificateType.isCA, BasicConstraints(certificateType.isCA))
+                .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
+                .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
 
-/**
- * Rebuild the distinguished name, replacing the common name with a value generated from the provided function.
- *
- * @param mutator a function to generate the new value from the previous one.
- * @throws IllegalArgumentException if the distinguished name does not contain a common name element.
- */
-private fun X500Name.mutateCommonName(mutator: (ASN1Encodable) -> String): X500Name {
-    val builder = X500NameBuilder(BCStyle.INSTANCE)
-    var matched = false
-    this.rdNs.forEach { rdn ->
-        rdn.typesAndValues.forEach { typeAndValue ->
-            when (typeAndValue.type) {
-                BCStyle.CN -> {
-                    matched = true
-                    builder.addRDN(typeAndValue.type, mutator(typeAndValue.value))
-                }
-                else -> {
-                    builder.addRDN(typeAndValue)
-                }
-            }
+        if (nameConstraints != null) {
+            builder.addExtension(Extension.nameConstraints, true, nameConstraints)
+        }
+        return builder
+    }
+
+    /**
+     * Build and sign an X.509 certificate with the given signer.
+     *
+     * @param issuer name of the issuing entity.
+     * @param issuerSigner content signer to sign the certificate with.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     */
+    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerSigner: ContentSigner,
+                          subject: X500Name, subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Date, Date>,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
+        return builder.build(issuerSigner).apply {
+            require(isValidOn(Date()))
         }
     }
-    require(matched) { "Input X.500 name must include a common name (CN) attribute: ${this}" }
-    return builder.build()
+
+    /**
+     * Build and sign an X.509 certificate with CA cert private key.
+     *
+     * @param issuer name of the issuing entity.
+     * @param issuerKeyPair the public & private key to sign the certificate with.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     */
+    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
+                          subject: X500Name, subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Date, Date>,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+
+        val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
+        val provider = Crypto.providerMap[signatureScheme.providerName]
+        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
+
+        val signer = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
+        return builder.build(signer).apply {
+            require(isValidOn(Date()))
+            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public)))
+        }
+    }
+
+    /**
+     * Create certificate signing request using provided information.
+     */
+    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
+        val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.providerMap[signatureScheme.providerName])
+        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).build(signer)
+    }
+
+    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair) = createCertificateSigningRequest(subject, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
 }
 
-val X500Name.commonName: String get() = getRDNs(BCStyle.CN).first().first.value.toString()
-val X500Name.orgName: String? get() = getRDNs(BCStyle.O).firstOrNull()?.first?.value?.toString()
-val X500Name.location: String get() = getRDNs(BCStyle.L).first().first.value.toString()
-val X500Name.locationOrNull: String? get() = try { location } catch (e: Exception) { null }
-val X509Certificate.subject: X500Name get() = X509CertificateHolder(encoded).subject
-val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 class CertificateStream(val input: InputStream) {
     private val certificateFactory = CertificateFactory.getInstance("X.509")
 
     fun nextCertificate(): X509Certificate = certificateFactory.generateCertificate(input) as X509Certificate
 }
-
-data class CertificateAndKeyPair(val certificate: X509CertificateHolder, val keyPair: KeyPair)
 
 enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean) {
     ROOT_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),

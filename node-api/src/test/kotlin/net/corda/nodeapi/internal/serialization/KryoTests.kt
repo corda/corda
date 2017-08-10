@@ -11,20 +11,14 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.testing.ALICE
 import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.BOB
-import net.corda.testing.BOB_PUBKEY
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Before
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
-import java.security.cert.CertPath
-import java.security.cert.CertificateFactory
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -148,26 +142,6 @@ class KryoTests {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
         }
         assertEquals(-1, readRubbishStream.read())
-    }
-
-    @Test
-    fun `serialize - deserialize X509CertififcateHolder`() {
-        val expected: X509CertificateHolder = X509Utilities.createSelfSignedCACertificate(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        val serialized = expected.serialize(factory, context).bytes
-        val actual: X509CertificateHolder = serialized.deserialize(factory, context)
-        assertEquals(expected, actual)
-    }
-
-    @Test
-    fun `serialize - deserialize X509CertPath`() {
-        val certFactory = CertificateFactory.getInstance("X509")
-        val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
-        val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name, BOB_PUBKEY)
-        val expected = certFactory.generateCertPath(listOf(certificate.cert, rootCACert.cert))
-        val serialized = expected.serialize(factory, context).bytes
-        val actual: CertPath = serialized.deserialize(factory, context)
-        assertEquals(expected, actual)
     }
 
     @CordaSerializable

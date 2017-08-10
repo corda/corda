@@ -1,19 +1,28 @@
-package net.corda.core.crypto
+package net.corda.node.utilities
 
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.generateKeyPair
-import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
-import net.corda.core.crypto.X509Utilities.createSelfSignedCACertificate
+import net.corda.core.crypto.cert
+import net.corda.core.crypto.commonName
+import net.corda.core.crypto.getX509Name
 import net.corda.core.internal.div
 import net.corda.core.internal.toTypedArray
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
+import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.config.createKeystoreForCordaNode
-import net.corda.node.utilities.*
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.getTestX509Name
+import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.SerializationContextImpl
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.testing.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.KeyUsage
+import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.junit.Rule
 import org.junit.Test
@@ -27,7 +36,9 @@ import java.nio.file.Path
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.SecureRandom
+import java.security.cert.CertPath
 import java.security.cert.Certificate
+import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.*
 import java.util.stream.Stream
@@ -42,8 +53,8 @@ class X509UtilitiesTest {
 
     @Test
     fun `create valid self-signed CA certificate`() {
-        val caKey = generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
-        val caCert = createSelfSignedCACertificate(getTestX509Name("Test Cert"), caKey)
+        val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val caCert = X509Utilities.createSelfSignedCACertificate(getTestX509Name("Test Cert"), caKey)
         assertTrue { caCert.subject.commonName == "Test Cert" } // using our subject common name
         assertEquals(caCert.issuer, caCert.subject) //self-signed
         caCert.isValidOn(Date()) // throws on verification problems
@@ -57,8 +68,8 @@ class X509UtilitiesTest {
     @Test
     fun `load and save a PEM file certificate`() {
         val tmpCertificateFile = tempFile("cacert.pem")
-        val caKey = generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
-        val caCert = createSelfSignedCACertificate(getTestX509Name("Test Cert"), caKey)
+        val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val caCert = X509Utilities.createSelfSignedCACertificate(getTestX509Name("Test Cert"), caKey)
         X509Utilities.saveCertificateAsPEMFile(caCert, tmpCertificateFile)
         val readCertificate = X509Utilities.loadCertificateFromPEMFile(tmpCertificateFile)
         assertEquals(caCert, readCertificate)
@@ -66,10 +77,10 @@ class X509UtilitiesTest {
 
     @Test
     fun `create valid server certificate chain`() {
-        val caKey = generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
-        val caCert = createSelfSignedCACertificate(getTestX509Name("Test CA Cert"), caKey)
+        val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val caCert = X509Utilities.createSelfSignedCACertificate(getTestX509Name("Test CA Cert"), caKey)
         val subject = getTestX509Name("Server Cert")
-        val keyPair = generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
+        val keyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val serverCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, caKey, subject, keyPair.public)
         assertTrue { serverCert.subject.toString().contains("CN=Server Cert") } // using our subject common name
         assertEquals(caCert.issuer, serverCert.issuer) // Issued by our CA cert
@@ -86,7 +97,7 @@ class X509UtilitiesTest {
         val tmpKeyStore = tempFile("keystore.jks")
 
         val keyPair = generateKeyPair(EDDSA_ED25519_SHA512)
-        val selfSignCert = createSelfSignedCACertificate(X500Name("CN=Test"), keyPair)
+        val selfSignCert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Test"), keyPair)
 
         assertTrue(Arrays.equals(selfSignCert.subjectPublicKeyInfo.encoded, keyPair.public.encoded))
 
@@ -111,7 +122,7 @@ class X509UtilitiesTest {
     fun `signing EdDSA key with EcDSA certificate`() {
         val tmpKeyStore = tempFile("keystore.jks")
         val ecDSAKey = generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val ecDSACert = createSelfSignedCACertificate(X500Name("CN=Test"), ecDSAKey)
+        val ecDSACert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Test"), ecDSAKey)
         val edDSAKeypair = generateKeyPair(EDDSA_ED25519_SHA512)
         val edDSACert = X509Utilities.createCertificate(CertificateType.TLS, ecDSACert, ecDSAKey, X500Name("CN=TestEdDSA"), edDSAKeypair.public)
 
@@ -155,8 +166,8 @@ class X509UtilitiesTest {
 
         // Now sign something with private key and verify against certificate public key
         val testData = "12345".toByteArray()
-        val caSignature = Crypto.doSign(DEFAULT_TLS_SIGNATURE_SCHEME, rootCaPrivateKey, testData)
-        assertTrue { Crypto.isValid(DEFAULT_TLS_SIGNATURE_SCHEME, rootCaCert.publicKey, caSignature, testData) }
+        val caSignature = Crypto.doSign(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, rootCaPrivateKey, testData)
+        assertTrue { Crypto.isValid(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, rootCaCert.publicKey, caSignature, testData) }
 
         // Load back generated intermediate CA Cert and private key
         val intermediateCaCert = keyStore.getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA) as X509Certificate
@@ -165,8 +176,8 @@ class X509UtilitiesTest {
         intermediateCaCert.verify(rootCaCert.publicKey)
 
         // Now sign something with private key and verify against certificate public key
-        val intermediateSignature = Crypto.doSign(DEFAULT_TLS_SIGNATURE_SCHEME, intermediateCaCertPrivateKey, testData)
-        assertTrue { Crypto.isValid(DEFAULT_TLS_SIGNATURE_SCHEME, intermediateCaCert.publicKey, intermediateSignature, testData) }
+        val intermediateSignature = Crypto.doSign(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, intermediateCaCertPrivateKey, testData)
+        assertTrue { Crypto.isValid(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, intermediateCaCert.publicKey, intermediateSignature, testData) }
     }
 
     @Test
@@ -209,9 +220,9 @@ class X509UtilitiesTest {
         assertTrue { sslCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.commonName) }
         // Now sign something with private key and verify against certificate public key
         val testData = "123456".toByteArray()
-        val signature = Crypto.doSign(DEFAULT_TLS_SIGNATURE_SCHEME, serverCertAndKey.keyPair.private, testData)
+        val signature = Crypto.doSign(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, serverCertAndKey.keyPair.private, testData)
         val publicKey = Crypto.toSupportedPublicKey(serverCertAndKey.certificate.subjectPublicKeyInfo)
-        assertTrue { Crypto.isValid(DEFAULT_TLS_SIGNATURE_SCHEME, publicKey, signature, testData) }
+        assertTrue { Crypto.isValid(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, publicKey, signature, testData) }
     }
 
     @Test
@@ -343,11 +354,11 @@ class X509UtilitiesTest {
                                               trustStoreFilePath: Path,
                                               trustStorePassword: String
     ): KeyStore {
-        val rootCAKey = generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = createSelfSignedCACertificate(X509Utilities.getX509Name("Corda Node Root CA","London","demo@r3.com",null), rootCAKey)
+        val rootCAKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(getX509Name("Corda Node Root CA", "London", "demo@r3.com", null), rootCAKey)
 
         val intermediateCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X509Utilities.getX509Name("Corda Node Intermediate CA","London","demo@r3.com",null), intermediateCAKeyPair.public)
+        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, getX509Name("Corda Node Intermediate CA", "London", "demo@r3.com", null), intermediateCAKeyPair.public)
 
         val keyPass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
@@ -374,7 +385,7 @@ class X509UtilitiesTest {
     @Test
     fun `Get correct private key type from Keystore`() {
         val keyPair = generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val selfSignCert = createSelfSignedCACertificate(X500Name("CN=Test"), keyPair)
+        val selfSignCert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Test"), keyPair)
         val keyStore = loadOrCreateKeyStore(tempFile("testKeystore.jks"), "keystorepassword")
         keyStore.setKeyEntry("Key", keyPair.private, "keypassword".toCharArray(), arrayOf(selfSignCert.cert))
 
@@ -383,5 +394,39 @@ class X509UtilitiesTest {
 
         assertTrue(keyFromKeystore is java.security.interfaces.ECPrivateKey) // by default JKS returns SUN EC key
         assertTrue(keyFromKeystoreCasted is org.bouncycastle.jce.interfaces.ECPrivateKey)
+    }
+
+    @Test
+    fun `serialize - deserialize X509CertififcateHolder`() {
+        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
+        val context = SerializationContextImpl(KryoHeaderV0_1,
+                javaClass.classLoader,
+                AllWhitelist,
+                emptyMap(),
+                true,
+                SerializationContext.UseCase.P2P)
+        val expected: X509CertificateHolder = X509Utilities.createSelfSignedCACertificate(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+        val serialized = expected.serialize(factory, context).bytes
+        val actual: X509CertificateHolder = serialized.deserialize(factory, context)
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `serialize - deserialize X509CertPath`() {
+        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
+        val context = SerializationContextImpl(KryoHeaderV0_1,
+                javaClass.classLoader,
+                AllWhitelist,
+                emptyMap(),
+                true,
+                SerializationContext.UseCase.P2P)
+        val certFactory = CertificateFactory.getInstance("X509")
+        val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
+        val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name, BOB_PUBKEY)
+        val expected = certFactory.generateCertPath(listOf(certificate.cert, rootCACert.cert))
+        val serialized = expected.serialize(factory, context).bytes
+        val actual: CertPath = serialized.deserialize(factory, context)
+        assertEquals(expected, actual)
     }
 }
