@@ -20,7 +20,7 @@ fun main(args: Array<String>) {
 
 private class TraderDemo {
     enum class Role {
-        BUYER,
+        BANK,
         SELLER
     }
 
@@ -49,7 +49,7 @@ private class TraderDemo {
         // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role
         // will contact the buyer and actually make something happen.
         val role = options.valueOf(roleArg)!!
-        if (role == Role.BUYER) {
+        if (role == Role.BANK) {
             val bankHost = NetworkHostAndPort("localhost", bankRpcPort)
             CordaRPCClient(bankHost).use("demo", "demo") {
                 TraderDemoClientApi(it.proxy).runIssuer(1100.DOLLARS, buyerName, sellerName, notaryName)

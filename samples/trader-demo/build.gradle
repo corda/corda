@@ -105,11 +105,11 @@ publishing {
     }
 }
 
-task runBuyer(type: JavaExec) {
+task runBank(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.traderdemo.TraderDemoKt'
     args '--role'
-    args 'BUYER'
+    args 'BANK'
 }
 
 task runSeller(type: JavaExec) {
