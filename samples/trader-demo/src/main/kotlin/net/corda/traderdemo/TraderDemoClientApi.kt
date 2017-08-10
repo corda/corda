@@ -16,12 +16,11 @@ import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.flows.CashIssueFlow
 import net.corda.node.services.vault.VaultSchemaV1
-import net.corda.testing.BOC
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.calculateRandomlySizedAmounts
-import net.corda.traderdemo.flow.BankFlow
+import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
@@ -48,10 +47,24 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
     }
 
-    fun runCpIssuer(amount: Amount<Currency> = 1100.0.DOLLARS, counterparty: X500Name) {
-        val otherParty = rpc.partyFromX500Name(counterparty) ?: throw IllegalStateException("Don't know $counterparty")
-        // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
-        //
+    fun runIssuer(amount: Amount<Currency> = 1100.0.DOLLARS, buyerName: X500Name, sellerName: X500Name, notaryName: X500Name) {
+        val ref = OpaqueBytes.of(1)
+        val buyer = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
+        val seller = rpc.partyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
+        val notaryLegalIdentity = rpc.partyFromX500Name(DUMMY_NOTARY.name)
+                ?: throw IllegalStateException("Unable to locate ${DUMMY_NOTARY.name} in Network Map Service")
+        val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
+                ?: throw IllegalStateException("Unable to locate notary node in network map cache")
+        val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
+        val anonymous = false
+        // issue random amounts of currency up to the requested amount, in parallel
+        val resultFutures = amounts.map { pennies ->
+            rpc.startFlow(::CashIssueFlow, amount.copy(quantity = pennies), OpaqueBytes.of(1), buyer, notaryNode.notaryIdentity, anonymous).returnValue
+        }
+
+        resultFutures.transpose().getOrThrow()
+        println("Cash issued to buyer")
+
         // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
         // attachment. Make sure we have the transaction prospectus attachment loaded into our store.
         //
@@ -64,33 +77,12 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         }
 
         // The line below blocks and waits for the future to resolve.
-        println("Running bank flow")
-        val stx = rpc.startFlow(::BankFlow, otherParty, amount).returnValue.getOrThrow()
+        val stx = rpc.startFlow(::CommercialPaperIssueFlow, amount, ref, seller, notaryNode.notaryIdentity).returnValue.getOrThrow()
         println("Commercial paper issued to seller")
     }
 
-    fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS, anonymous: Boolean = false) {
-        val bankOfCordaParty = rpc.partyFromX500Name(BOC.name)
-                ?: throw IllegalStateException("Unable to locate ${BOC.name} in Network Map Service")
-        val notaryLegalIdentity = rpc.partyFromX500Name(DUMMY_NOTARY.name)
-                ?: throw IllegalStateException("Unable to locate ${DUMMY_NOTARY.name} in Network Map Service")
-        val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
-                ?: throw IllegalStateException("Unable to locate notary node in network map cache")
-        val me = rpc.nodeIdentity()
-        val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
-        // issuer random amounts of currency totaling 30000.DOLLARS in parallel
-        val resultFutures = amounts.map { pennies ->
-            rpc.startFlow(::IssuanceRequester, Amount(pennies, amount.token), me.legalIdentity, OpaqueBytes.of(1), bankOfCordaParty, notaryNode.notaryIdentity, anonymous).returnValue
-        }
-
-        resultFutures.transpose().getOrThrow()
-    }
-
-    /**
-     * @param cpIssuer the name of the party who will issue commercial paper to be sold.
-     */
-    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, counterparty: X500Name) {
-        val otherParty = rpc.partyFromX500Name(counterparty) ?: throw IllegalStateException("Don't know $counterparty")
+    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, buyerName: X500Name) {
+        val otherParty = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
         // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
         //
         // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an

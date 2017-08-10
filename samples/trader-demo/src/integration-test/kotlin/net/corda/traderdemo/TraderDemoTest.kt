@@ -53,7 +53,7 @@ class TraderDemoTest : NodeBasedTest() {
 
         // TODO: Enable anonymisation
         clientA.runBuyer(amount = 100.DOLLARS, anonymous = false)
-        clientB.runSeller(counterparty = nodeA.info.legalIdentity.name, cpIssuer = bankNode.info.legalIdentity.name, amount = 5.DOLLARS)
+        clientB.runSeller(buyerName = nodeA.info.legalIdentity.name, cpIssuer = bankNode.info.legalIdentity.name, amount = 5.DOLLARS)
 
         assertThat(clientA.cashCount).isGreaterThan(originalACash)
         assertThat(clientB.cashCount).isEqualTo(expectedBCash)
