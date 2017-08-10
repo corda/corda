@@ -11,7 +11,7 @@ import javax.persistence.Converter
  * Completely anonymous parties are stored as null (to preserve privacy)
  */
 @Converter(autoApply = true)
-class AbstractPartyConverter(val identitySvc: IdentityService) : AttributeConverter<AbstractParty, String> {
+class AbstractPartyToX500NameAsStringConverter(val identitySvc: IdentityService) : AttributeConverter<AbstractParty, String> {
 
     override fun convertToDatabaseColumn(party: AbstractParty?): String? {
         party?.let {

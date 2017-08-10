@@ -3,7 +3,7 @@ package net.corda.node.services.database
 import net.corda.core.internal.castIfPossible
 import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.converters.AbstractPartyConverter
+import net.corda.core.schemas.converters.AbstractPartyToX500NameAsStringConverter
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
@@ -80,7 +80,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
                 }
             })
             // register custom converters
-            applyAttributeConverter(AbstractPartyConverter(identitySvc))
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identitySvc))
 
             build()
         }
