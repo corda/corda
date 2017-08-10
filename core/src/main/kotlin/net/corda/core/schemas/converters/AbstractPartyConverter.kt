@@ -6,6 +6,10 @@ import org.bouncycastle.asn1.x500.X500Name
 import javax.persistence.AttributeConverter
 import javax.persistence.Converter
 
+/**
+ * Converter to persist a party as its's well known identity (where resolvable)
+ * Completely anonymous parties are stored as null (to preserve privacy)
+ */
 @Converter(autoApply = true)
 class AbstractPartyConverter(val identitySvc: IdentityService) : AttributeConverter<AbstractParty, String> {
 
