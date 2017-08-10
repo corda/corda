@@ -27,10 +27,16 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
             loadFunction = { key -> Optional.ofNullable(loadValue(key)) }
     )
 
+    /**
+     * Returns the value associated with the key, first loading that value from the storage if necessary.
+     */
     operator fun get(key: K): V? {
         return cache.get(key).orElse(null)
     }
 
+    /**
+     * Returns all key/value pairs from the underlying storage.
+     */
     fun allPersisted(): Sequence<Pair<K, V>> {
         val criteriaQuery = DatabaseTransactionManager.current().session.criteriaBuilder.createQuery(persistentEntityClass)
         val root = criteriaQuery.from(persistentEntityClass)
@@ -40,20 +46,24 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> Boolean) : Boolean {
-        var inserted = false
-        var uniqueInDb = true
-        val existingInCache = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
-            inserted = true
-            // Key wasn't in the cache and might not be in DB.
+    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?) : Boolean {
+        var insertionAttempt = false
+        var isUnique = true
+        val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
+            insertionAttempt = true
+            // Key wasn't in the cache and might be in the underlying storage.
             // Depending on 'store' method, this may insert without checking key duplication or it may avoid inserting a duplicated key.
-            uniqueInDb = store(key, value)
-            Optional.of(value)
+            val existingInDb = store(key, value)
+            if (existingInDb != null) { // Always reuse an existing value from the storage of a duplicated key.
+                Optional.of(existingInDb)
+            } else {
+                Optional.of(value)
+            }
         }
-        if (!inserted) {
+        if (!insertionAttempt) {
             if (existingInCache.isPresent) {
                 // Key already exists in cache, do nothing.
-                uniqueInDb = false
+                isUnique = false
             } else {
                 // This happens when the key was queried before with no value associated. We invalidate the cached null
                 // value and recursively call set again. This is to avoid race conditions where another thread queries after
@@ -62,35 +72,36 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
                 return set(key, value, logWarning, store)
             }
         }
-        if (logWarning && !uniqueInDb) {
+        if (logWarning && !isUnique) {
             log.warn("Double insert in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
         }
-        return uniqueInDb
+        return isUnique
     }
 
     /**
-     * Puts the value into the map and caches it.
+     * Puts the value into the map and the underlying storage.
+     * Inserting the duplicated key may be unpredictable.
      */
-    operator fun set(key: K, value: V) {
-        set(key, value, logWarning = false) {
-            key,value -> DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
-            true
-        }
-    }
+    operator fun set(key: K, value: V) =
+            set(key, value, logWarning = false) {
+                key,value -> DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                null
+            }
 
     /**
-     * Puts the value or replace existing one in the map and caches it.
+     * Puts the value into the map and underlying storage.
+     * Duplicated key is not added into the map and underlying storage.
      * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
             set(key, value) {
                 key, value ->
-                val prev = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
-                if (prev == null) {
+                val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+                if (existingEntry == null) {
                     DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
-                    true
+                    null
                 } else {
-                    false
+                    fromPersistentEntity(existingEntry).second
                 }
             }
 
@@ -100,4 +111,3 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
     }
 
 }
-
