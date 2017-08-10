@@ -133,27 +133,4 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
                      issuerRef = _issuerRef.bytes,
                      participants =  _participants.map { CommonSchemaV1.Party(it) }.toSet())
     }
-
-    @Converter(autoApply = true)
-//    class BooleanToIntegerConverter(debug: Boolean) : AttributeConverter<Boolean, Int> {
-    class BooleanToIntegerConverter : AttributeConverter<Boolean, Int> {
-        override fun convertToDatabaseColumn(attribute: Boolean?): Int {
-            attribute?.let {
-                when (attribute) {
-                    true -> return 1
-                    false -> return 0
-                }
-            }
-            return -1
-        }
-        override fun convertToEntityAttribute(dbData: Int?): Boolean {
-            dbData?.let {
-                when (dbData) {
-                    1 -> return true
-                    else -> return false
-                }
-            }
-            return false
-        }
-    }
 }
