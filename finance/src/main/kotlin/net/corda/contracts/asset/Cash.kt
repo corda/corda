@@ -323,7 +323,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
                         """ +
                                 (if (notary != null)
-                                    " AND vs.notary_key = '${notary.owningKey.toBase58String()}'" else "") +
+                                    " AND vs.notary_name = '${notary.name}'" else "") +
                                 (if (onlyFromIssuerParties.isNotEmpty())
                                     " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
                                 (if (withIssuerRefs.isNotEmpty())

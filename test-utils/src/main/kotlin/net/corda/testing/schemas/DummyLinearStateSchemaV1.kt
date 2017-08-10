@@ -1,6 +1,7 @@
 package net.corda.testing.schemas
 
 import net.corda.core.contracts.ContractState
+import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import java.time.Instant
@@ -26,7 +27,7 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: Set<String>,
+            var participants: Set<AbstractParty>,
 
             /**
              * UniqueIdentifier

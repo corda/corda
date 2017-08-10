@@ -25,7 +25,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: Set<String>,
+            var participants: Set<AbstractParty>,
 
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
@@ -38,7 +38,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
     ) : PersistentState() {
         constructor(uid: UniqueIdentifier, _participants: Set<AbstractParty>)
-            : this(participants = _participants.map { it.nameOrNull().toString() }.toSet(),
+            : this(participants = _participants.toSet(),
                    externalId = uid.externalId,
                    uuid = uid.id)
     }
@@ -49,12 +49,12 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: Set<String>,
+            var participants: Set<AbstractParty>,
 
             /** [OwnableState] attributes */
 
             /** X500Name of anonymous owner party (after resolution by the IdentityService) **/
-            var owner: String,
+            var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
              *
@@ -69,16 +69,9 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** Issuer attributes */
 
             /** X500Name of issuer party **/
-            var issuer: String,
+            var issuer: AbstractParty,
 
             @Column(name = "issuer_reference")
             var issuerRef: ByteArray
-    ) : PersistentState() {
-        constructor(_participants: Set<AbstractParty>, _owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: ByteArray)
-                : this(participants = _participants.map { it.nameOrNull().toString() }.toSet(),
-                       owner = _owner.nameOrNull().toString(),
-                       quantity = _quantity,
-                       issuer = _issuerParty.nameOrNull().toString(),
-                       issuerRef = _issuerRef)
-    }
+    ) : PersistentState()
 }

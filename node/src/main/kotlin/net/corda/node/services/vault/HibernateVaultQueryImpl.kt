@@ -98,7 +98,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                                 val vaultState = result[0] as VaultSchemaV1.VaultStates
                                 val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
                                 val state = vaultState.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
-                                statesMeta.add(Vault.StateMetadata(stateRef, vaultState.contractStateClassName, vaultState.recordedTime, vaultState.consumedTime, vaultState.stateStatus, vaultState.notaryName, vaultState.lockId, vaultState.lockUpdateTime))
+                                statesMeta.add(Vault.StateMetadata(stateRef, vaultState.contractStateClassName, vaultState.recordedTime, vaultState.consumedTime, vaultState.stateStatus, vaultState.notaryName.nameOrNull().toString(), vaultState.lockId, vaultState.lockUpdateTime))
                                 statesAndRefs.add(StateAndRef(state, stateRef))
                             }
                             else {
