@@ -11,21 +11,21 @@ import javax.persistence.Converter
 @Converter(autoApply = true)
 class AbstractPartyConverter(val identitySvc: IdentityService) : AttributeConverter<AbstractParty, String> {
 
-    override fun convertToDatabaseColumn(party: AbstractParty?): String {
+    override fun convertToDatabaseColumn(party: AbstractParty?): String? {
         val partyName =
             when (party) {
-                is AnonymousParty -> identitySvc.partyFromAnonymous(party).toString()
+                is AnonymousParty -> identitySvc.partyFromAnonymous(party)?.toString()
                 is Party -> party.nameOrNull().toString()
-                else -> throw IdentityService.UnknownAnonymousPartyException("Unable to resolve identity: $party")
+                else -> null // non resolvable anonymous parties
         }
         return partyName
     }
 
-    override fun convertToEntityAttribute(dbData: String?): AbstractParty {
+    override fun convertToEntityAttribute(dbData: String?): AbstractParty? {
         dbData?.let {
             val party = identitySvc.partyFromX500Name(X500Name(dbData))
             return party as AbstractParty
         }
-        throw IdentityService.UnknownAnonymousPartyException("Unable to resolve identity: $dbData")
+        return null // non resolvable anonymous parties are stored as nulls
     }
 }
