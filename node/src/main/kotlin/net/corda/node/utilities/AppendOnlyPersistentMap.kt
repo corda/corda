@@ -46,7 +46,7 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?) : Boolean {
+    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?): Boolean {
         var insertionAttempt = false
         var isUnique = true
         val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
