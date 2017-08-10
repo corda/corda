@@ -40,49 +40,59 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-
-    private tailrec fun set(key: K, value: V, store: (K,V) -> Unit) {
+    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> Boolean) : Boolean {
         var inserted = false
-        val existing = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
+        var uniqueInDb = true
+        val existingInCache = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
             inserted = true
-            // Store the value. Note that if the key-value pair is already in the DB
-            // but was evicted from the cache then this operation will overwrite the entry in the DB!
-            store(key, value)
+            // Key wasn't in the cache and might not be in DB.
+            // Depending on 'store' method, this may insert without checking key duplication or it may avoid inserting a duplicated key.
+            uniqueInDb = store(key, value)
             Optional.of(value)
         }
         if (!inserted) {
-            // Value was inserted into cache fine, store the value. Note that if the key-value pair is already in the DB
-            // but was evicted from the cache then this operation may overwrite the entry in the DB!
-            if (existing.isPresent) {
-                // An existing value is cached, in this case we know for sure that there is a problem.
-                log.warn("Double insert detected in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
+            if (existingInCache.isPresent) {
+                // Key already exists in cache, do nothing.
+                uniqueInDb = false
             } else {
                 // This happens when the key was queried before with no value associated. We invalidate the cached null
                 // value and recursively call set again. This is to avoid race conditions where another thread queries after
                 // the invalidate but before the set.
                 cache.invalidate(key)
-                set(key, value)
+                return set(key, value, logWarning, store)
             }
         }
+        if (logWarning && !uniqueInDb) {
+            log.warn("Double insert in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
+        }
+        return uniqueInDb
     }
 
     /**
      * Puts the value into the map and caches it.
      */
     operator fun set(key: K, value: V) {
-        set(key, value) {
+        set(key, value, logWarning = false) {
             key,value -> DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+            true
         }
     }
 
     /**
      * Puts the value or replace existing one in the map and caches it.
+     * @return true if added key was unique, otherwise false
      */
-    fun addWithDuplicatesAllowed(key: K, value: V) {
-        set(key, value) {
-            key, value -> DatabaseTransactionManager.current().session.saveOrUpdate(toPersistentEntity(key,value))
-        }
-    }
+    fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
+            set(key, value) {
+                key, value ->
+                val prev = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+                if (prev == null) {
+                    DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                    true
+                } else {
+                    false
+                }
+            }
 
     private fun loadValue(key: K): V? {
         val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
@@ -90,3 +100,4 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
     }
 
 }
+

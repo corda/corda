@@ -27,8 +27,8 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
     )
 
     private companion object {
-        fun createTransactionsMap(): PersistentMap<SecureHash, SignedTransaction, DBTransaction, String> {
-            return PersistentMap(
+        fun createTransactionsMap(): AppendOnlyPersistentMap<SecureHash, SignedTransaction, DBTransaction, String> {
+            return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(SecureHash.parse(it.txId),
                             it.transaction.deserialize<SignedTransaction>( context = SerializationDefaults.STORAGE_CONTEXT)) },
