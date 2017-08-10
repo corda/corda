@@ -45,7 +45,7 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     protected fun canDeserializeVersion(byteSequence: ByteSequence): Boolean = AMQP_ENABLED && byteSequence == AmqpHeaderV1_0
 }
 
-// TODO: This will eventually cover server as well, but for now this is not implemented
+// TODO: This will eventually cover server RPC as well and move to node module, but for now this is not implemented
 class AMQPServerSerializationScheme : AbstractAMQPSerializationScheme() {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()
@@ -62,7 +62,7 @@ class AMQPServerSerializationScheme : AbstractAMQPSerializationScheme() {
 
 }
 
-// TODO: This will eventually cover client as well, but for now this is not implemented
+// TODO: This will eventually cover client RPC as well and move to client module, but for now this is not implemented
 class AMQPClientSerializationScheme : AbstractAMQPSerializationScheme() {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
