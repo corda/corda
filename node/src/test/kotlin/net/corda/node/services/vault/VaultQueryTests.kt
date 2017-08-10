@@ -58,7 +58,6 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        val identityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY))
         database = databaseAndServices.first
         services = databaseAndServices.second

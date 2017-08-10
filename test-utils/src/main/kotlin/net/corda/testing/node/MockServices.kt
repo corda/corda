@@ -221,7 +221,8 @@ fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(Com
     val databaseProperties = makeTestDatabaseProperties()
     val database = configureDatabase(dataSourceProps, databaseProperties)
     val mockService = database.transaction {
-        val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), databaseProperties)
+        val identityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
+        val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), databaseProperties, identityService)
         object : MockServices(*(keys.toTypedArray())) {
             override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 

@@ -42,7 +42,6 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
-        val identityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
         val databaseAndServices = makeTestDatabaseAndMockServices()
         database = databaseAndServices.first
         services = databaseAndServices.second
