@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
@@ -58,3 +59,16 @@ class ServerAMQPSerializationScheme : AbstractAMQPSerializationScheme() {
     }
 
 }
+
+val AMQP_P2P_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
+        SerializationDefaults.javaClass.classLoader,
+        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
+        emptyMap(),
+        true,
+        SerializationContext.UseCase.P2P)
+val AMQP_STORAGE_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
+        SerializationDefaults.javaClass.classLoader,
+        AllButBlacklisted,
+        emptyMap(),
+        true,
+        SerializationContext.UseCase.Storage)
