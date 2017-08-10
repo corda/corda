@@ -680,9 +680,9 @@ Finally, we can do redemption.
    .. sourcecode:: kotlin
 
       @Throws(InsufficientBalanceException::class)
-      fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: VaultService) {
+      fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub) {
           // Add the cash movement using the states in our vault.
-          vault.generateSpend(tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
+          Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
           tx.addInputState(paper)
           tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner.owningKey))
       }
@@ -698,7 +698,7 @@ from the issuer of the commercial paper to the current owner. If we don't have e
 an exception is thrown. Then we add the paper itself as an input, but, not an output (as we wish to remove it
 from the ledger). Finally, we add a Redeem command that should be signed by the owner of the commercial paper.
 
-.. warning:: The amount we pass to the ``generateSpend`` function has to be treated first with ``withoutIssuer``.
+.. warning:: The amount we pass to the ``Cash.generateSpend`` function has to be treated first with ``withoutIssuer``.
    This reflects the fact that the way we handle issuer constraints is still evolving; the commercial paper
    contract requires payment in the form of a currency issued by a specific party (e.g. the central bank,
    or the issuers own bank perhaps). But the vault wants to assemble spend transactions using cash states from

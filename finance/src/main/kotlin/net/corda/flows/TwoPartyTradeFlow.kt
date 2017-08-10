@@ -1,8 +1,12 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.sumCashBy
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.OwnableState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.withoutIssuer
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -174,7 +178,7 @@ object TwoPartyTradeFlow {
             val ptx = TransactionBuilder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwner)
+            val (tx, cashSigningPubKeys) = Cash.generateSpend(serviceHub, ptx, tradeRequest.price, tradeRequest.sellerOwner)
 
             // Add inputs/outputs/a command for the movement of the asset.
             tx.addInputState(assetForSale)

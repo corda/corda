@@ -8,13 +8,13 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.CommonQueryCriteria
+import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
-import net.corda.core.schemas.CommonSchemaV1
 import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 import javax.persistence.Tuple

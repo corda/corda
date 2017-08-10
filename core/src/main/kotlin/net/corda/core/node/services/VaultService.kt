@@ -5,18 +5,13 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
-import net.corda.core.messaging.DataFeed
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
-import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.OpaqueBytes
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -224,29 +219,7 @@ interface VaultService {
 
     fun getTransactionNotes(txnId: SecureHash): Iterable<String>
 
-    /**
-     * Generate a transaction that moves an amount of currency to the given pubkey.
-     *
-     * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
-     *
-     * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
-     *           to move the cash will be added on top.
-     * @param amount How much currency to send.
-     * @param to a key of the recipient.
-     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
-     *                        of given parties. This can be useful if the party you're trying to pay has expectations
-     *                        about which type of asset claims they are willing to accept.
-     * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
-     *         the resulting transaction for it to be valid.
-     * @throws InsufficientBalanceException when a cash spending transaction fails because
-     *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
-     */
-    @Throws(InsufficientBalanceException::class)
-    @Suspendable
-    fun generateSpend(tx: TransactionBuilder,
-                      amount: Amount<Currency>,
-                      to: AbstractParty,
-                      onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<PublicKey>>
+    // DOCEND VaultStatesQuery
 
     /**
      * Soft locking is used to prevent multiple transactions trying to use the same output simultaneously.
@@ -257,7 +230,10 @@ interface VaultService {
 
     /**
      * Reserve a set of [StateRef] for a given [UUID] unique identifier.
-     * Typically, the unique identifier will refer to a Flow lockId associated with a [Transaction] in an in-flight flow.
+     * Typically, the unique identifier will refer to a [FlowLogic.runId.uuid] associated with an in-flight flow.
+     * In this case if the flow terminates the locks will automatically be freed, even if there is an error.
+     * However, the user can specify their own [UUID] and manage this manually, possibly across the lifetime of multiple flows,
+     * or from other thread contexts e.g. [CordaService] instances.
      * In the case of coin selection, soft locks are automatically taken upon gathering relevant unconsumed input refs.
      *
      * @throws [StatesNotAvailableException] when not possible to softLock all of requested [StateRef]
@@ -273,20 +249,31 @@ interface VaultService {
      * are consumed as part of cash spending.
      */
     fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>? = null)
-
     // DOCEND SoftLockAPI
 
     /**
-     * TODO: this function should be private to the vault, but currently Cash Exit functionality
-     * is implemented in a separate module (finance) and requires access to it.
+     * Helper function to combine using [VaultQueryService] calls to determine spendable states and soft locking them.
+     * Currently performance will be worse than for the hand optimised version in `Cash.unconsumedCashStatesForSpending`
+     * However, this is fully generic and can operate with custom [FungibleAsset] states.
+     * @param lockId The [FlowLogic.runId.uuid] of the current flow used to soft lock the states.
+     * @param eligibleStatesQuery A custom query object that selects down to the appropriate subset of all states of the
+     * [contractType]. e.g. by selecting on account, issuer, etc. The query is internally augmented with the UNCONSUMED,
+     * soft lock and contract type requirements.
+     * @param amount The required amount of the asset, but with the issuer stripped off.
+     * It is assumed that compatible issuer states will be filtered out by the [eligibleStatesQuery].
+     * @param contractType class type of the result set.
+     * @return Returns a locked subset of the [eligibleStatesQuery] sufficient to satisfy the requested amount,
+     * or else an empty list and no change in the stored lock states when their are insufficient resources available.
      */
     @Suspendable
-    fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>,
-                                                        onlyFromIssuerParties: Set<AbstractParty>? = null,
-                                                        notary: Party? = null,
-                                                        lockId: UUID,
-                                                        withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<T>>
+    @Throws(StatesNotAvailableException::class)
+    fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
+                                                                         eligibleStatesQuery: QueryCriteria,
+                                                                         amount: Amount<U>,
+                                                                         contractType: Class<out T>): List<StateAndRef<T>>
+
 }
+
 
 class StatesNotAvailableException(override val message: String?, override val cause: Throwable? = null) : FlowException(message, cause) {
     override fun toString() = "Soft locking error: $message"

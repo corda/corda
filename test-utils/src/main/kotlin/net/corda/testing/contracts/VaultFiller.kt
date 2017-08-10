@@ -13,9 +13,9 @@ import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.toFuture
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.CHARLIE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
@@ -228,10 +228,11 @@ fun ServiceHub.evolveLinearState(linearState: StateAndRef<LinearState>) : StateA
 @JvmOverloads
 fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): Vault.Update<ContractState> {
     val update =  vaultService.rawUpdates.toFuture()
+    val services = this
 
     // A tx that spends our money.
     val spendTX = TransactionBuilder(DUMMY_NOTARY).apply {
-        vaultService.generateSpend(this, amount, to)
+        Cash.generateSpend(services, this, amount, to)
         signWith(DUMMY_NOTARY_KEY)
     }.toSignedTransaction(checkSufficientSignatures = false)
 

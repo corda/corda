@@ -9,6 +9,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
@@ -24,11 +25,14 @@ import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransacti
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
+import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.testing.DUMMY_CA
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MOCK_IDENTITIES
-import net.corda.testing.getTestPartyAndCertificate
+import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.configureDatabase
+import net.corda.schemas.CashSchemaV1
+import net.corda.schemas.CommercialPaperSchemaV1
+import net.corda.testing.*
+import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -210,6 +214,31 @@ fun makeTestDatabaseProperties(): Properties {
     val props = Properties()
     props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
     return props
+}
+
+fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1), keys: List<KeyPair> = listOf(MEGA_CORP_KEY)): Pair<CordaPersistence, MockServices> {
+    val dataSourceProps = makeTestDataSourceProperties()
+    val databaseProperties = makeTestDatabaseProperties()
+    val database = configureDatabase(dataSourceProps, databaseProperties)
+    val mockService = database.transaction {
+        val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), databaseProperties)
+        object : MockServices(*(keys.toTypedArray())) {
+            override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
+
+            override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                for (stx in txs) {
+                    validatedTransactions.addTransaction(stx)
+                }
+                // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                vaultService.notifyAll(txs.map { it.tx })
+            }
+
+            override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
+
+            override fun jdbcSession(): Connection = database.createSession()
+        }
+    }
+    return Pair(database, mockService)
 }
 
 val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")

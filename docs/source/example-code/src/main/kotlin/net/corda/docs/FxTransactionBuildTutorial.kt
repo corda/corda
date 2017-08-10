@@ -5,6 +5,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
@@ -13,7 +14,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.serialization.CordaSerializable
@@ -31,9 +31,10 @@ private data class FxRequest(val tradeId: String,
                              val notary: Party? = null)
 
 // DOCSTART 1
-// This is equivalent to the VaultService.generateSpend
+// This is equivalent to the Cash.generateSpend
 // Which is brought here to make the filtering logic more visible in the example
 private fun gatherOurInputs(serviceHub: ServiceHub,
+                            lockId: UUID,
                             amountRequired: Amount<Issued<Currency>>,
                             notary: Party?): Pair<List<StateAndRef<Cash.State>>, Long> {
     // extract our identity for convenience
@@ -41,34 +42,25 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
     val ourParties = ourKeys.map { serviceHub.identityService.partyFromKey(it) ?: throw IllegalStateException("Unable to resolve party from key") }
     val fungibleCriteria = QueryCriteria.FungibleAssetQueryCriteria(owner = ourParties)
 
+    val notaryName = if (notary != null) notary.name else serviceHub.networkMapCache.getAnyNotary()!!.name
+    val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notaryName = listOf(notaryName))
+
     val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal(amountRequired.token.product.currencyCode) }
     val cashCriteria = QueryCriteria.VaultCustomQueryCriteria(logicalExpression)
 
-    // Collect cash type inputs
-    val suitableCashStates = serviceHub.vaultQueryService.queryBy<Cash.State>(fungibleCriteria.and(cashCriteria)).states
-    require(!suitableCashStates.isEmpty()) { "Insufficient funds" }
+    val fullCriteria = fungibleCriteria.and(vaultCriteria).and(cashCriteria)
 
-    var remaining = amountRequired.quantity
-    // We will need all of the inputs to be on the same notary.
-    // For simplicity we just filter on the first notary encountered
-    // A production quality flow would need to migrate notary if the
-    // the amounts were not sufficient in any one notary
-    val sourceNotary: Party = notary ?: suitableCashStates.first().state.notary
+    val eligibleStates = serviceHub.vaultService.tryLockFungibleStatesForSpending<Cash.State, Currency>(lockId, fullCriteria, amountRequired.withoutIssuer(), Cash.State::class.java)
 
-    val inputsList = mutableListOf<StateAndRef<Cash.State>>()
-    // Iterate over filtered cash states to gather enough to pay
-    for (cash in suitableCashStates.filter { it.state.notary == sourceNotary }) {
-        inputsList += cash
-        if (remaining <= cash.state.data.amount.quantity) {
-            return Pair(inputsList, cash.state.data.amount.quantity - remaining)
-        }
-        remaining -= cash.state.data.amount.quantity
-    }
-    throw IllegalStateException("Insufficient funds")
+    check(eligibleStates.isNotEmpty()) { "Insufficient funds" }
+    val amount = eligibleStates.fold(0L) { tot, x -> tot + x.state.data.amount.quantity }
+    val change = amount - amountRequired.quantity
+
+    return Pair(eligibleStates, change)
 }
 // DOCEND 1
 
-private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxRequest): Pair<List<StateAndRef<Cash.State>>, List<Cash.State>> {
+private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, lockId: UUID, request: FxRequest): Pair<List<StateAndRef<Cash.State>>, List<Cash.State>> {
     // Create amount with correct issuer details
     val sellAmount = request.amount
 
@@ -78,7 +70,7 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxReques
     // we will use query manually in the helper function below.
     // Putting this into a non-suspendable function also prevents issues when
     // the flow is suspended.
-    val (inputs, residual) = gatherOurInputs(serviceHub, sellAmount, request.notary)
+    val (inputs, residual) = gatherOurInputs(serviceHub, lockId, sellAmount, request.notary)
 
     // Build and an output state for the counterparty
     val transferedFundsOutput = Cash.State(sellAmount, request.counterparty)
@@ -119,7 +111,7 @@ class ForeignExchangeFlow(val tradeId: String,
         } else throw IllegalArgumentException("Our identity must be one of the parties in the trade.")
 
         // Call the helper method to identify suitable inputs and make the outputs
-        val (outInputStates, ourOutputStates) = prepareOurInputsAndOutputs(serviceHub, localRequest)
+        val (outInputStates, ourOutputStates) = prepareOurInputsAndOutputs(serviceHub, runId.uuid, localRequest)
 
         // identify the notary for our states
         val notary = outInputStates.first().state.notary
@@ -231,7 +223,7 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
         // we will use query manually in the helper function below.
         // Putting this into a non-suspendable function also prevent issues when
         // the flow is suspended.
-        val (ourInputState, ourOutputState) = prepareOurInputsAndOutputs(serviceHub, request)
+        val (ourInputState, ourOutputState) = prepareOurInputsAndOutputs(serviceHub, runId.uuid, request)
 
         // Send back our proposed states and await the full transaction to verify
         val ourKey = serviceHub.keyManagementService.filterMyKeys(ourInputState.flatMap { it.state.data.participants }.map { it.owningKey }).single()

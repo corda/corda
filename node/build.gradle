@@ -87,7 +87,6 @@ processSmokeTestResources {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-    compile project(':finance')
     compile project(':node-schemas')
     compile project(':node-api')
     compile project(':client:rpc')
@@ -150,6 +149,7 @@ dependencies {
     testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
+    testCompile project(':finance')
 
     // sample test schemas
     testCompile project(path: ':finance', configuration: 'testArtifacts')
