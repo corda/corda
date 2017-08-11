@@ -3,11 +3,9 @@ package net.corda.node.utilities
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
-import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.testing.DUMMY_CA
-import net.corda.testing.MOCK_IDENTITIES
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
@@ -23,7 +21,7 @@ class ObservablesTests {
     val toBeClosed = mutableListOf<Closeable>()
 
     fun createDatabase(): CordaPersistence {
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = {InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)})
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
         toBeClosed += database
         return database
     }

@@ -11,7 +11,6 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.database.HibernateConfiguration
-import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -26,6 +25,7 @@ import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -40,7 +40,6 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
     val vault: VaultService get() = services.vaultService
     // Hibernate configuration objects
     lateinit var hibernateConfig: HibernateConfiguration
-    lateinit var hibernatePersister: HibernateObserver
 
     @Before
     fun setUp() {
@@ -52,11 +51,11 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
 
         val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, transactionSchema)
 
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), customSchemas, identitySvc = {InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)})
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), customSchemas, identitySvc = ::makeTestIdentityService)
 
         database.transaction {
 
-            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), identitySvc = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate))
+            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), identitySvc = makeTestIdentityService())
 
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultService get() {
