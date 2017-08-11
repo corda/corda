@@ -14,13 +14,13 @@ import java.util.concurrent.ConcurrentHashMap
 private const val AMQP_ENABLED = false
 
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
-    private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>()
+    private val serializerFactoriesForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>()
 
     protected abstract fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory
     protected abstract fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory
 
     private fun getSerializerFactory(context: SerializationContext): SerializerFactory {
-        return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
+        return serializerFactoriesForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
             when (context.useCase) {
                 SerializationContext.UseCase.Checkpoint ->
                     throw IllegalStateException("AMQP should not be used for checkpoint serialization.")
