@@ -8,8 +8,8 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.flows.CashExitFlow
+import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.flows.IssuerFlow
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -68,7 +68,7 @@ private class BankOfCordaDriver {
                                 "test",
                                 permissions = setOf(
                                         startFlowPermission<CashPaymentFlow>(),
-                                        startFlowPermission<IssuerFlow.IssuanceRequester>(),
+                                        startFlowPermission<CashIssueFlow>(),
                                         startFlowPermission<CashExitFlow>()))
                         val bigCorpUser = User(BIGCORP_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>()))
                         startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))

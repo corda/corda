@@ -67,9 +67,11 @@ class IntegrationTestingTutorial {
                 thread {
                     futures.push(aliceProxy.startFlow(::CashIssueFlow,
                             i.DOLLARS,
-                            issueRef,
                             bob.nodeInfo.legalIdentity,
-                            notary.nodeInfo.notaryIdentity
+                            alice.nodeInfo.legalIdentity,
+                            issueRef,
+                            notary.nodeInfo.notaryIdentity,
+                            true
                     ).returnValue)
                 }
             }.forEach(Thread::join) // Ensure the stack of futures is populated.

@@ -77,9 +77,10 @@ class CordaRPCClientTest : NodeBasedTest() {
         login(rpcUser.username, rpcUser.password)
         println("Creating proxy")
         println("Starting flow")
-        val flowHandle = connection!!.proxy.startTrackedFlow(
-                ::CashIssueFlow,
-                20.DOLLARS, OpaqueBytes.of(0), node.info.legalIdentity, node.info.legalIdentity)
+        val flowHandle = connection!!.proxy.startTrackedFlow(::CashIssueFlow,
+                20.DOLLARS, node.info.legalIdentity,
+                node.info.legalIdentity, OpaqueBytes.of(0), node.info.legalIdentity, true
+        )
         println("Started flow, waiting on result")
         flowHandle.progress.subscribe {
             println("PROGRESS $it")
@@ -113,8 +114,8 @@ class CordaRPCClientTest : NodeBasedTest() {
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
         val flowHandle = proxy.startFlow(::CashIssueFlow,
-                123.DOLLARS, OpaqueBytes.of(0),
-                node.info.legalIdentity, node.info.legalIdentity
+                123.DOLLARS, node.info.legalIdentity,
+                node.info.legalIdentity, OpaqueBytes.of(0), node.info.legalIdentity, true
         )
         println("Started issuing cash, waiting on result")
         flowHandle.returnValue.get()
@@ -140,10 +141,11 @@ class CordaRPCClientTest : NodeBasedTest() {
             }
         }
         val nodeIdentity = node.info.legalIdentity
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity, nodeIdentity), FlowInitiator.Shell).resultFuture.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, nodeIdentity, nodeIdentity, OpaqueBytes.of(0), nodeIdentity, true), FlowInitiator.Shell).resultFuture.getOrThrow()
         proxy.startFlow(::CashIssueFlow,
-                123.DOLLARS, OpaqueBytes.of(0),
-                nodeIdentity, nodeIdentity
+                123.DOLLARS, nodeIdentity,
+                nodeIdentity, OpaqueBytes.of(0), nodeIdentity,
+                true
         ).returnValue.getOrThrow()
         proxy.startFlowDynamic(CashIssueFlow::class.java,
                 1000.DOLLARS, OpaqueBytes.of(0),

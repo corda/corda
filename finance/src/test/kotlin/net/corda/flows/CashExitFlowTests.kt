@@ -33,9 +33,11 @@ class CashExitFlowTests {
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 
         mockNet.runNetwork()
-        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref,
+        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance,
                 bankOfCorda,
-                notary)).resultFuture
+                bankOfCorda, ref,
+                notary,
+                anonymous = true)).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
     }

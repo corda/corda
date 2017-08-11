@@ -111,8 +111,9 @@ class NodeMonitorModelTest : DriverBasedTest() {
         val anonymous = false
         rpc.startFlow(::CashIssueFlow,
                 Amount(100, USD),
-                OpaqueBytes(ByteArray(1, { 1 })),
                 aliceNode.legalIdentity,
+                rpc.nodeIdentity().legalIdentity,
+                OpaqueBytes(ByteArray(1, { 1 })),
                 notaryNode.notaryIdentity,
                 anonymous
         )
@@ -136,7 +137,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
     @Test
     fun `cash issue and move`() {
         val anonymous = false
-        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNode.legalIdentity, notaryNode.notaryIdentity, anonymous).returnValue.getOrThrow()
+        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, aliceNode.legalIdentity, rpc.nodeIdentity().legalIdentity, OpaqueBytes.of(1),
+                notaryNode.notaryIdentity, anonymous).returnValue.getOrThrow()
         rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity, anonymous).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null

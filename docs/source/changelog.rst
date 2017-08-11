@@ -42,6 +42,9 @@ UNRELEASED
 
 * Currency-related API in ``net.corda.core.contracts.ContractsDSL`` has moved to ```net.corda.finance.CurrencyUtils`.
 
+* Remove `IssuerFlow` as it allowed nodes to request arbitrary amounts of cash to be issued from any remote node. Use
+  `CashIssueFlow` instead.
+
 Milestone 14
 ------------
 
