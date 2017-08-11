@@ -6,8 +6,44 @@ Here are release notes for each snapshot release from M9 onwards.
 Unreleased
 ----------
 
-The transaction finalisation flow (``FinalityFlow``) has had hooks for alternative implementations, for example in
+Milestone 14
+------------
+
+This release continues with the goal to improve API stability and developer friendliness. There have also been more
+bug fixes and other improvements across the board.
+
+The CorDapp template repository has been replaced with a specific repository for
+`Java <https://github.com/corda/cordapp-template-java>`_ and `Kotlin <https://github.com/corda/cordapp-template-kotlin>`_
+to improve the experience of starting a new project and to simplify the build system.
+
+It is now possible to specify multiple IP addresses and legal identities for a single node, allowing node operators
+more flexibility in setting up nodes.
+
+A format has been introduced for CorDapp JARs that standardises the contents of CorDapps across nodes. This new format
+now requires CorDapps to contain their own external dependencies. This paves the way for significantly improved
+dependency management for CorDapps with the release of `Jigsaw (Java Modules) <http://openjdk.java.net/projects/jigsaw/>`_. For those using non-gradle build systems it is important
+to read :doc:`cordapp-build-systems` to learn more. Those using our ``cordformation`` plugin simply need to update
+to the latest version (``0.14.0``) to get the fixes.
+
+We've now begun the process of demarcating which classes are part of our public API and which ones are internal.
+Everything found in ``net.corda.core.internal`` and other packages in the ``net.corda`` namespace which has ``.internal`` in it are
+considered internal and not for public use. In a future release any CorDapp using these packages will fail to load, and
+when we migrate to Jigsaw these will not be exported.
+
+The transaction finalisation flow (``FinalityFlow``) has had hooks added for alternative implementations, for example in
 scenarios where no single participant in a transaction is aware of the well known identities of all parties.
+
+DemoBench has a fix for a rare but inconvenient crash that can occur when sharing your display across multiple devices,
+e.g. a projector while performing demonstrations in front of an audience.
+
+Guava types are being removed because Guava does not have backwards compatibility across versions, which has serious
+issues when multiple libraries depend on different versions of the library.
+
+The identity service API has been tweaked, primarily so anonymous identity registration now takes in
+AnonymousPartyAndPath rather than the individual components of the identity, as typically the caller will have
+an AnonymousPartyAndPath instance. See change log for further detail.
+
+Upgrading to this release is strongly recommended in order to keep up with the API changes, removal and additions.
 
 Milestone 13
 ------------

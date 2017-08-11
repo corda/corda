@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.utilities.ByteSequence
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedByte
@@ -25,17 +26,6 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
 
     internal companion object {
         val BYTES_NEEDED_TO_PEEK: Int = 23
-
-        private fun subArraysEqual(a: ByteArray, aOffset: Int, length: Int, b: ByteArray, bOffset: Int): Boolean {
-            if (aOffset + length > a.size || bOffset + length > b.size) throw IndexOutOfBoundsException()
-            var bytesRemaining = length
-            var aPos = aOffset
-            var bPos = bOffset
-            while (bytesRemaining-- > 0) {
-                if (a[aPos++] != b[bPos++]) return false
-            }
-            return true
-        }
 
         fun peekSize(bytes: ByteArray): Int {
             // There's an 8 byte header, and then a 0 byte plus descriptor followed by constructor
@@ -69,15 +59,16 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
 
 
     @Throws(NotSerializableException::class)
-    private fun <T : Any> getEnvelope(bytes: SerializedBytes<T>): Envelope {
+    private fun getEnvelope(bytes: ByteSequence): Envelope {
         // Check that the lead bytes match expected header
-        if (!subArraysEqual(bytes.bytes, 0, 8, AmqpHeaderV1_0.bytes, 0)) {
+        val headerSize = AmqpHeaderV1_0.size
+        if (bytes.take(headerSize) != AmqpHeaderV1_0) {
             throw NotSerializableException("Serialization header does not match.")
         }
 
         val data = Data.Factory.create()
-        val size = data.decode(ByteBuffer.wrap(bytes.bytes, 8, bytes.size - 8))
-        if (size.toInt() != bytes.size - 8) {
+        val size = data.decode(ByteBuffer.wrap(bytes.bytes, bytes.offset + headerSize, bytes.size - headerSize))
+        if (size.toInt() != bytes.size - headerSize) {
             throw NotSerializableException("Unexpected size of data")
         }
 
@@ -103,7 +94,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
      * be deserialized and a schema describing the types of the objects.
      */
     @Throws(NotSerializableException::class)
-    fun <T : Any> deserialize(bytes: SerializedBytes<T>, clazz: Class<T>): T {
+    fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>): T {
         return des {
             val envelope = getEnvelope(bytes)
             clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz))

@@ -148,8 +148,8 @@ class TwoPartyTradeFlowTests {
             bobNode.disableDBCloseOnStop()
 
             val cashStates = bobNode.database.transaction {
-                    bobNode.services.fillWithSomeTestCash(2000.DOLLARS, notaryNode.info.notaryIdentity, 3, 3)
-                }
+                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, notaryNode.info.notaryIdentity, 3, 3)
+            }
 
             val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, cpIssuer, aliceNode.info.legalIdentity,
@@ -168,7 +168,7 @@ class TwoPartyTradeFlowTests {
             }
 
             val (bobStateMachine, aliceResult) = runBuyerAndSeller(notaryNode, aliceNode, bobNode,
-                        "alice's paper".outputStateAndRef())
+                    "alice's paper".outputStateAndRef())
 
             assertEquals(aliceResult.getOrThrow(), bobStateMachine.getOrThrow().resultFuture.getOrThrow())
 
@@ -533,11 +533,11 @@ class TwoPartyTradeFlowTests {
         override fun call(): SignedTransaction {
             send(buyer, Pair(notary.notaryIdentity, price))
             return subFlow(Seller(
-                buyer,
-                notary,
-                assetToSell,
-                price,
-                me.party))
+                    buyer,
+                    notary,
+                    assetToSell,
+                    price,
+                    me.party))
         }
     }
 

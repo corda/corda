@@ -26,6 +26,7 @@ import net.corda.testing.contracts.DummyState;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.jetbrains.annotations.NotNull;
 
+import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.time.Duration;
@@ -506,7 +507,7 @@ public class FlowCookbookJava {
                 twiceSignedTx.checkSignaturesAreValid();
                 // DOCEND 37
 
-            } catch (SignatureException e) {
+            } catch (GeneralSecurityException e) {
                 // Handle this as required.
             }
 

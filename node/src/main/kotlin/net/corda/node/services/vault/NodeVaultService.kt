@@ -8,28 +8,32 @@ import io.requery.kotlin.eq
 import io.requery.kotlin.notNull
 import io.requery.query.RowExpression
 import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.OnLedgerAsset
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.crypto.toBase58String
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.tee
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.vault.IQueryCriteriaParser
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
+import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.toNonEmptySet
+import net.corda.core.utilities.trace
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.database.parserTransactionIsolationLevel
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -42,10 +46,8 @@ import net.corda.node.utilities.wrapWithDatabaseTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
-import java.sql.SQLException
 import java.util.*
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
+import javax.persistence.criteria.Predicate
 
 /**
  * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
@@ -79,6 +81,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         // For use during publishing only.
         val updatesPublisher: rx.Observer<Vault.Update<ContractState>> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
     }
+
     private val mutex = ThreadBox(InnerState())
 
     private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
@@ -334,123 +337,110 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         }
     }
 
-    // coin selection retry loop counter, sleep (msecs) and lock for selecting states
-    val MAX_RETRIES = 5
-    val RETRY_SLEEP = 100
-    val spendLock: ReentrantLock = ReentrantLock()
+    // TODO We shouldn't need to rewrite the query if we could modify the defaults.
+    private class QueryEditor<out T : ContractState>(val services: ServiceHub,
+                                                     val lockId: UUID,
+                                                     val contractType: Class<out T>) : IQueryCriteriaParser {
+        var alreadyHasVaultQuery: Boolean = false
+        var modifiedCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(contractStateTypes = setOf(contractType),
+                softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)),
+                status = Vault.StateStatus.UNCONSUMED)
 
-    @Suspendable
-    override fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>?, notary: Party?, lockId: UUID, withIssuerRefs: Set<OpaqueBytes>?): List<StateAndRef<T>> {
-
-        val issuerKeysStr = onlyFromIssuerParties?.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }?.dropLast(1)
-        val issuerRefsStr = withIssuerRefs?.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }?.dropLast(1)
-
-        val stateAndRefs = mutableListOf<StateAndRef<T>>()
-
-        // TODO: Need to provide a database provider independent means of performing this function.
-        //       We are using an H2 specific means of selecting a minimum set of rows that match a request amount of coins:
-        //       1) There is no standard SQL mechanism of calculating a cumulative total on a field and restricting row selection on the
-        //          running total of such an accumulator
-        //       2) H2 uses session variables to perform this accumulator function:
-        //          http://www.h2database.com/html/functions.html#set
-        //       3) H2 does not support JOIN's in FOR UPDATE (hence we are forced to execute 2 queries)
-
-        for (retryCount in 1..MAX_RETRIES) {
-
-            spendLock.withLock {
-                val statement = configuration.jdbcSession().createStatement()
-                try {
-                    statement.execute("CALL SET(@t, 0);")
-
-                    // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
-                    // the softLockReserve update will detect whether we try to lock states locked by others
-                    val selectJoin = """
-                        SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
-                        FROM vault_states AS vs, contract_cash_states AS ccs
-                        WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
-                        AND vs.state_status = 0
-                        AND ccs.ccy_code = '${amount.token}' and @t < ${amount.quantity}
-                        AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
-                        """ +
-                            (if (notary != null)
-                                " AND vs.notary_key = '${notary.owningKey.toBase58String()}'" else "") +
-                            (if (issuerKeysStr != null)
-                                " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
-                            (if (issuerRefsStr != null)
-                                " AND ccs.issuer_ref IN ($issuerRefsStr)" else "")
-
-                    // Retrieve spendable state refs
-                    val rs = statement.executeQuery(selectJoin)
-                    stateAndRefs.clear()
-                    log.debug(selectJoin)
-                    var totalPennies = 0L
-                    while (rs.next()) {
-                        val txHash = SecureHash.parse(rs.getString(1))
-                        val index = rs.getInt(2)
-                        val stateRef = StateRef(txHash, index)
-                        val state = rs.getBytes(3).deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
-                        val pennies = rs.getLong(4)
-                        totalPennies = rs.getLong(5)
-                        val rowLockId = rs.getString(6)
-                        stateAndRefs.add(StateAndRef(state, stateRef))
-                        log.trace { "ROW: $rowLockId ($lockId): $stateRef : $pennies ($totalPennies)" }
-                    }
-
-                    if (stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity) {
-                        // we should have a minimum number of states to satisfy our selection `amount` criteria
-                        log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
-
-                        // update database
-                        softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
-                        return stateAndRefs
-                    }
-                    log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
-                    // retry as more states may become available
-                } catch (e: SQLException) {
-                    log.error("""Failed retrieving unconsumed states for: amount [$amount], onlyFromIssuerParties [$onlyFromIssuerParties], notary [$notary], lockId [$lockId]
-                            $e.
-                        """)
-                } catch (e: StatesNotAvailableException) {
-                    stateAndRefs.clear()
-                    log.warn(e.message)
-                    // retry only if there are locked states that may become available again (or consumed with change)
-                } finally {
-                    statement.close()
-                }
-            }
-
-            log.warn("Coin selection failed on attempt $retryCount")
-            // TODO: revisit the back off strategy for contended spending.
-            if (retryCount != MAX_RETRIES) {
-                FlowStateMachineImpl.sleep(RETRY_SLEEP * retryCount.toLong())
-            }
+        override fun parseCriteria(criteria: QueryCriteria.CommonQueryCriteria): Collection<Predicate> {
+            modifiedCriteria = criteria
+            return emptyList()
         }
 
-        log.warn("Insufficient spendable states identified for $amount")
-        return stateAndRefs
+        override fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria): Collection<Predicate> {
+            modifiedCriteria = criteria
+            return emptyList()
+        }
+
+        override fun parseCriteria(criteria: QueryCriteria.LinearStateQueryCriteria): Collection<Predicate> {
+            modifiedCriteria = criteria
+            return emptyList()
+        }
+
+        override fun <L : PersistentState> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate> {
+            modifiedCriteria = criteria
+            return emptyList()
+        }
+
+        override fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate> {
+            modifiedCriteria = criteria.copy(contractStateTypes = setOf(contractType),
+                    softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)),
+                    status = Vault.StateStatus.UNCONSUMED)
+            alreadyHasVaultQuery = true
+            return emptyList()
+        }
+
+        override fun parseOr(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
+            parse(left)
+            val modifiedLeft = modifiedCriteria
+            parse(right)
+            val modifiedRight = modifiedCriteria
+            modifiedCriteria = modifiedLeft.or(modifiedRight)
+            return emptyList()
+        }
+
+        override fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
+            parse(left)
+            val modifiedLeft = modifiedCriteria
+            parse(right)
+            val modifiedRight = modifiedCriteria
+            modifiedCriteria = modifiedLeft.and(modifiedRight)
+            return emptyList()
+        }
+
+        override fun parse(criteria: QueryCriteria, sorting: Sort?): Collection<Predicate> {
+            val basicQuery = modifiedCriteria
+            criteria.visit(this)
+            modifiedCriteria = if (alreadyHasVaultQuery) modifiedCriteria else criteria.and(basicQuery)
+            return emptyList()
+        }
+
+        fun queryForEligibleStates(criteria: QueryCriteria): Vault.Page<T> {
+            val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
+            val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
+            parse(criteria, sorter)
+
+            return services.vaultQueryService.queryBy(contractType, modifiedCriteria, sorter)
+        }
     }
 
-    /**
-     * Generate a transaction that moves an amount of currency to the given pubkey.
-     *
-     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
-     *                        of given parties. This can be useful if the party you're trying to pay has expectations
-     *                        about which type of asset claims they are willing to accept.
-     */
+
     @Suspendable
-    override fun generateSpend(tx: TransactionBuilder,
-                               amount: Amount<Currency>,
-                               to: AbstractParty,
-                               onlyFromParties: Set<AbstractParty>?): Pair<TransactionBuilder, List<PublicKey>> {
-        // Retrieve unspent and unlocked cash states that meet our spending criteria.
-        val acceptableCoins = unconsumedStatesForSpending<Cash.State>(amount, onlyFromParties, tx.notary, tx.lockId)
-        return OnLedgerAsset.generateSpend(tx, amount, to, acceptableCoins,
-                { state, quantity, owner -> deriveState(state, quantity, owner) },
-                { Cash().generateMoveCommand() })
-    }
+    @Throws(StatesNotAvailableException::class)
+    override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
+                                                                                  eligibleStatesQuery: QueryCriteria,
+                                                                                  amount: Amount<U>,
+                                                                                  contractType: Class<out T>): List<StateAndRef<T>> {
+        if (amount.quantity == 0L) {
+            return emptyList()
+        }
 
-    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
-            = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
+        // TODO This helper code re-writes the query to alter the defaults on things such as soft locks
+        // and then runs the query. Ideally we would not need to do this.
+        val results = QueryEditor(services, lockId, contractType).queryForEligibleStates(eligibleStatesQuery)
+
+        var claimedAmount = 0L
+        val claimedStates = mutableListOf<StateAndRef<T>>()
+        for (state in results.states) {
+            val issuedAssetToken = state.state.data.amount.token
+            if (issuedAssetToken.product == amount.token) {
+                claimedStates += state
+                claimedAmount += state.state.data.amount.quantity
+                if (claimedAmount > amount.quantity) {
+                    break
+                }
+            }
+        }
+        if (claimedStates.isEmpty() || claimedAmount < amount.quantity) {
+            return emptyList()
+        }
+        softLockReserve(lockId, claimedStates.map { it.ref }.toNonEmptySet())
+        return claimedStates
+    }
 
     // TODO : Persists this in DB.
     private val authorisedUpgrade = mutableMapOf<StateRef, Class<out UpgradedContract<*, *>>>()

@@ -14,19 +14,19 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
-import org.bouncycastle.asn1.*
+import org.bouncycastle.asn1.ASN1Integer
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.DERNull
+import org.bouncycastle.asn1.DLSequence
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.sec.SECObjectIdentifiers
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.X509v3CertificateBuilder
-import org.bouncycastle.cert.bc.BcX509ExtensionUtils
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
@@ -40,10 +40,6 @@ import org.bouncycastle.jce.spec.ECPublicKeySpec
 import org.bouncycastle.math.ec.ECConstants
 import org.bouncycastle.math.ec.FixedPointCombMultiplier
 import org.bouncycastle.math.ec.WNafUtil
-import org.bouncycastle.operator.ContentSigner
-import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
-import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
@@ -53,7 +49,6 @@ import java.security.*
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
-import java.util.*
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -196,7 +191,7 @@ object Crypto {
     // that could cause unexpected and suspicious behaviour.
     // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
     // The val is private to avoid any harmful state changes.
-    private val providerMap: Map<String, Provider> = mapOf(
+    val providerMap: Map<String, Provider> = mapOf(
             BouncyCastleProvider.PROVIDER_NAME to getBouncyCastleProvider(),
             CordaSecurityProvider.PROVIDER_NAME to CordaSecurityProvider(),
             "BCPQC" to BouncyCastlePQCProvider()) // unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
@@ -768,90 +763,6 @@ object Crypto {
         val key = SecretKeySpec(keyData, "HmacSHA512")
         mac.init(key)
         return mac.doFinal(seed)
-    }
-
-    /**
-     * Build a partial X.509 certificate ready for signing.
-     *
-     * @param issuer name of the issuing entity.
-     * @param subject name of the certificate subject.
-     * @param subjectPublicKey public key of the certificate subject.
-     * @param validityWindow the time period the certificate is valid for.
-     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
-
-        val serial = BigInteger.valueOf(random63BitValue())
-        val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
-        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
-
-        val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
-                .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(subjectPublicKeyInfo))
-                .addExtension(Extension.basicConstraints, certificateType.isCA, BasicConstraints(certificateType.isCA))
-                .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
-                .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
-
-        if (nameConstraints != null) {
-            builder.addExtension(Extension.nameConstraints, true, nameConstraints)
-        }
-        return builder
-    }
-
-    /**
-     * Build and sign an X.509 certificate with the given signer.
-     *
-     * @param issuer name of the issuing entity.
-     * @param issuerSigner content signer to sign the certificate with.
-     * @param subject name of the certificate subject.
-     * @param subjectPublicKey public key of the certificate subject.
-     * @param validityWindow the time period the certificate is valid for.
-     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerSigner: ContentSigner,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
-        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
-        return builder.build(issuerSigner).apply {
-            require(isValidOn(Date()))
-        }
-    }
-
-    /**
-     * Build and sign an X.509 certificate with CA cert private key.
-     *
-     * @param issuer name of the issuing entity.
-     * @param issuerKeyPair the public & private key to sign the certificate with.
-     * @param subject name of the certificate subject.
-     * @param subjectPublicKey public key of the certificate subject.
-     * @param validityWindow the time period the certificate is valid for.
-     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
-
-        val signatureScheme = findSignatureScheme(issuerKeyPair.private)
-        val provider = providerMap[signatureScheme.providerName]
-        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
-
-        val signer = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
-        return builder.build(signer).apply {
-            require(isValidOn(Date()))
-            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public)))
-        }
-    }
-
-    /**
-     * Create certificate signing request using provided information.
-     */
-    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
-        val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, providerMap[signatureScheme.providerName])
-        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).build(signer)
     }
 
     private class KeyInfoConverter(val signatureScheme: SignatureScheme) : AsymmetricKeyInfoConverter {
