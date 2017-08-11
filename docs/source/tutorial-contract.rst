@@ -448,7 +448,7 @@ logic.
               is Commands.Redeem -> {
                   // Redemption of the paper requires movement of on-ledger cash.
                   val input = inputs.single()
-                  val received = tx.outputs.sumCashBy(input.owner)
+                  val received = tx.outputs.map{ it.data }.sumCashBy(input.owner)
                   val time = timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must be timestamped")
                   requireThat {
                       "the paper must have matured" using (time >= input.maturityDate)
