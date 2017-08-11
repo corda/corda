@@ -32,6 +32,9 @@ UNRELEASED
     of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified
     by set of lock ids)
 
+* Trader demo now issues cash and commercial paper directly from the bank node, rather than the seller node self-issuing
+  commercial paper but labelling it as if issued by the bank.
+
 Milestone 14
 ------------
 
