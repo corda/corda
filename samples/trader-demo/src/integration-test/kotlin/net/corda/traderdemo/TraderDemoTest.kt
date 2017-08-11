@@ -7,6 +7,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
 import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -27,7 +28,9 @@ class TraderDemoTest : NodeBasedTest() {
     @Test
     fun `runs trader demo`() {
         val demoUser = User("demo", "demo", setOf(startFlowPermission<SellerFlow>()))
-        val bankUser = User("user1", "test", permissions = setOf(startFlowPermission<CashIssueFlow>(),
+        val bankUser = User("user1", "test", permissions = setOf(
+                startFlowPermission<CashIssueFlow>(),
+                startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
         val (nodeA, nodeB, bankNode) = listOf(
                 startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)),

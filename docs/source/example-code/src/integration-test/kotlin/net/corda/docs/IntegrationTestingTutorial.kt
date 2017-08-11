@@ -1,8 +1,6 @@
 package net.corda.docs
 
 import net.corda.contracts.asset.Cash
-import net.corda.core.concurrent.CordaFuture
-import net.corda.finance.DOLLARS
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultTrackBy
@@ -10,6 +8,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.finance.DOLLARS
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission
@@ -17,13 +16,7 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
-import net.corda.testing.parallel
-import net.corda.testing.sequence
 import org.junit.Test
-import java.util.*
-import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class IntegrationTestingTutorial {
@@ -32,7 +25,8 @@ class IntegrationTestingTutorial {
         // START 1
         driver {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
-                    startFlowPermission<CashIssueFlow>()
+                    startFlowPermission<CashIssueFlow>(),
+                    startFlowPermission<CashPaymentFlow>()
             ))
             val bobUser = User("bobUser", "testPassword2", permissions = setOf(
                     startFlowPermission<CashPaymentFlow>()
@@ -62,20 +56,21 @@ class IntegrationTestingTutorial {
 
             // START 4
             val issueRef = OpaqueBytes.of(0)
-            val futures = Stack<CordaFuture<*>>()
             (1..10).map { i ->
-                thread {
-                    futures.push(aliceProxy.startFlow(::CashIssueFlow,
-                            i.DOLLARS,
-                            bob.nodeInfo.legalIdentity,
-                            alice.nodeInfo.legalIdentity,
-                            issueRef,
-                            notary.nodeInfo.notaryIdentity,
-                            true
-                    ).returnValue)
-                }
-            }.forEach(Thread::join) // Ensure the stack of futures is populated.
-            futures.forEach { it.getOrThrow() }
+                aliceProxy.startFlow(::CashIssueFlow,
+                        i.DOLLARS,
+                        issueRef,
+                        notary.nodeInfo.notaryIdentity
+                ).returnValue
+            }.transpose().getOrThrow()
+            // We wait for all of the issuances to run before we start making payments
+            (1..10).map { i ->
+                aliceProxy.startFlow(::CashPaymentFlow,
+                        i.DOLLARS,
+                        bob.nodeInfo.legalIdentity,
+                        true
+                ).returnValue
+            }.transpose().getOrThrow()
 
             bobVaultUpdates.expectEvents {
                 parallel(

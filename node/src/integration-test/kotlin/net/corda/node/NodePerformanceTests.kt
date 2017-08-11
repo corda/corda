@@ -111,7 +111,7 @@ class NodePerformanceTests {
             a.rpcClientToNode().use("A", "A") { connection ->
                 println("ISSUING")
                 val doneFutures = (1..100).toList().parallelStream().map {
-                    connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), a.nodeInfo.legalIdentity, a.nodeInfo.notaryIdentity).returnValue
+                    connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), a.nodeInfo.notaryIdentity).returnValue
                 }.toList()
                 doneFutures.transpose().get()
                 println("STARTING PAYMENT")

@@ -128,7 +128,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
             proxy.startFlow(::CashPaymentFlow, Amount(quantity, USD), me)
         } else {
             val quantity = Math.abs(random.nextLong() % 1000)
-            proxy.startFlow(::CashIssueFlow, Amount(quantity, USD), me, me, issueRef, notary, true)
+            proxy.startFlow(::CashIssueFlow, Amount(quantity, USD), issueRef, notary)
             ownedQuantity += quantity
         }
     }

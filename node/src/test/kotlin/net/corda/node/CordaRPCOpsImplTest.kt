@@ -93,9 +93,8 @@ class CordaRPCOpsImplTest {
         }
 
         // Tell the monitoring service node to issue some cash
-        val anonymous = false
         val recipient = aliceNode.info.legalIdentity
-        val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), recipient, rpc.nodeIdentity().legalIdentity, ref, notaryNode.info.notaryIdentity, anonymous)
+        val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, notaryNode.info.notaryIdentity)
         mockNet.runNetwork()
 
         var issueSmId: StateMachineRunId? = null
@@ -133,11 +132,8 @@ class CordaRPCOpsImplTest {
         val anonymous = false
         val result = rpc.startFlow(::CashIssueFlow,
                 100.DOLLARS,
-                aliceNode.info.legalIdentity,
-                rpc.nodeIdentity().legalIdentity,
                 OpaqueBytes(ByteArray(1, { 1 })),
-                notaryNode.info.notaryIdentity,
-                false
+                notaryNode.info.notaryIdentity
         )
 
         mockNet.runNetwork()
@@ -212,14 +208,7 @@ class CordaRPCOpsImplTest {
     fun `cash command by user not permissioned for cash`() {
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = emptySet())))
         assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
-            rpc.startFlow(::CashIssueFlow,
-                    Amount(100, USD),
-                    aliceNode.info.legalIdentity,
-                    rpc.nodeIdentity().legalIdentity,
-                    OpaqueBytes(ByteArray(1, { 1 })),
-                    notaryNode.info.notaryIdentity,
-                    false
-            )
+            rpc.startFlow(::CashIssueFlow, Amount(100, USD), OpaqueBytes(ByteArray(1, { 1 })), notaryNode.info.notaryIdentity)
         }
     }
 

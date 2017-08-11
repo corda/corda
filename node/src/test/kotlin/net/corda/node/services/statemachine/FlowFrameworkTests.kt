@@ -330,11 +330,8 @@ class FlowFrameworkTests {
         assertEquals(notary1.info.notaryIdentity, notary2.info.notaryIdentity)
         node1.services.startFlow(CashIssueFlow(
                 2000.DOLLARS,
-                node1.info.legalIdentity,
-                node1.info.legalIdentity,
                 OpaqueBytes.of(0x01),
-                notary1.info.notaryIdentity,
-                anonymous = false))
+                notary1.info.notaryIdentity))
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1..3) {
             val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity, anonymous = false))

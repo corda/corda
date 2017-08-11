@@ -175,8 +175,7 @@ class ContractUpgradeFlowTest {
     @Test
     fun `upgrade Cash to v2`() {
         // Create some cash.
-        val anonymous = false
-        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), a.info.legalIdentity, a.info.legalIdentity, OpaqueBytes.of(1), notary, anonymous)).resultFuture
+        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx
         val stateAndRef = stx.tx.outRef<Cash.State>(0)

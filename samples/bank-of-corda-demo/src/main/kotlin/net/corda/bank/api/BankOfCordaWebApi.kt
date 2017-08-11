@@ -7,6 +7,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDateTime
 import java.util.*
@@ -53,12 +54,13 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
 
         val amount = Amount(params.amount, Currency.getInstance(params.currency))
         val issuerBankPartyRef = OpaqueBytes.of(params.issuerBankPartyRef.toByte())
-        val anonymous = params.anonymous
 
         // invoke client side of Issuer Flow: IssuanceRequester
         // The line below blocks and waits for the future to resolve.
         return try {
-            rpc.startFlow(::CashIssueFlow, amount, issueToParty, issuerBankParty, issuerBankPartyRef, notaryNode.notaryIdentity, anonymous).returnValue.getOrThrow()
+            rpc.startFlow(::CashIssueFlow, amount, issuerBankPartyRef, notaryNode.notaryIdentity).returnValue.getOrThrow()
+            rpc.startFlow(::CashPaymentFlow, amount, issueToParty, params.anonymous)
+                    .returnValue.getOrThrow().stx
             logger.info("Issue request completed successfully: $params")
             Response.status(Response.Status.CREATED).build()
         } catch (e: Exception) {

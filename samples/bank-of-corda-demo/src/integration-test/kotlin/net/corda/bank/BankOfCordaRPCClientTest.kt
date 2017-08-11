@@ -9,6 +9,7 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -20,7 +21,9 @@ class BankOfCordaRPCClientTest {
     @Test
     fun `issuer flow via RPC`() {
         driver(dsl = {
-            val bocManager = User("bocManager", "password1", permissions = setOf(startFlowPermission<CashIssueFlow>()))
+            val bocManager = User("bocManager", "password1", permissions = setOf(
+                    startFlowPermission<CashIssueFlow>(),
+                    startFlowPermission<CashPaymentFlow>()))
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
             val (nodeBankOfCorda, nodeBigCorporation) = listOf(
                     startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type)), listOf(bocManager)),
@@ -47,10 +50,12 @@ class BankOfCordaRPCClientTest {
             bocProxy.startFlow(
                     ::CashIssueFlow,
                     1000.DOLLARS,
-                    nodeBigCorporation.nodeInfo.legalIdentity,
-                    nodeBankOfCorda.nodeInfo.legalIdentity,
                     BIG_CORP_PARTY_REF,
-                    nodeBankOfCorda.nodeInfo.notaryIdentity,
+                    nodeBankOfCorda.nodeInfo.notaryIdentity).returnValue.getOrThrow()
+            bocProxy.startFlow(
+                    ::CashPaymentFlow,
+                    1000.DOLLARS,
+                    nodeBigCorporation.nodeInfo.legalIdentity,
                     anonymous).returnValue.getOrThrow()
 
             // Check Bank of Corda Vault Updates

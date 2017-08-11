@@ -78,8 +78,7 @@ class CordaRPCClientTest : NodeBasedTest() {
         println("Creating proxy")
         println("Starting flow")
         val flowHandle = connection!!.proxy.startTrackedFlow(::CashIssueFlow,
-                20.DOLLARS, node.info.legalIdentity,
-                node.info.legalIdentity, OpaqueBytes.of(0), node.info.legalIdentity, true
+                20.DOLLARS, OpaqueBytes.of(0), node.info.legalIdentity
         )
         println("Started flow, waiting on result")
         flowHandle.progress.subscribe {
@@ -114,8 +113,7 @@ class CordaRPCClientTest : NodeBasedTest() {
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
         val flowHandle = proxy.startFlow(::CashIssueFlow,
-                123.DOLLARS, node.info.legalIdentity,
-                node.info.legalIdentity, OpaqueBytes.of(0), node.info.legalIdentity, true
+                123.DOLLARS, OpaqueBytes.of(0), node.info.legalIdentity
         )
         println("Started issuing cash, waiting on result")
         flowHandle.returnValue.get()
@@ -141,15 +139,16 @@ class CordaRPCClientTest : NodeBasedTest() {
             }
         }
         val nodeIdentity = node.info.legalIdentity
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, nodeIdentity, nodeIdentity, OpaqueBytes.of(0), nodeIdentity, true), FlowInitiator.Shell).resultFuture.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), FlowInitiator.Shell).resultFuture.getOrThrow()
         proxy.startFlow(::CashIssueFlow,
-                123.DOLLARS, nodeIdentity,
-                nodeIdentity, OpaqueBytes.of(0), nodeIdentity,
-                true
+                123.DOLLARS,
+                OpaqueBytes.of(0),
+                nodeIdentity
         ).returnValue.getOrThrow()
         proxy.startFlowDynamic(CashIssueFlow::class.java,
-                1000.DOLLARS, OpaqueBytes.of(0),
-                nodeIdentity, nodeIdentity).returnValue.getOrThrow()
+                1000.DOLLARS,
+                OpaqueBytes.of(0),
+                nodeIdentity).returnValue.getOrThrow()
         assertEquals(2, countRpcFlows)
         assertEquals(1, countShellFlows)
     }

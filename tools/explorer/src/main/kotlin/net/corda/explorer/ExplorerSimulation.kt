@@ -38,8 +38,7 @@ class ExplorerSimulation(val options: OptionSet) {
     val manager = User("manager", "test", permissions = setOf(
             startFlowPermission<CashIssueFlow>(),
             startFlowPermission<CashPaymentFlow>(),
-            startFlowPermission<CashExitFlow>(),
-            startFlowPermission<IssuerFlow.IssuanceRequester>())
+            startFlowPermission<CashExitFlow>())
     )
 
     lateinit var notaryNode: NodeHandle
