@@ -33,9 +33,9 @@ sourceSets {
 compileTestJava.dependsOn tasks.getByPath(':node:capsule:buildCordaJAR')
 
 dependencies {
-    compile project(':core')
-    compile project(':client:jfx')
-    compile project(':test-utils')
+    cordaCompile project(':core')
+    cordaCompile project(':client:jfx')
+    cordaCompile project(':test-utils')
     testCompile project(':verifier')
 
     compile "org.graphstream:gs-core:1.3"
@@ -43,8 +43,8 @@ dependencies {
         exclude group: "bouncycastle"
     }
 
-    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 }
 
 mainClassName = "net.corda.docs.ClientRpcTutorialKt"
