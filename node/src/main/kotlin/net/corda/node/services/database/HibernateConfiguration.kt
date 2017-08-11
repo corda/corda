@@ -80,7 +80,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
                 }
             })
             // register custom converters
-            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identitySvc()))
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identitySvc))
 
             build()
         }
