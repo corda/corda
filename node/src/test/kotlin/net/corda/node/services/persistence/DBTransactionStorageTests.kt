@@ -11,6 +11,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -21,11 +22,7 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.schemas.CashSchemaV1
 import net.corda.schemas.SampleCashSchemaV2
 import net.corda.schemas.SampleCashSchemaV3
-import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.LogHelper
-import net.corda.testing.TestDependencyInjectionBase
-import net.corda.testing.BOB_KEY
+import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
@@ -55,11 +52,11 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
 
         val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, transactionSchema)
 
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), customSchemas)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), customSchemas, identitySvc = {InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)})
 
         database.transaction {
 
-            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
+            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), identitySvc = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate))
 
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultService get() {

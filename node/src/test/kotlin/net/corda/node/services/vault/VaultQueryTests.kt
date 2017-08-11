@@ -77,7 +77,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties())
+        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = {InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)})
 
         setUpDb(database, 5000)
 

@@ -2,12 +2,10 @@ package net.corda.node.services.transactions
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.UniquenessException
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.testing.LogHelper
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.TestDependencyInjectionBase
-import net.corda.testing.generateStateRef
+import net.corda.testing.*
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
 import org.junit.After
@@ -25,7 +23,7 @@ class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = {InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)})
     }
 
     @After

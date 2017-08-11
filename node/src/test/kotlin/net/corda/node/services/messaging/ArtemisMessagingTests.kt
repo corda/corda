@@ -13,6 +13,7 @@ import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -69,7 +70,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = {InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)})
         networkMapRegistrationFuture = doneFuture(Unit)
     }
 

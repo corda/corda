@@ -10,6 +10,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.schemas.requery.Models
 import net.corda.node.services.vault.schemas.requery.VaultCashBalancesEntity
@@ -17,10 +18,7 @@ import net.corda.node.services.vault.schemas.requery.VaultSchema
 import net.corda.node.services.vault.schemas.requery.VaultStatesEntity
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_PUBKEY_1
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
@@ -42,7 +40,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties())
+        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties(), identitySvc = {InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)})
         newTransactionStorage()
         newRequeryStorage(dataSourceProperties)
     }

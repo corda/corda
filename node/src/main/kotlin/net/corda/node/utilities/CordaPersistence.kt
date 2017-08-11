@@ -2,6 +2,7 @@ package net.corda.node.utilities
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
@@ -19,7 +20,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
-class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: NodeSchemaService, databaseProperties: Properties): Closeable {
+class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: NodeSchemaService, val identitySvc: ()-> IdentityService, databaseProperties: Properties): Closeable {
 
     /** Holds Exposed database, the field will be removed once Exposed library is removed */
     lateinit var database: Database
@@ -27,13 +28,13 @@ class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: 
 
     val entityManagerFactory: SessionFactory by lazy(LazyThreadSafetyMode.NONE) {
         transaction {
-            HibernateConfiguration(nodeSchemaService, databaseProperties).sessionFactoryForRegisteredSchemas()
+            HibernateConfiguration(nodeSchemaService, databaseProperties, identitySvc()).sessionFactoryForRegisteredSchemas()
         }
     }
 
     companion object {
-        fun connect(dataSource: HikariDataSource, nodeSchemaService: NodeSchemaService, databaseProperties: Properties): CordaPersistence {
-            return CordaPersistence(dataSource, nodeSchemaService, databaseProperties).apply {
+        fun connect(dataSource: HikariDataSource, nodeSchemaService: NodeSchemaService, identitySvc: () -> IdentityService, databaseProperties: Properties): CordaPersistence {
+            return CordaPersistence(dataSource, nodeSchemaService, identitySvc, databaseProperties).apply {
                 DatabaseTransactionManager(this)
             }
         }
@@ -99,10 +100,10 @@ class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: 
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, entitySchemas: Set<MappedSchema> = emptySet<MappedSchema>()): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, entitySchemas: Set<MappedSchema> = emptySet<MappedSchema>(), identitySvc: ()-> IdentityService): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
-    val persistence = CordaPersistence.connect(dataSource, NodeSchemaService(entitySchemas), databaseProperties ?: Properties())
+    val persistence = CordaPersistence.connect(dataSource, NodeSchemaService(entitySchemas), identitySvc, databaseProperties ?: Properties())
 
     //org.jetbrains.exposed.sql.Database will be removed once Exposed library is removed
     val database = Database.connect(dataSource) { _ -> ExposedTransactionManager() }
