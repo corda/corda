@@ -27,6 +27,7 @@ import net.corda.core.crypto.commonName
 import net.corda.core.crypto.toBase58String
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
@@ -70,8 +71,8 @@ class TransactionViewer : CordaView("Transactions") {
             val id: SecureHash,
             val inputs: Inputs,
             val outputs: ObservableList<StateAndRef<ContractState>>,
-            val inputParties: ObservableList<List<ObservableValue<NodeInfo?>>>,
-            val outputParties: ObservableList<List<ObservableValue<NodeInfo?>>>,
+            val inputParties: ObservableList<List<ObservableValue<Party?>>>,
+            val outputParties: ObservableList<List<ObservableValue<Party?>>>,
             val commandTypes: List<Class<CommandData>>,
             val totalValueEquiv: ObservableValue<AmountDiff<Currency>>
     )
@@ -135,8 +136,8 @@ class TransactionViewer : CordaView("Transactions") {
                 "Transaction ID" to { tx, s -> "${tx.id}".contains(s, true) },
                 "Input" to { tx, s -> tx.inputs.resolved.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
                 "Output" to { tx, s -> tx.outputs.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
-                "Input Party" to { tx, s -> tx.inputParties.any { it.any { it.value?.legalIdentity?.name?.commonName?.contains(s, true) ?: false } } },
-                "Output Party" to { tx, s -> tx.outputParties.any { it.any { it.value?.legalIdentity?.name?.commonName?.contains(s, true) ?: false } } },
+                "Input Party" to { tx, s -> tx.inputParties.any { it.any { it.value?.name?.commonName?.contains(s, true) ?: false } } },
+                "Output Party" to { tx, s -> tx.outputParties.any { it.any { it.value?.name?.commonName?.contains(s, true) ?: false } } },
                 "Command Type" to { tx, s -> tx.commandTypes.any { it.simpleName.contains(s, true) } }
         )
         root.top = searchField.root
@@ -199,13 +200,13 @@ class TransactionViewer : CordaView("Transactions") {
         })
     }
 
-    private fun ObservableList<List<ObservableValue<NodeInfo?>>>.formatJoinPartyNames(separator: String = "", formatter: Formatter<X500Name>): String {
+    private fun ObservableList<List<ObservableValue<Party?>>>.formatJoinPartyNames(separator: String = ",", formatter: Formatter<X500Name>): String {
         return flatten().map {
-            it.value?.legalIdentity?.let { formatter.format(it.name) }
+            it.value?.let { formatter.format(it.name) }
         }.filterNotNull().toSet().joinToString(separator)
     }
 
-    private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { getModel<NetworkIdentityModel>().lookup(it.owningKey) } }
+    private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { it.owningKey.toKnownParty() } }
     private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract().javaClass.simpleName }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
 
     private class TransactionWidget : BorderPane() {
@@ -248,8 +249,8 @@ class TransactionViewer : CordaView("Transactions") {
             outputs.items = transaction.outputs.observable()
 
             signatures.children.addAll(signatureData.map { signature ->
-                val nodeInfo = getModel<NetworkIdentityModel>().lookup(signature)
-                copyableLabel(nodeInfo.map { "${signature.toStringShort()} (${it?.legalIdentity?.let { PartyNameFormatter.short.format(it.name)} ?: "???"})" })
+                val party = signature.toKnownParty()
+                copyableLabel(party.map { "${signature.toStringShort()} (${it?.let { PartyNameFormatter.short.format(it.name) } ?: "Anonymous"})" })
             })
         }
 
@@ -276,7 +277,7 @@ class TransactionViewer : CordaView("Transactions") {
                             row {
                                 label("Issuer :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
                                 val anonymousIssuer: AbstractParty = data.amount.token.issuer.party
-                                val issuer: AbstractParty = anonymousIssuer.resolveIssuer().value ?: anonymousIssuer
+                                val issuer: AbstractParty = anonymousIssuer.owningKey.toKnownParty().value ?: anonymousIssuer
                                 // TODO: Anonymous should probably be italicised or similar
                                 label(issuer.nameOrNull()?.let { PartyNameFormatter.short.format(it) } ?: "Anonymous") {
                                     tooltip(anonymousIssuer.owningKey.toBase58String())
@@ -284,9 +285,8 @@ class TransactionViewer : CordaView("Transactions") {
                             }
                             row {
                                 label("Owner :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
-                                val owner = data.owner
-                                val nodeInfo = getModel<NetworkIdentityModel>().lookup(owner.owningKey)
-                                label(nodeInfo.map { it?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) } ?: "???" }) {
+                                val owner = data.owner.owningKey.toKnownParty()
+                                label(owner.map { it?.let { PartyNameFormatter.short.format(it.name) } ?: "Anonymous" }) {
                                     tooltip(data.owner.owningKey.toBase58String())
                                 }
                             }
@@ -300,27 +300,28 @@ class TransactionViewer : CordaView("Transactions") {
     }
 
     private fun StateAndRef<ContractState>.contract() = this.state.data.contract
+
 }
 
 /**
  * We calculate the total value by subtracting relevant input states and adding relevant output states, as long as they're cash
  */
-private fun calculateTotalEquiv(identity: NodeInfo?,
+private fun calculateTotalEquiv(myIdentity: NodeInfo?,
                                 reportingCurrencyExchange: Pair<Currency, (Amount<Currency>) -> Amount<Currency>>,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
-    val legalIdentity = identity?.legalIdentity
+    val myLegalIdentity = myIdentity?.legalIdentity
     fun List<ContractState>.sum() = this.map { it as? Cash.State }
             .filterNotNull()
-            .filter { legalIdentity == it.owner }
+            .filter { it.owner.owningKey.toKnownParty().value == myLegalIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum()
 
     // For issuing cash, if I am the issuer and not the owner (e.g. issuing cash to other party), count it as negative.
     val issuedAmount = if (inputs.isEmpty()) outputs.map { it as? Cash.State }
             .filterNotNull()
-            .filter { legalIdentity == it.amount.token.issuer.party && legalIdentity != it.owner }
+            .filter { it.amount.token.issuer.party.owningKey.toKnownParty().value == myLegalIdentity && it.owner.owningKey.toKnownParty().value != myLegalIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum() else 0
 

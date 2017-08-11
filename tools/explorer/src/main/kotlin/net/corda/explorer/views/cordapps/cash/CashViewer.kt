@@ -205,7 +205,7 @@ class CashViewer : CordaView("Cash") {
                     /**
                      * Assemble the Issuer node.
                      */
-                    val treeItem = TreeItem(ViewerNode.IssuerNode(issuer.resolveIssuer().value ?: issuer, equivSumAmount, memberStates))
+                    val treeItem = TreeItem(ViewerNode.IssuerNode(issuer.owningKey.toKnownParty().value ?: issuer, equivSumAmount, memberStates))
 
                     /**
                      * Bind the children in the TreeTable structure.
