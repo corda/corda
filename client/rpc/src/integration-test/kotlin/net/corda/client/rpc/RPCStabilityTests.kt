@@ -1,17 +1,13 @@
 package net.corda.client.rpc
 
-import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.future
-import net.corda.core.getOrThrow
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.RPCOps
-import net.corda.core.utilities.millis
-import net.corda.core.utilities.seconds
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.Try
+import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.testing.*
@@ -24,10 +20,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.time.Duration
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 
 class RPCStabilityTests {
@@ -233,9 +226,7 @@ class RPCStabilityTests {
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
             startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
-            val pingFuture = future {
-                client.ping()
-            }
+            val pingFuture = ForkJoinPool.commonPool().fork(client::ping)
             assertEquals("pong", pingFuture.getOrThrow(10.seconds))
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
@@ -269,9 +260,9 @@ class RPCStabilityTests {
             ).get()
 
             val numberOfClients = 4
-            val clients = Futures.allAsList((1 .. numberOfClients).map {
+            val clients = (1 .. numberOfClients).map {
                 startRandomRpcClient<TrackSubscriberOps>(server.broker.hostAndPort!!)
-            }).get()
+            }.transpose().get()
 
             // Poll until all clients connect
             pollUntilClientNumber(server, numberOfClients)

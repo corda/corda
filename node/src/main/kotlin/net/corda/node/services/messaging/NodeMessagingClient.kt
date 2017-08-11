@@ -1,9 +1,9 @@
 package net.corda.node.services.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.andForget
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.getOrThrow
+import net.corda.core.internal.concurrent.andForget
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
@@ -11,12 +11,8 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.thenMatch
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.sequence
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MonitoringService
@@ -77,7 +73,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                           val myIdentity: PublicKey?,
                           val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                           val database: CordaPersistence,
-                          val networkMapRegistrationFuture: ListenableFuture<Unit>,
+                          val networkMapRegistrationFuture: CordaFuture<Unit>,
                           val monitoringService: MonitoringService,
                           advertisedAddress: NetworkHostAndPort = serverAddress
 ) : ArtemisMessagingComponent(), MessagingService {

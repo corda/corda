@@ -87,8 +87,6 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = java.util.ArrayList(keyToParties.values)
 
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
-    @Deprecated("Use partyFromX500Name")
-    override fun partyFromName(name: String): Party? = principalToParties[X500Name(name)]?.party
     override fun partyFromX500Name(principal: X500Name): Party? = principalToParties[principal]?.party
     override fun partyFromAnonymous(party: AbstractParty) = party as? Party ?: partyFromKey(party.owningKey)
     override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)

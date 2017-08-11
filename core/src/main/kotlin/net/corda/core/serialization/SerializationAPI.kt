@@ -5,7 +5,6 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.WriteOnceProperty
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
@@ -134,4 +133,8 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = SERIALIZA
 class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }
+}
+
+interface ClassWhitelist {
+    fun hasListed(type: Class<*>): Boolean
 }

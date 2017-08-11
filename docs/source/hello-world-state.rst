@@ -78,8 +78,8 @@ define an ``IOUState``:
 
         class IOUState(val value: Int,
                        val lender: Party,
-                       val borrower: Party) : ContractState {
-            override val contract: IOUContract = IOUContract()
+                       val borrower: Party,
+		       override val contract: TemplateContract) : ContractState {
 
             override val participants get() = listOf(lender, borrower)
         }

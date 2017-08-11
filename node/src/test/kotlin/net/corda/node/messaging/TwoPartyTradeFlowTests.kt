@@ -2,25 +2,24 @@ package net.corda.node.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
+import net.corda.core.concurrent.CordaFuture
 import net.corda.contracts.asset.CASH
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.`issued by`
 import net.corda.contracts.asset.`owned by`
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
-import net.corda.core.map
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -32,6 +31,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.days
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow.Buyer
@@ -57,7 +57,6 @@ import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 import java.security.KeyPair
 import java.util.*
-import java.util.concurrent.Future
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -149,8 +148,8 @@ class TwoPartyTradeFlowTests {
             bobNode.disableDBCloseOnStop()
 
             val cashStates = bobNode.database.transaction {
-                    bobNode.services.fillWithSomeTestCash(2000.DOLLARS, notaryNode.info.notaryIdentity, 3, 3)
-                }
+                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, notaryNode.info.notaryIdentity, 3, 3)
+            }
 
             val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, cpIssuer, aliceNode.info.legalIdentity,
@@ -169,7 +168,7 @@ class TwoPartyTradeFlowTests {
             }
 
             val (bobStateMachine, aliceResult) = runBuyerAndSeller(notaryNode, aliceNode, bobNode,
-                        "alice's paper".outputStateAndRef())
+                    "alice's paper".outputStateAndRef())
 
             assertEquals(aliceResult.getOrThrow(), bobStateMachine.getOrThrow().resultFuture.getOrThrow())
 
@@ -491,7 +490,7 @@ class TwoPartyTradeFlowTests {
     fun `dependency with error on buyer side`() {
         mockNet = MockNetwork(false)
         ledger(initialiseSerialization = false) {
-            runWithError(true, false, "at least one asset input")
+            runWithError(true, false, "at least one cash input")
         }
     }
 
@@ -499,14 +498,14 @@ class TwoPartyTradeFlowTests {
     fun `dependency with error on seller side`() {
         mockNet = MockNetwork(false)
         ledger(initialiseSerialization = false) {
-            runWithError(false, true, "Issuances must have a time-window")
+            runWithError(false, true, "Issuances have a time-window")
         }
     }
 
     private data class RunResult(
             // The buyer is not created immediately, only when the seller starts running
-            val buyer: Future<FlowStateMachine<*>>,
-            val sellerResult: Future<SignedTransaction>,
+            val buyer: CordaFuture<FlowStateMachine<*>>,
+            val sellerResult: CordaFuture<SignedTransaction>,
             val sellerId: StateMachineRunId
     )
 
@@ -534,11 +533,11 @@ class TwoPartyTradeFlowTests {
         override fun call(): SignedTransaction {
             send(buyer, Pair(notary.notaryIdentity, price))
             return subFlow(Seller(
-                buyer,
-                notary,
-                assetToSell,
-                price,
-                me.party))
+                    buyer,
+                    notary,
+                    assetToSell,
+                    price,
+                    me.party))
         }
     }
 
@@ -604,11 +603,11 @@ class TwoPartyTradeFlowTests {
 
         val signed = wtxToSign.map {
             val id = it.id
-            val sigs = mutableListOf<DigitalSignature.WithKey>()
-            sigs.add(node.services.keyManagementService.sign(id.bytes, node.services.legalIdentityKey))
-            sigs.add(notaryNode.services.keyManagementService.sign(id.bytes, notaryNode.services.notaryIdentityKey))
+            val sigs = mutableListOf<TransactionSignature>()
+            sigs.add(node.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(node.services.legalIdentityKey).schemeNumberID)), node.services.legalIdentityKey))
+            sigs.add(notaryNode.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(notaryNode.services.notaryIdentityKey).schemeNumberID)), notaryNode.services.notaryIdentityKey))
             extraSigningNodes.forEach { currentNode ->
-                sigs.add(currentNode.services.keyManagementService.sign(id.bytes, currentNode.info.legalIdentity.owningKey))
+                sigs.add(currentNode.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(currentNode.info.legalIdentity.owningKey).schemeNumberID)), currentNode.info.legalIdentity.owningKey))
             }
             SignedTransaction(it, sigs)
         }

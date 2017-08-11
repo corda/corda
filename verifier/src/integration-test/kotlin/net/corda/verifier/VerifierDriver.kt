@@ -1,19 +1,14 @@
 package net.corda.verifier
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.ListeningScheduledExecutorService
-import com.google.common.util.concurrent.SettableFuture
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.core.crypto.X509Utilities
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.commonName
-import net.corda.core.internal.div
-import net.corda.core.map
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.div
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.driver.ProcessUtilities
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
@@ -23,6 +18,7 @@ import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.driver.*
+import net.corda.testing.getTestX509Name
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -39,6 +35,7 @@ import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -47,10 +44,10 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 interface VerifierExposedDSLInterface : DriverDSLExposedInterface {
     /** Starts a lightweight verification requestor that implements the Node's Verifier API */
-    fun startVerificationRequestor(name: X500Name): ListenableFuture<VerificationRequestorHandle>
+    fun startVerificationRequestor(name: X500Name): CordaFuture<VerificationRequestorHandle>
 
     /** Starts an out of process verifier connected to [address] */
-    fun startVerifier(address: NetworkHostAndPort): ListenableFuture<VerifierHandle>
+    fun startVerifier(address: NetworkHostAndPort): CordaFuture<VerifierHandle>
 
     /**
      * Waits until [number] verifiers are listening for verification requests coming from the Node. Check
@@ -110,15 +107,15 @@ data class VerificationRequestorHandle(
         private val responseAddress: SimpleString,
         private val session: ClientSession,
         private val requestProducer: ClientProducer,
-        private val addVerificationFuture: (Long, SettableFuture<Throwable?>) -> Unit,
-        private val executorService: ListeningScheduledExecutorService
+        private val addVerificationFuture: (Long, OpenFuture<Throwable?>) -> Unit,
+        private val executorService: ScheduledExecutorService
 ) {
-    fun verifyTransaction(transaction: LedgerTransaction): ListenableFuture<Throwable?> {
+    fun verifyTransaction(transaction: LedgerTransaction): CordaFuture<Throwable?> {
         val message = session.createMessage(false)
         val verificationId = random63BitValue()
         val request = VerifierApi.VerificationRequest(verificationId, transaction, responseAddress)
         request.writeToClientMessage(message)
-        val verificationFuture = SettableFuture.create<Throwable?>()
+        val verificationFuture = openFuture<Throwable?>()
         addVerificationFuture(verificationId, verificationFuture)
         requestProducer.send(message)
         return verificationFuture
@@ -176,9 +173,9 @@ data class VerifierDriverDSL(
         }
     }
 
-    override fun startVerificationRequestor(name: X500Name): ListenableFuture<VerificationRequestorHandle> {
+    override fun startVerificationRequestor(name: X500Name): CordaFuture<VerificationRequestorHandle> {
         val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
-        return driverDSL.executorService.submit<VerificationRequestorHandle> {
+        return driverDSL.executorService.fork {
             startVerificationRequestorInternal(name, hostAndPort)
         }
     }
@@ -207,7 +204,7 @@ data class VerifierDriverDSL(
         val server = ActiveMQServerImpl(artemisConfig, securityManager)
         log.info("Starting verification requestor Artemis server with base dir $baseDir")
         server.start()
-        driverDSL.shutdownManager.registerShutdown(Futures.immediateFuture {
+        driverDSL.shutdownManager.registerShutdown(doneFuture {
             server.stop()
         })
 
@@ -215,7 +212,7 @@ data class VerifierDriverDSL(
         val transport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfig)
         val sessionFactory = locator.createSessionFactory(transport)
         val session = sessionFactory.createSession()
-        driverDSL.shutdownManager.registerShutdown(Futures.immediateFuture {
+        driverDSL.shutdownManager.registerShutdown(doneFuture {
             session.stop()
             sessionFactory.close()
         })
@@ -223,7 +220,7 @@ data class VerifierDriverDSL(
 
         val consumer = session.createConsumer(responseAddress)
         // We demux the individual txs ourselves to avoid race when a new verifier is added
-        val verificationResponseFutures = ConcurrentHashMap<Long, SettableFuture<Throwable?>>()
+        val verificationResponseFutures = ConcurrentHashMap<Long, OpenFuture<Throwable?>>()
         consumer.setMessageHandler {
             val result = VerifierApi.VerificationResponse.fromClientMessage(it)
             val resultFuture = verificationResponseFutures.remove(result.verificationId)
@@ -247,12 +244,12 @@ data class VerifierDriverDSL(
         )
     }
 
-    override fun startVerifier(address: NetworkHostAndPort): ListenableFuture<VerifierHandle> {
+    override fun startVerifier(address: NetworkHostAndPort): CordaFuture<VerifierHandle> {
         log.info("Starting verifier connecting to address $address")
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
-        val processFuture = driverDSL.executorService.submit<Process> {
-            val verifierName = X509Utilities.getDevX509Name("verifier$id")
+        val processFuture = driverDSL.executorService.fork {
+            val verifierName = getTestX509Name("verifier$id")
             val baseDirectory = driverDSL.driverDirectory / verifierName.commonName
             val config = createConfiguration(baseDirectory, address)
             val configFilename = "verifier.conf"

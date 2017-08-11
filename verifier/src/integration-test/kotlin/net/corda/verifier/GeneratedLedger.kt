@@ -3,7 +3,6 @@ package net.corda.verifier
 import net.corda.client.mock.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
@@ -12,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.getTestX509Name
 import java.io.ByteArrayInputStream
 import java.math.BigInteger
 import java.security.PublicKey
@@ -179,7 +179,7 @@ fun commandGenerator(partiesToPickFrom: Collection<Party>): Generator<Pair<Comma
 }
 
 val partyGenerator: Generator<Party> = Generator.int().combine(publicKeyGenerator) { n, key ->
-    Party(X509Utilities.getDevX509Name("Party$n"), key)
+    Party(getTestX509Name("Party$n"), key)
 }
 
 fun <A> pickOneOrMaybeNew(from: Collection<A>, generator: Generator<A>): Generator<A> {

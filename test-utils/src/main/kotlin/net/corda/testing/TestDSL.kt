@@ -1,12 +1,9 @@
 package net.corda.testing
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.expandedCompositeKeys
-import net.corda.core.crypto.sign
-import net.corda.core.crypto.testing.NullSignature
-import net.corda.core.crypto.toStringShort
+import net.corda.core.crypto.testing.NULL_SIGNATURE
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
@@ -289,7 +286,7 @@ data class TestLedgerDSLInterpreter private constructor(
     override fun verifies(): EnforceVerifyOrFail {
         try {
             val usedInputs = mutableSetOf<StateRef>()
-            services.recordTransactions(transactionsUnverified.map { SignedTransaction(it, listOf(NullSignature)) })
+            services.recordTransactions(transactionsUnverified.map { SignedTransaction(it, listOf(NULL_SIGNATURE)) })
             for ((_, value) in transactionWithLocations) {
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
@@ -301,7 +298,7 @@ data class TestLedgerDSLInterpreter private constructor(
                     throw DoubleSpentInputs(txIds)
                 }
                 usedInputs.addAll(wtx.inputs)
-                services.recordTransactions(SignedTransaction(wtx, listOf(NullSignature)))
+                services.recordTransactions(SignedTransaction(wtx, listOf(NULL_SIGNATURE)))
             }
             return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {
@@ -335,7 +332,7 @@ data class TestLedgerDSLInterpreter private constructor(
  */
 fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>) = transactionsToSign.map { wtx ->
     check(wtx.requiredSigningKeys.isNotEmpty())
-    val signatures = ArrayList<DigitalSignature.WithKey>()
+    val signatures = ArrayList<TransactionSignature>()
     val keyLookup = HashMap<PublicKey, KeyPair>()
 
     (ALL_TEST_KEYS + extraKeys).forEach {
@@ -343,7 +340,7 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>)
     }
     wtx.requiredSigningKeys.expandedCompositeKeys.forEach {
         val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
-        signatures += key.sign(wtx.id)
+        signatures += key.sign(SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(it).schemeNumberID)))
     }
     SignedTransaction(wtx, signatures)
 }

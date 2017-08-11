@@ -21,7 +21,7 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
         override val participants: List<AbstractParty>
             get() = listOf(owner)
 
-        override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
     }
 
     /**

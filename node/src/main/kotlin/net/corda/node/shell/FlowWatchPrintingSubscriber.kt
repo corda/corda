@@ -1,13 +1,12 @@
 package net.corda.node.shell
 
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.commonName
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.StateMachineUpdate.Added
 import net.corda.core.messaging.StateMachineUpdate.Removed
-import net.corda.core.then
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
 import org.crsh.text.Color
@@ -22,7 +21,7 @@ import rx.Subscriber
 class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscriber<Any>() {
     private val indexMap = HashMap<StateMachineRunId, Int>()
     private val table = createStateMachinesTable()
-    val future: SettableFuture<Unit> = SettableFuture.create()
+    val future = openFuture<Unit>()
 
     init {
         // The future is public and can be completed by something else to indicate we don't wish to follow

@@ -1,11 +1,11 @@
 package net.corda.testing.driver
 
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.div
-import net.corda.core.getOrThrow
 import net.corda.core.internal.list
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.internal.readLines
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
@@ -24,7 +24,7 @@ class DriverTests {
 
         private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
-        private fun nodeMustBeUp(handleFuture: ListenableFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
+        private fun nodeMustBeUp(handleFuture: CordaFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
             val hostAndPort = nodeInfo.addresses.first()
             // Check that the port is bound
             addressMustBeBound(executorService, hostAndPort, (this as? NodeHandle.OutOfProcess)?.process)

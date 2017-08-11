@@ -1,16 +1,16 @@
 package net.corda.node.services.transactions
 
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.issueInvalidState
@@ -85,7 +85,7 @@ class ValidatingNotaryServiceTests {
         assertEquals(setOf(expectedMissingKey), missingKeys)
     }
 
-    private fun runClient(stx: SignedTransaction): ListenableFuture<List<DigitalSignature.WithKey>> {
+    private fun runClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
         val flow = NotaryFlow.Client(stx)
         val future = clientNode.services.startFlow(flow).resultFuture
         mockNet.runNetwork()

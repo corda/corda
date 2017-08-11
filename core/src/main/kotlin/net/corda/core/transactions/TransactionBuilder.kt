@@ -151,18 +151,18 @@ open class TransactionBuilder(
 
     /** The signatures that have been collected so far - might be incomplete! */
     @Deprecated("Signatures should be gathered on a SignedTransaction instead.")
-    protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
+    protected val currentSigs = arrayListOf<TransactionSignature>()
 
     @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun signWith(key: KeyPair): TransactionBuilder {
-        val data = toWireTransaction().id
-        addSignatureUnchecked(key.sign(data.bytes))
+        val signableData = SignableData(toWireTransaction().id, SignatureMetadata(1, Crypto.findSignatureScheme(key.public).schemeNumberID)) // A dummy platformVersion.
+        addSignatureUnchecked(key.sign(signableData))
         return this
     }
 
     /** Adds the signature directly to the transaction, without checking it for validity. */
     @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
-    fun addSignatureUnchecked(sig: DigitalSignature.WithKey): TransactionBuilder {
+    fun addSignatureUnchecked(sig: TransactionSignature): TransactionBuilder {
         currentSigs.add(sig)
         return this
     }
@@ -188,7 +188,7 @@ open class TransactionBuilder(
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     @Deprecated("Use WireTransaction.checkSignature() instead.")
-    fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
+    fun checkAndAddSignature(sig: TransactionSignature) {
         checkSignature(sig)
         addSignatureUnchecked(sig)
     }
@@ -200,7 +200,7 @@ open class TransactionBuilder(
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     @Deprecated("Use WireTransaction.checkSignature() instead.")
-    fun checkSignature(sig: DigitalSignature.WithKey) {
+    fun checkSignature(sig: TransactionSignature) {
         require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
         sig.verify(toWireTransaction().id)
     }

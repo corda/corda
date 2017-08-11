@@ -3,17 +3,17 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.MutableClassToInstanceMap
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import com.google.common.util.concurrent.SettableFuture
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.*
-import net.corda.core.flatMap
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -62,6 +62,8 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.configureDatabase
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
@@ -77,6 +79,7 @@ import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.sql.Connection
 import java.time.Clock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -136,9 +139,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     var isPreviousCheckpointsPresent = false
         private set
 
-    protected val _networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create()
+    protected val _networkMapRegistrationFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service */
-    val networkMapRegistrationFuture: ListenableFuture<Unit>
+    val networkMapRegistrationFuture: CordaFuture<Unit>
         get() = _networkMapRegistrationFuture
 
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
@@ -208,10 +211,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // TODO Remove this once the cash stuff is in its own CorDapp
             registerInitiatedFlow(IssuerFlow.Issuer::class.java)
 
-            initUploaders()
-
             runOnStop += network::stop
-            _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
+            _networkMapRegistrationFuture.captureLater(registerWithNetworkMapIfConfigured())
             smm.start()
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
@@ -398,8 +399,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun installCoreFlows() {
-        installCoreFlow(FetchTransactionsFlow::class) { otherParty, _ -> FetchTransactionsHandler(otherParty) }
-        installCoreFlow(FetchAttachmentsFlow::class) { otherParty, _ -> FetchAttachmentsHandler(otherParty) }
         installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
         installCoreFlow(NotaryChangeFlow::class) { otherParty, _ -> NotaryChangeHandler(otherParty) }
         installCoreFlow(ContractUpgradeFlow::class) { otherParty, _ -> ContractUpgradeHandler(otherParty) }
@@ -477,15 +476,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filterNot { isAbstract(it.modifiers) }
     }
 
-    private fun initUploaders() {
-        _services.uploaders += attachments
-        cordappServices.values.filterIsInstanceTo(_services.uploaders, AcceptsFileUpload::class.java)
-    }
-
     private fun makeVaultObservers() {
         VaultSoftLockManager(services.vaultService, smm)
         ScheduledActivityObserver(services)
-        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService, configuration.database ?: Properties()))
+        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService, configuration.database ?: Properties(), services.identityService))
     }
 
     private fun makeInfo(): NodeInfo {
@@ -581,7 +575,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private fun registerWithNetworkMapIfConfigured(): ListenableFuture<Unit> {
+    private fun registerWithNetworkMapIfConfigured(): CordaFuture<Unit> {
         services.networkMapCache.addNode(info)
         // In the unit test environment, we may sometimes run without any network map service
         return if (networkMapAddress == null && inNodeNetworkMapService == null) {
@@ -596,7 +590,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Register this node with the network map cache, and load network map from a remote service (and register for
      * updates) if one has been supplied.
      */
-    protected open fun registerWithNetworkMap(): ListenableFuture<Unit> {
+    protected open fun registerWithNetworkMap(): CordaFuture<Unit> {
         require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
             "Initial network map address must indicate a node that provides a network map service"
         }
@@ -610,7 +604,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private fun sendNetworkMapRegistration(networkMapAddress: SingleMessageRecipient): ListenableFuture<RegistrationResponse> {
+    private fun sendNetworkMapRegistration(networkMapAddress: SingleMessageRecipient): CordaFuture<RegistrationResponse> {
         // Register this node against the network
         val instant = platformClock.instant()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
@@ -624,7 +618,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */
-    protected open fun noNetworkMapConfigured(): ListenableFuture<Unit> {
+    protected open fun noNetworkMapConfigured(): CordaFuture<Unit> {
         // TODO: There should be a consistent approach to configuration error exceptions.
         throw IllegalStateException("Configuration error: this node isn't being asked to act as the network map, nor " +
                 "has any other map node been configured.")
@@ -764,7 +758,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
-        override val uploaders = ArrayList<FileUploader>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val monitoringService = MonitoringService(MetricRegistry())
@@ -773,13 +766,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(this, configuration.dataSourceProperties, configuration.database) }
         override val vaultQueryService by lazy {
-            HibernateVaultQueryImpl(HibernateConfiguration(schemaService, configuration.database ?: Properties()), vaultService.updatesPublisher)
+            HibernateVaultQueryImpl(HibernateConfiguration(schemaService, configuration.database ?: Properties(), identityService), vaultService.updatesPublisher)
         }
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
         override val keyManagementService by lazy { makeKeyManagementService(identityService) }
-        override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch) }
+        override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch, serverThread = serverThread) }
         override val identityService by lazy {
             val trustStore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
             val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
@@ -814,6 +807,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 super.recordTransactions(txs)
             }
         }
+        override fun jdbcSession(): Connection = database.createSession()
     }
 
 }

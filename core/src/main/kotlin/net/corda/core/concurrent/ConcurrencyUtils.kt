@@ -1,34 +1,44 @@
 package net.corda.core.concurrent
 
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.catch
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.match
-import net.corda.core.then
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicBoolean
+
+/** Invoke [getOrThrow] and pass the value/throwable to success/failure respectively. */
+fun <V, W> Future<V>.match(success: (V) -> W, failure: (Throwable) -> W): W {
+    val value = try {
+        getOrThrow()
+    } catch (t: Throwable) {
+        return failure(t)
+    }
+    return success(value)
+}
 
 /**
  * As soon as a given future becomes done, the handler is invoked with that future as its argument.
  * The result of the handler is copied into the result future, and the handler isn't invoked again.
  * If a given future errors after the result future is done, the error is automatically logged.
  */
-fun <S, T> firstOf(vararg futures: ListenableFuture<out S>, handler: (ListenableFuture<out S>) -> T) = firstOf(futures, defaultLog, handler)
+fun <V, W> firstOf(vararg futures: CordaFuture<out V>, handler: (CordaFuture<out V>) -> W) = firstOf(futures, defaultLog, handler)
 
 private val defaultLog = LoggerFactory.getLogger("net.corda.core.concurrent")
 @VisibleForTesting
 internal val shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 
-internal fun <S, T> firstOf(futures: Array<out ListenableFuture<out S>>, log: Logger, handler: (ListenableFuture<out S>) -> T): ListenableFuture<T> {
-    val resultFuture = SettableFuture.create<T>()
+internal fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger, handler: (CordaFuture<out V>) -> W): CordaFuture<W> {
+    val resultFuture = openFuture<W>()
     val winnerChosen = AtomicBoolean()
     futures.forEach {
         it.then {
             if (winnerChosen.compareAndSet(false, true)) {
-                resultFuture.catch { handler(it) }
-            } else if (!it.isCancelled) {
+                resultFuture.capture { handler(it) }
+            } else if (it.isCancelled) {
+                // Do nothing.
+            } else {
                 it.match({}, { log.error(shortCircuitedTaskFailedMessage, it) })
             }
         }

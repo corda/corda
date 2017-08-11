@@ -1,14 +1,14 @@
 package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.util.concurrent.Futures
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.core.utilities.unwrap
@@ -24,9 +24,9 @@ class CordappScanningDriverTest {
         val user = User("u", "p", setOf(startFlowPermission<ReceiveFlow>()))
         // The driver will automatically pick up the annotated flows below
         driver {
-            val (alice, bob) = Futures.allAsList(
+            val (alice, bob) = listOf(
                     startNode(ALICE.name, rpcUsers = listOf(user)),
-                    startNode(BOB.name)).getOrThrow()
+                    startNode(BOB.name)).transpose().getOrThrow()
             val initiatedFlowClass = alice.rpcClientToNode()
                     .start(user.username, user.password)
                     .proxy

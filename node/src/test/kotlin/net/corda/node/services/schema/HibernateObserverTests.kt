@@ -10,9 +10,12 @@ import net.corda.core.schemas.QueryableState
 import net.corda.testing.LogHelper
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.testing.DUMMY_CA
 import net.corda.testing.MEGA_CORP
+import net.corda.testing.MOCK_IDENTITIES
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
 import org.hibernate.annotations.Cascade
@@ -102,7 +105,8 @@ class HibernateObserverTests {
         }
 
         @Suppress("UNUSED_VARIABLE")
-        val observer = HibernateObserver(rawUpdatesPublisher, HibernateConfiguration(schemaService, makeTestDatabaseProperties()))
+        val identityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
+        val observer = HibernateObserver(rawUpdatesPublisher, HibernateConfiguration(schemaService, makeTestDatabaseProperties(), identityService))
         database.transaction {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
             val parentRowCountResult = TransactionManager.current().connection.prepareStatement("select count(*) from Parents").executeQuery()

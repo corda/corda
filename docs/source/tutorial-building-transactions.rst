@@ -116,11 +116,12 @@ standard ``CashState`` in the ``:financial`` Gradle module. The Cash
 contract uses ``FungibleAsset`` states to model holdings of 
 interchangeable assets and allow the split/merge and summing of 
 states to meet a contractual obligation. We would normally use the 
-``generateSpend`` method on the ``VaultService`` to gather the required 
+``Cash.generateSpend`` method to gather the required
 amount of cash into a ``TransactionBuilder``, set the outputs and move 
 command. However, to elucidate more clearly example flow code is shown 
 here that will manually carry out the inputs queries by specifying relevant
-query criteria filters to the ``queryBy`` method of the ``VaultQueryService``.
+query criteria filters to the ``tryLockFungibleStatesForSpending`` method
+of the ``VaultService``.
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/FxTransactionBuildTutorial.kt
     :language: kotlin

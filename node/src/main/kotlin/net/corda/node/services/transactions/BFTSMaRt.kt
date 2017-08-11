@@ -14,21 +14,18 @@ import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sign
+import net.corda.core.crypto.*
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.Party
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.toTypedArray
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.internal.toTypedArray
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
@@ -176,7 +173,7 @@ object BFTSMaRt {
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
                            tableName: String,
-                           private val services: ServiceHubInternal,
+                           protected val services: ServiceHubInternal,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
             private val log = loggerFor<Replica>()
@@ -251,6 +248,10 @@ object BFTSMaRt {
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
             return services.database.transaction { services.keyManagementService.sign(bytes, services.notaryIdentityKey) }
+        }
+
+        protected fun sign(signableData: SignableData): TransactionSignature {
+            return services.database.transaction { services.keyManagementService.sign(signableData, services.notaryIdentityKey) }
         }
 
         // TODO:

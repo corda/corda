@@ -9,18 +9,17 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestDatabaseAndMockServices
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -43,23 +42,9 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
-        val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
-        database.transaction {
-            val hibernateConfig = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties())
-            services = object : MockServices() {
-                override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
-
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-                    for (stx in txs) {
-                        validatedTransactions.addTransaction(stx)
-                    }
-                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultService.notifyAll(txs.map { it.tx })
-                }
-                override val vaultQueryService : VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
-            }
-        }
+        val databaseAndServices = makeTestDatabaseAndMockServices()
+        database = databaseAndServices.first
+        services = databaseAndServices.second
     }
 
     @After
@@ -102,7 +87,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
 
             // A tx that spends our money.
             val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
-            vault.generateSpend(spendTXBuilder, 80.DOLLARS, BOB)
+            Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
             val spendPTX = services.signInitialTransaction(spendTXBuilder, freshKey)
             val spendTX = notaryServices.addSignature(spendPTX)
 
@@ -128,6 +113,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
     @Test
     fun `issue and attempt double spend`() {
         val freshKey = services.keyManagementService.freshKey()
+        val criteriaLocked = VaultQueryCriteria(softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.LOCKED_ONLY))
 
         database.transaction {
             // A tx that sends us money.
@@ -138,35 +124,38 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             println("Cash balance: ${services.getCashBalance(USD)}")
 
             assertThat(vaultQuery.queryBy<Cash.State>().states).hasSize(10)
-            assertThat(vault.softLockedStates<Cash.State>()).hasSize(0)
+            assertThat(vaultQuery.queryBy<Cash.State>(criteriaLocked).states).hasSize(0)
         }
 
         val backgroundExecutor = Executors.newFixedThreadPool(2)
         val countDown = CountDownLatch(2)
+
         // 1st tx that spends our money.
         backgroundExecutor.submit {
             database.transaction {
                 try {
                     val txn1Builder = TransactionBuilder(DUMMY_NOTARY)
-                    vault.generateSpend(txn1Builder, 60.DOLLARS, BOB)
+                    Cash.generateSpend(services, txn1Builder, 60.DOLLARS, BOB)
                     val ptxn1 = notaryServices.signInitialTransaction(txn1Builder)
                     val txn1 = services.addSignature(ptxn1, freshKey)
                     println("txn1: ${txn1.id} spent ${((txn1.tx.outputs[0].data) as Cash.State).amount}")
                     val unconsumedStates1 = vaultQuery.queryBy<Cash.State>()
                     val consumedStates1 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))
+                    val lockedStates1 = vaultQuery.queryBy<Cash.State>(criteriaLocked).states
                     println("""txn1 states:
                                 UNCONSUMED: ${unconsumedStates1.totalStatesAvailable} : $unconsumedStates1,
                                 CONSUMED: ${consumedStates1.totalStatesAvailable} : $consumedStates1,
-                                LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
+                                LOCKED: ${lockedStates1.count()} : $lockedStates1
                     """)
                     services.recordTransactions(txn1)
                     println("txn1: Cash balance: ${services.getCashBalance(USD)}")
                     val unconsumedStates2 = vaultQuery.queryBy<Cash.State>()
                     val consumedStates2 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))
+                    val lockedStates2 = vaultQuery.queryBy<Cash.State>(criteriaLocked).states
                     println("""txn1 states:
                                 UNCONSUMED: ${unconsumedStates2.totalStatesAvailable} : $unconsumedStates2,
                                 CONSUMED: ${consumedStates2.totalStatesAvailable} : $consumedStates2,
-                                LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
+                                LOCKED: ${lockedStates2.count()} : $lockedStates2
                     """)
                     txn1
                 } catch(e: Exception) {
@@ -182,25 +171,27 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             database.transaction {
                 try {
                     val txn2Builder = TransactionBuilder(DUMMY_NOTARY)
-                    vault.generateSpend(txn2Builder, 80.DOLLARS, BOB)
+                    Cash.generateSpend(services, txn2Builder, 80.DOLLARS, BOB)
                     val ptxn2 = notaryServices.signInitialTransaction(txn2Builder)
                     val txn2 = services.addSignature(ptxn2, freshKey)
                     println("txn2: ${txn2.id} spent ${((txn2.tx.outputs[0].data) as Cash.State).amount}")
                     val unconsumedStates1 = vaultQuery.queryBy<Cash.State>()
                     val consumedStates1 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))
+                    val lockedStates1 = vaultQuery.queryBy<Cash.State>(criteriaLocked).states
                     println("""txn2 states:
                                 UNCONSUMED: ${unconsumedStates1.totalStatesAvailable} : $unconsumedStates1,
                                 CONSUMED: ${consumedStates1.totalStatesAvailable} : $consumedStates1,
-                                LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
+                                LOCKED: ${lockedStates1.count()} : $lockedStates1
                     """)
                     services.recordTransactions(txn2)
                     println("txn2: Cash balance: ${services.getCashBalance(USD)}")
                     val unconsumedStates2 = vaultQuery.queryBy<Cash.State>()
                     val consumedStates2 = vaultQuery.queryBy<Cash.State>()
+                    val lockedStates2 = vaultQuery.queryBy<Cash.State>(criteriaLocked).states
                     println("""txn2 states:
                                 UNCONSUMED: ${unconsumedStates2.totalStatesAvailable} : $unconsumedStates2,
                                 CONSUMED: ${consumedStates2.totalStatesAvailable} : $consumedStates2,
-                                LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
+                                LOCKED: ${lockedStates2.count()} : $lockedStates2
                     """)
                     txn2
                 } catch(e: Exception) {
@@ -292,7 +283,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
         database.transaction {
             // A tx that spends our money.
             val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
-            vault.generateSpend(spendTXBuilder, 80.DOLLARS, BOB)
+            Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
             val spendPTX = notaryServices.signInitialTransaction(spendTXBuilder)
             val spendTX = services.addSignature(spendPTX, freshKey)
             services.recordTransactions(spendTX)

@@ -4,6 +4,7 @@ import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.composite.CompositeSignature
 import net.corda.core.crypto.provider.CordaObjectIdentifier
 import net.corda.core.crypto.provider.CordaSecurityProvider
+import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -13,19 +14,19 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
-import org.bouncycastle.asn1.*
+import org.bouncycastle.asn1.ASN1Integer
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.DERNull
+import org.bouncycastle.asn1.DLSequence
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.sec.SECObjectIdentifiers
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.X509v3CertificateBuilder
-import org.bouncycastle.cert.bc.BcX509ExtensionUtils
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
@@ -39,10 +40,6 @@ import org.bouncycastle.jce.spec.ECPublicKeySpec
 import org.bouncycastle.math.ec.ECConstants
 import org.bouncycastle.math.ec.FixedPointCombMultiplier
 import org.bouncycastle.math.ec.WNafUtil
-import org.bouncycastle.operator.ContentSigner
-import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
-import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
@@ -52,7 +49,6 @@ import java.security.*
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
-import java.util.*
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -195,7 +191,7 @@ object Crypto {
     // that could cause unexpected and suspicious behaviour.
     // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
     // The val is private to avoid any harmful state changes.
-    private val providerMap: Map<String, Provider> = mapOf(
+    val providerMap: Map<String, Provider> = mapOf(
             BouncyCastleProvider.PROVIDER_NAME to getBouncyCastleProvider(),
             CordaSecurityProvider.PROVIDER_NAME to CordaSecurityProvider(),
             "BCPQC" to BouncyCastlePQCProvider()) // unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
@@ -282,7 +278,7 @@ object Crypto {
 
     /**
      * Decode a PKCS8 encoded key to its [PrivateKey] object based on the input scheme code name.
-     * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
+     * This should be used when the type key is known, e.g. during deserialisation or with key caches or key managers.
      * @param schemeCodeName a [String] that should match a key in supportedSignatureSchemes map (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey a PKCS8 encoded private key.
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
@@ -293,7 +289,7 @@ object Crypto {
 
     /**
      * Decode a PKCS8 encoded key to its [PrivateKey] object based on the input scheme code name.
-     * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
+     * This should be used when the type key is known, e.g. during deserialisation or with key caches or key managers.
      * @param signatureScheme a signature scheme (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey a PKCS8 encoded private key.
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
@@ -325,7 +321,7 @@ object Crypto {
 
     /**
      * Decode an X509 encoded key to its [PrivateKey] object based on the input scheme code name.
-     * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
+     * This should be used when the type key is known, e.g. during deserialisation or with key caches or key managers.
      * @param schemeCodeName a [String] that should match a key in supportedSignatureSchemes map (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey an X509 encoded public key.
      * @throws IllegalArgumentException if the requested scheme is not supported.
@@ -337,7 +333,7 @@ object Crypto {
 
     /**
      * Decode an X509 encoded key to its [PrivateKey] object based on the input scheme code name.
-     * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
+     * This should be used when the type key is known, e.g. during deserialisation or with key caches or key managers.
      * @param signatureScheme a signature scheme (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey an X509 encoded public key.
      * @throws IllegalArgumentException if the requested scheme is not supported.
@@ -401,23 +397,23 @@ object Crypto {
     }
 
     /**
-     * Generic way to sign [MetaData] objects with a [PrivateKey].
-     * [MetaData] is a wrapper over the transaction's Merkle root in order to attach extra information, such as a timestamp or partial and blind signature indicators.
+     * Generic way to sign [SignableData] objects with a [PrivateKey].
+     * [SignableData] is a wrapper over the transaction's id (Merkle root) in order to attach extra information, such as a timestamp or partial and blind signature indicators.
      * @param privateKey the signer's [PrivateKey].
-     * @param metaData a [MetaData] object that adds extra information to a transaction.
-     * @return a [TransactionSignature] object than contains the output of a successful signing and the metaData.
-     * @throws IllegalArgumentException if the signature scheme is not supported for this private key or
-     * if metaData.schemeCodeName is not aligned with key type.
+     * @param signableData a [SignableData] object that adds extra information to a transaction.
+     * @return a [TransactionSignature] object than contains the output of a successful signing, signer's public key and the signature metadata.
+     * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-    fun doSign(privateKey: PrivateKey, metaData: MetaData): TransactionSignature {
-        val sigKey: SignatureScheme = findSignatureScheme(privateKey)
-        val sigMetaData: SignatureScheme = findSignatureScheme(metaData.schemeCodeName)
-        if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${metaData.schemeCodeName} is not aligned with the key type.")
-        val signatureData = doSign(sigKey.schemeCodeName, privateKey, metaData.bytes())
-        return TransactionSignature(signatureData, metaData)
+    fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
+        val sigKey: SignatureScheme = findSignatureScheme(keyPair.private)
+        val sigMetaData: SignatureScheme = findSignatureScheme(keyPair.public)
+        if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${sigMetaData.schemeCodeName}" +
+                " is not aligned with the key type: ${sigKey.schemeCodeName}.")
+        val signatureBytes = doSign(sigKey.schemeCodeName, keyPair.private, signableData.serialize().bytes)
+        return TransactionSignature(signatureBytes, keyPair.public, signableData.signatureMetadata)
     }
 
     /**
@@ -434,7 +430,7 @@ object Crypto {
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
-    @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+    @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = doVerify(findSignatureScheme(schemeCodeName), publicKey, signatureData, clearData)
 
     /**
@@ -485,9 +481,9 @@ object Crypto {
     /**
      * Utility to simplify the act of verifying a [TransactionSignature].
      * It returns true if it succeeds, but it always throws an exception if verification fails.
-     * @param publicKey the signer's [PublicKey].
-     * @param transactionSignature the signatureData on a message.
-     * @return true if verification passes or throws an exception if verification fails.
+     * @param txId transaction's id (Merkle root).
+     * @param transactionSignature the signature on the transaction.
+     * @return true if verification passes or throw exception if verification fails.
      * @throws InvalidKeyException if the key is invalid.
      * @throws SignatureException if this signatureData object is not initialized properly,
      * the passed-in signatureData is improperly encoded or of the wrong type,
@@ -495,9 +491,26 @@ object Crypto {
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-    fun doVerify(publicKey: PublicKey, transactionSignature: TransactionSignature): Boolean {
-        if (publicKey != transactionSignature.metaData.publicKey) IllegalArgumentException("MetaData's publicKey: ${transactionSignature.metaData.publicKey.toStringShort()} does not match")
-        return Crypto.doVerify(publicKey, transactionSignature.signatureData, transactionSignature.metaData.bytes())
+    fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
+        val signableData = SignableData(txId, transactionSignature.signatureMetadata)
+        return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
+    }
+
+    /**
+     * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the input public key's type.
+     * It returns true if it succeeds and false if not. In comparison to [doVerify] if the key and signature
+     * do not match it returns false rather than throwing an exception. Normally you should use the function which throws,
+     * as it avoids the risk of failing to test the result.
+     * @param txId transaction's id (Merkle root).
+     * @param transactionSignature the signature on the transaction.
+     * @throws SignatureException if this signatureData object is not initialized properly,
+     * the passed-in signatureData is improperly encoded or of the wrong type,
+     * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
+     */
+    @Throws(SignatureException::class)
+    fun isValid(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
+        val signableData = SignableData(txId, transactionSignature.signatureMetadata)
+        return isValid(findSignatureScheme(transactionSignature.by), transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
     }
 
     /**
@@ -750,90 +763,6 @@ object Crypto {
         val key = SecretKeySpec(keyData, "HmacSHA512")
         mac.init(key)
         return mac.doFinal(seed)
-    }
-
-    /**
-     * Build a partial X.509 certificate ready for signing.
-     *
-     * @param issuer name of the issuing entity.
-     * @param subject name of the certificate subject.
-     * @param subjectPublicKey public key of the certificate subject.
-     * @param validityWindow the time period the certificate is valid for.
-     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
-
-        val serial = BigInteger.valueOf(random63BitValue())
-        val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
-        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
-
-        val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
-                .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(subjectPublicKeyInfo))
-                .addExtension(Extension.basicConstraints, certificateType.isCA, BasicConstraints(certificateType.isCA))
-                .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
-                .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
-
-        if (nameConstraints != null) {
-            builder.addExtension(Extension.nameConstraints, true, nameConstraints)
-        }
-        return builder
-    }
-
-    /**
-     * Build and sign an X.509 certificate with the given signer.
-     *
-     * @param issuer name of the issuing entity.
-     * @param issuerSigner content signer to sign the certificate with.
-     * @param subject name of the certificate subject.
-     * @param subjectPublicKey public key of the certificate subject.
-     * @param validityWindow the time period the certificate is valid for.
-     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerSigner: ContentSigner,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
-        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
-        return builder.build(issuerSigner).apply {
-            require(isValidOn(Date()))
-        }
-    }
-
-    /**
-     * Build and sign an X.509 certificate with CA cert private key.
-     *
-     * @param issuer name of the issuing entity.
-     * @param issuerKeyPair the public & private key to sign the certificate with.
-     * @param subject name of the certificate subject.
-     * @param subjectPublicKey public key of the certificate subject.
-     * @param validityWindow the time period the certificate is valid for.
-     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
-
-        val signatureScheme = findSignatureScheme(issuerKeyPair.private)
-        val provider = providerMap[signatureScheme.providerName]
-        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
-
-        val signer = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
-        return builder.build(signer).apply {
-            require(isValidOn(Date()))
-            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public)))
-        }
-    }
-
-    /**
-     * Create certificate signing request using provided information.
-     */
-    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
-        val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, providerMap[signatureScheme.providerName])
-        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).build(signer)
     }
 
     private class KeyInfoConverter(val signatureScheme: SignatureScheme) : AsymmetricKeyInfoConverter {

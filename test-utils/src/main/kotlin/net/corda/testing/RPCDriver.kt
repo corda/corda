@@ -1,6 +1,5 @@
 package net.corda.testing
 
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.client.mock.Generator
 import net.corda.client.mock.generateOrFail
 import net.corda.client.mock.int
@@ -8,13 +7,14 @@ import net.corda.client.mock.string
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
-import net.corda.core.map
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseNetworkHostAndPort
-import net.corda.core.crypto.random63BitValue
-import net.corda.testing.driver.ProcessUtilities
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
@@ -23,7 +23,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
-import net.corda.nodeapi.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
 import net.corda.testing.driver.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -68,7 +68,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             ops : I
-    ): ListenableFuture<RpcServerHandle>
+    ): CordaFuture<RpcServerHandle>
 
     /**
      * Starts an In-VM RPC client.
@@ -83,7 +83,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             username: String = rpcTestUser.username,
             password: String = rpcTestUser.password,
             configuration: RPCClientConfiguration = RPCClientConfiguration.default
-    ): ListenableFuture<I>
+    ): CordaFuture<I>
 
     /**
      * Starts an In-VM Artemis session connecting to the RPC server.
@@ -114,7 +114,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             customPort: NetworkHostAndPort? = null,
             ops : I
-    ) : ListenableFuture<RpcServerHandle>
+    ) : CordaFuture<RpcServerHandle>
 
     /**
      * Starts a Netty RPC client.
@@ -131,7 +131,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             username: String = rpcTestUser.username,
             password: String = rpcTestUser.password,
             configuration: RPCClientConfiguration = RPCClientConfiguration.default
-    ): ListenableFuture<I>
+    ): CordaFuture<I>
 
     /**
      * Starts a Netty RPC client in a new JVM process that calls random RPCs with random arguments.
@@ -146,7 +146,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             rpcAddress: NetworkHostAndPort,
             username: String = rpcTestUser.username,
             password: String = rpcTestUser.password
-    ): ListenableFuture<Process>
+    ): CordaFuture<Process>
 
     /**
      * Starts a Netty Artemis session connecting to an RPC server.
@@ -167,13 +167,13 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             customPort: NetworkHostAndPort? = null
-    ): ListenableFuture<RpcBrokerHandle>
+    ): CordaFuture<RpcBrokerHandle>
 
     fun startInVmRpcBroker(
             rpcUser: User = rpcTestUser,
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE
-    ): ListenableFuture<RpcBrokerHandle>
+    ): CordaFuture<RpcBrokerHandle>
 
     fun <I : RPCOps> startRpcServerWithBrokerRunning(
             rpcUser: User = rpcTestUser,
@@ -335,14 +335,14 @@ data class RPCDriverDSL(
             maxBufferedBytesPerClient: Long,
             configuration: RPCServerConfiguration,
             ops: I
-    ): ListenableFuture<RpcServerHandle> {
+    ): CordaFuture<RpcServerHandle> {
         return startInVmRpcBroker(rpcUser, maxFileSize, maxBufferedBytesPerClient).map { broker ->
             startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker)
         }
     }
 
-    override fun <I : RPCOps> startInVmRpcClient(rpcOpsClass: Class<I>, username: String, password: String, configuration: RPCClientConfiguration): ListenableFuture<I> {
-        return driverDSL.executorService.submit<I> {
+    override fun <I : RPCOps> startInVmRpcClient(rpcOpsClass: Class<I>, username: String, password: String, configuration: RPCClientConfiguration): CordaFuture<I> {
+        return driverDSL.executorService.fork {
             val client = RPCClient<I>(inVmClientTransportConfiguration, configuration)
             val connection = client.start(rpcOpsClass, username, password)
             driverDSL.shutdownManager.registerShutdown {
@@ -373,7 +373,7 @@ data class RPCDriverDSL(
             configuration: RPCServerConfiguration,
             customPort: NetworkHostAndPort?,
             ops: I
-    ): ListenableFuture<RpcServerHandle> {
+    ): CordaFuture<RpcServerHandle> {
         return startRpcBroker(serverName, rpcUser, maxFileSize, maxBufferedBytesPerClient, customPort).map { broker ->
             startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker)
         }
@@ -385,8 +385,8 @@ data class RPCDriverDSL(
             username: String,
             password: String,
             configuration: RPCClientConfiguration
-    ): ListenableFuture<I> {
-        return driverDSL.executorService.submit<I> {
+    ): CordaFuture<I> {
+        return driverDSL.executorService.fork {
             val client = RPCClient<I>(ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), rpcAddress, null), configuration)
             val connection = client.start(rpcOpsClass, username, password)
             driverDSL.shutdownManager.registerShutdown {
@@ -396,8 +396,8 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun <I : RPCOps> startRandomRpcClient(rpcOpsClass: Class<I>, rpcAddress: NetworkHostAndPort, username: String, password: String): ListenableFuture<Process> {
-        val processFuture = driverDSL.executorService.submit<Process> {
+    override fun <I : RPCOps> startRandomRpcClient(rpcOpsClass: Class<I>, rpcAddress: NetworkHostAndPort, username: String, password: String): CordaFuture<Process> {
+        val processFuture = driverDSL.executorService.fork {
             ProcessUtilities.startJavaProcess<RandomRpcUser>(listOf(rpcOpsClass.name, rpcAddress.toString(), username, password))
         }
         driverDSL.shutdownManager.registerProcessShutdown(processFuture)
@@ -423,10 +423,10 @@ data class RPCDriverDSL(
             maxFileSize: Int,
             maxBufferedBytesPerClient: Long,
             customPort: NetworkHostAndPort?
-    ): ListenableFuture<RpcBrokerHandle> {
+    ): CordaFuture<RpcBrokerHandle> {
         val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
         addressMustNotBeBound(driverDSL.executorService, hostAndPort)
-        return driverDSL.executorService.submit<RpcBrokerHandle> {
+        return driverDSL.executorService.fork {
             val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)
             val server = ActiveMQServerImpl(artemisConfig, SingleUserSecurityManager(rpcUser))
             server.start()
@@ -442,8 +442,8 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun startInVmRpcBroker(rpcUser: User, maxFileSize: Int, maxBufferedBytesPerClient: Long): ListenableFuture<RpcBrokerHandle> {
-        return driverDSL.executorService.submit<RpcBrokerHandle> {
+    override fun startInVmRpcBroker(rpcUser: User, maxFileSize: Int, maxBufferedBytesPerClient: Long): CordaFuture<RpcBrokerHandle> {
+        return driverDSL.executorService.fork {
             val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)
             val server = EmbeddedActiveMQ()
             server.setConfiguration(artemisConfig)

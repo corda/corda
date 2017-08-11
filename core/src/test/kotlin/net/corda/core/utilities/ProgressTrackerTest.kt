@@ -1,16 +1,5 @@
 package net.corda.core.utilities
 
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.KryoSerializable
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
-import net.corda.core.serialization.AllWhitelist
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.serialize
-import net.corda.node.serialization.KryoServerSerializationScheme
-import net.corda.nodeapi.serialization.KryoHeaderV0_1
-import net.corda.nodeapi.serialization.SerializationContextImpl
-import net.corda.nodeapi.serialization.SerializationFactoryImpl
 import org.junit.Before
 import org.junit.Test
 import java.util.*
@@ -98,35 +87,5 @@ class ProgressTrackerTest {
         repeat(4) { pt.nextStep() }
         pt.currentStep = SimpleSteps.ONE
         assertEquals(SimpleSteps.TWO, pt.nextStep())
-    }
-
-    @Test
-    fun rxSubscriptionsAreNotSerialized() {
-        class Unserializable : KryoSerializable {
-            override fun write(kryo: Kryo?, output: Output?) = throw AssertionError("not called")
-            override fun read(kryo: Kryo?, input: Input?) = throw AssertionError("not called")
-
-            fun foo() {
-                println("bar")
-            }
-        }
-
-        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
-        class Tmp {
-            val unserializable = Unserializable()
-
-            init {
-                pt2.changes.subscribe { unserializable.foo() }
-            }
-        }
-        Tmp()
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        val context = SerializationContextImpl(KryoHeaderV0_1,
-                javaClass.classLoader,
-                AllWhitelist,
-                emptyMap(),
-                true,
-                SerializationContext.UseCase.P2P)
-        pt.serialize(factory, context)
     }
 }

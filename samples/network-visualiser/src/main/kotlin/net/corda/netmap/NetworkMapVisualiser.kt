@@ -13,7 +13,6 @@ import javafx.stage.Stage
 import javafx.util.Duration
 import net.corda.core.crypto.commonName
 import net.corda.core.serialization.deserialize
-import net.corda.core.then
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.netmap.simulation.IRSSimulation

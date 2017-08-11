@@ -1,16 +1,17 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.NamedByHash
-import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.transactions.SignedTransaction.SignaturesMissingException
 import net.corda.core.utilities.toNonEmptySet
+import java.security.InvalidKeyException
 import java.security.PublicKey
 import java.security.SignatureException
 
 /** An interface for transactions containing signatures, with logic for signature verification */
 interface TransactionWithSignatures : NamedByHash {
-    val sigs: List<DigitalSignature.WithKey>
+    val sigs: List<TransactionSignature>
 
     /** Specifies all the public keys that require signatures for the transaction to be valid */
     val requiredSigningKeys: Set<PublicKey>
@@ -52,12 +53,13 @@ interface TransactionWithSignatures : NamedByHash {
      * corrupt. If you use this function directly you'll need to do the other checks yourself. Probably you
      * want [verifySignatures] instead.
      *
+     * @throws InvalidKeyException if the key on a signature is invalid.
      * @throws SignatureException if a signature fails to verify.
      */
-    @Throws(SignatureException::class)
+    @Throws(InvalidKeyException::class, SignatureException::class)
     fun checkSignaturesAreValid() {
         for (sig in sigs) {
-            sig.verify(id.bytes)
+            sig.verify(id)
         }
     }
 

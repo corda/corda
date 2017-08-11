@@ -9,11 +9,11 @@ import net.corda.contracts.asset.`owned by`
 import net.corda.core.contracts.*
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.getOrThrow
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase

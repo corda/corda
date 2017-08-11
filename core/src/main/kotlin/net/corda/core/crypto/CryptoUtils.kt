@@ -34,7 +34,17 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignat
  */
 @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: ByteArray) = private.sign(bytesToSign, public)
-fun KeyPair.sign(bytesToSign: OpaqueBytes) = private.sign(bytesToSign.bytes, public)
+fun KeyPair.sign(bytesToSign: OpaqueBytes) = sign(bytesToSign.bytes)
+/**
+ * Helper function for signing a [SignableData] object.
+ * @param signableData the object to be signed.
+ * @return a [TransactionSignature] object.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
+ * @throws InvalidKeyException if the private key is invalid.
+ * @throws SignatureException if signing is not possible due to malformed data or private key.
+ */
+@Throws(InvalidKeyException::class, SignatureException::class)
+fun KeyPair.sign(signableData: SignableData): TransactionSignature = Crypto.doSign(this, signableData)
 
 /**
  * Utility to simplify the act of verifying a signature.
@@ -88,7 +98,7 @@ fun PublicKey.containsAny(otherKeys: Iterable<PublicKey>): Boolean {
 }
 
 /** Returns the set of all [PublicKey]s of the signatures */
-fun Iterable<DigitalSignature.WithKey>.byKeys() = map { it.by }.toSet()
+fun Iterable<TransactionSignature>.byKeys() = map { it.by }.toSet()
 
 // Allow Kotlin destructuring:    val (private, public) = keyPair
 operator fun KeyPair.component1(): PrivateKey = this.private
@@ -106,17 +116,6 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
 fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEntropy(entropy)
 
 /**
- * Helper function for signing.
- * @param metaData tha attached MetaData object.
- * @return a [TransactionSignature ] object.
- * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
- * @throws InvalidKeyException if the private key is invalid.
- * @throws SignatureException if signing is not possible due to malformed data or private key.
- */
-@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-fun PrivateKey.sign(metaData: MetaData): TransactionSignature = Crypto.doSign(this, metaData)
-
-/**
  * Helper function to verify a signature.
  * @param signatureData the signature on a message.
  * @param clearData the clear data/message that was signed (usually the Merkle root).
@@ -128,21 +127,6 @@ fun PrivateKey.sign(metaData: MetaData): TransactionSignature = Crypto.doSign(th
  */
 @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
 fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Crypto.doVerify(this, signatureData, clearData)
-
-/**
- * Helper function to verify a metadata attached signature. It is noted that the transactionSignature contains
- * signatureData and a [MetaData] object that contains the signer's public key and the transaction's Merkle root.
- * @param transactionSignature a [TransactionSignature] object that .
- * @throws InvalidKeyException if the key is invalid.
- * @throws SignatureException if this signatureData object is not initialized properly,
- * the passed-in signatureData is improperly encoded or of the wrong type,
- * if this signatureData algorithm is unable to process the input data provided, etc.
- * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
- */
-@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-fun PublicKey.verify(transactionSignature: TransactionSignature): Boolean {
-    return Crypto.doVerify(this, transactionSignature)
-}
 
 /**
  * Helper function for the signers to verify their own signature.

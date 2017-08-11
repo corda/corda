@@ -3,16 +3,21 @@ package net.corda.node.services.database
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DummyFungibleContract
+import net.corda.contracts.asset.sumCash
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.CordaPersistence
@@ -34,8 +39,10 @@ import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
 import org.junit.After
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
 import javax.persistence.EntityManager
@@ -64,17 +71,11 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         val defaultDatabaseProperties = makeTestDatabaseProperties()
         database = configureDatabase(dataSourceProps, defaultDatabaseProperties)
         val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
-
         database.transaction {
-
-            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
-
+            val identityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
+            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), identityService)
             services = object : MockServices(BOB_KEY) {
-                override val vaultService: VaultService get() {
-                    val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
-                    hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
-                    return vaultService
-                }
+                override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -83,7 +84,9 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
                 }
+                override fun jdbcSession() = database.createSession()
             }
+            hibernatePersister = services.hibernatePersister
         }
         setUpDb()
 
@@ -129,7 +132,8 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
-        assertThat(queryResults.size).isEqualTo(6)
+        val coins = queryResults.map { it.contractState.deserialize<TransactionState<Cash.State>>().data }.sumCash()
+        assertThat(coins.toDecimal() >= BigDecimal("50.00"))
     }
 
     @Test
@@ -852,4 +856,26 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         assertThat(queryResults).hasSize(6)
     }
 
+    /**
+     *  Test invoking SQL query using JDBC connection (session)
+     */
+    @Test
+    fun `test calling an arbitrary JDBC native query`() {
+        // DOCSTART JdbcSession
+        val nativeQuery = "SELECT v.transaction_id, v.output_index FROM vault_states v WHERE v.state_status = 0"
+
+        database.transaction {
+            val jdbcSession = database.createSession()
+            val prepStatement = jdbcSession.prepareStatement(nativeQuery)
+            val rs = prepStatement.executeQuery()
+        // DOCEND JdbcSession
+            var count = 0
+            while (rs.next()) {
+                val stateRef = StateRef(SecureHash.parse(rs.getString(1)), rs.getInt(2))
+                Assert.assertTrue(cashStates.map { it.ref }.contains(stateRef))
+                count++
+            }
+            Assert.assertEquals(cashStates.count(), count)
+        }
+    }
 }

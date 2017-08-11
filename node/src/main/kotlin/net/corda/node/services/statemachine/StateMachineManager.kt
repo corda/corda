@@ -6,8 +6,8 @@ import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.KryoException
 import com.google.common.collect.HashMultimap
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowException
@@ -19,10 +19,11 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
-import net.corda.core.then
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -36,6 +37,8 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
+import net.corda.nodeapi.internal.serialization.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -138,13 +141,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     internal val tokenizableServices = ArrayList<Any>()
     // Context for tokenized services in checkpoints
     private val serializationContext by lazy {
-        SerializeAsTokenContext(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
+        SerializeAsTokenContextImpl(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
     }
 
     fun findServices(predicate: (Any) -> Boolean) = tokenizableServices.filter(predicate)
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
-    fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
+    fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, CordaFuture<T>>> {
         @Suppress("UNCHECKED_CAST")
         return mutex.locked {
             stateMachines.keys.mapNotNull {
@@ -469,11 +472,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
-        // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
-        // on the flow completion future inside that context. The problem is that any progress checkpoints are
-        // unable to acquire the table lock and move forward till the calling transaction finishes.
-        // Committing in line here on a fresh context ensure we can progress.
-        val fiber = database.isolatedTransaction {
+        val fiber = database.transaction {
             val fiber = createFiber(logic, flowInitiator)
             updateCheckpoint(fiber)
             fiber

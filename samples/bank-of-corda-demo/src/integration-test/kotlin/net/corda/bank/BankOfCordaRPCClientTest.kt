@@ -1,14 +1,14 @@
 package net.corda.bank
 
-import com.google.common.util.concurrent.Futures
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.internal.concurrent.transpose
+import net.corda.core.utilities.getOrThrow
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -23,10 +23,10 @@ class BankOfCordaRPCClientTest {
         driver(dsl = {
             val bocManager = User("bocManager", "password1", permissions = setOf(startFlowPermission<IssuanceRequester>()))
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
-            val (nodeBankOfCorda, nodeBigCorporation) = Futures.allAsList(
+            val (nodeBankOfCorda, nodeBigCorporation) = listOf(
                     startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type)), listOf(bocManager)),
                     startNode(BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
-            ).getOrThrow()
+            ).transpose().getOrThrow()
 
             // Bank of Corda RPC Client
             val bocClient = nodeBankOfCorda.rpcClientToNode()

@@ -406,12 +406,6 @@ interface DealState : LinearState {
     fun generateAgreement(notary: Party): TransactionBuilder
 }
 
-// TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(dealPartyName = listOf(<String>)))"))
-inline fun <reified T : DealState> VaultService.dealsWith(party: AbstractParty) = linearHeadsOfType<T>().values.filter {
-    it.state.data.participants.any { it == party }
-}
-
 /**
  * Interface adding fixing specific methods.
  */

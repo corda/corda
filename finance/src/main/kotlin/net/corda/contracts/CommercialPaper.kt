@@ -1,20 +1,16 @@
 package net.corda.contracts
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.sumCashBy
-import net.corda.contracts.clause.AbstractIssue
 import net.corda.core.contracts.*
-import net.corda.core.contracts.clauses.AnyOf
-import net.corda.core.contracts.clauses.Clause
-import net.corda.core.contracts.clauses.GroupClauseVerifier
-import net.corda.core.contracts.clauses.verifyClause
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.random63BitValue
+import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
-import net.corda.core.node.services.VaultService
+import net.corda.core.node.ServiceHub
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -45,20 +41,12 @@ import java.util.*
  *    which may need to be tracked. That, in turn, requires validation logic (there is a bean validator that knows how
  *    to do this in the Apache BVal project).
  */
-
 val CP_PROGRAM_ID = CommercialPaper()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 class CommercialPaper : Contract {
     // TODO: should reference the content of the legal agreement, not its URI
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
-
-    data class Terms(
-            val asset: Issued<Currency>,
-            val maturityDate: Instant
-    )
-
-    override fun verify(tx: LedgerTransaction) = verifyClause(tx, Clauses.Group(), tx.commands.select<Commands>())
 
     data class State(
             val issuance: PartyAndReference,
@@ -67,13 +55,10 @@ class CommercialPaper : Contract {
             val maturityDate: Instant
     ) : OwnableState, QueryableState, ICommercialPaperState {
         override val contract = CP_PROGRAM_ID
-        override val participants: List<AbstractParty>
-            get() = listOf(owner)
+        override val participants = listOf(owner)
 
-        val token: Issued<Terms>
-            get() = Issued(issuance, Terms(faceValue.token, maturityDate))
-
-        override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
+        fun withoutOwner() = copy(owner = NULL_PARTY)
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by $owner)"
 
         // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
@@ -82,7 +67,6 @@ class CommercialPaper : Contract {
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
 
-        // DOCSTART VaultIndexedQueryCriteria
         /** Object Relational Mapping support. */
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1)
         /** Additional used schemas would be added here (eg. CommercialPaperV2, ...) */
@@ -100,97 +84,76 @@ class CommercialPaper : Contract {
                         faceValueIssuerParty = this.faceValue.token.issuer.party.owningKey.toBase58String(),
                         faceValueIssuerRef = this.faceValue.token.issuer.reference.bytes
                 )
-                /** Additional schema mappings would be added here (eg. CommercialPaperV2, ...) */
+            /** Additional schema mappings would be added here (eg. CommercialPaperV2, ...) */
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
-        }
-        // DOCEND VaultIndexedQueryCriteria
-    }
-
-    interface Clauses {
-        class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
-                AnyOf(
-                        Redeem(),
-                        Move(),
-                        Issue())) {
-            override fun groupStates(tx: LedgerTransaction): List<LedgerTransaction.InOutGroup<State, Issued<Terms>>>
-                    = tx.groupStates<State, Issued<Terms>> { it.token }
-        }
-
-        class Issue : AbstractIssue<State, Commands, Terms>(
-                { map { Amount(it.faceValue.quantity, it.token) }.sumOrThrow() },
-                { token -> map { Amount(it.faceValue.quantity, it.token) }.sumOrZero(token) }) {
-            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
-
-            override fun verify(tx: LedgerTransaction,
-                                inputs: List<State>,
-                                outputs: List<State>,
-                                commands: List<AuthenticatedObject<Commands>>,
-                                groupingKey: Issued<Terms>?): Set<Commands> {
-                val consumedCommands = super.verify(tx, inputs, outputs, commands, groupingKey)
-                commands.requireSingleCommand<Commands.Issue>()
-                val timeWindow = tx.timeWindow
-                val time = timeWindow?.untilTime ?: throw IllegalArgumentException("Issuances must have a time-window")
-
-                require(outputs.all { time < it.maturityDate }) { "maturity date is not in the past" }
-
-                return consumedCommands
-            }
-        }
-
-        class Move : Clause<State, Commands, Issued<Terms>>() {
-            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Move::class.java)
-
-            override fun verify(tx: LedgerTransaction,
-                                inputs: List<State>,
-                                outputs: List<State>,
-                                commands: List<AuthenticatedObject<Commands>>,
-                                groupingKey: Issued<Terms>?): Set<Commands> {
-                val command = commands.requireSingleCommand<Commands.Move>()
-                val input = inputs.single()
-                requireThat {
-                    "the transaction is signed by the owner of the CP" using (input.owner.owningKey in command.signers)
-                    "the state is propagated" using (outputs.size == 1)
-                    // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
-                    // the input ignoring the owner field due to the grouping.
-                }
-                return setOf(command.value)
-            }
-        }
-
-        class Redeem : Clause<State, Commands, Issued<Terms>>() {
-            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Redeem::class.java)
-
-            override fun verify(tx: LedgerTransaction,
-                                inputs: List<State>,
-                                outputs: List<State>,
-                                commands: List<AuthenticatedObject<Commands>>,
-                                groupingKey: Issued<Terms>?): Set<Commands> {
-                // TODO: This should filter commands down to those with compatible subjects (underlying product and maturity date)
-                // before requiring a single command
-                val command = commands.requireSingleCommand<Commands.Redeem>()
-                val timeWindow = tx.timeWindow
-
-                val input = inputs.single()
-                val received = tx.outputStates.sumCashBy(input.owner)
-                val time = timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must have a time-window")
-                requireThat {
-                    "the paper must have matured" using (time >= input.maturityDate)
-                    "the received amount equals the face value" using (received == input.faceValue)
-                    "the paper must be destroyed" using outputs.isEmpty()
-                    "the transaction is signed by the owner of the CP" using (input.owner.owningKey in command.signers)
-                }
-
-                return setOf(command.value)
-            }
-
         }
     }
 
     interface Commands : CommandData {
-        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
+        class Move : TypeOnlyCommandData(), Commands
+
         class Redeem : TypeOnlyCommandData(), Commands
-        data class Issue(override val nonce: Long = random63BitValue()) : IssueCommand, Commands
+        // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
+        // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
+        class Issue : TypeOnlyCommandData(), Commands
+    }
+
+    override fun verify(tx: LedgerTransaction) {
+        // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
+        val groups = tx.groupStates(State::withoutOwner)
+
+        // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
+        // it for cash on or after the maturity date.
+        val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
+        val timeWindow: TimeWindow? = tx.timeWindow
+
+        // Suppress compiler warning as 'key' is an unused variable when destructuring 'groups'.
+        @Suppress("UNUSED_VARIABLE")
+        for ((inputs, outputs, key) in groups) {
+            when (command.value) {
+                is Commands.Move -> {
+                    val input = inputs.single()
+                    requireThat {
+                        "the transaction is signed by the owner of the CP" using (input.owner.owningKey in command.signers)
+                        "the state is propagated" using (outputs.size == 1)
+                        // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
+                        // the input ignoring the owner field due to the grouping.
+                    }
+                }
+
+                is Commands.Redeem -> {
+                    // Redemption of the paper requires movement of on-ledger cash.
+                    val input = inputs.single()
+                    val received = tx.outputStates.sumCashBy(input.owner)
+                    val time = timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must have a time-window")
+                    requireThat {
+                        "the paper must have matured" using (time >= input.maturityDate)
+                        "the received amount equals the face value" using (received == input.faceValue)
+                        "the paper must be destroyed" using outputs.isEmpty()
+                        "the transaction is signed by the owner of the CP" using (input.owner.owningKey in command.signers)
+                    }
+                }
+
+                is Commands.Issue -> {
+                    val output = outputs.single()
+                    val time = timeWindow?.untilTime ?: throw IllegalArgumentException("Issuances have a time-window")
+                    requireThat {
+                        // Don't allow people to issue commercial paper under other entities identities.
+                        "output states are issued by a command signer" using
+                                (output.issuance.party.owningKey in command.signers)
+                        "output values sum to more than the inputs" using (output.faceValue.quantity > 0)
+                        "the maturity date is not in the past" using (time < output.maturityDate)
+                        // Don't allow an existing CP state to be replaced by this issuance.
+                        // TODO: Consider how to handle the case of mistaken issuances, or other need to patch.
+                        "output values sum to more than the inputs" using inputs.isEmpty()
+                    }
+                }
+
+            // TODO: Think about how to evolve contracts over time with new commands.
+                else -> throw IllegalArgumentException("Unrecognised command")
+            }
+        }
     }
 
     /**
@@ -198,9 +161,10 @@ class CommercialPaper : Contract {
      * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
      * at the moment: this restriction is not fundamental and may be lifted later.
      */
-    fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant, notary: Party): TransactionBuilder {
-        val state = TransactionState(State(issuance, issuance.party, faceValue, maturityDate), notary)
-        return TransactionBuilder(notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
+    fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant,
+                      notary: Party): TransactionBuilder {
+        val state = State(issuance, issuance.party, faceValue, maturityDate)
+        return TransactionBuilder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**
@@ -208,7 +172,7 @@ class CommercialPaper : Contract {
      */
     fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: AbstractParty) {
         tx.addInputState(paper)
-        tx.addOutputState(TransactionState(paper.state.data.copy(owner = newOwner), paper.state.notary))
+        tx.addOutputState(paper.state.data.withOwner(newOwner))
         tx.addCommand(Commands.Move(), paper.state.data.owner.owningKey)
     }
 
@@ -221,17 +185,14 @@ class CommercialPaper : Contract {
      */
     @Throws(InsufficientBalanceException::class)
     @Suspendable
-    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: VaultService) {
+    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub) {
         // Add the cash movement using the states in our vault.
-        val amount = paper.state.data.faceValue.let { amount -> Amount(amount.quantity, amount.token.product) }
-        vault.generateSpend(tx, amount, paper.state.data.owner)
+        Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
         tx.addInputState(paper)
-        tx.addCommand(CommercialPaper.Commands.Redeem(), paper.state.data.owner.owningKey)
+        tx.addCommand(Commands.Redeem(), paper.state.data.owner.owningKey)
     }
 }
 
 infix fun CommercialPaper.State.`owned by`(owner: AbstractParty) = copy(owner = owner)
 infix fun CommercialPaper.State.`with notary`(notary: Party) = TransactionState(this, notary)
 infix fun ICommercialPaperState.`owned by`(newOwner: AbstractParty) = withOwner(newOwner)
-
-

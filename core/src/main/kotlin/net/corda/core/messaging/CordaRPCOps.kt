@@ -1,6 +1,6 @@
 package net.corda.core.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
@@ -152,14 +152,6 @@ interface CordaRPCOps : RPCOps {
     // DOCEND VaultTrackAPIHelpers
 
     /**
-     * Returns a data feed of head states in the vault and an observable of future updates to the vault.
-     */
-    @RPCReturnsObservables
-    // TODO: Remove this from the interface
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
-    fun vaultAndUpdates(): DataFeed<List<StateAndRef<ContractState>>, Vault.Update<ContractState>>
-
-    /**
      * Returns a data feed of all recorded transactions and an observable of future recorded ones.
      */
     @RPCReturnsObservables
@@ -221,10 +213,6 @@ interface CordaRPCOps : RPCOps {
      */
     fun uploadAttachment(jar: InputStream): SecureHash
 
-    // TODO: Remove this from the interface
-    @Deprecated("This service will be removed in a future milestone")
-    fun uploadFile(dataType: String, name: String?, file: InputStream): String
-
     /**
      * Authorise a contract state upgrade.
      * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
@@ -245,24 +233,27 @@ interface CordaRPCOps : RPCOps {
     fun currentNodeTime(): Instant
 
     /**
-     * Returns a [ListenableFuture] which completes when the node has registered wih the network map service. It can also
+     * Returns a [CordaFuture] which completes when the node has registered wih the network map service. It can also
      * complete with an exception if it is unable to.
      */
     @RPCReturnsObservables
-    fun waitUntilRegisteredWithNetworkMap(): ListenableFuture<Unit>
+    fun waitUntilRegisteredWithNetworkMap(): CordaFuture<Void?>
 
     // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
     // the node's state locally and query that directly.
     /**
+     * Returns the well known identity from an abstract party. This is intended to resolve the well known identity
+     * from a confidential identity, however it transparently handles returning the well known identity back if
+     * a well known identity is passed in.
+     *
+     * @param party identity to determine well known identity for.
+     * @return well known identity, if found.
+     */
+    fun partyFromAnonymous(party: AbstractParty): Party?
+    /**
      * Returns the [Party] corresponding to the given key, if found.
      */
     fun partyFromKey(key: PublicKey): Party?
-
-    /**
-     * Returns the [Party] with the given name as it's [Party.name]
-     */
-    @Deprecated("Use partyFromX500Name instead")
-    fun partyFromName(name: String): Party?
 
     /**
      * Returns the [Party] with the X.500 principal as it's [Party.name]

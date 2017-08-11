@@ -2,16 +2,19 @@
 
 package net.corda.testing
 
-import com.google.common.util.concurrent.Futures
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TypeOnlyCommandData
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CertificateAndKeyPair
+import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.testing.DummyPublicKey
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.User
 import net.corda.testing.driver.DriverDSLExposedInterface
 import org.bouncycastle.asn1.x500.X500Name
@@ -77,6 +80,9 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
 
 fun dummyCommand(vararg signers: PublicKey) = Command<TypeOnlyCommandData>(object : TypeOnlyCommandData() {}, signers.toList())
 
+val DUMMY_IDENTITY_1: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_PARTY)
+val DUMMY_PARTY: Party get() = Party(X500Name("CN=Dummy,O=Dummy,L=Madrid,C=ES"), DUMMY_KEY_1.public)
+
 //
 // Extensions to the Driver DSL to auto-manufacture nodes by name.
 //
@@ -121,6 +127,6 @@ fun DriverDSLExposedInterface.aliceBobAndNotary(): List<PredefinedTestNode> {
     val alice = alice()
     val bob = bob()
     val notary = notary()
-    Futures.allAsList(alice.nodeFuture, bob.nodeFuture, notary.nodeFuture).get()
+    listOf(alice.nodeFuture, bob.nodeFuture, notary.nodeFuture).transpose().get()
     return listOf(alice, bob, notary)
 }

@@ -1,9 +1,9 @@
 package net.corda.testing.node
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
@@ -41,7 +41,7 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
     // TODO: We should have a dummy service hub rather than change behaviour in tests
     val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port, InMemoryNetworkMapCache(serviceHub = null), userService)
-    val networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create<Unit>()
+    val networkMapRegistrationFuture = openFuture<Unit>()
     val network = database.transaction {
         NodeMessagingClient(
                 config,

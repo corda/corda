@@ -3,11 +3,12 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
+import net.corda.core.internal.FetchDataFlow
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.UniquenessProvider
@@ -31,7 +32,7 @@ object NotaryFlow {
      */
     @InitiatingFlow
     open class Client(private val stx: SignedTransaction,
-                      override val progressTracker: ProgressTracker) : FlowLogic<List<DigitalSignature.WithKey>>() {
+                      override val progressTracker: ProgressTracker) : FlowLogic<List<TransactionSignature>>() {
         constructor(stx: SignedTransaction) : this(stx, tracker())
 
         companion object {
@@ -45,7 +46,7 @@ object NotaryFlow {
 
         @Suspendable
         @Throws(NotaryException::class)
-        override fun call(): List<DigitalSignature.WithKey> {
+        override fun call(): List<TransactionSignature> {
             progressTracker.currentStep = REQUESTING
 
             notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
@@ -63,18 +64,18 @@ object NotaryFlow {
                 throw NotaryException(NotaryError.TransactionInvalid(ex))
             }
 
-            val payload: Any = if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
-                stx
-            } else {
-                if (stx.isNotaryChangeTransaction()) {
-                    stx.notaryChangeTx
-                } else {
-                    stx.tx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
-                }
-            }
-
             val response = try {
-                sendAndReceiveWithRetry<List<DigitalSignature.WithKey>>(notaryParty, payload)
+                if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
+                    subFlow(SendTransactionWithRetry(notaryParty, stx))
+                    receive<List<TransactionSignature>>(notaryParty)
+                } else {
+                    val tx: Any = if (stx.isNotaryChangeTransaction()) {
+                        stx.notaryChangeTx
+                    } else {
+                        stx.tx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
+                    }
+                    sendAndReceiveWithRetry(notaryParty, tx)
+                }
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
                     e.error.conflict.verified()
@@ -83,14 +84,14 @@ object NotaryFlow {
             }
 
             return response.unwrap { signatures ->
-                signatures.forEach { validateSignature(it, stx.id.bytes) }
+                signatures.forEach { validateSignature(it, stx.id) }
                 signatures
             }
         }
 
-        private fun validateSignature(sig: DigitalSignature.WithKey, data: ByteArray) {
+        private fun validateSignature(sig: TransactionSignature, txId: SecureHash) {
             check(sig.by in notaryParty.owningKey.keys) { "Invalid signer for the notary result" }
-            sig.verify(data)
+            sig.verify(txId)
         }
     }
 
@@ -123,7 +124,7 @@ object NotaryFlow {
 
         @Suspendable
         private fun signAndSendResponse(txId: SecureHash) {
-            val signature = service.sign(txId.bytes)
+            val signature = service.sign(txId)
             send(otherSide, listOf(signature))
         }
     }
@@ -149,4 +150,13 @@ sealed class NotaryError {
     data class TransactionInvalid(val cause: Throwable) : NotaryError() {
         override fun toString() = cause.toString()
     }
+}
+
+/**
+ * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [sendAndReceiveWithRetry]
+ * instead of [sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
+ */
+private class SendTransactionWithRetry(otherSide: Party, stx: SignedTransaction) : SendTransactionFlow(otherSide, stx) {
+    @Suspendable
+    override fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any) = sendAndReceiveWithRetry<FetchDataFlow.Request>(otherSide, payload)
 }

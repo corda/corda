@@ -5,7 +5,7 @@
     </Properties>
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="[%-5level] %date{HH:mm:ss,SSS} [%t] %c{2}.%method - %msg%n" />
+            <PatternLayout pattern="[%-5level] %date{HH:mm:ss,SSS} [%t] (%F:%L) %c{2}.%method - %msg%n" />
         </Console>
         <!-- Required for printBasicInfo -->
         <Console name="Console-Appender-Println" target="SYSTEM_OUT">
@@ -21,6 +21,9 @@
         </Logger>
         <Logger name="BasicInfo" additivity="false">
             <AppenderRef ref="Console-Appender-Println"/>
+        </Logger>
+        <Logger name="org.hibernate.SQL" level="info" additivity="false"> 
+            <AppenderRef ref="Console-Appender"/> 
         </Logger>
     </Loggers>
 </Configuration>

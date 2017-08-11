@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -14,6 +13,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.internal.Emoji
+import net.corda.core.utilities.getOrThrow
 import net.corda.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.services.startFlowPermission
@@ -202,7 +202,7 @@ class ContractUpgradeFlowTest {
 
             override fun move(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
             override fun toString() = "${Emoji.bagOfCash}New Cash($amount at ${amount.token.issuer} owned by $owner)"
-            override fun withNewOwner(newOwner: AbstractParty) = Pair(Cash.Commands.Move(), copy(owners = listOf(newOwner)))
+            override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Cash.Commands.Move(), copy(owners = listOf(newOwner)))
         }
 
         override fun upgrade(state: Cash.State) = CashV2.State(state.amount.times(1000), listOf(state.owner))

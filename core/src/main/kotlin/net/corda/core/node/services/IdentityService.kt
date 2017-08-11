@@ -2,7 +2,6 @@ package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
-import net.corda.core.identity.AnonymousPartyAndPath
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -104,16 +103,16 @@ interface IdentityService {
     // but for now this is not supported.
 
     fun partyFromKey(key: PublicKey): Party?
-    @Deprecated("Use partyFromX500Name or partiesFromName")
-    fun partyFromName(name: String): Party?
 
     fun partyFromX500Name(principal: X500Name): Party?
 
     /**
-     * Resolve the well known identity of a party. If the party passed in is already a well known identity
-     * (i.e. a [Party]) this returns it as-is.
+     * Returns the well known identity from an abstract party. This is intended to resolve the well known identity
+     * from a confidential identity, however it transparently handles returning the well known identity back if
+     * a well known identity is passed in.
      *
-     * @return the well known identity, or null if unknown.
+     * @param party identity to determine well known identity for.
+     * @return well known identity, if found.
      */
     fun partyFromAnonymous(party: AbstractParty): Party?
 

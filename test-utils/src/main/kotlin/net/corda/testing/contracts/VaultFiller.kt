@@ -6,19 +6,22 @@ import net.corda.contracts.Commodity
 import net.corda.contracts.DealState
 import net.corda.contracts.asset.*
 import net.corda.core.contracts.*
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
-import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.CHARLIE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
 import java.security.KeyPair
 import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
 import java.time.Instant.now
 import java.util.*
@@ -223,18 +226,17 @@ fun ServiceHub.evolveLinearStates(linearStates: List<StateAndRef<LinearState>>) 
 fun ServiceHub.evolveLinearState(linearState: StateAndRef<LinearState>) : StateAndRef<LinearState> = consumeAndProduce(linearState)
 
 @JvmOverloads
-fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): Vault<Cash.State> {
+fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): Vault.Update<ContractState> {
+    val update =  vaultService.rawUpdates.toFuture()
+    val services = this
+
     // A tx that spends our money.
     val spendTX = TransactionBuilder(DUMMY_NOTARY).apply {
-        vaultService.generateSpend(this, amount, to)
+        Cash.generateSpend(services, this, amount, to)
         signWith(DUMMY_NOTARY_KEY)
     }.toSignedTransaction(checkSufficientSignatures = false)
 
     recordTransactions(spendTX)
 
-    // Get all the StateRefs of all the generated transactions.
-    val states = spendTX.tx.outputs.indices.map { i -> spendTX.tx.outRef<Cash.State>(i) }
-
-    return Vault(states)
+    return update.getOrThrow(Duration.ofSeconds(3))
 }
-

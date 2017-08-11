@@ -2,15 +2,13 @@ package net.corda.testing.node
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.getOrThrow
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.messaging.MessageRecipients
@@ -21,6 +19,7 @@ import net.corda.core.node.ServiceEntry
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.*
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
@@ -209,7 +208,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
 
         // It's OK to not have a network map service in the mock network.
-        override fun noNetworkMapConfigured(): ListenableFuture<Unit> = Futures.immediateFuture(Unit)
+        override fun noNetworkMapConfigured() = doneFuture(Unit)
 
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): WorldMapLocation? = null

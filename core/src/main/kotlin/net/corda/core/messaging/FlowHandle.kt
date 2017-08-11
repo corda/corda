@@ -1,6 +1,6 @@
 package net.corda.core.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
@@ -9,11 +9,11 @@ import rx.Observable
  * [FlowHandle] is a serialisable handle for the started flow, parameterised by the type of the flow's return value.
  *
  * @property id The started state machine's ID.
- * @property returnValue A [ListenableFuture] of the flow's return value.
+ * @property returnValue A [CordaFuture] of the flow's return value.
  */
 interface FlowHandle<A> : AutoCloseable {
     val id: StateMachineRunId
-    val returnValue: ListenableFuture<A>
+    val returnValue: CordaFuture<A>
 
     /**
      * Use this function for flows whose returnValue is not going to be used, so as to free up server resources.
@@ -41,7 +41,7 @@ interface FlowProgressHandle<A> : FlowHandle<A> {
 @CordaSerializable
 data class FlowHandleImpl<A>(
         override val id: StateMachineRunId,
-        override val returnValue: ListenableFuture<A>) : FlowHandle<A> {
+        override val returnValue: CordaFuture<A>) : FlowHandle<A> {
 
      // Remember to add @Throws to FlowHandle.close() if this throws an exception.
     override fun close() {
@@ -52,7 +52,7 @@ data class FlowHandleImpl<A>(
 @CordaSerializable
 data class FlowProgressHandleImpl<A>(
         override val id: StateMachineRunId,
-        override val returnValue: ListenableFuture<A>,
+        override val returnValue: CordaFuture<A>,
         override val progress: Observable<String>) : FlowProgressHandle<A> {
 
     // Remember to add @Throws to FlowProgressHandle.close() if this throws an exception.

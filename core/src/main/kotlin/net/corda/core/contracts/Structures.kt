@@ -1,6 +1,7 @@
+@file:JvmName("Structures")
+
 package net.corda.core.contracts
 
-import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowLogicRef
@@ -145,6 +146,12 @@ data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
 fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
 
 // DOCSTART 3
+
+/**
+ * Return structure for [OwnableState.withNewOwner]
+ */
+data class CommandAndState(val command: CommandData, val ownableState: OwnableState)
+
 /**
  * A contract state that can have a single owner.
  */
@@ -153,7 +160,7 @@ interface OwnableState : ContractState {
     val owner: AbstractParty
 
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
-    fun withNewOwner(newOwner: AbstractParty): Pair<CommandData, OwnableState>
+    fun withNewOwner(newOwner: AbstractParty): CommandAndState
 }
 // DOCEND 3
 
@@ -203,26 +210,6 @@ interface LinearState : ContractState {
      * True if this should be tracked by our vault(s).
      */
     fun isRelevant(ourKeys: Set<PublicKey>): Boolean
-
-    /**
-     * Standard clause to verify the LinearState safety properties.
-     */
-    @CordaSerializable
-    class ClauseVerifier<in S : LinearState, C : CommandData> : Clause<S, C, Unit>() {
-        override fun verify(tx: LedgerTransaction,
-                            inputs: List<S>,
-                            outputs: List<S>,
-                            commands: List<AuthenticatedObject<C>>,
-                            groupingKey: Unit?): Set<C> {
-            val inputIds = inputs.map { it.linearId }.distinct()
-            val outputIds = outputs.map { it.linearId }.distinct()
-            requireThat {
-                "LinearStates are not merged" using (inputIds.count() == inputs.count())
-                "LinearStates are not split" using (outputIds.count() == outputs.count())
-            }
-            return emptySet()
-        }
-    }
 }
 // DOCEND 2
 
@@ -438,7 +425,7 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
 
 /**
  * A privacy salt is required to compute nonces per transaction component in order to ensure that an adversary cannot
- * use brute force techniques and reveal the content of a merkle-leaf hashed value.
+ * use brute force techniques and reveal the content of a Merkle-leaf hashed value.
  * Because this salt serves the role of the seed to compute nonces, its size and entropy should be equal to the
  * underlying hash function used for Merkle tree generation, currently [SHA256], which has an output of 32 bytes.
  * There are two constructors, one that generates a new 32-bytes random salt, and another that takes a [ByteArray] input.
