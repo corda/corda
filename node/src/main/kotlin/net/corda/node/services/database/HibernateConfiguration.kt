@@ -20,7 +20,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, val databaseProperties: Properties, val identitySvc: IdentityService) {
+class HibernateConfiguration(val schemaService: SchemaService, val databaseProperties: Properties, private val identitySvc: () -> IdentityService) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
@@ -80,7 +80,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
                 }
             })
             // register custom converters
-            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identitySvc))
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identitySvc()))
 
             build()
         }

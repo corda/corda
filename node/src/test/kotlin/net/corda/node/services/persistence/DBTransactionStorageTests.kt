@@ -55,7 +55,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
 
         database.transaction {
 
-            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), identitySvc = makeTestIdentityService())
+            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
 
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultService get() {

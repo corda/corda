@@ -28,7 +28,7 @@ class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: 
 
     val entityManagerFactory: SessionFactory by lazy(LazyThreadSafetyMode.NONE) {
         transaction {
-            HibernateConfiguration(nodeSchemaService, databaseProperties, identitySvc()).sessionFactoryForRegisteredSchemas()
+            HibernateConfiguration(nodeSchemaService, databaseProperties, identitySvc).sessionFactoryForRegisteredSchemas()
         }
     }
 
