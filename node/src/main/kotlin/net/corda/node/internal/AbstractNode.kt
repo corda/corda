@@ -29,7 +29,6 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.flows.IssuerFlow
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
@@ -209,9 +208,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 registerInitiatedFlows(scanResult)
                 findRPCFlows(scanResult)
             }
-
-            // TODO Remove this once the cash stuff is in its own CorDapp
-            registerInitiatedFlow(IssuerFlow.Issuer::class.java)
 
             runOnStop += network::stop
             _networkMapRegistrationFuture.captureLater(registerWithNetworkMapIfConfigured())

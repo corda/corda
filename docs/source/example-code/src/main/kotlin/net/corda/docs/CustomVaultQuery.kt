@@ -132,8 +132,9 @@ object TopupIssuerFlow {
             val notaryParty = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
             // invoke Cash subflow to issue Asset
             progressTracker.currentStep = ISSUING
+            val issuer = serviceHub.myInfo.legalIdentity
             val issueRecipient = serviceHub.myInfo.legalIdentity
-            val issueCashFlow = CashIssueFlow(amount, issuerPartyRef, issueRecipient, notaryParty, anonymous = false)
+            val issueCashFlow = CashIssueFlow(amount, issueRecipient, issuer, issuerPartyRef, notaryParty, anonymous = false)
             val issueTx = subFlow(issueCashFlow)
             // NOTE: issueCashFlow performs a Broadcast (which stores a local copy of the txn to the ledger)
             // short-circuit when issuing to self

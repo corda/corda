@@ -18,39 +18,43 @@ import java.util.*
  * Initiates a flow that produces cash issuance transaction.
  *
  * @param amount the amount of currency to issue.
- * @param issueRef a reference to put on the issued currency.
- * @param recipient the party who should own the currency after it is issued.
+ * @param issuerBankPartyRef a reference to put on the issued currency.
+ * @param issueTo the party who should own the currency after it is issued.
  * @param notary the notary to set on the output states.
  */
 @StartableByRPC
 class CashIssueFlow(val amount: Amount<Currency>,
-                    val issueRef: OpaqueBytes,
-                    val recipient: Party,
+                    val issueTo: Party,
+                    val issuerBankParty
+                    : Party,
+                    val issuerBankPartyRef: OpaqueBytes,
                     val notary: Party,
                     val anonymous: Boolean,
                     progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>,
-                issueRef: OpaqueBytes,
-                recipient: Party,
-                notary: Party) : this(amount, issueRef, recipient, notary, true, tracker())
+                issuerBankPartyRef: OpaqueBytes,
+                issuerBankParty: Party,
+                issueTo: Party,
+                notary: Party) : this(amount, issueTo, issuerBankParty, issuerBankPartyRef, notary, true, tracker())
     constructor(amount: Amount<Currency>,
-                issueRef: OpaqueBytes,
-                recipient: Party,
+                issueTo: Party,
+                issuerBankParty: Party,
+                issuerBankPartyRef: OpaqueBytes,
                 notary: Party,
-                anonymous: Boolean) : this(amount, issueRef, recipient, notary, anonymous, tracker())
+                anonymous: Boolean) : this(amount, issueTo, issuerBankParty, issuerBankPartyRef, notary, anonymous, tracker())
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_ID
         val txIdentities = if (anonymous) {
-            subFlow(TransactionKeyFlow(recipient))
+            subFlow(TransactionKeyFlow(issueTo))
         } else {
             emptyMap<Party, AnonymousParty>()
         }
-        val anonymousRecipient = txIdentities[recipient] ?: recipient
+        val anonymousRecipient = txIdentities[issueTo] ?: issueTo
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionBuilder(notary)
-        val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
+        val issuer = issuerBankParty.ref(issuerBankPartyRef)
         val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), anonymousRecipient, notary)
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(builder, signers)

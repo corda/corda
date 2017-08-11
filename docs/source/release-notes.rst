@@ -8,6 +8,8 @@ Unreleased
 
 * Merged handling of well known and confidential identities in the identity service.
 
+* Remove `IssuerFlow` as it allowed nodes to request arbitrary amounts of cash to be issued from any remote node.
+
 Milestone 14
 ------------
 
