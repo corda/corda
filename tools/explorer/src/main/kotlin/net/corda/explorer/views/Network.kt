@@ -79,7 +79,7 @@ class Network : CordaView() {
                     .filterNotNull()
                     .map { it.stateAndRef.state.data }.getParties()
             val outputParties = it.transaction.tx.outputStates.observable().getParties()
-            val signingParties = it.transaction.sigs.map { getModel<NetworkIdentityModel>().lookup(it.by) }
+            val signingParties = it.transaction.sigs.map { it.by.toKnownParty() }
             // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network.
             // TODO : Expose artemis queue to get real message information.
             inputParties.cross(outputParties) + inputParties.cross(signingParties)
@@ -170,10 +170,10 @@ class Network : CordaView() {
         zoomOutButton.setOnAction { zoom(0.8) }
 
         lastTransactions.addListener { _, _, new ->
-            new?.forEach {
-                it.first.value?.let { a ->
-                    it.second.value?.let { b ->
-                        fireBulletBetweenNodes(a.legalIdentity, b.legalIdentity, "bank", "bank")
+            new?.forEach { (partyA, partyB) ->
+                partyA.value?.let { a ->
+                    partyB.value?.let { b ->
+                        fireBulletBetweenNodes(a, b, "bank", "bank")
                     }
                 }
             }
@@ -209,7 +209,7 @@ class Network : CordaView() {
         return Point2D(x, y)
     }
 
-    private fun List<ContractState>.getParties() = map { it.participants.map { getModel<NetworkIdentityModel>().lookup(it.owningKey) } }.flatten()
+    private fun List<ContractState>.getParties() = map { it.participants.map { it.owningKey.toKnownParty() } }.flatten()
 
     private fun fireBulletBetweenNodes(senderNode: Party, destNode: Party, startType: String, endType: String) {
         val senderNodeComp = allComponentMap[senderNode] ?: return
