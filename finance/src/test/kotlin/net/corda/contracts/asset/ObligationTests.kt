@@ -227,10 +227,10 @@ class ObligationTests {
         initialiseTestSerialization()
         val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB))
         val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE))
-        val txBuilder = TransactionBuilder(DUMMY_NOTARY).apply {
+        val tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateCloseOutNetting(this, ALICE, obligationAliceToBob, obligationBobToAlice)
-        }
-        assertEquals(0, txBuilder.outputStates().size)
+        }.toWireTransaction()
+        assertEquals(0, tx.outputs.size)
     }
 
     /** Test generating a transaction to net two obligations of the different sizes, and confirm the balance is correct. */

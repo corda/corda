@@ -93,6 +93,7 @@ class ScheduledFlowTests {
             val notary = state.state.notary
             val newStateOutput = scheduledState.copy(processed = true)
             val builder = TransactionBuilder(notary)
+                    .addInputState(state)
                     .addOutputState(newStateOutput)
                     .addCommand(dummyCommand(serviceHub.legalIdentityKey))
             val tx = serviceHub.signInitialTransaction(builder)
