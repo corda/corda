@@ -22,7 +22,8 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     private fun getSerializerFactory(context: SerializationContext): SerializerFactory {
         return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
             when (context.useCase) {
-                SerializationContext.UseCase.Checkpoint -> throw IllegalStateException("AMQP should not be used for checkpoint serialization.")
+                SerializationContext.UseCase.Checkpoint ->
+                    throw IllegalStateException("AMQP should not be used for checkpoint serialization.")
                 SerializationContext.UseCase.RPCClient ->
                     rpcClientSerializerFactory(context)
                 SerializationContext.UseCase.RPCServer ->
