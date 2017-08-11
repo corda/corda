@@ -16,7 +16,7 @@ class DeserializeSimpleTypesTests {
         private const val VERBOSE = false
     }
 
-    val sf = SerializerFactory()
+    val sf = SerializerFactoryFactory.get()
 
     @Test
     fun testChar() {

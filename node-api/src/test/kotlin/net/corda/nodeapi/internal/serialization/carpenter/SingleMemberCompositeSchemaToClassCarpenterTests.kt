@@ -30,7 +30,10 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("int", amqpSchema.fields[0].type)
 
         val carpenterSchema = CarpenterSchemas.newInstance()
-        amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
+        amqpSchema.carpenterSchema(
+                classloader = ClassLoader.getSystemClassLoader(),
+                carpenterSchemas = carpenterSchema,
+                force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
         val aBuilder = ClassCarpenter().build(aSchema)
@@ -58,7 +61,10 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
         val amqpSchema = obj.envelope.schema.types[0] as CompositeType
         val carpenterSchema = CarpenterSchemas.newInstance()
-        amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
+        amqpSchema.carpenterSchema(
+                classloader = ClassLoader.getSystemClassLoader(),
+                carpenterSchemas = carpenterSchema,
+                force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
         val aBuilder = ClassCarpenter().build(aSchema)
@@ -90,7 +96,10 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("long", amqpSchema.fields[0].type)
 
         val carpenterSchema = CarpenterSchemas.newInstance()
-        amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
+        amqpSchema.carpenterSchema(
+                classloader = ClassLoader.getSystemClassLoader(),
+                carpenterSchemas = carpenterSchema,
+                force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
         val aBuilder = ClassCarpenter().build(aSchema)
@@ -122,7 +131,10 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("short", amqpSchema.fields[0].type)
 
         val carpenterSchema = CarpenterSchemas.newInstance()
-        amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
+        amqpSchema.carpenterSchema(
+                classloader = ClassLoader.getSystemClassLoader(),
+                carpenterSchemas = carpenterSchema,
+                force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
         val aBuilder = ClassCarpenter().build(aSchema)
@@ -154,7 +166,10 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("double", amqpSchema.fields[0].type)
 
         val carpenterSchema = CarpenterSchemas.newInstance()
-        amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
+        amqpSchema.carpenterSchema(
+                classloader = ClassLoader.getSystemClassLoader(),
+                carpenterSchemas = carpenterSchema,
+                force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
         val aBuilder = ClassCarpenter().build(aSchema)
@@ -186,7 +201,10 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("float", amqpSchema.fields[0].type)
 
         val carpenterSchema = CarpenterSchemas.newInstance()
-        amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
+        amqpSchema.carpenterSchema(
+                classloader = ClassLoader.getSystemClassLoader(),
+                carpenterSchemas = carpenterSchema,
+                force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
         val aBuilder = ClassCarpenter().build(aSchema)
