@@ -38,7 +38,7 @@ object ProcessUtilities {
         val command = mutableListOf<String>().apply {
             add((System.getProperty("java.home") / "bin" / "java").toString())
             (jdwpPort != null) && add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$jdwpPort")
-            add("-Xmx200m")
+            add("-Xmx256m")
             add("-XX:+UseG1GC")
             addAll(extraJvmArguments)
             add("-cp")
