@@ -61,8 +61,8 @@ fun initialiseTestSerialization() {
 
     // Now configure all the testing related delegates.
     (SerializationDefaults.SERIALIZATION_FACTORY as TestSerializationFactory).delegate = SerializationFactoryImpl().apply {
-        registerScheme(KryoClientSerializationScheme())
-        registerScheme(KryoServerSerializationScheme())
+        registerScheme(KryoClientSerializationScheme(this))
+        registerScheme(KryoServerSerializationScheme(this))
         registerScheme(AMQPClientSerializationScheme())
         registerScheme(AMQPServerSerializationScheme())
     }
@@ -138,5 +138,9 @@ class TestSerializationContext : SerializationContext {
 
     override fun withWhitelisted(clazz: Class<*>): SerializationContext {
         return TestSerializationContext().apply { delegate = this@TestSerializationContext.delegate!!.withWhitelisted(clazz) }
+    }
+
+    override fun withPreferredSerializationVersion(versionHeader: ByteSequence): SerializationContext {
+        return TestSerializationContext().apply { delegate = this@TestSerializationContext.delegate!!.withPreferredSerializationVersion(versionHeader) }
     }
 }
