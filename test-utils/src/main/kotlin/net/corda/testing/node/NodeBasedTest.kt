@@ -1,10 +1,13 @@
 package net.corda.testing.node
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
-import net.corda.core.internal.concurrent.*
+import net.corda.core.crypto.getX509Name
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
@@ -120,13 +123,13 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
         val masterNodeFuture = startNode(
-                X509Utilities.getX509Name("${notaryName.commonName}-0","London","demo@r3.com",null),
+                getX509Name("${notaryName.commonName}-0", "London", "demo@r3.com", null),
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0]))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
-                    X509Utilities.getX509Name("${notaryName.commonName}-$it","London","demo@r3.com",null),
+                    getX509Name("${notaryName.commonName}-$it", "London", "demo@r3.com", null),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
