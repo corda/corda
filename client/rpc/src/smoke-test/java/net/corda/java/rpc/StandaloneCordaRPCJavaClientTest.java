@@ -75,7 +75,7 @@ public class StandaloneCordaRPCJavaClientTest {
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
                 dollars123, OpaqueBytes.of("1".getBytes()),
-                notaryNode.getLegalIdentity(), notaryNode.getLegalIdentity());
+                notaryNode.getLegalIdentity());
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 

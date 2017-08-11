@@ -134,14 +134,10 @@ class DistributedServiceTests : DriverBasedTest() {
     }
 
     private fun issueCash(amount: Amount<Currency>) {
-        val issueHandle = aliceProxy.startFlow(
-                ::CashIssueFlow,
-                amount, OpaqueBytes.of(0), alice.nodeInfo.legalIdentity, raftNotaryIdentity)
-        issueHandle.returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(0), raftNotaryIdentity).returnValue.getOrThrow()
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        val payHandle = aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity)
-        payHandle.returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
     }
 }
