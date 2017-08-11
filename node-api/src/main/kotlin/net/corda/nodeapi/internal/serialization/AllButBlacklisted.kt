@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.serialization.ClassWhitelist
+import sun.jvm.hotspot.memory.Dictionary
 import sun.misc.Unsafe
 import sun.security.util.Password
 import java.io.*
@@ -39,6 +40,8 @@ object AllButBlacklisted : ClassWhitelist {
             Thread::class.java.name,
             HashSet::class.java.name,
             HashMap::class.java.name,
+            Dictionary::class.java.name, // Deprecated (marked obsolete) in the jdk
+            Hashtable::class.java.name, // see [Dictionary]
             ClassLoader::class.java.name,
             Handler::class.java.name, // MemoryHandler, StreamHandler
             Runtime::class.java.name,

@@ -33,7 +33,7 @@ class DeserializeCollectionTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test
+    @Test(expected=java.io.NotSerializableException::class)
     fun abstractMapFromMapOf() {
         data class C(val c: AbstractMap<String, Int>)
         val c = C (mapOf("A" to 1, "B" to 2) as AbstractMap)
@@ -42,7 +42,7 @@ class DeserializeCollectionTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test
+    @Test(expected=java.io.NotSerializableException::class)
     fun abstractMapFromTreeMap() {
         data class C(val c: AbstractMap<String, Int>)
         val c = C (TreeMap(mapOf("A" to 1, "B" to 2)))
@@ -50,6 +50,7 @@ class DeserializeCollectionTests {
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
+
     @Test
     fun sortedMapTest() {
         data class C(val c: SortedMap<String, Int>)
@@ -67,15 +68,28 @@ class DeserializeCollectionTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test
+    @Test(expected=java.lang.IllegalArgumentException::class)
     fun dictionaryTest() {
         data class C(val c: Dictionary<String, Int>)
         var v : Hashtable<String, Int> = Hashtable()
         v.put ("a", 1)
         v.put ("b", 2)
         val c = C(v)
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        DeserializationInput(sf).deserialize(serialisedBytes)
+
+        // expected to throw
+        TestSerializationOutput(VERBOSE, sf).serialize(c)
+    }
+
+    @Test(expected=java.lang.IllegalArgumentException::class)
+    fun hashtableTest() {
+        data class C(val c: Hashtable<String, Int>)
+        var v : Hashtable<String, Int> = Hashtable()
+        v.put ("a", 1)
+        v.put ("b", 2)
+        val c = C(v)
+
+        // expected to throw
+        TestSerializationOutput(VERBOSE, sf).serialize(c)
     }
 
     @Test(expected=java.lang.IllegalArgumentException::class)
@@ -87,13 +101,12 @@ class DeserializeCollectionTests {
         TestSerializationOutput(VERBOSE, sf).serialize(c)
     }
 
-    @Test
+    @Test(expected=java.lang.IllegalArgumentException::class)
     fun weakHashMapTest() {
         data class C(val c : WeakHashMap<String, Int>)
         val c = C (WeakHashMap (mapOf("A" to 1, "B" to 2)))
 
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        DeserializationInput(sf).deserialize(serialisedBytes)
+        TestSerializationOutput(VERBOSE, sf).serialize(c)
     }
 
     @Test
