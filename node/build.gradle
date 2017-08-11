@@ -20,13 +20,6 @@ configurations {
         exclude group: 'io.netty', module: 'netty-handler'
     }
 
-    testCompile {
-        // Excluding javassist:javassist because it clashes with Hibernate's
-        // transitive org.javassist:javassist dependency.
-        // TODO: Remove this exclusion once junit-quickcheck 0.8 is released.
-        exclude group: 'javassist', module: 'javassist'
-    }
-
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 
@@ -142,7 +135,6 @@ dependencies {
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
-    testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
     testCompile project(':finance')
