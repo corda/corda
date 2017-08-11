@@ -10,7 +10,6 @@ import com.google.common.collect.testing.features.MapFeature
 import com.google.common.collect.testing.features.SetFeature
 import com.google.common.collect.testing.testers.*
 import junit.framework.TestSuite
-import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.*
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
@@ -43,7 +42,7 @@ class JDBCHashMapTestSuite {
         @BeforeClass
         fun before() {
             initialiseTestSerialization()
-            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate) })
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { throw UnsupportedOperationException("Identity Service should not be in use") })
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
             memoryConstrainedMap = JDBCHashMap<String, String>("test_map_constrained", loadOnInit = false, maxBuckets = 1)
@@ -229,7 +228,7 @@ class JDBCHashMapTestSuite {
 
         @Before
         fun before() {
-            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate) })
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { throw UnsupportedOperationException("Identity Service should not be in use") })
         }
 
         @After

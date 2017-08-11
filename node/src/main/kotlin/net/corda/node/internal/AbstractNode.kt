@@ -126,11 +126,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     val services: ServiceHubInternal get() = _services
 
-    /** For referencing before [services] are created. */
-    fun getIdentityService(): IdentityService {
-        return _services.identityService
-    }
-
     private lateinit var _services: ServiceHubInternalImpl
     lateinit var info: NodeInfo
     lateinit var checkpointStorage: CheckpointStorage
@@ -550,7 +545,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            this.database = configureDatabase(props, configuration.database, identitySvc = this::getIdentityService)
+            this.database = configureDatabase(props, configuration.database, identitySvc = { _services.identityService })
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             database.transaction {
                 log.info("Connected to ${database.database.vendor} database.")
