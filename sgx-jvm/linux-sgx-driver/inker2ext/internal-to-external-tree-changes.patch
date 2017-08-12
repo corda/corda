@@ -1,0 +1,141 @@
+From 06bc2c551c06d45e2fe06dd54e7ebace7cbc674b Mon Sep 17 00:00:00 2001
+From: Serge Ayoun <serge.ayoun@intel.com>
+Date: Wed, 3 May 2017 15:55:19 +0300
+Subject: [PATCH] isgx: internal to external tree changes
+
+Signed-off-by: Serge Ayoun <serge.ayoun@intel.com>
+---
+ drivers/platform/x86/intel_sgx/sgx.h            |  5 +++--
+ drivers/platform/x86/intel_sgx/sgx_ioctl.c      |  6 +++++-
+ drivers/platform/x86/intel_sgx/sgx_main.c       |  5 ++++-
+ drivers/platform/x86/intel_sgx/sgx_page_cache.c |  6 +++++-
+ drivers/platform/x86/intel_sgx/sgx_util.c       |  6 +++++-
+ drivers/platform/x86/intel_sgx/sgx_vma.c        | 11 +++++++++++
+ 6 files changed, 33 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/platform/x86/intel_sgx/sgx.h b/drivers/platform/x86/intel_sgx/sgx.h
+index e59ff01..01dcfb3 100644
+--- a/drivers/platform/x86/intel_sgx/sgx.h
++++ b/drivers/platform/x86/intel_sgx/sgx.h
+@@ -60,15 +60,16 @@
+ #ifndef __ARCH_INTEL_SGX_H__
+ #define __ARCH_INTEL_SGX_H__
+ 
+-#include <uapi/asm/sgx.h>
++#include "sgx_user.h"
+ #include <linux/kref.h>
++#include <linux/version.h>
+ #include <linux/rbtree.h>
+ #include <linux/rwsem.h>
+ #include <linux/sched.h>
+ #include <linux/workqueue.h>
+ #include <linux/mmu_notifier.h>
+ #include <linux/radix-tree.h>
+-#include <asm/sgx.h>
++#include "sgx_arch.h"
+ 
+ #define SGX_EINIT_SPIN_COUNT	20
+ #define SGX_EINIT_SLEEP_COUNT	50
+diff --git a/drivers/platform/x86/intel_sgx/sgx_ioctl.c b/drivers/platform/x86/intel_sgx/sgx_ioctl.c
+index ba7c0d2..e1db58c 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_ioctl.c
++++ b/drivers/platform/x86/intel_sgx/sgx_ioctl.c
+@@ -64,7 +64,11 @@
+ #include <linux/file.h>
+ #include <linux/highmem.h>
+ #include <linux/ratelimit.h>
+-#include <linux/sched/signal.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
++	#include <linux/sched/signal.h>
++#else
++	#include <linux/signal.h>
++#endif
+ #include <linux/slab.h>
+ #include <linux/hashtable.h>
+ #include <linux/shmem_fs.h>
+diff --git a/drivers/platform/x86/intel_sgx/sgx_main.c b/drivers/platform/x86/intel_sgx/sgx_main.c
+index 5890643..70b95c1 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_main.c
++++ b/drivers/platform/x86/intel_sgx/sgx_main.c
+@@ -78,6 +78,9 @@
+ MODULE_DESCRIPTION(DRV_DESCRIPTION);
+ MODULE_AUTHOR("Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>");
+ MODULE_VERSION(DRV_VERSION);
++#ifndef X86_FEATURE_SGX
++#define X86_FEATURE_SGX (9 * 32 + 2)
++#endif
+ 
+ /*
+  * Global data.
+@@ -156,7 +159,7 @@ static unsigned long sgx_get_unmapped_area(struct file *file,
+ };
+ 
+ static struct miscdevice sgx_dev = {
+-	.name	= "sgx",
++	.name	= "isgx",
+ 	.fops	= &sgx_fops,
+ 	.mode   = 0666,
+ };
+diff --git a/drivers/platform/x86/intel_sgx/sgx_page_cache.c b/drivers/platform/x86/intel_sgx/sgx_page_cache.c
+index 59a67cb..0cb9b4e 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_page_cache.c
++++ b/drivers/platform/x86/intel_sgx/sgx_page_cache.c
+@@ -63,7 +63,11 @@
+ #include <linux/highmem.h>
+ #include <linux/kthread.h>
+ #include <linux/ratelimit.h>
+-#include <linux/sched/signal.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
++	#include <linux/sched/signal.h>
++#else
++	#include <linux/signal.h>
++#endif
+ #include <linux/slab.h>
+ 
+ #define SGX_NR_LOW_EPC_PAGES_DEFAULT 32
+diff --git a/drivers/platform/x86/intel_sgx/sgx_util.c b/drivers/platform/x86/intel_sgx/sgx_util.c
+index 1e9fa18..4226f2a 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_util.c
++++ b/drivers/platform/x86/intel_sgx/sgx_util.c
+@@ -61,7 +61,11 @@
+ #include "sgx.h"
+ #include <linux/highmem.h>
+ #include <linux/shmem_fs.h>
+-#include <linux/sched/mm.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
++	#include <linux/sched/signal.h>
++#else
++	#include <linux/signal.h>
++#endif
+ 
+ struct page *sgx_get_backing(struct sgx_encl *encl,
+ 			     struct sgx_encl_page *entry,
+diff --git a/drivers/platform/x86/intel_sgx/sgx_vma.c b/drivers/platform/x86/intel_sgx/sgx_vma.c
+index f83c0b8..4dbe26c 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_vma.c
++++ b/drivers/platform/x86/intel_sgx/sgx_vma.c
+@@ -94,10 +94,21 @@ static void sgx_vma_close(struct vm_area_struct *vma)
+ 	kref_put(&encl->refcount, sgx_encl_release);
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
+ static int sgx_vma_fault(struct vm_fault *vmf)
+ {
+ 	struct vm_area_struct *vma = vmf->vma;
++#else
++static int sgx_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
++{
++#endif
++	
++	
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
+ 	unsigned long addr = (unsigned long)vmf->address;
++#else
++	unsigned long addr = (unsigned long) vmf->virtual_address;
++#endif
+ 	struct sgx_encl_page *entry;
+ 
+ 	entry = sgx_fault_page(vma, addr, 0);
+-- 
+1.9.1
+
