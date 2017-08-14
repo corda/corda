@@ -11,6 +11,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.finance.*
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*

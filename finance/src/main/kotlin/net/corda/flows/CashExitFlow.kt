@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.contracts.issuedBy
+import net.corda.finance.issuedBy
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy

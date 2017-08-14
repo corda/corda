@@ -2,19 +2,18 @@ package net.corda.flows
 
 import net.corda.contracts.asset.Cash
 import net.corda.core.concurrent.CordaFuture
-import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.currency
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.trackBy
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.finance.DOLLARS
 import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.node.MockNetwork
@@ -109,7 +108,7 @@ class IssuerFlowTest(val anonymous: Boolean) {
         val notary = notaryNode.services.myInfo.notaryIdentity
         // try to issue an amount of a restricted currency
         assertFailsWith<FlowException> {
-            runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, Amount(100000L, currency("BRL")),
+            runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, Amount(100000L, Currency.getInstance("BRL")),
                     bankClientNode.info.legalIdentity, OpaqueBytes.of(123), notary).getOrThrow()
         }
     }

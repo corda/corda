@@ -14,6 +14,9 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.node.services.queryBy
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.finance.DOLLARS
+import net.corda.finance.GBP
+import net.corda.finance.USD
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl

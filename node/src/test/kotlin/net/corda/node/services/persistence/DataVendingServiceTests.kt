@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
-import net.corda.core.contracts.USD
+import net.corda.finance.USD
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow

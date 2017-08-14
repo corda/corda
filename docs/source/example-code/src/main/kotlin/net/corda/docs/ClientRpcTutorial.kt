@@ -3,7 +3,7 @@ package net.corda.docs
 import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.USD
+import net.corda.finance.USD
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy

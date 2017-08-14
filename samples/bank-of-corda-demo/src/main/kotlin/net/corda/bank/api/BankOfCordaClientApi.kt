@@ -3,15 +3,14 @@ package net.corda.bank.api
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.currency
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.flows.IssuerFlow.IssuanceRequester
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.http.HttpApi
+import java.util.*
 
 /**
  * Interface for communicating with Bank of Corda node
@@ -46,7 +45,7 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
             val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
                     ?: throw IllegalStateException("Unable to locate notary node in network map cache")
 
-            val amount = Amount(params.amount, currency(params.currency))
+            val amount = Amount(params.amount, Currency.getInstance(params.currency))
             val issuerToPartyRef = OpaqueBytes.of(params.issueToPartyRefAsString.toByte())
 
             return rpc.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty, notaryNode.notaryIdentity, params.anonymous)

@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.finance.GBP
 
 @StartableByRPC
 class DummyIssueAndMove(private val notary: Party, private val counterpartyNode: Party, private val discriminator: Int) : FlowLogic<SignedTransaction>() {

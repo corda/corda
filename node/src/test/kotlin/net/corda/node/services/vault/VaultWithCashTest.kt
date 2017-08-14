@@ -4,7 +4,9 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.contracts.getCashBalance
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryService
@@ -13,6 +15,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.finance.*
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.*

@@ -2,8 +2,8 @@ package net.corda.client.rpc
 
 import net.corda.contracts.getCashBalance
 import net.corda.contracts.getCashBalances
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.USD
+import net.corda.finance.DOLLARS
+import net.corda.finance.USD
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.messaging.*

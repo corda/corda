@@ -20,6 +20,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
+import net.corda.finance.*
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash

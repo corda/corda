@@ -5,8 +5,8 @@ import net.corda.client.jfx.model.ProgressTrackingEvent
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.USD
+import net.corda.finance.DOLLARS
+import net.corda.finance.USD
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowInitiator

@@ -7,7 +7,6 @@ import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.getCashBalance
 import net.corda.contracts.getCashBalances
-import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.*
@@ -18,6 +17,10 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
+import net.corda.finance.DOLLARS
+import net.corda.finance.POUNDS
+import net.corda.finance.SWISS_FRANCS
+import net.corda.finance.USD
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.nodeapi.User

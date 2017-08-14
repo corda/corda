@@ -14,6 +14,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
+import net.corda.finance.DOLLARS
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase

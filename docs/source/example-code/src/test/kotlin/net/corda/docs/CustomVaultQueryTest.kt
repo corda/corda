@@ -5,6 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.finance.*
 import net.corda.flows.CashIssueFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService

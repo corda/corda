@@ -33,6 +33,8 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.flows.TwoPartyTradeFlow.Buyer
 import net.corda.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode

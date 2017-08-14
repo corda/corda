@@ -8,6 +8,8 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.testing.*
 import org.junit.Test
 import java.security.PublicKey

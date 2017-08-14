@@ -2,7 +2,7 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.base.Stopwatch
-import net.corda.core.contracts.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.concurrent.transpose

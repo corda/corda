@@ -40,6 +40,8 @@ UNRELEASED
   If you specifically need well known identities, use the network map, which is the authoritative source of current well
   known identities.
 
+* Currency-related API in ``net.corda.core.contracts.ContractsDSL`` has moved to ```net.corda.finance.CurrencyUtils`.
+
 Milestone 14
 ------------
 

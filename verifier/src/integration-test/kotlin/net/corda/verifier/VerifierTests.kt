@@ -1,7 +1,7 @@
 package net.corda.verifier
 
 import net.corda.client.mock.generateOrFail
-import net.corda.core.contracts.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes

@@ -1,7 +1,6 @@
 package net.corda.bank.api
 
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.currency
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
@@ -10,6 +9,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDateTime
+import java.util.*
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
@@ -49,9 +49,9 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
         val notaryParty = rpc.partyFromX500Name(params.notaryName)
                 ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.notaryName} in identity service").build()
         val notaryNode = rpc.nodeIdentityFromParty(notaryParty)
-                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${notaryParty} in network map service").build()
+                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate $notaryParty in network map service").build()
 
-        val amount = Amount(params.amount, currency(params.currency))
+        val amount = Amount(params.amount, Currency.getInstance(params.currency))
         val issuerToPartyRef = OpaqueBytes.of(params.issueToPartyRefAsString.toByte())
         val anonymous = params.anonymous
 
@@ -62,7 +62,7 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
             logger.info("Issue request completed successfully: $params")
             Response.status(Response.Status.CREATED).build()
         } catch (e: Exception) {
-            logger.error("Issue request failed: ${e}", e)
+            logger.error("Issue request failed", e)
             Response.status(Response.Status.FORBIDDEN).build()
         }
     }

@@ -6,8 +6,8 @@ import net.corda.core.identity.AnonymousParty;
 import net.corda.core.utilities.OpaqueBytes;
 import org.junit.Test;
 
-import static net.corda.core.contracts.ContractsDSL.DOLLARS;
-import static net.corda.core.contracts.ContractsDSL.issuedBy;
+import static net.corda.finance.CurrencyUtils.DOLLARS;
+import static net.corda.finance.CurrencyUtils.issuedBy;
 import static net.corda.testing.CoreTestUtils.*;
 
 /**

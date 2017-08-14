@@ -1,9 +1,8 @@
 package net.corda.bank
 
 import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.core.messaging.startFlow
-import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria

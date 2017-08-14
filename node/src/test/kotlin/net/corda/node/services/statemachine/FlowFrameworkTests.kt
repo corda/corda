@@ -5,7 +5,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue

@@ -10,6 +10,9 @@ import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.finance.DOLLARS
+import net.corda.finance.POUNDS
+import net.corda.finance.SWISS_FRANCS
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1

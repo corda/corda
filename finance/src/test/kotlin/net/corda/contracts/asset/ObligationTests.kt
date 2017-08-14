@@ -13,6 +13,7 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
 import net.corda.core.utilities.hours
+import net.corda.finance.*
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices

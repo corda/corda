@@ -29,6 +29,7 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.finance.parseCurrency
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigDecimal
@@ -348,7 +349,7 @@ object JacksonSupport {
     object AmountDeserializer : JsonDeserializer<Amount<*>>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): Amount<*> {
             try {
-                return Amount.parseCurrency(parser.text)
+                return parseCurrency(parser.text)
             } catch (e: Exception) {
                 try {
                     val tree = parser.readValueAsTree<JsonNode>()
