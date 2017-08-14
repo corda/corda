@@ -413,7 +413,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             // DOCSTART VaultQueryExample4
-            val criteria = VaultQueryCriteria(notaryName = listOf(CASH_NOTARY))
+            val criteria = VaultQueryCriteria(notary = listOf(CASH_NOTARY))
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample4
             assertThat(results.states).hasSize(3)
@@ -1410,7 +1410,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), ref = OpaqueBytes.of(2))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), ref = OpaqueBytes.of(3))
 
-            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC),
+            val criteria = FungibleAssetQueryCriteria(issuer = listOf(BOC),
                     issuerRef = listOf(BOC.ref(1).reference, BOC.ref(2).reference))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
@@ -1441,7 +1441,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (usdCashIssuer))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (chfCashIssuer))
 
-            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(gbpCashIssuer.party, usdCashIssuer.party))
+            val criteria = FungibleAssetQueryCriteria(issuer = listOf(gbpCashIssuer.party, usdCashIssuer.party))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
         }
@@ -1573,7 +1573,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)))
 
             // DOCSTART VaultQueryExample14
-            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC))
+            val criteria = FungibleAssetQueryCriteria(issuer = listOf(BOC))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
             // DOCEND VaultQueryExample14
 

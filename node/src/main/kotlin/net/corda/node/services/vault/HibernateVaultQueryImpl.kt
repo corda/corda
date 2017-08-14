@@ -103,7 +103,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                                                                    vaultState.recordedTime,
                                                                    vaultState.consumedTime,
                                                                    vaultState.stateStatus,
-                                                                   vaultState.notaryName?.nameOrNull()?.toString() ?: "",
+                                                                   vaultState.notary,
                                                                    vaultState.lockId,
                                                                    vaultState.lockUpdateTime))
                                 statesAndRefs.add(StateAndRef(state, stateRef))

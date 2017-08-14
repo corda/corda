@@ -29,7 +29,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     class VaultStates(
             /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name")
-            var notaryName: AbstractParty,
+            var notary: AbstractParty,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
             @Column(name = "contract_state_class_name")

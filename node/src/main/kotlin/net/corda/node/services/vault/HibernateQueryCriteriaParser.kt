@@ -7,14 +7,12 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.CommonQueryCriteria
-import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
-import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 import javax.persistence.Tuple
 import javax.persistence.criteria.*
@@ -68,8 +66,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
 
         // notary names
-        criteria.notaryName?.let {
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<AbstractParty>("notaryName").`in`(criteria.notaryName)))
+        criteria.notary?.let {
+            predicateSet.add(criteriaBuilder.and(vaultStates.get<AbstractParty>("notary").`in`(criteria.notary)))
         }
 
         // state references
@@ -252,8 +250,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
 
         // issuer party
-        criteria.issuerPartyName?.let {
-            val issuerParties = criteria.issuerPartyName as List<AbstractParty>
+        criteria.issuer?.let {
+            val issuerParties = criteria.issuer as List<AbstractParty>
             predicateSet.add(criteriaBuilder.and(vaultFungibleStates.get<AbstractParty>("issuer").`in`(issuerParties)))
         }
 

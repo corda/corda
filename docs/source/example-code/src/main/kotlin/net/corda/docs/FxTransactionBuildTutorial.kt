@@ -44,7 +44,7 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
     val fungibleCriteria = QueryCriteria.FungibleAssetQueryCriteria(owner = ourParties)
 
     val notary = notary ?: serviceHub.networkMapCache.getAnyNotary()
-    val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notaryName = listOf(notary as AbstractParty))
+    val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = listOf(notary as AbstractParty))
 
     val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal(amountRequired.token.product.currencyCode) }
     val cashCriteria = QueryCriteria.VaultCustomQueryCriteria(logicalExpression)
