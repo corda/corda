@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.Fix
 import net.corda.contracts.FixableDealState
 import net.corda.core.contracts.*
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
@@ -12,13 +13,13 @@ import net.corda.core.flows.SchedulableFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.seconds
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.transient
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
+import net.corda.core.utilities.transient
 import net.corda.flows.TwoPartyDealFlow
 import java.math.BigDecimal
 import java.security.PublicKey
@@ -52,7 +53,7 @@ object FixingFlow {
         }
 
         @Suspendable
-        override fun assembleSharedTX(handshake: TwoPartyDealFlow.Handshake<FixingSession>): Pair<TransactionBuilder, List<PublicKey>> {
+        override fun assembleSharedTX(handshake: TwoPartyDealFlow.Handshake<FixingSession>): Triple<TransactionBuilder, List<PublicKey>, List<TransactionSignature>> {
             @Suppress("UNCHECKED_CAST")
             val fixOf = deal.nextFixingOf()!!
 
@@ -85,9 +86,9 @@ object FixingFlow {
                     }
                 }
             }
-            subFlow(addFixing)
+            val sig = subFlow(addFixing)
             // DOCEND 1
-            return Pair(ptx, arrayListOf(myOldParty.owningKey))
+            return Triple(ptx, arrayListOf(myOldParty.owningKey), listOf(sig))
         }
     }
 

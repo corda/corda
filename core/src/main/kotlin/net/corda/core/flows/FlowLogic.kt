@@ -7,6 +7,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.abbreviate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -52,10 +53,15 @@ abstract class FlowLogic<out T> {
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
-    @Deprecated("This is no longer used and will be removed in a future release. If you are using this to communicate " +
-            "with the same party but for two different message streams, then the correct way of doing that is to use sub-flows",
-            level = DeprecationLevel.ERROR)
-    open fun getCounterpartyMarker(party: Party): Class<*> = javaClass
+    /**
+     * Returns a [FlowContext] object describing the flow [otherParty] is using. With [FlowContext.flowVersion] it
+     * provides the necessary information needed for the evolution of flows and enabling backwards compatibility.
+     *
+     * This method can be called before any send or receive has been done with [otherParty]. In such a case this will force
+     * them to start their flow.
+     */
+    @Suspendable
+    fun getFlowContext(otherParty: Party): FlowContext = stateMachine.getFlowContext(otherParty, flowUsedForSessions)
 
     /**
      * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
@@ -90,11 +96,6 @@ abstract class FlowLogic<out T> {
         return stateMachine.sendAndReceive(receiveType, otherParty, payload, flowUsedForSessions)
     }
 
-    /** @see sendAndReceiveWithRetry */
-    internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return sendAndReceiveWithRetry(R::class.java, otherParty, payload)
-    }
-
     /**
      * Similar to [sendAndReceive] but also instructs the `payload` to be redelivered until the expected message is received.
      *
@@ -104,9 +105,8 @@ abstract class FlowLogic<out T> {
      * oracle services. If one or more nodes in the service cluster go down mid-session, the message will be redelivered
      * to a different one, so there is no need to wait until the initial node comes back up to obtain a response.
      */
-    @Suspendable
-    internal open fun <R : Any> sendAndReceiveWithRetry(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(receiveType, otherParty, payload, flowUsedForSessions, true)
+    internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any): UntrustworthyData<R> {
+        return stateMachine.sendAndReceive(R::class.java, otherParty, payload, flowUsedForSessions, true)
     }
 
     /**
@@ -181,7 +181,9 @@ abstract class FlowLogic<out T> {
      * @param extraAuditData in the audit log for this permission check these extra key value pairs will be recorded.
      */
     @Throws(FlowException::class)
-    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) = stateMachine.checkFlowPermission(permissionName, extraAuditData)
+    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
+        stateMachine.checkFlowPermission(permissionName, extraAuditData)
+    }
 
 
     /**
@@ -190,7 +192,9 @@ abstract class FlowLogic<out T> {
      * @param comment a general human readable summary of the event.
      * @param extraAuditData in the audit log for this permission check these extra key value pairs will be recorded.
      */
-    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) = stateMachine.recordAuditEvent(eventType, comment, extraAuditData)
+    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
+        stateMachine.recordAuditEvent(eventType, comment, extraAuditData)
+    }
 
     /**
      * Override this to provide a [ProgressTracker]. If one is provided and stepped, the framework will do something
@@ -262,3 +266,20 @@ abstract class FlowLogic<out T> {
         }
     }
 }
+
+/**
+ * Version and name of the CorDapp hosting the other side of the flow.
+ */
+@CordaSerializable
+data class FlowContext(
+        /**
+         * The integer flow version the other side is using.
+         * @see InitiatingFlow
+         */
+        val flowVersion: Int,
+        /**
+         * Name of the CorDapp jar hosting the flow, without the .jar extension. It will include a unique identifier
+         * to deduplicate it from other releases of the same CorDapp, typically a version string. See the
+         * [CorDapp JAR format](https://docs.corda.net/cordapp-build-systems.html#cordapp-jar-format) for more details.
+         */
+        val appName: String)

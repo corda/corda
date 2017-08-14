@@ -34,7 +34,7 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
         // Move ownership of the asset to the counterparty
         val moveTxBuilder = TransactionBuilder(notary = notary)
 
-        val (_, keys) = vaultService.generateSpend(moveTxBuilder, Amount(amount.quantity, GBP), counterpartyNode)
+        val (_, keys) = Cash.generateSpend(serviceHub, moveTxBuilder, Amount(amount.quantity, GBP), counterpartyNode)
         // We don't check signatures because we know that the notary's signature is missing
         signInitialTransaction(moveTxBuilder, keys)
     }

@@ -54,6 +54,8 @@ data class SerializationContextImpl(override val preferedSerializationVersion: B
     }
 }
 
+private const val HEADER_SIZE: Int = 8
+
 open class SerializationFactoryImpl : SerializationFactory {
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
 
@@ -63,8 +65,8 @@ open class SerializationFactoryImpl : SerializationFactory {
     private val schemes: ConcurrentHashMap<Pair<ByteSequence, SerializationContext.UseCase>, SerializationScheme> = ConcurrentHashMap()
 
     private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): SerializationScheme {
-        // truncate sequence to 8 bytes
-        return schemes.computeIfAbsent(byteSequence.take(8).copy() to target) {
+        // truncate sequence to 8 bytes, and make sure it's a copy to avoid holding onto large ByteArrays
+        return schemes.computeIfAbsent(byteSequence.take(HEADER_SIZE).copy() to target) {
             for (scheme in registeredSchemes) {
                 if (scheme.canDeserializeVersion(it.first, it.second)) {
                     return@computeIfAbsent scheme
@@ -162,11 +164,12 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
         val pool = getPool(context)
-        Input(byteSequence.bytes, byteSequence.offset, byteSequence.size).use { input ->
-            val header = OpaqueBytes(input.readBytes(8))
-            if (header != KryoHeaderV0_1) {
-                throw KryoException("Serialized bytes header does not match expected format.")
-            }
+        val headerSize = KryoHeaderV0_1.size
+        val header = byteSequence.take(headerSize)
+        if (header != KryoHeaderV0_1) {
+            throw KryoException("Serialized bytes header does not match expected format.")
+        }
+        Input(byteSequence.bytes, byteSequence.offset + headerSize, byteSequence.size - headerSize).use { input ->
             return pool.run { kryo ->
                 withContext(kryo, context) {
                     @Suppress("UNCHECKED_CAST")

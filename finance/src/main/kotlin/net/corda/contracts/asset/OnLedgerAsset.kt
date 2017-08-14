@@ -226,8 +226,6 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
      *
      * @param tx transaction builder to add states and commands to.
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
-     * @param changeKey the key to send any change to. This needs to be explicitly stated as the input states are not
-     * necessarily owned by us.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
      * @return the public keys which must sign the transaction for it to be valid.

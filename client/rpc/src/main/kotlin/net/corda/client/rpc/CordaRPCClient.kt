@@ -9,6 +9,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.serialization.AMQPClientSerializationScheme
 import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
@@ -71,6 +72,7 @@ class CordaRPCClient(
             try {
                 SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
                     registerScheme(KryoClientSerializationScheme())
+                    registerScheme(AMQPClientSerializationScheme())
                 }
                 SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
                 SerializationDefaults.RPC_CLIENT_CONTEXT = KRYO_RPC_CLIENT_CONTEXT

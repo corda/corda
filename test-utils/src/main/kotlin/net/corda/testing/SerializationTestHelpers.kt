@@ -63,6 +63,8 @@ fun initialiseTestSerialization() {
     (SerializationDefaults.SERIALIZATION_FACTORY as TestSerializationFactory).delegate = SerializationFactoryImpl().apply {
         registerScheme(KryoClientSerializationScheme())
         registerScheme(KryoServerSerializationScheme())
+        registerScheme(AMQPClientSerializationScheme())
+        registerScheme(AMQPServerSerializationScheme())
     }
     (SerializationDefaults.P2P_CONTEXT as TestSerializationContext).delegate = KRYO_P2P_CONTEXT
     (SerializationDefaults.RPC_SERVER_CONTEXT as TestSerializationContext).delegate = KRYO_RPC_SERVER_CONTEXT

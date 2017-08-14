@@ -10,10 +10,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
@@ -28,6 +25,7 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
@@ -205,7 +203,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * @param allowedUnsuspendedFiberCount Optional parameter is used in some tests.
      */
     fun stop(allowedUnsuspendedFiberCount: Int = 0) {
-        check(allowedUnsuspendedFiberCount >= 0)
+        require(allowedUnsuspendedFiberCount >= 0)
         mutex.locked {
             if (stopping) throw IllegalStateException("Already stopping!")
             stopping = true
@@ -340,23 +338,30 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: Party) {
         logger.trace { "Received $sessionInit from $sender" }
-        val otherPartySessionId = sessionInit.initiatorSessionId
+        val senderSessionId = sessionInit.initiatorSessionId
 
-        fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(otherPartySessionId, message))
+        fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(senderSessionId, message))
 
-        val session = try {
-            val initiatedFlowFactory = serviceHub.getFlowFactory(sessionInit.loadInitiatingFlowClass())
-                    ?: throw SessionRejectException("${sessionInit.initiatingFlowClass} is not registered")
-            val flow = initiatedFlowFactory.createFlow(receivedMessage.platformVersion, sender, sessionInit)
-            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
-            val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
+        val (session, initiatedFlowFactory) = try {
+            val initiatedFlowFactory = getInitiatedFlowFactory(sessionInit)
+            val flow = initiatedFlowFactory.createFlow(sender)
+            val senderFlowVersion = when (initiatedFlowFactory) {
+                is InitiatedFlowFactory.Core -> receivedMessage.platformVersion  // The flow version for the core flows is the platform version
+                is InitiatedFlowFactory.CorDapp -> sessionInit.flowVersion
+            }
+            val session = FlowSession(
+                    flow,
+                    random63BitValue(),
+                    sender,
+                    FlowSessionState.Initiated(sender, senderSessionId, FlowContext(senderFlowVersion, sessionInit.appName)))
             if (sessionInit.firstPayload != null) {
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
             }
             openSessions[session.ourSessionId] = session
+            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             fiber.openSessions[Pair(flow, sender)] = session
             updateCheckpoint(fiber)
-            session
+            session to initiatedFlowFactory
         } catch (e: SessionRejectException) {
             logger.warn("${e.logMessage}: $sessionInit")
             sendSessionReject(e.rejectMessage)
@@ -367,20 +372,28 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             return
         }
 
-        sendSessionMessage(sender, SessionConfirm(otherPartySessionId, session.ourSessionId), session.fiber)
+        val (ourFlowVersion, appName) = when (initiatedFlowFactory) {
+            // The flow version for the core flows is the platform version
+            is InitiatedFlowFactory.Core -> serviceHub.myInfo.platformVersion to "corda"
+            is InitiatedFlowFactory.CorDapp -> initiatedFlowFactory.flowVersion to initiatedFlowFactory.appName
+        }
+
+        sendSessionMessage(sender, SessionConfirm(senderSessionId, session.ourSessionId, ourFlowVersion, appName), session.fiber)
         session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.initiatingFlowClass}" }
         session.fiber.logger.trace { "Initiated from $sessionInit on $session" }
         resumeFiber(session.fiber)
     }
 
-    private fun SessionInit.loadInitiatingFlowClass(): Class<out FlowLogic<*>> {
-        return try {
-            Class.forName(initiatingFlowClass).asSubclass(FlowLogic::class.java)
+    private fun getInitiatedFlowFactory(sessionInit: SessionInit): InitiatedFlowFactory<*> {
+        val initiatingFlowClass = try {
+            Class.forName(sessionInit.initiatingFlowClass).asSubclass(FlowLogic::class.java)
         } catch (e: ClassNotFoundException) {
-            throw SessionRejectException("Don't know $initiatingFlowClass")
+            throw SessionRejectException("Don't know ${sessionInit.initiatingFlowClass}")
         } catch (e: ClassCastException) {
-            throw SessionRejectException("$initiatingFlowClass is not a flow")
+            throw SessionRejectException("${sessionInit.initiatingFlowClass} is not a flow")
         }
+        return serviceHub.getFlowFactory(initiatingFlowClass) ?:
+                throw SessionRejectException("$initiatingFlowClass is not registered")
     }
 
     private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
@@ -389,7 +402,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun deserializeFiber(checkpoint: Checkpoint, logger: Logger): FlowStateMachineImpl<*>? {
         return try {
-            checkpoint.serializedFiber.deserialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext)).apply { fromCheckpoint = true }
+            checkpoint.serializedFiber.deserialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext)).apply {
+                fromCheckpoint = true
+            }
         } catch (t: Throwable) {
             logger.error("Encountered unrestorable checkpoint!", t)
             null

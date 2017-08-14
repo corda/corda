@@ -1,6 +1,7 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
@@ -26,7 +27,7 @@ open class CashPaymentFlow(
         val recipient: Party,
         val anonymous: Boolean,
         progressTracker: ProgressTracker,
-        val issuerConstraint: Set<Party>? = null) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
+        val issuerConstraint: Set<Party> = emptySet()) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
     constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, true, tracker())
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
@@ -45,7 +46,7 @@ open class CashPaymentFlow(
         val builder: TransactionBuilder = TransactionBuilder(null as Party?)
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
-            serviceHub.vaultService.generateSpend(
+            Cash.generateSpend(serviceHub,
                     builder,
                     amount,
                     anonymousRecipient,

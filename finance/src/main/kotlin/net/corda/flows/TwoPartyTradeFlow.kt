@@ -1,8 +1,12 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.sumCashBy
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.OwnableState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.withoutIssuer
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -138,7 +142,8 @@ object TwoPartyTradeFlow {
             // Put together a proposed transaction that performs the trade, and sign it.
             progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(assetForSale, tradeRequest)
-            val partSignedTx = signWithOurKeys(cashSigningPubKeys, ptx)
+            // Now sign the transaction with whatever keys we need to move the cash.
+            val partSignedTx = serviceHub.signInitialTransaction(ptx, cashSigningPubKeys)
 
             // Send the signed transaction to the seller, who must then sign it themselves and commit
             // it to the ledger by sending it to the notary.
@@ -164,17 +169,13 @@ object TwoPartyTradeFlow {
             }
         }
 
-        private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
-            // Now sign the transaction with whatever keys we need to move the cash.
-            return serviceHub.signInitialTransaction(ptx, cashSigningPubKeys)
-        }
 
         @Suspendable
         private fun assembleSharedTX(assetForSale: StateAndRef<OwnableState>, tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionBuilder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwner)
+            val (tx, cashSigningPubKeys) = Cash.generateSpend(serviceHub, ptx, tradeRequest.price, tradeRequest.sellerOwner)
 
             // Add inputs/outputs/a command for the movement of the asset.
             tx.addInputState(assetForSale)

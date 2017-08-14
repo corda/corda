@@ -79,7 +79,7 @@ the following:
                 txBuilder.verify(serviceHub)
 
                 // Signing the transaction.
-                val signedTx = serviceHub.signInitialTransaction(txBuilder)
+                val signedTx = serviceHub.toSignedTransaction(txBuilder)
 
                 // Finalising the transaction.
                 subFlow(FinalityFlow(signedTx))
@@ -141,7 +141,7 @@ the following:
                 txBuilder.verify(getServiceHub());
 
                 // Signing the transaction.
-                final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
+                final SignedTransaction signedTx = getServiceHub().toSignedTransaction(txBuilder);
 
                 // Finalising the transaction.
                 subFlow(new FinalityFlow(signedTx));
@@ -229,7 +229,7 @@ Signing the transaction
 Now that we have a valid transaction proposal, we need to sign it. Once the transaction is signed, no-one will be able
 to modify the transaction without invalidating our signature, effectively making the transaction immutable.
 
-The call to ``ServiceHub.signInitialTransaction`` returns a ``SignedTransaction`` - an object that pairs the
+The call to ``ServiceHub.toSignedTransaction`` returns a ``SignedTransaction`` - an object that pairs the
 transaction itself with a list of signatures over that transaction.
 
 Finalising the transaction

@@ -1,21 +1,19 @@
 package net.corda.contracts
 
 import net.corda.contracts.asset.*
-import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.contracts.*
-import net.corda.core.utilities.days
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.utilities.configureDatabase
+import net.corda.core.utilities.days
+import net.corda.core.utilities.seconds
 import net.corda.testing.*
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestDatabaseAndMockServices
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -206,47 +204,30 @@ class CommercialPaperTestsGeneric {
     private lateinit var alicesVault: Vault<ContractState>
 
     private val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+    private val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
 
     private lateinit var moveTX: SignedTransaction
 
     @Test
     fun `issue move and then redeem`() {
         initialiseTestSerialization()
-        val dataSourcePropsAlice = makeTestDataSourceProperties()
-        val databaseAlice = configureDatabase(dataSourcePropsAlice, makeTestDatabaseProperties())
+        val aliceDatabaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(ALICE_KEY))
+        val databaseAlice = aliceDatabaseAndServices.first
+        aliceServices = aliceDatabaseAndServices.second
+        aliceVaultService = aliceServices.vaultService
+
         databaseAlice.transaction {
-
-            aliceServices = object : MockServices(ALICE_KEY) {
-                override val vaultService: VaultService = makeVaultService(dataSourcePropsAlice)
-
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-                    for (stx in txs) {
-                        validatedTransactions.addTransaction(stx)
-                    }
-                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultService.notifyAll(txs.map { it.tx })
-                }
-            }
-            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
+            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
             aliceVaultService = aliceServices.vaultService
         }
 
-        val dataSourcePropsBigCorp = makeTestDataSourceProperties()
-        val databaseBigCorp = configureDatabase(dataSourcePropsBigCorp, makeTestDatabaseProperties())
+        val bigCorpDatabaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(BIG_CORP_KEY))
+        val databaseBigCorp = bigCorpDatabaseAndServices.first
+        bigCorpServices = bigCorpDatabaseAndServices.second
+        bigCorpVaultService = bigCorpServices.vaultService
+
         databaseBigCorp.transaction {
-
-            bigCorpServices = object : MockServices(BIG_CORP_KEY) {
-                override val vaultService: VaultService = makeVaultService(dataSourcePropsBigCorp)
-
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-                    for (stx in txs) {
-                        validatedTransactions.addTransaction(stx)
-                    }
-                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultService.notifyAll(txs.map { it.tx })
-                }
-            }
-            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
+            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
             bigCorpVaultService = bigCorpServices.vaultService
         }
 
@@ -266,7 +247,7 @@ class CommercialPaperTestsGeneric {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
                 val builder = TransactionBuilder(DUMMY_NOTARY)
-                aliceVaultService.generateSpend(builder, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
+                Cash.generateSpend(aliceServices, builder, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
                 CommercialPaper().generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(aliceServices.key.public))
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = bigCorpServices.addSignature(ptx)
@@ -288,7 +269,7 @@ class CommercialPaperTestsGeneric {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
                 val builder = TransactionBuilder(DUMMY_NOTARY)
                 builder.setTimeWindow(time, 30.seconds)
-                CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), bigCorpVaultService)
+                CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), bigCorpServices)
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = bigCorpServices.addSignature(ptx)
                 val stx = notaryServices.addSignature(ptx2)

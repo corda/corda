@@ -15,9 +15,7 @@ class RaftNonValidatingNotaryService(override val services: ServiceHubInternal) 
     override val timeWindowChecker: TimeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider: RaftUniquenessProvider = RaftUniquenessProvider(services)
 
-    override fun createServiceFlow(otherParty: Party, platformVersion: Int): NotaryFlow.Service {
-        return NonValidatingNotaryFlow(otherParty, this)
-    }
+    override fun createServiceFlow(otherParty: Party): NotaryFlow.Service = NonValidatingNotaryFlow(otherParty, this)
 
     override fun start() {
         uniquenessProvider.start()

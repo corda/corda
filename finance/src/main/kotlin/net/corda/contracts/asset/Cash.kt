@@ -1,5 +1,7 @@
 package net.corda.contracts.asset
 
+import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
@@ -9,16 +11,27 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.toHexString
+import net.corda.core.utilities.toNonEmptySet
+import net.corda.core.utilities.trace
 import net.corda.schemas.CashSchemaV1
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
+import java.sql.SQLException
 import java.util.*
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -212,6 +225,163 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             "there is only a single issue command" using (cashCommands.count() == 1)
         }
     }
+
+    companion object {
+        // coin selection retry loop counter, sleep (msecs) and lock for selecting states
+        private val MAX_RETRIES = 5
+        private val RETRY_SLEEP = 100
+        private val spendLock: ReentrantLock = ReentrantLock()
+        /**
+         * Generate a transaction that moves an amount of currency to the given pubkey.
+         *
+         * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
+         *
+         * @param services The [ServiceHub] to provide access to the database session.
+         * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
+         *           to move the cash will be added on top.
+         * @param amount How much currency to send.
+         * @param to a key of the recipient.
+         * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
+         *                        of given parties. This can be useful if the party you're trying to pay has expectations
+         *                        about which type of asset claims they are willing to accept.
+         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         *         the resulting transaction for it to be valid.
+         * @throws InsufficientBalanceException when a cash spending transaction fails because
+         *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+         */
+        @JvmStatic
+        @Throws(InsufficientBalanceException::class)
+        @Suspendable
+        fun generateSpend(services: ServiceHub,
+                          tx: TransactionBuilder,
+                          amount: Amount<Currency>,
+                          to: AbstractParty,
+                          onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
+
+            fun deriveState(txState: TransactionState<Cash.State>, amt: Amount<Issued<Currency>>, owner: AbstractParty)
+                    = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
+
+            // Retrieve unspent and unlocked cash states that meet our spending criteria.
+            val acceptableCoins = Cash.unconsumedCashStatesForSpending(services, amount, onlyFromParties, tx.notary, tx.lockId)
+            return OnLedgerAsset.generateSpend(tx, amount, to, acceptableCoins,
+                    { state, quantity, owner -> deriveState(state, quantity, owner) },
+                    { Cash().generateMoveCommand() })
+
+        }
+
+        /**
+         * An optimised query to gather Cash states that are available and retry if they are temporarily unavailable.
+         * @param services The service hub to allow access to the database session
+         * @param amount The amount of currency desired (ignoring issues, but specifying the currency)
+         * @param onlyFromIssuerParties If empty the operation ignores the specifics of the issuer,
+         * otherwise the set of eligible states wil be filtered to only include those from these issuers.
+         * @param notary If null the notary source is ignored, if specified then only states marked
+         * with this notary are included.
+         * @param lockId The [FlowLogic.runId.uuid] of the flow, which is used to soft reserve the states.
+         * Also, previous outputs of the flow will be eligible as they are implicitly locked with this id until the flow completes.
+         * @param withIssuerRefs If not empty the specific set of issuer references to match against.
+         * @return The matching states that were found. If sufficient funds were found these will be locked,
+         * otherwise what is available is returned unlocked for informational purposes.
+         */
+        @JvmStatic
+        @Suspendable
+        fun unconsumedCashStatesForSpending(services: ServiceHub,
+                                            amount: Amount<Currency>,
+                                            onlyFromIssuerParties: Set<AbstractParty> = emptySet(),
+                                            notary: Party? = null,
+                                            lockId: UUID,
+                                            withIssuerRefs: Set<OpaqueBytes> = emptySet()): List<StateAndRef<Cash.State>> {
+
+            val issuerKeysStr = onlyFromIssuerParties.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }.dropLast(1)
+            val issuerRefsStr = withIssuerRefs.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }.dropLast(1)
+
+            val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
+
+            // TODO: Need to provide a database provider independent means of performing this function.
+            //       We are using an H2 specific means of selecting a minimum set of rows that match a request amount of coins:
+            //       1) There is no standard SQL mechanism of calculating a cumulative total on a field and restricting row selection on the
+            //          running total of such an accumulator
+            //       2) H2 uses session variables to perform this accumulator function:
+            //          http://www.h2database.com/html/functions.html#set
+            //       3) H2 does not support JOIN's in FOR UPDATE (hence we are forced to execute 2 queries)
+
+            for (retryCount in 1..MAX_RETRIES) {
+
+                spendLock.withLock {
+                    val statement = services.jdbcSession().createStatement()
+                    try {
+                        statement.execute("CALL SET(@t, 0);")
+
+                        // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
+                        // the softLockReserve update will detect whether we try to lock states locked by others
+                        val selectJoin = """
+                        SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
+                        FROM vault_states AS vs, contract_cash_states AS ccs
+                        WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
+                        AND vs.state_status = 0
+                        AND ccs.ccy_code = '${amount.token}' and @t < ${amount.quantity}
+                        AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
+                        """ +
+                                (if (notary != null)
+                                    " AND vs.notary_key = '${notary.owningKey.toBase58String()}'" else "") +
+                                (if (onlyFromIssuerParties.isNotEmpty())
+                                    " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
+                                (if (withIssuerRefs.isNotEmpty())
+                                    " AND ccs.issuer_ref IN ($issuerRefsStr)" else "")
+
+                        // Retrieve spendable state refs
+                        val rs = statement.executeQuery(selectJoin)
+                        stateAndRefs.clear()
+                        log.debug(selectJoin)
+                        var totalPennies = 0L
+                        while (rs.next()) {
+                            val txHash = SecureHash.parse(rs.getString(1))
+                            val index = rs.getInt(2)
+                            val stateRef = StateRef(txHash, index)
+                            val state = rs.getBytes(3).deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
+                            val pennies = rs.getLong(4)
+                            totalPennies = rs.getLong(5)
+                            val rowLockId = rs.getString(6)
+                            stateAndRefs.add(StateAndRef(state, stateRef))
+                            log.trace { "ROW: $rowLockId ($lockId): $stateRef : $pennies ($totalPennies)" }
+                        }
+
+                        if (stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity) {
+                            // we should have a minimum number of states to satisfy our selection `amount` criteria
+                            log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
+
+                            // With the current single threaded state machine available states are guaranteed to lock.
+                            // TODO However, we will have to revisit these methods in the future multi-threaded.
+                            services.vaultService.softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
+                            return stateAndRefs
+                        }
+                        log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
+                        // retry as more states may become available
+                    } catch (e: SQLException) {
+                        log.error("""Failed retrieving unconsumed states for: amount [$amount], onlyFromIssuerParties [$onlyFromIssuerParties], notary [$notary], lockId [$lockId]
+                            $e.
+                        """)
+                    } catch (e: StatesNotAvailableException) { // Should never happen with single threaded state machine
+                        stateAndRefs.clear()
+                        log.warn(e.message)
+                        // retry only if there are locked states that may become available again (or consumed with change)
+                    } finally {
+                        statement.close()
+                    }
+                }
+
+                log.warn("Coin selection failed on attempt $retryCount")
+                // TODO: revisit the back off strategy for contended spending.
+                if (retryCount != MAX_RETRIES) {
+                    Strand.sleep(RETRY_SLEEP * retryCount.toLong())
+                }
+            }
+
+            log.warn("Insufficient spendable states identified for $amount")
+            return stateAndRefs
+        }
+    }
+
 }
 
 // Small DSL extensions.

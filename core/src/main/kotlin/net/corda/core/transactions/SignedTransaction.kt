@@ -1,15 +1,16 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
+import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
@@ -72,6 +73,12 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         if (this.tx.notary?.owningKey in keys)
             descriptions.add("notary")
         return descriptions
+    }
+
+    @VisibleForTesting
+    fun withAdditionalSignature(keyPair: KeyPair, signatureMetadata: SignatureMetadata): SignedTransaction {
+        val signableData = SignableData(tx.id, signatureMetadata)
+        return withAdditionalSignature(keyPair.sign(signableData))
     }
 
     /** Returns the same transaction but with an additional (unchecked) signature. */
