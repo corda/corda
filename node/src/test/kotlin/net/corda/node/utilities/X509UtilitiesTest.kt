@@ -3,7 +3,6 @@ package net.corda.node.utilities
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.generateKeyPair
-import net.corda.core.crypto.cert
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.getX509Name
 import net.corda.core.internal.div
