@@ -11,13 +11,11 @@ import net.corda.core.messaging.DataFeed;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.VaultQueryException;
 import net.corda.core.node.services.VaultQueryService;
-import net.corda.core.node.services.VaultService;
 import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.core.utilities.OpaqueBytes;
-import net.corda.node.services.identity.InMemoryIdentityService;
 import net.corda.node.utilities.CordaPersistence;
 import net.corda.schemas.CashSchemaV1;
 import net.corda.testing.TestConstants;
@@ -52,7 +50,6 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
     private MockServices services;
     private MockServices issuerServices;
-    private VaultService vaultSvc;
     private VaultQueryService vaultQuerySvc;
     private CordaPersistence database;
 
@@ -61,12 +58,10 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         ArrayList<KeyPair> keys = new ArrayList<>();
         keys.add(getMEGA_CORP_KEY());
         keys.add(getDUMMY_NOTARY_KEY());
-        InMemoryIdentityService identityService = new InMemoryIdentityService(getMOCK_IDENTITIES(), Collections.emptyMap(), getDUMMY_CA().getCertificate());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(Collections.EMPTY_SET, keys);
         issuerServices = new MockServices(getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();
-        vaultSvc = services.getVaultService();
         vaultQuerySvc = services.getVaultQueryService();
     }
 
@@ -299,7 +294,6 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             DataFeed<Vault.Page<ContractState>, Vault.Update<ContractState>> results = vaultQuerySvc.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);
 
             Vault.Page<ContractState> snapshot = results.getSnapshot();
-            Observable<Vault.Update<ContractState>> updates = results.getUpdates();
             // DOCEND VaultJavaQueryExample5
 
             assertThat(snapshot.getStates()).hasSize(13);
