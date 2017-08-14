@@ -1,11 +1,9 @@
 package net.corda.node.services.events
 
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.contracts.*
 import net.corda.core.internal.ThreadBox
-import net.corda.core.contracts.SchedulableState
-import net.corda.core.contracts.ScheduledActivity
-import net.corda.core.contracts.ScheduledStateRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -16,12 +14,13 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import java.io.Serializable
 import javax.annotation.concurrent.ThreadSafe
+import javax.persistence.*
 
 /**
  * A first pass of a simple [SchedulerService] that works with [MutableClock]s for testing, demonstrations and simulations
@@ -48,39 +47,54 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
 
     companion object {
         private val log = loggerFor<NodeSchedulerService>()
-    }
 
-    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}scheduled_states") {
-        val output = stateRef("transaction_id", "output_index")
-        val scheduledAt = instant("scheduled_at")
-    }
-
-    // Variables inside InnerState are protected with a lock by the ThreadBox and aren't in scope unless you're
-    // inside mutex.locked {} code block. So we can't forget to take the lock unless we accidentally leak a reference
-    // to somewhere.
-    private class InnerState {
-        var scheduledStates = object : AbstractJDBCHashMap<StateRef, ScheduledStateRef, Table>(Table, loadOnInit = true) {
-            override fun keyFromRow(row: ResultRow): StateRef = StateRef(row[table.output.txId], row[table.output.index])
-
-            override fun valueFromRow(row: ResultRow): ScheduledStateRef {
-                return ScheduledStateRef(StateRef(row[table.output.txId], row[table.output.index]), row[table.scheduledAt])
-            }
-
-            override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<StateRef, ScheduledStateRef>, finalizables: MutableList<() -> Unit>) {
-                insert[table.output.txId] = entry.key.txhash
-                insert[table.output.index] = entry.key.index
-            }
-
-            override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<StateRef, ScheduledStateRef>, finalizables: MutableList<() -> Unit>) {
-                insert[table.scheduledAt] = entry.value.scheduledAt
-            }
-
+        fun createMap(): PersistentMap<StateRef, ScheduledStateRef, NodeScheduler, NodeScheduler.StateRef> {
+            return PersistentMap(
+                    toPersistentEntityKey = { NodeScheduler.StateRef(it.txhash.toString(), it.index) },
+                    fromPersistentEntity = {
+                        Pair(StateRef(SecureHash.parse(it.output.transactionId), it.output.outputIndex),
+                                ScheduledStateRef(StateRef(SecureHash.parse(it.output.transactionId), it.output.outputIndex), it.scheduledAt))
+                    },
+                    toPersistentEntity = { key: StateRef, value: ScheduledStateRef ->
+                        NodeScheduler().apply {
+                            output = NodeScheduler.StateRef(key.txhash.toString(), key.index)
+                            scheduledAt = value.scheduledAt
+                        }
+                    },
+                    persistentEntityClass = NodeScheduler::class.java
+            )
         }
+    }
+
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}scheduled_states")
+    class NodeScheduler (
+            @EmbeddedId
+            var output: StateRef = StateRef(),
+
+            @Column(name = "scheduled_at")
+            var scheduledAt: Instant = Instant.now()
+    ) {
+        @Embeddable
+        data class StateRef (
+                @Column(name = "transaction_id", length = 64)
+                var transactionId: String = "",
+
+                @Column(name = "output_index", length = 36)
+                var outputIndex: Int = 0
+        ) : Serializable
+    }
+
+    private class InnerState {
+        var scheduledStates = createMap()
+
         var earliestState: ScheduledStateRef? = null
         var rescheduled: SettableFuture<Boolean>? = null
 
+        var queue = ScheduleIndex()
+
         internal fun recomputeEarliest() {
-            earliestState = scheduledStates.values.sortedBy { it.scheduledAt }.firstOrNull()
+            earliestState = queue.peek()
         }
     }
 
@@ -89,6 +103,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
+            queue.addAll(scheduledStates.all().map { it.second }.toMutableList())
             recomputeEarliest()
             rescheduleWakeUp()
         }
@@ -97,7 +112,10 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
         mutex.locked {
-            if (scheduledStates.put(action.ref, action) == null) {
+            val rev = scheduledStates[action.ref]
+            queue.set(rev, action)
+            scheduledStates.set(action.ref, action)
+            if (rev == null) {
                 unfinishedSchedules.countUp()
             }
             if (action.scheduledAt.isBefore(earliestState?.scheduledAt ?: Instant.MAX)) {
@@ -117,6 +135,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         mutex.locked {
             val removedAction = scheduledStates.remove(ref)
             if (removedAction != null) {
+                queue.remove(removedAction)
                 unfinishedSchedules.countDown()
                 if (removedAction == earliestState) {
                     recomputeEarliest()
@@ -157,7 +176,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        serverThread.fetchFrom {
+        serverThread.execute {
             services.database.transaction {
                 val scheduledFlow = getScheduledFlow(scheduledState)
                 if (scheduledFlow != null) {
@@ -175,24 +194,24 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         var scheduledFlow: FlowLogic<*>? = null
         mutex.locked {
             // need to remove us from those scheduled, but only if we are still next
-            scheduledStates.compute(scheduledState.ref) { _, value ->
-                if (value === scheduledState) {
-                    if (scheduledActivity == null) {
-                        log.info("Scheduled state $scheduledState has rescheduled to never.")
-                        unfinishedSchedules.countDown()
-                        null
-                    } else if (scheduledActivity.scheduledAt.isAfter(services.clock.instant())) {
-                        log.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
-                        ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
-                    } else {
-                        // TODO: FlowLogicRefFactory needs to sort out the class loader etc
-                        val flowLogic = FlowLogicRefFactoryImpl.toFlowLogic(scheduledActivity.logicRef)
-                        log.trace { "Scheduler starting FlowLogic $flowLogic" }
-                        scheduledFlow = flowLogic
-                        null
-                    }
+            val previousState = scheduledStates.get(scheduledState.ref)
+            if (previousState != null && previousState === scheduledState) {
+                if (scheduledActivity == null) {
+                    log.info("Scheduled state $scheduledState has rescheduled to never.")
+                    unfinishedSchedules.countDown()
+                    scheduledStates.remove(scheduledState.ref)
+                    queue.remove(scheduledState)
+                } else if (scheduledActivity.scheduledAt.isAfter(services.clock.instant())) {
+                    log.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
+                    var newState = ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
+                    scheduledStates[scheduledState.ref] = newState
+                    queue.set(scheduledState, newState)
                 } else {
-                    value
+                    val flowLogic = FlowLogicRefFactoryImpl.toFlowLogic(scheduledActivity.logicRef)
+                    log.trace { "Scheduler starting FlowLogic $flowLogic" }
+                    scheduledFlow = flowLogic
+                    scheduledStates.remove(scheduledState.ref)
+                    queue.remove(scheduledState)
                 }
             }
             // and schedule the next one
@@ -211,6 +230,29 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         } catch (e: Exception) {
             log.error("Attempt to run scheduled state $scheduledState resulted in error.", e)
             null
+        }
+    }
+
+    private class ScheduleIndex {
+        var orderedList: PriorityQueue<ScheduledStateRef> = PriorityQueue({ a, b -> a.scheduledAt.compareTo(b.scheduledAt) })
+
+        fun peek(): ScheduledStateRef? = orderedList.peek()
+
+        fun add(action: ScheduledStateRef) {
+                orderedList.add(action)
+        }
+
+        fun addAll(scheduledStates : MutableList<ScheduledStateRef>) {
+            orderedList.addAll(scheduledStates)
+        }
+
+        fun remove(action: ScheduledStateRef?){
+            orderedList.remove(action)
+        }
+
+        fun set(exitingAction: ScheduledStateRef?, newAction: ScheduledStateRef) {
+            remove(exitingAction)
+            add(newAction)
         }
     }
 }
