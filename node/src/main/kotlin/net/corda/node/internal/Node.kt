@@ -331,7 +331,7 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     private fun initialiseSerialization() {
         SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-            registerScheme(KryoServerSerializationScheme())
+            registerScheme(KryoServerSerializationScheme(this))
             registerScheme(AMQPServerSerializationScheme())
         }
         SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT

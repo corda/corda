@@ -34,7 +34,6 @@ data class SerializationContextImpl(override val preferedSerializationVersion: B
                                     override val properties: Map<Any, Any>,
                                     override val objectReferencesEnabled: Boolean,
                                     override val useCase: SerializationContext.UseCase) : SerializationContext {
-
     override fun withProperty(property: Any, value: Any): SerializationContext {
         return copy(properties = properties + (property to value))
     }
@@ -52,6 +51,8 @@ data class SerializationContextImpl(override val preferedSerializationVersion: B
             override fun hasListed(type: Class<*>): Boolean = whitelist.hasListed(type) || type.name == clazz.name
         })
     }
+
+    override fun withPreferredSerializationVersion(versionHeader: ByteSequence) = copy(preferedSerializationVersion = versionHeader)
 }
 
 private const val HEADER_SIZE: Int = 8
@@ -118,7 +119,7 @@ private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() 
     override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
 }
 
-abstract class AbstractKryoSerializationScheme : SerializationScheme {
+abstract class AbstractKryoSerializationScheme(val serializationFactory: SerializationFactory) : SerializationScheme {
     private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, KryoPool>()
 
     protected abstract fun rpcClientKryoPool(context: SerializationContext): KryoPool
@@ -130,7 +131,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                 SerializationContext.UseCase.Checkpoint ->
                     KryoPool.Builder {
                         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-                        val classResolver = makeNoWhitelistClassResolver().apply { setKryo(serializer.kryo) }
+                        val classResolver = CordaClassResolver(serializationFactory, context).apply { setKryo(serializer.kryo) }
                         // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
                         val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                         serializer.kryo.apply {
@@ -146,7 +147,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                     rpcServerKryoPool(context)
                 else ->
                     KryoPool.Builder {
-                        DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(context.whitelist))).apply { classLoader = it.second }
+                        DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(serializationFactory, context))).apply { classLoader = it.second }
                     }.build()
             }
         }
