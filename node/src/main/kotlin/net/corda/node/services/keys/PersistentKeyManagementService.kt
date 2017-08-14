@@ -1,18 +1,23 @@
 package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
-import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.serialization.*
-import net.corda.node.utilities.*
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
+import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support node re-start.
@@ -71,7 +76,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
         return keyPair.public
     }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymousPartyAndPath =
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate =
             freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
 
     private fun getSigner(publicKey: PublicKey): ContentSigner  = getSigner(getSigningKeyPair(publicKey))
