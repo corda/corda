@@ -63,25 +63,23 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
-        val rtn = let {
-            if (Collection::class.java.isAssignableFrom(declaredClass)) {
-                serializersByType.computeIfAbsent(declaredType) {
-                    CollectionSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
-                            declaredClass, arrayOf(AnyType), null), this)
-                }
-            } else if (Map::class.java.isAssignableFrom(declaredClass)) {
-                serializersByType.computeIfAbsent(declaredClass) {
-                    makeMapSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
-                            declaredClass, arrayOf(AnyType, AnyType), null))
-                }
-            } else {
-                makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
+        val serializer = if (Collection::class.java.isAssignableFrom(declaredClass)) {
+            serializersByType.computeIfAbsent(declaredType) {
+                CollectionSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
+                        declaredClass, arrayOf(AnyType), null), this)
             }
+        } else if (Map::class.java.isAssignableFrom(declaredClass)) {
+            serializersByType.computeIfAbsent(declaredClass) {
+                makeMapSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
+                        declaredClass, arrayOf(AnyType, AnyType), null))
+            }
+        } else {
+            makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
         }
 
-        serializersByDescriptor.putIfAbsent(rtn.typeDescriptor, rtn)
+        serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
 
-        return rtn
+        return serializer
     }
 
     /**
@@ -219,24 +217,24 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     }
 
     private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> = serializersByType.computeIfAbsent(type) {
-            if (isPrimitive(clazz)) {
-                AMQPPrimitiveSerializer(clazz)
-            } else {
-                findCustomSerializer(clazz, declaredType) ?: run {
-                    if (type.isArray()) {
-                        whitelisted(type.componentType())
-                        if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
-                        else ArraySerializer.make(type, this)
-                    } else if (clazz.kotlin.objectInstance != null) {
-                        whitelisted(clazz)
-                        SingletonSerializer(clazz, clazz.kotlin.objectInstance!!, this)
-                    } else {
-                        whitelisted(type)
-                        ObjectSerializer(type, this)
-                    }
+        if (isPrimitive(clazz)) {
+            AMQPPrimitiveSerializer(clazz)
+        } else {
+            findCustomSerializer(clazz, declaredType) ?: run {
+                if (type.isArray()) {
+                    whitelisted(type.componentType())
+                    if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
+                    else ArraySerializer.make(type, this)
+                } else if (clazz.kotlin.objectInstance != null) {
+                    whitelisted(clazz)
+                    SingletonSerializer(clazz, clazz.kotlin.objectInstance!!, this)
+                } else {
+                    whitelisted(type)
+                    ObjectSerializer(type, this)
                 }
             }
         }
+    }
 
     internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
         // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is AbstractMap, only Map.
