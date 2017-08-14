@@ -486,7 +486,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeVaultObservers() {
         VaultSoftLockManager(services.vaultService, smm)
         ScheduledActivityObserver(services)
-        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService, configuration.database ?: Properties(), services.identityService))
+        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService, configuration.database ?: Properties(), {services.identityService}))
     }
 
     private fun makeInfo(): NodeInfo {
@@ -545,7 +545,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            this.database = configureDatabase(props, configuration.database)
+            this.database = configureDatabase(props, configuration.database, identitySvc = { _services.identityService })
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             database.transaction {
                 log.info("Connected to ${database.database.vendor} database.")
@@ -773,7 +773,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(this, configuration.dataSourceProperties, configuration.database) }
         override val vaultQueryService by lazy {
-            HibernateVaultQueryImpl(HibernateConfiguration(schemaService, configuration.database ?: Properties(), identityService), vaultService.updatesPublisher)
+            HibernateVaultQueryImpl(HibernateConfiguration(schemaService, configuration.database ?: Properties(), { identityService }), vaultService.updatesPublisher)
         }
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
