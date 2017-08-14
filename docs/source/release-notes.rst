@@ -6,6 +6,8 @@ Here are release notes for each snapshot release from M9 onwards.
 Unreleased
 ----------
 
+* Merged handling of well known and confidential identities in the identity service.
+
 Milestone 14
 ------------
 

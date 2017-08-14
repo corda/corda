@@ -19,49 +19,23 @@ interface IdentityService {
     val caCertStore: CertStore
 
     /**
-     * Verify and then store a well known identity.
+     * Verify and then store an identity.
      *
-     * @param party a party representing a legal entity.
-     * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
-     * certificate chain for the anonymous party.
-     */
-    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun registerIdentity(party: PartyAndCertificate)
-
-    /**
-     * Verify and then store an anonymous identity.
-     *
-     * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
-     * @param party well known party the anonymised party must represent.
-     * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
-     * certificate chain for the anonymous party.
-     */
-    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    @Deprecated("Use verifyAndRegisterAnonymousIdentity() instead, which is the same function with a better name")
-    fun registerAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
-
-    /**
-     * Verify and then store an anonymous identity.
-     *
-     * @param anonymousIdentity an anonymised identity representing a legal entity in a transaction.
-     * @param wellKnownIdentity well known party the anonymised party must represent.
-     * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
-     * certificate chain for the anonymous party.
-     */
-    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAndRegisterAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, wellKnownIdentity: Party): PartyAndCertificate
-
-    /**
-     * Verify an anonymous identity.
-     *
-     * @param anonymousParty a party representing a legal entity in a transaction.
-     * @param party well known party the anonymised party must represent.
-     * @param path certificate path from the trusted root to the party.
-     * @return the full well known identity.
+     * @param party a party representing a legal entity and the certificate path linking them to the network trust root.
      * @throws IllegalArgumentException if the certificate path is invalid.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAnonymousIdentity(anonymousIdentity: AnonymousPartyAndPath, party: Party): PartyAndCertificate
+    @Deprecated("Use verifyAndRegisterIdentity() instead, which is the same function with a better name")
+    fun registerIdentity(party: PartyAndCertificate)
+
+    /**
+     * Verify and then store an identity.
+     *
+     * @param identity a party representing a legal entity and the certificate path linking them to the network trust root.
+     * @throws IllegalArgumentException if the certificate path is invalid.
+     */
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun verifyAndRegisterIdentity(identity: PartyAndCertificate)
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
@@ -77,12 +51,6 @@ interface IdentityService {
      * used in preference where possible.
      */
     fun getAllIdentities(): Iterable<PartyAndCertificate>
-
-    /**
-     * Get the certificate and path for a previously registered anonymous identity. These are used to prove an anonmyous
-     * identity is owned by a well known identity.
-     */
-    fun anonymousFromKey(owningKey: PublicKey): AnonymousPartyAndPath?
 
     /**
      * Get the certificate and path for a well known identity's owning key.
@@ -132,12 +100,6 @@ interface IdentityService {
      * @throws IllegalArgumentException
      */
     fun requirePartyFromAnonymous(party: AbstractParty): Party
-
-    /**
-     * Get the certificate chain showing an anonymous party is owned by the given party.
-     */
-    @Deprecated("Use anonymousFromKey instead, which provides more detail and takes in a more relevant input", replaceWith = ReplaceWith("anonymousFromKey(anonymousParty.owningKey)"))
-    fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath?
 
     /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
