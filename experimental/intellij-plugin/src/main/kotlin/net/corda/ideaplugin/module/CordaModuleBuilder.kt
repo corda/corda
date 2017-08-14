@@ -1,4 +1,4 @@
-package net.corda.ideaPlugin.module
+package net.corda.ideaplugin.module
 
 import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.ide.projectWizard.ProjectSettingsStep

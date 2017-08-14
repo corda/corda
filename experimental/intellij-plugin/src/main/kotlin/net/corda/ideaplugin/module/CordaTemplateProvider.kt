@@ -1,4 +1,4 @@
-package net.corda.ideaPlugin.module
+package net.corda.ideaplugin.module
 
 object CordaTemplateProvider {
     fun getTemplateFiles(cordaTemplate: CordaTemplate, language: Language): List<TemplateFile> {

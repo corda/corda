@@ -26,7 +26,8 @@
   <depends>org.jetbrains.plugins.gradle</depends>
 
   <extensions defaultExtensionNs="com.intellij">
-    <moduleType id="CORDA_MODULE" implementationClass="net.corda.ideaPlugin.module.CordaModuleType"/>
+    <moduleType id="CORDA_MODULE" implementationClass="net.corda.ideaplugin.module.CordaModuleType"/>
+    <toolWindow id="Corda Flow Tool" icon="/images/corda-toolwindow-icon.png" anchor="right" factoryClass="net.corda.ideaplugin.toolwindow.CordaFlowToolWindow" />
   </extensions>
 
   <actions>

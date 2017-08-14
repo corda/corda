@@ -1,4 +1,4 @@
-package net.corda.ideaPlugin.module
+package net.corda.ideaplugin.module
 
 import com.intellij.ide.util.projectWizard.ModuleWizardStep
 import com.intellij.openapi.options.ConfigurationException

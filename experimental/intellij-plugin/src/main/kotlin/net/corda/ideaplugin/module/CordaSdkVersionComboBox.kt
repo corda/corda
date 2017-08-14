@@ -1,4 +1,4 @@
-package net.corda.ideaPlugin.module
+package net.corda.ideaplugin.module
 
 import com.intellij.openapi.util.Version
 import com.intellij.ui.ColoredListCellRenderer

@@ -25,6 +25,11 @@ intellij {
     buildDir = "$projectDir/build"
 }
 
+dependencies {
+    // For JSON
+    compile "com.fasterxml.jackson.core:jackson-databind:2.8.5"
+}
+
 group 'net.corda'
 version '0.1.0' // Plugin version
 
