@@ -114,7 +114,7 @@ A state is a class that stores data that is checked by the contract. A commercia
           override val participants = listOf(owner)
 
           fun withoutOwner() = copy(owner = AnonymousParty(NullPublicKey))
-          override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+          override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
       }
 
    .. sourcecode:: java
