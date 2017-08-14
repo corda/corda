@@ -11,8 +11,8 @@ import net.corda.testing.LogHelper
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -33,7 +33,7 @@ class DBCheckpointStorageTests : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
         newCheckpointStorage()
     }
 
@@ -91,16 +91,6 @@ class DBCheckpointStorageTests : TestDependencyInjectionBase() {
         newCheckpointStorage()
         database.transaction {
             assertThat(checkpointStorage.checkpoints()).containsExactly(checkpoint2)
-        }
-    }
-
-    @Test
-    fun `remove unknown checkpoint`() {
-        val checkpoint = newCheckpoint()
-        database.transaction {
-            assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
-                checkpointStorage.removeCheckpoint(checkpoint)
-            }
         }
     }
 

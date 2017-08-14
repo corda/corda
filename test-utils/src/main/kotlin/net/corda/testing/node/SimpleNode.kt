@@ -32,11 +32,11 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
                  rpcAddress: NetworkHostAndPort = freeLocalHostAndPort(),
                  trustRoot: X509Certificate) : AutoCloseable {
 
-    val database: CordaPersistence = configureDatabase(config.dataSourceProperties, config.database)
     val userService = RPCUserServiceImpl(config.rpcUsers)
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()
     val identityService: IdentityService = InMemoryIdentityService(trustRoot = trustRoot)
+    val database: CordaPersistence = configureDatabase(config.dataSourceProperties, config.database, identitySvc = {InMemoryIdentityService(trustRoot = trustRoot)})
     val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
     // TODO: We should have a dummy service hub rather than change behaviour in tests
