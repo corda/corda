@@ -171,7 +171,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
             QueryCriteria vaultCriteria = new VaultQueryCriteria(status, contractStateTypes);
 
-            List<UniqueIdentifier> linearIds = Collections.singletonList(uid);
+            List<UUID> linearIds = Collections.singletonList(uid.getId());
             QueryCriteria linearCriteriaAll = new LinearStateQueryCriteria(null, linearIds);
             QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(null, null, dealIds);
 
@@ -281,7 +281,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Set<Class<ContractState>> contractStateTypes = new HashSet(Arrays.asList(DealState.class, LinearState.class));
             QueryCriteria vaultCriteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
 
-            List<UniqueIdentifier> linearIds = Collections.singletonList(uid);
+            List<UUID> linearIds = Collections.singletonList(uid.getId());
             List<AbstractParty> dealParty = Collections.singletonList(getMEGA_CORP());
             QueryCriteria dealCriteria = new LinearStateQueryCriteria(dealParty, null, dealIds);
             QueryCriteria linearCriteria = new LinearStateQueryCriteria(dealParty, linearIds, null);

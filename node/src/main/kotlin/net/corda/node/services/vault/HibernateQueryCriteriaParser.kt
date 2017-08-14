@@ -2,7 +2,6 @@ package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
@@ -229,7 +228,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     override fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria) : Collection<Predicate> {
         log.trace { "Parsing FungibleAssetQueryCriteria: $criteria" }
 
-        var predicateSet = mutableSetOf<Predicate>()
+        val predicateSet = mutableSetOf<Predicate>()
 
         val vaultFungibleStates = criteriaQuery.from(VaultSchemaV1.VaultFungibleStates::class.java)
         rootEntities.putIfAbsent(VaultSchemaV1.VaultFungibleStates::class.java, vaultFungibleStates)
@@ -296,19 +295,16 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         if (contractTypes.isNotEmpty())
             predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
-        // linear ids
-        criteria.linearId?.let {
-            val uniqueIdentifiers = criteria.linearId as List<UniqueIdentifier>
-            val externalIds = uniqueIdentifiers.mapNotNull { it.externalId }
-            if (externalIds.isNotEmpty())
-                predicateSet.add(criteriaBuilder.and(vaultLinearStates.get<String>("externalId").`in`(externalIds)))
-            predicateSet.add(criteriaBuilder.and(vaultLinearStates.get<UUID>("uuid").`in`(uniqueIdentifiers.map { it.id })))
+        // linear ids UUID
+        criteria.uuid?.let {
+            val uuids = criteria.uuid as List<UUID>
+            predicateSet.add(criteriaBuilder.and(vaultLinearStates.get<UUID>("uuid").`in`(uuids)))
         }
 
-        // deal refs
-        criteria.dealRef?.let {
-            val dealRefs = criteria.dealRef as List<String>
-            predicateSet.add(criteriaBuilder.and(vaultLinearStates.get<String>("dealReference").`in`(dealRefs)))
+        // linear ids externalId
+        criteria.externalId?.let {
+            val externalIds = criteria.externalId as List<String>
+            predicateSet.add(criteriaBuilder.and(vaultLinearStates.get<String>("externalId").`in`(externalIds)))
         }
 
         // deal participants
@@ -359,7 +355,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     override fun parseOr(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
         log.trace { "Parsing OR QueryCriteria composition: $left OR $right" }
 
-        var predicateSet = mutableSetOf<Predicate>()
+        val predicateSet = mutableSetOf<Predicate>()
         val leftPredicates = parse(left)
         val rightPredicates = parse(right)
 
@@ -372,7 +368,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     override fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
         log.trace { "Parsing AND QueryCriteria composition: $left AND $right" }
 
-        var predicateSet = mutableSetOf<Predicate>()
+        val predicateSet = mutableSetOf<Predicate>()
         val leftPredicates = parse(left)
         val rightPredicates = parse(right)
 
@@ -417,7 +413,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     private fun parse(sorting: Sort) {
         log.trace { "Parsing sorting specification: $sorting" }
 
-        var orderCriteria = mutableListOf<Order>()
+        val orderCriteria = mutableListOf<Order>()
 
         sorting.columns.map { (sortAttribute, direction) ->
             val (entityStateClass, entityStateAttributeParent, entityStateAttributeChild) =
