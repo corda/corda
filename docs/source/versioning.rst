@@ -31,14 +31,42 @@ for the network.
 Flow versioning
 ---------------
 
-A platform which can be extended with CorDapps also requires the ability to version these apps as they evolve from
-release to release. This allows users of these apps, whether they're other nodes or RPC users, to select which version
-they wish to use and enables nodes to control which app versions they support. Flows have their own version numbers,
-independent of other versioning, for example of the platform. In particular it is the initiating flow that can be versioned
-using the ``version`` property of the ``InitiatingFlow`` annotation. This assigns an integer version number, similar in
-concept to the platform version, which is used in the session handshake process when a flow communicates with another party
-for the first time. The other party will only accept the session request if it, firstly, has that flow loaded, and secondly,
-for the same version (see also :doc:`flow-state-machine`).
+In addition to the evolution of the platform, flows that run on top of the platform can also evolve. It may be that the
+flow protocol between an initiating flow and it's intiated flow changes from one CorDapp release to the next in such as
+way to be backwards incompatible with existing flows. For example, if a sequence of sends and receives needs to change
+or if the semantics of a particular receive changes.
 
-.. note:: Currently we don't support multiple versions of the same flow loaded in the same node. This will be possible
-   once we start loading CorDapps in separate class loaders.
+The ``InitiatingFlow`` annotation (see :doc:`flow-state-machine` for more information on the flow annotations) has a ``version``
+property, which if not specified defaults to 1. This flow version is included in the flow session handshake and exposed
+to both parties in the communication via ``FlowLogic.getFlowContext``. This takes in a ``Party`` and will return a
+``FlowContext`` object which describes the flow running on the other side. In particular it has the ``flowVersion`` property
+which can be used to programmatically evolve flows across versions.
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        @Suspendable
+        override fun call() {
+            val flowVersionOfOtherParty = getFlowContext(otherParty).flowVersion
+            val receivedString = if (flowVersionOfOtherParty == 1) {
+                receive<Int>(otherParty).unwrap { it.toString() }
+            } else {
+                receive<String>(otherParty).unwrap { it }
+            }
+        }
+
+The above shows an example evolution of a flow which in the first version was expecting to receive an Int, but then
+in subsequent versions was relaxed to receive a String. This flow is still able to communicate with parties which are
+running the older flow (or rather older CorDapps containing the older flow).
+
+.. warning:: It's important that ``InitiatingFlow.version`` be incremented each time the flow protocol changes in an
+   incompatible way.
+
+``FlowContext`` also has ``appName`` which is the name of the CorDapp hosting the flow. This can be used to determine
+implementation details of the CorDapp. See :doc:`cordapp-build-systems` for more information on the CorDapp filename.
+
+.. note:: Currently changing any of the properties of a ``CordaSerializable`` type is also backwards incompatible and
+   requires incrementing of ``InitiatingFlow.version``. This will be relaxed somewhat once the AMQP wire serialisation
+   format is implemented as it will automatically handle a lot of the data type migration cases.
+

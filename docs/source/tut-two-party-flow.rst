@@ -36,7 +36,7 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         txBuilder.verify(serviceHub)
 
         // Signing the transaction.
-        val signedTx = serviceHub.signInitialTransaction(txBuilder)
+        val signedTx = serviceHub.toSignedTransaction(txBuilder)
 
         // Obtaining the counterparty's signature
         val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx))
@@ -56,7 +56,7 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         txBuilder.verify(getServiceHub());
 
         // Signing the transaction.
-        final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
+        final SignedTransaction signedTx = getServiceHub().toSignedTransaction(txBuilder);
 
         // Obtaining the counterparty's signature
         final SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(signedTx, null));

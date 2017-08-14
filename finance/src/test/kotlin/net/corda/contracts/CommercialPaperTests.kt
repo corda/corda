@@ -204,6 +204,7 @@ class CommercialPaperTestsGeneric {
     private lateinit var alicesVault: Vault<ContractState>
 
     private val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+    private val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
 
     private lateinit var moveTX: SignedTransaction
 
@@ -216,7 +217,7 @@ class CommercialPaperTestsGeneric {
         aliceVaultService = aliceServices.vaultService
 
         databaseAlice.transaction {
-            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
+            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
             aliceVaultService = aliceServices.vaultService
         }
 
@@ -226,7 +227,7 @@ class CommercialPaperTestsGeneric {
         bigCorpVaultService = bigCorpServices.vaultService
 
         databaseBigCorp.transaction {
-            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
+            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
             bigCorpVaultService = bigCorpServices.vaultService
         }
 

@@ -73,11 +73,7 @@ processResources {
 }
 
 processSmokeTestResources {
-    // Build one of the demos so that we can test CorDapp scanning in CordappScanningTest. It doesn't matter which demo
-    // we use, just make sure the test is updated accordingly.
-    from(project(':samples:trader-demo').tasks.jar) {
-        rename 'trader-demo-(.*)', 'trader-demo.jar'
-    }
+    // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
     from(project(':node:capsule').tasks.buildCordaJAR) {
         rename 'corda-(.*)', 'corda.jar'
     }
@@ -213,7 +209,13 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
+task smokeTestJar(type: Jar) {
+    baseName = project.name + '-smoke-test'
+    from sourceSets.smokeTest.output
+}
+
 task smokeTest(type: Test) {
+    dependsOn smokeTestJar
     testClassesDir = sourceSets.smokeTest.output.classesDir
     classpath = sourceSets.smokeTest.runtimeClasspath
 }

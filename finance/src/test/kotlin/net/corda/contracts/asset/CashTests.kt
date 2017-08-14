@@ -6,17 +6,11 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.node.services.database.HibernateConfiguration
-import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
@@ -47,6 +41,7 @@ class CashTests : TestDependencyInjectionBase() {
     )
 
     lateinit var miniCorpServices: MockServices
+    lateinit var megaCorpServices: MockServices
     val vault: VaultService get() = miniCorpServices.vaultService
     lateinit var database: CordaPersistence
     lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
@@ -54,19 +49,20 @@ class CashTests : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
+        megaCorpServices = MockServices(MEGA_CORP_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY))
         database = databaseAndServices.first
         miniCorpServices = databaseAndServices.second
 
         database.transaction {
             miniCorpServices.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    issuedBy = MEGA_CORP.ref(1), issuerKey = MEGA_CORP_KEY, ownedBy = OUR_IDENTITY_1)
+                    ownedBy = OUR_IDENTITY_1, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
             miniCorpServices.fillWithSomeTestCash(howMuch = 400.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    issuedBy = MEGA_CORP.ref(1), issuerKey = MEGA_CORP_KEY, ownedBy = OUR_IDENTITY_1)
+                    ownedBy = OUR_IDENTITY_1, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
             miniCorpServices.fillWithSomeTestCash(howMuch = 80.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    issuedBy = MINI_CORP.ref(1), issuerKey = MINI_CORP_KEY, ownedBy = OUR_IDENTITY_1)
+                    ownedBy = OUR_IDENTITY_1, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
             miniCorpServices.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    issuedBy = MINI_CORP.ref(1), issuerKey = MINI_CORP_KEY, ownedBy = OUR_IDENTITY_1)
+                    ownedBy = OUR_IDENTITY_1, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
 
             vaultStatesUnconsumed = miniCorpServices.vaultQueryService.queryBy<Cash.State>().states
         }
