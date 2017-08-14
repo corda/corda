@@ -9,9 +9,13 @@ interface I {
 }
 
 /**
- * These tests work by having the class carpenter build the classes we serialise and then deserialise. Because
- * those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
- * versions of them up using its own internal class carpenter (each carpenter houses it's own loader). This
+ * These tests work by having the class carpenter build the classes we serialise and then deserialise them
+ * within the context of a second serialiser factory. The second factory is required as the first, having
+ * been used to serialise the class, will have cached a copy of the class and will thus bypass the need
+ * to pull it out of the class loader.
+ *
+ * However,  those classes don't exist within the system's Class Loader and thus the deserialiser will be forced
+ * to carpent versions of them up using its own internal class carpenter (each carpenter houses it's own loader). This
  * replicates the situation where a receiver doesn't have some or all elements of a schema present on it's classpath
  */
 class DeserializeNeedingCarpentryTests {
@@ -22,7 +26,8 @@ class DeserializeNeedingCarpentryTests {
         private const val VERBOSE = false
     }
 
-    val sf = SerializerFactory()
+    val sf1 = SerializerFactory()
+    val sf2 = SerializerFactory()
 
     @Test
     fun verySimpleType() {
@@ -30,15 +35,30 @@ class DeserializeNeedingCarpentryTests {
         val clazz = ClassCarpenter().build(ClassSchema("oneType", mapOf("a" to NonNullableField(Int::class.java))))
         val classInstance = clazz.constructors[0].newInstance(testVal)
 
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(classInstance)
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
 
-        assertNotEquals(clazz::class.java, deserializedObj::class.java)
-        assertEquals (testVal, deserializedObj::class.java.getMethod("getA").invoke(deserializedObj))
+        val deserializedObj1 = DeserializationInput(sf1).deserialize(serialisedBytes)
+        assertEquals(clazz, deserializedObj1::class.java)
+        assertEquals (testVal, deserializedObj1::class.java.getMethod("getA").invoke(deserializedObj1))
 
-        val deserializedObj2 = DeserializationInput(sf).deserialize(serialisedBytes)
+        val deserializedObj2 = DeserializationInput(sf1).deserialize(serialisedBytes)
+        assertEquals(clazz, deserializedObj2::class.java)
+        assertEquals(deserializedObj1::class.java, deserializedObj2::class.java)
+        assertEquals (testVal, deserializedObj2::class.java.getMethod("getA").invoke(deserializedObj2))
 
-        assertEquals(deserializedObj::class.java, deserializedObj2::class.java)
+        val deserializedObj3 = DeserializationInput(sf2).deserialize(serialisedBytes)
+        assertNotEquals(clazz, deserializedObj3::class.java)
+        assertNotEquals(deserializedObj1::class.java, deserializedObj3::class.java)
+        assertNotEquals(deserializedObj2::class.java, deserializedObj3::class.java)
+        assertEquals (testVal, deserializedObj3::class.java.getMethod("getA").invoke(deserializedObj3))
+
+        val deserializedObj4 = DeserializationInput(sf2).deserialize(serialisedBytes)
+        assertNotEquals(clazz, deserializedObj4::class.java)
+        assertNotEquals(deserializedObj1::class.java, deserializedObj4::class.java)
+        assertNotEquals(deserializedObj2::class.java, deserializedObj4::class.java)
+        assertEquals(deserializedObj3::class.java, deserializedObj4::class.java)
+        assertEquals (testVal, deserializedObj4::class.java.getMethod("getA").invoke(deserializedObj4))
+
     }
 
     @Test
@@ -51,11 +71,11 @@ class DeserializeNeedingCarpentryTests {
         val concreteB = clazz.constructors[0].newInstance(testValB)
         val concreteC = clazz.constructors[0].newInstance(testValC)
 
-        val deserialisedA = DeserializationInput(sf).deserialize(TestSerializationOutput(VERBOSE, sf).serialize(concreteA))
+        val deserialisedA = DeserializationInput(sf2).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(concreteA))
 
         assertEquals (testValA, deserialisedA::class.java.getMethod("getA").invoke(deserialisedA))
 
-        val deserialisedB = DeserializationInput(sf).deserialize(TestSerializationOutput(VERBOSE, sf).serialize(concreteB))
+        val deserialisedB = DeserializationInput(sf2).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(concreteB))
 
         assertEquals (testValB, deserialisedA::class.java.getMethod("getA").invoke(deserialisedB))
         assertEquals (deserialisedA::class.java, deserialisedB::class.java)
@@ -79,8 +99,8 @@ class DeserializeNeedingCarpentryTests {
         val testVal = "Some Person"
         val classInstance = clazz.constructors[0].newInstance(testVal)
 
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(classInstance)
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
+        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
         assertTrue(deserializedObj is I)
         assertEquals(testVal, (deserializedObj as I).getName())
@@ -97,7 +117,7 @@ class DeserializeNeedingCarpentryTests {
                 clazz.constructors[0].newInstance(2),
                 clazz.constructors[0].newInstance(3)))
 
-        val deserializedObj = DeserializationInput(sf).deserialize(TestSerializationOutput(VERBOSE, sf).serialize(outer))
+        val deserializedObj = DeserializationInput(sf2).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(outer))
 
         assertNotEquals((deserializedObj.a[0])::class.java, (outer.a[0])::class.java)
         assertNotEquals((deserializedObj.a[1])::class.java, (outer.a[1])::class.java)
@@ -127,10 +147,10 @@ class DeserializeNeedingCarpentryTests {
         val inner = innerType.constructors[0].newInstance(1)
         val outer = outerType.constructors[0].newInstance(innerType.constructors[0].newInstance(2))
 
-        val serializedI = TestSerializationOutput(VERBOSE, sf).serialize(inner)
-        val deserialisedI = DeserializationInput(sf).deserialize(serializedI)
-        val serialisedO   = TestSerializationOutput(VERBOSE, sf).serialize(outer)
-        val deserialisedO = DeserializationInput(sf).deserialize(serialisedO)
+        val serializedI = TestSerializationOutput(VERBOSE, sf1).serialize(inner)
+        val deserialisedI = DeserializationInput(sf2).deserialize(serializedI)
+        val serialisedO   = TestSerializationOutput(VERBOSE, sf1).serialize(outer)
+        val deserialisedO = DeserializationInput(sf2).deserialize(serialisedO)
 
         // ensure out carpented version of inner is reused
         assertEquals (deserialisedI::class.java,
@@ -147,8 +167,8 @@ class DeserializeNeedingCarpentryTests {
                 mapOf("inner" to NonNullableField(nestedClass))))
 
         val classInstance = outerClass.constructors.first().newInstance(nestedClass.constructors.first().newInstance("name"))
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(classInstance)
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
+        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
         val inner = deserializedObj::class.java.getMethod("getInner").invoke(deserializedObj)
         assertEquals("name", inner::class.java.getMethod("getName").invoke(inner))
@@ -166,8 +186,8 @@ class DeserializeNeedingCarpentryTests {
                 nestedClass.constructors.first().newInstance("foo"),
                 nestedClass.constructors.first().newInstance("bar"))
 
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(classInstance)
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
+        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
         assertEquals ("foo", deserializedObj.a::class.java.getMethod("getName").invoke(deserializedObj.a))
         assertEquals ("bar", deserializedObj.b::class.java.getMethod("getName").invoke(deserializedObj.b))
@@ -186,8 +206,8 @@ class DeserializeNeedingCarpentryTests {
                 unknownClass.constructors.first().newInstance(5, 6),
                 unknownClass.constructors.first().newInstance(7, 8)))
 
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(toSerialise)
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(toSerialise)
+        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
         var sentinel = 1
         deserializedObj.l.forEach {
             assertEquals(sentinel++, it::class.java.getMethod("getV1").invoke(it))
@@ -208,9 +228,9 @@ class DeserializeNeedingCarpentryTests {
                 "name" to NonNullableField(String::class.java)),
                 interfaces = listOf (I::class.java, interfaceClass)))
 
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(
                 concreteClass.constructors.first().newInstance(12, "timmy"))
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
         assertTrue(deserializedObj is I)
         assertEquals("timmy", (deserializedObj as I).getName())
