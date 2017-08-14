@@ -4,73 +4,60 @@ import com.google.common.annotations.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.utilities.*
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.exposedLogger
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.util.Collections.synchronizedMap
+import javax.persistence.*
 
 class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
-    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}transactions") {
-        val txId = secureHash("tx_id")
-        val transaction = blob("transaction")
-    }
 
-    private class TransactionsMap : AbstractJDBCHashMap<SecureHash, SignedTransaction, Table>(Table, loadOnInit = false) {
-        override fun keyFromRow(row: ResultRow): SecureHash = row[table.txId]
+    @Entity
+    @Table(name = "${NODE_DATABASE_PREFIX}transactions")
+    class DBTransaction(
+            @Id
+            @Column(name = "tx_id", length = 64)
+            var txId: String = "",
 
-        override fun valueFromRow(row: ResultRow): SignedTransaction = deserializeFromBlob(row[table.transaction])
+            @Lob
+            @Column
+            var transaction: ByteArray = ByteArray(0)
+    )
 
-        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, SignedTransaction>, finalizables: MutableList<() -> Unit>) {
-            insert[table.txId] = entry.key
-        }
-
-        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, SignedTransaction>, finalizables: MutableList<() -> Unit>) {
-            insert[table.transaction] = serializeToBlob(entry.value, finalizables)
-        }
-    }
-
-    private val txStorage = synchronizedMap(TransactionsMap())
-
-    override fun addTransaction(transaction: SignedTransaction): Boolean {
-        val recorded = synchronized(txStorage) {
-            val old = txStorage[transaction.id]
-            if (old == null) {
-                txStorage.put(transaction.id, transaction)
-                updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
-                true
-            } else {
-                false
-            }
-        }
-        if (!recorded) {
-            exposedLogger.warn("Duplicate recording of transaction ${transaction.id}")
-        }
-        return recorded
-    }
-
-    override fun getTransaction(id: SecureHash): SignedTransaction? {
-        synchronized(txStorage) {
-            return txStorage[id]
+    private companion object {
+        fun createTransactionsMap(): AppendOnlyPersistentMap<SecureHash, SignedTransaction, DBTransaction, String> {
+            return AppendOnlyPersistentMap(
+                    toPersistentEntityKey = { it.toString() },
+                    fromPersistentEntity = { Pair(SecureHash.parse(it.txId),
+                            it.transaction.deserialize<SignedTransaction>( context = SerializationDefaults.STORAGE_CONTEXT)) },
+                    toPersistentEntity = { key: SecureHash, value: SignedTransaction ->
+                        DBTransaction().apply {
+                            txId = key.toString()
+                            transaction = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                        }
+                    },
+                    persistentEntityClass = DBTransaction::class.java
+            )
         }
     }
+
+    private val txStorage = createTransactionsMap()
+
+    override fun addTransaction(transaction: SignedTransaction): Boolean =
+        txStorage.addWithDuplicatesAllowed(transaction.id, transaction).apply {
+            updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
+        }
+
+    override fun getTransaction(id: SecureHash): SignedTransaction? = txStorage[id]
 
     private val updatesPublisher = PublishSubject.create<SignedTransaction>().toSerialized()
     override val updates: Observable<SignedTransaction> = updatesPublisher.wrapWithDatabaseTransaction()
 
-    override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
-        synchronized(txStorage) {
-            return DataFeed(txStorage.values.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
-        }
-    }
+    override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> =
+            DataFeed(txStorage.allPersisted().map { it.second }.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
 
     @VisibleForTesting
-    val transactions: Iterable<SignedTransaction> get() = synchronized(txStorage) {
-        txStorage.values.toList()
-    }
+    val transactions: Iterable<SignedTransaction> get() = txStorage.allPersisted().map { it.second }.toList()
 }
