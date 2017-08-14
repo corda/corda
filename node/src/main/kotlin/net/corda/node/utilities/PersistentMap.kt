@@ -49,13 +49,18 @@ class PersistentMap<K, V, E, EK> (
         return cache.get(key).orElse(null)
     }
 
-    fun all(): Sequence<Pair<K, V>> {
-        return cache.asMap().map { entry -> Pair(entry.key as K, entry.value.get() as V) }.asSequence()
+    fun allPersisted(): Sequence<Pair<K, V>> {
+        val criteriaQuery = DatabaseTransactionManager.current().session.criteriaBuilder.createQuery(persistentEntityClass)
+        val root = criteriaQuery.from(persistentEntityClass)
+        criteriaQuery.select(root)
+        val query = DatabaseTransactionManager.current().session.createQuery(criteriaQuery)
+        val result = query.resultList
+        return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    override val size = cache.asMap().count() //TODO Guava cache.size() returns Long not Int
+    override val size = allPersisted().count()
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K, V) -> Boolean) : Boolean {
+    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> Boolean) : Boolean {
         var inserted = false
         var uniqueInDb = true
         val existingInCache = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
@@ -142,7 +147,7 @@ class PersistentMap<K, V, E, EK> (
     }
 
     private inner class EntryIterator : MutableIterator<MutableMap.MutableEntry<K, V>> {
-        private val iterator = all().map { NotReallyMutableEntry(it.first, it.second) }.iterator()
+        private val iterator = allPersisted().map { NotReallyMutableEntry(it.first, it.second) }.iterator()
 
         private var current: MutableMap.MutableEntry<K, V>? = null
 
