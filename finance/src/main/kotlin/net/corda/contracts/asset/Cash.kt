@@ -10,6 +10,7 @@ import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException

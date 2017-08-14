@@ -115,14 +115,12 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
 
     val myKey = ownedBy?.owningKey ?: myInfo.legalIdentity.owningKey
     val anonParty = AnonymousParty(myKey)
-    val legalParty = this.identityService.partyFromAnonymous(anonParty)
 
     // We will allocate one state to one transaction, for simplicities sake.
     val cash = Cash()
     val transactions: List<SignedTransaction> = amounts.map { pennies ->
         val issuance = TransactionBuilder(null as Party?)
-        // TODO: always use anonymous party as owner (awaiting PR that persists resolved anonymous party identities using Hibernate Custom BasicType)
-        cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), (legalParty?: anonParty), outputNotary)
+        cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), anonParty, outputNotary)
 
         return@map issuerServices.signInitialTransaction(issuance, issuedBy.party.owningKey)
     }

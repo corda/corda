@@ -27,7 +27,7 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: Set<AbstractParty>,
+            var participants: MutableSet<AbstractParty>,
 
             /**
              * UniqueIdentifier

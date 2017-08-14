@@ -33,5 +33,5 @@ object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
         val _issuerParty: AbstractParty,
         @Transient
         val _issuerRef: ByteArray
-    ) : CommonSchemaV1.FungibleState(_participants, _owner, _quantity, _issuerParty, _issuerRef)
+    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef)
 }

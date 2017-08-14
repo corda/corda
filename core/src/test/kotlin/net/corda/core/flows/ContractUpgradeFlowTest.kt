@@ -42,11 +42,14 @@ class ContractUpgradeFlowTest {
     @Before
     fun setup() {
         mockNet = MockNetwork()
-        val nodes = mockNet.createSomeNodes()
+        val nodes = mockNet.createSomeNodes(notaryKeyPair = null) // prevent generation of notary override
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
         notary = nodes.notaryNode.info.notaryIdentity
-        mockNet.runNetwork()
+
+        val nodeIdentity = nodes.notaryNode.info.legalIdentitiesAndCerts.single { it.party == nodes.notaryNode.info.notaryIdentity }
+        a.services.identityService.registerIdentity(nodeIdentity)
+        b.services.identityService.registerIdentity(nodeIdentity)
     }
 
     @After

@@ -71,7 +71,10 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: Set<AbstractParty>,
+            @Column(name = "participants")
+            var participants: MutableSet<AbstractParty>? = null,
+            // Reason for not using Set is described here:
+            // https://stackoverflow.com/questions/44213074/kotlin-collection-has-neither-generic-type-or-onetomany-targetentity
 
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
@@ -85,7 +88,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
         constructor(uid: UniqueIdentifier, _participants: List<AbstractParty>) :
                 this(externalId = uid.externalId,
                      uuid = uid.id,
-                     participants = _participants.toSet())
+                     participants = _participants.toMutableSet())
     }
 
     @Entity
@@ -95,7 +98,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: Set<AbstractParty>,
+            @Column(name = "participants")
+            var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
             @Column(name = "owner_id")
@@ -114,6 +118,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /** Issuer attributes */
 
             /** X500Name of issuer party **/
+            @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
             @Column(name = "issuer_reference")
@@ -124,6 +129,6 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
                      quantity = _quantity,
                      issuer = _issuerParty,
                      issuerRef = _issuerRef.bytes,
-                     participants =  _participants.toSet())
+                     participants = _participants.toMutableSet())
     }
 }

@@ -25,7 +25,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: Set<AbstractParty>,
+            @Column(name = "participants")
+            var participants: MutableSet<AbstractParty>? = null,
 
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
@@ -38,7 +39,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
     ) : PersistentState() {
         constructor(uid: UniqueIdentifier, _participants: Set<AbstractParty>)
-            : this(participants = _participants.toSet(),
+            : this(participants = _participants.toMutableSet(),
                    externalId = uid.externalId,
                    uuid = uid.id)
     }
@@ -49,7 +50,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: Set<AbstractParty>,
+            @Column(name = "participants")
+            var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
 
@@ -69,6 +71,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** Issuer attributes */
 
             /** X500Name of issuer party **/
+            @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
             @Column(name = "issuer_reference")
