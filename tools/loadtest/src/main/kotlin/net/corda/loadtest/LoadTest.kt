@@ -181,8 +181,7 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             log.info("Getting node info of ${connection.remoteNode.hostname}")
             val info = connection.info
             log.info("Got node info of ${connection.remoteNode.hostname}: $info!")
-            val (otherInfo, infoUpdates) = connection.proxy.networkMapFeed()
-            infoUpdates.notUsed()
+            val otherInfo = connection.proxy.networkMapSnapshot()
             val pubKeysString = otherInfo.map {
                 "    ${it.legalIdentity.name}: ${it.legalIdentity.owningKey.toBase58String()}"
             }.joinToString("\n")

@@ -65,8 +65,8 @@ public class StandaloneCordaRPCJavaClientTest {
     }
 
     private NodeInfo fetchNotaryIdentity() {
-        DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> nodeDataFeed = rpcProxy.networkMapFeed();
-        return nodeDataFeed.getSnapshot().get(0);
+        List<NodeInfo> nodeDataSnapshot = rpcProxy.networkMapSnapshot();
+        return nodeDataSnapshot.get(0);
     }
 
     @Test
