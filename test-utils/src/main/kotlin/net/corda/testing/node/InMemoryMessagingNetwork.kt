@@ -93,7 +93,7 @@ class InMemoryMessagingNetwork(
 
     /**
      * Creates a node and returns the new object that identifies its location on the network to senders, and the
-     * [InMemoryMessaging] that the recipient/in-memory node uses to receive messages and send messages itself.
+     * [InMemoryMessaging] that the otherSide/in-memory node uses to receive messages and send messages itself.
      *
      * If [manuallyPumped] is set to true, then you are expected to call the [InMemoryMessaging.pump] method on the [InMemoryMessaging]
      * in order to cause the delivery of a single message, which will occur on the thread of the caller. If set to false
@@ -139,7 +139,7 @@ class InMemoryMessagingNetwork(
         fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
     }
 
-    /** This can be set to an object which can inject artificial latency between sender/recipient pairs. */
+    /** This can be set to an object which can inject artificial latency between sender/otherSide pairs. */
     @Volatile var latencyCalculator: LatencyCalculator? = null
     private val timer = Timer()
 
@@ -270,7 +270,7 @@ class InMemoryMessagingNetwork(
                 for (handle in handleEndpointMap.keys)
                     getQueueForPeerHandle(handle).add(transfer)
             }
-            else -> throw IllegalArgumentException("Unknown type of recipient handle")
+            else -> throw IllegalArgumentException("Unknown type of otherSide handle")
         }
         _sentMessages.onNext(transfer)
     }

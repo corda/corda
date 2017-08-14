@@ -25,8 +25,8 @@ sealed class CashFlowCommand {
                          val notary: Party,
                          val anonymous: Boolean) : CashFlowCommand() {
         override fun startFlow(proxy: CordaRPCOps): FlowHandle<AbstractCashFlow.Result> {
-            proxy.startFlow(::CashIssueFlow, amount, issueRef, notary).returnValue.getOrThrow()
-            return proxy.startFlow(::CashPaymentFlow, amount, recipient, anonymous)
+            proxy.startFlow(::CashIssueFlow, amount, issueRef, notary)
+            return proxy.startFlow(CashPaymentFlow::Initiate, amount, recipient, anonymous)
         }
     }
 
@@ -38,7 +38,7 @@ sealed class CashFlowCommand {
      */
     data class PayCash(val amount: Amount<Currency>, val recipient: Party, val issuerConstraint: Party? = null,
                        val anonymous: Boolean) : CashFlowCommand() {
-        override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(::CashPaymentFlow, amount, recipient, anonymous)
+        override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(CashPaymentFlow::Initiate, amount, recipient, anonymous)
     }
 
     /**

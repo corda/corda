@@ -33,7 +33,7 @@ object StabilityTest {
                 val request = command.request
                 val result = when (request) {
                     is IssueAndPaymentRequest -> command.node.proxy.startFlow(::CashIssueAndPaymentFlow, request).returnValue
-                    is PaymentRequest -> command.node.proxy.startFlow(::CashPaymentFlow, request).returnValue
+                    is PaymentRequest -> command.node.proxy.startFlow(CashPaymentFlow::Initiate, request).returnValue
                     is ExitRequest -> command.node.proxy.startFlow(::CashExitFlow, request).returnValue
                     else -> throw IllegalArgumentException("Unexpected request type: $request")
                 }

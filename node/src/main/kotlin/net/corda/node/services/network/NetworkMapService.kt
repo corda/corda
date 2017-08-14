@@ -360,7 +360,7 @@ sealed class NodeMapError : Exception() {
     /** Thrown if the signature on the node info does not match the public key for the identity */
     class InvalidSignature : NodeMapError()
 
-    /** Thrown if the replyTo of a subscription change message is not a single message recipient */
+    /** Thrown if the replyTo of a subscription change message is not a single message otherSide */
     class InvalidSubscriber : NodeMapError()
 }
 

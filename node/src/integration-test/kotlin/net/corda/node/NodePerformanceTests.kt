@@ -103,7 +103,7 @@ class NodePerformanceTests {
     fun `self pay rate`() {
         driver(startNodesInProcess = true) {
             val a = startNode(
-                    rpcUsers = listOf(User("A", "A", setOf(startFlowPermission<CashIssueFlow>(), startFlowPermission<CashPaymentFlow>()))),
+                    rpcUsers = listOf(User("A", "A", setOf(startFlowPermission<CashIssueFlow>(), startFlowPermission<CashPaymentFlow.Initiate>()))),
                     advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))
             ).get()
             a as NodeHandle.InProcess
@@ -116,7 +116,7 @@ class NodePerformanceTests {
                 doneFutures.transpose().get()
                 println("STARTING PAYMENT")
                 startPublishingFixedRateInjector(metricRegistry, 8, 5.minutes, 100L / TimeUnit.SECONDS) {
-                    connection.proxy.startFlow(::CashPaymentFlow, 1.DOLLARS, a.nodeInfo.legalIdentity).returnValue.get()
+                    connection.proxy.startFlow(CashPaymentFlow::Initiate, 1.DOLLARS, a.nodeInfo.legalIdentity).returnValue.get()
                 }
             }
 

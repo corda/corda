@@ -55,7 +55,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     override fun setup() = driver {
         val cashUser = User("user1", "test", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
-                startFlowPermission<CashPaymentFlow>(),
+                startFlowPermission<CashPaymentFlow.Initiate>(),
                 startFlowPermission<CashExitFlow>())
         )
         val aliceNodeFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser))
@@ -134,7 +134,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     fun `cash issue and move`() {
         val anonymous = false
         rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
-        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity, anonymous).returnValue.getOrThrow()
+        rpc.startFlow(CashPaymentFlow::Initiate, 100.DOLLARS, bobNode.legalIdentity, anonymous).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
@@ -152,7 +152,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                         require(remove.id == issueSmId)
                     },
                     // MOVE - N.B. There are other framework flows that happen in parallel for the remote resolve transactions flow
-                    expect(match = { it is StateMachineUpdate.Added && it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
+                    expect(match = { it is StateMachineUpdate.Added && it.stateMachineInfo.flowLogicClassName == CashPaymentFlow.Initiate::class.java.name }) { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
                         val initiator = add.stateMachineInfo.initiator
                         require(initiator is FlowInitiator.RPC && initiator.username == "user1")

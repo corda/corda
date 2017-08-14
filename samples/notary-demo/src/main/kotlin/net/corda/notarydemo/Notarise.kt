@@ -18,7 +18,7 @@ import kotlin.streams.asSequence
 
 fun main(args: Array<String>) {
     val address = NetworkHostAndPort("localhost", 10003)
-    println("Connecting to the recipient node ($address)")
+    println("Connecting to the otherSide node ($address)")
     CordaRPCClient(address).start(notaryDemoUser.username, notaryDemoUser.password).use {
         NotaryDemoClientApi(it.proxy).notarise(10)
     }

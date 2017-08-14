@@ -65,7 +65,7 @@ fun main(args: Array<String>) {
         }
         Role.RECIPIENT -> {
             val host = NetworkHostAndPort("localhost", 10009)
-            println("Connecting to the recipient node ($host)")
+            println("Connecting to the otherSide node ($host)")
             CordaRPCClient(host).start("demo", "demo").use {
                 recipient(it.proxy)
             }
@@ -86,7 +86,7 @@ fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
 
 private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256, executor: ScheduledExecutorService) {
 
-    // Get the identity key of the other side (the recipient).
+    // Get the identity key of the other side (the otherSide).
     val notaryFuture: CordaFuture<Party> = poll(executor, DUMMY_NOTARY.name.toString()) { rpc.partyFromX500Name(DUMMY_NOTARY.name) }
     val otherSideFuture: CordaFuture<Party> = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }
 
@@ -122,7 +122,7 @@ class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: Secu
 
         progressTracker.currentStep = SIGNING
 
-        // Send the transaction to the other recipient
+        // Send the transaction to the other otherSide
         val stx = serviceHub.signInitialTransaction(ptx)
 
         return subFlow(FinalityFlow(stx, setOf(otherSide))).single()

@@ -30,7 +30,7 @@ class TraderDemoTest : NodeBasedTest() {
         val demoUser = User("demo", "demo", setOf(startFlowPermission<SellerFlow>()))
         val bankUser = User("user1", "test", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
-                startFlowPermission<CashPaymentFlow>(),
+                startFlowPermission<CashPaymentFlow.Initiate>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
         val (nodeA, nodeB, bankNode) = listOf(
                 startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)),

@@ -26,10 +26,10 @@ class IntegrationTestingTutorial {
         driver {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlowPermission<CashIssueFlow>(),
-                    startFlowPermission<CashPaymentFlow>()
+                    startFlowPermission<CashPaymentFlow.Initiate>()
             ))
             val bobUser = User("bobUser", "testPassword2", permissions = setOf(
-                    startFlowPermission<CashPaymentFlow>()
+                    startFlowPermission<CashPaymentFlow.Initiate>()
             ))
             val (alice, bob, notary) = listOf(
                     startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),
@@ -65,7 +65,7 @@ class IntegrationTestingTutorial {
             }.transpose().getOrThrow()
             // We wait for all of the issuances to run before we start making payments
             (1..10).map { i ->
-                aliceProxy.startFlow(::CashPaymentFlow,
+                aliceProxy.startFlow(CashPaymentFlow::Initiate,
                         i.DOLLARS,
                         bob.nodeInfo.legalIdentity,
                         true
@@ -89,7 +89,7 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1..10) {
-                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
+                bobProxy.startFlow(CashPaymentFlow::Initiate, i.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

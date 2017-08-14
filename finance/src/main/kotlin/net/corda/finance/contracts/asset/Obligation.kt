@@ -292,7 +292,7 @@ class Obligation<P : Any> : Contract {
         // sum to more than the inputs. An issuance of zero size is not allowed.
         //
         // Note that this means literally anyone with access to the network can issue cash claims of arbitrary
-        // amounts! It is up to the recipient to decide if the backing party is trustworthy or not, via some
+        // amounts! It is up to the otherSide to decide if the backing party is trustworthy or not, via some
         // as-yet-unwritten identity service. See ADP-22 for discussion.
 
         // The grouping ensures that all outputs have the same deposit reference and currency.

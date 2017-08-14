@@ -36,7 +36,7 @@ class DistributedServiceTests : DriverBasedTest() {
         val clusterSize = 3
         val testUser = User("test", "test", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
-                startFlowPermission<CashPaymentFlow>())
+                startFlowPermission<CashPaymentFlow.Initiate>())
         )
         val aliceFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser))
         val notariesFuture = startNotaryCluster(
@@ -137,6 +137,6 @@ class DistributedServiceTests : DriverBasedTest() {
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
+        aliceProxy.startFlow(CashPaymentFlow::Initiate, amount, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
     }
 }

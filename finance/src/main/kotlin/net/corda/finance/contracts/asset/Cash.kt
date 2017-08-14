@@ -248,7 +248,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         // sum to more than the inputs. An issuance of zero size is not allowed.
         //
         // Note that this means literally anyone with access to the network can issue cash claims of arbitrary
-        // amounts! It is up to the recipient to decide if the backing party is trustworthy or not, via some
+        // amounts! It is up to the otherSide to decide if the backing party is trustworthy or not, via some
         // as-yet-unwritten identity service. See ADP-22 for discussion.
 
         // The grouping ensures that all outputs have the same deposit reference and currency.
@@ -274,7 +274,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
          *           to move the cash will be added on top.
          * @param amount How much currency to send.
-         * @param to a key of the recipient.
+         * @param to a key of the otherSide.
          * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
          *                        of given parties. This can be useful if the party you're trying to pay has expectations
          *                        about which type of asset claims they are willing to accept.

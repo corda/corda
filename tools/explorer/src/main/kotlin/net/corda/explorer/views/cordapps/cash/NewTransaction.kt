@@ -99,7 +99,7 @@ class NewTransaction : Fragment() {
             }
             val handle: FlowHandle<AbstractCashFlow.Result> = when (request) {
                 is IssueAndPaymentRequest -> rpcProxy.value!!.startFlow(::CashIssueAndPaymentFlow, request)
-                is PaymentRequest -> rpcProxy.value!!.startFlow(::CashPaymentFlow, request)
+                is PaymentRequest -> rpcProxy.value!!.startFlow(CashPaymentFlow::Initiate, request)
                 is ExitRequest -> rpcProxy.value!!.startFlow(::CashExitFlow, request)
                 else -> throw IllegalArgumentException("Unexpected request type: $request")
             }
