@@ -115,12 +115,12 @@ class InMemoryIdentityServiceTests {
         service.verifyAndRegisterAnonymousIdentity(aliceTxIdentity, alice.party)
 
         var actual = service.anonymousFromKey(aliceTxIdentity.party.owningKey)
-        assertEquals<AnonymousPartyAndPath>(aliceTxIdentity, actual!!)
+        assertEquals(aliceTxIdentity, actual!!)
 
         assertNull(service.anonymousFromKey(bobTxIdentity.party.owningKey))
         service.verifyAndRegisterAnonymousIdentity(bobTxIdentity, bob.party)
         actual = service.anonymousFromKey(bobTxIdentity.party.owningKey)
-        assertEquals<AnonymousPartyAndPath>(bobTxIdentity, actual!!)
+        assertEquals(bobTxIdentity, actual!!)
     }
 
     /**
@@ -131,37 +131,28 @@ class InMemoryIdentityServiceTests {
     fun `assert ownership`() {
         withTestSerialization {
             val trustRoot = DUMMY_CA
-            val (alice, aliceTxIdentity) = createParty(ALICE.name, trustRoot)
-
-            val certFactory = CertificateFactory.getInstance("X509")
-            val bobRootKey = Crypto.generateKeyPair()
-            val bobRoot = getTestPartyAndCertificate(BOB.name, bobRootKey.public)
-            val bobRootCert = bobRoot.certificate
-            val bobTxKey = Crypto.generateKeyPair()
-            val bobTxCert = X509Utilities.createCertificate(CertificateType.IDENTITY, bobRootCert, bobRootKey, BOB.name, bobTxKey.public)
-            val bobCertPath = certFactory.generateCertPath(listOf(bobTxCert.cert, bobRootCert.cert))
-            val bob = PartyAndCertificate(BOB.name, bobRootKey.public, bobRootCert, bobCertPath)
+            val (alice, anonymousAlice) = createParty(ALICE.name, trustRoot)
+            val (bob, anonymousBob) = createParty(BOB.name, trustRoot)
 
             // Now we have identities, construct the service and let it know about both
             val service = InMemoryIdentityService(setOf(alice, bob), emptyMap(), trustRoot.certificate.cert)
-            service.verifyAndRegisterAnonymousIdentity(aliceTxIdentity, alice.party)
 
-            val anonymousBob = AnonymousPartyAndPath(AnonymousParty(bobTxKey.public),bobCertPath)
+            service.verifyAndRegisterAnonymousIdentity(anonymousAlice, alice.party)
             service.verifyAndRegisterAnonymousIdentity(anonymousBob, bob.party)
 
             // Verify that paths are verified
-            service.assertOwnership(alice.party, aliceTxIdentity.party)
+            service.assertOwnership(alice.party, anonymousAlice.party)
             service.assertOwnership(bob.party, anonymousBob.party)
             assertFailsWith<IllegalArgumentException> {
                 service.assertOwnership(alice.party, anonymousBob.party)
             }
             assertFailsWith<IllegalArgumentException> {
-                service.assertOwnership(bob.party, aliceTxIdentity.party)
+                service.assertOwnership(bob.party, anonymousAlice.party)
             }
 
             assertFailsWith<IllegalArgumentException> {
                 val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
-                service.assertOwnership(Party(trustRoot.certificate.subject, owningKey), aliceTxIdentity.party)
+                service.assertOwnership(Party(trustRoot.certificate.subject, owningKey), anonymousAlice.party)
             }
         }
     }

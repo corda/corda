@@ -6,7 +6,7 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*
 
-fun <T> withTestSerialization(block: () -> T): T {
+inline fun <T> withTestSerialization(block: () -> T): T {
     initialiseTestSerialization()
     try {
         return block()
