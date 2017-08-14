@@ -2,7 +2,7 @@ package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.cert
+import net.corda.node.utilities.cert
 import net.corda.core.crypto.subject
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*

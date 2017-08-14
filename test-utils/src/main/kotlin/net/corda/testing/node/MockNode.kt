@@ -4,7 +4,7 @@ import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.CertificateAndKeyPair
-import net.corda.core.crypto.cert
+import net.corda.node.utilities.cert
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate

@@ -20,6 +20,7 @@ import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
+import net.corda.node.utilities.cert
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties

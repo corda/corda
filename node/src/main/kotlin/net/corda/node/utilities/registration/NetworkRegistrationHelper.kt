@@ -1,7 +1,7 @@
 package net.corda.node.utilities.registration
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.cert
+import net.corda.node.utilities.cert
 import net.corda.core.internal.*
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.validateX500Name

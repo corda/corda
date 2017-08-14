@@ -1,6 +1,9 @@
 package net.corda.node.utilities
 
-import net.corda.core.crypto.*
+import net.corda.core.crypto.ContentSignerBuilder
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.ASN1EncodableVector
@@ -12,6 +15,7 @@ import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.ContentSigner
@@ -232,6 +236,7 @@ object X509Utilities {
     fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair) = createCertificateSigningRequest(subject, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
 }
 
+val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 class CertificateStream(val input: InputStream) {
     private val certificateFactory = CertificateFactory.getInstance("X.509")

@@ -6,7 +6,6 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import java.security.KeyPair
 import java.security.cert.X509Certificate
 
@@ -58,7 +57,6 @@ val X500Name.locationOrNull: String? get() = try {
     null
 }
 val X509Certificate.subject: X500Name get() = X509CertificateHolder(encoded).subject
-val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 /**
  * Generate a distinguished name from the provided values.
