@@ -11,18 +11,22 @@ import javax.persistence.Converter
  * Completely anonymous parties are stored as null (to preserve privacy)
  */
 @Converter(autoApply = true)
-class AbstractPartyToX500NameAsStringConverter(val identitySvc: IdentityService) : AttributeConverter<AbstractParty, String> {
+class AbstractPartyToX500NameAsStringConverter(identitySvc: () -> IdentityService) : AttributeConverter<AbstractParty, String> {
+
+    private val identityService: IdentityService by lazy {
+        identitySvc()
+    }
 
     override fun convertToDatabaseColumn(party: AbstractParty?): String? {
         party?.let {
-            return identitySvc.partyFromAnonymous(party)?.toString()
+            return identityService.partyFromAnonymous(party)?.toString()
         }
         return null // non resolvable anonymous parties
     }
 
     override fun convertToEntityAttribute(dbData: String?): AbstractParty? {
         dbData?.let {
-            val party = identitySvc.partyFromX500Name(X500Name(dbData))
+            val party = identityService.partyFromX500Name(X500Name(dbData))
             return party as AbstractParty
         }
         return null // non resolvable anonymous parties are stored as nulls

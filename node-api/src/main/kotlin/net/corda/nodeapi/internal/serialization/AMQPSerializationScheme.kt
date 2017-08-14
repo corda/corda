@@ -11,9 +11,22 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import java.util.concurrent.ConcurrentHashMap
 
-private const val AMQP_ENABLED = false
+internal val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferedSerializationVersion == AmqpHeaderV1_0
 
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
+    internal companion object {
+        fun registerCustomSerializers(factory: SerializerFactory) {
+            factory.apply {
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.X500NameSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(this))
+            }
+        }
+    }
+
     private val serializerFactoriesForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>()
 
     protected abstract fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory
@@ -30,7 +43,7 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                     rpcServerSerializerFactory(context)
                 else -> SerializerFactory(context.whitelist) // TODO pass class loader also
             }
-        }
+        }.also { registerCustomSerializers(it) }
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {

@@ -11,8 +11,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.nodeapi.RPCException
+import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
-import net.corda.nodeapi.internal.serialization.KryoAMQPSerializer
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
 import net.corda.nodeapi.internal.serialization.amqp.custom.*
 import net.corda.testing.MEGA_CORP
@@ -528,10 +528,10 @@ class SerializationOutputTests {
         val state = TransactionState<FooState>(FooState(), MEGA_CORP)
 
         val factory = SerializerFactory()
-        KryoAMQPSerializer.registerCustomSerializers(factory)
+        AbstractAMQPSerializationScheme.registerCustomSerializers(factory)
 
         val factory2 = SerializerFactory()
-        KryoAMQPSerializer.registerCustomSerializers(factory2)
+        AbstractAMQPSerializationScheme.registerCustomSerializers(factory2)
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         assertTrue(desState is TransactionState<*>)

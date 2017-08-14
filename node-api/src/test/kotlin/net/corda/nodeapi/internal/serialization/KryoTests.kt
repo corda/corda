@@ -12,6 +12,7 @@ import net.corda.core.utilities.sequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.ALICE_PUBKEY
+import net.corda.testing.TestDependencyInjectionBase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
@@ -23,13 +24,13 @@ import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class KryoTests {
+class KryoTests : TestDependencyInjectionBase() {
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
 
     @Before
     fun setup() {
-        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
+        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
         context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
                 AllWhitelist,
@@ -199,7 +200,7 @@ class KryoTests {
             }
         }
         Tmp()
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
+        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
         val context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
                 AllWhitelist,
