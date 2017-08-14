@@ -46,6 +46,7 @@ clean:
 	$(MAKE) -C linux-sgx clean
 	$(MAKE) -C linux-sgx-driver clean
 	[ ! -d jdk8u ] || $(MAKE) -C jdk8u clean
+	../gradlew -p .. verify-enclave:clean
 	$(MAKE) -C avian clean
 
 .PHONY: distclean

@@ -53,13 +53,16 @@ void check_transaction(void *reqbuf, size_t buflen, char *error) {
     JNI_CreateJavaVM(&vm, &env_void, &vmArgs);
     JNIEnv* env = static_cast<JNIEnv*>(env_void);
 
-    jclass c = env->FindClass("com/r3/enclaves/txverify/Enclavelet");
+    env->FindClass("com/r3/enclaves/txverify/KryoVerifierSerializationScheme");
     if (!env->ExceptionCheck()) {
-        jmethodID m = env->GetStaticMethodID(c, "verifyInEnclave", "([B)V");
+        jclass c = env->FindClass("com/r3/enclaves/txverify/Enclavelet");
         if (!env->ExceptionCheck()) {
-            jbyteArray reqbits = env->NewByteArray((jsize) buflen);
-            env->SetByteArrayRegion(reqbits, 0, buflen, (const jbyte *)reqbuf);
-            jobject result = env->CallStaticObjectMethod(c, m, reqbits);
+            jmethodID m = env->GetStaticMethodID(c, "verifyInEnclave", "([B)V");
+            if (!env->ExceptionCheck()) {
+                jbyteArray reqbits = env->NewByteArray((jsize) buflen);
+                env->SetByteArrayRegion(reqbits, 0, buflen, (const jbyte *)reqbuf);
+                jobject result = env->CallStaticObjectMethod(c, m, reqbits);
+            }
         }
     }
 
