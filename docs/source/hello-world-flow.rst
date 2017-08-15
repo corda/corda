@@ -164,6 +164,9 @@ We now have our own ``FlowLogic`` subclass that overrides ``FlowLogic.call``. Th
   * ``@InitiatingFlow`` means that this flow can be started directly by the node
   * ``StartableByRPC`` allows the node owner to start this flow via an RPC call
 
+* We override the progress tracker, even though we are not providing any progress tracker steps yet. The progress
+  tracker is required for the node shell to establish when the flow has ended
+
 Let's walk through the steps of ``FlowLogic.call`` one-by-one:
 
 Retrieving participant information
