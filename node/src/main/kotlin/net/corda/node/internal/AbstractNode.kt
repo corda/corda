@@ -299,7 +299,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .map { (initiatingFlow, initiatedFlows) ->
                     val sorted = initiatedFlows.sortedWith(FlowTypeHierarchyComparator(initiatingFlow))
                     if (sorted.size > 1) {
-                        log.warn("${initiatingFlow.name} has been specified as the inititating flow by multiple flows " +
+                        log.warn("${initiatingFlow.name} has been specified as the initiating flow by multiple flows " +
                                 "in the same type hierarchy: ${sorted.joinToString { it.name }}. Choosing the most " +
                                 "specific sub-type for registration: ${sorted[0].name}.")
                     }
@@ -658,11 +658,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filterNotNull()
                 .toTypedArray()
         val service = InMemoryIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
-        services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentityAndCert) }
+        services.networkMapCache.partyNodes.forEach { service.verifyAndRegisterIdentity(it.legalIdentityAndCert) }
         services.networkMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
-                service.registerIdentity(mapChange.node.legalIdentityAndCert)
+                service.verifyAndRegisterIdentity(mapChange.node.legalIdentityAndCert)
             }
         }
         return service
