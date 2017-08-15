@@ -45,7 +45,7 @@ class NativeSgxApiTest {
                 verifies()
             }
 
-            val req = TransactionVerificationRequest(wtx3.serialized, arrayOf(wtx1.serialized, wtx2.serialized), emptyArray())
+            val req = TransactionVerificationRequest(wtx3.serialize(), arrayOf(wtx1.serialize(), wtx2.serialize()), emptyArray())
             val serialized = req.serialize()
             assertNull(NativeSgxApi.verify(enclavePath, serialized.bytes))
         }
