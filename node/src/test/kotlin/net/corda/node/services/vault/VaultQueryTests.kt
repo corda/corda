@@ -50,7 +50,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     lateinit var notaryServices: MockServices
     val vaultSvc: VaultService get() = services.vaultService
     val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
-    val identitySvc: IdentityService get() = services.identityService
+    val identitySvc: IdentityService = makeTestIdentityService()
     lateinit var database: CordaPersistence
 
     // test cash notary
@@ -60,11 +60,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY))
-        database = databaseAndServices.first
-        services = databaseAndServices.second
         // register additional identities
         identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
+        identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
+        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY), identitySvc = { identitySvc })
+        database = databaseAndServices.first
+        services = databaseAndServices.second
         notaryServices = MockServices(DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
     }
 
@@ -79,7 +80,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { identitySvc })
 
         setUpDb(database, 5000)
 

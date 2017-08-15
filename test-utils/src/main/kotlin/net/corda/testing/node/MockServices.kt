@@ -217,13 +217,15 @@ fun makeTestDatabaseProperties(): Properties {
 
 fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
 
-fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1), keys: List<KeyPair> = listOf(MEGA_CORP_KEY)): Pair<CordaPersistence, MockServices> {
+fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1),
+                                    keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
+                                    identitySvc: ()-> IdentityService = { makeTestIdentityService() }): Pair<CordaPersistence, MockServices> {
     val dataSourceProps = makeTestDataSourceProperties()
     val databaseProperties = makeTestDatabaseProperties()
 
-    val database = configureDatabase(dataSourceProps, databaseProperties, identitySvc = ::makeTestIdentityService)
+    val database = configureDatabase(dataSourceProps, databaseProperties, identitySvc = identitySvc)
     val mockService = database.transaction {
-        val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), databaseProperties,  identitySvc = ::makeTestIdentityService)
+        val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), databaseProperties,  identitySvc = identitySvc)
         object : MockServices(*(keys.toTypedArray())) {
             override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
