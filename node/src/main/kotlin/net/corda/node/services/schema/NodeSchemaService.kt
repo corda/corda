@@ -1,15 +1,14 @@
 package net.corda.node.services.schema
 
-import net.corda.contracts.DealState
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.LinearState
+import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.api.SchemaService
-import net.corda.core.schemas.CommonSchemaV1
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
@@ -59,9 +58,6 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
             schemas += state.supportedSchemas()
         if (state is LinearState)
             schemas += VaultSchemaV1   // VaultLinearStates
-        // TODO: DealState to be deprecated (collapsed into LinearState)
-        if (state is DealState)
-            schemas += VaultSchemaV1   // VaultLinearStates
         if (state is FungibleAsset<*>)
             schemas += VaultSchemaV1   // VaultFungibleStates
 
@@ -70,11 +66,8 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
 
     // Because schema is always one supported by the state, just delegate.
     override fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState {
-        // TODO: DealState to be deprecated (collapsed into LinearState)
-        if ((schema is VaultSchemaV1) && (state is DealState))
-            return VaultSchemaV1.VaultLinearStates(state.linearId, state.ref, state.participants)
         if ((schema is VaultSchemaV1) && (state is LinearState))
-            return VaultSchemaV1.VaultLinearStates(state.linearId, "", state.participants)
+            return VaultSchemaV1.VaultLinearStates(state.linearId, state.participants)
         if ((schema is VaultSchemaV1) && (state is FungibleAsset<*>))
             return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
         return (state as QueryableState).generateMappedObject(schema)

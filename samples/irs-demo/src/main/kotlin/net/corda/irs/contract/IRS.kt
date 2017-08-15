@@ -567,7 +567,7 @@ class InterestRateSwap : Contract {
         requireNotNull(tx.timeWindow) { "must be have a time-window)" }
         val groups: List<LedgerTransaction.InOutGroup<State, UniqueIdentifier>> = tx.groupStates { state -> state.linearId }
         var atLeastOneCommandProcessed = false
-        for ((inputs, outputs, key) in groups) {
+        for ((inputs, outputs, _) in groups) {
             val agreeCommand = tx.commands.select<Commands.Agree>().firstOrNull()
             if (agreeCommand != null) {
                 verifyAgreeCommand(inputs, outputs)
@@ -616,7 +616,7 @@ class InterestRateSwap : Contract {
         override val oracleType: ServiceType
             get() = NodeInterestRates.Oracle.type
 
-        override val ref = common.tradeID
+        val ref: String get() = linearId.externalId ?: ""
 
         override val participants: List<AbstractParty>
             get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)

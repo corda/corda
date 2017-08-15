@@ -13,9 +13,6 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.services.database.HibernateConfiguration
-import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.*
@@ -278,7 +275,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             val deals = vaultQuery.queryBy<DummyDealContract.State>().states
-            deals.forEach { println(it.state.data.ref) }
+            deals.forEach { println(it.state.data.linearId.externalId!!) }
         }
 
         database.transaction {
@@ -306,7 +303,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             val deals = vaultQuery.queryBy<DummyDealContract.State>().states
-            deals.forEach { println(it.state.data.ref) }
+            deals.forEach { println(it.state.data.linearId.externalId!!) }
 
             services.fillWithSomeTestLinearStates(3)
             val linearStates = vaultQuery.queryBy<DummyLinearContract.State>().states
