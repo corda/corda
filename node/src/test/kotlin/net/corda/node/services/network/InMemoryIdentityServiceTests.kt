@@ -7,7 +7,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
@@ -90,10 +90,10 @@ class InMemoryIdentityServiceTests {
             val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
             // TODO: Generate certificate with an EdDSA key rather than ECDSA
-            val identity = Party(CertificateAndKeyPair(rootCert, rootKey))
+            val identity = Party(rootCert)
             val txIdentity = AnonymousParty(txKey.public)
 
-            assertFailsWith<IdentityService.UnknownAnonymousPartyException> {
+            assertFailsWith<UnknownAnonymousPartyException> {
                 service.assertOwnership(identity, txIdentity)
             }
         }
@@ -107,7 +107,7 @@ class InMemoryIdentityServiceTests {
     fun `get anonymous identity by key`() {
         val trustRoot = DUMMY_CA
         val (alice, aliceTxIdentity) = createParty(ALICE.name, trustRoot)
-        val (bob, bobTxIdentity) = createParty(ALICE.name, trustRoot)
+        val (_, bobTxIdentity) = createParty(ALICE.name, trustRoot)
 
         // Now we have identities, construct the service and let it know about both
         val service = InMemoryIdentityService(setOf(alice), emptySet(), trustRoot.certificate.cert)
@@ -163,7 +163,7 @@ class InMemoryIdentityServiceTests {
         val txKey = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name, txKey.public)
         val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
-        return Pair(issuer, PartyAndCertificate(Party(x500Name, txKey.public), txCert, txCertPath))
+        return Pair(issuer, PartyAndCertificate(txCertPath))
     }
 
     /**
