@@ -33,24 +33,20 @@ FlowLogic
 Flows are implemented as ``FlowLogic`` subclasses. You define the steps taken by the flow by overriding
 ``FlowLogic.call``.
 
-We'll write our flow in either ``TemplateFlow.java`` or ``TemplateFlow.kt``. Overwrite the existing template code with
-the following:
+We'll write our flow in either ``TemplateFlow.java`` or ``App.kt``. Overwrite both the existing flows in the template
+with the following:
 
 .. container:: codeset
 
     .. code-block:: kotlin
 
-        package com.iou
+        ...
 
-        import co.paralleluniverse.fibers.Suspendable
-        import net.corda.core.contracts.Command
-        import net.corda.core.flows.FlowLogic
-        import net.corda.core.flows.InitiatingFlow
-        import net.corda.core.flows.StartableByRPC
-        import net.corda.core.identity.Party
-        import net.corda.core.transactions.TransactionBuilder
         import net.corda.core.utilities.ProgressTracker
-        import net.corda.core.flows.FinalityFlow
+        import net.corda.core.transactions.TransactionBuilder
+        import net.corda.core.flows.*
+
+        ...
 
         @InitiatingFlow
         @StartableByRPC
@@ -88,19 +84,17 @@ the following:
 
     .. code-block:: java
 
-        package com.iou;
+        package com.template.flow;
 
         import co.paralleluniverse.fibers.Suspendable;
+        import com.template.contract.IOUContract;
+        import com.template.state.IOUState;
         import net.corda.core.contracts.Command;
-        import net.corda.core.flows.FlowException;
-        import net.corda.core.flows.FlowLogic;
-        import net.corda.core.flows.InitiatingFlow;
-        import net.corda.core.flows.StartableByRPC;
+        import net.corda.core.flows.*;
         import net.corda.core.identity.Party;
         import net.corda.core.transactions.SignedTransaction;
         import net.corda.core.transactions.TransactionBuilder;
         import net.corda.core.utilities.ProgressTracker;
-        import net.corda.flows.FinalityFlow;
 
         @InitiatingFlow
         @StartableByRPC
@@ -118,6 +112,11 @@ the following:
                 this.otherParty = otherParty;
             }
 
+            @Override
+            public ProgressTracker getProgressTracker() {
+                return progressTracker;
+            }
+
             /**
              * The flow logic is encapsulated within the call() method.
              */
@@ -128,7 +127,7 @@ the following:
                 final Party me = getServiceHub().getMyInfo().getLegalIdentity();
                 final Party notary = getServiceHub().getNetworkMapCache().getAnyNotary(null);
 
-                // We create a transaction builder
+                // We create a transaction builder.
                 final TransactionBuilder txBuilder = new TransactionBuilder();
                 txBuilder.setNotary(notary);
 
@@ -149,6 +148,8 @@ the following:
                 return null;
             }
         }
+
+If you're following along in Java, you'll also need to rename ``TemplateFlow.java`` to ``IOUFlow.java``.
 
 We now have our own ``FlowLogic`` subclass that overrides ``FlowLogic.call``. There's a few things to note:
 
@@ -229,7 +230,7 @@ Signing the transaction
 Now that we have a valid transaction proposal, we need to sign it. Once the transaction is signed, no-one will be able
 to modify the transaction without invalidating our signature, effectively making the transaction immutable.
 
-The call to ``ServiceHub.signInitialTransaction`` returns a ``SignedTransaction`` - an object that pairs the
+The call to ``ServiceHub.toSignedTransaction`` returns a ``SignedTransaction`` - an object that pairs the
 transaction itself with a list of signatures over that transaction.
 
 Finalising the transaction
