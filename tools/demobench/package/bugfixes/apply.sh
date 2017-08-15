@@ -20,8 +20,7 @@ fi
 # =========
 #
 # sun.swing.JLightweightFrame:473
-# https://github.com/JetBrains/jdk8u_jdk/issues/6
-# https://github.com/JetBrains/jdk8u/issues/8
+# https://bugs.openjdk.java.net/browse/JDK-8185890
 
 rm -rf $BUILDDIR && mkdir $BUILDDIR
 if (javac -O -d $BUILDDIR $(find $SOURCEDIR -name "*.java")); then
