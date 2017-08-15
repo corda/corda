@@ -772,9 +772,8 @@ class DriverDSL(
                 log.info("Starting in-process Node ${nodeConf.myLegalName.commonName}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
-                val clock: Clock = if (nodeConf.useTestClock) TestClock() else NodeClock()
                 // TODO pass the version in?
-                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, clock, initialiseSerialization = false)
+                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, initialiseSerialization = false)
                 node.start()
                 val nodeThread = thread(name = nodeConf.myLegalName.commonName) {
                     node.run()
