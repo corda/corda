@@ -727,18 +727,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Use composite key instead if exists
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
-        val (keyPair, certPath) = if (keyStore.containsAlias(compositeKeyAlias)) {
+        val (keyPair, certs) = if (keyStore.containsAlias(compositeKeyAlias)) {
             val compositeKey = Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
             val compositeKeyCert = keyStore.getCertificate(compositeKeyAlias)
-            val certPath = CertificateFactory.getInstance("X509").generateCertPath(listOf(compositeKeyCert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
-            Pair(KeyPair(compositeKey, keys.private), certPath)
+            Pair(KeyPair(compositeKey, keys.private), listOf(compositeKeyCert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
         } else {
-            val certPath = CertificateFactory.getInstance("X509").generateCertPath(keyStore.getCertificateChain(privateKeyAlias).toList())
-            Pair(keys, certPath)
+            Pair(keys, keyStore.getCertificateChain(privateKeyAlias).toList())
         }
-
+        val certPath = CertificateFactory.getInstance("X509").generateCertPath(certs)
         partyKeys += keyPair
-        return Pair(PartyAndCertificate(loadedServiceName, keyPair.public, X509CertificateHolder(certPath.certificates.first().encoded), certPath), keyPair)
+        return Pair(PartyAndCertificate(loadedServiceName, keyPair.public, X509CertificateHolder(certs.first().encoded), certPath), keyPair)
     }
 
     private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
