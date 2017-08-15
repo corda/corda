@@ -9,14 +9,14 @@ import java.util.*
 
 
 /**
- * Implements a caching layer on top of a table accessed via Hibernate mapping.
+ * Implements an unbound caching layer on top of a table accessed via Hibernate mapping.
  */
 class PersistentMap<K, V, E, EK> (
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K,V>,
         val toPersistentEntity: (key: K, value: V) -> E,
         val persistentEntityClass: Class<E>
-) { //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
+) {
 
     private companion object {
         val log = loggerFor<PersistentMap<*, *, *, *>>()
@@ -114,7 +114,6 @@ class PersistentMap<K, V, E, EK> (
         val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
-
 
     fun remove(key: K): V? {
         val result = cache.get(key).orElse(null)
