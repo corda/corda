@@ -16,6 +16,7 @@ import java.security.cert.*
 interface IdentityService {
     val trustRoot: X509Certificate
     val trustRootHolder: X509CertificateHolder
+    val trustAnchor: TrustAnchor
     val caCertStore: CertStore
 
     /**
@@ -31,11 +32,12 @@ interface IdentityService {
     /**
      * Verify and then store an identity.
      *
-     * @param identity a party representing a legal entity and the certificate path linking them to the network trust root.
+     * @param identity a party and the certificate path linking them to the network trust root.
+     * @return the issuing entity, if known.
      * @throws IllegalArgumentException if the certificate path is invalid.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAndRegisterIdentity(identity: PartyAndCertificate)
+    fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate?
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
@@ -62,9 +64,11 @@ interface IdentityService {
     /**
      * Get the certificate and path for a well known identity.
      *
-     * @return the party and certificate, or null if unknown.
+     * @return the party and certificate.
+     * @throws IllegalArgumentException if the certificate and path are unknown. This should never happen for a well
+     * known identity.
      */
-    fun certificateFromParty(party: Party): PartyAndCertificate?
+    fun certificateFromParty(party: Party): PartyAndCertificate
 
     // There is no method for removing identities, as once we are made aware of a Party we want to keep track of them
     // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,

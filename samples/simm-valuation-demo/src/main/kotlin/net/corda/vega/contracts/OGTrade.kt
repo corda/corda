@@ -13,7 +13,7 @@ data class OGTrade(override val legalContractReference: SecureHash = SecureHash.
         requireNotNull(tx.timeWindow) { "must have a time-window" }
         val groups: List<LedgerTransaction.InOutGroup<IRSState, UniqueIdentifier>> = tx.groupStates { state -> state.linearId }
         var atLeastOneCommandProcessed = false
-        for ((inputs, outputs, key) in groups) {
+        for ((inputs, outputs, _) in groups) {
             val command = tx.commands.select<Commands.Agree>().firstOrNull()
             if (command != null) {
                 require(inputs.isEmpty()) { "Inputs must be empty" }

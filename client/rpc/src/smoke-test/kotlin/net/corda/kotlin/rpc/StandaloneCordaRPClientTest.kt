@@ -202,8 +202,7 @@ class StandaloneCordaRPClientTest {
     }
 
     private fun fetchNotaryIdentity(): NodeInfo {
-        val (nodeInfo, nodeUpdates) = rpcProxy.networkMapFeed()
-        nodeUpdates.notUsed()
+        val nodeInfo = rpcProxy.networkMapSnapshot()
         assertEquals(1, nodeInfo.size)
         return nodeInfo[0]
     }

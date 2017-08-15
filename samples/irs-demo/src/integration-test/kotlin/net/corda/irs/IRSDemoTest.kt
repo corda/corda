@@ -7,6 +7,7 @@ import net.corda.core.toFuture
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
@@ -29,6 +30,11 @@ import java.time.Duration
 import java.time.LocalDate
 
 class IRSDemoTest : IntegrationTestCategory {
+
+    companion object {
+        val log = loggerFor<IRSDemoTest>()
+    }
+
     val rpcUser = User("user", "password", emptySet())
     val currentDate: LocalDate = LocalDate.now()
     val futureDate: LocalDate = currentDate.plusMonths(6)
@@ -43,7 +49,7 @@ class IRSDemoTest : IntegrationTestCategory {
                     startNode(DUMMY_BANK_B.name)
             ).transpose().getOrThrow()
 
-            println("All nodes started")
+            log.info("All nodes started")
 
             val (controllerAddr, nodeAAddr, nodeBAddr) = listOf(
                     startWebserver(controller),
@@ -51,7 +57,7 @@ class IRSDemoTest : IntegrationTestCategory {
                     startWebserver(nodeB)
             ).transpose().getOrThrow().map { it.listenAddress }
 
-            println("All webservers started")
+            log.info("All webservers started")
 
             val (_, nodeAApi, nodeBApi) = listOf(controller, nodeA, nodeB).zip(listOf(controllerAddr, nodeAAddr, nodeBAddr)).map {
                 val mapper = net.corda.jackson.JacksonSupport.createDefaultMapper(it.first.rpc)
@@ -85,25 +91,25 @@ class IRSDemoTest : IntegrationTestCategory {
         val vaultUpdates = proxy.vaultTrackBy<InterestRateSwap.State>().updates
 
         return vaultUpdates.map { update ->
-            val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State>()
+            val irsStates = update.produced.map { it.state.data }
             irsStates.mapNotNull { it.calculation.nextFixingDate() }.max()
         }.cache()
     }
 
     private fun runDateChange(nodeApi: HttpApi) {
-        println("Running date change against ${nodeApi.root}")
+        log.info("Running date change against ${nodeApi.root}")
         assertThat(nodeApi.putJson("demodate", "\"$futureDate\"")).isTrue()
     }
 
     private fun runTrade(nodeApi: HttpApi) {
-        println("Running trade against ${nodeApi.root}")
+        log.info("Running trade against ${nodeApi.root}")
         val fileContents = loadResourceFile("net/corda/irs/simulation/example-irs-trade.json")
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
         assertThat(nodeApi.postJson("deals", tradeFile)).isTrue()
     }
 
     private fun runUploadRates(host: NetworkHostAndPort) {
-        println("Running upload rates against $host")
+        log.info("Running upload rates against $host")
         val fileContents = loadResourceFile("net/corda/irs/simulation/example.rates.txt")
         val url = URL("http://$host/api/irs/fixes")
         assertThat(uploadFile(url, fileContents)).isTrue()
@@ -114,13 +120,13 @@ class IRSDemoTest : IntegrationTestCategory {
     }
 
     private fun getTradeCount(nodeApi: HttpApi): Int {
-        println("Getting trade count from ${nodeApi.root}")
+        log.info("Getting trade count from ${nodeApi.root}")
         val deals = nodeApi.getJson<Array<*>>("deals")
         return deals.size
     }
 
     private fun getTrades(nodeApi: HttpApi): Array<InterestRateSwap.State> {
-        println("Getting trades from ${nodeApi.root}")
+        log.info("Getting trades from ${nodeApi.root}")
         val deals = nodeApi.getJson<Array<InterestRateSwap.State>>("deals")
         return deals
     }

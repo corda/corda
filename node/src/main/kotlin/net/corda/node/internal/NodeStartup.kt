@@ -97,7 +97,7 @@ open class NodeStartup(val args: Array<String>) {
     open protected fun preNetworkRegistration(conf: FullNodeConfiguration) = Unit
 
     open protected fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, services: Set<ServiceInfo>): Node {
-        return Node(conf, services, versionInfo, if (conf.useTestClock) TestClock() else NodeClock())
+        return Node(conf, services, versionInfo)
     }
 
     open protected fun startNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {

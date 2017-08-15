@@ -200,8 +200,8 @@ class TwoPartyTradeFlowTests {
             val cashIssuer = bankNode.info.legalIdentity.ref(1)
             val cpIssuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
-            aliceNode.services.identityService.registerIdentity(bobNode.info.legalIdentityAndCert)
-            bobNode.services.identityService.registerIdentity(aliceNode.info.legalIdentityAndCert)
+            aliceNode.services.identityService.verifyAndRegisterIdentity(bobNode.info.legalIdentityAndCert)
+            bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
