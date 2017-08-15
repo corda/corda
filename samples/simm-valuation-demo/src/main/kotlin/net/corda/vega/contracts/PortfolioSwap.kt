@@ -13,7 +13,7 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
     override fun verify(tx: LedgerTransaction) {
         requireNotNull(tx.timeWindow) { "must have a time-window)" }
         val groups: List<LedgerTransaction.InOutGroup<PortfolioState, UniqueIdentifier>> = tx.groupStates { state -> state.linearId }
-        for ((inputs, outputs, key) in groups) {
+        for ((inputs, outputs, _) in groups) {
             val agreeCommand = tx.commands.select<Commands.Agree>().firstOrNull()
             if (agreeCommand != null) {
                 requireThat {
