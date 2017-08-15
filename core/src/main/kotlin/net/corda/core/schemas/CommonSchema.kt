@@ -55,7 +55,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
             /** [OwnableState] attributes */
 
-            /** X500Name of anonymous owner party (after resolution by the IdentityService) **/
+            /** X500Name of owner party **/
+            @Column(name = "owner_name")
             var owner: AbstractParty,
 
             /** [FungibleAsset] attributes

@@ -1,5 +1,6 @@
 package net.corda.schemas
 
+import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
@@ -21,8 +22,9 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
            indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "ccy_code"),
                              Index(name = "pennies_idx", columnList = "pennies")))
     class PersistentCashState(
-            @Column(name = "owner_key")
-            var owner: String,
+            /** X500Name of owner party **/
+            @Column(name = "owner_name")
+            var owner: AbstractParty,
 
             @Column(name = "pennies")
             var pennies: Long,

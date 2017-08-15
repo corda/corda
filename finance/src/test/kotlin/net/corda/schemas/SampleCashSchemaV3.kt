@@ -19,10 +19,11 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: Set<String>,
+            var participants: MutableSet<AbstractParty>? = null,
 
-            /** X500Name of anonymous owner party (after resolution by the IdentityService) **/
-            var owner: String,
+            /** X500Name of owner party **/
+            @Column(name = "owner_name")
+            var owner: AbstractParty,
 
             @Column(name = "pennies")
             var pennies: Long,
@@ -31,17 +32,10 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             var currency: String,
 
             /** X500Name of issuer party **/
-            var issuer: String,
+            @Column(name = "issuer_name")
+            var issuer: AbstractParty,
 
             @Column(name = "issuer_ref")
             var issuerRef: ByteArray
-    ) : PersistentState() {
-        constructor(_participants: Set<AbstractParty>, _owner: AbstractParty, _quantity: Long, _currency: String, _issuerParty: AbstractParty, _issuerRef: ByteArray)
-                : this(participants = _participants.map { it.nameOrNull().toString() }.toSet(),
-                        owner = _owner.nameOrNull().toString(),
-                        pennies = _quantity,
-                        currency = _currency,
-                        issuer = _issuerParty.nameOrNull().toString(),
-                        issuerRef = _issuerRef)
-    }
+    ) : PersistentState()
 }

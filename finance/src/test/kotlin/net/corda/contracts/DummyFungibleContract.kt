@@ -54,7 +54,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         issuerRef = this.amount.token.issuer.reference.bytes
                 )
                 is SampleCashSchemaV2 -> SampleCashSchemaV2.PersistentCashState(
-                        _participants = this.participants.toSet(),
+                        _participants = this.participants.toMutableSet(),
                         _owner = this.owner,
                         _quantity = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
@@ -62,12 +62,12 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         _issuerRef = this.amount.token.issuer.reference.bytes
                 )
                 is SampleCashSchemaV3 -> SampleCashSchemaV3.PersistentCashState(
-                        _participants = this.participants.toSet(),
-                        _owner = this.owner,
-                        _quantity = this.amount.quantity,
-                        _currency = this.amount.token.product.currencyCode,
-                        _issuerParty = this.amount.token.issuer.party,
-                        _issuerRef = this.amount.token.issuer.reference.bytes
+                        participants = this.participants.toMutableSet(),
+                        owner = this.owner,
+                        pennies = this.amount.quantity,
+                        currency = this.amount.token.product.currencyCode,
+                        issuer = this.amount.token.issuer.party,
+                        issuerRef = this.amount.token.issuer.reference.bytes
                 )
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }

@@ -68,8 +68,8 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
                                                              lockId: UUID = UUID.randomUUID(),
                                                              withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<Cash.State>> {
 
-        val notary = if (notary != null) listOf(notary) else null
-        var baseCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = notary)
+        val notaries = if (notary != null) listOf(notary) else null
+        var baseCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = notaries)
         if (onlyFromIssuerParties != null || withIssuerRefs != null) {
             baseCriteria = baseCriteria.and(QueryCriteria.FungibleAssetQueryCriteria(
                     issuer = onlyFromIssuerParties?.toList(),

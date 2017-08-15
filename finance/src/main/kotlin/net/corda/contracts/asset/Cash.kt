@@ -99,7 +99,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is CashSchemaV1 -> CashSchemaV1.PersistentCashState(
-                        owner = this.owner.owningKey.toBase58String(),
+                        owner = this.owner,
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),

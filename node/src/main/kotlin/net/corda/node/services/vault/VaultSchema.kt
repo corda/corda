@@ -102,7 +102,9 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
-            @Column(name = "owner_id")
+
+            /** X500Name of owner party **/
+            @Column(name = "owner_name")
             var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
