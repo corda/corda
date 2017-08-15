@@ -41,8 +41,7 @@ class PersistentMap<K, V, E, EK> (
                 RemovalCause.EXPIRED, RemovalCause.SIZE, RemovalCause.COLLECTED -> {
                     log.error("Entry was removed from cache!!!")
                 }
-                //else -> { // do nothing for RemovalCause.REPLACED
-                //}
+                //else do nothing for RemovalCause.REPLACED
             }
         }
     }
