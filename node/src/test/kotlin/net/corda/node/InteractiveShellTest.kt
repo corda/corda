@@ -4,11 +4,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowContext
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStackSnapshot
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
@@ -93,21 +89,9 @@ class InteractiveShellTest {
         override val id: StateMachineRunId get() = throw UnsupportedOperationException()
         override val resultFuture: CordaFuture<Any?> get() = throw UnsupportedOperationException()
         override val flowInitiator: FlowInitiator get() = throw UnsupportedOperationException()
-
-        override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
-            // Do nothing
-        }
-
-        override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
-            // Do nothing
-        }
-
-        override fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot? {
-            return null
-        }
-
-        override fun persistFlowStackSnapshot(flowClass: Class<*>) {
-            // Do nothing
-        }
+        override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) = Unit
+        override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) = Unit
+        override fun flowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot? = null
+        override fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>) = Unit
     }
 }

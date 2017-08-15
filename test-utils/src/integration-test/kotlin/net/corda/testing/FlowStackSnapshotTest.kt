@@ -1,21 +1,23 @@
 package net.corda.testing
 
 import co.paralleluniverse.fibers.Suspendable
-import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.div
+import net.corda.core.internal.list
+import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
+import net.corda.jackson.JacksonSupport
 import net.corda.node.services.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver
 import org.junit.Ignore
 import org.junit.Test
-import java.io.File
 import java.nio.file.Path
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -110,15 +112,15 @@ object Constants {
  * No side effect flow that stores the partial snapshot into a file, path to which is passed in the flow constructor.
  */
 @StartableByRPC
-class PersistingNoSideEffectFlow : FlowLogic<String>() {
+class PersistingNoSideEffectFlow : FlowLogic<StateMachineRunId>() {
 
     @Suspendable
-    override fun call(): String {
+    override fun call(): StateMachineRunId {
         // Using the [Constants] object here is considered by Quasar as a side effect. Thus explicit initialization
         @Suppress("UNUSED_VARIABLE")
         val unusedVar = "inCall"
         persist()
-        return stateMachine.id.toString()
+        return stateMachine.id
     }
 
     @Suspendable
@@ -134,14 +136,14 @@ class PersistingNoSideEffectFlow : FlowLogic<String>() {
  * Flow with side effects that stores the partial snapshot into a file, path to which is passed in the flow constructor.
  */
 @StartableByRPC
-class PersistingSideEffectFlow : FlowLogic<String>() {
+class PersistingSideEffectFlow : FlowLogic<StateMachineRunId>() {
 
     @Suspendable
-    override fun call(): String {
+    override fun call(): StateMachineRunId {
         @Suppress("UNUSED_VARIABLE")
         val unusedVar = Constants.IN_CALL_VALUE
         persist()
-        return stateMachine.id.toString()
+        return stateMachine.id
     }
 
     @Suspendable
@@ -156,16 +158,16 @@ class PersistingSideEffectFlow : FlowLogic<String>() {
  * Similar to [PersistingSideEffectFlow] but aims to produce multiple snapshot files.
  */
 @StartableByRPC
-class MultiplePersistingSideEffectFlow(val persistCallCount: Int) : FlowLogic<String>() {
+class MultiplePersistingSideEffectFlow(val persistCallCount: Int) : FlowLogic<StateMachineRunId>() {
 
     @Suspendable
-    override fun call(): String {
+    override fun call(): StateMachineRunId {
         @Suppress("UNUSED_VARIABLE")
         val unusedVar = Constants.IN_CALL_VALUE
         for (i in 1..persistCallCount) {
             persist()
         }
-        return stateMachine.id.toString()
+        return stateMachine.id
     }
 
     @Suspendable
@@ -176,14 +178,19 @@ class MultiplePersistingSideEffectFlow(val persistCallCount: Int) : FlowLogic<St
     }
 }
 
-fun readFlowStackSnapshotFromDir(baseDir: Path, flowId: String): FlowStackSnapshot {
-    val snapshotFile = File(baseDir.toFile(), "flowStackSnapshots/${LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}/$flowId/flowStackSnapshot.json")
-    return ObjectMapper().readValue(snapshotFile.inputStream(), FlowStackSnapshot::class.java)
+fun readFlowStackSnapshotFromDir(baseDir: Path, flowId: StateMachineRunId): FlowStackSnapshot {
+    val snapshotFile = flowSnapshotDir(baseDir, flowId) / "flowStackSnapshot.json"
+    return snapshotFile.read {
+        JacksonSupport.createNonRpcMapper().readValue(it, FlowStackSnapshot::class.java)
+    }
 }
 
-fun countFilesInDir(baseDir: Path, flowId: String): Int {
-    val flowDir = File(baseDir.toFile(), "flowStackSnapshots/${LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}/$flowId/")
-    return flowDir.listFiles().size
+private fun flowSnapshotDir(baseDir: Path, flowId: StateMachineRunId): Path {
+    return baseDir / "flowStackSnapshots" / LocalDate.now().toString() / flowId.uuid.toString()
+}
+
+fun countFilesInDir(baseDir: Path, flowId: StateMachineRunId): Int {
+    return flowSnapshotDir(baseDir, flowId).list { it.count().toInt() }
 }
 
 fun assertFrame(expectedMethod: String, expectedEmpty: Boolean, frame: StackSnapshotFrame) {
@@ -191,11 +198,11 @@ fun assertFrame(expectedMethod: String, expectedEmpty: Boolean, frame: StackSnap
     assertEquals(expectedEmpty, frame.dataTypes.isEmpty())
 }
 
+@Ignore("When running via gradle the Jacoco agent interferes with the quasar instrumentation process and violates tested" +
+        "criteria (specifically: extra objects are introduced to the quasar stack by th Jacoco agent). You can however " +
+        "run these tests via an IDE.")
 class FlowStackSnapshotTest {
-
     @Test
-    @Ignore("This test is skipped due to Jacoco agent interference with the quasar instrumentation process. " +
-            "This violates  tested criteria (specifically: extra objects are introduced to the quasar stack by th Jacoco agent)")
     fun `flowStackSnapshot contains full frames when methods with side effects are called`() {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlowPermission<SideEffectFlow>())))).get()
@@ -211,8 +218,6 @@ class FlowStackSnapshotTest {
     }
 
     @Test
-    @Ignore("This test is skipped due to Jacoco agent interference with the quasar instrumentation process. " +
-            "This violates tested criteria (specifically extra objects are introduced to the quasar stack by th Jacoco agent)")
     fun `flowStackSnapshot contains empty frames when methods with no side effects are called`() {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlowPermission<NoSideEffectFlow>())))).get()
@@ -228,8 +233,6 @@ class FlowStackSnapshotTest {
     }
 
     @Test
-    @Ignore("This test is skipped due to Jacoco agent interference with the quasar instrumentation process. " +
-            "This violates tested criteria (specifically extra objects are introduced to the quasar stack by th Jacoco agent)")
     fun `persistFlowStackSnapshot persists empty frames to a file when methods with no side effects are called`() {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlowPermission<PersistingNoSideEffectFlow>())))).get()
@@ -247,8 +250,6 @@ class FlowStackSnapshotTest {
     }
 
     @Test
-    @Ignore("This test is skipped due to Jacoco agent interference with the quasar instrumentation process. " +
-            "This violates tested criteria (specifically extra objects are introduced to the quasar stack by th Jacoco agent)")
     fun `persistFlowStackSnapshot persists multiple snapshots in different files`() {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlowPermission<MultiplePersistingSideEffectFlow>())))).get()
@@ -263,8 +264,6 @@ class FlowStackSnapshotTest {
     }
 
     @Test
-    @Ignore("This test is skipped due to Jacoco agent interference with the quasar instrumentation process. " +
-            "This violates tested criteria (specifically extra objects are introduced to the quasar stack by th Jacoco agent)")
     fun `persistFlowStackSnapshot stack traces are aligned with stack objects`() {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlowPermission<PersistingSideEffectFlow>())))).get()
@@ -279,11 +278,11 @@ class FlowStackSnapshotTest {
                     it.stackObjects.forEach {
                         when (it) {
                             Constants.IN_CALL_VALUE -> {
-                                assertEquals(PersistingSideEffectFlow::call.name, trace!!.methodName)
+                                assertEquals(PersistingSideEffectFlow::call.name, trace.methodName)
                                 inCallCount++
                             }
                             Constants.IN_PERSIST_VALUE -> {
-                                assertEquals(PersistingSideEffectFlow::persist.name, trace!!.methodName)
+                                assertEquals(PersistingSideEffectFlow::persist.name, trace.methodName)
                                 inPersistCount++
                             }
                         }
