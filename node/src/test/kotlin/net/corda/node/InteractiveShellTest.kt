@@ -7,6 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowContext
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
@@ -32,6 +33,7 @@ class InteractiveShellTest {
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
         constructor(party: Party) : this(party.name.toString())
+
         override fun call() = a
     }
 
@@ -97,6 +99,14 @@ class InteractiveShellTest {
         }
 
         override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
+            // Do nothing
+        }
+
+        override fun flowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot? {
+            return null
+        }
+
+        override fun persistFlowStackSnapshot(flowClass: Class<*>) {
             // Do nothing
         }
     }
