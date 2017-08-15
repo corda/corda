@@ -9,6 +9,11 @@ Running our CorDapp
 
 Now that we've written a CorDapp, it's time to test it by running it on some real Corda nodes.
 
+Clean up
+--------
+Before running our node, delete the ``client/TemplateClient.java`` (for Java) or ``client/TemplateClient.kt`` (for
+Kotlin) file. We won't be using it, and it will cause build errors unless we remove it.
+
 Deploying our CorDapp
 ---------------------
 Let's take a look at the nodes we're going to deploy. Open the project's build file under ``java-source/build.gradle``

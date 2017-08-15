@@ -8,8 +8,9 @@ The CorDapp Template
 ====================
 
 When writing a new CorDapp, you’ll generally want to base it on the
-`Cordapp Template <https://github.com/corda/cordapp-template>`_. The Cordapp Template allows you to quickly deploy
-your CorDapp onto a local test network of dummy nodes to evaluate its functionality.
+`Java Cordapp Template <https://github.com/corda/cordapp-template-java>`_ or the equivalent
+`Kotlin Cordapp Template <https://github.com/corda/cordapp-template-kotlin>`_. The Cordapp Template allows you to
+quickly deploy your CorDapp onto a local test network of dummy nodes to evaluate its functionality.
 
 Note that there's no need to download and install Corda itself. As long as you're working from a stable Milestone
 branch, the required libraries will be downloaded automatically from an online repository.
@@ -24,7 +25,11 @@ Open a terminal window in the directory where you want to download the CorDapp t
 .. code-block:: text
 
     # Clone the template from GitHub:
-    git clone https://github.com/corda/cordapp-template.git ; cd cordapp-template
+    git clone https://github.com/corda/cordapp-template-java.git ; cd cordapp-template-java
+
+    *or*
+
+    git clone https://github.com/corda/cordapp-template-kotlin.git ; cd cordapp-template-kotlin
 
     # Retrieve a list of the stable Milestone branches using:
     git branch -a --list *release-M*
@@ -34,11 +39,8 @@ Open a terminal window in the directory where you want to download the CorDapp t
 
 Template structure
 ------------------
-We can write our CorDapp in either Java or Kotlin, and will be providing the code in both languages throughout. If
-you want to write the CorDapp in Java, you'll be modifying the files under ``java-source``. If you prefer to use
-Kotlin, you'll be modifying the files under ``kotlin-source``.
-
-To implement our IOU CorDapp, we'll only need to modify three files:
+We can write our CorDapp in either Java or Kotlin, and will be providing the code in both languages throughout. To
+implement our IOU CorDapp in Java, we'll only need to modify three files:
 
 .. container:: codeset
 
@@ -53,16 +55,7 @@ To implement our IOU CorDapp, we'll only need to modify three files:
         // 3. The flow
         java-source/src/main/java/com/template/flow/TemplateFlow.java
 
-    .. code-block:: kotlin
-
-        // 1. The state
-        kotlin-source/src/main/kotlin/com/template/state/TemplateState.kt
-
-        // 2. The contract
-        kotlin-source/src/main/kotlin/com/template/contract/TemplateContract.kt
-
-        // 3. The flow
-        kotlin-source/src/main/kotlin/com/template/flow/TemplateFlow.kt
+For Kotlin, we'll simply be modifying the ``App.kt`` file.
 
 Progress so far
 ---------------
