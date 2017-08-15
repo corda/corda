@@ -17,56 +17,51 @@ import java.util.*
  */
 class DefaultWhitelist : CordaPluginRegistry() {
     override fun customizeSerialization(custom: SerializationCustomization): Boolean {
-        custom.apply {
-            // TODO: Turn this into an array and use map {}
-            addToWhitelist(Array<Any>(0, {}).javaClass)
-            addToWhitelist(Notification::class.java)
-            addToWhitelist(Notification.Kind::class.java)
-            addToWhitelist(ArrayList::class.java)
-            addToWhitelist(listOf<Any>().javaClass) // EmptyList
-            addToWhitelist(Pair::class.java)
-            addToWhitelist(ByteArray::class.java)
-            addToWhitelist(UUID::class.java)
-            addToWhitelist(LinkedHashSet::class.java)
-            addToWhitelist(setOf<Unit>().javaClass) // EmptySet
-            addToWhitelist(Currency::class.java)
-            addToWhitelist(listOf(Unit).javaClass) // SingletonList
-            addToWhitelist(setOf(Unit).javaClass) // SingletonSet
-            addToWhitelist(mapOf(Unit to Unit).javaClass) // SingletonSet
-            addToWhitelist(NetworkHostAndPort::class.java)
-            addToWhitelist(SimpleString::class.java)
-            addToWhitelist(KryoException::class.java)
-            addToWhitelist(StringBuffer::class.java)
-            addToWhitelist(Unit::class.java)
-            addToWhitelist(java.io.ByteArrayInputStream::class.java)
-            addToWhitelist(java.lang.Class::class.java)
-            addToWhitelist(java.math.BigDecimal::class.java)
-            addToWhitelist(java.security.KeyPair::class.java)
-
-            // Matches the list in TimeSerializers.addDefaultSerializers:
-            addToWhitelist(java.time.Duration::class.java)
-            addToWhitelist(java.time.Instant::class.java)
-            addToWhitelist(java.time.LocalDate::class.java)
-            addToWhitelist(java.time.LocalDateTime::class.java)
-            addToWhitelist(java.time.ZoneOffset::class.java)
-            addToWhitelist(java.time.ZoneId::class.java)
-            addToWhitelist(java.time.OffsetTime::class.java)
-            addToWhitelist(java.time.OffsetDateTime::class.java)
-            addToWhitelist(java.time.ZonedDateTime::class.java)
-            addToWhitelist(java.time.Year::class.java)
-            addToWhitelist(java.time.YearMonth::class.java)
-            addToWhitelist(java.time.MonthDay::class.java)
-            addToWhitelist(java.time.Period::class.java)
-            addToWhitelist(java.time.DayOfWeek::class.java)   // No custom serialiser but it's an enum.
-
-            addToWhitelist(java.util.Collections.singletonMap("A", "B").javaClass)
-            addToWhitelist(java.util.LinkedHashMap::class.java)
-            addToWhitelist(BigDecimal::class.java)
-            addToWhitelist(LocalDate::class.java)
-            addToWhitelist(Period::class.java)
-            addToWhitelist(BitSet::class.java)
-            addToWhitelist(OnErrorNotImplementedException::class.java)
-        }
+        arrayOf(Array<Any>(0, {}).javaClass,
+                Notification::class.java,
+                Notification.Kind::class.java,
+                ArrayList::class.java,
+                listOf<Any>().javaClass, // EmptyList
+                Pair::class.java,
+                ByteArray::class.java,
+                UUID::class.java,
+                LinkedHashSet::class.java,
+                setOf<Unit>().javaClass, // EmptySet
+                Currency::class.java,
+                listOf(Unit).javaClass, // SingletonList
+                setOf(Unit).javaClass, // SingletonSet
+                mapOf(Unit to Unit).javaClass, // SingletonSet
+                NetworkHostAndPort::class.java,
+                SimpleString::class.java,
+                KryoException::class.java,
+                StringBuffer::class.java,
+                Unit::class.java,
+                java.io.ByteArrayInputStream::class.java,
+                java.lang.Class::class.java,
+                java.math.BigDecimal::class.java,
+                java.security.KeyPair::class.java,
+                java.time.Duration::class.java, // Matches the list in TimeSerializers.addDefaultSerializers:
+                java.time.Instant::class.java,
+                java.time.LocalDate::class.java,
+                java.time.LocalDateTime::class.java,
+                java.time.ZoneOffset::class.java,
+                java.time.ZoneId::class.java,
+                java.time.OffsetTime::class.java,
+                java.time.OffsetDateTime::class.java,
+                java.time.ZonedDateTime::class.java,
+                java.time.Year::class.java,
+                java.time.YearMonth::class.java,
+                java.time.MonthDay::class.java,
+                java.time.Period::class.java,
+                java.time.DayOfWeek::class.java, // No custom serialiser but it's an enum.
+                java.util.Collections.singletonMap("A", "B").javaClass,
+                java.util.LinkedHashMap::class.java,
+                BigDecimal::class.java,
+                LocalDate::class.java,
+                Period::class.java,
+                BitSet::class.java,
+                OnErrorNotImplementedException::class.java
+        ).map { custom.addToWhitelist(it) }
         return true
     }
 }
