@@ -109,7 +109,7 @@ Where:
   * ``OwnableState`` also override the default behavior of the vault's relevancy check. The default vault
     implementation will track any ``OwnableState`` of which it is the owner.
 
-* ``withNewOwner(newOwner: PublicKey)`` creates an identical copy of the state, only with a new owner
+* ``withNewOwner(newOwner: AbstractParty)`` creates an identical copy of the state, only with a new owner
 
 Other interfaces
 ^^^^^^^^^^^^^^^^

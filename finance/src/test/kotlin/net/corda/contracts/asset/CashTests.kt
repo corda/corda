@@ -30,11 +30,11 @@ class CashTests : TestDependencyInjectionBase() {
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
     val inState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
-            owner = AnonymousParty(DUMMY_PUBKEY_1)
+            owner = AnonymousParty(ALICE_PUBKEY)
     )
     // Input state held by the issuer
     val issuerInState = inState.copy(owner = defaultIssuer.party)
-    val outState = issuerInState.copy(owner = AnonymousParty(DUMMY_PUBKEY_2))
+    val outState = issuerInState.copy(owner = AnonymousParty(BOB_PUBKEY))
 
     fun Cash.State.editDepositRef(ref: Byte) = copy(
             amount = Amount(amount.quantity, token = amount.token.copy(amount.token.issuer.copy(reference = OpaqueBytes.of(ref))))
@@ -91,19 +91,19 @@ class CashTests : TestDependencyInjectionBase() {
             }
             tweak {
                 output { outState }
-                command(DUMMY_PUBKEY_2) { Cash.Commands.Move() }
+                command(BOB_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "the owning keys are a subset of the signing keys"
             }
             tweak {
                 output { outState }
                 output { outState `issued by` MINI_CORP }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "at least one cash input"
             }
             // Simple reallocation works.
             tweak {
                 output { outState }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 this.verifies()
             }
         }
@@ -127,14 +127,14 @@ class CashTests : TestDependencyInjectionBase() {
         // institution is allowed to issue as much cash as they want.
         transaction {
             output { outState }
-            command(DUMMY_PUBKEY_1) { Cash.Commands.Issue() }
+            command(ALICE_PUBKEY) { Cash.Commands.Issue() }
             this `fails with` "output states are issued by a command signer"
         }
         transaction {
             output {
                 Cash.State(
                         amount = 1000.DOLLARS `issued by` MINI_CORP.ref(12, 34),
-                        owner = AnonymousParty(DUMMY_PUBKEY_1)
+                        owner = AnonymousParty(ALICE_PUBKEY)
                 )
             }
             tweak {
@@ -151,13 +151,13 @@ class CashTests : TestDependencyInjectionBase() {
         initialiseTestSerialization()
         // Test generation works.
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
-            Cash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = AnonymousParty(DUMMY_PUBKEY_1), notary = DUMMY_NOTARY)
+            Cash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
         }.toWireTransaction()
         assertTrue(tx.inputs.isEmpty())
         val s = tx.outputsOfType<Cash.State>().single()
         assertEquals(100.DOLLARS `issued by` MINI_CORP.ref(12, 34), s.amount)
         assertEquals(MINI_CORP as AbstractParty, s.amount.token.issuer.party)
-        assertEquals(AnonymousParty(DUMMY_PUBKEY_1), s.owner)
+        assertEquals(AnonymousParty(ALICE_PUBKEY), s.owner)
         assertTrue(tx.commands[0].value is Cash.Commands.Issue)
         assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])
     }
@@ -168,7 +168,7 @@ class CashTests : TestDependencyInjectionBase() {
         // Test issuance from an issued amount
         val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
-            Cash().generateIssue(this, amount, owner = AnonymousParty(DUMMY_PUBKEY_1), notary = DUMMY_NOTARY)
+            Cash().generateIssue(this, amount, owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
         }.toWireTransaction()
         assertTrue(tx.inputs.isEmpty())
         assertEquals(tx.outputs[0], tx.outputs[0])
@@ -183,7 +183,7 @@ class CashTests : TestDependencyInjectionBase() {
 
             // Move fails: not allowed to summon money.
             tweak {
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
 
@@ -246,7 +246,7 @@ class CashTests : TestDependencyInjectionBase() {
     fun testMergeSplit() {
         // Splitting value works.
         transaction {
-            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             tweak {
                 input { inState }
                 val splits4 = inState.amount.splitEvenly(4)
@@ -313,7 +313,7 @@ class CashTests : TestDependencyInjectionBase() {
             input {
                 inState.copy(
                         amount = 150.POUNDS `issued by` defaultIssuer,
-                        owner = AnonymousParty(DUMMY_PUBKEY_2)
+                        owner = AnonymousParty(BOB_PUBKEY)
                 )
             }
             output { outState.copy(amount = 1150.DOLLARS `issued by` defaultIssuer) }
@@ -324,7 +324,7 @@ class CashTests : TestDependencyInjectionBase() {
             input { inState }
             input { inState `issued by` MINI_CORP }
             output { outState }
-            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't combine two different deposits at the same issuer.
@@ -390,7 +390,7 @@ class CashTests : TestDependencyInjectionBase() {
             input { inState }
             output { outState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
-            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
     }
@@ -404,20 +404,20 @@ class CashTests : TestDependencyInjectionBase() {
 
             // Can't merge them together.
             tweak {
-                output { inState.copy(owner = AnonymousParty(DUMMY_PUBKEY_2), amount = 2000.DOLLARS `issued by` defaultIssuer) }
+                output { inState.copy(owner = AnonymousParty(BOB_PUBKEY), amount = 2000.DOLLARS `issued by` defaultIssuer) }
                 this `fails with` "the amounts balance"
             }
             // Missing MiniCorp deposit
             tweak {
-                output { inState.copy(owner = AnonymousParty(DUMMY_PUBKEY_2)) }
-                output { inState.copy(owner = AnonymousParty(DUMMY_PUBKEY_2)) }
+                output { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
+                output { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
                 this `fails with` "the amounts balance"
             }
 
             // This works.
-            output { inState.copy(owner = AnonymousParty(DUMMY_PUBKEY_2)) }
-            output { inState.copy(owner = AnonymousParty(DUMMY_PUBKEY_2)) `issued by` MINI_CORP }
-            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            output { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
+            output { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) `issued by` MINI_CORP }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this.verifies()
         }
     }
@@ -426,12 +426,12 @@ class CashTests : TestDependencyInjectionBase() {
     fun multiCurrency() {
         // Check we can do an atomic currency trade tx.
         transaction {
-            val pounds = Cash.State(658.POUNDS `issued by` MINI_CORP.ref(3, 4, 5), AnonymousParty(DUMMY_PUBKEY_2))
-            input { inState `owned by` AnonymousParty(DUMMY_PUBKEY_1) }
+            val pounds = Cash.State(658.POUNDS `issued by` MINI_CORP.ref(3, 4, 5), AnonymousParty(BOB_PUBKEY))
+            input { inState `owned by` AnonymousParty(ALICE_PUBKEY) }
             input { pounds }
-            output { inState `owned by` AnonymousParty(DUMMY_PUBKEY_2) }
-            output { pounds `owned by` AnonymousParty(DUMMY_PUBKEY_1) }
-            command(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2) { Cash.Commands.Move() }
+            output { inState `owned by` AnonymousParty(BOB_PUBKEY) }
+            output { pounds `owned by` AnonymousParty(ALICE_PUBKEY) }
+            command(ALICE_PUBKEY, BOB_PUBKEY) { Cash.Commands.Move() }
 
             this.verifies()
         }
@@ -444,7 +444,7 @@ class CashTests : TestDependencyInjectionBase() {
     val OUR_KEY: KeyPair by lazy { generateKeyPair() }
     val OUR_IDENTITY_1: AbstractParty get() = AnonymousParty(OUR_KEY.public)
 
-    val THEIR_IDENTITY_1 = AnonymousParty(DUMMY_PUBKEY_2)
+    val THEIR_IDENTITY_1 = AnonymousParty(MINI_CORP_PUBKEY)
 
     fun makeCash(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1) =
             StateAndRef(
@@ -745,7 +745,7 @@ class CashTests : TestDependencyInjectionBase() {
 
             transaction {
                 input("MEGA_CORP cash")
-                output("MEGA_CORP cash".output<Cash.State>().copy(owner = AnonymousParty(DUMMY_PUBKEY_1)))
+                output("MEGA_CORP cash".output<Cash.State>().copy(owner = AnonymousParty(ALICE_PUBKEY)))
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                 this.verifies()
             }

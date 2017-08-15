@@ -6,10 +6,9 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
-import net.corda.core.serialization.AttachmentsClassLoader
-import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.*
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets
@@ -22,23 +21,13 @@ fun Kryo.addToWhitelist(type: Class<*>) {
     ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassWhitelist)?.add(type)
 }
 
-fun makeStandardClassResolver(): ClassResolver {
-    return CordaClassResolver(GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()))
-}
-
-fun makeNoWhitelistClassResolver(): ClassResolver {
-    return CordaClassResolver(AllWhitelist)
-}
-
-fun makeAllButBlacklistedClassResolver(): ClassResolver {
-    return CordaClassResolver(AllButBlacklisted)
-}
-
 /**
  * @param amqpEnabled Setting this to true turns on experimental AMQP serialization for any class annotated with
  * [CordaSerializable].
  */
-class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean = false) : DefaultClassResolver() {
+class CordaClassResolver(val serializationFactory: SerializationFactory, val serializationContext: SerializationContext) : DefaultClassResolver() {
+    val whitelist: ClassWhitelist = TransientClassWhiteList(serializationContext.whitelist)
+
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
         return super.getRegistration(type) ?: checkClass(type)
@@ -78,9 +67,9 @@ class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean
         // If something is not annotated, or AMQP is disabled, we stay serializing with Kryo.  This will typically be the
         // case for flow checkpoints (ignoring all cases where AMQP is disabled) since our top level messaging data structures
         // are annotated and once we enter AMQP serialisation we stay with it for the entire object subgraph.
-        if (checkForAnnotation(type) && amqpEnabled) {
+        if (checkForAnnotation(type) && AMQP_ENABLED) {
             // Build AMQP serializer
-            return register(Registration(type, KryoAMQPSerializer, NAME.toInt()))
+            return register(Registration(type, KryoAMQPSerializer(serializationFactory, serializationContext), NAME.toInt()))
         }
 
         val objectInstance = try {
@@ -169,6 +158,21 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
     companion object {
         val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
     }
+
+    override fun hasListed(type: Class<*>): Boolean {
+        return (type.name in whitelist) || delegate.hasListed(type)
+    }
+
+    override fun add(entry: Class<*>) {
+        whitelist += entry.name
+    }
+}
+
+/**
+ * A whitelist that can be customised via the [CordaPluginRegistry], since implements [MutableClassWhitelist].
+ */
+class TransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
+    val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
 
     override fun hasListed(type: Class<*>): Boolean {
         return (type.name in whitelist) || delegate.hasListed(type)

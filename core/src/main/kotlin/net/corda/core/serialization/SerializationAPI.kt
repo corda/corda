@@ -82,6 +82,11 @@ interface SerializationContext {
     fun withWhitelisted(clazz: Class<*>): SerializationContext
 
     /**
+     * Helper method to return a new context based on this context but with serialization using the format this header sequence represents.
+     */
+    fun withPreferredSerializationVersion(versionHeader: ByteSequence): SerializationContext
+
+    /**
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
     enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint }

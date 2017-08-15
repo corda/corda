@@ -1,6 +1,8 @@
 package net.corda.node.utilities
 
 import co.paralleluniverse.strands.Strand
+import org.hibernate.Session
+import org.hibernate.Transaction
 import rx.subjects.PublishSubject
 import rx.subjects.Subject
 import java.sql.Connection
@@ -21,13 +23,28 @@ class DatabaseTransaction(isolation: Int, val threadLocal: ThreadLocal<DatabaseT
                 }
     }
 
+    private val sessionDelegate = lazy {
+        val session = cordaPersistence.entityManagerFactory.withOptions().connection(connection).openSession()
+        hibernateTransaction = session.beginTransaction()
+        session
+    }
+
+    val session: Session by sessionDelegate
+    private lateinit var hibernateTransaction : Transaction
+
     val outerTransaction: DatabaseTransaction? = threadLocal.get()
 
     fun commit() {
+        if (sessionDelegate.isInitialized()) {
+            hibernateTransaction.commit()
+        }
         connection.commit()
     }
 
     fun rollback() {
+        if (sessionDelegate.isInitialized() && session.isOpen) {
+            session.clear()
+        }
         if (!connection.isClosed) {
             connection.rollback()
         }

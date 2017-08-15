@@ -35,6 +35,11 @@ UNRELEASED
 * Trader demo now issues cash and commercial paper directly from the bank node, rather than the seller node self-issuing
   commercial paper but labelling it as if issued by the bank.
 
+* Merged handling of well known and confidential identities in the identity service. Registration now takes in an identity
+  (either type) plus supporting certificate path, and de-anonymisation simply returns the issuing identity where known.
+  If you specifically need well known identities, use the network map, which is the authoritative source of current well
+  known identities.
+
 Milestone 14
 ------------
 

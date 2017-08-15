@@ -23,7 +23,7 @@ import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import net.corda.testing.DUMMY_PUBKEY_1
+import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import org.bouncycastle.asn1.x500.X500Name
@@ -92,7 +92,7 @@ object FlowCookbook {
             // We'll be using a dummy public key for demonstration purposes.
             // These are built in to Corda, and are generally used for writing
             // tests.
-            val dummyPubKey: PublicKey = DUMMY_PUBKEY_1
+            val dummyPubKey: PublicKey = ALICE_PUBKEY
 
             /**--------------------------
              * IDENTIFYING OTHER NODES *
