@@ -61,6 +61,11 @@ interface CordaRPCOps : RPCOps {
     override val protocolVersion: Int get() = nodeIdentity().platformVersion
 
     /**
+     * Returns a list of currently in-progress state machine infos.
+     */
+    fun stateMachinesSnapshot(): List<StateMachineInfo>
+
+    /**
      * Returns a data feed of currently in-progress state machine infos and an observable of future state machine adds/removes.
      */
     @RPCReturnsObservables
@@ -152,10 +157,20 @@ interface CordaRPCOps : RPCOps {
     // DOCEND VaultTrackAPIHelpers
 
     /**
+     * Returns a list of all recorded transactions.
+     */
+    fun verifiedTransactionsSnapshot(): List<SignedTransaction>
+
+    /**
      * Returns a data feed of all recorded transactions and an observable of future recorded ones.
      */
     @RPCReturnsObservables
     fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction>
+
+    /**
+     * Returns a snapshot list of existing state machine id - recorded transaction hash mappings.
+     */
+    fun stateMachineRecordedTransactionMappingSnapshot(): List<StateMachineTransactionMapping>
 
     /**
      * Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
@@ -163,6 +178,11 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping>
+
+    /**
+     * Returns all parties currently visible on the network with their advertised services.
+     */
+    fun networkMapSnapshot(): List<NodeInfo>
 
     /**
      * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.

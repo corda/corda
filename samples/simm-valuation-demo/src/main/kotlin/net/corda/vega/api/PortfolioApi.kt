@@ -253,8 +253,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     @Path("whoami")
     @Produces(MediaType.APPLICATION_JSON)
     fun getWhoAmI(): AvailableParties {
-        val (parties, partyUpdates) = rpc.networkMapFeed()
-        partyUpdates.notUsed()
+        val parties = rpc.networkMapSnapshot()
         val counterParties = parties.filterNot {
             it.advertisedServices.any { it.info.type in setOf(ServiceType.networkMap, ServiceType.notary) }
                     || it.legalIdentity == ownParty
