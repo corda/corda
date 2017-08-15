@@ -72,14 +72,14 @@ interface ServiceHub : ServicesForResolution {
      *
      * @param txs The transactions to record.
      */
-    fun recordTransactions(txs: Iterable<SignedTransaction>)
+    fun recordTransactions(txs: Iterable<SignedTransaction>, notifyVault: Boolean = true)
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing. This is expected to be run within a database transaction.
      */
-    fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction) {
-        recordTransactions(listOf(first, *remaining))
+    fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction, notifyVault: Boolean = true) {
+        recordTransactions(listOf(first, *remaining), notifyVault)
     }
 
     /**
@@ -92,8 +92,7 @@ interface ServiceHub : ServicesForResolution {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
         return if (stx.isNotaryChangeTransaction()) {
             stx.resolveNotaryChangeTransaction(this).outputs[stateRef.index]
-        }
-        else stx.tx.outputs[stateRef.index]
+        } else stx.tx.outputs[stateRef.index]
     }
 
     /**
@@ -106,8 +105,7 @@ interface ServiceHub : ServicesForResolution {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
         return if (stx.isNotaryChangeTransaction()) {
             stx.resolveNotaryChangeTransaction(this).outRef<T>(stateRef.index)
-        }
-        else {
+        } else {
             stx.tx.outRef<T>(stateRef.index)
         }
     }
