@@ -4,7 +4,6 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.carpenter.CarpenterSchemas
 import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
 import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
@@ -182,13 +181,13 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
      * Iterate over an AMQP schema, for each type ascertain weather it's on ClassPath of [classloader] amd
      * if not use the [ClassCarpenter] to generate a class to use in it's place
      */
-    private fun processSchema(schema: Schema, sentinal: Boolean = false) {
+    private fun processSchema(schema: Schema, sentinel: Boolean = false) {
         val carpenterSchemas = CarpenterSchemas.newInstance()
         for (typeNotation in schema.types) {
             try {
-            }
-            catch (e: ClassNotFoundException) {
-                if (sentinal || (typeNotation !is CompositeType)) throw e
+                processSchemaEntry(typeNotation)
+            } catch (e: ClassNotFoundException) {
+                if (sentinel || (typeNotation !is CompositeType)) throw e
                 typeNotation.carpenterSchema(classloader, carpenterSchemas = carpenterSchemas)
             }
         }
@@ -209,13 +208,13 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
 
     private fun processRestrictedType(typeNotation: RestrictedType) {
         // TODO: class loader logic, and compare the schema.
-        val type = typeForName(typeNotation.name)
+        val type = typeForName(typeNotation.name, classloader)
         get(null, type)
     }
 
-    private fun processCompositeType(typeNotation: CompositeType,
+    private fun processCompositeType(typeNotation: CompositeType) {
         // TODO: class loader logic, and compare the schema.
-        val type = typeForName(typeNotation.name, cl)
+        val type = typeForName(typeNotation.name, classloader)
         get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
     }
 

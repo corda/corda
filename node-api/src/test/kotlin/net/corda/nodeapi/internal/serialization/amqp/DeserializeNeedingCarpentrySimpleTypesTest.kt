@@ -16,8 +16,8 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
         private const val VERBOSE = false
     }
 
-    val sf  = SerializerFactory()
-    val sf2 = SerializerFactory()
+    val sf  = testDefaultFactory()
+    val sf2 = testDefaultFactory()
 
     @Test
     fun singleInt() {

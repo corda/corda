@@ -25,8 +25,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase() {
         private const val VERBOSE = false
     }
 
-    val sf1 = SerializerFactory()
-    val sf2 = SerializerFactory()
+    val sf1 = testDefaultFactory()
+    val sf2 = testDefaultFactory()
 
     @Test
     fun verySimpleType() {
@@ -165,7 +165,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase() {
     @Test
     fun nestedTypes() {
         val cc = ClassCarpenter()
-        val nestedClass = cc.build (ClassSchema(testName(),
+        val nestedClass = cc.build (ClassSchema("nestedType",
                 mapOf("name" to NonNullableField(String::class.java))))
 
         val outerClass = cc.build (ClassSchema("outerType",
@@ -174,6 +174,23 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase() {
         val classInstance = outerClass.constructors.first().newInstance(nestedClass.constructors.first().newInstance("name"))
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
         val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
+
+        val inner = deserializedObj::class.java.getMethod("getInner").invoke(deserializedObj)
+        assertEquals("name", inner::class.java.getMethod("getName").invoke(inner))
+    }
+
+    @Test
+    fun repeatedNestedTypes() {
+        val cc = ClassCarpenter()
+        val nestedClass = cc.build (ClassSchema("nestedType",
+                mapOf("name" to NonNullableField(String::class.java))))
+
+        data class outer(val a: Any, val b: Any)
+
+        val classInstance = outer (
+                nestedClass.constructors.first().newInstance("foo"),
+                nestedClass.constructors.first().newInstance("bar"))
+
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
         val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
