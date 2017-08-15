@@ -47,8 +47,9 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     }
 
     fun getSerializerFactory(): SerializerFactory {
-        return serializerFactoriesForContexts.computeIfAbsent(Pair(AllWhitelist, deserializationClassLoader)) {
-            SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        return serializerFactoriesForContexts.computeIfAbsent(Pair(
+                AllWhitelist, SerializationDefaults.javaClass.classLoader)) {
+            SerializerFactory(AllWhitelist, SerializationDefaults.javaClass.classLoader)
         }
     }
 

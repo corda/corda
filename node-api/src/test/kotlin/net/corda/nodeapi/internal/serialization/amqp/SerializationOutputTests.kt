@@ -14,6 +14,9 @@ import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
 import org.apache.qpid.proton.amqp.*
@@ -135,7 +138,8 @@ class SerializationOutputTests {
     data class PolymorphicProperty(val foo: FooInterface?)
 
     private fun serdes(obj: Any,
-                       factory: SerializerFactory = SerializerFactoryFactory.get(),
+                       factory: SerializerFactory = SerializerFactory (
+                               AllWhitelist, ClassLoader.getSystemClassLoader()),
                        freshDeserializationFactory: SerializerFactory = SerializerFactory(
                                AllWhitelist, ClassLoader.getSystemClassLoader()),
                        expectedEqual: Boolean = true,
@@ -527,10 +531,10 @@ class SerializationOutputTests {
     fun `test transaction state`() {
         val state = TransactionState(FooState(), MEGA_CORP)
 
-        val factory = SerializerFactory()
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         AbstractAMQPSerializationScheme.registerCustomSerializers(factory)
 
-        val factory2 = SerializerFactory()
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         AbstractAMQPSerializationScheme.registerCustomSerializers(factory2)
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)

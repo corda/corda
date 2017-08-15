@@ -16,30 +16,30 @@ class DeserializeSimpleTypesTests {
         private const val VERBOSE = false
     }
 
-    val sf1 = SerializerFactory()
-    val sf2 = SerializerFactory()
+    val sf1 = testDefaultFactory()
+    val sf2 = testDefaultFactory()
 
     @Test
     fun testChar() {
         data class C(val c: Char)
 
-        var deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('c')))
+        var deserializedC = DeserializationInput(sf).deserialize(SerializationOutput(sf).serialize(C('c')))
         assertEquals('c', deserializedC.c)
 
         // CYRILLIC CAPITAL LETTER YU (U+042E)
-        deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('Ю')))
+        deserializedC = DeserializationInput(sf).deserialize(SerializationOutput(sf).serialize(C('Ю')))
         assertEquals('Ю', deserializedC.c)
 
         // 	ARABIC LETTER FEH WITH DOT BELOW (U+06A3)
-        deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('ڣ')))
+        deserializedC = DeserializationInput(sf).deserialize(SerializationOutput(sf).serialize(C('ڣ')))
         assertEquals('ڣ', deserializedC.c)
 
         // 	ARABIC LETTER DAD WITH DOT BELOW (U+06FB)
-        deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('ۻ')))
+        deserializedC = DeserializationInput(sf).deserialize(SerializationOutput(sf).serialize(C('ۻ')))
         assertEquals('ۻ', deserializedC.c)
 
         // BENGALI LETTER AA (U+0986)
-        deserializedC = DeserializationInput().deserialize(SerializationOutput().serialize(C('আ')))
+        deserializedC = DeserializationInput(sf).deserialize(SerializationOutput(sf).serialize(C('আ')))
         assertEquals('আ', deserializedC.c)
     }
 
@@ -49,8 +49,8 @@ class DeserializeSimpleTypesTests {
         data class C(val c: Character)
 
         val c = C(Character('c'))
-        val serialisedC = SerializationOutput().serialize(c)
-        val deserializedC = DeserializationInput().deserialize(serialisedC)
+        val serialisedC = SerializationOutput(sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
 
         assertEquals(c.c, deserializedC.c)
     }
@@ -60,8 +60,8 @@ class DeserializeSimpleTypesTests {
         data class C(val c: Char?)
 
         val c = C(null)
-        val serialisedC = SerializationOutput().serialize(c)
-        val deserializedC = DeserializationInput().deserialize(serialisedC)
+        val serialisedC = SerializationOutput(sf).serialize(c)
+        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
 
         assertEquals(c.c, deserializedC.c)
     }
