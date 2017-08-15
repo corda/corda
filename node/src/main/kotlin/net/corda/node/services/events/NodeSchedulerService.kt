@@ -82,20 +82,15 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
 
                 @Column(name = "output_index", length = 36)
                 var outputIndex: Int = 0
-        ) : Serializable
+        ): Serializable
     }
 
     private class InnerState {
         var scheduledStates = createMap()
 
-        var earliestState: ScheduledStateRef? = null
+        var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue({ a, b -> a.scheduledAt.compareTo(b.scheduledAt) })
+
         var rescheduled: SettableFuture<Boolean>? = null
-
-        var queue = ScheduleIndex()
-
-        internal fun recomputeEarliest() {
-            earliestState = queue.peek()
-        }
     }
 
     private val mutex = ThreadBox(InnerState())
@@ -103,8 +98,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
-            queue.addAll(scheduledStates.all().map { it.second }.toMutableList())
-            recomputeEarliest()
+            scheduledStatesQueue.addAll(scheduledStates.all().map{ it.second }.toMutableList())
             rescheduleWakeUp()
         }
     }
@@ -112,19 +106,20 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
         mutex.locked {
-            val rev = scheduledStates[action.ref]
-            queue.set(rev, action)
-            scheduledStates.set(action.ref, action)
-            if (rev == null) {
+            val previousState = scheduledStates[action.ref]
+            scheduledStates[action.ref] = action
+            var previousEarliest = scheduledStatesQueue.peek()
+            scheduledStatesQueue.remove(previousState)
+            scheduledStatesQueue.add(action)
+            if (previousState == null) {
                 unfinishedSchedules.countUp()
             }
-            if (action.scheduledAt.isBefore(earliestState?.scheduledAt ?: Instant.MAX)) {
+
+            if (action.scheduledAt.isBefore(previousEarliest?.scheduledAt ?: Instant.MAX)) {
                 // We are earliest
-                earliestState = action
                 rescheduleWakeUp()
-            } else if (earliestState?.ref == action.ref && earliestState!!.scheduledAt != action.scheduledAt) {
+            } else if(previousEarliest?.ref == action.ref && previousEarliest.scheduledAt != action.scheduledAt) {
                 // We were earliest but might not be any more
-                recomputeEarliest()
                 rescheduleWakeUp()
             }
         }
@@ -135,10 +130,9 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         mutex.locked {
             val removedAction = scheduledStates.remove(ref)
             if (removedAction != null) {
-                queue.remove(removedAction)
+                scheduledStatesQueue.remove(removedAction)
                 unfinishedSchedules.countDown()
-                if (removedAction == earliestState) {
-                    recomputeEarliest()
+                if (removedAction == scheduledStatesQueue.peek()) {
                     rescheduleWakeUp()
                 }
             }
@@ -158,7 +152,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         val (scheduledState, ourRescheduledFuture) = mutex.alreadyLocked {
             rescheduled?.cancel(false)
             rescheduled = SettableFuture.create()
-            Pair(earliestState, rescheduled!!)
+            Pair(scheduledStatesQueue.peek(), rescheduled!!)
         }
         if (scheduledState != null) {
             schedulerTimerExecutor.execute {
@@ -200,22 +194,22 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
                     log.info("Scheduled state $scheduledState has rescheduled to never.")
                     unfinishedSchedules.countDown()
                     scheduledStates.remove(scheduledState.ref)
-                    queue.remove(scheduledState)
+                    scheduledStatesQueue.remove(scheduledState)
                 } else if (scheduledActivity.scheduledAt.isAfter(services.clock.instant())) {
                     log.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
                     var newState = ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
                     scheduledStates[scheduledState.ref] = newState
-                    queue.set(scheduledState, newState)
+                    scheduledStatesQueue.remove(scheduledState)
+                    scheduledStatesQueue.add(newState)
                 } else {
                     val flowLogic = FlowLogicRefFactoryImpl.toFlowLogic(scheduledActivity.logicRef)
                     log.trace { "Scheduler starting FlowLogic $flowLogic" }
                     scheduledFlow = flowLogic
                     scheduledStates.remove(scheduledState.ref)
-                    queue.remove(scheduledState)
+                    scheduledStatesQueue.remove(scheduledState)
                 }
             }
             // and schedule the next one
-            recomputeEarliest()
             rescheduleWakeUp()
         }
         return scheduledFlow
@@ -230,29 +224,6 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         } catch (e: Exception) {
             log.error("Attempt to run scheduled state $scheduledState resulted in error.", e)
             null
-        }
-    }
-
-    private class ScheduleIndex {
-        var orderedList: PriorityQueue<ScheduledStateRef> = PriorityQueue({ a, b -> a.scheduledAt.compareTo(b.scheduledAt) })
-
-        fun peek(): ScheduledStateRef? = orderedList.peek()
-
-        fun add(action: ScheduledStateRef) {
-                orderedList.add(action)
-        }
-
-        fun addAll(scheduledStates : MutableList<ScheduledStateRef>) {
-            orderedList.addAll(scheduledStates)
-        }
-
-        fun remove(action: ScheduledStateRef?){
-            orderedList.remove(action)
-        }
-
-        fun set(exitingAction: ScheduledStateRef?, newAction: ScheduledStateRef) {
-            remove(exitingAction)
-            add(newAction)
         }
     }
 }
