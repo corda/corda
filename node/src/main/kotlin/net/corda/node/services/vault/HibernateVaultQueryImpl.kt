@@ -18,7 +18,9 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import net.corda.node.services.database.HibernateConfiguration
+import org.hibernate.Session
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.subjects.PublishSubject
 import rx.Observable
@@ -37,6 +39,27 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
     private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
     private val criteriaBuilder = sessionFactory.criteriaBuilder
 
+
+    /**
+     * Maintain a list of contract state interfaces to concrete types stored in the vault
+     * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
+     */
+    private val contractTypeMappings = mutableMapOf<String, MutableSet<String>>()
+
+    init {
+        updatesPublisher.subscribe { update ->
+            update.produced.forEach {
+                val concreteType = it.state.data.javaClass
+                log.trace { "State update of type: $concreteType" }
+                val contractInterfaces = deriveContractInterfaces(concreteType)
+                contractInterfaces.map {
+                    val contractInterface = contractTypeMappings.getOrPut(it.name, { mutableSetOf() })
+                    contractInterface.add(concreteType.name)
+                }
+            }
+        }
+    }
+
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractType, criteria: $criteria, pagination: $paging, sorting: $sorting")
@@ -50,15 +73,12 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
             totalStates = results.otherResults[0] as Long
         }
 
-        val session = sessionFactory.withOptions().
-                connection(TransactionManager.current().connection).
-                openSession()
+        val session = getSession()
 
         session.use {
             val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
             val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
 
-            val contractTypeMappings = resolveUniqueContractStateTypes(session)
             // TODO: revisit (use single instance of parser for all queries)
             val criteriaParser = HibernateQueryCriteriaParser(contractType, contractTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
 
@@ -128,29 +148,10 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
         }
     }
 
-    /**
-     * Maintain a list of contract state interfaces to concrete types stored in the vault
-     * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
-     */
-    fun resolveUniqueContractStateTypes(session: EntityManager): Map<String, List<String>> {
-        val criteria = criteriaBuilder.createQuery(String::class.java)
-        val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
-        criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
-        val query = session.createQuery(criteria)
-        val results = query.resultList
-        val distinctTypes = results.map { it }
-
-        val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableList<String>>()
-        distinctTypes.forEach { it ->
-            @Suppress("UNCHECKED_CAST")
-            val concreteType = Class.forName(it) as Class<ContractState>
-            val contractInterfaces = deriveContractInterfaces(concreteType)
-            contractInterfaces.map {
-                val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableListOf() })
-                contractInterface.add(concreteType.name)
-            }
-        }
-        return contractInterfaceToConcreteTypes
+    private fun getSession(): Session {
+        return sessionFactory.withOptions().
+                connection(TransactionManager.current().connection).
+                openSession()
     }
 
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
