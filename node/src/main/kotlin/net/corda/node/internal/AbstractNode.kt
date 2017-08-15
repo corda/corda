@@ -67,6 +67,7 @@ import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
@@ -718,24 +719,26 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        val (cert, keyPair) = keyStore.certificateAndKeyPair(privateKeyAlias)
-
+        val (cert, keys) = keyStore.certificateAndKeyPair(privateKeyAlias)
         // Get keys from keystore.
         val loadedServiceName = cert.subject
         if (loadedServiceName != serviceName)
             throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:$serviceName vs $loadedServiceName")
 
-        val certPath = CertificateFactory.getInstance("X509").generateCertPath(keyStore.getCertificateChain(privateKeyAlias).toList())
         // Use composite key instead if exists
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
-        val publicKey = if (keyStore.containsAlias(compositeKeyAlias)) {
-            Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
+        val (keyPair, certs) = if (keyStore.containsAlias(compositeKeyAlias)) {
+            val compositeKey = Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
+            val compositeKeyCert = keyStore.getCertificate(compositeKeyAlias)
+            // We have to create the certificate chain for the composite key manually, this is because in order to store
+            // the chain in keystore we need a private key, however there are no corresponding private key for composite key.
+            Pair(KeyPair(compositeKey, keys.private), listOf(compositeKeyCert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
         } else {
-            keyPair.public
+            Pair(keys, keyStore.getCertificateChain(privateKeyAlias).toList())
         }
-
-        partyKeys += keyPair
-        return Pair(PartyAndCertificate(loadedServiceName, publicKey, cert, certPath), keyPair)
+        val certPath = CertificateFactory.getInstance("X509").generateCertPath(certs)
+        partyKeys += keys
+        return Pair(PartyAndCertificate(loadedServiceName, keyPair.public, X509CertificateHolder(certs.first().encoded), certPath), keyPair)
     }
 
     private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
