@@ -55,7 +55,7 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
 
             @Column(name = "node_party_path", length = 4096)
             var certPath: ByteArray = ByteArray(0)
-    ) : Serializable
+    ): Serializable
 
     private companion object {
         private val factory = CertificateFactory.getInstance("X.509")
