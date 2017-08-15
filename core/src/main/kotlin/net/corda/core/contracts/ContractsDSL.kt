@@ -55,13 +55,6 @@ object Requirements {
     infix inline fun String.using(expr: Boolean) {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
     }
-    // Avoid overloading Kotlin keywords
-    @Deprecated("This function is deprecated, use 'using' instead",
-        ReplaceWith("using (expr)", "net.corda.core.contracts.Requirements.using"))
-    @Suppress("NOTHING_TO_INLINE")   // Inlining this takes it out of our committed ABI.
-    infix inline fun String.by(expr: Boolean) {
-        using(expr)
-    }
 }
 
 inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()

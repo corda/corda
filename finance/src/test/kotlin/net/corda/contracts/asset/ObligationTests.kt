@@ -44,7 +44,7 @@ class ObligationTests {
             quantity = 1000.DOLLARS.quantity,
             beneficiary = CHARLIE
     )
-    val outState = inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2))
+    val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
     val miniCorpServices = MockServices(MINI_CORP_KEY)
     val notaryServices = MockServices(DUMMY_NOTARY_KEY)
 
@@ -81,7 +81,7 @@ class ObligationTests {
             }
             tweak {
                 output { outState }
-                command(DUMMY_PUBKEY_2) { Obligation.Commands.Move() }
+                command(BOB_PUBKEY) { Obligation.Commands.Move() }
                 this `fails with` "the owning keys are a subset of the signing keys"
             }
             tweak {
@@ -629,7 +629,7 @@ class ObligationTests {
                 inState.copy(
                         quantity = 15000,
                         template = megaCorpPoundSettlement,
-                        beneficiary = AnonymousParty(DUMMY_PUBKEY_2)
+                        beneficiary = AnonymousParty(BOB_PUBKEY)
                 )
             }
             output { outState.copy(quantity = 115000) }
@@ -702,19 +702,19 @@ class ObligationTests {
 
             // Can't merge them together.
             tweak {
-                output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2), quantity = 200000L) }
+                output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY), quantity = 200000L) }
                 this `fails with` "the amounts balance"
             }
             // Missing MiniCorp deposit
             tweak {
-                output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2)) }
-                output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2)) }
+                output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) }
+                output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) }
                 this `fails with` "the amounts balance"
             }
 
             // This works.
-            output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2)) }
-            output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2)) `issued by` MINI_CORP }
+            output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) }
+            output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) `issued by` MINI_CORP }
             command(CHARLIE.owningKey) { Obligation.Commands.Move() }
             this.verifies()
         }
@@ -724,12 +724,12 @@ class ObligationTests {
     fun multiCurrency() {
         // Check we can do an atomic currency trade tx.
         transaction {
-            val pounds = Obligation.State(Lifecycle.NORMAL, MINI_CORP, megaCorpPoundSettlement, 658.POUNDS.quantity, AnonymousParty(DUMMY_PUBKEY_2))
+            val pounds = Obligation.State(Lifecycle.NORMAL, MINI_CORP, megaCorpPoundSettlement, 658.POUNDS.quantity, AnonymousParty(BOB_PUBKEY))
             input { inState `owned by` CHARLIE }
             input { pounds }
-            output { inState `owned by` AnonymousParty(DUMMY_PUBKEY_2) }
+            output { inState `owned by` AnonymousParty(BOB_PUBKEY) }
             output { pounds `owned by` CHARLIE }
-            command(CHARLIE.owningKey, DUMMY_PUBKEY_2) { Obligation.Commands.Move() }
+            command(CHARLIE.owningKey, BOB_PUBKEY) { Obligation.Commands.Move() }
 
             this.verifies()
         }

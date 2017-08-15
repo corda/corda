@@ -171,7 +171,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
             index = txnState.index
             stateStatus = Vault.StateStatus.UNCONSUMED
             contractStateClassName = DummyContract.SingleOwnerState::class.java.name
-            contractState = DummyContract.SingleOwnerState(owner = AnonymousParty(DUMMY_PUBKEY_1)).serialize().bytes
+            contractState = DummyContract.SingleOwnerState(owner = AnonymousParty(MEGA_CORP_PUBKEY)).serialize().bytes
             notaryName = txn.tx.notary!!.name.toString()
             notaryKey = txn.tx.notary!!.owningKey.toBase58String()
             recordedTime = Instant.now()

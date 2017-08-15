@@ -8,19 +8,20 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.testing.TestDependencyInjectionBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 
-class SerializationTokenTest {
+class SerializationTokenTest  : TestDependencyInjectionBase() {
 
     lateinit var factory: SerializationFactory
     lateinit var context: SerializationContext
 
     @Before
     fun setup() {
-        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
+        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
         context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
                 AllWhitelist,
@@ -96,7 +97,7 @@ class SerializationTokenTest {
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)
 
-        val kryo: Kryo = DefaultKryoCustomizer.customize(CordaKryo(makeNoWhitelistClassResolver()))
+        val kryo: Kryo = DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(factory, this.context)))
         val stream = ByteArrayOutputStream()
             Output(stream).use {
                 it.write(KryoHeaderV0_1.bytes)
