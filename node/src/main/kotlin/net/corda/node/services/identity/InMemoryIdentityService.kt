@@ -44,9 +44,8 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
      */
     override val caCertStore: CertStore
     override val trustRootHolder = X509CertificateHolder(trustRoot.encoded)
-    private val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
+    override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
-    private val keyToIssuingParty = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val principalToParties = ConcurrentHashMap<X500Name, PartyAndCertificate>()
 
     init {
@@ -56,16 +55,17 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         principalToParties.putAll(identities.associateBy { it.name })
         confidentialIdentities.forEach { identity ->
             require(identity.certPath.certificates.size >= 2) { "Certificate path must at least include subject and issuing certificates" }
-            keyToIssuingParty[identity.owningKey] = keyToParties[identity.certPath.certificates[1].publicKey]!!
             principalToParties.computeIfAbsent(identity.name) { identity }
         }
     }
 
-    override fun registerIdentity(party: PartyAndCertificate) = verifyAndRegisterIdentity(party)
+    override fun registerIdentity(party: PartyAndCertificate) {
+        verifyAndRegisterIdentity(party)
+    }
 
     // TODO: Check the certificate validation logic
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate) {
+    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         require(identity.certPath.certificates.size >= 2) { "Certificate path must at least include subject and issuing certificates" }
         // Validate the chain first, before we do anything clever with it
         identity.verify(trustAnchor)
@@ -74,25 +74,32 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         require(Arrays.equals(identity.certificate.subjectPublicKeyInfo.encoded, identity.owningKey.encoded)) { "Party certificate must end with party's public key" }
 
         keyToParties[identity.owningKey] = identity
-        // TODO: This map should only be deanonymised parties, not all issuers, but we have no good way of checking for
-        // confidential vs anonymous identities
-        val issuer = keyToParties[identity.certPath.certificates[1].publicKey]
-        if (issuer != null) {
-            keyToIssuingParty[identity.owningKey] = issuer
-        }
         // Always keep the first party we registered, as that's the well known identity
         principalToParties.computeIfAbsent(identity.name) { identity }
+        return keyToParties[identity.certPath.certificates[1].publicKey]
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[owningKey]
-    override fun certificateFromParty(party: Party): PartyAndCertificate? = principalToParties[party.name]
+    override fun certificateFromParty(party: Party): PartyAndCertificate = principalToParties[party.name] ?: throw IllegalArgumentException("Unknown identity ${party.name}")
 
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = java.util.ArrayList(keyToParties.values)
 
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
     override fun partyFromX500Name(principal: X500Name): Party? = principalToParties[principal]?.party
-    override fun partyFromAnonymous(party: AbstractParty) = party as? Party ?: keyToIssuingParty[party.owningKey]?.party
+    override fun partyFromAnonymous(party: AbstractParty): Party? {
+        // Expand the anonymous party to a full party (i.e. has a name) if possible
+        val candidate = party as? Party ?: keyToParties[party.owningKey]?.party
+        // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
+        // Look up the well known identity for that name
+        return if (candidate != null) {
+            // If we have a well known identity by that name, use it in preference to the candidate. Otherwise default
+            // back to the candidate.
+            principalToParties[candidate.name]?.party ?: candidate
+        } else {
+            null
+        }
+    }
     override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
     override fun requirePartyFromAnonymous(party: AbstractParty): Party {
         return partyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
