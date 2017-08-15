@@ -64,7 +64,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database = databaseAndServices.first
         services = databaseAndServices.second
         // register additional identities
-        identitySvc.registerIdentity(CASH_NOTARY_IDENTITY)
+        identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
         notaryServices = MockServices(DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
     }
 
@@ -423,7 +423,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed linear states for single participant`() {
         database.transaction {
-            identitySvc.registerIdentity(BIG_CORP_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
 
             services.fillWithSomeTestLinearStates(2, "TEST", participants = listOf(MEGA_CORP, MINI_CORP))
             services.fillWithSomeTestDeals(listOf("456"), participants = listOf(MEGA_CORP, BIG_CORP))
@@ -439,7 +439,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed linear states for two participants`() {
         database.transaction {
-            identitySvc.registerIdentity(BIG_CORP_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
 
             services.fillWithSomeTestLinearStates(2, "TEST", participants = listOf(MEGA_CORP, MINI_CORP))
             services.fillWithSomeTestDeals(listOf("456"), participants = listOf(MEGA_CORP, BIG_CORP))
@@ -800,7 +800,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `aggregate functions sum by issuer and currency and sort by aggregate sum`() {
         database.transaction {
-            identitySvc.registerIdentity(BOC_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
 
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
             services.fillWithSomeTestCash(200.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1))
@@ -1403,7 +1403,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed fungible assets for specific issuer party and refs`() {
         database.transaction {
-            identitySvc.registerIdentity(BOC_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
 
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), ref = OpaqueBytes.of(1))
@@ -1433,9 +1433,6 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val chfCashIssuerServices = MockServices(chfCashIssuerKey)
 
         database.transaction {
-//            identitySvc.registerIdentity(GBP_CASH_IDENTITY)
-//            identitySvc.registerIdentity(USD_CASH_IDENTITY)
-//            identitySvc.registerIdentity(CHF_CASH_IDENTITY)
 
             services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (gbpCashIssuer))
             services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (usdCashIssuer))
@@ -1567,7 +1564,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed fungible assets for issuer party`() {
         database.transaction {
-            identitySvc.registerIdentity(BOC_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
 
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)))
@@ -1839,7 +1836,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed linear heads for single participant`() {
         database.transaction {
-            identitySvc.registerIdentity(ALICE_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(ALICE_IDENTITY)
             services.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE))
             services.fillWithSomeTestLinearStates(1)
             services.fillWithSomeTestLinearStates(1, "TEST3")
@@ -1855,9 +1852,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed linear heads for multiple participants`() {
         database.transaction {
-            identitySvc.registerIdentity(ALICE_IDENTITY)
-            identitySvc.registerIdentity(BOB_IDENTITY)
-            identitySvc.registerIdentity(CHARLIE_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(ALICE_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(BOB_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(CHARLIE_IDENTITY)
 
             services.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE,BOB,CHARLIE))
             services.fillWithSomeTestLinearStates(1)
