@@ -730,6 +730,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val (keyPair, certs) = if (keyStore.containsAlias(compositeKeyAlias)) {
             val compositeKey = Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
             val compositeKeyCert = keyStore.getCertificate(compositeKeyAlias)
+            // We have to create the certificate chain for the composite key manually, this is because in order to store
+            // the chain in keystore we need a private key, however there are no corresponding private key for composite key.
             Pair(KeyPair(compositeKey, keys.private), listOf(compositeKeyCert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
         } else {
             Pair(keys, keyStore.getCertificateChain(privateKeyAlias).toList())
