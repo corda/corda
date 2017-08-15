@@ -3,13 +3,12 @@ package net.corda.flows
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.`issued by`
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.trackBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.node.utilities.transaction
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
@@ -32,14 +31,12 @@ class CashPaymentFlowTests {
 
     @Before
     fun start() {
-        val nodes = mockNet.createTwoNodes()
-        notaryNode = nodes.first
-        bankOfCordaNode = nodes.second
+        val nodes = mockNet.createSomeNodes(1)
+        notaryNode = nodes.notaryNode
+        bankOfCordaNode = nodes.partyNodes[0]
         notary = notaryNode.info.notaryIdentity
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 
-        notaryNode.services.identityService.registerIdentity(bankOfCordaNode.info.legalIdentityAndCert)
-        bankOfCordaNode.services.identityService.registerIdentity(notaryNode.info.legalIdentityAndCert)
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref,
                 bankOfCorda,
                 notary)).resultFuture
@@ -75,17 +72,17 @@ class CashPaymentFlowTests {
                 expect { update ->
                     require(update.consumed.size == 1) { "Expected 1 consumed states, actual: $update" }
                     require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
-                    val changeState = update.produced.single().state.data as Cash.State
+                    val changeState = update.produced.single().state.data
                     assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
                 }
             }
 
             // Check notary node vault updates
             vaultUpdatesBankClient.expectEvents {
-                expect { update ->
-                    require(update.consumed.isEmpty()) { update.consumed.size }
-                    require(update.produced.size == 1) { update.produced.size }
-                    val paymentState = update.produced.single().state.data as Cash.State
+                expect { (consumed, produced) ->
+                    require(consumed.isEmpty()) { consumed.size }
+                    require(produced.size == 1) { produced.size }
+                    val paymentState = produced.single().state.data
                     assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
                 }
             }

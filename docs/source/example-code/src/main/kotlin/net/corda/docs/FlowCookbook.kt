@@ -1,16 +1,15 @@
+@file:Suppress("UNUSED_VARIABLE", "unused")
+
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.contracts.TransactionType.General
-import net.corda.core.contracts.TransactionType.NotaryChange
-import net.corda.testing.contracts.DummyContract
-import net.corda.testing.contracts.DummyState
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.FetchDataFlow
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
@@ -19,18 +18,16 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_PUBKEY_1
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import net.corda.flows.CollectSignaturesFlow
-import net.corda.flows.FinalityFlow
-import net.corda.flows.ResolveTransactionsFlow
-import net.corda.flows.SignTransactionFlow
+import net.corda.testing.ALICE_PUBKEY
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyState
 import org.bouncycastle.asn1.x500.X500Name
 import java.security.PublicKey
-import java.time.Duration
 import java.time.Instant
 
 // We group our two flows inside a singleton object to indicate that they work
@@ -89,12 +86,13 @@ object FlowCookbook {
 
         override val progressTracker: ProgressTracker = tracker()
 
+        @Suppress("RemoveExplicitTypeArguments")
         @Suspendable
         override fun call() {
             // We'll be using a dummy public key for demonstration purposes.
             // These are built in to Corda, and are generally used for writing
             // tests.
-            val dummyPubKey: PublicKey = DUMMY_PUBKEY_1
+            val dummyPubKey: PublicKey = ALICE_PUBKEY
 
             /**--------------------------
              * IDENTIFYING OTHER NODES *
@@ -251,11 +249,11 @@ object FlowCookbook {
             // public keys. To be valid, the transaction requires a signature
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
-            val commandData: CommandData = DummyContract.Commands.Create()
+            val commandData: DummyContract.Commands.Create = DummyContract.Commands.Create()
             val ourPubKey: PublicKey = serviceHub.legalIdentityKey
             val counterpartyPubKey: PublicKey = counterparty.owningKey
             val requiredSigners: List<PublicKey> = listOf(ourPubKey, counterpartyPubKey)
-            val ourCommand: Command = Command(commandData, requiredSigners)
+            val ourCommand: Command<DummyContract.Commands.Create> = Command(commandData, requiredSigners)
             // DOCEND 24
 
             // ``CommandData`` can either be:
@@ -284,11 +282,11 @@ object FlowCookbook {
             // We can also define a time window as an ``Instant`` +/- a time
             // tolerance (e.g. 30 seconds):
             // DOCSTART 42
-            val ourTimeWindow2: TimeWindow = TimeWindow.withTolerance(Instant.now(), Duration.ofSeconds(30))
+            val ourTimeWindow2: TimeWindow = TimeWindow.withTolerance(Instant.now(), 30.seconds)
             // DOCEND 42
             // Or as a start-time plus a duration:
             // DOCSTART 43
-            val ourTimeWindow3: TimeWindow = TimeWindow.fromStartAndDuration(Instant.now(), Duration.ofSeconds(30))
+            val ourTimeWindow3: TimeWindow = TimeWindow.fromStartAndDuration(Instant.now(), 30.seconds)
             // DOCEND 43
 
             /**-----------------------
@@ -296,16 +294,13 @@ object FlowCookbook {
             -----------------------**/
             progressTracker.currentStep = TX_BUILDING
 
-            // There are two types of transaction (notary-change and general),
-            // and therefore two types of transaction builder:
             // DOCSTART 19
-            val notaryChangeTxBuilder: TransactionBuilder = TransactionBuilder(NotaryChange, specificNotary)
-            val regTxBuilder: TransactionBuilder = TransactionBuilder(General, specificNotary)
+            val txBuilder: TransactionBuilder = TransactionBuilder(specificNotary)
             // DOCEND 19
 
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:
             // DOCSTART 27
-            regTxBuilder.withItems(
+            txBuilder.withItems(
                     // Inputs, as ``StateRef``s that reference the outputs of previous transactions
                     ourStateAndRef,
                     // Outputs, as ``ContractState``s
@@ -317,20 +312,20 @@ object FlowCookbook {
 
             // We can also add items using methods for the individual components:
             // DOCSTART 28
-            regTxBuilder.addInputState(ourStateAndRef)
-            regTxBuilder.addOutputState(ourOutput)
-            regTxBuilder.addCommand(ourCommand)
-            regTxBuilder.addAttachment(ourAttachment)
+            txBuilder.addInputState(ourStateAndRef)
+            txBuilder.addOutputState(ourOutput)
+            txBuilder.addCommand(ourCommand)
+            txBuilder.addAttachment(ourAttachment)
             // DOCEND 28
 
             // There are several ways of setting the transaction's time-window.
             // We can set a time-window directly:
             // DOCSTART 44
-            regTxBuilder.setTimeWindow(ourTimeWindow)
+            txBuilder.setTimeWindow(ourTimeWindow)
             // DOCEND 44
             // Or as a start time plus a duration (e.g. 45 seconds):
             // DOCSTART 45
-            regTxBuilder.setTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(45))
+            txBuilder.setTimeWindow(serviceHub.clock.instant(), 45.seconds)
             // DOCEND 45
 
             /**----------------------
@@ -341,12 +336,12 @@ object FlowCookbook {
             // We finalise the transaction by signing it, converting it into a
             // ``SignedTransaction``.
             // DOCSTART 29
-            val onceSignedTx: SignedTransaction = serviceHub.signInitialTransaction(regTxBuilder)
+            val onceSignedTx: SignedTransaction = serviceHub.signInitialTransaction(txBuilder)
             // DOCEND 29
             // We can also sign the transaction using a different public key:
             // DOCSTART 30
             val otherKey: PublicKey = serviceHub.keyManagementService.freshKey()
-            val onceSignedTx2: SignedTransaction = serviceHub.signInitialTransaction(regTxBuilder, otherKey)
+            val onceSignedTx2: SignedTransaction = serviceHub.signInitialTransaction(txBuilder, otherKey)
             // DOCEND 30
 
             // If instead this was a ``SignedTransaction`` that we'd received
@@ -368,11 +363,11 @@ object FlowCookbook {
             // node does not need to check we haven't changed anything in the
             // transaction.
             // DOCSTART 40
-            val sig: DigitalSignature.WithKey = serviceHub.createSignature(onceSignedTx)
+            val sig: TransactionSignature = serviceHub.createSignature(onceSignedTx)
             // DOCEND 40
             // And again, if we wanted to use a different public key:
             // DOCSTART 41
-            val sig2: DigitalSignature.WithKey = serviceHub.createSignature(onceSignedTx, otherKey2)
+            val sig2: TransactionSignature = serviceHub.createSignature(onceSignedTx, otherKey2)
             // DOCEND 41
 
             // In practice, however, the process of gathering every signature
@@ -384,18 +379,34 @@ object FlowCookbook {
             ---------------------------**/
             progressTracker.currentStep = TX_VERIFICATION
 
-            // Verifying a transaction will also verify every transaction in
-            // the transaction's dependency chain. So if this was a
-            // transaction we'd received from a counterparty and it had any
-            // dependencies, we'd need to download all of these dependencies
-            // using``ResolveTransactionsFlow`` before verifying it.
+            // Verifying a transaction will also verify every transaction in the transaction's dependency chain, which will require
+            // transaction data access on counterparty's node. The ``SendTransactionFlow`` can be used to automate the sending
+            // and data vending process. The ``SendTransactionFlow`` will listen for data request until the transaction
+            // is resolved and verified on the other side:
+            // DOCSTART 12
+            subFlow(SendTransactionFlow(counterparty, twiceSignedTx))
+
+            // Optional request verification to further restrict data access.
+            subFlow(object :SendTransactionFlow(counterparty, twiceSignedTx){
+                override fun verifyDataRequest(dataRequest: FetchDataFlow.Request.Data) {
+                    // Extra request verification.
+                }
+            })
+            // DOCEND 12
+
+            // We can receive the transaction using ``ReceiveTransactionFlow``,
+            // which will automatically download all the dependencies and verify
+            // the transaction
             // DOCSTART 13
-            subFlow(ResolveTransactionsFlow(twiceSignedTx, counterparty))
+            val verifiedTransaction = subFlow(ReceiveTransactionFlow(counterparty))
             // DOCEND 13
 
-            // We can also resolve a `StateRef` dependency chain.
+            // We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies.
             // DOCSTART 14
-            subFlow(ResolveTransactionsFlow(setOf(ourStateRef.txhash), counterparty))
+            subFlow(SendStateAndRefFlow(counterparty, dummyStates))
+
+            // On the receive side ...
+            val resolvedStateAndRef = subFlow(ReceiveStateAndRefFlow<DummyState>(counterparty))
             // DOCEND 14
 
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``
@@ -424,7 +435,7 @@ object FlowCookbook {
             // sign it! We need to make sure the transaction represents an
             // agreement we actually want to enter into.
             // DOCSTART 34
-            val outputState: DummyState = wireTx.outputs.single().data as DummyState
+            val outputState: DummyState = wireTx.outputsOfType<DummyState>().single()
             if (outputState.magicNumber == 777) {
                 // ``FlowException`` is a special exception type. It will be
                 // propagated back to any counterparty flows waiting for a
@@ -461,14 +472,14 @@ object FlowCookbook {
             // We can verify that a transaction has all the required
             // signatures, and that they're all valid, by running:
             // DOCSTART 35
-            fullySignedTx.verifySignatures()
+            fullySignedTx.verifyRequiredSignatures()
             // DOCEND 35
 
             // If the transaction is only partially signed, we have to pass in
             // a list of the public keys corresponding to the missing
             // signatures, explicitly telling the system not to check them.
             // DOCSTART 36
-            onceSignedTx.verifySignatures(counterpartyPubKey)
+            onceSignedTx.verifySignaturesExcept(counterpartyPubKey)
             // DOCEND 36
 
             // We can also choose to only check the signatures that are
@@ -556,7 +567,7 @@ object FlowCookbook {
             val signTransactionFlow: SignTransactionFlow = object : SignTransactionFlow(counterparty) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     // Any additional checking we see fit...
-                    val outputState = stx.tx.outputs.single().data as DummyState
+                    val outputState = stx.tx.outputsOfType<DummyState>().single()
                     assert(outputState.magicNumber == 777)
                 }
             }

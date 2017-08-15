@@ -1,6 +1,6 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -17,15 +17,17 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
  * Each instance of this class creates such a configHome, accessible via [path].
  * The files are deleted on [close] typically via [use], see [PathManager] for details.
  */
-class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, debug: Boolean = false) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
+class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, debug: Boolean, val exposeRaces: Boolean) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
     companion object {
         private val log = loggerFor<BFTSMaRtConfig>()
         internal val portIsClaimedFormat = "Port %s is claimed by another replica: %s"
     }
 
+    val clusterSize get() = replicaAddresses.size
+
     init {
         val claimedPorts = mutableSetOf<NetworkHostAndPort>()
-        val n = replicaAddresses.size
+        val n = clusterSize
         (0 until n).forEach { replicaId ->
             // Each replica claims the configured port and the next one:
             replicaPorts(replicaId).forEach { port ->

@@ -1,40 +1,37 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.RPCOps
-import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.ALICE
-import net.corda.testing.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
+import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
-import net.corda.testing.freeLocalHostAndPort
-import net.corda.testing.freePort
+import net.corda.testing.*
 import net.corda.testing.node.MOCK_VERSION_INFO
 import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.testNodeConfiguration
+import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.Closeable
 import java.net.ServerSocket
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
@@ -43,7 +40,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 //TODO This needs to be merged into P2PMessagingTest as that creates a more realistic environment
-class ArtemisMessagingTests {
+class ArtemisMessagingTests : TestDependencyInjectionBase() {
     @Rule @JvmField val temporaryFolder = TemporaryFolder()
 
     val serverPort = freePort()
@@ -52,10 +49,9 @@ class ArtemisMessagingTests {
     val identity = generateKeyPair()
 
     lateinit var config: NodeConfiguration
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var userService: RPCUserService
-    lateinit var networkMapRegistrationFuture: ListenableFuture<Unit>
+    lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
 
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
@@ -75,10 +71,8 @@ class ArtemisMessagingTests {
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
-        networkMapRegistrationFuture = Futures.immediateFuture(Unit)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+        networkMapRegistrationFuture = doneFuture(Unit)
     }
 
     @After
@@ -87,7 +81,7 @@ class ArtemisMessagingTests {
         messagingServer?.stop()
         messagingClient = null
         messagingServer = null
-        dataSource.close()
+        database.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
@@ -142,7 +136,7 @@ class ArtemisMessagingTests {
 
     @Test
     fun `client should be able to send message to itself before network map is available, and receive after`() {
-        val settableFuture: SettableFuture<Unit> = SettableFuture.create()
+        val settableFuture = openFuture<Unit>()
         networkMapRegistrationFuture = settableFuture
 
         val receivedMessages = LinkedBlockingQueue<Message>()
@@ -167,7 +161,7 @@ class ArtemisMessagingTests {
     fun `client should be able to send large numbers of messages to itself before network map is available and survive restart, then receive messages`() {
         // Crank the iteration up as high as you want... just takes longer to run.
         val iterations = 100
-        networkMapRegistrationFuture = SettableFuture.create()
+        networkMapRegistrationFuture = openFuture()
 
         val receivedMessages = LinkedBlockingQueue<Message>()
 
@@ -188,7 +182,7 @@ class ArtemisMessagingTests {
         messagingClient.stop()
         messagingServer?.stop()
 
-        networkMapRegistrationFuture = Futures.immediateFuture(Unit)
+        networkMapRegistrationFuture = doneFuture(Unit)
 
         createAndStartClientAndServer(receivedMessages)
         for (iter in 1..iterations) {

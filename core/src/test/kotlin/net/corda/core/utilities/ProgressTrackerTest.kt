@@ -1,11 +1,5 @@
 package net.corda.core.utilities
 
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.KryoSerializable
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
-import net.corda.core.serialization.createTestKryo
-import net.corda.core.serialization.serialize
 import org.junit.Before
 import org.junit.Test
 import java.util.*
@@ -93,32 +87,5 @@ class ProgressTrackerTest {
         repeat(4) { pt.nextStep() }
         pt.currentStep = SimpleSteps.ONE
         assertEquals(SimpleSteps.TWO, pt.nextStep())
-    }
-
-    @Test
-    fun rxSubscriptionsAreNotSerialized() {
-        class Unserializable : KryoSerializable {
-            override fun write(kryo: Kryo?, output: Output?) = throw AssertionError("not called")
-            override fun read(kryo: Kryo?, input: Input?) = throw AssertionError("not called")
-
-            fun foo() {
-                println("bar")
-            }
-        }
-
-        val kryo = createTestKryo().apply {
-            // This is required to make sure Kryo walks through the auto-generated members for the lambda below.
-            fieldSerializerConfig.isIgnoreSyntheticFields = false
-        }
-        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
-        class Tmp {
-            val unserializable = Unserializable()
-
-            init {
-                pt2.changes.subscribe { unserializable.foo() }
-            }
-        }
-        Tmp()
-        pt.serialize(kryo)
     }
 }

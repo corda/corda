@@ -1,19 +1,20 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.getOrThrow
+import net.corda.core.flows.NotaryChangeFlow
+import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.seconds
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.flows.NotaryChangeFlow
-import net.corda.flows.StateReplacementException
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -34,7 +35,7 @@ class NotaryChangeTests {
     lateinit var clientNodeB: MockNetwork.MockNode
 
     @Before
-    fun setup() {
+    fun setUp() {
         mockNet = MockNetwork()
         oldNotaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
@@ -106,11 +107,12 @@ class NotaryChangeTests {
         val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
 
-        val notaryChangeTx = clientNodeA.services.validatedTransactions.getTransaction(newState.ref.txhash)!!.tx
+        val recordedTx = clientNodeA.services.validatedTransactions.getTransaction(newState.ref.txhash)!!
+        val notaryChangeTx = recordedTx.resolveNotaryChangeTransaction(clientNodeA.services)
 
         // Check that all encumbrances have been propagated to the outputs
-        val originalOutputs = issueTx.outputs.map { it.data }
-        val newOutputs = notaryChangeTx.outputs.map { it.data }
+        val originalOutputs = issueTx.outputStates
+        val newOutputs = notaryChangeTx.outputStates
         assertTrue(originalOutputs.minus(newOutputs).isEmpty())
 
         // Check that encumbrance links aren't broken after notary change
@@ -135,7 +137,7 @@ class NotaryChangeTests {
         val stateB = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
         val stateC = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
 
-        val tx = TransactionType.General.Builder(null).apply {
+        val tx = TransactionBuilder(null).apply {
             addCommand(Command(DummyContract.Commands.Create(), owner.party.owningKey))
             addOutputState(stateA, notary, encumbrance = 2) // Encumbered by stateB
             addOutputState(stateC, notary)
@@ -166,7 +168,7 @@ fun issueState(node: AbstractNode, notaryNode: AbstractNode): StateAndRef<*> {
 fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: AbstractNode): StateAndRef<DummyContract.MultiOwnerState> {
     val state = TransactionState(DummyContract.MultiOwnerState(0,
             listOf(nodeA.info.legalIdentity, nodeB.info.legalIdentity)), notaryNode.info.notaryIdentity)
-    val tx = TransactionType.NotaryChange.Builder(notaryNode.info.notaryIdentity).withItems(state)
+    val tx = TransactionBuilder(notary = notaryNode.info.notaryIdentity).withItems(state)
     val signedByA = nodeA.services.signInitialTransaction(tx)
     val signedByAB = nodeB.services.addSignature(signedByA)
     val stx = notaryNode.services.addSignature(signedByAB, notaryNode.services.notaryIdentityKey)

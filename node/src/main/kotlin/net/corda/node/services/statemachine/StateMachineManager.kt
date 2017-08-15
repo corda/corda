@@ -2,44 +2,42 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
-import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
-import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
-import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import io.requery.util.CloseableIterator
-import net.corda.core.ThreadBox
-import net.corda.core.bufferUntilSubscribed
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.castIfPossible
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
-import net.corda.core.then
+import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.internal.SessionRejectException
+import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.TopicSession
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.bufferUntilDatabaseCommit
+import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
+import net.corda.nodeapi.internal.serialization.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -76,39 +74,10 @@ import kotlin.collections.ArrayList
 class StateMachineManager(val serviceHub: ServiceHubInternal,
                           val checkpointStorage: CheckpointStorage,
                           val executor: AffinityExecutor,
-                          val database: Database,
+                          val database: CordaPersistence,
                           private val unfinishedFibers: ReusableLatch = ReusableLatch()) {
 
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
-
-    private val quasarKryoPool = KryoPool.Builder {
-        val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-        val classResolver = makeNoWhitelistClassResolver().apply { setKryo(serializer.kryo) }
-        // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
-        val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
-        serializer.kryo.apply {
-            field.set(this, classResolver)
-            DefaultKryoCustomizer.customize(this)
-            addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
-        }
-    }.build()
-
-    // TODO Move this into the blacklist and upgrade the blacklist to allow custom messages
-    private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
-        override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
-            val message = if (closeable is CloseableIterator<*>) {
-                "A live Iterator pointing to the database has been detected during flow checkpointing. This may be due " +
-                        "to a Vault query - move it into a private method."
-            } else {
-                "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
-                        "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
-                        "confined to a private method or the reference is nulled out."
-            }
-            throw UnsupportedOperationException(message)
-        }
-
-        override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
-    }
 
     companion object {
         private val logger = loggerFor<StateMachineManager>()
@@ -170,17 +139,18 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     internal val tokenizableServices = ArrayList<Any>()
     // Context for tokenized services in checkpoints
     private val serializationContext by lazy {
-        SerializeAsTokenContext(tokenizableServices, quasarKryoPool, serviceHub)
+        SerializeAsTokenContextImpl(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
     }
 
+    fun findServices(predicate: (Any) -> Boolean) = tokenizableServices.filter(predicate)
+
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
-    fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
+    fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, CordaFuture<T>>> {
         @Suppress("UNCHECKED_CAST")
         return mutex.locked {
-            stateMachines.keys
-                    .map { it.logic }
-                    .filterIsInstance(flowClass)
-                    .map { it to (it.stateMachine as FlowStateMachineImpl<T>).resultFuture }
+            stateMachines.keys.mapNotNull {
+                flowClass.castIfPossible(it.logic)?.let { it to (it.stateMachine as FlowStateMachineImpl<T>).resultFuture }
+            }
         }
     }
 
@@ -233,7 +203,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * @param allowedUnsuspendedFiberCount Optional parameter is used in some tests.
      */
     fun stop(allowedUnsuspendedFiberCount: Int = 0) {
-        check(allowedUnsuspendedFiberCount >= 0)
+        require(allowedUnsuspendedFiberCount >= 0)
         mutex.locked {
             if (stopping) throw IllegalStateException("Already stopping!")
             stopping = true
@@ -368,28 +338,30 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: Party) {
         logger.trace { "Received $sessionInit from $sender" }
-        val otherPartySessionId = sessionInit.initiatorSessionId
+        val senderSessionId = sessionInit.initiatorSessionId
 
-        fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(otherPartySessionId, message))
+        fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(senderSessionId, message))
 
-        val initiatedFlowFactory = serviceHub.getFlowFactory(sessionInit.initiatingFlowClass)
-        if (initiatedFlowFactory == null) {
-            logger.warn("${sessionInit.initiatingFlowClass} has not been registered: $sessionInit")
-            sendSessionReject("${sessionInit.initiatingFlowClass.name} has not been registered")
-            return
-        }
-
-        val session = try {
-            val flow = initiatedFlowFactory.createFlow(receivedMessage.platformVersion, sender, sessionInit)
-            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
-            val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
+        val (session, initiatedFlowFactory) = try {
+            val initiatedFlowFactory = getInitiatedFlowFactory(sessionInit)
+            val flow = initiatedFlowFactory.createFlow(sender)
+            val senderFlowVersion = when (initiatedFlowFactory) {
+                is InitiatedFlowFactory.Core -> receivedMessage.platformVersion  // The flow version for the core flows is the platform version
+                is InitiatedFlowFactory.CorDapp -> sessionInit.flowVersion
+            }
+            val session = FlowSession(
+                    flow,
+                    random63BitValue(),
+                    sender,
+                    FlowSessionState.Initiated(sender, senderSessionId, FlowContext(senderFlowVersion, sessionInit.appName)))
             if (sessionInit.firstPayload != null) {
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
             }
             openSessions[session.ourSessionId] = session
+            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             fiber.openSessions[Pair(flow, sender)] = session
             updateCheckpoint(fiber)
-            session
+            session to initiatedFlowFactory
         } catch (e: SessionRejectException) {
             logger.warn("${e.logMessage}: $sessionInit")
             sendSessionReject(e.rejectMessage)
@@ -400,28 +372,38 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             return
         }
 
-        sendSessionMessage(sender, SessionConfirm(otherPartySessionId, session.ourSessionId), session.fiber)
-        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.initiatingFlowClass.name}" }
+        val (ourFlowVersion, appName) = when (initiatedFlowFactory) {
+            // The flow version for the core flows is the platform version
+            is InitiatedFlowFactory.Core -> serviceHub.myInfo.platformVersion to "corda"
+            is InitiatedFlowFactory.CorDapp -> initiatedFlowFactory.flowVersion to initiatedFlowFactory.appName
+        }
+
+        sendSessionMessage(sender, SessionConfirm(senderSessionId, session.ourSessionId, ourFlowVersion, appName), session.fiber)
+        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.initiatingFlowClass}" }
         session.fiber.logger.trace { "Initiated from $sessionInit on $session" }
         resumeFiber(session.fiber)
     }
 
-    private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
-        return quasarKryoPool.run { kryo ->
-            // add the map of tokens -> tokenizedServices to the kyro context
-            kryo.withSerializationContext(serializationContext) {
-                fiber.serialize(kryo)
-            }
+    private fun getInitiatedFlowFactory(sessionInit: SessionInit): InitiatedFlowFactory<*> {
+        val initiatingFlowClass = try {
+            Class.forName(sessionInit.initiatingFlowClass).asSubclass(FlowLogic::class.java)
+        } catch (e: ClassNotFoundException) {
+            throw SessionRejectException("Don't know ${sessionInit.initiatingFlowClass}")
+        } catch (e: ClassCastException) {
+            throw SessionRejectException("${sessionInit.initiatingFlowClass} is not a flow")
         }
+        return serviceHub.getFlowFactory(initiatingFlowClass) ?:
+                throw SessionRejectException("$initiatingFlowClass is not registered")
+    }
+
+    private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
+        return fiber.serialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext))
     }
 
     private fun deserializeFiber(checkpoint: Checkpoint, logger: Logger): FlowStateMachineImpl<*>? {
         return try {
-            quasarKryoPool.run { kryo ->
-                // put the map of token -> tokenized into the kryo context
-                kryo.withSerializationContext(serializationContext) {
-                    checkpoint.serializedFiber.deserialize(kryo)
-                }.apply { fromCheckpoint = true }
+            checkpoint.serializedFiber.deserialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext)).apply {
+                fromCheckpoint = true
             }
         } catch (t: Throwable) {
             logger.error("Encountered unrestorable checkpoint!", t)
@@ -505,11 +487,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
-        // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
-        // on the flow completion future inside that context. The problem is that any progress checkpoints are
-        // unable to acquire the table lock and move forward till the calling transaction finishes.
-        // Committing in line here on a fresh context ensure we can progress.
-        val fiber = database.isolatedTransaction {
+        val fiber = database.transaction {
             val fiber = createFiber(logic, flowInitiator)
             updateCheckpoint(fiber)
             fiber
@@ -619,4 +597,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId)
         }
     }
+}
+
+class SessionRejectException(val rejectMessage: String, val logMessage: String) : Exception() {
+    constructor(message: String) : this(message, message)
 }

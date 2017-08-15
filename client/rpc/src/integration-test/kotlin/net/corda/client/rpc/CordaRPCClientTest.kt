@@ -1,13 +1,15 @@
 package net.corda.client.rpc
 
+import net.corda.contracts.getCashBalance
+import net.corda.contracts.getCashBalances
 import net.corda.core.contracts.DOLLARS
+import net.corda.core.contracts.USD
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.testing.ALICE
+import net.corda.core.utilities.getOrThrow
 import net.corda.flows.CashException
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -15,13 +17,13 @@ import net.corda.node.internal.Node
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.ALICE
 import net.corda.testing.node.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -42,7 +44,7 @@ class CordaRPCClientTest : NodeBasedTest() {
     @Before
     fun setUp() {
         node = startNode(ALICE.name, rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
-        client = CordaRPCClient(node.configuration.rpcAddress!!)
+        client = CordaRPCClient(node.configuration.rpcAddress!!, initialiseSerialization = false)
     }
 
     @After
@@ -117,20 +119,18 @@ class CordaRPCClientTest : NodeBasedTest() {
         println("Started issuing cash, waiting on result")
         flowHandle.returnValue.get()
 
-        val finishCash = proxy.getCashBalances()
-        println("Cash Balances: $finishCash")
-        assertEquals(1, finishCash.size)
-        assertEquals(123.DOLLARS, finishCash.get(Currency.getInstance("USD")))
+        val cashDollars = proxy.getCashBalance(USD)
+        println("Balance: $cashDollars")
+        assertEquals(123.DOLLARS, cashDollars)
     }
 
     @Test
     fun `flow initiator via RPC`() {
         login(rpcUser.username, rpcUser.password)
         val proxy = connection!!.proxy
-        val smUpdates = proxy.stateMachinesAndUpdates()
         var countRpcFlows = 0
         var countShellFlows = 0
-        smUpdates.second.subscribe {
+        proxy.stateMachinesFeed().updates.subscribe {
             if (it is StateMachineUpdate.Added) {
                 val initiator = it.stateMachineInfo.initiator
                 if (initiator is FlowInitiator.RPC)

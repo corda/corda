@@ -1,9 +1,10 @@
 package net.corda.flows;
 
+import net.corda.core.flows.AbstractStateReplacementFlow;
 import net.corda.core.identity.Party;
-import net.corda.core.identity.Party;
-import net.corda.core.utilities.*;
-import org.jetbrains.annotations.*;
+import net.corda.core.transactions.SignedTransaction;
+import net.corda.core.utilities.ProgressTracker;
+import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 public class AbstractStateReplacementFlowTest {
@@ -15,7 +16,7 @@ public class AbstractStateReplacementFlowTest {
         }
 
         @Override
-        protected void verifyProposal(@NotNull AbstractStateReplacementFlow.Proposal proposal) {
+        protected void verifyProposal(@NotNull SignedTransaction stx, @NotNull AbstractStateReplacementFlow.Proposal proposal) {
         }
     }
 }

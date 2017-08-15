@@ -1,8 +1,10 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.NotaryException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -12,7 +14,7 @@ import net.corda.core.utilities.ProgressTracker
 /**
  * Initiates a flow that produces an Issue/Move or Exit Cash transaction.
  */
-abstract class AbstractCashFlow<T>(override val progressTracker: ProgressTracker) : FlowLogic<T>() {
+abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTracker) : FlowLogic<T>() {
     companion object {
         object GENERATING_ID : ProgressTracker.Step("Generating anonymous identities")
         object GENERATING_TX : ProgressTracker.Step("Generating transaction")

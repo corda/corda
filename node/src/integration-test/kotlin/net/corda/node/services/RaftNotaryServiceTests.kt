@@ -1,19 +1,18 @@
 package net.corda.node.services
 
-import com.google.common.util.concurrent.Futures
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
 import net.corda.testing.contracts.DummyContract
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
-import net.corda.core.map
 import net.corda.testing.DUMMY_BANK_A
-import net.corda.flows.NotaryError
-import net.corda.flows.NotaryException
-import net.corda.flows.NotaryFlow
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.transpose
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.AbstractNode
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.NodeBasedTest
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
@@ -26,22 +25,22 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
     @Test
     fun `detect double spend`() {
-        val (bankA) = Futures.allAsList(
+        val (bankA) = listOf(
                 startNode(DUMMY_BANK_A.name),
                 startNotaryCluster(notaryName, 3).map { it.first() }
-        ).getOrThrow()
+        ).transpose().getOrThrow()
 
         val notaryParty = bankA.services.networkMapCache.getNotary(notaryName)!!
 
         val inputState = issueState(bankA, notaryParty)
 
-        val firstTxBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState)
+        val firstTxBuilder = TransactionBuilder(notaryParty).withItems(inputState)
         val firstSpendTx = bankA.services.signInitialTransaction(firstTxBuilder)
 
         val firstSpend = bankA.services.startFlow(NotaryFlow.Client(firstSpendTx))
         firstSpend.resultFuture.getOrThrow()
 
-        val secondSpendBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
+        val secondSpendBuilder = TransactionBuilder(notaryParty).withItems(inputState).run {
             val dummyState = DummyContract.SingleOwnerState(0, bankA.info.legalIdentity)
             addOutputState(dummyState)
             this

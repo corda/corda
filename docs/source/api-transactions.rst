@@ -9,36 +9,6 @@ API: Transactions
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-transactions`.
 
-Transaction types
------------------
-There are two types of transaction in Corda:
-
-* ``TransactionType.NotaryChange``, used to change the notary for a set of states
-* ``TransactionType.General``, for transactions other than notary-change transactions
-
-Notary-change transactions
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-A single Corda network will usually have multiple notary services. To commit a transaction, we require a signature
-from the notary service associated with each input state. If we tried to commit a transaction where the input
-states were associated with different notary services, the transaction would require a signature from multiple notary
-services, creating a complicated multi-phase commit scenario. To prevent this, every input state in a transaction
-must be associated the same notary.
-
-However, we will often need to create a transaction involving input states associated with different notaries. Before
-we can create this transaction, we will need to change the notary service associated with each state by:
-
-* Deciding which notary service we want to notarise the transaction
-* For each set of inputs states that point to the same notary service that isn't the desired notary service, creating a
-  ``TransactionType.NotaryChange`` transaction that:
-
-  * Consumes the input states pointing to the old notary
-  * Outputs the same states, but that now point to the new notary
-
-* Using the outputs of the notary-change transactions as inputs to a standard ``TransactionType.General`` transaction
-
-In practice, this process is handled automatically by a built-in flow called ``NotaryChangeFlow``. See
-:doc:`api-flows` for more details.
-
 Transaction workflow
 --------------------
 There are four states the transaction can occupy:
@@ -382,13 +352,14 @@ A ``SignedTransaction`` is a combination of:
        :start-after: DOCSTART 1
        :end-before: DOCEND 1
 
-Before adding our signature to the transaction, we'll want to verify both the transaction itself and its signatures.
+Before adding our signature to the transaction, we'll want to verify both the transaction's contents and the
+transaction's signatures.
 
-Verifying the transaction
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Verifying the transaction's contents
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To verify a transaction, we need to retrieve any states in the transaction chain that our node doesn't
 currently have in its local storage from the proposer(s) of the transaction. This process is handled by a built-in flow
-called ``ResolveTransactionsFlow``. See :doc:`api-flows` for more details.
+called ``ReceiveTransactionFlow``. See :doc:`api-flows` for more details.
 
 When verifying a ``SignedTransaction``, we don't verify the ``SignedTransaction`` *per se*, but rather the
 ``WireTransaction`` it contains. We extract this ``WireTransaction`` as follows:
@@ -460,10 +431,10 @@ the contract. Here's an example of how we might do this:
        :end-before: DOCEND 34
        :dedent: 12
 
-Verifying the signatures
-^^^^^^^^^^^^^^^^^^^^^^^^
-We also need to verify the signatures over the transaction to prevent tampering. We do this using
-``SignedTransaction.verifySignatures``:
+Verifying the transaction's signatures
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+We also need to verify that the transaction has all the required signatures, and that these signatures are valid, to
+prevent tampering. We do this using ``SignedTransaction.verifyRequiredSignatures``:
 
 .. container:: codeset
 
@@ -479,8 +450,8 @@ We also need to verify the signatures over the transaction to prevent tampering.
        :end-before: DOCEND 35
        :dedent: 12
 
-Optionally, we can pass ``verifySignatures`` a ``vararg`` of the public keys for which the signatures are allowed
-to be missing:
+Alternatively, we can use ``SignedTransaction.verifySignaturesExcept``, which takes a ``vararg`` of the public keys for
+which the signatures are allowed to be missing:
 
 .. container:: codeset
 
@@ -588,4 +559,23 @@ Or using another one of our public keys, as follows:
 Notarising and recording
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Notarising and recording a transaction is handled by a built-in flow called ``FinalityFlow``. See
+:doc:`api-flows` for more details.
+
+Notary-change transactions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+A single Corda network will usually have multiple notary services. To commit a transaction, we require a signature
+from the notary service associated with each input state. If we tried to commit a transaction where the input
+states were associated with different notary services, the transaction would require a signature from multiple notary
+services, creating a complicated multi-phase commit scenario. To prevent this, every input state in a transaction
+must be associated with the same notary.
+
+However, we will often need to create a transaction involving input states associated with different notaries. Before
+we can create this transaction, we will need to change the notary service associated with each state by:
+
+* Deciding which notary service we want to notarise the transaction
+* Creating a special ``NotaryChangeWireTransaction`` that consumes the input states pointing to the old notary and
+  produces outputs which are identical but point to the new notary service
+* Using the outputs of the notary-change transactions as inputs to a standard transaction
+
+In practice, this process is handled automatically by a built-in flow called ``NotaryChangeFlow``. See
 :doc:`api-flows` for more details.

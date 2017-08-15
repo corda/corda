@@ -1,7 +1,7 @@
 package net.corda.node.utilities.registration
 
 import com.google.common.net.MediaType
-import net.corda.core.crypto.CertificateStream
+import net.corda.node.utilities.CertificateStream
 import org.apache.commons.io.IOUtils
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.IOException

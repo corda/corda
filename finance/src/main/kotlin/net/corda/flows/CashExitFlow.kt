@@ -4,12 +4,15 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
 
@@ -36,9 +39,9 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
     @Throws(CashException::class)
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
-        val builder: TransactionBuilder = TransactionType.General.Builder(notary = null as Party?)
+        val builder: TransactionBuilder = TransactionBuilder(notary = null as Party?)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
-        val exitStates = serviceHub.vaultService.unconsumedStatesForSpending<Cash.State>(amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
+        val exitStates = Cash.unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
             Cash().generateExit(
                     builder,
@@ -48,13 +51,9 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
             throw CashException("Exiting more cash than exists", e)
         }
 
-        // Work out who the owners of the burnt states were
-        val inputStatesNullable = serviceHub.vaultService.statesForRefs(builder.inputStates())
-        val inputStates = inputStatesNullable.values.filterNotNull().map { it.data }
-        if (inputStatesNullable.size != inputStates.size) {
-            val unresolvedStateRefs = inputStatesNullable.filter { it.value == null }.map { it.key }
-            throw IllegalStateException("Failed to resolve input StateRefs: $unresolvedStateRefs")
-        }
+        // Work out who the owners of the burnt states were (specify page size so we don't silently drop any if > DEFAULT_PAGE_SIZE)
+        val inputStates = serviceHub.vaultQueryService.queryBy<Cash.State>(VaultQueryCriteria(stateRefs = builder.inputStates()),
+                                                                           PageSpecification(pageNumber = DEFAULT_PAGE_NUM, pageSize = builder.inputStates().size)).states
 
         // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
         //       count as a reason to fail?

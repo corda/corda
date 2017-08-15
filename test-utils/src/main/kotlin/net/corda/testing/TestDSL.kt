@@ -3,10 +3,9 @@ package net.corda.testing
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.expandedCompositeKeys
-import net.corda.core.crypto.testing.NullSignature
+import net.corda.core.crypto.testing.NULL_SIGNATURE
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -14,6 +13,9 @@ import java.io.InputStream
 import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -284,7 +286,7 @@ data class TestLedgerDSLInterpreter private constructor(
     override fun verifies(): EnforceVerifyOrFail {
         try {
             val usedInputs = mutableSetOf<StateRef>()
-            services.recordTransactions(transactionsUnverified.map { SignedTransaction(it.serialized, listOf(NullSignature)) })
+            services.recordTransactions(transactionsUnverified.map { SignedTransaction(it, listOf(NULL_SIGNATURE)) })
             for ((_, value) in transactionWithLocations) {
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
@@ -296,7 +298,7 @@ data class TestLedgerDSLInterpreter private constructor(
                     throw DoubleSpentInputs(txIds)
                 }
                 usedInputs.addAll(wtx.inputs)
-                services.recordTransactions(SignedTransaction(wtx.serialized, listOf(NullSignature)))
+                services.recordTransactions(SignedTransaction(wtx, listOf(NULL_SIGNATURE)))
             }
             return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {
@@ -329,20 +331,18 @@ data class TestLedgerDSLInterpreter private constructor(
  * @return List of [SignedTransaction]s.
  */
 fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>) = transactionsToSign.map { wtx ->
-    check(wtx.mustSign.isNotEmpty())
-    val bits = wtx.serialize()
-    require(bits == wtx.serialized)
-    val signatures = ArrayList<DigitalSignature.WithKey>()
+    check(wtx.requiredSigningKeys.isNotEmpty())
+    val signatures = ArrayList<TransactionSignature>()
     val keyLookup = HashMap<PublicKey, KeyPair>()
 
     (ALL_TEST_KEYS + extraKeys).forEach {
         keyLookup[it.public] = it
     }
-    wtx.mustSign.expandedCompositeKeys.forEach {
+    wtx.requiredSigningKeys.expandedCompositeKeys.forEach {
         val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
-        signatures += key.sign(wtx.id)
+        signatures += key.sign(SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(it).schemeNumberID)))
     }
-    SignedTransaction(bits, signatures)
+    SignedTransaction(wtx, signatures)
 }
 
 /**

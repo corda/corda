@@ -11,7 +11,7 @@ Corda provides a number of flexible query mechanisms for accessing the Vault:
 
 The majority of query requirements can be satisfied by using the Vault Query API, which is exposed via the ``VaultQueryService`` for use directly by flows:
 
-.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/Services.kt
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/VaultQueryService.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryAPI
     :end-before: DOCEND VaultQueryAPI
@@ -56,7 +56,7 @@ There are four implementations of this interface which can be chained together t
 
 1. ``VaultQueryCriteria`` provides filterable criteria on attributes within the Vault states table: status (UNCONSUMED, CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED).
 
-	.. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, includeSoftlockedStates = true).
+	.. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, always include soft locked states).
 
 2. ``FungibleAssetQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``FungibleAsset`` contract state interface, used to represent assets that are fungible, countable and issued by a specific party (eg. ``Cash.State`` and ``CommodityContract.State`` in the Corda finance module). Filterable attributes include: participants(s), owner(s), quantity, issuer party(s) and issuer reference(s).
 	   
@@ -185,26 +185,12 @@ Query for unconsumed linear states for given linear ids:
     :start-after: DOCSTART VaultQueryExample8
     :end-before: DOCEND VaultQueryExample8
 
-This example was previously executed using the deprecated extension method:
-
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-    :language: kotlin
-    :start-after: DOCSTART VaultDeprecatedQueryExample1
-    :end-before: DOCEND VaultDeprecatedQueryExample1
-
 Query for all linear states associated with a linear id:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample9
     :end-before: DOCEND VaultQueryExample9
-
-This example was previously executed using the deprecated method:
-
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-    :language: kotlin
-    :start-after: DOCSTART VaultDeprecatedQueryExample2
-    :end-before: DOCEND VaultDeprecatedQueryExample2
 
 Query for unconsumed deal states with deals references:
 
@@ -313,26 +299,12 @@ Query for all unconsumed linear states:
     :start-after: DOCSTART VaultJavaQueryExample0
     :end-before: DOCEND VaultJavaQueryExample0
 
-This example was previously executed using the deprecated method:
-
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
-    :language: java
-    :start-after: DOCSTART VaultDeprecatedJavaQueryExample0
-    :end-before: DOCEND VaultDeprecatedJavaQueryExample0
-
 Query for all consumed cash states:
 
 .. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample1
     :end-before: DOCEND VaultJavaQueryExample1
-
-This example was previously executed using the deprecated method:
-
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
-    :language: java
-    :start-after: DOCSTART VaultDeprecatedJavaQueryExample1
-    :end-before: DOCEND VaultDeprecatedJavaQueryExample1
 
 Query for consumed deal states or linear ids, specify a paging specification and sort by unique identifier:
 
@@ -377,6 +349,15 @@ Track unconsumed deal states or linear states (with snapshot including specifica
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample4
     :end-before: DOCEND VaultJavaQueryExample4
+
+Troubleshooting
+---------------
+If the results your were expecting do not match actual returned query results we recommend you add an entry to your
+``log4j2.xml`` configuration file to enable display of executed SQL statements::
+
+        <Logger name="org.hibernate.SQL" level="debug" additivity="false"> 
+            <AppenderRef ref="Console-Appender"/> 
+        </Logger>
 
 Behavioural notes
 -----------------

@@ -2,6 +2,7 @@
 
 package net.corda.core.contracts
 
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import java.math.BigDecimal
 import java.security.PublicKey
@@ -54,13 +55,6 @@ object Requirements {
     infix inline fun String.using(expr: Boolean) {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
     }
-    // Avoid overloading Kotlin keywords
-    @Deprecated("This function is deprecated, use 'using' instead",
-        ReplaceWith("using (expr)", "net.corda.core.contracts.Requirements.using"))
-    @Suppress("NOTHING_TO_INLINE")   // Inlining this takes it out of our committed ABI.
-    infix inline fun String.by(expr: Boolean) {
-        using(expr)
-    }
 }
 
 inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
@@ -71,7 +65,7 @@ inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
 
 /** Filters the command list by type, party and public key all at once. */
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: PublicKey? = null,
-                                                                                         party: Party? = null) =
+                                                                                         party: AbstractParty? = null) =
         filter { it.value is T }.
                 filter { if (signer == null) true else signer in it.signers }.
                 filter { if (party == null) true else party in it.signingParties }.

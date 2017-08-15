@@ -3,6 +3,7 @@ package net.corda.node.services.transactions
 import bftsmart.communication.ServerCommunicationSystem
 import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemClientSide
 import bftsmart.communication.client.netty.NettyClientServerSession
+import bftsmart.statemanagement.strategy.StandardStateManager
 import bftsmart.tom.MessageContext
 import bftsmart.tom.ServiceProxy
 import bftsmart.tom.ServiceReplica
@@ -11,32 +12,28 @@ import bftsmart.tom.core.messages.TOMMessage
 import bftsmart.tom.server.defaultservices.DefaultRecoverable
 import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
-import net.corda.core.DeclaredField.Companion.declaredField
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sign
+import net.corda.core.crypto.*
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
 import net.corda.core.identity.Party
+import net.corda.core.internal.declaredField
+import net.corda.core.internal.toTypedArray
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.toTypedArray
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.NotaryError
-import net.corda.flows.NotaryException
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
 import net.corda.node.utilities.JDBCHashMap
-import net.corda.node.utilities.transaction
 import java.nio.file.Path
 import java.util.*
 
@@ -71,7 +68,12 @@ object BFTSMaRt {
         data class Signatures(val txSignatures: List<DigitalSignature>) : ClusterResponse()
     }
 
-    class Client(config: BFTSMaRtConfig, private val clientId: Int) : SingletonSerializeAsToken() {
+    interface Cluster {
+        /** Avoid bug where a replica fails to start due to a consensus change during the BFT startup sequence. */
+        fun waitUntilAllReplicasHaveInitialized()
+    }
+
+    class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster) : SingletonSerializeAsToken() {
         companion object {
             private val log = loggerFor<Client>()
         }
@@ -101,6 +103,7 @@ object BFTSMaRt {
         fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
             require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
             awaitClientConnectionToCluster()
+            cluster.waitUntilAllReplicasHaveInitialized()
             val requestBytes = CommitRequest(transaction, otherSide).serialize().bytes
             val responseBytes = proxy.invokeOrdered(requestBytes)
             return responseBytes.deserialize<ClusterResponse>()
@@ -170,12 +173,24 @@ object BFTSMaRt {
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
                            tableName: String,
-                           private val services: ServiceHubInternal,
+                           protected val services: ServiceHubInternal,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
             private val log = loggerFor<Replica>()
         }
 
+        private val stateManagerOverride = run {
+            // Mock framework shutdown is not in reverse order, and we need to stop the faulty replicas first:
+            val exposeStartupRace = config.exposeRaces && replicaId < maxFaultyReplicas(config.clusterSize)
+            object : StandardStateManager() {
+                override fun askCurrentConsensusId() {
+                    if (exposeStartupRace) Thread.sleep(20000) // Must be long enough for the non-redundant replicas to reach a non-initial consensus.
+                    super.askCurrentConsensusId()
+                }
+            }
+        }
+
+        override fun getStateManager() = stateManagerOverride
         // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
         private val commitLog = services.database.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
@@ -233,6 +248,10 @@ object BFTSMaRt {
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
             return services.database.transaction { services.keyManagementService.sign(bytes, services.notaryIdentityKey) }
+        }
+
+        protected fun sign(signableData: SignableData): TransactionSignature {
+            return services.database.transaction { services.keyManagementService.sign(signableData, services.notaryIdentityKey) }
         }
 
         // TODO:

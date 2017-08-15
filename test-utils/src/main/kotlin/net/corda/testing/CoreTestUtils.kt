@@ -11,16 +11,19 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.utilities.CertificateType
+import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -66,9 +69,9 @@ val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
 val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
 
-val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getX509Name("MegaCorp","London","demo@r3.com",null), MEGA_CORP_PUBKEY)
+val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX509Name("MegaCorp", "London", "demo@r3.com", null), MEGA_CORP_PUBKEY)
 val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
-val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getX509Name("MiniCorp","London","demo@r3.com",null), MINI_CORP_PUBKEY)
+val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX509Name("MiniCorp", "London", "demo@r3.com", null), MINI_CORP_PUBKEY)
 val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
@@ -79,14 +82,14 @@ val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getX509Name("BigCorporation","London","demo@r3.com",null), BIG_CORP_PUBKEY)
+val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX509Name("BigCorporation", "London", "demo@r3.com", null), BIG_CORP_PUBKEY)
 val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
 val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTARY_IDENTITY)
-val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptyMap(), DUMMY_CA.certificate.cert)
+val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptySet(), DUMMY_CA.certificate.cert)
 
 val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)
 
@@ -126,11 +129,17 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAnd
  */
 @JvmOverloads fun ledger(
         services: ServiceHub = MockServices(),
+        initialiseSerialization: Boolean = true,
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))
-    dsl(ledgerDsl)
-    return ledgerDsl
+    if (initialiseSerialization) initialiseTestSerialization()
+    try {
+        val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))
+        dsl(ledgerDsl)
+        return ledgerDsl
+    } finally {
+        if (initialiseSerialization) resetTestSerialization()
+    }
 }
 
 /**
@@ -141,8 +150,9 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAnd
 @JvmOverloads fun transaction(
         transactionLabel: String? = null,
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
+        initialiseSerialization: Boolean = true,
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }
+) = ledger(initialiseSerialization = initialiseSerialization) { this.transaction(transactionLabel, transactionBuilder, dsl) }
 
 fun testNodeConfiguration(
         baseDirectory: Path,
@@ -156,6 +166,7 @@ fun testNodeConfiguration(
     whenever(nc.trustStorePassword).thenReturn("trustpass")
     whenever(nc.rpcUsers).thenReturn(emptyList())
     whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.commonName))
+    whenever(nc.database).thenReturn(makeTestDatabaseProperties())
     whenever(nc.emailAddress).thenReturn("")
     whenever(nc.exportJMXto).thenReturn("")
     whenever(nc.devMode).thenReturn(true)

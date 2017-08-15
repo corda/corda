@@ -3,17 +3,17 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.MutableClassToInstanceMap
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import com.google.common.util.concurrent.SettableFuture
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
-import net.corda.core.*
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.*
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -22,12 +22,18 @@ import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
-import net.corda.flows.*
-import net.corda.node.services.*
+import net.corda.core.utilities.toNonEmptySet
+import net.corda.flows.CashExitFlow
+import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
+import net.corda.flows.IssuerFlow
+import net.corda.node.services.ContractUpgradeHandler
+import net.corda.node.services.NotaryChangeHandler
+import net.corda.node.services.NotifyTransactionHandler
+import net.corda.node.services.TransactionKeyHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -54,31 +60,27 @@ import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
 import net.corda.node.services.transactions.*
-import net.corda.node.services.vault.CashBalanceAsMetricsObserver
 import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
+import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier.*
-import java.math.BigInteger
 import java.net.JarURLConnection
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
-import java.security.KeyStore
 import java.security.KeyStoreException
-import java.security.cert.*
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import java.sql.Connection
 import java.time.Clock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -132,15 +134,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     var inNodeNetworkMapService: NetworkMapService? = null
     lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     protected var dbCloser: (() -> Any?)? = null
 
     var isPreviousCheckpointsPresent = false
         private set
 
-    protected val _networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create()
+    protected val _networkMapRegistrationFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service */
-    val networkMapRegistrationFuture: ListenableFuture<Unit>
+    val networkMapRegistrationFuture: CordaFuture<Unit>
         get() = _networkMapRegistrationFuture
 
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
@@ -159,7 +161,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
     }
 
-    open fun start(): AbstractNode {
+    open fun start() {
         require(!started) { "Node has already been started" }
 
         if (configuration.devMode) {
@@ -210,17 +212,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // TODO Remove this once the cash stuff is in its own CorDapp
             registerInitiatedFlow(IssuerFlow.Issuer::class.java)
 
-            initUploaders()
-
             runOnStop += network::stop
-            _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
+            _networkMapRegistrationFuture.captureLater(registerWithNetworkMapIfConfigured())
             smm.start()
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             _services.schedulerService.start()
         }
         started = true
-        return this
     }
 
     private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
@@ -284,7 +283,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun handleCustomNotaryService(service: NotaryService) {
         runOnStop += service::stop
         service.start()
-        installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
+        installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
     }
 
     private inline fun <reified A : Annotation> Class<*>.requireAnnotation(): A {
@@ -346,9 +345,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
         val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
         require(classWithAnnotation == initiatingFlow) {
-            "${InitiatingFlow::class.java.name} must be annotated on ${initiatingFlow.name} and not on a super-type"
+            "${InitiatedBy::class.java.name} must point to ${classWithAnnotation.name} and not ${initiatingFlow.name}"
         }
-        val flowFactory = InitiatedFlowFactory.CorDapp(version, { ctor.newInstance(it) })
+        val jarFile = Paths.get(initiatedFlow.protectionDomain.codeSource.location.toURI())
+        val appName = if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
+            jarFile.fileName.toString().removeSuffix(".jar")
+        } else {
+            "<unknown>"
+        }
+        val flowFactory = InitiatedFlowFactory.CorDapp(version, appName, { ctor.newInstance(it) })
         val observable = internalRegisterFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
         log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
         return observable
@@ -392,7 +397,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * @suppress
      */
     @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party, Int) -> FlowLogic<*>) {
+    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party) -> FlowLogic<*>) {
         require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
@@ -401,12 +406,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun installCoreFlows() {
-        installCoreFlow(FetchTransactionsFlow::class) { otherParty, _ -> FetchTransactionsHandler(otherParty) }
-        installCoreFlow(FetchAttachmentsFlow::class) { otherParty, _ -> FetchAttachmentsHandler(otherParty) }
-        installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
-        installCoreFlow(NotaryChangeFlow::class) { otherParty, _ -> NotaryChangeHandler(otherParty) }
-        installCoreFlow(ContractUpgradeFlow::class) { otherParty, _ -> ContractUpgradeHandler(otherParty) }
-        installCoreFlow(TransactionKeyFlow::class) { otherParty, _ -> TransactionKeyHandler(otherParty) }
+        installCoreFlow(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
+        installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
+        installCoreFlow(ContractUpgradeFlow::class, ::ContractUpgradeHandler)
+        installCoreFlow(TransactionKeyFlow::class, ::TransactionKeyHandler)
     }
 
     /**
@@ -416,7 +419,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         _services = ServiceHubInternalImpl()
-        attachments = createAttachmentStorage()
+        attachments = NodeAttachmentService(configuration.dataSourceProperties, services.monitoringService.metrics, configuration.database)
         network = makeMessagingService()
         info = makeInfo()
 
@@ -480,22 +483,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filterNot { isAbstract(it.modifiers) }
     }
 
-    private fun initUploaders() {
-        _services.uploaders += attachments
-        cordappServices.values.filterIsInstanceTo(_services.uploaders, AcceptsFileUpload::class.java)
-    }
-
     private fun makeVaultObservers() {
         VaultSoftLockManager(services.vaultService, smm)
-        CashBalanceAsMetricsObserver(services, database)
         ScheduledActivityObserver(services)
-        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService))
+        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService, configuration.database ?: Properties(), {services.identityService}))
     }
 
     private fun makeInfo(): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
         val legalIdentity = obtainLegalIdentity()
-        val allIdentitiesSet = advertisedServiceEntries.map { it.identity }.toSet() + legalIdentity
+        val allIdentitiesSet = (advertisedServiceEntries.map { it.identity } + legalIdentity).toNonEmptySet()
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
         return NodeInfo(addresses, legalIdentity, allIdentitiesSet, platformVersion, advertisedServiceEntries, findMyLocation())
     }
@@ -519,8 +516,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun validateKeystore() {
         val containCorrectKeys = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            val sslKeystore = KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
-            val identitiesKeystore = KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
+            val sslKeystore = loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
+            val identitiesKeystore = loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
             sslKeystore.containsAlias(X509Utilities.CORDA_CLIENT_TLS) && identitiesKeystore.containsAlias(X509Utilities.CORDA_CLIENT_CA)
         } catch (e: KeyStoreException) {
             log.warn("Certificate key store found but key store password does not match configuration.")
@@ -534,7 +531,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
                     "Read more at: https://docs.corda.net/permissioning.html"
         }
-        val identitiesKeystore = KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
+        val identitiesKeystore = loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
         val tlsIdentity = identitiesKeystore.getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject
 
         require(tlsIdentity == configuration.myLegalName) {
@@ -548,11 +545,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            val (toClose, database) = configureDatabase(props)
-            this.database = database
+            this.database = configureDatabase(props, configuration.database, identitySvc = { _services.identityService })
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
-            log.info("Connected to ${database.vendor} database.")
-            toClose::close.let {
+            database.transaction {
+                log.info("Connected to ${database.database.vendor} database.")
+            }
+            this.database::close.let {
                 dbCloser = it
                 runOnStop += it
             }
@@ -564,25 +562,27 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    /**
-     * Run any tasks that are needed to ensure the node is in a correct state before running start().
-     */
-    open fun setup(): AbstractNode {
-        configuration.baseDirectory.createDirectories()
-        return this
-    }
-
     private fun makeAdvertisedServices(tokenizableServices: MutableList<Any>) {
         val serviceTypes = info.advertisedServices.map { it.info.type }
         if (NetworkMapService.type in serviceTypes) makeNetworkMapService()
-
         val notaryServiceType = serviceTypes.singleOrNull { it.isNotary() }
         if (notaryServiceType != null) {
-            makeCoreNotaryService(notaryServiceType, tokenizableServices)
+            val service = makeCoreNotaryService(notaryServiceType)
+            if (service != null) {
+                service.apply {
+                    tokenizableServices.add(this)
+                    runOnStop += this::stop
+                    start()
+                }
+                installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
+            } else {
+                log.info("Notary type ${notaryServiceType.id} does not match any built-in notary types. " +
+                        "It is expected to be loaded via a CorDapp")
+            }
         }
     }
 
-    private fun registerWithNetworkMapIfConfigured(): ListenableFuture<Unit> {
+    private fun registerWithNetworkMapIfConfigured(): CordaFuture<Unit> {
         services.networkMapCache.addNode(info)
         // In the unit test environment, we may sometimes run without any network map service
         return if (networkMapAddress == null && inNodeNetworkMapService == null) {
@@ -597,7 +597,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Register this node with the network map cache, and load network map from a remote service (and register for
      * updates) if one has been supplied.
      */
-    protected open fun registerWithNetworkMap(): ListenableFuture<Unit> {
+    protected open fun registerWithNetworkMap(): CordaFuture<Unit> {
         require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
             "Initial network map address must indicate a node that provides a network map service"
         }
@@ -611,7 +611,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private fun sendNetworkMapRegistration(networkMapAddress: SingleMessageRecipient): ListenableFuture<RegistrationResponse> {
+    private fun sendNetworkMapRegistration(networkMapAddress: SingleMessageRecipient): CordaFuture<RegistrationResponse> {
         // Register this node against the network
         val instant = platformClock.instant()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
@@ -625,7 +625,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */
-    protected open fun noNetworkMapConfigured(): ListenableFuture<Unit> {
+    protected open fun noNetworkMapConfigured(): CordaFuture<Unit> {
         // TODO: There should be a consistent approach to configuration error exceptions.
         throw IllegalStateException("Configuration error: this node isn't being asked to act as the network map, nor " +
                 "has any other map node been configured.")
@@ -639,25 +639,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         inNodeNetworkMapService = PersistentNetworkMapService(services, configuration.minimumPlatformVersion)
     }
 
-    open protected fun makeCoreNotaryService(type: ServiceType, tokenizableServices: MutableList<Any>) {
-        val service: NotaryService = when (type) {
+    open protected fun makeCoreNotaryService(type: ServiceType): NotaryService? {
+        return when (type) {
             SimpleNotaryService.type -> SimpleNotaryService(services)
             ValidatingNotaryService.type -> ValidatingNotaryService(services)
             RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services)
             BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services)
-            else -> {
-                log.info("Notary type ${type.id} does not match any built-in notary types. " +
-                        "It is expected to be loaded via a CorDapp")
-                return
-            }
+            else -> null
         }
-        service.apply {
-            tokenizableServices.add(this)
-            runOnStop += this::stop
-            start()
-        }
-        installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
     }
 
     protected open fun makeIdentityService(trustRoot: X509Certificate,
@@ -709,63 +699,59 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the legal name is actually validated in some way.
 
         // TODO: Integrate with Key management service?
-        val certFactory = CertificateFactory.getInstance("X509")
         val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
-        val privKeyFile = configuration.baseDirectory / privateKeyAlias
-        val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
-        val certificateAndKeyPair = keyStore.certificateAndKeyPair(privateKeyAlias)
-        val identityCertPathAndKey: Pair<PartyAndCertificate, KeyPair> = if (certificateAndKeyPair != null) {
-            val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
-            val (cert, keyPair) = certificateAndKeyPair
-            // Get keys from keystore.
-            val loadedServiceName = cert.subject
-            if (loadedServiceName != serviceName) {
-                throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:" +
-                        "$serviceName vs $loadedServiceName")
-            }
-            val certPath = certFactory.generateCertPath(listOf(cert.cert) + clientCertPath)
-            Pair(PartyAndCertificate(loadedServiceName, keyPair.public, cert, certPath), keyPair)
-        } else if (privKeyFile.exists()) {
+        val compositeKeyAlias = "$serviceId-composite-key"
+
+        if (!keyStore.containsAlias(privateKeyAlias)) {
+            val privKeyFile = configuration.baseDirectory / privateKeyAlias
+            val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
+            val compositeKeyFile = configuration.baseDirectory / compositeKeyAlias
+            // TODO: Remove use of [ServiceIdentityGenerator.generateToDisk].
             // Get keys from key file.
-            // TODO: this is here to smooth out the key storage transition, remove this in future release.
-            // Check that the identity in the config file matches the identity file we have stored to disk.
-            // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
-            // things up for us.
-            val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
-            if (myIdentity.name != serviceName)
-                throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
-                        "$serviceName vs ${myIdentity.name}")
-            // Load the private key.
-            val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
-            if (myIdentity.owningKey !is CompositeKey) { // TODO: Support case where owningKey is a composite key.
-                keyStore.save(serviceName, privateKeyAlias, keyPair)
+            // TODO: this is here to smooth out the key storage transition, remove this migration in future release.
+            if (privKeyFile.exists()) {
+                migrateKeysFromFile(keyStore, serviceName, pubIdentityFile, privKeyFile, compositeKeyFile, privateKeyAlias, compositeKeyAlias)
+            } else {
+                log.info("$privateKeyAlias not found in keystore ${configuration.nodeKeystore}, generating fresh key!")
+                keyStore.saveNewKeyPair(serviceName, privateKeyAlias, generateKeyPair())
             }
-            val dummyCaKey = entropyToKeyPair(BigInteger.valueOf(111))
-            val dummyCa = CertificateAndKeyPair(
-                    X509Utilities.createSelfSignedCACertificate(X500Name("CN=Dummy CA,OU=Corda,O=R3 Ltd,L=London,C=GB"), dummyCaKey),
-                    dummyCaKey)
-            val partyAndCertificate = getTestPartyAndCertificate(myIdentity, dummyCa)
-            // Sanity check the certificate and path
-            val validatorParameters = PKIXParameters(setOf(TrustAnchor(dummyCa.certificate.cert, null)))
-            val validator = CertPathValidator.getInstance("PKIX")
-            validatorParameters.isRevocationEnabled = false
-            validator.validate(partyAndCertificate.certPath, validatorParameters) as PKIXCertPathValidatorResult
-            Pair(partyAndCertificate, keyPair)
-        } else {
-            val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
-            val clientCA = keyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)!!
-            // Create new keys and store in keystore.
-            log.info("Identity key not found, generating fresh key!")
-            val keyPair: KeyPair = generateKeyPair()
-            val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public)
-            val certPath = certFactory.generateCertPath(listOf(cert.cert) + clientCertPath)
-            keyStore.save(serviceName, privateKeyAlias, keyPair)
-            require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
-            Pair(PartyAndCertificate(serviceName, keyPair.public, cert, certPath), keyPair)
         }
-        partyKeys += identityCertPathAndKey.second
-        return identityCertPathAndKey
+
+        val (cert, keyPair) = keyStore.certificateAndKeyPair(privateKeyAlias)
+
+        // Get keys from keystore.
+        val loadedServiceName = cert.subject
+        if (loadedServiceName != serviceName)
+            throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:$serviceName vs $loadedServiceName")
+
+        val certPath = CertificateFactory.getInstance("X509").generateCertPath(keyStore.getCertificateChain(privateKeyAlias).toList())
+        // Use composite key instead if exists
+        // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
+        val publicKey = if (keyStore.containsAlias(compositeKeyAlias)) {
+            Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
+        } else {
+            keyPair.public
+        }
+
+        partyKeys += keyPair
+        return Pair(PartyAndCertificate(loadedServiceName, publicKey, cert, certPath), keyPair)
+    }
+
+    private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
+                                    pubKeyFile: Path, privKeyFile: Path, compositeKeyFile:Path,
+                                    privateKeyAlias: String, compositeKeyAlias: String) {
+        log.info("Migrating $privateKeyAlias from file to keystore...")
+        // Check that the identity in the config file matches the identity file we have stored to disk.
+        // Load the private key.
+        val publicKey = Crypto.decodePublicKey(pubKeyFile.readAll())
+        val privateKey = Crypto.decodePrivateKey(privKeyFile.readAll())
+        keyStore.saveNewKeyPair(serviceName, privateKeyAlias, KeyPair(publicKey, privateKey))
+        // Store composite key separately.
+        if (compositeKeyFile.exists()) {
+            keyStore.savePublicKey(serviceName, compositeKeyAlias, Crypto.decodePublicKey(compositeKeyFile.readAll()))
+        }
+        log.info("Finish migrating $privateKeyAlias from file to keystore.")
     }
 
     private fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair): PartyAndCertificate {
@@ -777,34 +763,29 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
-    private fun createAttachmentStorage(): NodeAttachmentService {
-        val attachmentsDir = (configuration.baseDirectory / "attachments").createDirectories()
-        return NodeAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics)
-    }
-
     private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
-        override val uploaders = ArrayList<FileUploader>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val monitoringService = MonitoringService(MetricRegistry())
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
-        override val vaultService by lazy { NodeVaultService(this, configuration.dataSourceProperties) }
+        override val vaultService by lazy { NodeVaultService(this, configuration.dataSourceProperties, configuration.database) }
         override val vaultQueryService by lazy {
-            HibernateVaultQueryImpl(HibernateConfiguration(schemaService), vaultService.updatesPublisher)
+            HibernateVaultQueryImpl(HibernateConfiguration(schemaService, configuration.database ?: Properties(), { identityService }), vaultService.updatesPublisher)
         }
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
         override val keyManagementService by lazy { makeKeyManagementService(identityService) }
-        override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch) }
+        override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch, serverThread = serverThread) }
         override val identityService by lazy {
-            val keyStoreWrapper = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
+            val trustStore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
+            val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
             makeIdentityService(
-                    keyStoreWrapper.keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)!! as X509Certificate,
-                    keyStoreWrapper.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
+                    trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).cert,
+                    caKeyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
                     info.legalIdentityAndCert)
         }
         override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
@@ -812,7 +793,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val clock: Clock get() = platformClock
         override val myInfo: NodeInfo get() = info
         override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
-        override val database: Database get() = this@AbstractNode.database
+        override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
@@ -833,21 +814,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 super.recordTransactions(txs)
             }
         }
+        override fun jdbcSession(): Connection = database.createSession()
     }
 
-}
-
-private class KeyStoreWrapper(val keyStore: KeyStore, val storePath: Path, private val storePassword: String) {
-    constructor(storePath: Path, storePassword: String) : this(KeyStoreUtilities.loadKeyStore(storePath, storePassword), storePath, storePassword)
-
-    fun certificateAndKeyPair(alias: String): CertificateAndKeyPair? {
-        return if (keyStore.containsAlias(alias)) keyStore.getCertificateAndKeyPair(alias, storePassword) else null
-    }
-
-    fun save(serviceName: X500Name, privateKeyAlias: String, keyPair: KeyPair) {
-        val clientCA = keyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, storePassword)
-        val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public).cert
-        keyStore.addOrReplaceKey(privateKeyAlias, keyPair.private, storePassword.toCharArray(), arrayOf(cert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
-        keyStore.save(storePath, storePassword)
-    }
 }

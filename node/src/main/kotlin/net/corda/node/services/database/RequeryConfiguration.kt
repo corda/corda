@@ -3,17 +3,18 @@ package net.corda.node.services.database
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.requery.Persistable
+import io.requery.TransactionIsolation
 import io.requery.meta.EntityModel
 import io.requery.sql.KotlinEntityDataStore
 import io.requery.sql.SchemaModifier
 import io.requery.sql.TableCreationMode
 import net.corda.core.utilities.loggerFor
-import org.jetbrains.exposed.sql.transactions.TransactionManager
+import net.corda.node.utilities.DatabaseTransactionManager
 import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Boolean = false) {
+class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Boolean = false, val databaseProperties: Properties) {
 
     companion object {
         val logger = loggerFor<RequeryConfiguration>()
@@ -40,15 +41,25 @@ class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Bo
     fun makeSessionFactoryForModel(model: EntityModel): KotlinEntityDataStore<Persistable> {
         val configuration = KotlinConfigurationTransactionWrapper(model, dataSource, useDefaultLogging = this.useDefaultLogging)
         val tables = SchemaModifier(configuration)
-        val mode = TableCreationMode.CREATE_NOT_EXISTS
-        tables.createTables(mode)
+        if (databaseProperties.getProperty("initDatabase","true") == "true" ) {
+            val mode = TableCreationMode.CREATE_NOT_EXISTS
+            tables.createTables(mode)
+        }
         return KotlinEntityDataStore(configuration)
     }
 
     // TODO: remove once Requery supports QUERY WITH COMPOSITE_KEY IN
-    fun jdbcSession(): Connection {
-        val ctx = TransactionManager.manager.currentOrNull()
-        return ctx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
-    }
+    fun jdbcSession(): Connection = DatabaseTransactionManager.current().connection
 }
 
+fun parserTransactionIsolationLevel(property: String?) : TransactionIsolation =
+        when (property) {
+            "none" -> TransactionIsolation.NONE
+            "readUncommitted" -> TransactionIsolation.READ_UNCOMMITTED
+            "readCommitted" -> TransactionIsolation.READ_COMMITTED
+            "repeatableRead" ->  TransactionIsolation.REPEATABLE_READ
+            "serializable" -> TransactionIsolation.SERIALIZABLE
+            else -> {
+                TransactionIsolation.REPEATABLE_READ
+            }
+        }

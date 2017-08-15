@@ -1,7 +1,7 @@
 package net.corda.testing
 
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.getOrThrow
+import net.corda.core.utilities.getOrThrow
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -78,6 +78,11 @@ fun <E> sequence(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = Expec
  */
 fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Parallel(listOf(*expectations))
 
+/**
+ * Tests that events arrive in unspecified order.
+ *
+ * @param expectations The pieces of DSL all of which should run but in an unspecified order depending on what sequence events arrive.
+ */
 fun <E> parallel(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = ExpectCompose.Parallel(expectations)
 
 /**

@@ -2,38 +2,33 @@ package net.corda.node.services.transactions
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.UniquenessException
-import net.corda.testing.LogHelper
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.generateStateRef
+import net.corda.testing.*
 import net.corda.testing.node.makeTestDataSourceProperties
-import org.jetbrains.exposed.sql.Database
+import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class PersistentUniquenessProviderTests {
+class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
     val identity = MEGA_CORP
     val txID = SecureHash.randomSHA256()
 
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
     }
 
     @After
     fun tearDown() {
-        dataSource.close()
+        database.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 

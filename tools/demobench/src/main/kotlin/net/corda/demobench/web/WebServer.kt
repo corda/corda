@@ -1,11 +1,10 @@
 package net.corda.demobench.web
 
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.RateLimiter
-import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.catch
-import net.corda.core.minutes
-import net.corda.core.until
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.utilities.minutes
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.until
 import net.corda.core.utilities.loggerFor
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.readErrorLines
@@ -26,12 +25,12 @@ class WebServer internal constructor(private val webServerController: WebServerC
     private var process: Process? = null
 
     @Throws(IOException::class)
-    fun open(config: NodeConfig): ListenableFuture<URI> {
+    fun open(config: NodeConfig): CordaFuture<URI> {
         val nodeDir = config.nodeDir.toFile()
 
         if (!nodeDir.isDirectory) {
             log.warn("Working directory '{}' does not exist.", nodeDir.absolutePath)
-            return SettableFuture.create()
+            return openFuture()
         }
 
         try {
@@ -58,9 +57,9 @@ class WebServer internal constructor(private val webServerController: WebServerC
                 }
             }
 
-            val future = SettableFuture.create<URI>()
+            val future = openFuture<URI>()
             thread {
-                future.catch {
+                future.capture {
                     log.info("Waiting for web server for ${config.legalName} to start ...")
                     waitForStart(config.webPort)
                 }

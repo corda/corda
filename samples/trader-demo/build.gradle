@@ -25,10 +25,10 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
     // Corda integration dependencies
-    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
-    compile project(':core')
-    compile project(':finance')
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':finance')
 
     // Corda Plugins: dependent flows and services
     cordapp project(':samples:bank-of-corda-demo')
@@ -40,16 +40,17 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
-            'StartFlow.net.corda.flows.IssuerFlow$IssuanceRequester',
-            "StartFlow.net.corda.traderdemo.flow.SellerFlow"
+            'StartFlow.net.corda.flows.CashIssueFlow',
+            'StartFlow.net.corda.traderdemo.flow.CommercialPaperIssueFlow',
+            'StartFlow.net.corda.traderdemo.flow.SellerFlow'
     ]]]
 
     directory "./build/nodes"
     // This name "Notary" is hard-coded into TraderDemoClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.
-    networkMap "CN=Notary Service,O=R3,OU=corda,L=London,C=GB"
+    networkMap "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
     node {
-        name "CN=Notary Service,O=R3,OU=corda,L=London,C=GB"
+        name "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         cordapps = []
@@ -74,7 +75,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "CN=BankOfCorda,O=R3,L=New York,C=US"
         advertisedServices = []
         p2pPort 10011
+        rpcPort 10012
         cordapps = []
+        rpcUsers = ext.rpcUsers
     }
 }
 
@@ -102,11 +105,11 @@ publishing {
     }
 }
 
-task runBuyer(type: JavaExec) {
+task runBank(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.traderdemo.TraderDemoKt'
     args '--role'
-    args 'BUYER'
+    args 'BANK'
 }
 
 task runSeller(type: JavaExec) {

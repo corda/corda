@@ -3,8 +3,9 @@ package net.corda.core.serialization
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
-import net.corda.core.seconds
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.seconds
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Before
@@ -16,11 +17,11 @@ import kotlin.test.assertFailsWith
 
 val TEST_PROGRAM_ID = TransactionSerializationTests.TestCash()
 
-class TransactionSerializationTests {
+class TransactionSerializationTests : TestDependencyInjectionBase() {
     class TestCash : Contract {
         override val legalContractReference = SecureHash.sha256("TestCash")
 
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
         }
 
         data class State(
@@ -31,7 +32,7 @@ class TransactionSerializationTests {
             override val participants: List<AbstractParty>
                 get() = listOf(owner)
 
-            override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
+            override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
         }
 
         interface Commands : CommandData {
@@ -53,7 +54,7 @@ class TransactionSerializationTests {
 
     @Before
     fun setup() {
-        tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(
+        tx = TransactionBuilder(DUMMY_NOTARY).withItems(
                 inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey))
         )
     }
@@ -64,12 +65,12 @@ class TransactionSerializationTests {
         val stx = notaryServices.addSignature(ptx)
 
         // Now check that the signature we just made verifies.
-        stx.verifySignatures()
+        stx.verifyRequiredSignatures()
 
         // Corrupt the data and ensure the signature catches the problem.
         stx.id.bytes[5] = stx.id.bytes[5].inc()
         assertFailsWith(SignatureException::class) {
-            stx.verifySignatures()
+            stx.verifyRequiredSignatures()
         }
     }
 
@@ -85,14 +86,14 @@ class TransactionSerializationTests {
 
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
-            val tx2 = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState, outputState, changeState,
+            val tx2 = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState,
                     Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
 
             val ptx2 = notaryServices.signInitialTransaction(tx2)
             val dummyServices = MockServices(DUMMY_KEY_2)
             val stx2 = dummyServices.addSignature(ptx2)
 
-            stx.copy(sigs = stx2.sigs).verifySignatures()
+            stx.copy(sigs = stx2.sigs).verifyRequiredSignatures()
         }
     }
 
@@ -102,5 +103,19 @@ class TransactionSerializationTests {
         val ptx = megaCorpServices.signInitialTransaction(tx)
         val stx = notaryServices.addSignature(ptx)
         assertEquals(TEST_TX_TIME, stx.tx.timeWindow?.midpoint)
+    }
+
+    @Test
+    fun storeAndLoadWhenSigning() {
+        val ptx = megaCorpServices.signInitialTransaction(tx)
+        ptx.verifySignaturesExcept(notaryServices.key.public)
+
+        val stored = ptx.serialize()
+        val loaded = stored.deserialize()
+
+        assertEquals(loaded, ptx)
+
+        val final = notaryServices.addSignature(loaded)
+        final.verifyRequiredSignatures()
     }
 }

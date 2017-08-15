@@ -1,20 +1,22 @@
 package net.corda.irs
 
-import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.getOrThrow
+import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.uploadFile
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.IntegrationTestCategory
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
@@ -25,30 +27,29 @@ import rx.Observable
 import java.net.URL
 import java.time.Duration
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 class IRSDemoTest : IntegrationTestCategory {
     val rpcUser = User("user", "password", emptySet())
     val currentDate: LocalDate = LocalDate.now()
     val futureDate: LocalDate = currentDate.plusMonths(6)
-    val maxWaitTime: Duration = Duration.of(60, ChronoUnit.SECONDS)
+    val maxWaitTime: Duration = 60.seconds
 
     @Test
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
-            val (controller, nodeA, nodeB) = Futures.allAsList(
+            val (controller, nodeA, nodeB) = listOf(
                     startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
                     startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
                     startNode(DUMMY_BANK_B.name)
-            ).getOrThrow()
+            ).transpose().getOrThrow()
 
             println("All nodes started")
 
-            val (controllerAddr, nodeAAddr, nodeBAddr) = Futures.allAsList(
+            val (controllerAddr, nodeAAddr, nodeBAddr) = listOf(
                     startWebserver(controller),
                     startWebserver(nodeA),
                     startWebserver(nodeB)
-            ).getOrThrow().map { it.listenAddress }
+            ).transpose().getOrThrow().map { it.listenAddress }
 
             println("All webservers started")
 
@@ -79,9 +80,9 @@ class IRSDemoTest : IntegrationTestCategory {
     fun getFloatingLegFixCount(nodeApi: HttpApi) = getTrades(nodeApi)[0].calculation.floatingLegPaymentSchedule.count { it.value.rate.ratioUnit != null }
 
     fun getFixingDateObservable(config: FullNodeConfiguration): Observable<LocalDate?> {
-        val client = CordaRPCClient(config.rpcAddress!!)
+        val client = CordaRPCClient(config.rpcAddress!!, initialiseSerialization = false)
         val proxy = client.start("user", "password").proxy
-        val vaultUpdates = proxy.vaultAndUpdates().second
+        val vaultUpdates = proxy.vaultTrackBy<InterestRateSwap.State>().updates
 
         return vaultUpdates.map { update ->
             val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State>()

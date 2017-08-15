@@ -2,11 +2,12 @@ package net.corda.node.services.transactions
 
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.Timer
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
@@ -24,7 +25,7 @@ abstract class OutOfProcessTransactionVerifierService(
 
     private data class VerificationHandle(
             val transactionId: SecureHash,
-            val resultFuture: SettableFuture<Unit>,
+            val resultFuture: OpenFuture<Unit>,
             val durationTimerContext: Timer.Context
     )
 
@@ -61,9 +62,9 @@ abstract class OutOfProcessTransactionVerifierService(
 
     abstract fun sendRequest(nonce: Long, transaction: LedgerTransaction)
 
-    override fun verify(transaction: LedgerTransaction): ListenableFuture<*> {
+    override fun verify(transaction: LedgerTransaction): CordaFuture<*> {
         log.info("Verifying ${transaction.id}")
-        val future = SettableFuture.create<Unit>()
+        val future = openFuture<Unit>()
         val nonce = random63BitValue()
         verificationHandles[nonce] = VerificationHandle(transaction.id, future, durationTimer.time())
         sendRequest(nonce, transaction)

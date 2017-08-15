@@ -8,10 +8,11 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.AnonymisedIdentity
+import net.corda.core.utilities.NonEmptySet
 import net.corda.node.VersionInfo
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.WritableTransactionStorage
@@ -23,11 +24,14 @@ import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransacti
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
+import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.testing.DUMMY_CA
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MOCK_IDENTITIES
-import net.corda.testing.getTestPartyAndCertificate
+import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.configureDatabase
+import net.corda.schemas.CashSchemaV1
+import net.corda.schemas.CommercialPaperSchemaV1
+import net.corda.testing.*
+import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -38,6 +42,7 @@ import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.sql.Connection
 import java.time.Clock
 import java.util.*
 import java.util.jar.JarInputStream
@@ -50,6 +55,7 @@ import java.util.jar.JarInputStream
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
 open class MockServices(vararg val keys: KeyPair) : ServiceHub {
+
     constructor() : this(generateKeyPair())
 
     val key: KeyPair get() = keys.first()
@@ -75,17 +81,21 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo get() {
         val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
-        return NodeInfo(emptyList(), identity, setOf(identity), 1)
+        return NodeInfo(emptyList(), identity, NonEmptySet.of(identity), 1)
     }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
-    fun makeVaultService(dataSourceProps: Properties, hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService())): VaultService {
-        val vaultService = NodeVaultService(this, dataSourceProps)
-        HibernateObserver(vaultService.rawUpdates, hibernateConfig)
+    lateinit var hibernatePersister: HibernateObserver
+
+    fun makeVaultService(dataSourceProps: Properties, hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties(), { identityService })): VaultService {
+        val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
+        hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
 
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T = throw IllegalArgumentException("${type.name} not found")
+
+    override fun jdbcSession(): Connection = throw UnsupportedOperationException()
 }
 
 class MockKeyManagementService(val identityService: IdentityService,
@@ -104,7 +114,7 @@ class MockKeyManagementService(val identityService: IdentityService,
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity {
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
     }
 
@@ -117,8 +127,12 @@ class MockKeyManagementService(val identityService: IdentityService,
 
     override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
         val keyPair = getSigningKeyPair(publicKey)
-        val signature = keyPair.sign(bytes)
-        return signature
+        return keyPair.sign(bytes)
+    }
+
+    override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
+        val keyPair = getSigningKeyPair(publicKey)
+        return keyPair.sign(signableData)
     }
 }
 
@@ -193,6 +207,40 @@ fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().to
     props.setProperty("dataSource.user", "sa")
     props.setProperty("dataSource.password", "")
     return props
+}
+
+fun makeTestDatabaseProperties(): Properties {
+    val props = Properties()
+    props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
+    return props
+}
+
+fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
+
+fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1), keys: List<KeyPair> = listOf(MEGA_CORP_KEY)): Pair<CordaPersistence, MockServices> {
+    val dataSourceProps = makeTestDataSourceProperties()
+    val databaseProperties = makeTestDatabaseProperties()
+
+    val database = configureDatabase(dataSourceProps, databaseProperties, identitySvc = ::makeTestIdentityService)
+    val mockService = database.transaction {
+        val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), databaseProperties,  identitySvc = ::makeTestIdentityService)
+        object : MockServices(*(keys.toTypedArray())) {
+            override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
+
+            override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                for (stx in txs) {
+                    validatedTransactions.addTransaction(stx)
+                }
+                // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                vaultService.notifyAll(txs.map { it.tx })
+            }
+
+            override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
+
+            override fun jdbcSession(): Connection = database.createSession()
+        }
+    }
+    return Pair(database, mockService)
 }
 
 val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")

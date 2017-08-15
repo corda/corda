@@ -4,7 +4,7 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "0.14-SNAPSHOT"
+    ext.corda_release_version = "0.15-SNAPSHOT"
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     // TODO This is going to be difficult until we have a clear separation throughout the code of what is public and what is internal
     ext.corda_platform_version = 1
@@ -31,7 +31,6 @@ buildscript {
     ext.log4j_version = '2.7'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
-    ext.quickcheck_version = '0.7'
     ext.okhttp_version = '3.5.0'
     ext.netty_version = '4.1.9.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
@@ -168,22 +167,23 @@ repositories {
     }
 }
 
+// TODO: Corda root project currently produces a dummy cordapp when it shouldn't.
 // Required for building out the fat JAR.
 dependencies {
-    compile project(':node')
+    cordaCompile project(':node')
     compile "com.google.guava:guava:$guava_version"
 
-    // Set to compile to ensure it exists now deploy nodes no longer relies on build
-    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    // Set to corda compile to ensure it exists now deploy nodes no longer relies on build
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
-    runtime project(':client:jfx')
-    runtime project(':client:mock')
-    runtime project(':client:rpc')
-    runtime project(':core')
-    runtime project(':finance')
-    runtime project(':webserver')
+    cordaRuntime project(':client:jfx')
+    cordaRuntime project(':client:mock')
+    cordaRuntime project(':client:rpc')
+    cordaRuntime project(':core')
+    cordaRuntime project(':finance')
+    cordaRuntime project(':webserver')
     testCompile project(':test-utils')
 }
 
@@ -285,7 +285,7 @@ artifactory {
             password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
         }
         defaults {
-            publications('corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver')
+            publications('corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver')
         }
     }
 }

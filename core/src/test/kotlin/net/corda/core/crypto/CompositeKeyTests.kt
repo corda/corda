@@ -1,21 +1,26 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.crypto.composite.CompositeKey.NodeAndWeight
 import net.corda.core.crypto.composite.CompositeSignature
 import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
-import net.corda.core.div
+import net.corda.core.internal.declaredField
+import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.node.utilities.*
+import net.corda.testing.TestDependencyInjectionBase
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.PublicKey
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CompositeKeyTests {
+class CompositeKeyTests : TestDependencyInjectionBase() {
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()
@@ -24,18 +29,21 @@ class CompositeKeyTests {
     val bobKey = generateKeyPair()
     val charlieKey = generateKeyPair()
 
-    val alicePublicKey = aliceKey.public
-    val bobPublicKey = bobKey.public
-    val charliePublicKey = charlieKey.public
+    val alicePublicKey: PublicKey = aliceKey.public
+    val bobPublicKey: PublicKey = bobKey.public
+    val charliePublicKey: PublicKey = charlieKey.public
 
     val message = OpaqueBytes("Transaction".toByteArray())
+    val secureHash = message.sha256()
 
-    val aliceSignature = aliceKey.sign(message)
-    val bobSignature = bobKey.sign(message)
-    val charlieSignature = charlieKey.sign(message)
+    // By lazy is required so that the serialisers are configured before vals initialisation takes place (they internally invoke serialise).
+    val aliceSignature by lazy { aliceKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID))) }
+    val bobSignature by lazy { bobKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(bobPublicKey).schemeNumberID))) }
+    val charlieSignature by lazy { charlieKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(charliePublicKey).schemeNumberID))) }
 
     @Test
     fun `(Alice) fulfilled by Alice signature`() {
+        println(aliceKey.serialize().hash)
         assertTrue { alicePublicKey.isFulfilledBy(aliceSignature.by) }
         assertFalse { alicePublicKey.isFulfilledBy(charlieSignature.by) }
     }
@@ -76,7 +84,7 @@ class CompositeKeyTests {
     }
 
     @Test
-    fun `kryo encoded tree decodes correctly`() {
+    fun `encoded tree decodes correctly`() {
         val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
         val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
 
@@ -146,11 +154,12 @@ class CompositeKeyTests {
      * Check that verifying a composite signature using the [CompositeSignature] engine works.
      */
     @Test
-    fun `composite signature verification`() {
+    fun `composite TransactionSignature verification `() {
         val twoOfThree = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey, charliePublicKey).build(threshold = 2)
+
         val engine = CompositeSignature()
         engine.initVerify(twoOfThree)
-        engine.update(message.bytes)
+        engine.update(secureHash.bytes)
 
         assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature)).serialize().bytes) }
         assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(bobSignature)).serialize().bytes) }
@@ -161,7 +170,7 @@ class CompositeKeyTests {
         assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, bobSignature, charlieSignature)).serialize().bytes) }
 
         // Check the underlying signature is validated
-        val brokenBobSignature = DigitalSignature.WithKey(bobSignature.by, aliceSignature.bytes)
+        val brokenBobSignature = TransactionSignature(aliceSignature.bytes, bobSignature.by, SignatureMetadata(1, Crypto.findSignatureScheme(bobSignature.by).schemeNumberID))
         assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, brokenBobSignature)).serialize().bytes) }
     }
 
@@ -229,10 +238,7 @@ class CompositeKeyTests {
         // We will create a graph cycle between key5 and key3. Key5 has already a reference to key3 (via key4).
         // To create a cycle, we add a reference (child) from key3 to key5.
         // Children list is immutable, so reflection is used to inject key5 as an extra NodeAndWeight child of key3.
-        val field = key3.javaClass.getDeclaredField("children")
-        field.isAccessible = true
-        val fixedChildren = key3.children.plus(CompositeKey.NodeAndWeight(key5, 1))
-        field.set(key3, fixedChildren)
+        key3.declaredField<List<NodeAndWeight>>("children").value = key3.children + NodeAndWeight(key5, 1)
 
         /* A view of the example graph cycle.
          *
@@ -278,19 +284,19 @@ class CompositeKeyTests {
 
     @Test
     fun `CompositeKey from multiple signature schemes and signature verification`() {
-        val (privRSA, pubRSA) = Crypto.generateKeyPair(Crypto.RSA_SHA256)
-        val (privK1, pubK1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
-        val (privR1, pubR1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val (privEd, pubEd) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
-        val (privSP, pubSP) = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val keyPairRSA = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
 
-        val RSASignature = privRSA.sign(message.bytes, pubRSA)
-        val K1Signature = privK1.sign(message.bytes, pubK1)
-        val R1Signature = privR1.sign(message.bytes, pubR1)
-        val EdSignature = privEd.sign(message.bytes, pubEd)
-        val SPSignature = privSP.sign(message.bytes, pubSP)
+        val RSASignature = keyPairRSA.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairRSA.public).schemeNumberID)))
+        val K1Signature = keyPairK1.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairK1.public).schemeNumberID)))
+        val R1Signature = keyPairR1.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairR1.public).schemeNumberID)))
+        val EdSignature = keyPairEd.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairEd.public).schemeNumberID)))
+        val SPSignature = keyPairSP.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairSP.public).schemeNumberID)))
 
-        val compositeKey = CompositeKey.Builder().addKeys(pubRSA, pubK1, pubR1, pubEd, pubSP).build() as CompositeKey
+        val compositeKey = CompositeKey.Builder().addKeys(keyPairRSA.public, keyPairK1.public, keyPairR1.public, keyPairEd.public, keyPairSP.public).build() as CompositeKey
 
         val signatures = listOf(RSASignature, K1Signature, R1Signature, EdSignature, SPSignature)
         assertTrue { compositeKey.isFulfilledBy(signatures.byKeys()) }
@@ -303,19 +309,19 @@ class CompositeKeyTests {
     @Test
     fun `Test save to keystore`() {
         // From test case [CompositeKey from multiple signature schemes and signature verification]
-        val (privRSA, pubRSA) = Crypto.generateKeyPair(Crypto.RSA_SHA256)
-        val (privK1, pubK1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
-        val (privR1, pubR1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val (privEd, pubEd) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
-        val (privSP, pubSP) = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val keyPairRSA = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
 
-        val RSASignature = privRSA.sign(message.bytes, pubRSA)
-        val K1Signature = privK1.sign(message.bytes, pubK1)
-        val R1Signature = privR1.sign(message.bytes, pubR1)
-        val EdSignature = privEd.sign(message.bytes, pubEd)
-        val SPSignature = privSP.sign(message.bytes, pubSP)
+        val RSASignature = keyPairRSA.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairRSA.public).schemeNumberID)))
+        val K1Signature = keyPairK1.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairK1.public).schemeNumberID)))
+        val R1Signature = keyPairR1.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairR1.public).schemeNumberID)))
+        val EdSignature = keyPairEd.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairEd.public).schemeNumberID)))
+        val SPSignature = keyPairSP.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairSP.public).schemeNumberID)))
 
-        val compositeKey = CompositeKey.Builder().addKeys(pubRSA, pubK1, pubR1, pubEd, pubSP).build() as CompositeKey
+        val compositeKey = CompositeKey.Builder().addKeys(keyPairRSA.public, keyPairK1.public, keyPairR1.public, keyPairEd.public, keyPairSP.public).build() as CompositeKey
 
         val signatures = listOf(RSASignature, K1Signature, R1Signature, EdSignature, SPSignature)
         assertTrue { compositeKey.isFulfilledBy(signatures.byKeys()) }
@@ -332,12 +338,12 @@ class CompositeKeyTests {
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"
-        val keystore = KeyStoreUtilities.loadOrCreateKeyStore(keystorePath, "password")
+        val keystore = loadOrCreateKeyStore(keystorePath, "password")
         keystore.setCertificateEntry("CompositeKey", compositeKeyCert.cert)
         keystore.save(keystorePath, "password")
 
         // Load keystore from disk.
-        val keystore2 = KeyStoreUtilities.loadKeyStore(keystorePath, "password")
+        val keystore2 = loadKeyStore(keystorePath, "password")
         assertTrue { keystore2.containsAlias("CompositeKey") }
 
         val key = keystore2.getCertificate("CompositeKey").publicKey

@@ -1,15 +1,19 @@
 package net.corda.node.services.schema
 
-import net.corda.contracts.DealState
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.LinearState
+import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.api.SchemaService
-import net.corda.core.schemas.CommonSchemaV1
+import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.persistence.DBTransactionMappingStorage
+import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.schemas.CashSchemaV1
 
@@ -23,14 +27,25 @@ import net.corda.schemas.CashSchemaV1
  */
 class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaService, SingletonSerializeAsToken() {
 
-    // Currently does not support configuring schema options.
+    // Entities for compulsory services
+    object NodeServices
+
+    object NodeServicesV1 : MappedSchema(schemaFamily = NodeServices.javaClass, version = 1,
+            mappedTypes = listOf(DBCheckpointStorage.DBCheckpoint::class.java,
+                    DBTransactionStorage.DBTransaction::class.java,
+                    DBTransactionMappingStorage.DBTransactionMapping::class.java,
+                    PersistentKeyManagementService.PersistentKey::class.java,
+                    PersistentUniquenessProvider.PersistentUniqueness::class.java
+                    ))
 
     // Required schemas are those used by internal Corda services
     // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)
     val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CashSchemaV1, SchemaService.SchemaOptions()),
                   Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(VaultSchemaV1, SchemaService.SchemaOptions()))
+                  Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
+                  Pair(NodeServicesV1, SchemaService.SchemaOptions()))
+
 
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
         mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())
@@ -43,9 +58,6 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
             schemas += state.supportedSchemas()
         if (state is LinearState)
             schemas += VaultSchemaV1   // VaultLinearStates
-        // TODO: DealState to be deprecated (collapsed into LinearState)
-        if (state is DealState)
-            schemas += VaultSchemaV1   // VaultLinearStates
         if (state is FungibleAsset<*>)
             schemas += VaultSchemaV1   // VaultFungibleStates
 
@@ -54,11 +66,8 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
 
     // Because schema is always one supported by the state, just delegate.
     override fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState {
-        // TODO: DealState to be deprecated (collapsed into LinearState)
-        if ((schema is VaultSchemaV1) && (state is DealState))
-            return VaultSchemaV1.VaultLinearStates(state.linearId, state.ref, state.participants)
         if ((schema is VaultSchemaV1) && (state is LinearState))
-            return VaultSchemaV1.VaultLinearStates(state.linearId, "", state.participants)
+            return VaultSchemaV1.VaultLinearStates(state.linearId, state.participants)
         if ((schema is VaultSchemaV1) && (state is FungibleAsset<*>))
             return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
         return (state as QueryableState).generateMappedObject(schema)

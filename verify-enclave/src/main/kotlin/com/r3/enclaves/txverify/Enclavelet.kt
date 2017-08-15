@@ -5,7 +5,6 @@ package com.r3.enclaves.txverify
 import com.esotericsoftware.minlog.Log
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.createTestKryo
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.WireTransaction
 import java.io.File
@@ -31,10 +30,9 @@ class TransactionVerificationRequest(val wtxToVerify: SerializedBytes<WireTransa
  */
 @Throws(Exception::class)
 fun verifyInEnclave(reqBytes: ByteArray) {
-    val kryo = createTestKryo()
-    val req = reqBytes.deserialize<TransactionVerificationRequest>(kryo)
-    val wtxToVerify = req.wtxToVerify.deserialize(kryo)
-    val dependencies = req.dependencies.map { it.deserialize(kryo) }.associateBy { it.id }
+    val req = reqBytes.deserialize<TransactionVerificationRequest>()
+    val wtxToVerify = req.wtxToVerify.deserialize()
+    val dependencies = req.dependencies.map { it.deserialize() }.associateBy { it.id }
     val ltx = wtxToVerify.toLedgerTransaction(
             resolveIdentity = { null },
             resolveAttachment = { null },

@@ -7,15 +7,19 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.io.Closeables
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.*
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.write
+import net.corda.core.internal.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
 import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
@@ -48,7 +52,6 @@ import org.crsh.vfs.spi.url.ClassPathMountFactory
 import rx.Observable
 import rx.Subscriber
 import java.io.*
-import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -184,6 +187,8 @@ object InteractiveShell {
         JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory(), true).apply {
             val rpcModule = SimpleModule()
             rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
+            rpcModule.addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
+            rpcModule.addDeserializer(UUID::class.java, UUIDDeserializer)
             registerModule(rpcModule)
         }
     }
@@ -274,25 +279,25 @@ object InteractiveShell {
         val errors = ArrayList<String>()
         for (ctor in clazz.constructors) {
             var paramNamesFromConstructor: List<String>? = null
-            fun getPrototype(ctor: Constructor<*>): List<String> {
+            fun getPrototype(): List<String> {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
-                val prototype = paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
-                return prototype
+                return paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
             }
+
             try {
                 // Attempt construction with the given arguments.
                 paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
                 val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.parameterTypes), inputData)
                 if (args.size != ctor.parameterTypes.size) {
-                    errors.add("${getPrototype(ctor)}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
+                    errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
                     continue
                 }
                 val flow = ctor.newInstance(*args) as FlowLogic<*>
                 return invoke(flow)
             } catch(e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
-                errors.add("${getPrototype(ctor)}: missing parameter ${e.paramName}")
+                errors.add("${getPrototype()}: missing parameter ${e.paramName}")
             } catch(e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
-                errors.add("${getPrototype(ctor)}: too many parameters")
+                errors.add("${getPrototype()}: too many parameters")
             } catch(e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
                 errors.add("$argTypes: <constructor missing parameter reflection data>")
@@ -308,7 +313,7 @@ object InteractiveShell {
     @JvmStatic
     fun runStateMachinesView(out: RenderPrintWriter): Any? {
         val proxy = node.rpcOps
-        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
+        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
         stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
@@ -380,7 +385,7 @@ object InteractiveShell {
         return result
     }
 
-    private fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): ListenableFuture<Unit>? {
+    private fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): CordaFuture<Unit>? {
         val printerFun = { obj: Any? -> yamlMapper.writeValueAsString(obj) }
         toStream.println(printerFun(response))
         toStream.flush()
@@ -389,7 +394,7 @@ object InteractiveShell {
 
     private class PrintingSubscriber(private val printerFun: (Any?) -> String, private val toStream: PrintWriter) : Subscriber<Any>() {
         private var count = 0
-        val future: SettableFuture<Unit> = SettableFuture.create()
+        val future = openFuture<Unit>()
 
         init {
             // The future is public and can be completed by something else to indicate we don't wish to follow
@@ -420,7 +425,7 @@ object InteractiveShell {
 
     // Kotlin bug: USELESS_CAST warning is generated below but the IDE won't let us remove it.
     @Suppress("USELESS_CAST", "UNCHECKED_CAST")
-    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, toStream: PrintWriter): SettableFuture<Unit>? {
+    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, toStream: PrintWriter): OpenFuture<Unit>? {
         // Match on a couple of common patterns for "important" observables. It's tough to do this in a generic
         // way because observables can be embedded anywhere in the object graph, and can emit other arbitrary
         // object graphs that contain yet more observables. So we just look for top level responses that follow
@@ -496,6 +501,38 @@ object InteractiveShell {
                     // Ignore.
                 }
             }
+        }
+    }
+
+    /**
+     * String value deserialized to [UniqueIdentifier].
+     * Any string value used as [UniqueIdentifier.externalId].
+     * If string contains underscore(i.e. externalId_uuid) then split with it.
+     *      Index 0 as [UniqueIdentifier.externalId]
+     *      Index 1 as [UniqueIdentifier.id]
+     * */
+    object UniqueIdentifierDeserializer : JsonDeserializer<UniqueIdentifier>() {
+        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): UniqueIdentifier {
+            //Check if externalId and UUID may be separated by underscore.
+            if (p.text.contains("_")) {
+                val ids = p.text.split("_")
+                //Create UUID object from string.
+                val uuid: UUID = UUID.fromString(ids[1])
+                //Create UniqueIdentifier object using externalId and UUID.
+                return UniqueIdentifier(ids[0], uuid)
+            }
+            //Any other string used as externalId.
+            return UniqueIdentifier(p.text)
+        }
+    }
+
+    /**
+     * String value deserialized to [UUID].
+     * */
+    object UUIDDeserializer : JsonDeserializer<UUID>() {
+        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): UUID {
+            //Create UUID object from string.
+            return UUID.fromString(p.text)
         }
     }
 

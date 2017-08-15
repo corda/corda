@@ -1,12 +1,13 @@
 package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.TransactionParts
 import net.corda.core.identity.Party
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.FilteredTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.utilities.unwrap
-import net.corda.flows.NotaryFlow
-import net.corda.flows.TransactionParts
 
 class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSide, service) {
     /**
@@ -19,10 +20,19 @@ class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryS
      */
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
-        val ftx = receive<FilteredTransaction>(otherSide).unwrap {
-            it.verify()
-            it
+        val parts = receive<Any>(otherSide).unwrap {
+            when (it) {
+                is FilteredTransaction -> {
+                    it.verify()
+                    TransactionParts(it.rootHash, it.filteredLeaves.inputs, it.filteredLeaves.timeWindow)
+                }
+                is NotaryChangeWireTransaction -> TransactionParts(it.id, it.inputs, null)
+                else -> {
+                    throw IllegalArgumentException("Received unexpected transaction type: ${it::class.java.simpleName}," +
+                            "expected either ${FilteredTransaction::class.java.simpleName} or ${NotaryChangeWireTransaction::class.java.simpleName}")
+                }
+            }
         }
-        return TransactionParts(ftx.rootHash, ftx.filteredLeaves.inputs, ftx.filteredLeaves.timeWindow)
+        return parts
     }
 }

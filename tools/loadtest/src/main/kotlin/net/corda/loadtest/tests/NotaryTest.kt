@@ -6,11 +6,11 @@ import net.corda.client.mock.pickOne
 import net.corda.client.mock.replicate
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.startFlow
-import net.corda.core.thenMatch
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.FinalityFlow
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
 import net.corda.testing.contracts.DummyContract
@@ -43,7 +43,7 @@ val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
                 val proxy = node.proxy
                 val issueFlow = proxy.startFlow(::FinalityFlow, issueTx)
                 issueFlow.returnValue.thenMatch({
-                    val moveFlow = proxy.startFlow(::FinalityFlow, moveTx)
+                    proxy.startFlow(::FinalityFlow, moveTx)
                 }, {})
             } catch (e: FlowException) {
                 log.error("Failure", e)

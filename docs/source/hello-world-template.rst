@@ -8,8 +8,9 @@ The CorDapp Template
 ====================
 
 When writing a new CorDapp, you’ll generally want to base it on the
-`Cordapp Template <https://github.com/corda/cordapp-template>`_. The Cordapp Template allows you to quickly deploy
-your CorDapp onto a local test network of dummy nodes to evaluate its functionality.
+`Java Cordapp Template <https://github.com/corda/cordapp-template-java>`_ or the equivalent
+`Kotlin Cordapp Template <https://github.com/corda/cordapp-template-kotlin>`_. The Cordapp Template allows you to
+quickly deploy your CorDapp onto a local test network of dummy nodes to evaluate its functionality.
 
 Note that there's no need to download and install Corda itself. As long as you're working from a stable Milestone
 branch, the required libraries will be downloaded automatically from an online repository.
@@ -24,7 +25,11 @@ Open a terminal window in the directory where you want to download the CorDapp t
 .. code-block:: text
 
     # Clone the template from GitHub:
-    git clone https://github.com/corda/cordapp-template.git ; cd cordapp-template
+    git clone https://github.com/corda/cordapp-template-java.git ; cd cordapp-template
+
+    *or*
+
+    git clone https://github.com/corda/cordapp-template-kotlin.git ; cd cordapp-template
 
     # Retrieve a list of the stable Milestone branches using:
     git branch -a --list *release-M*

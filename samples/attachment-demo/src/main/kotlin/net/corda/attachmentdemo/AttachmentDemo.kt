@@ -3,22 +3,25 @@ package net.corda.attachmentdemo
 import co.paralleluniverse.fibers.Suspendable
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionForContract
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.Emoji
+import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
-import net.corda.core.sizedInputStreamAndHash
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.*
-import net.corda.flows.FinalityFlow
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.poll
@@ -26,6 +29,7 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.jar.JarInputStream
 import javax.servlet.http.HttpServletResponse.SC_OK
 import javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION
@@ -70,14 +74,20 @@ fun main(args: Array<String>) {
 
 /** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
 fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
-    val (inputStream, hash) = sizedInputStreamAndHash(numOfClearBytes)
-    sender(rpc, inputStream, hash)
+    val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(numOfClearBytes, 0)
+    val executor = Executors.newScheduledThreadPool(2)
+    try {
+        sender(rpc, inputStream, hash, executor)
+    } finally {
+        executor.shutdown()
+    }
 }
 
-fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {
+private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256, executor: ScheduledExecutorService) {
+
     // Get the identity key of the other side (the recipient).
-    val executor = Executors.newScheduledThreadPool(1)
-    val otherSide: Party = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }.get()
+    val notaryFuture: CordaFuture<Party> = poll(executor, DUMMY_NOTARY.name.toString()) { rpc.partyFromX500Name(DUMMY_NOTARY.name) }
+    val otherSideFuture: CordaFuture<Party> = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }
 
     // Make sure we have the file in storage
     if (!rpc.attachmentExists(hash)) {
@@ -88,14 +98,14 @@ fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) 
         require(rpc.attachmentExists(hash))
     }
 
-    val flowHandle = rpc.startTrackedFlow(::AttachmentDemoFlow, otherSide, hash)
+    val flowHandle = rpc.startTrackedFlow(::AttachmentDemoFlow, otherSideFuture.get(), notaryFuture.get(), hash)
     flowHandle.progress.subscribe(::println)
     val stx = flowHandle.returnValue.getOrThrow()
     println("Sent ${stx.id}")
 }
 
 @StartableByRPC
-class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
+class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
 
     object SIGNING : ProgressTracker.Step("Signing transaction")
 
@@ -104,7 +114,7 @@ class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : Fl
     @Suspendable
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
-        val ptx = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+        val ptx = TransactionBuilder(notary)
         ptx.addOutputState(AttachmentContract.State(hash))
         ptx.addAttachment(hash)
 
@@ -119,11 +129,11 @@ class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : Fl
 
 fun recipient(rpc: CordaRPCOps) {
     println("Waiting to receive transaction ...")
-    val stx = rpc.verifiedTransactions().second.toBlocking().first()
+    val stx = rpc.verifiedTransactionsFeed().updates.toBlocking().first()
     val wtx = stx.tx
     if (wtx.attachments.isNotEmpty()) {
         if (wtx.outputs.isNotEmpty()) {
-            val state = wtx.outputs.map { it.data }.filterIsInstance<AttachmentContract.State>().single()
+            val state = wtx.outputsOfType<AttachmentContract.State>().single()
             require(rpc.attachmentExists(state.hash))
 
             // Download the attachment via the Web endpoint.
@@ -170,8 +180,8 @@ class AttachmentContract : Contract {
     override val legalContractReference: SecureHash
         get() = SecureHash.zeroHash // TODO not implemented
 
-    override fun verify(tx: TransactionForContract) {
-        val state = tx.outputs.filterIsInstance<AttachmentContract.State>().single()
+    override fun verify(tx: LedgerTransaction) {
+        val state = tx.outputsOfType<AttachmentContract.State>().single()
         val attachment = tx.attachments.single()
         require(state.hash == attachment.id)
     }

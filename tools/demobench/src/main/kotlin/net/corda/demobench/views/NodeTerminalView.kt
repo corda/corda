@@ -3,24 +3,23 @@ package net.corda.demobench.views
 import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
-import java.awt.Dimension
-import java.net.URI
-import java.util.logging.Level
-import javax.swing.SwingUtilities
 import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.control.ProgressIndicator
 import javafx.scene.image.ImageView
-import javafx.scene.layout.StackPane
 import javafx.scene.layout.HBox
+import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.util.Duration
+import net.corda.contracts.getCashBalances
+import net.corda.core.concurrent.match
+import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.commonName
-import net.corda.core.match
-import net.corda.core.then
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.vaultTrackBy
+import net.corda.core.node.services.vault.PageSpecification
 import net.corda.demobench.explorer.ExplorerController
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeController
@@ -33,9 +32,17 @@ import net.corda.demobench.web.WebServerController
 import rx.Subscription
 import rx.schedulers.Schedulers
 import tornadofx.*
+import java.awt.Dimension
+import java.net.URI
+import java.util.logging.Level
+import javax.swing.SwingUtilities
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
+
+    private companion object {
+        val pageSpecification = PageSpecification(1, 1)
+    }
 
     private val nodeController by inject<NodeController>()
     private val explorerController by inject<ExplorerController>()
@@ -53,7 +60,7 @@ class NodeTerminalView : Fragment() {
 
     private val subscriptions: MutableList<Subscription> = mutableListOf()
     private var txCount: Int = 0
-    private var stateCount: Int = 0
+    private var stateCount: Long = 0
     private var isDestroyed: Boolean = false
     private val explorer = explorerController.explorer()
     private val webServer = webServerController.webServer()
@@ -159,17 +166,15 @@ class NodeTerminalView : Fragment() {
             webServer.open(config).then {
                 Platform.runLater {
                     launchWebButton.graphic = null
-                }
-                it.match({
-                    log.info("Web server for ${config.legalName} started on $it")
-                    Platform.runLater {
+                    it.match(success = {
+                        log.info("Web server for ${config.legalName} started on $it")
                         webURL = it
                         launchWebButton.text = "Reopen\nweb site"
                         app.hostServices.showDocument(it.toString())
-                    }
-                }, {
-                    launchWebButton.text = oldLabel
-                })
+                    }, failure = {
+                        launchWebButton.text = oldLabel
+                    })
+                }
             }
         }
     }
@@ -182,11 +187,12 @@ class NodeTerminalView : Fragment() {
 
     private fun initialise(config: NodeConfig, ops: CordaRPCOps) {
         try {
-            val (txInit, txNext) = ops.verifiedTransactions()
-            val (stateInit, stateNext) = ops.vaultAndUpdates()
+            val (txInit, txNext) = ops.verifiedTransactionsFeed()
+            val (stateInit, stateNext) = ops.vaultTrackBy<ContractState>(paging = pageSpecification)
 
             txCount = txInit.size
-            stateCount = stateInit.size
+            // This is the total number of states in the vault, regardless of pagination.
+            stateCount = stateInit.totalStatesAvailable
 
             Platform.runLater {
                 logo.opacityProperty().animate(1.0, Duration.seconds(2.5))
@@ -194,7 +200,7 @@ class NodeTerminalView : Fragment() {
                 states.value = stateCount.toString()
             }
 
-            val fxScheduler = Schedulers.from({ Platform.runLater(it) })
+            val fxScheduler = Schedulers.from(Platform::runLater)
             subscriptions.add(txNext.observeOn(fxScheduler).subscribe {
                 transactions.value = (++txCount).toString()
             })

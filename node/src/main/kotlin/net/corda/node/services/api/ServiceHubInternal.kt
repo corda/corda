@@ -1,7 +1,7 @@
 package net.corda.node.services.api
 
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
@@ -12,7 +12,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
-import net.corda.core.node.services.FileUploader
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
@@ -23,7 +22,13 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import org.jetbrains.exposed.sql.Database
+import net.corda.node.utilities.CordaPersistence
+
+/**
+ * Session ID to use for services listening for the first message in a session (before a
+ * specific session ID has been established).
+ */
+val DEFAULT_SESSION_ID = 0L
 
 interface NetworkMapCacheInternal : NetworkMapCache {
     /**
@@ -31,7 +36,7 @@ interface NetworkMapCacheInternal : NetworkMapCache {
      * @param network the network messaging service.
      * @param service the network map service to fetch current state from.
      */
-    fun deregisterForUpdates(network: MessagingService, service: NodeInfo): ListenableFuture<Unit>
+    fun deregisterForUpdates(network: MessagingService, service: NodeInfo): CordaFuture<Unit>
 
     /**
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
@@ -43,7 +48,7 @@ interface NetworkMapCacheInternal : NetworkMapCache {
      * version is less than or equal to the given version, no update is fetched.
      */
     fun addMapService(network: MessagingService, networkMapAddress: SingleMessageRecipient,
-                      subscribe: Boolean, ifChangedSinceVer: Int? = null): ListenableFuture<Unit>
+                      subscribe: Boolean, ifChangedSinceVer: Int? = null): CordaFuture<Unit>
 
     /** Adds a node to the local cache (generally only used for adding ourselves). */
     fun addNode(node: NodeInfo)
@@ -81,16 +86,12 @@ interface ServiceHubInternal : PluginServiceHub {
     val auditService: AuditService
     val rpcFlows: List<Class<out FlowLogic<*>>>
     val networkService: MessagingService
-    val database: Database
+    val database: CordaPersistence
     val configuration: NodeConfiguration
 
-    @Suppress("DEPRECATION")
-    @Deprecated("This service will be removed in a future milestone")
-    val uploaders: List<FileUploader>
-
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+        require (txs.any()) { "No transactions passed in for recording" }
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
-        require(recordedTransactions.isNotEmpty()) { "No transactions passed in for recording" }
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
         if (stateMachineRunId != null) {
             recordedTransactions.forEach {
@@ -99,7 +100,9 @@ interface ServiceHubInternal : PluginServiceHub {
         } else {
             log.warn("Transactions recorded from outside of a state machine")
         }
-        vaultService.notifyAll(recordedTransactions.map { it.tx })
+
+        val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
+        vaultService.notifyAll(toNotify)
     }
 
     /**

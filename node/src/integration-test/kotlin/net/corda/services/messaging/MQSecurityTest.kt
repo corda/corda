@@ -7,11 +7,11 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.core.utilities.unwrap
@@ -151,7 +151,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     fun loginToRPC(target: NetworkHostAndPort, rpcUser: User, sslConfiguration: SSLConfiguration? = null): CordaRPCOps {
-        return CordaRPCClient(target, sslConfiguration).start(rpcUser.username, rpcUser.password).proxy
+        return CordaRPCClient(target, sslConfiguration, initialiseSerialization = false).start(rpcUser.username, rpcUser.password).proxy
     }
 
     fun loginToRPCAndGetClientQueue(): String {

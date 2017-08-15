@@ -39,10 +39,9 @@ a JVM client.
 Protocol
 --------
 
-Normally attachments on transactions are fetched automatically via the ``ResolveTransactionsFlow``. Attachments
+Normally attachments on transactions are fetched automatically via the ``ReceiveTransactionFlow``. Attachments
 are needed in order to validate a transaction (they include, for example, the contract code), so must be fetched
-before the validation process can run. ``ResolveTransactionsFlow`` calls ``FetchTransactionsFlow`` to perform the
-actual retrieval.
+before the validation process can run.
 
 .. note:: Future versions of Corda may support non-critical attachments that are not used for transaction verification
    and which are shared explicitly. These are useful for attaching and signing auditing data with a transaction
@@ -104,7 +103,7 @@ transaction and send it to the recipient node:
 
        // Create a trivial transaction that just passes across the attachment - in normal cases there would be
        // inputs, outputs and commands that refer to this attachment.
-       val ptx = TransactionType.General.Builder(notary = null)
+       val ptx = TransactionBuilder(notary = null)
        require(rpc.attachmentExists(PROSPECTUS_HASH))
        ptx.addAttachment(PROSPECTUS_HASH)
        // TODO: Add a dummy state and specify a notary, so that the tx hash is randomised each time and the demo can be repeated.

@@ -24,6 +24,11 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
         }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
     }
     smokeTest {
         kotlin {
@@ -32,6 +37,11 @@ sourceSets {
             compileClasspath += main.output
             runtimeClasspath += main.output
             srcDir file('src/smoke-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/smoke-test/java')
         }
     }
 }
@@ -82,5 +92,5 @@ jar {
 }
 
 publish {
-    name = jar.baseName
+    name jar.baseName
 }

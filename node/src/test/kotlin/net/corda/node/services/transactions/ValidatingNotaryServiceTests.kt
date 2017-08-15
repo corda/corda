@@ -1,23 +1,23 @@
 package net.corda.node.services.transactions
 
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
-import net.corda.testing.contracts.DummyContract
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.getOrThrow
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.NotaryError
-import net.corda.flows.NotaryException
-import net.corda.flows.NotaryFlow
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.issueInvalidState
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -39,7 +39,7 @@ class ValidatingNotaryServiceTests {
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
         )
-        clientNode = mockNet.createNode(networkMapAddress = notaryNode.network.myAddress)
+        clientNode = mockNet.createNode(notaryNode.network.myAddress)
         mockNet.runNetwork() // Clear network map registration messages
     }
 
@@ -52,14 +52,15 @@ class ValidatingNotaryServiceTests {
     fun `should report error for invalid transaction dependency`() {
         val stx = run {
             val inputState = issueInvalidState(clientNode, notaryNode.info.notaryIdentity)
-            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
+            val tx = TransactionBuilder(notaryNode.info.notaryIdentity).withItems(inputState)
             clientNode.services.signInitialTransaction(tx)
         }
 
         val future = runClient(stx)
 
         val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
-        assertThat(ex.error).isInstanceOf(NotaryError.SignaturesInvalid::class.java)
+        val notaryError = ex.error as NotaryError.TransactionInvalid
+        assertThat(notaryError.cause).isInstanceOf(SignedTransaction.SignaturesMissingException::class.java)
     }
 
     @Test
@@ -69,7 +70,7 @@ class ValidatingNotaryServiceTests {
             val inputState = issueState(clientNode)
 
             val command = Command(DummyContract.Commands.Move(), expectedMissingKey)
-            val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState, command)
+            val tx = TransactionBuilder(notaryNode.info.notaryIdentity).withItems(inputState, command)
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -77,14 +78,14 @@ class ValidatingNotaryServiceTests {
             val future = runClient(stx)
             future.getOrThrow()
         }
-        val notaryError = ex.error
-        assertThat(notaryError).isInstanceOf(NotaryError.SignaturesMissing::class.java)
+        val notaryError = ex.error as NotaryError.TransactionInvalid
+        assertThat(notaryError.cause).isInstanceOf(SignedTransaction.SignaturesMissingException::class.java)
 
-        val missingKeys = (notaryError as NotaryError.SignaturesMissing).cause.missing
+        val missingKeys = (notaryError.cause as SignedTransaction.SignaturesMissingException).missing
         assertEquals(setOf(expectedMissingKey), missingKeys)
     }
 
-    private fun runClient(stx: SignedTransaction): ListenableFuture<List<DigitalSignature.WithKey>> {
+    private fun runClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
         val flow = NotaryFlow.Client(stx)
         val future = clientNode.services.startFlow(flow).resultFuture
         mockNet.runNetwork()

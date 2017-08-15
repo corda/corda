@@ -167,21 +167,23 @@ fun <A> Generator.Companion.replicate(number: Int, generator: Generator<A>): Gen
 }
 
 
-fun <A> Generator.Companion.replicatePoisson(meanSize: Double, generator: Generator<A>) = Generator<List<A>> {
+fun <A> Generator.Companion.replicatePoisson(meanSize: Double, generator: Generator<A>, atLeastOne: Boolean = false) = Generator<List<A>> {
     val chance = (meanSize - 1) / meanSize
     val result = mutableListOf<A>()
     var finish = false
     while (!finish) {
-        val result = Generator.doubleRange(0.0, 1.0).generate(it).flatMap { value ->
+        val res = Generator.doubleRange(0.0, 1.0).generate(it).flatMap { value ->
             if (value < chance) {
                 generator.generate(it).map { result.add(it) }
             } else {
                 finish = true
-                Try.Success(Unit)
+                if (result.isEmpty() && atLeastOne) {
+                    generator.generate(it).map { result.add(it) }
+                } else Try.Success(Unit)
             }
         }
-        if (result is Try.Failure) {
-            return@Generator result
+        if (res is Try.Failure) {
+            return@Generator res
         }
     }
     Try.Success(result)

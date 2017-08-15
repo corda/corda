@@ -23,19 +23,25 @@ configurations {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-    testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
-    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
-    compile project(':core')
-    compile project(':client:jfx')
-    compile project(':client:rpc')
-    compile project(':finance')
-    compile project(':test-utils')
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':client:jfx')
+    cordaCompile project(':client:rpc')
+    cordaCompile project(':finance')
+    cordaCompile project(':webserver')
+    cordaCompile project(':test-utils')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+
+    // Cordapp dependencies
+    // Specify your cordapp's dependencies below, including dependent cordapps
+
+    // Test dependencies
+    testCompile "junit:junit:$junit_version"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {

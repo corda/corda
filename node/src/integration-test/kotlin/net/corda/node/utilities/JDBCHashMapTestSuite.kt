@@ -10,16 +10,13 @@ import com.google.common.collect.testing.features.MapFeature
 import com.google.common.collect.testing.features.SetFeature
 import com.google.common.collect.testing.testers.*
 import junit.framework.TestSuite
+import net.corda.testing.*
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
-import java.io.Closeable
-import java.sql.Connection
 import java.util.*
 
 @RunWith(Suite::class)
@@ -32,9 +29,8 @@ import java.util.*
         JDBCHashMapTestSuite.SetConstrained::class)
 class JDBCHashMapTestSuite {
     companion object {
-        lateinit var dataSource: Closeable
-        lateinit var transaction: Transaction
-        lateinit var database: Database
+        lateinit var transaction: DatabaseTransaction
+        lateinit var database: CordaPersistence
         lateinit var loadOnInitFalseMap: JDBCHashMap<String, String>
         lateinit var memoryConstrainedMap: JDBCHashMap<String, String>
         lateinit var loadOnInitTrueMap: JDBCHashMap<String, String>
@@ -45,9 +41,8 @@ class JDBCHashMapTestSuite {
         @JvmStatic
         @BeforeClass
         fun before() {
-            val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-            dataSource = dataSourceAndDatabase.first
-            database = dataSourceAndDatabase.second
+            initialiseTestSerialization()
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { throw UnsupportedOperationException("Identity Service should not be in use") })
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
             memoryConstrainedMap = JDBCHashMap<String, String>("test_map_constrained", loadOnInit = false, maxBuckets = 1)
@@ -61,7 +56,8 @@ class JDBCHashMapTestSuite {
         @AfterClass
         fun after() {
             closeDatabaseTx()
-            dataSource.close()
+            database.close()
+            resetTestSerialization()
         }
 
         @JvmStatic
@@ -105,7 +101,7 @@ class JDBCHashMapTestSuite {
                 .createTestSuite()
 
         private fun setUpDatabaseTx() {
-            transaction = TransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
+            transaction = DatabaseTransactionManager.currentOrNew()
         }
 
         private fun closeDatabaseTx() {
@@ -203,7 +199,7 @@ class JDBCHashMapTestSuite {
      *
      * If the Map reloads, then so will the Set as it just delegates.
      */
-    class MapCanBeReloaded {
+    class MapCanBeReloaded : TestDependencyInjectionBase() {
         private val ops = listOf(Triple(AddOrRemove.ADD, "A", "1"),
                 Triple(AddOrRemove.ADD, "B", "2"),
                 Triple(AddOrRemove.ADD, "C", "3"),
@@ -228,21 +224,17 @@ class JDBCHashMapTestSuite {
 
         private val transientMapForComparison = applyOpsToMap(LinkedHashMap())
 
-        lateinit var dataSource: Closeable
-        lateinit var database: Database
+        lateinit var database: CordaPersistence
 
         @Before
         fun before() {
-            val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-            dataSource = dataSourceAndDatabase.first
-            database = dataSourceAndDatabase.second
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { throw UnsupportedOperationException("Identity Service should not be in use") })
         }
 
         @After
         fun after() {
-            dataSource.close()
+            database.close()
         }
-
 
         @Test
         fun `fill map and check content after reconstruction`() {

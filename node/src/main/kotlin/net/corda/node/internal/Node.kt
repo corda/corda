@@ -1,19 +1,18 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.*
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.seconds
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.parseNetworkHostAndPort
-import net.corda.core.utilities.trace
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
+import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -33,6 +32,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.serialization.*
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -58,7 +58,8 @@ import kotlin.system.exitProcess
 open class Node(override val configuration: FullNodeConfiguration,
                 advertisedServices: Set<ServiceInfo>,
                 val versionInfo: VersionInfo,
-                clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
+                clock: Clock = NodeClock(),
+                val initialiseSerialization: Boolean = true) : AbstractNode(configuration, advertisedServices, clock) {
     companion object {
         private val logger = loggerFor<Node>()
         var renderBasicInfoToConsole = true
@@ -255,8 +256,8 @@ open class Node(override val configuration: FullNodeConfiguration,
      * Insert an initial step in the registration process which will throw an exception if a non-recoverable error is
      * encountered when trying to connect to the network map node.
      */
-    override fun registerWithNetworkMap(): ListenableFuture<Unit> {
-        val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: Futures.immediateFuture(Unit)
+    override fun registerWithNetworkMap(): CordaFuture<Unit> {
+        val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: doneFuture(Unit)
         return networkMapConnection.flatMap { super.registerWithNetworkMap() }
     }
 
@@ -295,9 +296,13 @@ open class Node(override val configuration: FullNodeConfiguration,
         super.initialiseDatabasePersistence(insideTransaction)
     }
 
-    val startupComplete: ListenableFuture<Unit> = SettableFuture.create()
+    private val _startupComplete = openFuture<Unit>()
+    val startupComplete: CordaFuture<Unit> get() = _startupComplete
 
-    override fun start(): Node {
+    override fun start() {
+        if (initialiseSerialization) {
+            initialiseSerialization()
+        }
         super.start()
 
         networkMapRegistrationFuture.thenMatch({
@@ -320,24 +325,28 @@ open class Node(override val configuration: FullNodeConfiguration,
                         build().
                         start()
 
-                (startupComplete as SettableFuture<Unit>).set(Unit)
+                _startupComplete.set(Unit)
             }
         }, {})
         shutdownHook = addShutdownHook {
             stop()
         }
-        return this
+    }
+
+    private fun initialiseSerialization() {
+        SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
+            registerScheme(KryoServerSerializationScheme(this))
+            registerScheme(AMQPServerSerializationScheme())
+        }
+        SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
+        SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT
+        SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT
+        SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT
     }
 
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
         (network as NodeMessagingClient).run(messageBroker!!.serverControl)
-    }
-
-    // TODO: Do we really need setup?
-    override fun setup(): Node {
-        super.setup()
-        return this
     }
 
     private var shutdown = false

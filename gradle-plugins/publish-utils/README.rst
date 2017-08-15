@@ -76,8 +76,8 @@ The project configuration block has the following structure:
 .. code-block:: text
 
     publish {
-        name = 'non-default-project-name'
         disableDefaultJar = false // set to true to disable the default JAR being created (e.g. when creating a fat JAR)
+        name 'non-default-project-name' // Always put this last because it causes configuration to happen
     }
 
 **Artifacts**

@@ -1,7 +1,7 @@
 package net.corda.testing.driver
 
-import net.corda.core.div
-import net.corda.core.exists
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import java.io.File.pathSeparator
 import java.nio.file.Path
 

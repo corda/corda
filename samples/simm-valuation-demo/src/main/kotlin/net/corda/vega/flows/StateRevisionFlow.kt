@@ -1,18 +1,17 @@
 package net.corda.vega.flows
 
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.identity.AbstractParty
+import net.corda.core.flows.AbstractStateReplacementFlow
+import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.Party
-import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.AbstractStateReplacementFlow
-import net.corda.flows.StateReplacementException
+import net.corda.core.utilities.seconds
 import net.corda.vega.contracts.RevisionedState
-import java.security.PublicKey
 
 /**
  * Flow that generates an update on a mutable deal state and commits the resulting transaction reaching consensus
- * on the update between two parties
+ * on the update between two parties.
  */
 object StateRevisionFlow {
     class Requester<T>(curStateRef: StateAndRef<RevisionedState<T>>,
@@ -21,6 +20,8 @@ object StateRevisionFlow {
             val state = originalState.state.data
             val tx = state.generateRevision(originalState.state.notary, originalState, modification)
             tx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
+            val privacySalt = PrivacySalt()
+            tx.setPrivacySalt(privacySalt)
 
             val stx = serviceHub.signInitialTransaction(tx)
             val participantKeys = state.participants.map { it.owningKey }
@@ -31,8 +32,8 @@ object StateRevisionFlow {
     }
 
     open class Receiver<in T>(otherParty: Party) : AbstractStateReplacementFlow.Acceptor<T>(otherParty) {
-        override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<T>) {
-            val proposedTx = proposal.stx.tx
+        override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<T>) {
+            val proposedTx = stx.tx
             val state = proposal.stateRef
             if (state !in proposedTx.inputs) {
                 throw StateReplacementException("The proposed state $state is not in the proposed transaction inputs")

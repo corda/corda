@@ -1,45 +1,84 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
-import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.testing.NullPublicKey
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.node.services.VaultService
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.LogHelper
+import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.schema.HibernateObserver
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.services.vault.NodeVaultService
+import net.corda.node.services.vault.VaultSchemaV1
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
+import net.corda.schemas.CashSchemaV1
+import net.corda.schemas.SampleCashSchemaV2
+import net.corda.schemas.SampleCashSchemaV3
+import net.corda.testing.*
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
-class DBTransactionStorageTests {
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+class DBTransactionStorageTests : TestDependencyInjectionBase() {
+    lateinit var database: CordaPersistence
     lateinit var transactionStorage: DBTransactionStorage
+    lateinit var services: MockServices
+    val vault: VaultService get() = services.vaultService
+    // Hibernate configuration objects
+    lateinit var hibernateConfig: HibernateConfiguration
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        val dataSourceProps = makeTestDataSourceProperties()
+
+        val transactionSchema = MappedSchema(schemaFamily = javaClass, version = 1,
+                mappedTypes = listOf(DBTransactionStorage.DBTransaction::class.java))
+
+        val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, transactionSchema)
+
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), customSchemas, identitySvc = ::makeTestIdentityService)
+
+        database.transaction {
+
+            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+
+            services = object : MockServices(BOB_KEY) {
+                override val vaultService: VaultService get() {
+                    val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
+                    hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
+                    return vaultService
+                }
+
+                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                    for (stx in txs) {
+                        validatedTransactions.addTransaction(stx)
+                    }
+                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                    vaultService.notifyAll(txs.map { it.tx })
+                }
+            }
+        }
         newTransactionStorage()
     }
 
     @After
     fun cleanUp() {
-        dataSource.close()
+        database.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
@@ -123,6 +162,37 @@ class DBTransactionStorageTests {
     }
 
     @Test
+    fun `transaction saved twice in same DB transaction scope`() {
+        val firstTransaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(firstTransaction)
+            transactionStorage.addTransaction(firstTransaction)
+        }
+        assertTransactionIsRetrievable(firstTransaction)
+        database.transaction {
+            assertThat(transactionStorage.transactions).containsOnly(firstTransaction)
+        }
+    }
+
+    @Test
+    fun `transaction saved twice in two DB transaction scopes`() {
+        val firstTransaction = newTransaction()
+        val secondTransaction = newTransaction()
+        database.transaction {
+            transactionStorage.addTransaction(firstTransaction)
+        }
+
+        database.transaction {
+            transactionStorage.addTransaction(secondTransaction)
+            transactionStorage.addTransaction(firstTransaction)
+        }
+        assertTransactionIsRetrievable(firstTransaction)
+        database.transaction {
+            assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
+        }
+    }
+
+    @Test
     fun `updates are fired`() {
         val future = transactionStorage.updates.toFuture()
         val expected = newTransaction()
@@ -152,10 +222,8 @@ class DBTransactionStorageTests {
                 outputs = emptyList(),
                 commands = emptyList(),
                 notary = DUMMY_NOTARY,
-                signers = emptyList(),
-                type = TransactionType.General,
                 timeWindow = null
         )
-        return SignedTransaction(wtx.serialized, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))
+        return SignedTransaction(wtx, listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID))))
     }
 }

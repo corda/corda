@@ -1,19 +1,24 @@
 package net.corda.node.services.network
 
-import net.corda.core.getOrThrow
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
 
 class InMemoryNetworkMapCacheTest {
-    private val mockNet = MockNetwork()
+    lateinit var mockNet: MockNetwork
+
+    @Before
+    fun setUp() {
+        mockNet = MockNetwork()
+    }
 
     @After
     fun teardown() {
@@ -22,7 +27,9 @@ class InMemoryNetworkMapCacheTest {
 
     @Test
     fun registerWithNetwork() {
-        val (n0, n1) = mockNet.createTwoNodes()
+        val nodes = mockNet.createSomeNodes(1)
+        val n0 = nodes.mapNode
+        val n1 = nodes.partyNodes[0]
         val future = n1.services.networkMapCache.addMapService(n1.network, n0.network.myAddress, false, null)
         mockNet.runNetwork()
         future.getOrThrow()
@@ -31,8 +38,8 @@ class InMemoryNetworkMapCacheTest {
     @Test
     fun `key collision`() {
         val entropy = BigInteger.valueOf(24012017L)
-        val nodeA = mockNet.createNode(null, -1, MockNetwork.DefaultFactory, true, ALICE.name, null, entropy, ServiceInfo(NetworkMapService.type))
-        val nodeB = mockNet.createNode(null, -1, MockNetwork.DefaultFactory, true, BOB.name, null, entropy, ServiceInfo(NetworkMapService.type))
+        val nodeA = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = ALICE.name, entropyRoot = entropy, advertisedServices = ServiceInfo(NetworkMapService.type))
+        val nodeB = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = BOB.name, entropyRoot = entropy, advertisedServices = ServiceInfo(NetworkMapService.type))
         assertEquals(nodeA.info.legalIdentity, nodeB.info.legalIdentity)
 
         mockNet.runNetwork()
@@ -49,7 +56,9 @@ class InMemoryNetworkMapCacheTest {
 
     @Test
     fun `getNodeByLegalIdentity`() {
-        val (n0, n1) = mockNet.createTwoNodes()
+        val nodes = mockNet.createSomeNodes(1)
+        val n0 = nodes.mapNode
+        val n1 = nodes.partyNodes[0]
         val node0Cache: NetworkMapCache = n0.services.networkMapCache
         val expected = n1.info
 

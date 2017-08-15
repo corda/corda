@@ -8,9 +8,8 @@ import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyContract
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
@@ -25,7 +24,8 @@ import net.corda.node.services.vault.schemas.requery.*
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.contracts.DummyContract
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.After
 import org.junit.Assert
@@ -40,7 +40,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class VaultSchemaTest {
+class VaultSchemaTest : TestDependencyInjectionBase() {
 
     var instance: KotlinEntityDataStore<Persistable>? = null
     val data: KotlinEntityDataStore<Persistable> get() = instance!!
@@ -87,14 +87,14 @@ class VaultSchemaTest {
             override val participants: List<AbstractParty>
                 get() = listOf(owner)
 
-            override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Create(), copy(owner = newOwner))
+            override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Create(), copy(owner = newOwner))
         }
 
         interface Commands : CommandData {
             class Create : TypeOnlyCommandData(), Commands
         }
 
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
             // Always accepts.
         }
     }
@@ -119,8 +119,8 @@ class VaultSchemaTest {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timeWindow: TimeWindow? = null
+        val privacySalt: PrivacySalt = PrivacySalt()
         transaction = LedgerTransaction(
                 inputs,
                 outputs,
@@ -128,9 +128,8 @@ class VaultSchemaTest {
                 attachments,
                 id,
                 notary,
-                signers,
                 timeWindow,
-                TransactionType.General
+                privacySalt
         )
     }
 
@@ -151,8 +150,8 @@ class VaultSchemaTest {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timeWindow: TimeWindow? = null
+        val privacySalt: PrivacySalt = PrivacySalt()
         return LedgerTransaction(
                 inputs,
                 outputs,
@@ -160,9 +159,8 @@ class VaultSchemaTest {
                 attachments,
                 id,
                 notary,
-                signers,
                 timeWindow,
-                TransactionType.General
+                privacySalt
         )
     }
 
@@ -466,12 +464,12 @@ class VaultSchemaTest {
     fun testInsert() {
         val stateEntity = createStateEntity(transaction!!.inputs[0])
         val latch = CountDownLatch(1)
-        odata.insert(stateEntity).subscribe { stateEntity ->
-            Assert.assertNotNull(stateEntity.txId)
-            Assert.assertTrue(stateEntity.txId.isNotEmpty())
+        odata.insert(stateEntity).subscribe {
+            Assert.assertNotNull(it.txId)
+            Assert.assertTrue(it.txId.isNotEmpty())
             val cached = data.select(VaultSchema.VaultStates::class)
-                    .where(VaultSchema.VaultStates::txId.eq(stateEntity.txId)).get().first()
-            Assert.assertSame(cached, stateEntity)
+                    .where(VaultSchema.VaultStates::txId.eq(it.txId)).get().first()
+            Assert.assertSame(cached, it)
             latch.countDown()
         }
         latch.await()

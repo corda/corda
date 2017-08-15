@@ -8,15 +8,13 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import net.corda.contracts.asset.CommodityContract
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TokenizableAssetInfo
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
-import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import java.math.BigDecimal
@@ -24,7 +22,6 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -83,7 +80,6 @@ data class Tenor(val name: String) {
             TimeUnit.Week -> startDate.plusWeeks(amount.toLong())
             TimeUnit.Month -> startDate.plusMonths(amount.toLong())
             TimeUnit.Year -> startDate.plusYears(amount.toLong())
-            else -> throw IllegalStateException("Invalid tenor time unit: $unit")
         }
         // Move date to the closest business day when it falls on a weekend/holiday
         val adjustedMaturityDate = calendar.applyRollConvention(maturityDate, DateRollConvention.ModifiedFollowing)
@@ -394,9 +390,6 @@ data class Commodity(val commodityCode: String,
  * implementation of general flows that manipulate many agreement types.
  */
 interface DealState : LinearState {
-    /** Human readable well known reference (e.g. trade reference) */
-    val ref: String
-
     /**
      * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
      * deal/agreement flow to generate the necessary transaction for potential implementations.
@@ -407,12 +400,6 @@ interface DealState : LinearState {
      * Contract instance from a ContractState are imminent, at which point we can move this out of here.
      */
     fun generateAgreement(notary: Party): TransactionBuilder
-}
-
-// TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(dealPartyName = listOf(<String>)))"))
-inline fun <reified T : DealState> VaultService.dealsWith(party: AbstractParty) = linearHeadsOfType<T>().values.filter {
-    it.state.data.participants.any { it == party }
 }
 
 /**

@@ -5,14 +5,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.TransactionType.General;
-import net.corda.core.contracts.TransactionType.NotaryChange;
-import net.corda.testing.contracts.DummyContract;
-import net.corda.testing.contracts.DummyState;
-import net.corda.core.crypto.DigitalSignature;
 import net.corda.core.crypto.SecureHash;
+import net.corda.core.crypto.TransactionSignature;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
+import net.corda.core.internal.FetchDataFlow;
 import net.corda.core.node.services.ServiceType;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.Vault.Page;
@@ -24,21 +21,20 @@ import net.corda.core.transactions.WireTransaction;
 import net.corda.core.utilities.ProgressTracker;
 import net.corda.core.utilities.ProgressTracker.Step;
 import net.corda.core.utilities.UntrustworthyData;
-import net.corda.flows.CollectSignaturesFlow;
-import net.corda.flows.FinalityFlow;
-import net.corda.flows.ResolveTransactionsFlow;
-import net.corda.flows.SignTransactionFlow;
+import net.corda.testing.contracts.DummyContract;
+import net.corda.testing.contracts.DummyState;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.jetbrains.annotations.NotNull;
 
+import java.security.GeneralSecurityException;
 import java.security.PublicKey;
-import java.security.SignatureException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
-import static net.corda.testing.TestConstants.getDUMMY_PUBKEY_1;
+import static net.corda.testing.TestConstants.getALICE_KEY;
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
@@ -81,13 +77,15 @@ public class FlowCookbookJava {
         private static final Step SIGS_GATHERING = new Step("Gathering a transaction's signatures.") {
             // Wiring up a child progress tracker allows us to see the
             // subflow's progress steps in our flow's progress tracker.
-            @Override public ProgressTracker childProgressTracker() {
+            @Override
+            public ProgressTracker childProgressTracker() {
                 return CollectSignaturesFlow.Companion.tracker();
             }
         };
         private static final Step VERIFYING_SIGS = new Step("Verifying a transaction's signatures.");
         private static final Step FINALISATION = new Step("Finalising a transaction.") {
-            @Override public ProgressTracker childProgressTracker() {
+            @Override
+            public ProgressTracker childProgressTracker() {
                 return FinalityFlow.Companion.tracker();
             }
         };
@@ -111,7 +109,7 @@ public class FlowCookbookJava {
             // We'll be using a dummy public key for demonstration purposes.
             // These are built in to Corda, and are generally used for writing
             // tests.
-            PublicKey dummyPubKey = getDUMMY_PUBKEY_1();
+            PublicKey dummyPubKey = getALICE_KEY().getPublic();
 
             /*---------------------------
              * IDENTIFYING OTHER NODES *
@@ -268,11 +266,11 @@ public class FlowCookbookJava {
             // public keys. To be valid, the transaction requires a signature
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
-            CommandData commandData = new DummyContract.Commands.Create();
+            DummyContract.Commands.Create commandData = new DummyContract.Commands.Create();
             PublicKey ourPubKey = getServiceHub().getLegalIdentityKey();
             PublicKey counterpartyPubKey = counterparty.getOwningKey();
             List<PublicKey> requiredSigners = ImmutableList.of(ourPubKey, counterpartyPubKey);
-            Command ourCommand = new Command(commandData, requiredSigners);
+            Command<DummyContract.Commands.Create> ourCommand = new Command<>(commandData, requiredSigners);
             // DOCEND 24
 
             // ``CommandData`` can either be:
@@ -315,16 +313,13 @@ public class FlowCookbookJava {
             ------------------------*/
             progressTracker.setCurrentStep(TX_BUILDING);
 
-            // There are two types of transaction (notary-change and general),
-            // and therefore two types of transaction builder:
             // DOCSTART 19
-            TransactionBuilder notaryChangeTxBuilder = new TransactionBuilder(NotaryChange.INSTANCE, specificNotary);
-            TransactionBuilder regTxBuilder = new TransactionBuilder(General.INSTANCE, specificNotary);
+            TransactionBuilder txBuilder = new TransactionBuilder(specificNotary);
             // DOCEND 19
 
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:
             // DOCSTART 27
-            regTxBuilder.withItems(
+            txBuilder.withItems(
                     // Inputs, as ``StateRef``s that reference to the outputs of previous transactions
                     ourStateAndRef,
                     // Outputs, as ``ContractState``s
@@ -336,20 +331,20 @@ public class FlowCookbookJava {
 
             // We can also add items using methods for the individual components:
             // DOCSTART 28
-            regTxBuilder.addInputState(ourStateAndRef);
-            regTxBuilder.addOutputState(ourOutput);
-            regTxBuilder.addCommand(ourCommand);
-            regTxBuilder.addAttachment(ourAttachment);
+            txBuilder.addInputState(ourStateAndRef);
+            txBuilder.addOutputState(ourOutput);
+            txBuilder.addCommand(ourCommand);
+            txBuilder.addAttachment(ourAttachment);
             // DOCEND 28
 
             // There are several ways of setting the transaction's time-window.
             // We can set a time-window directly:
             // DOCSTART 44
-            regTxBuilder.setTimeWindow(ourTimeWindow);
+            txBuilder.setTimeWindow(ourTimeWindow);
             // DOCEND 44
             // Or as a start time plus a duration (e.g. 45 seconds):
             // DOCSTART 45
-            regTxBuilder.setTimeWindow(Instant.now(), Duration.ofSeconds(45));
+            txBuilder.setTimeWindow(Instant.now(), Duration.ofSeconds(45));
             // DOCEND 45
 
             /*-----------------------
@@ -360,12 +355,12 @@ public class FlowCookbookJava {
             // We finalise the transaction by signing it,
             // converting it into a ``SignedTransaction``.
             // DOCSTART 29
-            SignedTransaction onceSignedTx = getServiceHub().signInitialTransaction(regTxBuilder);
+            SignedTransaction onceSignedTx = getServiceHub().signInitialTransaction(txBuilder);
             // DOCEND 29
             // We can also sign the transaction using a different public key:
             // DOCSTART 30
             PublicKey otherKey = getServiceHub().getKeyManagementService().freshKey();
-            SignedTransaction onceSignedTx2 = getServiceHub().signInitialTransaction(regTxBuilder, otherKey);
+            SignedTransaction onceSignedTx2 = getServiceHub().signInitialTransaction(txBuilder, otherKey);
             // DOCEND 30
 
             // If instead this was a ``SignedTransaction`` that we'd received
@@ -387,11 +382,11 @@ public class FlowCookbookJava {
             // node does not need to check we haven't changed anything in the
             // transaction.
             // DOCSTART 40
-            DigitalSignature.WithKey sig = getServiceHub().createSignature(onceSignedTx);
+            TransactionSignature sig = getServiceHub().createSignature(onceSignedTx);
             // DOCEND 40
             // And again, if we wanted to use a different public key:
             // DOCSTART 41
-            DigitalSignature.WithKey sig2 = getServiceHub().createSignature(onceSignedTx, otherKey2);
+            TransactionSignature sig2 = getServiceHub().createSignature(onceSignedTx, otherKey2);
             // DOCEND 41
 
             /*----------------------------
@@ -399,18 +394,35 @@ public class FlowCookbookJava {
             ----------------------------*/
             progressTracker.setCurrentStep(TX_VERIFICATION);
 
-            // Verifying a transaction will also verify every transaction in
-            // the transaction's dependency chain. So if this was a
-            // transaction we'd received from a counterparty and it had any
-            // dependencies, we'd need to download all of these dependencies
-            // using``ResolveTransactionsFlow`` before verifying it.
+            // Verifying a transaction will also verify every transaction in the transaction's dependency chain, which will require
+            // transaction data access on counterparty's node. The ``SendTransactionFlow`` can be used to automate the sending
+            // and data vending process. The ``SendTransactionFlow`` will listen for data request until the transaction
+            // is resolved and verified on the other side:
+            // DOCSTART 12
+            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx));
+
+            // Optional request verification to further restrict data access.
+            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx){
+                @Override
+                protected void verifyDataRequest(@NotNull FetchDataFlow.Request.Data dataRequest) {
+                    // Extra request verification.
+                }
+            });
+            // DOCEND 12
+
+            // We can receive the transaction using ``ReceiveTransactionFlow``,
+            // which will automatically download all the dependencies and verify
+            // the transaction
             // DOCSTART 13
-            subFlow(new ResolveTransactionsFlow(twiceSignedTx, counterparty));
+            SignedTransaction verifiedTransaction = subFlow(new ReceiveTransactionFlow(counterparty));
             // DOCEND 13
 
-            // We can also resolve a `StateRef` dependency chain.
+            // We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies.
             // DOCSTART 14
-            subFlow(new ResolveTransactionsFlow(ImmutableSet.of(ourStateRef.getTxhash()), counterparty));
+            subFlow(new SendStateAndRefFlow(counterparty, dummyStates));
+
+            // On the receive side ...
+            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterparty));
             // DOCEND 14
 
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``
@@ -478,14 +490,14 @@ public class FlowCookbookJava {
                 // We can verify that a transaction has all the required
                 // signatures, and that they're all valid, by running:
                 // DOCSTART 35
-                fullySignedTx.verifySignatures();
+                fullySignedTx.verifyRequiredSignatures();
                 // DOCEND 35
 
                 // If the transaction is only partially signed, we have to pass in
                 // a list of the public keys corresponding to the missing
                 // signatures, explicitly telling the system not to check them.
                 // DOCSTART 36
-                onceSignedTx.verifySignatures(counterpartyPubKey);
+                onceSignedTx.verifySignaturesExcept(counterpartyPubKey);
                 // DOCEND 36
 
                 // We can also choose to only check the signatures that are
@@ -495,7 +507,7 @@ public class FlowCookbookJava {
                 twiceSignedTx.checkSignaturesAreValid();
                 // DOCEND 37
 
-            } catch (SignatureException e) {
+            } catch (GeneralSecurityException e) {
                 // Handle this as required.
             }
 

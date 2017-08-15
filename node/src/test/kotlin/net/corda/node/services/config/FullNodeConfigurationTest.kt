@@ -5,6 +5,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.ALICE
 import net.corda.nodeapi.User
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.net.URL
@@ -21,6 +22,7 @@ class FullNodeConfigurationTest {
                 keyStorePassword = "cordacadevpass",
                 trustStorePassword = "trustpass",
                 dataSourceProperties = makeTestDataSourceProperties(ALICE.name.commonName),
+                database = makeTestDatabaseProperties(),
                 certificateSigningService = URL("http://localhost"),
                 rpcUsers = emptyList(),
                 verifierType = VerifierType.InMemory,
@@ -29,7 +31,7 @@ class FullNodeConfigurationTest {
                 rpcAddress = NetworkHostAndPort("localhost", 1),
                 messagingServerAddress = null,
                 extraAdvertisedServiceIds = emptyList(),
-                bftReplicaId = null,
+                bftSMaRt = BFTSMaRtConfiguration(-1, false),
                 notaryNodeAddress = null,
                 notaryClusterAddresses = emptyList(),
                 certificateChainCheckPolicies = emptyList(),

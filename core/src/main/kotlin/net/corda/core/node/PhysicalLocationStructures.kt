@@ -3,6 +3,8 @@ package net.corda.core.node
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
+data class ScreenCoordinate(val screenX: Double, val screenY: Double)
+
 /** A latitude/longitude pair. */
 @CordaSerializable
 data class WorldCoordinate(val latitude: Double, val longitude: Double) {
@@ -21,7 +23,7 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
      */
     @Suppress("unused") // Used from the visualiser GUI.
     fun project(screenWidth: Double, screenHeight: Double, topLatitude: Double, bottomLatitude: Double,
-                leftLongitude: Double, rightLongitude: Double): Pair<Double, Double> {
+                leftLongitude: Double, rightLongitude: Double): ScreenCoordinate {
         require(latitude in bottomLatitude..topLatitude)
         require(longitude in leftLongitude..rightLongitude)
 
@@ -33,7 +35,7 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
         val topLatRel = screenYRelative(topLatitude)
         val bottomLatRel = screenYRelative(bottomLatitude)
         fun latitudeToScreenY(lat: Double) = screenHeight * (screenYRelative(lat) - topLatRel) / (bottomLatRel - topLatRel)
-        return Pair(longitudeToScreenX(longitude), latitudeToScreenY(latitude))
+        return ScreenCoordinate(longitudeToScreenX(longitude), latitudeToScreenY(latitude))
     }
 }
 

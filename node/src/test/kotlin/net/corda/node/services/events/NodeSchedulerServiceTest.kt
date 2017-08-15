@@ -1,7 +1,7 @@
 package net.corda.node.services.events
 
 import net.corda.core.contracts.*
-import net.corda.core.days
+import net.corda.core.utilities.days
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
@@ -9,9 +9,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.testing.ALICE_KEY
-import net.corda.testing.DUMMY_CA
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.MockServiceHubInternal
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -19,21 +17,18 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
-import net.corda.testing.getTestX509Name
+import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
+import net.corda.testing.node.*
 import net.corda.testing.node.TestClock
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Clock
@@ -54,8 +49,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     lateinit var scheduler: NodeSchedulerService
     lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var countDown: CountDownLatch
     lateinit var smmHasRemovedAllFlows: CountDownLatch
 
@@ -72,13 +66,12 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Before
     fun setup() {
+        initialiseTestSerialization()
         countDown = CountDownLatch(1)
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProps)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
@@ -95,11 +88,11 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
-                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)
+                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
                 override val testReference = this@NodeSchedulerServiceTest
             }
-            scheduler = NodeSchedulerService(services, schedulerGatedExecutor)
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
+            scheduler = NodeSchedulerService(services, schedulerGatedExecutor, serverThread = smmExecutor)
             val mockSMM = StateMachineManager(services, DBCheckpointStorage(), smmExecutor, database)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
@@ -120,7 +113,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         }
         smmExecutor.shutdown()
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
-        dataSource.close()
+        database.close()
+        resetTestSerialization()
     }
 
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {
@@ -283,7 +277,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
                 val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant)
-                val builder = TransactionType.General.Builder(null).apply {
+                val builder = TransactionBuilder(null).apply {
                     addOutputState(state, DUMMY_NOTARY)
                     addCommand(Command(), freshKey)
                 }

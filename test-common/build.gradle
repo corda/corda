@@ -1,9 +1,10 @@
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 jar {
     baseName 'corda-test-common'
 }
 
 publish {
-    name = jar.baseName
+    name jar.baseName
 }

@@ -1,22 +1,23 @@
 package net.corda.node.services.keys
 
-import net.corda.core.ThreadBox
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.keys
-import net.corda.core.crypto.sign
+import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.flows.AnonymisedIdentity
-import net.corda.node.utilities.*
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
+import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import org.bouncycastle.operator.ContentSigner
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support node re-start.
@@ -28,66 +29,73 @@ import java.security.PublicKey
 class PersistentKeyManagementService(val identityService: IdentityService,
                                      initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
 
-    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}our_key_pairs") {
-        val publicKey = publicKey("public_key")
-        val privateKey = blob("private_key")
-    }
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
+    class PersistentKey(
 
-    private class InnerState {
-        val keys = object : AbstractJDBCHashMap<PublicKey, PrivateKey, Table>(Table, loadOnInit = false) {
-            override fun keyFromRow(row: ResultRow): PublicKey = row[table.publicKey]
+            @Id
+            @Column(name = "public_key")
+            var publicKey: String = "",
 
-            override fun valueFromRow(row: ResultRow): PrivateKey = deserializeFromBlob(row[table.privateKey])
+            @Lob
+            @Column(name = "private_key")
+            var privateKey: ByteArray = ByteArray(0)
+    )
 
-            override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<PublicKey, PrivateKey>, finalizables: MutableList<() -> Unit>) {
-                insert[table.publicKey] = entry.key
-            }
-
-            override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<PublicKey, PrivateKey>, finalizables: MutableList<() -> Unit>) {
-                insert[table.privateKey] = serializeToBlob(entry.value, finalizables)
-            }
+    private companion object {
+        fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
+            return AppendOnlyPersistentMap(
+                    toPersistentEntityKey = { it.toBase58String() },
+                    fromPersistentEntity = { Pair(parsePublicKeyBase58(it.publicKey),
+                            it.privateKey.deserialize<PrivateKey>(context = SerializationDefaults.STORAGE_CONTEXT)) },
+                    toPersistentEntity = { key: PublicKey, value: PrivateKey ->
+                        PersistentKey().apply {
+                            publicKey = key.toBase58String()
+                            privateKey = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                        }
+                    },
+                    persistentEntityClass = PersistentKey::class.java
+            )
         }
     }
 
-    private val mutex = ThreadBox(InnerState())
+    val keysMap = createKeyMap()
 
     init {
-        mutex.locked {
-            keys.putAll(initialKeys.associate { Pair(it.public, it.private) })
-        }
+        initialKeys.forEach({ it -> keysMap.addWithDuplicatesAllowed(it.public, it.private) })
     }
 
-    override val keys: Set<PublicKey> get() = mutex.locked { keys.keys }
+    override val keys: Set<PublicKey> get() = keysMap.allPersisted().map { it.first }.toSet()
 
-    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> {
-        return mutex.locked { candidateKeys.filter { it in this.keys } }
-    }
+    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> =
+            candidateKeys.filter { keysMap[it] != null }
 
     override fun freshKey(): PublicKey {
         val keyPair = generateKeyPair()
-        mutex.locked {
-            keys[keyPair.public] = keyPair.private
-        }
+        keysMap[keyPair.public] = keyPair.private
         return keyPair.public
     }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity {
-        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
-    }
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate =
+            freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
 
     private fun getSigner(publicKey: PublicKey): ContentSigner  = getSigner(getSigningKeyPair(publicKey))
 
+    //It looks for the PublicKey in the (potentially) CompositeKey that is ours, and then returns the associated PrivateKey to use in signing
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
-        return mutex.locked {
-            val pk = publicKey.keys.first { keys.containsKey(it) }
-            KeyPair(pk, keys[pk]!!)
-        }
+        val pk = publicKey.keys.first { keysMap[it] != null } //TODO here for us to re-write this using an actual query if publicKey.keys.size > 1
+        return KeyPair(pk, keysMap[pk]!!)
     }
 
     override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
         val keyPair = getSigningKeyPair(publicKey)
-        val signature = keyPair.sign(bytes)
-        return signature
+        return keyPair.sign(bytes)
     }
 
+    // TODO: A full KeyManagementService implementation needs to record activity to the Audit Service and to limit
+    //      signing to appropriately authorised contexts and initiating users.
+    override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
+        val keyPair = getSigningKeyPair(publicKey)
+        return keyPair.sign(signableData)
+    }
 }

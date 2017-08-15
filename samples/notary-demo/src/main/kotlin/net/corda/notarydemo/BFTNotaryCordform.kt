@@ -1,6 +1,6 @@
 package net.corda.notarydemo
 
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
@@ -11,8 +11,8 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
-import net.corda.core.stream
-import net.corda.core.toTypedArray
+import net.corda.core.internal.stream
+import net.corda.core.internal.toTypedArray
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.transactions.minCorrectReplicas
 import org.bouncycastle.asn1.x500.X500Name

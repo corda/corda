@@ -1,7 +1,7 @@
 package net.corda.node.services.vault
 
-import net.corda.core.ThreadBox
-import net.corda.core.bufferUntilSubscribed
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -13,14 +13,15 @@ import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
+import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.storageKryo
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.database.HibernateConfiguration
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.subjects.PublishSubject
+import rx.Observable
 import java.lang.Exception
 import java.util.*
 import javax.persistence.EntityManager
@@ -28,7 +29,7 @@ import javax.persistence.Tuple
 
 
 class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
-                              val updatesPublisher: PublishSubject<Vault.Update>) : SingletonSerializeAsToken(), VaultQueryService {
+                              val updatesPublisher: PublishSubject<Vault.Update<ContractState>>) : SingletonSerializeAsToken(), VaultQueryService {
     companion object {
         val log = loggerFor<HibernateVaultQueryImpl>()
     }
@@ -96,18 +97,18 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                                     return@forEachIndexed
                                 val vaultState = result[0] as VaultSchemaV1.VaultStates
                                 val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
-                                val state = vaultState.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                val state = vaultState.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
                                 statesMeta.add(Vault.StateMetadata(stateRef, vaultState.contractStateClassName, vaultState.recordedTime, vaultState.consumedTime, vaultState.stateStatus, vaultState.notaryName, vaultState.notaryKey, vaultState.lockId, vaultState.lockUpdateTime))
                                 statesAndRefs.add(StateAndRef(state, stateRef))
                             }
                             else {
+                                // TODO: improve typing of returned other results
                                 log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
                                 otherResults.addAll(result.toArray().asList())
                             }
                         }
 
                 return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
-
             } catch (e: Exception) {
                 log.error(e.message)
                 throw e.cause ?: e
@@ -118,10 +119,11 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
     private val mutex = ThreadBox({ updatesPublisher })
 
     @Throws(VaultQueryException::class)
-    override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update> {
+    override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
-            val snapshotResults = _queryBy<T>(criteria, paging, sorting, contractType)
-            val updates = updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractType, snapshotResults.stateTypes) }
+            val snapshotResults = _queryBy(criteria, paging, sorting, contractType)
+            @Suppress("UNCHECKED_CAST")
+            val updates = updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
             DataFeed(snapshotResults, updates)
         }
     }

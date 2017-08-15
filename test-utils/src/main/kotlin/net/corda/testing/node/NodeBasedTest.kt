@@ -1,15 +1,19 @@
 package net.corda.testing.node
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors.listeningDecorator
-import net.corda.core.*
-import net.corda.core.crypto.X509Utilities
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
+import net.corda.core.crypto.getX509Name
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.WHITESPACE
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.ConfigHelper
@@ -21,6 +25,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.testing.DUMMY_MAP
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
 import org.apache.logging.log4j.Level
@@ -37,7 +42,7 @@ import kotlin.concurrent.thread
  * purposes. Use the driver if you need to run the nodes in separate processes otherwise this class will suffice.
  */
 // TODO Some of the logic here duplicates what's in the driver
-abstract class NodeBasedTest {
+abstract class NodeBasedTest : TestDependencyInjectionBase() {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
@@ -57,8 +62,8 @@ abstract class NodeBasedTest {
      */
     @After
     fun stopAllNodes() {
-        val shutdownExecutor = listeningDecorator(Executors.newScheduledThreadPool(nodes.size))
-        Futures.allAsList(nodes.map { shutdownExecutor.submit(it::stop) }).getOrThrow()
+        val shutdownExecutor = Executors.newScheduledThreadPool(nodes.size)
+        nodes.map { shutdownExecutor.fork(it::stop) }.transpose().getOrThrow()
         // Wait until ports are released
         val portNotBoundChecks = nodes.flatMap {
             listOf(
@@ -68,7 +73,7 @@ abstract class NodeBasedTest {
         }.filterNotNull()
         nodes.clear()
         _networkMapNode = null
-        Futures.allAsList(portNotBoundChecks).getOrThrow()
+        portNotBoundChecks.transpose().getOrThrow()
     }
 
     /**
@@ -90,7 +95,7 @@ abstract class NodeBasedTest {
                   platformVersion: Int = 1,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): ListenableFuture<Node> {
+                  configOverrides: Map<String, Any> = emptyMap()): CordaFuture<Node> {
         val node = startNodeInternal(
                 legalName,
                 platformVersion,
@@ -108,7 +113,7 @@ abstract class NodeBasedTest {
 
     fun startNotaryCluster(notaryName: X500Name,
                            clusterSize: Int,
-                           serviceType: ServiceType = RaftValidatingNotaryService.type): ListenableFuture<List<Node>> {
+                           serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
                 (0 until clusterSize).map { baseDirectory(notaryName.appendToCommonName("-$it")) },
                 serviceType.id,
@@ -118,20 +123,20 @@ abstract class NodeBasedTest {
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
         val masterNodeFuture = startNode(
-                X509Utilities.getX509Name("${notaryName.commonName}-0","London","demo@r3.com",null),
+                getX509Name("${notaryName.commonName}-0", "London", "demo@r3.com", null),
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0]))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
-                    X509Utilities.getX509Name("${notaryName.commonName}-$it","London","demo@r3.com",null),
+                    getX509Name("${notaryName.commonName}-$it", "London", "demo@r3.com", null),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
                             "notaryClusterAddresses" to listOf(nodeAddresses[0])))
         }
 
-        return Futures.allAsList(remainingNodesFutures).flatMap { remainingNodes ->
+        return remainingNodesFutures.transpose().flatMap { remainingNodes ->
             masterNodeFuture.map { masterNode -> listOf(masterNode) + remainingNodes }
         }
     }
@@ -159,7 +164,7 @@ abstract class NodeBasedTest {
 
         val parsedConfig = config.parseAs<FullNodeConfiguration>()
         val node = Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
-                if (parsedConfig.useTestClock) TestClock() else NodeClock())
+                if (parsedConfig.useTestClock) TestClock() else NodeClock(), initialiseSerialization = false)
         node.start()
         nodes += node
         thread(name = legalName.commonName) {

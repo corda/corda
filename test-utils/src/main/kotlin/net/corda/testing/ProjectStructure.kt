@@ -1,7 +1,7 @@
 package net.corda.testing
 
-import net.corda.core.div
-import net.corda.core.isDirectory
+import net.corda.core.internal.div
+import net.corda.core.internal.isDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
 

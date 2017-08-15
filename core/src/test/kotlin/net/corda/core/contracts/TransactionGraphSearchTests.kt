@@ -1,20 +1,18 @@
 package net.corda.core.contracts
 
-import net.corda.testing.contracts.DummyContract
-import net.corda.testing.contracts.DummyState
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.testing.MEGA_CORP_KEY
-import net.corda.testing.MEGA_CORP_PUBKEY
+import net.corda.testing.*
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockTransactionStorage
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class TransactionGraphSearchTests {
+class TransactionGraphSearchTests : TestDependencyInjectionBase() {
     class GraphTransactionStorage(val originTx: SignedTransaction, val inputTx: SignedTransaction) : MockTransactionStorage() {
         init {
             addTransaction(originTx)
@@ -35,14 +33,14 @@ class TransactionGraphSearchTests {
         val megaCorpServices = MockServices(MEGA_CORP_KEY)
         val notaryServices = MockServices(DUMMY_NOTARY_KEY)
 
-        val originBuilder = TransactionType.General.Builder(DUMMY_NOTARY)
+        val originBuilder = TransactionBuilder(DUMMY_NOTARY)
         originBuilder.addOutputState(DummyState(random31BitValue()))
         originBuilder.addCommand(command, MEGA_CORP_PUBKEY)
 
         val originPtx = megaCorpServices.signInitialTransaction(originBuilder)
         val originTx = notaryServices.addSignature(originPtx)
 
-        val inputBuilder = TransactionType.General.Builder(DUMMY_NOTARY)
+        val inputBuilder = TransactionBuilder(DUMMY_NOTARY)
         inputBuilder.addInputState(originTx.tx.outRef<DummyState>(0))
 
         val inputPtx = megaCorpServices.signInitialTransaction(inputBuilder)

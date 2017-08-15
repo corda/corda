@@ -1,24 +1,23 @@
 package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.bufferUntilSubscribed
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.map
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.DEFAULT_SESSION_ID
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.api.NetworkCacheError
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.messaging.MessagingService
@@ -56,8 +55,8 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
     override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
-    private val _registrationFuture = SettableFuture.create<Unit>()
-    override val mapServiceRegistered: ListenableFuture<Unit> get() = _registrationFuture
+    private val _registrationFuture = openFuture<Void?>()
+    override val mapServiceRegistered: CordaFuture<Void?> get() = _registrationFuture
 
     private var registeredForPush = false
     protected var registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
@@ -97,7 +96,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
     }
 
     override fun addMapService(network: MessagingService, networkMapAddress: SingleMessageRecipient, subscribe: Boolean,
-                               ifChangedSinceVer: Int?): ListenableFuture<Unit> {
+                               ifChangedSinceVer: Int?): CordaFuture<Unit> {
         if (subscribe && !registeredForPush) {
             // Add handler to the network, for updates received from the remote network map service.
             network.addMessageHandler(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
@@ -123,7 +122,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
             nodes?.forEach { processRegistration(it) }
             Unit
         }
-        _registrationFuture.setFuture(future)
+        _registrationFuture.captureLater(future.map { null })
 
         return future
     }
@@ -150,7 +149,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
      * Unsubscribes from updates from the given map service.
      * @param service the network map service to listen to updates from.
      */
-    override fun deregisterForUpdates(network: MessagingService, service: NodeInfo): ListenableFuture<Unit> {
+    override fun deregisterForUpdates(network: MessagingService, service: NodeInfo): CordaFuture<Unit> {
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.SubscribeRequest(false, network.myAddress)
         // `network.getAddressOfParty(partyInfo)` is a work-around for MockNetwork and InMemoryMessaging to get rid of SingleMessageRecipient in NodeInfo.
@@ -158,7 +157,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
         val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, address).map {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }
-        _registrationFuture.setFuture(future)
+        _registrationFuture.captureLater(future.map { null })
         return future
     }
 
@@ -182,6 +181,6 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
 
     @VisibleForTesting
     override fun runWithoutMapService() {
-        _registrationFuture.set(Unit)
+        _registrationFuture.set(null)
     }
 }

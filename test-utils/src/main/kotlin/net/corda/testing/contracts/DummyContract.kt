@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
@@ -20,7 +21,7 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
         override val participants: List<AbstractParty>
             get() = listOf(owner)
 
-        override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
     }
 
     /**
@@ -39,7 +40,7 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
         class Move : TypeOnlyCommandData(), Commands
     }
 
-    override fun verify(tx: TransactionForContract) {
+    override fun verify(tx: LedgerTransaction) {
         // Always accepts.
     }
 
@@ -49,10 +50,10 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
             val owners = listOf(owner) + otherOwners
             return if (owners.size == 1) {
                 val state = SingleOwnerState(magicNumber, owners.first().party)
-                TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owners.first().party.owningKey))
+                TransactionBuilder(notary).withItems(state, Command(Commands.Create(), owners.first().party.owningKey))
             } else {
                 val state = MultiOwnerState(magicNumber, owners.map { it.party })
-                TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owners.map { it.party.owningKey }))
+                TransactionBuilder(notary).withItems(state, Command(Commands.Create(), owners.map { it.party.owningKey }))
             }
         }
 
@@ -61,7 +62,7 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
             require(priors.isNotEmpty())
             val priorState = priors[0].state.data
             val (cmd, state) = priorState.withNewOwner(newOwner)
-            return TransactionType.General.Builder(notary = priors[0].state.notary).withItems(
+            return TransactionBuilder(notary = priors[0].state.notary).withItems(
                     /* INPUTS  */ *priors.toTypedArray(),
                     /* COMMAND */ Command(cmd, priorState.owner.owningKey),
                     /* OUTPUT  */ state

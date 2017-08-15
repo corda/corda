@@ -1,7 +1,7 @@
 package net.corda.testing.node
 
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.getOrThrow
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.driver.DriverDSLExposedInterface
 import org.junit.After
 import org.junit.Before

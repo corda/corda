@@ -1,16 +1,12 @@
 package net.corda.node.services.network
 
-import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.getOrThrow
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.CHARLIE
-import net.corda.testing.DUMMY_MAP
+import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.send
 import net.corda.node.services.messaging.sendRequest
@@ -23,20 +19,26 @@ import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
+import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.CHARLIE
+import net.corda.testing.DUMMY_MAP
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
-import org.eclipse.jetty.util.BlockingArrayQueue
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
 import java.security.KeyPair
 import java.time.Instant
+import java.util.*
+import java.util.concurrent.LinkedBlockingQueue
 
 abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> {
     lateinit var mockNet: MockNetwork
@@ -50,10 +52,11 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     @Before
     fun setup() {
         mockNet = MockNetwork(defaultFactory = nodeFactory)
-        mockNet.createTwoNodes(firstNodeName = DUMMY_MAP.name, secondNodeName = ALICE.name).apply {
-            mapServiceNode = first
-            alice = second
-        }
+        mapServiceNode = mockNet.createNode(
+                nodeFactory = nodeFactory,
+                legalName = DUMMY_MAP.name,
+                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
+        alice = mockNet.createNode(mapServiceNode.network.myAddress, nodeFactory = nodeFactory, legalName = ALICE.name)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
     }
@@ -63,7 +66,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         mockNet.stopNodes()
     }
 
-    protected abstract val nodeFactory: MockNetwork.Factory
+    protected abstract val nodeFactory: MockNetwork.Factory<*>
 
     protected abstract val networkMapService: S
 
@@ -207,7 +210,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     private var lastSerial = Long.MIN_VALUE
 
     private fun MockNode.registration(addOrRemove: AddOrRemove,
-                                      serial: Long? = null): ListenableFuture<RegistrationResponse> {
+                                      serial: Long? = null): CordaFuture<RegistrationResponse> {
         val distinctSerial = if (serial == null) {
             ++lastSerial
         } else {
@@ -222,9 +225,9 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         return response
     }
 
-    private fun MockNode.subscribe(): List<Update> {
+    private fun MockNode.subscribe(): Queue<Update> {
         val request = SubscribeRequest(true, network.myAddress)
-        val updates = BlockingArrayQueue<Update>()
+        val updates = LinkedBlockingQueue<Update>()
         services.networkService.addMessageHandler(PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
             updates += message.data.deserialize<Update>()
         }
@@ -248,7 +251,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private fun addNewNodeToNetworkMap(legalName: X500Name): MockNode {
-        val node = mockNet.createNode(networkMapAddress = mapServiceNode.network.myAddress, legalName = legalName)
+        val node = mockNet.createNode(mapServiceNode.network.myAddress, legalName = legalName)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
         return node
@@ -268,7 +271,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         }
     }
 
-    private object NoNMSNodeFactory : MockNetwork.Factory {
+    private object NoNMSNodeFactory : MockNetwork.Factory<MockNode> {
         override fun create(config: NodeConfiguration,
                             network: MockNetwork,
                             networkMapAddr: SingleMessageRecipient?,

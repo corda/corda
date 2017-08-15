@@ -1,13 +1,12 @@
 package net.corda.core.node.services
 
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
-import net.corda.core.randomOrNull
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
@@ -45,7 +44,7 @@ interface NetworkMapCache {
     /** Tracks changes to the network map cache */
     val changed: Observable<MapChange>
     /** Future to track completion of the NetworkMapService registration. */
-    val mapServiceRegistered: ListenableFuture<Unit>
+    val mapServiceRegistered: CordaFuture<Void?>
 
     /**
      * Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the
@@ -98,9 +97,9 @@ interface NetworkMapCache {
 
     /** Gets a notary identity by the given name. */
     fun getNotary(principal: X500Name): Party? {
-        val notaryNode = notaryNodes.randomOrNull {
+        val notaryNode = notaryNodes.filter {
             it.advertisedServices.any { it.info.type.isSubTypeOf(ServiceType.notary) && it.info.name == principal }
-        }
+        }.randomOrNull()
         return notaryNode?.notaryIdentity
     }
 
@@ -118,6 +117,20 @@ interface NetworkMapCache {
             notaryNodes.filter { it.advertisedServices.any { it.info.type == type } }
         }
         return nodes.randomOrNull()?.notaryIdentity
+    }
+
+    /**
+     * Returns a service identity advertised by one of the nodes on the network
+     * @param type Specifies the type of the service
+     */
+    fun getAnyServiceOfType(type: ServiceType): Party? {
+        for (node in partyNodes) {
+            val serviceIdentities = node.serviceIdentities(type)
+            if (serviceIdentities.isNotEmpty()) {
+                return serviceIdentities.randomOrNull()
+            }
+        }
+        return null;
     }
 
     /** Checks whether a given party is an advertised notary identity */

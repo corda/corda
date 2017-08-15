@@ -2,16 +2,13 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.requireThat
 import net.corda.testing.contracts.DummyContract
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
-import net.corda.flows.CollectSignaturesFlow
-import net.corda.flows.FinalityFlow
-import net.corda.flows.SignTransactionFlow
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
@@ -64,9 +61,10 @@ class CollectSignaturesFlowTests {
                 val flow = object : SignTransactionFlow(otherParty) {
                     @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         val tx = stx.tx
+                        val ltx = tx.toLedgerTransaction(serviceHub)
                         "There should only be one output state" using (tx.outputs.size == 1)
                         "There should only be one output state" using (tx.inputs.isEmpty())
-                        val magicNumberState = tx.outputs.single().data as DummyContract.MultiOwnerState
+                        val magicNumberState = ltx.outputsOfType<DummyContract.MultiOwnerState>().single()
                         "Must be 1337 or greater" using (magicNumberState.magicNumber >= 1337)
                     }
                 }
@@ -86,7 +84,7 @@ class CollectSignaturesFlowTests {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
                 val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
-                val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
+                val builder = TransactionBuilder(notary).withItems(state, command)
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx))
                 val ftx = subFlow(FinalityFlow(stx)).single()
@@ -106,7 +104,7 @@ class CollectSignaturesFlowTests {
             override fun call(): SignedTransaction {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
                 val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
-                val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
+                val builder = TransactionBuilder(notary).withItems(state, command)
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx))
                 val ftx = subFlow(FinalityFlow(stx)).single()
@@ -121,9 +119,10 @@ class CollectSignaturesFlowTests {
                 val flow = object : SignTransactionFlow(otherParty) {
                     @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         val tx = stx.tx
+                        val ltx = tx.toLedgerTransaction(serviceHub)
                         "There should only be one output state" using (tx.outputs.size == 1)
                         "There should only be one output state" using (tx.inputs.isEmpty())
-                        val magicNumberState = tx.outputs.single().data as DummyContract.MultiOwnerState
+                        val magicNumberState = ltx.outputsOfType<DummyContract.MultiOwnerState>().single()
                         "Must be 1337 or greater" using (magicNumberState.magicNumber >= 1337)
                     }
                 }
@@ -144,7 +143,7 @@ class CollectSignaturesFlowTests {
         val flow = a.services.startFlow(TestFlowTwo.Initiator(state))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
-        result.verifySignatures()
+        result.verifyRequiredSignatures()
         println(result.tx)
         println(result.sigs)
     }
@@ -156,7 +155,7 @@ class CollectSignaturesFlowTests {
         val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
-        result.verifySignatures()
+        result.verifyRequiredSignatures()
         println(result.tx)
         println(result.sigs)
     }

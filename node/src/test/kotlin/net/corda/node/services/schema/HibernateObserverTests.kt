@@ -10,38 +10,38 @@ import net.corda.core.schemas.QueryableState
 import net.corda.testing.LogHelper
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
+import net.corda.testing.DUMMY_CA
 import net.corda.testing.MEGA_CORP
+import net.corda.testing.MOCK_IDENTITIES
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.subjects.PublishSubject
-import java.io.Closeable
 import javax.persistence.*
 import kotlin.test.assertEquals
 
 
 class HibernateObserverTests {
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(HibernateObserver::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
     }
 
     @After
     fun cleanUp() {
-        dataSource.close()
+        database.close()
         LogHelper.reset(HibernateObserver::class)
     }
 
@@ -91,7 +91,7 @@ class HibernateObserverTests {
     @Test
     fun testChildObjectsArePersisted() {
         val testSchema = object : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {}
-        val rawUpdatesPublisher = PublishSubject.create<Vault.Update>()
+        val rawUpdatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()
         val schemaService = object : SchemaService {
             override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = emptyMap()
 
@@ -106,7 +106,7 @@ class HibernateObserverTests {
         }
 
         @Suppress("UNUSED_VARIABLE")
-        val observer = HibernateObserver(rawUpdatesPublisher, HibernateConfiguration(schemaService))
+        val observer = HibernateObserver(rawUpdatesPublisher, HibernateConfiguration(schemaService, makeTestDatabaseProperties(), ::makeTestIdentityService))
         database.transaction {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
             val parentRowCountResult = TransactionManager.current().connection.prepareStatement("select count(*) from Parents").executeQuery()

@@ -3,10 +3,10 @@ package net.corda.core.contracts
 import net.corda.contracts.asset.Cash
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.ledger
-import net.corda.testing.transaction
 import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -28,8 +28,8 @@ class TransactionEncumbranceTests {
 
     class DummyTimeLock : Contract {
         override val legalContractReference = SecureHash.sha256("DummyTimeLock")
-        override fun verify(tx: TransactionForContract) {
-            val timeLockInput = tx.inputs.filterIsInstance<State>().singleOrNull() ?: return
+        override fun verify(tx: LedgerTransaction) {
+            val timeLockInput = tx.inputsOfType<State>().singleOrNull() ?: return
             val time = tx.timeWindow?.untilTime ?: throw IllegalArgumentException("Transactions containing time-locks must have a time-window")
             requireThat {
                 "the time specified in the time-lock has passed" using (time >= timeLockInput.validFrom)
@@ -114,22 +114,26 @@ class TransactionEncumbranceTests {
 
     @Test
     fun `state cannot be encumbered by itself`() {
-        transaction {
-            input { state }
-            output(encumbrance = 0) { stateWithNewOwner }
-            command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
-            this `fails with` "Missing required encumbrance 0 in OUTPUT"
+        ledger {
+            transaction {
+                input { state }
+                output(encumbrance = 0) { stateWithNewOwner }
+                command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
+                this `fails with` "Missing required encumbrance 0 in OUTPUT"
+            }
         }
     }
 
     @Test
     fun `encumbrance state index must be valid`() {
-        transaction {
-            input { state }
-            output(encumbrance = 2) { stateWithNewOwner }
-            output { timeLock }
-            command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
-            this `fails with` "Missing required encumbrance 2 in OUTPUT"
+        ledger {
+            transaction {
+                input { state }
+                output(encumbrance = 2) { stateWithNewOwner }
+                output { timeLock }
+                command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
+                this `fails with` "Missing required encumbrance 2 in OUTPUT"
+            }
         }
     }
 

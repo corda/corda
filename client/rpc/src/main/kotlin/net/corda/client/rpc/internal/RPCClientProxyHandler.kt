@@ -4,18 +4,19 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.RemovalCause
 import com.google.common.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import net.corda.core.ThreadBox
+import net.corda.core.internal.ThreadBox
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.getOrThrow
+import net.corda.core.internal.LazyPool
+import net.corda.core.internal.LazyStickyPool
+import net.corda.core.internal.LifeCycle
 import net.corda.core.messaging.RPCOps
-import net.corda.core.serialization.KryoPoolWithContext
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.*
 import net.corda.nodeapi.*
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -61,7 +62,8 @@ class RPCClientProxyHandler(
         private val rpcPassword: String,
         private val serverLocator: ServerLocator,
         private val clientAddress: SimpleString,
-        private val rpcOpsClass: Class<out RPCOps>
+        private val rpcOpsClass: Class<out RPCOps>,
+        serializationContext: SerializationContext
 ) : InvocationHandler {
 
     private enum class State {
@@ -74,9 +76,6 @@ class RPCClientProxyHandler(
 
     private companion object {
         val log = loggerFor<RPCClientProxyHandler>()
-        // Note that this KryoPool is not yet capable of deserialising Observables, it requires Proxy-specific context
-        // to do that. However it may still be used for serialisation of RPC requests and related messages.
-        val kryoPool: KryoPool = KryoPool.Builder { RPCKryo(RpcClientObservableSerializer) }.build()
         // To check whether toString() is being invoked
         val toStringMethod: Method = Object::toString.javaMethod!!
     }
@@ -85,7 +84,7 @@ class RPCClientProxyHandler(
     private var reaperExecutor: ScheduledExecutorService? = null
 
     // A sticky pool for running Observable.onNext()s. We need the stickiness to preserve the observation ordering.
-    private val observationExecutorThreadFactory = ThreadFactoryBuilder().setNameFormat("rpc-client-observation-pool-%d").build()
+    private val observationExecutorThreadFactory = ThreadFactoryBuilder().setNameFormat("rpc-client-observation-pool-%d").setDaemon(true).build()
     private val observationExecutorPool = LazyStickyPool(rpcConfiguration.observationExecutorPoolSize) {
         Executors.newFixedThreadPool(1, observationExecutorThreadFactory)
     }
@@ -109,11 +108,10 @@ class RPCClientProxyHandler(
     private val observablesToReap = ThreadBox(object {
         var observables = ArrayList<RPCApi.ObservableId>()
     })
-    // A Kryo pool that automatically adds the observable context when an instance is requested.
-    private val kryoPoolWithObservableContext = RpcClientObservableSerializer.createPoolWithContext(kryoPool, observableContext)
+    private val serializationContextWithObservableContext = RpcClientObservableSerializer.createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
-        val onObservableRemove = RemovalListener<RPCApi.ObservableId, UnicastSubject<Notification<Any>>> {
+        val onObservableRemove = RemovalListener<RPCApi.ObservableId, UnicastSubject<Notification<*>>> {
             val rpcCallSite = callSiteMap?.remove(it.key.toLong)
             if (it.cause == RemovalCause.COLLECTED) {
                 log.warn(listOf(
@@ -194,7 +192,7 @@ class RPCClientProxyHandler(
             val replyFuture = SettableFuture.create<Any>()
             sessionAndProducerPool.run {
                 val message = it.session.createMessage(false)
-                request.writeToClientMessage(kryoPool, message)
+                request.writeToClientMessage(serializationContextWithObservableContext, message)
 
                 log.debug {
                     val argumentsString = arguments?.joinToString() ?: ""
@@ -221,7 +219,7 @@ class RPCClientProxyHandler(
 
     // The handler for Artemis messages.
     private fun artemisMessageHandler(message: ClientMessage) {
-        val serverToClient = RPCApi.ServerToClient.fromClientMessage(kryoPoolWithObservableContext, message)
+        val serverToClient = RPCApi.ServerToClient.fromClientMessage(serializationContextWithObservableContext, message)
         log.debug { "Got message from RPC server $serverToClient" }
         when (serverToClient) {
             is RPCApi.ServerToClient.RpcReply -> {
@@ -338,7 +336,7 @@ class RPCClientProxyHandler(
     }
 }
 
-private typealias RpcObservableMap = Cache<RPCApi.ObservableId, UnicastSubject<Notification<Any>>>
+private typealias RpcObservableMap = Cache<RPCApi.ObservableId, UnicastSubject<Notification<*>>>
 private typealias RpcReplyMap = ConcurrentHashMap<RPCApi.RpcRequestId, SettableFuture<Any?>>
 private typealias CallSiteMap = ConcurrentHashMap<Long, Throwable?>
 
@@ -348,7 +346,7 @@ private typealias CallSiteMap = ConcurrentHashMap<Long, Throwable?>
  * @param observableMap holds the Observables that are ultimately exposed to the user.
  * @param hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
  */
-private data class ObservableContext(
+data class ObservableContext(
         val callSiteMap: CallSiteMap?,
         val observableMap: RpcObservableMap,
         val hardReferenceStore: MutableSet<Observable<*>>
@@ -357,17 +355,17 @@ private data class ObservableContext(
 /**
  * A [Serializer] to deserialise Observables once the corresponding Kryo instance has been provided with an [ObservableContext].
  */
-private object RpcClientObservableSerializer : Serializer<Observable<Any>>() {
+object RpcClientObservableSerializer : Serializer<Observable<*>>() {
     private object RpcObservableContextKey
-    fun createPoolWithContext(kryoPool: KryoPool, observableContext: ObservableContext): KryoPool {
-        return KryoPoolWithContext(kryoPool, RpcObservableContextKey, observableContext)
+
+    fun createContext(serializationContext: SerializationContext, observableContext: ObservableContext): SerializationContext {
+        return serializationContext.withProperty(RpcObservableContextKey, observableContext)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<Observable<Any>>): Observable<Any> {
-        @Suppress("UNCHECKED_CAST")
+    override fun read(kryo: Kryo, input: Input, type: Class<Observable<*>>): Observable<Any> {
         val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
         val observableId = RPCApi.ObservableId(input.readLong(true))
-        val observable = UnicastSubject.create<Notification<Any>>()
+        val observable = UnicastSubject.create<Notification<*>>()
         require(observableContext.observableMap.getIfPresent(observableId) == null) {
             "Multiple Observables arrived with the same ID $observableId"
         }
@@ -384,7 +382,7 @@ private object RpcClientObservableSerializer : Serializer<Observable<Any>>() {
         }.dematerialize()
     }
 
-    override fun write(kryo: Kryo, output: Output, observable: Observable<Any>) {
+    override fun write(kryo: Kryo, output: Output, observable: Observable<*>) {
         throw UnsupportedOperationException("Cannot serialise Observables on the client side")
     }
 

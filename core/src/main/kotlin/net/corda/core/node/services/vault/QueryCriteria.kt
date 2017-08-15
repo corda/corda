@@ -4,7 +4,6 @@ package net.corda.core.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
@@ -26,6 +25,19 @@ sealed class QueryCriteria {
     @CordaSerializable
     data class TimeCondition(val type: TimeInstantType, val predicate: ColumnPredicate<Instant>)
 
+    // DOCSTART VaultQuerySoftLockingCriteria
+    @CordaSerializable
+    data class SoftLockingCondition(val type: SoftLockingType, val lockIds: List<UUID> = emptyList())
+
+    @CordaSerializable
+    enum class SoftLockingType {
+        UNLOCKED_ONLY,  // only unlocked states
+        LOCKED_ONLY,    // only soft locked states
+        SPECIFIED,      // only those soft locked states specified by lock id(s)
+        UNLOCKED_AND_SPECIFIED   // all unlocked states plus those soft locked states specified by lock id(s)
+    }
+    // DOCEND VaultQuerySoftLockingCriteria
+
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
@@ -40,7 +52,7 @@ sealed class QueryCriteria {
                                                              val contractStateTypes: Set<Class<out ContractState>>? = null,
                                                              val stateRefs: List<StateRef>? = null,
                                                              val notaryName: List<X500Name>? = null,
-                                                             val includeSoftlockedStates: Boolean = true,
+                                                             val softLockingCondition: SoftLockingCondition? = null,
                                                              val timeCondition: TimeCondition? = null) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))
@@ -51,8 +63,8 @@ sealed class QueryCriteria {
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
     data class LinearStateQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
-                                                                  val linearId: List<UniqueIdentifier>? = null,
-                                                                  val dealRef: List<String>? = null,
+                                                                  val uuid: List<UUID>? = null,
+                                                                  val externalId: List<String>? = null,
                                                                   override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))

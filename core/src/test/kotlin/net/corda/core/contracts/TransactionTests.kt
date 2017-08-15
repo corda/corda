@@ -1,27 +1,29 @@
 package net.corda.core.contracts
 
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.testing.contracts.DummyContract
+import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.sign
 import net.corda.core.identity.Party
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.*
+import net.corda.testing.contracts.DummyContract
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 
-class TransactionTests {
-
-    private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair): SignedTransaction {
-        val bytes: SerializedBytes<WireTransaction> = wtx.serialized
-        return SignedTransaction(bytes, keys.map { it.sign(wtx.id.bytes) })
+class TransactionTests : TestDependencyInjectionBase() {
+    private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair, notarySig: Boolean = true): SignedTransaction {
+        val keySigs = keys.map { it.sign(SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(it.public).schemeNumberID))) }
+        val sigs = if (notarySig) {
+            keySigs + DUMMY_NOTARY_KEY.sign(SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY_KEY.public).schemeNumberID)))
+        } else {
+            keySigs
+        }
+        return SignedTransaction(wtx, sigs)
     }
 
     @Test
@@ -38,26 +40,24 @@ class TransactionTests {
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
-                commands = emptyList(),
+                commands = listOf(dummyCommand(compKey, DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = DUMMY_NOTARY,
-                signers = listOf(compKey, DUMMY_KEY_1.public, DUMMY_KEY_2.public),
-                type = TransactionType.General,
                 timeWindow = null
         )
         assertEquals(
                 setOf(compKey, DUMMY_KEY_2.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifySignatures() }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifyRequiredSignatures() }.missing
         )
 
         assertEquals(
                 setOf(compKey, DUMMY_KEY_2.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1, ak).verifySignatures() }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1, ak).verifyRequiredSignatures() }.missing
         )
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk).verifySignatures()
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ck).verifySignatures()
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk, ck).verifySignatures()
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak).verifySignatures(compKey)
-        makeSigned(wtx, DUMMY_KEY_1, ak).verifySignatures(compKey, DUMMY_KEY_2.public) // Mixed allowed to be missing.
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk).verifyRequiredSignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ck).verifyRequiredSignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk, ck).verifyRequiredSignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak).verifySignaturesExcept(compKey)
+        makeSigned(wtx, DUMMY_KEY_1, ak).verifySignaturesExcept(compKey, DUMMY_KEY_2.public) // Mixed allowed to be missing.
     }
 
     @Test
@@ -66,31 +66,29 @@ class TransactionTests {
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
-                commands = emptyList(),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = DUMMY_NOTARY,
-                signers = listOf(DUMMY_KEY_1.public, DUMMY_KEY_2.public),
-                type = TransactionType.General,
                 timeWindow = null
         )
-        assertFailsWith<IllegalArgumentException> { makeSigned(wtx).verifySignatures() }
+        assertFailsWith<IllegalArgumentException> { makeSigned(wtx, notarySig = false).verifyRequiredSignatures() }
 
         assertEquals(
                 setOf(DUMMY_KEY_1.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_2).verifySignatures() }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_2).verifyRequiredSignatures() }.missing
         )
         assertEquals(
                 setOf(DUMMY_KEY_2.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifySignatures() }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifyRequiredSignatures() }.missing
         )
         assertEquals(
                 setOf(DUMMY_KEY_2.public),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_CASH_ISSUER_KEY).verifySignatures(DUMMY_KEY_1.public) }.missing
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_CASH_ISSUER_KEY).verifySignaturesExcept(DUMMY_KEY_1.public) }.missing
         )
 
-        makeSigned(wtx, DUMMY_KEY_1).verifySignatures(DUMMY_KEY_2.public)
-        makeSigned(wtx, DUMMY_KEY_2).verifySignatures(DUMMY_KEY_1.public)
+        makeSigned(wtx, DUMMY_KEY_1).verifySignaturesExcept(DUMMY_KEY_2.public)
+        makeSigned(wtx, DUMMY_KEY_2).verifySignaturesExcept(DUMMY_KEY_1.public)
 
-        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2).verifySignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2).verifyRequiredSignatures()
     }
 
     @Test
@@ -101,8 +99,8 @@ class TransactionTests {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timeWindow: TimeWindow? = null
+        val privacySalt: PrivacySalt = PrivacySalt()
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
                 outputs,
@@ -110,39 +108,26 @@ class TransactionTests {
                 attachments,
                 id,
                 null,
-                signers,
                 timeWindow,
-                TransactionType.General
+                privacySalt
         )
 
-        transaction.type.verify(transaction)
+        transaction.verify()
     }
 
     @Test
-    fun `transaction verification fails for duplicate inputs`() {
-        val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
+    fun `transaction cannot have duplicate inputs`() {
         val stateRef = StateRef(SecureHash.randomSHA256(), 0)
-        val stateAndRef = StateAndRef(baseOutState, stateRef)
-        val inputs = listOf(stateAndRef, stateAndRef)
-        val outputs = listOf(baseOutState)
-        val commands = emptyList<AuthenticatedObject<CommandData>>()
-        val attachments = emptyList<Attachment>()
-        val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public)
-        val timeWindow: TimeWindow? = null
-        val transaction: LedgerTransaction = LedgerTransaction(
-                inputs,
-                outputs,
-                commands,
-                attachments,
-                id,
-                DUMMY_NOTARY,
-                signers,
-                timeWindow,
-                TransactionType.General
+        fun buildTransaction() = WireTransaction(
+                inputs = listOf(stateRef, stateRef),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = DUMMY_NOTARY,
+                timeWindow = null
         )
 
-        assertFailsWith<TransactionVerificationException.DuplicateInputStates> { transaction.type.verify(transaction) }
+        assertFailsWith<IllegalStateException> { buildTransaction() }
     }
 
     @Test
@@ -155,20 +140,38 @@ class TransactionTests {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timeWindow: TimeWindow? = null
-        val transaction: LedgerTransaction = LedgerTransaction(
+        val privacySalt: PrivacySalt = PrivacySalt()
+        fun buildTransaction() = LedgerTransaction(
                 inputs,
                 outputs,
                 commands,
                 attachments,
                 id,
                 notary,
-                signers,
                 timeWindow,
-                TransactionType.General
+                privacySalt
         )
 
-        assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { transaction.type.verify(transaction) }
+        assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction() }
+    }
+
+    @Test
+    fun `transactions with identical contents must have different ids`() {
+        val outputState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
+        fun buildTransaction() = WireTransaction(
+                inputs = emptyList(),
+                attachments = emptyList(),
+                outputs = listOf(outputState),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = null,
+                timeWindow = null,
+                privacySalt = PrivacySalt() // Randomly-generated – used for calculating the id
+        )
+
+        val issueTx1 = buildTransaction()
+        val issueTx2 = buildTransaction()
+
+        assertNotEquals(issueTx1.id, issueTx2.id)
     }
 }

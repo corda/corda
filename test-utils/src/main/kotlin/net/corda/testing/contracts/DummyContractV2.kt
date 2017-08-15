@@ -2,9 +2,11 @@ package net.corda.testing.contracts
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.identity.AbstractParty
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.flows.ContractUpgradeFlow
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 val DUMMY_V2_PROGRAM_ID = DummyContractV2()
@@ -30,7 +32,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
         return State(state.magicNumber, state.participants)
     }
 
-    override fun verify(tx: TransactionForContract) {
+    override fun verify(tx: LedgerTransaction) {
         if (tx.commands.any { it.value is UpgradeCommand }) ContractUpgradeFlow.verify(tx)
         // Other verifications.
     }
@@ -50,7 +52,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
         require(states.isNotEmpty())
 
         val signees: Set<AbstractParty> = states.flatMap { it.state.data.participants }.distinct().toSet()
-        return Pair(TransactionType.General.Builder(notary).apply {
+        return Pair(TransactionBuilder(notary).apply {
             states.forEach {
                 addInputState(it)
                 addOutputState(upgrade(it.state.data))

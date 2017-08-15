@@ -4,59 +4,50 @@ import io.requery.Persistable
 import io.requery.kotlin.eq
 import io.requery.sql.KotlinEntityDataStore
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
-import net.corda.testing.contracts.DummyContract
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.testing.NullPublicKey
-import net.corda.core.crypto.toBase58String
+import net.corda.core.crypto.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.storageKryo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_PUBKEY_1
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.schemas.requery.Models
 import net.corda.node.services.vault.schemas.requery.VaultCashBalancesEntity
 import net.corda.node.services.vault.schemas.requery.VaultSchema
 import net.corda.node.services.vault.schemas.requery.VaultStatesEntity
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
+import net.corda.testing.*
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.time.Instant
 import java.util.*
 
-class RequeryConfigurationTest {
+class RequeryConfigurationTest : TestDependencyInjectionBase() {
 
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var transactionStorage: DBTransactionStorage
     lateinit var requerySession: KotlinEntityDataStore<Persistable>
 
     @Before
     fun setUp() {
         val dataSourceProperties = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProperties)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
         newTransactionStorage()
         newRequeryStorage(dataSourceProperties)
     }
 
     @After
     fun cleanUp() {
-        dataSource.close()
+        database.close()
     }
 
     @Test
@@ -163,7 +154,7 @@ class RequeryConfigurationTest {
         val nativeQuery = "SELECT v.transaction_id, v.output_index FROM vault_states v WHERE v.state_status = 0"
 
         database.transaction {
-            val configuration = RequeryConfiguration(dataSourceProperties, true)
+            val configuration = RequeryConfiguration(dataSourceProperties, true, makeTestDatabaseProperties())
             val jdbcSession = configuration.jdbcSession()
             val prepStatement = jdbcSession.prepareStatement(nativeQuery)
             val rs = prepStatement.executeQuery()
@@ -180,7 +171,7 @@ class RequeryConfigurationTest {
             index = txnState.index
             stateStatus = Vault.StateStatus.UNCONSUMED
             contractStateClassName = DummyContract.SingleOwnerState::class.java.name
-            contractState = DummyContract.SingleOwnerState(owner = AnonymousParty(DUMMY_PUBKEY_1)).serialize(storageKryo()).bytes
+            contractState = DummyContract.SingleOwnerState(owner = AnonymousParty(MEGA_CORP_PUBKEY)).serialize().bytes
             notaryName = txn.tx.notary!!.name.toString()
             notaryKey = txn.tx.notary!!.owningKey.toBase58String()
             recordedTime = Instant.now()
@@ -203,7 +194,7 @@ class RequeryConfigurationTest {
 
     private fun newRequeryStorage(dataSourceProperties: Properties) {
         database.transaction {
-            val configuration = RequeryConfiguration(dataSourceProperties, true)
+            val configuration = RequeryConfiguration(dataSourceProperties, true, makeTestDatabaseProperties())
             requerySession = configuration.sessionForModel(Models.VAULT)
         }
     }
@@ -215,10 +206,8 @@ class RequeryConfigurationTest {
                 outputs = emptyList(),
                 commands = emptyList(),
                 notary = DUMMY_NOTARY,
-                signers = emptyList(),
-                type = TransactionType.General,
                 timeWindow = null
         )
-        return SignedTransaction(wtx.serialized, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))
+        return SignedTransaction(wtx, listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID))))
     }
 }

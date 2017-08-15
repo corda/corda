@@ -3,14 +3,13 @@ package net.corda.client.jfx.model
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.StateMachineInfo
-import net.corda.core.messaging.StateMachineTransactionMapping
-import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.Vault
-import net.corda.core.seconds
+import net.corda.core.node.services.vault.*
+import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
@@ -32,14 +31,14 @@ data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val mess
 class NodeMonitorModel {
 
     private val stateMachineUpdatesSubject = PublishSubject.create<StateMachineUpdate>()
-    private val vaultUpdatesSubject = PublishSubject.create<Vault.Update>()
+    private val vaultUpdatesSubject = PublishSubject.create<Vault.Update<ContractState>>()
     private val transactionsSubject = PublishSubject.create<SignedTransaction>()
     private val stateMachineTransactionMappingSubject = PublishSubject.create<StateMachineTransactionMapping>()
     private val progressTrackingSubject = PublishSubject.create<ProgressTrackingEvent>()
     private val networkMapSubject = PublishSubject.create<MapChange>()
 
     val stateMachineUpdates: Observable<StateMachineUpdate> = stateMachineUpdatesSubject
-    val vaultUpdates: Observable<Vault.Update> = vaultUpdatesSubject
+    val vaultUpdates: Observable<Vault.Update<ContractState>> = vaultUpdatesSubject
     val transactions: Observable<SignedTransaction> = transactionsSubject
     val stateMachineTransactionMapping: Observable<StateMachineTransactionMapping> = stateMachineTransactionMappingSubject
     val progressTracking: Observable<ProgressTrackingEvent> = progressTrackingSubject
@@ -51,17 +50,18 @@ class NodeMonitorModel {
      * Register for updates to/from a given vault.
      * TODO provide an unsubscribe mechanism
      */
-    fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
+    fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String, initialiseSerialization: Boolean = true) {
         val client = CordaRPCClient(
                 hostAndPort = nodeHostAndPort,
                 configuration = CordaRPCClientConfiguration.default.copy(
                         connectionMaxRetryInterval = 10.seconds
-                )
+                ),
+                initialiseSerialization = initialiseSerialization
         )
         val connection = client.start(username, password)
         val proxy = connection.proxy
 
-        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
+        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         // Extract the flow tracking stream
         // TODO is there a nicer way of doing this? Stream of streams in general results in code like this...
         val currentProgressTrackerUpdates = stateMachines.mapNotNull { stateMachine ->
@@ -82,21 +82,22 @@ class NodeMonitorModel {
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         stateMachineUpdates.startWith(currentStateMachines).subscribe(stateMachineUpdatesSubject)
 
-        // Vault updates
-        val (vault, vaultUpdates) = proxy.vaultAndUpdates()
-        val initialVaultUpdate = Vault.Update(setOf(), vault.toSet())
+        // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
+        val (vaultSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
+                                                                              PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
+        val initialVaultUpdate = Vault.Update(setOf(), vaultSnapshot.states.toSet())
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
 
         // Transactions
-        val (transactions, newTransactions) = proxy.verifiedTransactions()
+        val (transactions, newTransactions) = proxy.verifiedTransactionsFeed()
         newTransactions.startWith(transactions).subscribe(transactionsSubject)
 
         // SM -> TX mapping
-        val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMapping()
+        val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMappingFeed()
         futureSmTxMappings.startWith(smTxMappings).subscribe(stateMachineTransactionMappingSubject)
 
         // Parties on network
-        val (parties, futurePartyUpdate) = proxy.networkMapUpdates()
+        val (parties, futurePartyUpdate) = proxy.networkMapFeed()
         futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).subscribe(networkMapSubject)
 
         proxyObservable.set(proxy)

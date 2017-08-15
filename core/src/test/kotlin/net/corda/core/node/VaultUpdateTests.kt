@@ -4,16 +4,18 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.testing.DUMMY_NOTARY
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 
 class VaultUpdateTests {
 
     object DummyContract : Contract {
 
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
         }
 
         override val legalContractReference: SecureHash = SecureHash.sha256("")
@@ -46,7 +48,7 @@ class VaultUpdateTests {
 
     @Test
     fun `something plus nothing is something`() {
-        val before = Vault.Update(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
+        val before = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
         val after = before + Vault.NoUpdate
         assertEquals(before, after)
     }
@@ -54,32 +56,39 @@ class VaultUpdateTests {
     @Test
     fun `nothing plus something is something`() {
         val before = Vault.NoUpdate
-        val after = before + Vault.Update(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
-        val expected = Vault.Update(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
+        val after = before + Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
+        val expected = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
         assertEquals(expected, after)
     }
 
     @Test
     fun `something plus consume state 0 is something without state 0 output`() {
-        val before = Vault.Update(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
-        val after = before + Vault.Update(setOf(stateAndRef0), setOf())
-        val expected = Vault.Update(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef1))
+        val before = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
+        val after = before + Vault.Update<ContractState>(setOf(stateAndRef0), setOf())
+        val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef1))
         assertEquals(expected, after)
     }
 
     @Test
     fun `something plus produce state 4 is something with additional state 4 output`() {
-        val before = Vault.Update(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
-        val after = before + Vault.Update(setOf(), setOf(stateAndRef4))
-        val expected = Vault.Update(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1, stateAndRef4))
+        val before = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
+        val after = before + Vault.Update<ContractState>(setOf(), setOf(stateAndRef4))
+        val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1, stateAndRef4))
         assertEquals(expected, after)
     }
 
     @Test
     fun `something plus consume states 0 and 1, and produce state 4, is something without state 0 and 1 outputs and only state 4 output`() {
-        val before = Vault.Update(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
-        val after = before + Vault.Update(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef4))
-        val expected = Vault.Update(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef4))
+        val before = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
+        val after = before + Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef4))
+        val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef4))
         assertEquals(expected, after)
+    }
+
+    @Test
+    fun `can't combine updates of different types`() {
+        val regularUpdate = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef4))
+        val notaryChangeUpdate = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1), type = Vault.UpdateType.NOTARY_CHANGE)
+        assertFailsWith<IllegalArgumentException> { regularUpdate + notaryChangeUpdate }
     }
 }

@@ -3,7 +3,7 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.Fix
 import net.corda.contracts.FixOf
-import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
@@ -33,7 +33,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
                         protected val fixOf: FixOf,
                         protected val expectedRate: BigDecimal,
                         protected val rateTolerance: BigDecimal,
-                        override val progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name)) : FlowLogic<Unit>() {
+                        override val progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name)) : FlowLogic<TransactionSignature>() {
 
     companion object {
         class QUERYING(val name: String) : ProgressTracker.Step("Querying oracle for $name interest rate")
@@ -54,7 +54,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
 
     // DOCSTART 2
     @Suspendable
-    override fun call() {
+    override fun call(): TransactionSignature {
         progressTracker.currentStep = progressTracker.steps[1]
         val fix = subFlow(FixQueryFlow(fixOf, oracle))
         progressTracker.currentStep = WORKING
@@ -63,8 +63,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
         val mtx = tx.toWireTransaction().buildFilteredTransaction(Predicate { filtering(it) })
-        val signature = subFlow(FixSignFlow(tx, oracle, mtx))
-        tx.addSignatureUnchecked(signature)
+        return subFlow(FixSignFlow(tx, oracle, mtx))
     }
     // DOCEND 2
 
@@ -112,10 +111,10 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
 
     @InitiatingFlow
     class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
-                      val partialMerkleTx: FilteredTransaction) : FlowLogic<DigitalSignature.WithKey>() {
+                      val partialMerkleTx: FilteredTransaction) : FlowLogic<TransactionSignature>() {
         @Suspendable
-        override fun call(): DigitalSignature.WithKey {
-            val resp = sendAndReceive<DigitalSignature.WithKey>(oracle, SignRequest(partialMerkleTx))
+        override fun call(): TransactionSignature {
+            val resp = sendAndReceive<TransactionSignature>(oracle, SignRequest(partialMerkleTx))
             return resp.unwrap { sig ->
                 check(oracle.owningKey.isFulfilledBy(listOf(sig.by)))
                 tx.toWireTransaction().checkSignature(sig)

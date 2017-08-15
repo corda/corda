@@ -1,27 +1,25 @@
 package net.corda.node.services
 
-import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.POUNDS
 import net.corda.core.identity.Party
-import net.corda.core.getOrThrow
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.driver
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.User
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
+import net.corda.testing.*
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.driver
 import net.corda.testing.node.DriverBasedTest
-import net.corda.testing.replicate
 import org.junit.Test
 import rx.Observable
 import java.util.*
@@ -65,7 +63,7 @@ class DistributedServiceTests : DriverBasedTest() {
         aliceProxy = connectRpc(alice)
         val rpcClientsToNotaries = notaries.map(::connectRpc)
         notaryStateMachines = Observable.from(rpcClientsToNotaries.map { proxy ->
-            proxy.stateMachinesAndUpdates().second.map { Pair(proxy.nodeIdentity(), it) }
+            proxy.stateMachinesFeed().updates.map { Pair(proxy.nodeIdentity(), it) }
         }).flatMap { it.onErrorResumeNext(Observable.empty()) }.bufferUntilSubscribed()
 
         runTest()
@@ -86,8 +84,7 @@ class DistributedServiceTests : DriverBasedTest() {
         val notarisationsPerNotary = HashMap<Party, Int>()
         notaryStateMachines.expectEvents(isStrict = false) {
             replicate<Pair<NodeInfo, StateMachineUpdate>>(50) {
-                expect(match = { it.second is StateMachineUpdate.Added }) {
-                    val (notary, update) = it
+                expect(match = { it.second is StateMachineUpdate.Added }) { (notary, update) ->
                     update as StateMachineUpdate.Added
                     notarisationsPerNotary.compute(notary.legalIdentity) { _, number -> number?.plus(1) ?: 1 }
                 }
@@ -125,8 +122,7 @@ class DistributedServiceTests : DriverBasedTest() {
         val notarisationsPerNotary = HashMap<Party, Int>()
         notaryStateMachines.expectEvents(isStrict = false) {
             replicate<Pair<NodeInfo, StateMachineUpdate>>(30) {
-                expect(match = { it.second is StateMachineUpdate.Added }) {
-                    val (notary, update) = it
+                expect(match = { it.second is StateMachineUpdate.Added }) { (notary, update) ->
                     update as StateMachineUpdate.Added
                     notarisationsPerNotary.compute(notary.legalIdentity) { _, number -> number?.plus(1) ?: 1 }
                 }

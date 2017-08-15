@@ -6,6 +6,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.time.Instant
 import java.util.*
@@ -19,6 +20,7 @@ object VaultSchema
 /**
  * First version of the Vault ORM schema
  */
+@CordaSerializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
                                     mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java,  CommonSchemaV1.Party::class.java)) {
     @Entity
@@ -66,8 +68,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     @Entity
     @Table(name = "vault_linear_states",
             indexes = arrayOf(Index(name = "external_id_index", columnList = "external_id"),
-                              Index(name = "uuid_index", columnList = "uuid"),
-                              Index(name = "deal_reference_index", columnList = "deal_reference")))
+                    Index(name = "uuid_index", columnList = "uuid")))
     class VaultLinearStates(
             /** [ContractState] attributes */
             @OneToMany(cascade = arrayOf(CascadeType.ALL))
@@ -80,18 +81,11 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
-            var uuid: UUID,
-
-            // TODO: DealState to be deprecated (collapsed into LinearState)
-
-            /** Deal State attributes **/
-            @Column(name = "deal_reference")
-            var dealReference: String
+            var uuid: UUID
     ) : PersistentState() {
-        constructor(uid: UniqueIdentifier, _dealReference: String, _participants: List<AbstractParty>) :
+        constructor(uid: UniqueIdentifier, _participants: List<AbstractParty>) :
                 this(externalId = uid.externalId,
                      uuid = uid.id,
-                     dealReference = _dealReference,
                      participants = _participants.map{ CommonSchemaV1.Party(it) }.toSet() )
     }
 
@@ -103,8 +97,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var participants: Set<CommonSchemaV1.Party>,
 
             /** [OwnableState] attributes */
-            @OneToOne(cascade = arrayOf(CascadeType.ALL))
-            var owner: CommonSchemaV1.Party,
+            @Column(name = "owner_id")
+            var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
              *
@@ -124,7 +118,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var issuerRef: ByteArray
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
-                this(owner = CommonSchemaV1.Party(_owner),
+                this(owner = _owner,
                      quantity = _quantity,
                      issuerParty = CommonSchemaV1.Party(_issuerParty),
                      issuerRef = _issuerRef.bytes,

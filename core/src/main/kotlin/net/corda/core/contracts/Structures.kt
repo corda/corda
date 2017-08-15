@@ -1,19 +1,24 @@
+@file:JvmName("Structures")
+
 package net.corda.core.contracts
 
-import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.serialization.serialize
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.PublicKey
-import java.time.Duration
 import java.time.Instant
 import java.util.jar.JarInputStream
 
@@ -76,7 +81,7 @@ interface ContractState {
      * A _participant_ is any party that is able to consume this state in a valid transaction.
      *
      * The list of participants is required for certain types of transactions. For example, when changing the notary
-     * for this state ([TransactionType.NotaryChange]), every participant has to be involved and approve the transaction
+     * for this state, every participant has to be involved and approve the transaction
      * so that they receive the updated state, and don't end up in a situation where they can no longer use a state
      * they possess, since someone consumed that state during the notary change process.
      *
@@ -141,6 +146,12 @@ data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
 fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
 
 // DOCSTART 3
+
+/**
+ * Return structure for [OwnableState.withNewOwner]
+ */
+data class CommandAndState(val command: CommandData, val ownableState: OwnableState)
+
 /**
  * A contract state that can have a single owner.
  */
@@ -149,7 +160,7 @@ interface OwnableState : ContractState {
     val owner: AbstractParty
 
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
-    fun withNewOwner(newOwner: AbstractParty): Pair<CommandData, OwnableState>
+    fun withNewOwner(newOwner: AbstractParty): CommandAndState
 }
 // DOCEND 3
 
@@ -199,26 +210,6 @@ interface LinearState : ContractState {
      * True if this should be tracked by our vault(s).
      */
     fun isRelevant(ourKeys: Set<PublicKey>): Boolean
-
-    /**
-     * Standard clause to verify the LinearState safety properties.
-     */
-    @CordaSerializable
-    class ClauseVerifier<in S : LinearState, C : CommandData> : Clause<S, C, Unit>() {
-        override fun verify(tx: TransactionForContract,
-                            inputs: List<S>,
-                            outputs: List<S>,
-                            commands: List<AuthenticatedObject<C>>,
-                            groupingKey: Unit?): Set<C> {
-            val inputIds = inputs.map { it.linearId }.distinct()
-            val outputIds = outputs.map { it.linearId }.distinct()
-            requireThat {
-                "LinearStates are not merged" using (inputIds.count() == inputs.count())
-                "LinearStates are not split" using (outputIds.count() == outputs.count())
-            }
-            return emptySet()
-        }
-    }
 }
 // DOCEND 2
 
@@ -281,14 +272,13 @@ abstract class TypeOnlyCommandData : CommandData {
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
 @CordaSerializable
-// DOCSTART 9
-data class Command(val value: CommandData, val signers: List<PublicKey>) {
-// DOCEND 9
+data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) {
+    // TODO Introduce NonEmptyList?
     init {
         require(signers.isNotEmpty())
     }
 
-    constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
+    constructor(data: T, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
     override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString()}"
@@ -324,63 +314,6 @@ data class AuthenticatedObject<out T : Any>(
 )
 // DOCEND 6
 
-/**
- * A time-window is required for validation/notarization purposes.
- * If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
- * between (fromTime, untilTime).
- * Usually, a time-window is required to have both sides set (fromTime, untilTime).
- * However, some apps may require that a time-window has a start [Instant] (fromTime), but no end [Instant] (untilTime) and vice versa.
- * TODO: Consider refactoring using TimeWindow abstraction like TimeWindow.From, TimeWindow.Until, TimeWindow.Between.
- */
-@CordaSerializable
-class TimeWindow private constructor(
-        /** The time at which this transaction is said to have occurred is after this moment. */
-        val fromTime: Instant?,
-        /** The time at which this transaction is said to have occurred is before this moment. */
-        val untilTime: Instant?
-) {
-    companion object {
-        /** Use when the left-side [fromTime] of a [TimeWindow] is only required and we don't need an end instant (untilTime). */
-        @JvmStatic
-        fun fromOnly(fromTime: Instant) = TimeWindow(fromTime, null)
-
-        /** Use when the right-side [untilTime] of a [TimeWindow] is only required and we don't need a start instant (fromTime). */
-        @JvmStatic
-        fun untilOnly(untilTime: Instant) = TimeWindow(null, untilTime)
-
-        /** Use when both sides of a [TimeWindow] must be set ([fromTime], [untilTime]). */
-        @JvmStatic
-        fun between(fromTime: Instant, untilTime: Instant): TimeWindow {
-            require(fromTime < untilTime) { "fromTime should be earlier than untilTime" }
-            return TimeWindow(fromTime, untilTime)
-        }
-
-        /** Use when we have a start time and a period of validity. */
-        @JvmStatic
-        fun fromStartAndDuration(fromTime: Instant, duration: Duration): TimeWindow = between(fromTime, fromTime + duration)
-
-        /**
-         * When we need to create a [TimeWindow] based on a specific time [Instant] and some tolerance in both sides of this instant.
-         * The result will be the following time-window: ([time] - [tolerance], [time] + [tolerance]).
-         */
-        @JvmStatic
-        fun withTolerance(time: Instant, tolerance: Duration) = between(time - tolerance, time + tolerance)
-    }
-
-    /** The midpoint is calculated as fromTime + (untilTime - fromTime)/2. Note that it can only be computed if both sides are set. */
-    val midpoint: Instant get() = fromTime!! + Duration.between(fromTime, untilTime!!).dividedBy(2)
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is TimeWindow) return false
-        return (fromTime == other.fromTime && untilTime == other.untilTime)
-    }
-
-    override fun hashCode() = 31 * (fromTime?.hashCode() ?: 0) + (untilTime?.hashCode() ?: 0)
-
-    override fun toString() = "TimeWindow(fromTime=$fromTime, untilTime=$untilTime)"
-}
-
 // DOCSTART 5
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
@@ -399,7 +332,7 @@ interface Contract {
      * existing contract code.
      */
     @Throws(IllegalArgumentException::class)
-    fun verify(tx: TransactionForContract)
+    fun verify(tx: LedgerTransaction)
 
     /**
      * Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
@@ -488,4 +421,24 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
         closeEntry()
     }
     throw FileNotFoundException(path)
+}
+
+/**
+ * A privacy salt is required to compute nonces per transaction component in order to ensure that an adversary cannot
+ * use brute force techniques and reveal the content of a Merkle-leaf hashed value.
+ * Because this salt serves the role of the seed to compute nonces, its size and entropy should be equal to the
+ * underlying hash function used for Merkle tree generation, currently [SHA256], which has an output of 32 bytes.
+ * There are two constructors, one that generates a new 32-bytes random salt, and another that takes a [ByteArray] input.
+ * The latter is required in cases where the salt value needs to be pre-generated (agreed between transacting parties),
+ * but it is highlighted that one should always ensure it has sufficient entropy.
+ */
+@CordaSerializable
+class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
+    /** Constructs a salt with a randomly-generated 32 byte value. */
+    constructor() : this(secureRandomBytes(32))
+
+    init {
+        require(bytes.size == 32) { "Privacy salt should be 32 bytes." }
+        require(!bytes.all { it == 0.toByte() }) { "Privacy salt should not be all zeros." }
+    }
 }

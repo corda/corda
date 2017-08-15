@@ -8,9 +8,8 @@ import io.atomix.copycat.server.StateMachine
 import io.atomix.copycat.server.storage.snapshot.SnapshotReader
 import io.atomix.copycat.server.storage.snapshot.SnapshotWriter
 import net.corda.core.utilities.loggerFor
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.JDBCHashMap
-import net.corda.node.utilities.transaction
-import org.jetbrains.exposed.sql.Database
 import java.util.*
 
 /**
@@ -21,7 +20,7 @@ import java.util.*
  * to disk, and sharing them across the cluster. A new node joining the cluster will have to obtain and install a snapshot
  * containing the entire JDBC table contents.
  */
-class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: String) : StateMachine(), Snapshottable {
+class DistributedImmutableMap<K : Any, V : Any>(val db: CordaPersistence, tableName: String) : StateMachine(), Snapshottable {
     companion object {
         private val log = loggerFor<DistributedImmutableMap<*, *>>()
     }
@@ -55,7 +54,7 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
      * @return map containing conflicting entries
      */
     fun put(commit: Commit<Commands.PutAll<K, V>>): Map<K, V> {
-        commit.use { commit ->
+        commit.use {
             val conflicts = LinkedHashMap<K, V>()
             db.transaction {
                 val entries = commit.operation().entries

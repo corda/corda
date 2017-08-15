@@ -5,22 +5,22 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.read
-import net.corda.core.readAll
+import net.corda.core.internal.read
+import net.corda.core.internal.readAll
 import net.corda.testing.LogHelper
-import net.corda.core.write
-import net.corda.core.writeLines
+import net.corda.core.internal.write
+import net.corda.core.internal.writeLines
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.node.makeTestDataSourceProperties
-import org.jetbrains.exposed.sql.Database
+import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.nio.charset.Charset
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
@@ -35,8 +35,7 @@ import kotlin.test.assertNull
 class NodeAttachmentStorageTest {
     // Use an in memory file system for testing attachment storage.
     lateinit var fs: FileSystem
-    lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var dataSourceProperties: Properties
     lateinit var configuration: RequeryConfiguration
 
@@ -45,17 +44,15 @@ class NodeAttachmentStorageTest {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         dataSourceProperties = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProperties)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
 
-        configuration = RequeryConfiguration(dataSourceProperties)
+        configuration = RequeryConfiguration(dataSourceProperties, databaseProperties = makeTestDatabaseProperties())
         fs = Jimfs.newFileSystem(Configuration.unix())
     }
 
     @After
     fun tearDown() {
-        dataSource.close()
+        database.close()
     }
 
     @Test
@@ -64,7 +61,7 @@ class NodeAttachmentStorageTest {
         val expectedHash = testJar.readAll().sha256()
 
         database.transaction {
-            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
+            val storage = NodeAttachmentService(dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
             val id = testJar.read { storage.importAttachment(it) }
             assertEquals(expectedHash, id)
 
@@ -90,7 +87,7 @@ class NodeAttachmentStorageTest {
     fun `duplicates not allowed`() {
         val testJar = makeTestJar()
         database.transaction {
-            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
+            val storage = NodeAttachmentService(dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
             testJar.read {
                 storage.importAttachment(it)
             }
@@ -106,7 +103,7 @@ class NodeAttachmentStorageTest {
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
         database.transaction {
-            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
+            val storage = NodeAttachmentService(dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
             val id = testJar.read { storage.importAttachment(it) }
 
             // Corrupt the file in the store.
@@ -134,7 +131,7 @@ class NodeAttachmentStorageTest {
     @Test
     fun `non jar rejected`() {
         database.transaction {
-            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
+            val storage = NodeAttachmentService(dataSourceProperties, MetricRegistry(), makeTestDatabaseProperties())
             val path = fs.getPath("notajar")
             path.writeLines(listOf("Hey", "there!"))
             path.read {

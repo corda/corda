@@ -2,7 +2,7 @@ package net.corda.nodeapi.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigUtil
-import net.corda.core.noneOrSingle
+import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.validateX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseNetworkHostAndPort
@@ -73,7 +73,7 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         Path::class -> Paths.get(getString(path))
         URL::class -> URL(getString(path))
         Properties::class -> getConfig(path).toProperties()
-        X500Name::class -> X500Name(getString(path)).apply(::validateX500Name)
+        X500Name::class -> X500Name(getString(path))
         else -> if (typeClass.java.isEnum) {
             parseEnum(typeClass.java, getString(path))
         } else {

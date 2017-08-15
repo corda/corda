@@ -8,6 +8,7 @@ import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
 import net.corda.core.crypto.commonName
+import net.corda.core.node.ScreenCoordinate
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.testing.node.MockNetwork
@@ -26,8 +27,8 @@ class VisualiserViewModel {
     inner class NodeWidget(val node: MockNetwork.MockNode, val innerDot: Circle, val outerDot: Circle, val longPulseDot: Circle,
                            val pulseAnim: Animation, val longPulseAnim: Animation,
                            val nameLabel: Label, val statusLabel: Label) {
-        fun position(index: Int, nodeCoords: (node: MockNetwork.MockNode, index: Int) -> Pair<Double, Double>) {
-            val (x, y) = nodeCoords(node, index)
+        fun position(nodeCoords: (node: MockNetwork.MockNode) -> ScreenCoordinate) {
+            val (x, y) = nodeCoords(node)
             innerDot.centerX = x
             innerDot.centerY = y
             outerDot.centerX = x
@@ -63,20 +64,20 @@ class VisualiserViewModel {
 
     fun repositionNodes() {
         for ((index, bank) in simulation.banks.withIndex()) {
-            nodesToWidgets[bank]!!.position(index, when (displayStyle) {
-                Style.MAP -> { node, _ -> nodeMapCoords(node) }
-                Style.CIRCLE -> { _, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.BANK, index) }
+            nodesToWidgets[bank]!!.position(when (displayStyle) {
+                Style.MAP -> { node -> nodeMapCoords(node) }
+                Style.CIRCLE -> { _ -> nodeCircleCoords(NetworkMapVisualiser.NodeType.BANK, index) }
             })
         }
         for ((index, serviceProvider) in (simulation.serviceProviders + simulation.regulators).withIndex()) {
-            nodesToWidgets[serviceProvider]!!.position(index, when (displayStyle) {
-                Style.MAP -> { node, _ -> nodeMapCoords(node) }
-                Style.CIRCLE -> { _, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.SERVICE, index) }
+            nodesToWidgets[serviceProvider]!!.position(when (displayStyle) {
+                Style.MAP -> { node -> nodeMapCoords(node) }
+                Style.CIRCLE -> { _ -> nodeCircleCoords(NetworkMapVisualiser.NodeType.SERVICE, index) }
             })
         }
     }
 
-    fun nodeMapCoords(node: MockNetwork.MockNode): Pair<Double, Double> {
+    fun nodeMapCoords(node: MockNetwork.MockNode): ScreenCoordinate {
         // For an image of the whole world, we use:
         // return node.place.coordinate.project(mapImage.fitWidth, mapImage.fitHeight, 85.0511, -85.0511, -180.0, 180.0)
 
@@ -90,7 +91,7 @@ class VisualiserViewModel {
         }
     }
 
-    fun nodeCircleCoords(type: NetworkMapVisualiser.NodeType, index: Int): Pair<Double, Double> {
+    fun nodeCircleCoords(type: NetworkMapVisualiser.NodeType, index: Int): ScreenCoordinate {
         val stepRad: Double = when (type) {
             NetworkMapVisualiser.NodeType.BANK -> 2 * Math.PI / bankCount
             NetworkMapVisualiser.NodeType.SERVICE -> (2 * Math.PI / serviceCount)
@@ -109,7 +110,7 @@ class VisualiserViewModel {
         val circleY = view.stageHeight / 2 + yOffset
         val x: Double = radius * Math.cos(tangentRad) + circleX
         val y: Double = radius * Math.sin(tangentRad) + circleY
-        return Pair(x, y)
+        return ScreenCoordinate(x, y)
     }
 
     fun createNodes() {
@@ -172,8 +173,8 @@ class VisualiserViewModel {
 
         val widget = NodeWidget(forNode, innerDot, outerDot, longPulseOuterDot, pulseAnim, longPulseAnim, nameLabel, statusLabel)
         when (displayStyle) {
-            Style.CIRCLE -> widget.position(index, { _, index -> nodeCircleCoords(nodeType, index) })
-            Style.MAP -> widget.position(index, { node, _ -> nodeMapCoords(node) })
+            Style.CIRCLE -> widget.position { _ -> nodeCircleCoords(nodeType, index) }
+            Style.MAP -> widget.position { node -> nodeMapCoords(node) }
         }
         return widget
     }

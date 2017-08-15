@@ -1,18 +1,13 @@
 package net.corda.contracts.asset
 
 import net.corda.contracts.Commodity
-import net.corda.contracts.clause.AbstractConserveAmount
-import net.corda.contracts.clause.AbstractIssue
-import net.corda.contracts.clause.NoZeroSizedOutputs
 import net.corda.core.contracts.*
-import net.corda.core.contracts.clauses.AnyOf
-import net.corda.core.contracts.clauses.GroupClauseVerifier
-import net.corda.core.contracts.clauses.verifyClause
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.util.*
 
@@ -48,48 +43,6 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/commodity-claims.html")
 
-    /**
-     * The clauses for this contract are essentially:
-     *
-     * 1. Group all commodity input and output states in a transaction by issued commodity, and then for each group:
-     *  a. Check there are no zero sized output states in the group, and throw an error if so.
-     *  b. Check for an issuance command, and do standard issuance checks if so, THEN STOP. Otherwise:
-     *  c. Check for a move command (required) and an optional exit command, and that input and output totals are correctly
-     *     conserved (output = input - exit)
-     */
-    interface Clauses {
-        /**
-         * Grouping clause to extract input and output states into matched groups and then run a set of clauses over
-         * each group.
-         */
-        class Group : GroupClauseVerifier<State, Commands, Issued<Commodity>>(AnyOf(
-                NoZeroSizedOutputs<State, Commands, Commodity>(),
-                Issue(),
-                ConserveAmount())) {
-            /**
-             * Group commodity states by issuance definition (issuer and underlying commodity).
-             */
-            override fun groupStates(tx: TransactionForContract)
-                    = tx.groupStates<State, Issued<Commodity>> { it.amount.token }
-        }
-
-        /**
-         * Standard issue clause, specialised to match the commodity issue command.
-         */
-        class Issue : AbstractIssue<State, Commands, Commodity>(
-                sum = { sumCommodities() },
-                sumOrZero = { sumCommoditiesOrZero(it) }
-        ) {
-            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
-        }
-
-        /**
-         * Standard clause for conserving the amount from input to output.
-         */
-        @CordaSerializable
-        class ConserveAmount : AbstractConserveAmount<State, Commands, Commodity>()
-    }
-
     /** A state representing a commodity claim against some party */
     data class State(
             override val amount: Amount<Issued<Commodity>>,
@@ -109,7 +62,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
 
         override fun toString() = "Commodity($amount at ${amount.token.issuer} owned by $owner)"
 
-        override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
     }
 
     // Just for grouping
@@ -137,8 +90,71 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         data class Exit(override val amount: Amount<Issued<Commodity>>) : Commands, FungibleAsset.Commands.Exit<Commodity>
     }
 
-    override fun verify(tx: TransactionForContract)
-            = verifyClause(tx, Clauses.Group(), extractCommands(tx.commands))
+    override fun verify(tx: LedgerTransaction) {
+        // Each group is a set of input/output states with distinct (reference, commodity) attributes. These types
+        // of commodity are not fungible and must be kept separated for bookkeeping purposes.
+        val groups = tx.groupStates { it: CommodityContract.State -> it.amount.token }
+
+        for ((inputs, outputs, key) in groups) {
+            // Either inputs or outputs could be empty.
+            val issuer = key.issuer
+            val commodity = key.product
+            val party = issuer.party
+
+            requireThat {
+                "there are no zero sized outputs" using ( outputs.none { it.amount.quantity == 0L } )
+            }
+
+            val issueCommand = tx.commands.select<Commands.Issue>().firstOrNull()
+            if (issueCommand != null) {
+                verifyIssueCommand(inputs, outputs, tx, issueCommand, commodity, issuer)
+            } else {
+                val inputAmount = inputs.sumCommoditiesOrNull() ?: throw IllegalArgumentException("there is at least one commodity input for this group")
+                val outputAmount = outputs.sumCommoditiesOrZero(Issued(issuer, commodity))
+
+                // If we want to remove commodity from the ledger, that must be signed for by the issuer.
+                // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
+                val exitCommand = tx.commands.select<Commands.Exit>(party = party).singleOrNull()
+                val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, Issued(issuer, commodity))
+
+                requireThat {
+                    "there are no zero sized inputs" using ( inputs.none { it.amount.quantity == 0L } )
+                    "for reference ${issuer.reference} at issuer ${party.nameOrNull()} the amounts balance" using
+                            (inputAmount == outputAmount + amountExitingLedger)
+                }
+
+                verifyMoveCommand<Commands.Move>(inputs, tx.commands)
+            }
+        }
+    }
+
+    private fun verifyIssueCommand(inputs: List<State>,
+                                   outputs: List<State>,
+                                   tx: LedgerTransaction,
+                                   issueCommand: AuthenticatedObject<Commands.Issue>,
+                                   commodity: Commodity,
+                                   issuer: PartyAndReference) {
+        // If we have an issue command, perform special processing: the group is allowed to have no inputs,
+        // and the output states must have a deposit reference owned by the signer.
+        //
+        // Whilst the transaction *may* have no inputs, it can have them, and in this case the outputs must
+        // sum to more than the inputs. An issuance of zero size is not allowed.
+        //
+        // Note that this means literally anyone with access to the network can issue cash claims of arbitrary
+        // amounts! It is up to the recipient to decide if the backing party is trustworthy or not, via some
+        // as-yet-unwritten identity service. See ADP-22 for discussion.
+
+        // The grouping ensures that all outputs have the same deposit reference and currency.
+        val inputAmount = inputs.sumCommoditiesOrZero(Issued(issuer, commodity))
+        val outputAmount = outputs.sumCommodities()
+        val commodityCommands = tx.commands.select<CommodityContract.Commands>()
+        requireThat {
+            "the issue command has a nonce" using (issueCommand.value.nonce != 0L)
+            "output deposits are owned by a command signer" using (issuer.party in issueCommand.signingParties)
+            "output values sum to more than the inputs" using (outputAmount > inputAmount)
+            "there is only a single issue command" using (commodityCommands.count() == 1)
+        }
+    }
 
     override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Commands>>
             = commands.select<CommodityContract.Commands>()

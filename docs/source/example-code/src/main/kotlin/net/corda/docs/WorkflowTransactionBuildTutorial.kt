@@ -2,31 +2,26 @@ package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.containsAny
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import net.corda.flows.FinalityFlow
 import java.security.PublicKey
-import java.time.Duration
-
-// DOCSTART 1
-// Helper method to locate the latest Vault version of a LinearState from a possibly out of date StateRef
-inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndRef<T> {
-    val linearHeads = vaultService.linearHeadsOfType<T>()
-    val original = toStateAndRef<T>(ref)
-    return linearHeads[original.state.data.linearId]!!
-}
-// DOCEND 1
 
 // Minimal state model of a manual approval process
 @CordaSerializable
@@ -69,16 +64,16 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
      * The verify method locks down the allowed transactions to contain just a single proposal being
      * created/modified and the only modification allowed is to the state field.
      */
-    override fun verify(tx: TransactionForContract) {
+    override fun verify(tx: LedgerTransaction) {
         val command = tx.commands.requireSingleCommand<TradeApprovalContract.Commands>()
-        require(tx.timeWindow?.midpoint != null) { "must have a time-window" }
+        requireNotNull(tx.timeWindow) { "must have a time-window" }
         when (command.value) {
             is Commands.Issue -> {
                 requireThat {
                     "Issue of new WorkflowContract must not include any inputs" using (tx.inputs.isEmpty())
                     "Issue of new WorkflowContract must be in a unique transaction" using (tx.outputs.size == 1)
                 }
-                val issued = tx.outputs[0] as TradeApprovalContract.State
+                val issued = tx.outputsOfType<TradeApprovalContract.State>().single()
                 requireThat {
                     "Issue requires the source Party as signer" using (command.signers.contains(issued.source.owningKey))
                     "Initial Issue state must be NEW" using (issued.state == WorkflowState.NEW)
@@ -121,9 +116,9 @@ class SubmitTradeApprovalFlow(val tradeId: String,
         // identify a notary. This might also be done external to the flow
         val notary = serviceHub.networkMapCache.getAnyNotary()
         // Create the TransactionBuilder and populate with the new state.
-        val tx = TransactionType.General.Builder(notary)
+        val tx = TransactionBuilder(notary)
                 .withItems(tradeProposal, Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
-        tx.setTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(60))
+        tx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)
         // We can automatically sign as there is no untrusted data.
         val signedTx = serviceHub.signInitialTransaction(tx)
         // Notarise and distribute.
@@ -148,8 +143,11 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
 
     @Suspendable
     override fun call(): StateAndRef<TradeApprovalContract.State> {
-        // Pull in the latest Vault version of the StateRef as a full StateAndRef
-        val latestRecord = serviceHub.latest<TradeApprovalContract.State>(ref)
+        // DOCSTART 1
+        val criteria = VaultQueryCriteria(stateRefs = listOf(ref))
+        val latestRecord = serviceHub.vaultQueryService.queryBy<TradeApprovalContract.State>(criteria).states.single()
+        // DOCEND 1
+
         // Check the protocol hasn't already been run
         require(latestRecord.ref == ref) {
             "Input trade $ref is not latest version $latestRecord"
@@ -176,15 +174,13 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
         // To destroy the old proposal state and replace with the new completion state.
         // Also add the Completed command with keys of all parties to signal the Tx purpose
         // to the Contract verify method.
-        val tx = TransactionType.
-                General.
-                Builder(notary).
+        val tx = TransactionBuilder(notary).
                 withItems(
                         latestRecord,
                         newState,
                         Command(TradeApprovalContract.Commands.Completed(),
                                 listOf(serviceHub.myInfo.legalIdentity.owningKey, latestRecord.state.data.source.owningKey)))
-        tx.setTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(60))
+        tx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)
         // We can sign this transaction immediately as we have already checked all the fields and the decision
         // is ultimately a manual one from the caller.
         // As a SignedTransaction we can pass the data around certain that it cannot be modified,
@@ -192,12 +188,12 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
         val selfSignedTx = serviceHub.signInitialTransaction(tx)
         //DOCEND 2
         // Send the signed transaction to the originator and await their signature to confirm
-        val allPartySignedTx = sendAndReceive<DigitalSignature.WithKey>(newState.source, selfSignedTx).unwrap {
+        val allPartySignedTx = sendAndReceive<TransactionSignature>(newState.source, selfSignedTx).unwrap {
             // Add their signature to our unmodified transaction. To check they signed the same tx.
             val agreedTx = selfSignedTx + it
             // Receive back their signature and confirm that it is for an unmodified transaction
             // Also that the only missing signature is from teh Notary
-            agreedTx.verifySignatures(notary.owningKey)
+            agreedTx.verifySignaturesExcept(notary.owningKey)
             // Recheck the data of the transaction. Note we run toLedgerTransaction on the WireTransaction
             // as we do not have all the signature.
             agreedTx.tx.toLedgerTransaction(serviceHub).verify()
@@ -226,16 +222,17 @@ class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
         // First we receive the verdict transaction signed by their single key
         val completeTx = receive<SignedTransaction>(source).unwrap {
             // Check the transaction is signed apart from our own key and the notary
-            val wtx = it.verifySignatures(serviceHub.myInfo.legalIdentity.owningKey, it.tx.notary!!.owningKey)
+            it.verifySignaturesExcept(serviceHub.myInfo.legalIdentity.owningKey, it.tx.notary!!.owningKey)
             // Check the transaction data is correctly formed
-            wtx.toLedgerTransaction(serviceHub).verify()
+            val ltx = it.toLedgerTransaction(serviceHub, false)
+            ltx.verify()
             // Confirm that this is the expected type of transaction
-            require(wtx.commands.single().value is TradeApprovalContract.Commands.Completed) {
+            require(ltx.commands.single().value is TradeApprovalContract.Commands.Completed) {
                 "Transaction must represent a workflow completion"
             }
             // Check the context dependent parts of the transaction as the
             // Contract verify method must not use serviceHub queries.
-            val state = wtx.outRef<TradeApprovalContract.State>(0)
+            val state = ltx.outRef<TradeApprovalContract.State>(0)
             require(state.state.data.source == serviceHub.myInfo.legalIdentity) {
                 "Proposal not one of our original proposals"
             }

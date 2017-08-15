@@ -39,7 +39,7 @@ Then we initialise the transaction builder:
 
 .. sourcecode:: kotlin
 
-    val builder: TransactionBuilder = TransactionType.General.Builder(notary = ourNotary)
+    val builder: TransactionBuilder = TransactionBuilder(notary = ourNotary)
 
 For any output state we add to this transaction builder, ``ourNotary`` will be assigned as its notary.
 Next we create a state object and assign ourselves as the owner. For this example we'll use a
@@ -64,7 +64,7 @@ We then sign the transaction, build and record it to our transaction storage:
 .. sourcecode:: kotlin
 
    val mySigningKey: PublicKey = serviceHub.legalIdentityKey
-   val issueTransaction = serviceHub.signInitialTransaction(issueTransaction, mySigningKey)
+   val issueTransaction = serviceHub.toSignedTransaction(issueTransaction, mySigningKey)
    serviceHub.recordTransactions(issueTransaction)
 
 The transaction is recorded and we now have a state (asset) in possession that we can transfer to someone else. Note
@@ -98,7 +98,7 @@ Again we sign the transaction, and build it:
 
    // We build it and add our default identity signature without checking if all signatures are present,
    // Note we know that the notary signature is missing, so thie SignedTransaction is still partial.
-   val moveTransaction = serviceHub.signInitialTransaction(moveTransactionBuilder)
+   val moveTransaction = serviceHub.toSignedTransaction(moveTransactionBuilder)
 
 Next we need to obtain a signature from the notary for the transaction to be valid. Prior to signing, the notary will
 commit our old (input) state so it cannot be used again.

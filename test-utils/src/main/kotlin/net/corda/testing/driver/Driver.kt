@@ -2,19 +2,23 @@
 
 package net.corda.testing.driver
 
-import com.google.common.util.concurrent.*
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
-import net.corda.core.*
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
+import net.corda.core.crypto.getX509Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.div
+import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -33,10 +37,7 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.*
 import net.corda.testing.node.MOCK_VERSION_INFO
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -52,9 +53,12 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
@@ -91,12 +95,12 @@ interface DriverDSLExposedInterface : CordformContext {
                   rpcUsers: List<User> = emptyList(),
                   verifierType: VerifierType = VerifierType.InMemory,
                   customOverrides: Map<String, Any?> = emptyMap(),
-                  startInSameProcess: Boolean? = null): ListenableFuture<out NodeHandle>
+                  startInSameProcess: Boolean? = null): CordaFuture<NodeHandle>
 
     fun startNodes(
             nodes: List<CordformNode>,
             startInSameProcess: Boolean? = null
-    ): List<ListenableFuture<out NodeHandle>>
+    ): List<CordaFuture<NodeHandle>>
 
     /**
      * Starts a distributed notary cluster.
@@ -116,14 +120,14 @@ interface DriverDSLExposedInterface : CordformContext {
             type: ServiceType = RaftValidatingNotaryService.type,
             verifierType: VerifierType = VerifierType.InMemory,
             rpcUsers: List<User> = emptyList(),
-            startInSameProcess: Boolean? = null): ListenableFuture<Pair<Party, List<NodeHandle>>>
+            startInSameProcess: Boolean? = null): CordaFuture<Pair<Party, List<NodeHandle>>>
 
     /**
      * Starts a web server for a node
      *
      * @param handle The handle for the node that this webserver connects to via RPC.
      */
-    fun startWebserver(handle: NodeHandle): ListenableFuture<WebserverHandle>
+    fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle>
 
     /**
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
@@ -131,7 +135,7 @@ interface DriverDSLExposedInterface : CordformContext {
      * @param startInProcess Determines if the node should be started inside this process. If null the Driver-level
      *     value will be used.
      */
-    fun startDedicatedNetworkMapService(startInProcess: Boolean? = null): ListenableFuture<out NodeHandle>
+    fun startDedicatedNetworkMapService(startInProcess: Boolean? = null): CordaFuture<NodeHandle>
 
     fun waitForAllNodesToFinish()
 
@@ -144,12 +148,12 @@ interface DriverDSLExposedInterface : CordformContext {
      * @param check The function being polled.
      * @return A future that completes with the non-null value [check] has returned.
      */
-    fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> A?): ListenableFuture<A>
+    fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> A?): CordaFuture<A>
     /**
      * Polls the given function until it returns true.
      * @see pollUntilNonNull
      */
-    fun pollUntilTrue(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> Boolean): ListenableFuture<Unit> {
+    fun pollUntilTrue(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> Boolean): CordaFuture<Unit> {
         return pollUntilNonNull(pollName, pollInterval, warnCount) { if (check()) Unit else null }
     }
 
@@ -185,7 +189,7 @@ sealed class NodeHandle {
             val nodeThread: Thread
     ) : NodeHandle()
 
-    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
+    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!, initialiseSerialization = false)
 }
 
 data class WebserverHandle(
@@ -221,7 +225,7 @@ sealed class PortAllocation {
  *     (...)
  *   }
  *
- * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously, but rather returns a [Future]
+ * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously, but rather returns a [CordaFuture]
  * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service.
  *
  * The driver implicitly bootstraps a [NetworkMapService].
@@ -248,6 +252,7 @@ fun <A> driver(
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
+        initialiseSerialization: Boolean = true,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
         startNodesInProcess: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
@@ -263,7 +268,8 @@ fun <A> driver(
                 isDebug = isDebug
         ),
         coerce = { it },
-        dsl = dsl
+        dsl = dsl,
+        initialiseSerialization = initialiseSerialization
 )
 
 /**
@@ -276,9 +282,11 @@ fun <A> driver(
  */
 fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericDriver(
         driverDsl: D,
+        initialiseSerialization: Boolean = true,
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
+    if (initialiseSerialization) initialiseTestSerialization()
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
@@ -289,6 +297,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
+        if (initialiseSerialization) resetTestSerialization()
     }
 }
 
@@ -305,7 +314,7 @@ fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: N
     addressMustBeBoundFuture(executorService, hostAndPort, listenProcess).getOrThrow()
 }
 
-fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort, listenProcess: Process? = null): ListenableFuture<Unit> {
+fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort, listenProcess: Process? = null): CordaFuture<Unit> {
     return poll(executorService, "address $hostAndPort to bind") {
         if (listenProcess != null && !listenProcess.isAlive) {
             throw ListenProcessDeathException(hostAndPort, listenProcess)
@@ -323,7 +332,7 @@ fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort
     addressMustNotBeBoundFuture(executorService, hostAndPort).getOrThrow()
 }
 
-fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort): ListenableFuture<Unit> {
+fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort): CordaFuture<Unit> {
     return poll(executorService, "address $hostAndPort to unbind") {
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
@@ -340,14 +349,14 @@ fun <A> poll(
         pollInterval: Duration = 500.millis,
         warnCount: Int = 120,
         check: () -> A?
-): ListenableFuture<A> {
-    val resultFuture = SettableFuture.create<A>()
+): CordaFuture<A> {
+    val resultFuture = openFuture<A>()
     val task = object : Runnable {
         var counter = -1
         override fun run() {
             if (resultFuture.isCancelled) return // Give up, caller can no longer get the result.
             if (++counter == warnCount) {
-                log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
+                log.warn("Been polling $pollName for ${(pollInterval * warnCount.toLong()).seconds} seconds...")
             }
             try {
                 val checkResult = check()
@@ -367,7 +376,7 @@ fun <A> poll(
 
 class ShutdownManager(private val executorService: ExecutorService) {
     private class State {
-        val registeredShutdowns = ArrayList<ListenableFuture<() -> Unit>>()
+        val registeredShutdowns = ArrayList<CordaFuture<() -> Unit>>()
         var isShutdown = false
     }
 
@@ -389,7 +398,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
     fun shutdown() {
         val shutdownActionFutures = state.locked {
             if (isShutdown) {
-                emptyList<ListenableFuture<() -> Unit>>()
+                emptyList<CordaFuture<() -> Unit>>()
             } else {
                 isShutdown = true
                 registeredShutdowns
@@ -407,15 +416,15 @@ class ShutdownManager(private val executorService: ExecutorService) {
         } }
     }
 
-    fun registerShutdown(shutdown: ListenableFuture<() -> Unit>) {
+    fun registerShutdown(shutdown: CordaFuture<() -> Unit>) {
         state.locked {
             require(!isShutdown)
             registeredShutdowns.add(shutdown)
         }
     }
-    fun registerShutdown(shutdown: () -> Unit) = registerShutdown(Futures.immediateFuture(shutdown))
+    fun registerShutdown(shutdown: () -> Unit) = registerShutdown(doneFuture(shutdown))
 
-    fun registerProcessShutdown(processFuture: ListenableFuture<Process>) {
+    fun registerProcessShutdown(processFuture: CordaFuture<Process>) {
         val processShutdown = processFuture.map { process ->
             {
                 process.destroy()
@@ -450,7 +459,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
                 registeredShutdowns.subList(start, end).listIterator(end - start).run {
                     while (hasPrevious()) {
                         previous().getOrThrow().invoke()
-                        set(Futures.immediateFuture {}) // Don't break other followers by doing a remove.
+                        set(doneFuture {}) // Don't break other followers by doing a remove.
                     }
                 }
             }
@@ -469,14 +478,14 @@ class DriverDSL(
         val startNodesInProcess: Boolean
 ) : DriverDSLInternalInterface {
     private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
-    private var _executorService: ListeningScheduledExecutorService? = null
+    private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
     private val callerPackage = getCallerPackage()
 
     class State {
-        val processes = ArrayList<ListenableFuture<Process>>()
+        val processes = ArrayList<CordaFuture<Process>>()
     }
 
     private val state = ThreadBox(State())
@@ -490,7 +499,7 @@ class DriverDSL(
         Paths.get(quasarFileUrl.toURI()).toString()
     }
 
-    fun registerProcess(process: ListenableFuture<Process>) {
+    fun registerProcess(process: CordaFuture<Process>) {
         shutdownManager.registerProcessShutdown(process)
         state.locked {
             processes.add(process)
@@ -498,7 +507,7 @@ class DriverDSL(
     }
 
     override fun waitForAllNodesToFinish() = state.locked {
-        Futures.allAsList(processes).get().forEach {
+        processes.transpose().get().forEach {
             it.waitFor()
         }
     }
@@ -508,8 +517,8 @@ class DriverDSL(
         _executorService?.shutdownNow()
     }
 
-    private fun establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration, processDeathFuture: ListenableFuture<out Throwable>): ListenableFuture<CordaRPCOps> {
-        val client = CordaRPCClient(nodeAddress, sslConfig)
+    private fun establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
+        val client = CordaRPCClient(nodeAddress, sslConfig, initialiseSerialization = false)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
@@ -521,7 +530,7 @@ class DriverDSL(
         }
         return firstOf(connectionFuture, processDeathFuture) {
             if (it == processDeathFuture) {
-                throw processDeathFuture.getOrThrow()
+                throw ListenProcessDeathException(nodeAddress, processDeathFuture.getOrThrow())
             }
             val connection = connectionFuture.getOrThrow()
             shutdownManager.registerShutdown(connection::close)
@@ -555,12 +564,12 @@ class DriverDSL(
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?
-    ): ListenableFuture<out NodeHandle> {
+    ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?: X509Utilities.getX509Name("${oneOf(names).commonName}-${p2pAddress.port}","London","demo@r3.com",null)
+        val name = providedName ?: getX509Name("${oneOf(names).commonName}-${p2pAddress.port}", "London", "demo@r3.com", null)
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(listOf(object : NodeDefinition {
             override fun getName() = name.toString()
             override fun getConfig() = configOf("p2pAddress" to p2pAddress.toString())
@@ -583,7 +592,7 @@ class DriverDSL(
         return startNodeInternal(config, webAddress, startInSameProcess)
     }
 
-    override fun startNodes(nodes: List<CordformNode>, startInSameProcess: Boolean?): List<ListenableFuture<out NodeHandle>> {
+    override fun startNodes(nodes: List<CordformNode>, startInSameProcess: Boolean?): List<CordaFuture<NodeHandle>> {
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(nodes)
         return nodes.map { node ->
             portAllocation.nextHostAndPort() // rpcAddress
@@ -611,7 +620,7 @@ class DriverDSL(
             verifierType: VerifierType,
             rpcUsers: List<User>,
             startInSameProcess: Boolean?
-    ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
+    ): CordaFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
@@ -636,7 +645,7 @@ class DriverDSL(
 
         return firstNotaryFuture.flatMap { firstNotary ->
             val notaryParty = firstNotary.nodeInfo.notaryIdentity
-            Futures.allAsList(restNotaryFutures).map { restNotaries ->
+            restNotaryFutures.transpose().map { restNotaries ->
                 Pair(notaryParty, listOf(firstNotary) + restNotaries)
             }
         }
@@ -659,7 +668,7 @@ class DriverDSL(
         throw IllegalStateException("Webserver at ${handle.webAddress} has died")
     }
 
-    override fun startWebserver(handle: NodeHandle): ListenableFuture<WebserverHandle> {
+    override fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val processFuture = DriverDSL.startWebserver(executorService, handle, debugPort)
         registerProcess(processFuture)
@@ -667,9 +676,7 @@ class DriverDSL(
     }
 
     override fun start() {
-        _executorService = MoreExecutors.listeningDecorator(
-                Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
-        )
+        _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
         // We set this property so that in-process nodes find cordapps. Out-of-process nodes need this passed in when started.
         System.setProperty("net.corda.node.cordapp.scan.package", callerPackage)
@@ -680,7 +687,7 @@ class DriverDSL(
 
     override fun baseDirectory(nodeName: X500Name): Path = driverDirectory / nodeName.commonName.replace(WHITESPACE, "")
 
-    override fun startDedicatedNetworkMapService(startInProcess: Boolean?): ListenableFuture<out NodeHandle> {
+    override fun startDedicatedNetworkMapService(startInProcess: Boolean?): CordaFuture<NodeHandle> {
         val webAddress = portAllocation.nextHostAndPort()
         val networkMapLegalName = networkMapStartStrategy.legalName
         val config = ConfigHelper.loadConfig(
@@ -698,7 +705,7 @@ class DriverDSL(
         return startNodeInternal(config, webAddress, startInProcess)
     }
 
-    private fun startNodeInternal(config: Config, webAddress: NetworkHostAndPort, startInProcess: Boolean?): ListenableFuture<out NodeHandle> {
+    private fun startNodeInternal(config: Config, webAddress: NetworkHostAndPort, startInProcess: Boolean?): CordaFuture<NodeHandle> {
         val nodeConfiguration = config.parseAs<FullNodeConfiguration>()
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config)
@@ -709,7 +716,7 @@ class DriverDSL(
                     } }
             )
             return nodeAndThreadFuture.flatMap { (node, thread) ->
-                establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, SettableFuture.create()).flatMap { rpc ->
+                establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, openFuture()).flatMap { rpc ->
                     rpc.waitUntilRegisteredWithNetworkMap().map {
                         NodeHandle.InProcess(rpc.nodeIdentity(), rpc, nodeConfiguration, webAddress, node, thread)
                     }
@@ -721,17 +728,17 @@ class DriverDSL(
             registerProcess(processFuture)
             return processFuture.flatMap { process ->
                 val processDeathFuture = poll(executorService, "process death") {
-                    if (process.isAlive) null else ListenProcessDeathException(nodeConfiguration.p2pAddress, process)
+                    if (process.isAlive) null else process
                 }
                 // We continue to use SSL enabled port for RPC when its for node user.
                 establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, processDeathFuture).flatMap { rpc ->
                     // Call waitUntilRegisteredWithNetworkMap in background in case RPC is failing over:
-                    val networkMapFuture = executorService.submit(Callable {
+                    val networkMapFuture = executorService.fork {
                         rpc.waitUntilRegisteredWithNetworkMap()
-                    }).flatMap { it }
+                    }.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
-                            throw processDeathFuture.getOrThrow()
+                            throw ListenProcessDeathException(nodeConfiguration.p2pAddress, process)
                         }
                         processDeathFuture.cancel(false)
                         NodeHandle.OutOfProcess(rpc.nodeIdentity(), rpc, nodeConfiguration, webAddress, debugPort, process)
@@ -741,7 +748,7 @@ class DriverDSL(
         }
     }
 
-    override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): ListenableFuture<A> {
+    override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): CordaFuture<A> {
         val pollFuture = poll(executorService, pollName, pollInterval, warnCount, check)
         shutdownManager.registerShutdown { pollFuture.cancel(true) }
         return pollFuture
@@ -757,17 +764,17 @@ class DriverDSL(
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
         private fun startInProcessNode(
-                executorService: ListeningScheduledExecutorService,
+                executorService: ScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
                 config: Config
-        ): ListenableFuture<Pair<Node, Thread>> {
-            return executorService.submit<Pair<Node, Thread>> {
+        ): CordaFuture<Pair<Node, Thread>> {
+            return executorService.fork {
                 log.info("Starting in-process Node ${nodeConf.myLegalName.commonName}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
                 val clock: Clock = if (nodeConf.useTestClock) TestClock() else NodeClock()
                 // TODO pass the version in?
-                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, clock)
+                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, clock, initialiseSerialization = false)
                 node.start()
                 val nodeThread = thread(name = nodeConf.myLegalName.commonName) {
                     node.run()
@@ -777,15 +784,15 @@ class DriverDSL(
         }
 
         private fun startOutOfProcessNode(
-                executorService: ListeningScheduledExecutorService,
+                executorService: ScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
                 config: Config,
                 quasarJarPath: String,
                 debugPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 callerPackage: String
-        ): ListenableFuture<Process> {
-            val processFuture = executorService.submit<Process> {
+        ): CordaFuture<Process> {
+            val processFuture = executorService.fork {
                 log.info("Starting out-of-process Node ${nodeConf.myLegalName.commonName}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
@@ -823,11 +830,11 @@ class DriverDSL(
         }
 
         private fun startWebserver(
-                executorService: ListeningScheduledExecutorService,
+                executorService: ScheduledExecutorService,
                 handle: NodeHandle,
                 debugPort: Int?
-        ): ListenableFuture<Process> {
-            return executorService.submit<Process> {
+        ): CordaFuture<Process> {
+            return executorService.fork {
                 val className = "net.corda.webserver.WebServer"
                 ProcessUtilities.startCordaProcess(
                         className = className, // cannot directly get class for this, so just use string

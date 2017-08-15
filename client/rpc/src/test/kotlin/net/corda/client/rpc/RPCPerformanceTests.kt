@@ -3,12 +3,11 @@ package net.corda.client.rpc
 import com.google.common.base.Stopwatch
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.messaging.RPCOps
-import net.corda.core.minutes
-import net.corda.core.seconds
-import net.corda.core.utilities.div
+import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
+import net.corda.testing.performance.div
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.driver.ShutdownManager
 import net.corda.testing.measure
 import net.corda.testing.performance.startPublishingFixedRateInjector
 import net.corda.testing.performance.startReporter

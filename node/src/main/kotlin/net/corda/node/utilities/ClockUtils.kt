@@ -3,16 +3,14 @@ package net.corda.node.utilities
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.SettableFuture
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.then
+import net.corda.core.internal.until
 import rx.Observable
 import rx.Subscriber
 import rx.subscriptions.Subscriptions
 import java.time.Clock
-import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.BiConsumer
 import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 
 /**
@@ -80,7 +78,7 @@ fun Clock.awaitWithDeadline(deadline: Instant, future: Future<*> = GuavaSettable
         } else {
             null
         }
-        nanos = Duration.between(this.instant(), deadline).toNanos()
+        nanos = (instant() until deadline).toNanos()
         if (nanos > 0) {
             try {
                 // This will return when it times out, or when the clock mutates or when when the original future completes.
@@ -106,17 +104,11 @@ fun Clock.awaitWithDeadline(deadline: Instant, future: Future<*> = GuavaSettable
  * We need this so that we do not block the actual thread when calling get(), but instead allow a Quasar context
  * switch.  There's no need to checkpoint our Fibers as there's no external effect of waiting.
  */
-private fun <T : Any> makeStrandFriendlySettableFuture(future: Future<T>): SettableFuture<Boolean> {
-    return if (future is ListenableFuture) {
-        val settable = SettableFuture<Boolean>()
-        future.then { settable.set(true) }
-        settable
-    } else if (future is CompletableFuture) {
-        val settable = SettableFuture<Boolean>()
-        future.whenComplete(BiConsumer { _, _ -> settable.set(true) })
-        settable
-    } else {
-        throw IllegalArgumentException("Cannot make future $future Fiber friendly.")
+private fun <T : Any> makeStrandFriendlySettableFuture(future: Future<T>) = SettableFuture<Boolean>().also { g ->
+    when (future) {
+        is ListenableFuture -> future.addListener(Runnable { g.set(true) }, Executor { it.run() })
+        is CompletionStage<*> -> future.whenComplete { _, _ -> g.set(true) }
+        else -> throw IllegalArgumentException("Cannot make future $future Fiber friendly.")
     }
 }
 

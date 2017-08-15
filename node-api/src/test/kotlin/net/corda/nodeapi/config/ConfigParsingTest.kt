@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
-import net.corda.core.div
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.getTestX509Name
 import org.assertj.core.api.Assertions.assertThat

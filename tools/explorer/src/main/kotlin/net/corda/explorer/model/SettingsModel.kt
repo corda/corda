@@ -5,9 +5,9 @@ import javafx.beans.Observable
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.core.contracts.currency
-import net.corda.core.createDirectories
-import net.corda.core.div
-import net.corda.core.exists
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import tornadofx.*
 import java.nio.file.Files
 import java.nio.file.Path

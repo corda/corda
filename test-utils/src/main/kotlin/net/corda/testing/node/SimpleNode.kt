@@ -1,9 +1,9 @@
 package net.corda.testing.node
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
@@ -17,11 +17,9 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.freeLocalHostAndPort
-import org.jetbrains.exposed.sql.Database
-import java.io.Closeable
 import java.security.KeyPair
 import java.security.cert.X509Certificate
 import kotlin.concurrent.thread
@@ -34,17 +32,16 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
                  rpcAddress: NetworkHostAndPort = freeLocalHostAndPort(),
                  trustRoot: X509Certificate) : AutoCloseable {
 
-    private val databaseWithCloseable: Pair<Closeable, Database> = configureDatabase(config.dataSourceProperties)
-    val database: Database get() = databaseWithCloseable.second
     val userService = RPCUserServiceImpl(config.rpcUsers)
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()
     val identityService: IdentityService = InMemoryIdentityService(trustRoot = trustRoot)
+    val database: CordaPersistence = configureDatabase(config.dataSourceProperties, config.database, identitySvc = {InMemoryIdentityService(trustRoot = trustRoot)})
     val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
     // TODO: We should have a dummy service hub rather than change behaviour in tests
     val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port, InMemoryNetworkMapCache(serviceHub = null), userService)
-    val networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create<Unit>()
+    val networkMapRegistrationFuture = openFuture<Unit>()
     val network = database.transaction {
         NodeMessagingClient(
                 config,
@@ -72,7 +69,7 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
     override fun close() {
         network.stop()
         broker.stop()
-        databaseWithCloseable.first.close()
+        database.close()
         executor.shutdownNow()
     }
 }

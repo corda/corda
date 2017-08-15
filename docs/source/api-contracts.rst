@@ -22,19 +22,19 @@ The ``Contract`` interface is defined as follows:
 
 Where:
 
-* ``verify(tx: TransactionForContract)`` determines whether transactions involving states which reference this
+        * ``verify(tx: LedgerTransaction)`` determines whether transactions involving states which reference this
   contract type are valid
 * ``legalContractReference`` is the hash of the legal prose contract that ``verify`` seeks to express in code
 
 verify()
 --------
 
-``verify()`` is a method that doesn't return anything and takes a ``TransactionForContract`` as a parameter. It
+``verify()`` is a method that doesn't return anything and takes a ``LedgerTransaction`` as a parameter. It
 either throws an exception if the transaction is considered invalid, or returns normally if the transaction is
 considered valid.
 
 ``verify()`` is executed in a sandbox. It does not have access to the enclosing scope, and is not able to access
-the network or perform any other I/O. It only has access to the properties defined on ``TransactionForContract`` when
+the network or perform any other I/O. It only has access to the properties defined on ``LedgerTransaction`` when
 establishing whether a transaction is valid.
 
 The two simplest ``verify`` functions are the one that accepts all transactions, and the one that rejects all
@@ -46,14 +46,14 @@ Here is the ``verify`` that accepts all transactions:
 
    .. sourcecode:: kotlin
 
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
             // Always accepts!
         }
 
    .. sourcecode:: java
 
         @Override
-        public void verify(TransactionForContract tx) {
+        public void verify(LedgerTransaction tx) {
             // Always accepts!
         }
 
@@ -63,39 +63,39 @@ And here is the ``verify`` that rejects all transactions:
 
    .. sourcecode:: kotlin
 
-        override fun verify(tx: TransactionForContract) {
+        override fun verify(tx: LedgerTransaction) {
             throw IllegalArgumentException("Always rejects!")
         }
 
    .. sourcecode:: java
 
         @Override
-        public void verify(TransactionForContract tx) {
+        public void verify(LedgerTransaction tx) {
             throw new IllegalArgumentException("Always rejects!");
         }
 
-TransactionForContract
+LedgerTransaction
 ^^^^^^^^^^^^^^^^^^^^^^
 
-The ``TransactionForContract`` object passed into ``verify()`` represents the full set of information available to
+The ``LedgerTransaction`` object passed into ``verify()`` represents the full set of information available to
 ``verify()`` when deciding whether to accept or reject the transaction. It has the following properties:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/TransactionVerification.kt
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/transactions/LedgerTransaction.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
 
 Where:
 
-* ``inputs`` is a list of the transaction's inputs
-* ``outputs`` is a list of the transaction's outputs
-* ``attachments`` is a list of the transaction's attachments
-* ``commands`` is a list of the transaction's commands, and their associated signatures
-* ``origHash`` is the transaction's hash
-* ``inputNotary`` is the transaction's notary
-* ``timestamp`` is the transaction's timestamp
+    * ``inputs`` is a list of the transaction's inputs'
+* ``outputs`` is a list of the transaction's outputs'
+* ``attachments`` is a list of the transaction's attachments'
+* ``commands`` is a list of the transaction's commands, and their associated signatures'
+* ``id`` is the transaction's Merkle root hash'
+* ``notary`` is the transaction's notary. If there are inputs these must have the same notary on their source transactions.
+* ``timeWindow`` is the transaction's timestamp and defines the acceptable delay for notarisation.
 
 requireThat()
 ^^^^^^^^^^^^^
@@ -134,7 +134,7 @@ exception will cause the transaction to be rejected.
 Commands
 ^^^^^^^^
 
-``TransactionForContract`` contains the commands as a list of ``AuthenticatedObject`` instances.
+``LedgerTransaction`` contains the commands as a list of ``AuthenticatedObject`` instances.
 ``AuthenticatedObject`` pairs an object with a list of signers. In this case, ``AuthenticatedObject`` pairs a command
 with a list of the entities that are required to sign a transaction where this command is present:
 
@@ -175,7 +175,7 @@ execution of ``verify()``:
                 class Transfer : TypeOnlyCommandData(), Commands
             }
 
-            override fun verify(tx: TransactionForContract) {
+            override fun verify(tx: LedgerTransaction) {
                 val command = tx.commands.requireSingleCommand<Commands>()
 
                 when (command.value) {
@@ -200,7 +200,7 @@ execution of ``verify()``:
             }
 
             @Override
-            public void verify(TransactionForContract tx) {
+            public void verify(LedgerTransaction tx) {
                 final AuthenticatedObject<Commands> command = requireSingleCommand(tx.getCommands(), Commands.class);
 
                 if (command.getValue() instanceof Commands.Issue) {
@@ -228,7 +228,7 @@ We can imagine that we would like to verify the USD states and the GBP states se
    :scale: 20
    :align: center
 
-``TransactionForContract`` provides a ``groupStates`` method to allow you to group states in this way:
+``LedgerTransaction`` provides a ``groupStates`` method to allow you to group states in this way:
 
 .. container:: codeset
 

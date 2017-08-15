@@ -83,7 +83,7 @@ Run from the command prompt
 Run from IntelliJ
 ~~~~~~~~~~~~~~~~~
 1. Open IntelliJ Community Edition
-2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-template folder
+2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-tutorial folder
 
 .. warning:: If you click "Import Project" instead of "Open", the project's run configurations will be erased!
 
@@ -128,7 +128,7 @@ Run from the terminal
 Run from IntelliJ
 ~~~~~~~~~~~~~~~~~
 1. Open IntelliJ Community Edition
-2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-template folder
+2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-tutorial folder
 3. Once the project is open, click "File > Project Structure". Under "Project SDK:", set the project SDK by clicking "New...", clicking "JDK", and navigating to /Library/Java/JavaVirtualMachines/jdk1.8.0_XXX (where "XXX" is the latest minor version number). Click "OK".
 4. Click "View > Tool Windows > Event Log", and click "Import Gradle project", then "OK". Wait, and click "OK" again when the "Gradle Project Data To Import" window appears
 5. Wait for indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing is complete)
@@ -143,9 +143,11 @@ The Corda platform source code is available here:
 
     https://github.com/corda/corda.git
 
-A CorDapp template that you can use as the basis for your own CorDapps is available here:
+A CorDapp template that you can use as the basis for your own CorDapps is available in both Java and Kotlin versions:
 
-    https://github.com/corda/cordapp-template.git
+    https://github.com/corda/cordapp-template-java.git
+
+    https://github.com/corda/cordapp-template-kotlin.git
 
 And a simple example CorDapp for you to explore basic concepts is available here:
 
@@ -158,11 +160,14 @@ instead by running ``git checkout release-M12``.
 
 Next steps
 ----------
+The best way to check that everything is working fine is by running the :doc:`tutorial CorDapp <tutorial-cordapp>` and
+the :doc:`samples <running-the-demos>`.
 
-The best way to check that everything is working fine is by :doc:`running-the-demos`.
+Next, you should read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
-Once you have these demos running, you may be interested in writing your own CorDapps, in which case you should refer to 
-:doc:`tutorial-cordapp`.
+By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
+:doc:`Hello, World tutorial <hello-world-index>`. You may want to refer to the :doc:`API docs <api-index>` along the
+way.
 
 If you encounter any issues, please see the :doc:`troubleshooting` page, or get in touch with us on the
 `forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.
