@@ -11,6 +11,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
@@ -41,7 +42,9 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
                     PersistentNetworkMapService.NetworkNode::class.java,
-                    PersistentNetworkMapService.NetworkSubscriber::class.java
+                    PersistentNetworkMapService.NetworkSubscriber::class.java,
+                    NodeMessagingClient.ProcessedMessage::class.java,
+                    NodeMessagingClient.RetryMessage::class.java
                     ))
 
     // Required schemas are those used by internal Corda services
