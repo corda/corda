@@ -6,7 +6,7 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*
 
-fun <T> withTestSerialization(block: () -> T): T {
+inline fun <T> withTestSerialization(block: () -> T): T {
     initialiseTestSerialization()
     try {
         return block()
@@ -61,8 +61,8 @@ fun initialiseTestSerialization() {
 
     // Now configure all the testing related delegates.
     (SerializationDefaults.SERIALIZATION_FACTORY as TestSerializationFactory).delegate = SerializationFactoryImpl().apply {
-        registerScheme(KryoClientSerializationScheme())
-        registerScheme(KryoServerSerializationScheme())
+        registerScheme(KryoClientSerializationScheme(this))
+        registerScheme(KryoServerSerializationScheme(this))
         registerScheme(AMQPClientSerializationScheme())
         registerScheme(AMQPServerSerializationScheme())
     }
@@ -138,5 +138,9 @@ class TestSerializationContext : SerializationContext {
 
     override fun withWhitelisted(clazz: Class<*>): SerializationContext {
         return TestSerializationContext().apply { delegate = this@TestSerializationContext.delegate!!.withWhitelisted(clazz) }
+    }
+
+    override fun withPreferredSerializationVersion(versionHeader: ByteSequence): SerializationContext {
+        return TestSerializationContext().apply { delegate = this@TestSerializationContext.delegate!!.withPreferredSerializationVersion(versionHeader) }
     }
 }

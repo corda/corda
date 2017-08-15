@@ -153,7 +153,7 @@ class CommercialPaperTestsGeneric {
     fun `key mismatch at issue`() {
         transaction {
             output { thisTest.getPaper() }
-            command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+            command(MINI_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timeWindow(TEST_TX_TIME)
             this `fails with` "output states are issued by a command signer"
         }

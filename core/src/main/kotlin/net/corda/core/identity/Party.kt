@@ -30,5 +30,6 @@ class Party(val name: X500Name, owningKey: PublicKey) : AbstractParty(owningKey)
     override fun toString() = name.toString()
     override fun nameOrNull(): X500Name? = name
 
+    fun anonymise(): AnonymousParty = AnonymousParty(owningKey)
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
 }

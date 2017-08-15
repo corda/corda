@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousPartyAndPath
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
@@ -26,32 +26,32 @@ class TransactionKeyFlowTests {
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         val alice: Party = aliceNode.services.myInfo.legalIdentity
         val bob: Party = bobNode.services.myInfo.legalIdentity
-        aliceNode.services.identityService.registerIdentity(bobNode.info.legalIdentityAndCert)
-        aliceNode.services.identityService.registerIdentity(notaryNode.info.legalIdentityAndCert)
-        bobNode.services.identityService.registerIdentity(aliceNode.info.legalIdentityAndCert)
-        bobNode.services.identityService.registerIdentity(notaryNode.info.legalIdentityAndCert)
+        aliceNode.services.identityService.verifyAndRegisterIdentity(bobNode.info.legalIdentityAndCert)
+        aliceNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
+        bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
+        bobNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
 
         // Run the flows
         val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow(bob))
 
         // Get the results
-        val actual: Map<Party, AnonymousPartyAndPath> = requesterFlow.resultFuture.getOrThrow().toMap()
+        val actual: Map<Party, AnonymousParty> = requesterFlow.resultFuture.getOrThrow().toMap()
         assertEquals(2, actual.size)
         // Verify that the generated anonymous identities do not match the well known identities
         val aliceAnonymousIdentity = actual[alice] ?: throw IllegalStateException()
         val bobAnonymousIdentity = actual[bob] ?: throw IllegalStateException()
-        assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity.party)
-        assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity.party)
+        assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity)
+        assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity)
 
         // Verify that the anonymous identities look sane
-        assertEquals(alice.name, aliceAnonymousIdentity.name)
-        assertEquals(bob.name, bobAnonymousIdentity.name)
+        assertEquals(alice.name, aliceNode.services.identityService.partyFromAnonymous(aliceAnonymousIdentity)!!.name)
+        assertEquals(bob.name, bobNode.services.identityService.partyFromAnonymous(bobAnonymousIdentity)!!.name)
 
         // Verify that the nodes have the right anonymous identities
-        assertTrue { aliceAnonymousIdentity.party.owningKey in aliceNode.services.keyManagementService.keys }
-        assertTrue { bobAnonymousIdentity.party.owningKey in bobNode.services.keyManagementService.keys }
-        assertFalse { aliceAnonymousIdentity.party.owningKey in bobNode.services.keyManagementService.keys }
-        assertFalse { bobAnonymousIdentity.party.owningKey in aliceNode.services.keyManagementService.keys }
+        assertTrue { aliceAnonymousIdentity.owningKey in aliceNode.services.keyManagementService.keys }
+        assertTrue { bobAnonymousIdentity.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { aliceAnonymousIdentity.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { bobAnonymousIdentity.owningKey in aliceNode.services.keyManagementService.keys }
 
         mockNet.stopNodes()
     }
