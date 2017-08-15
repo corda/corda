@@ -3,8 +3,8 @@ package net.corda.irs.api
 import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.AutoOfferFlow
@@ -37,7 +37,7 @@ class InterestRateSwapAPI(val rpc: CordaRPCOps) {
 
     private fun getDealByRef(ref: String): InterestRateSwap.State? {
         val vault = rpc.vaultQueryBy<InterestRateSwap.State>().states
-        val states = vault.filterStatesOfType<InterestRateSwap.State>().filter { it.state.data.ref == ref }
+        val states = vault.filterStatesOfType<InterestRateSwap.State>().filter { it.state.data.linearId.externalId == ref }
         return if (states.isEmpty()) null else {
             val deals = states.map { it.state.data }
             return if (deals.isEmpty()) null else deals[0]
