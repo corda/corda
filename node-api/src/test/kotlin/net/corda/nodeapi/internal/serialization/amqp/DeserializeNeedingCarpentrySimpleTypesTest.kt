@@ -4,12 +4,10 @@ import org.junit.Test
 import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
 
-/**
- * These tests work by having the class carpenter build the classes we serialise and then deserialise. Because
- * those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
- * versions of them up using its own internal class carpenter (each carpenter houses it's own loader). This
- * replicates the situation where a receiver doesn't have some or all elements of a schema present on it's classpath
- */
+// These tests work by having the class carpenter build the classes we serialise and then deserialise. Because
+// those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
+// versions of them up using its own internal class carpenter (each carpenter houses it's own loader). This
+// replicates the situation where a receiver doesn't have some or all elements of a schema present on it's classpath
 class DeserializeNeedingCarpentrySimpleTypesTest {
     companion object {
         /**
@@ -18,7 +16,8 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         private const val VERBOSE = false
     }
 
-    val sf = SerializerFactory()
+    val sf  = SerializerFactory()
+    val sf2 = SerializerFactory()
 
     @Test
     fun singleInt() {
@@ -28,8 +27,16 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(1))
         val db = DeserializationInput(sf).deserialize(sb)
+        val db2 = DeserializationInput(sf2).deserialize(sb)
+
+        // despite being carpented, and thus not on the class path, we should've cached clazz
+        // inside the serialiser object and thus we should have created the same type
+        assertEquals (db::class.java, clazz)
+        assertNotEquals (db2::class.java, clazz)
+        assertNotEquals (db::class.java, db2::class.java)
 
         assertEquals(1, db::class.java.getMethod("getInt").invoke(db))
+        assertEquals(1, db2::class.java.getMethod("getInt").invoke(db2))
     }
 
     @Test
@@ -39,9 +46,13 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(1))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db1 = DeserializationInput(sf).deserialize(sb)
+        val db2 = DeserializationInput(sf2).deserialize(sb)
 
-        assertEquals(1, db::class.java.getMethod("getInt").invoke(db))
+        assertEquals(clazz, db1::class.java)
+        assertNotEquals(clazz, db2::class.java)
+        assertEquals(1, db1::class.java.getMethod("getInt").invoke(db1))
+        assertEquals(1, db2::class.java.getMethod("getInt").invoke(db2))
     }
 
     @Test
@@ -51,9 +62,13 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(null))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db1 = DeserializationInput(sf).deserialize(sb)
+        val db2 = DeserializationInput(sf2).deserialize(sb)
 
-        assertEquals(null, db::class.java.getMethod("getInt").invoke(db))
+        assertEquals(clazz, db1::class.java)
+        assertNotEquals(clazz, db2::class.java)
+        assertEquals(null, db1::class.java.getMethod("getInt").invoke(db1))
+        assertEquals(null, db2::class.java.getMethod("getInt").invoke(db2))
     }
 
     @Test
@@ -63,8 +78,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance('a'))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals('a', db::class.java.getMethod("getChar").invoke(db))
     }
 
@@ -75,8 +91,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance('a'))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals('a', db::class.java.getMethod("getChar").invoke(db))
     }
 
@@ -87,8 +104,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(null))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(null, db::class.java.getMethod("getChar").invoke(db))
     }
 
@@ -100,8 +118,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
         val l : Long  = 1
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(l))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(l, (db::class.java.getMethod("getLong").invoke(db)))
     }
 
@@ -113,8 +132,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
         val l : Long  = 1
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(l))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(l, (db::class.java.getMethod("getLong").invoke(db)))
     }
 
@@ -125,8 +145,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(null))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(null, (db::class.java.getMethod("getLong").invoke(db)))
     }
 
@@ -137,8 +158,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(true))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(true, db::class.java.getMethod("getBoolean").invoke(db))
     }
 
@@ -149,8 +171,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(true))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(true, db::class.java.getMethod("getBoolean").invoke(db))
     }
 
@@ -161,8 +184,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(null))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(null, db::class.java.getMethod("getBoolean").invoke(db))
     }
 
@@ -173,8 +197,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(10.0))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(10.0, db::class.java.getMethod("getDouble").invoke(db))
     }
 
@@ -185,8 +210,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(10.0))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(10.0, db::class.java.getMethod("getDouble").invoke(db))
     }
 
@@ -197,8 +223,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(null))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(null, db::class.java.getMethod("getDouble").invoke(db))
     }
 
@@ -209,8 +236,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(3.toShort()))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(3.toShort(), db::class.java.getMethod("getShort").invoke(db))
     }
 
@@ -221,8 +249,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(3.toShort()))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(3.toShort(), db::class.java.getMethod("getShort").invoke(db))
     }
 
@@ -233,8 +262,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(null))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(null, db::class.java.getMethod("getShort").invoke(db))
     }
 
@@ -245,8 +275,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(10.0F))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(10.0F, db::class.java.getMethod("getFloat").invoke(db))
     }
 
@@ -257,8 +288,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(10.0F))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(10.0F, db::class.java.getMethod("getFloat").invoke(db))
     }
 
@@ -269,8 +301,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(null))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(null, db::class.java.getMethod("getFloat").invoke(db))
     }
 
@@ -282,8 +315,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
         val b : Byte = 0b0101
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(b))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(b, db::class.java.getMethod("getByte").invoke(db))
         assertEquals(0b0101, (db::class.java.getMethod("getByte").invoke(db) as Byte))
     }
@@ -296,8 +330,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
         val b : Byte = 0b0101
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(b))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(b, db::class.java.getMethod("getByte").invoke(db))
         assertEquals(0b0101, (db::class.java.getMethod("getByte").invoke(db) as Byte))
     }
@@ -309,8 +344,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         )))
 
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(null))
-        val db = DeserializationInput(sf).deserialize(sb)
+        val db = DeserializationInput(sf2).deserialize(sb)
 
+        assertNotEquals(clazz, db::class.java)
         assertEquals(null, db::class.java.getMethod("getByte").invoke(db))
     }
 
@@ -323,8 +359,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         val classInstance = clazz.constructors[0].newInstance(testVal)
 
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(classInstance)
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
+        assertNotEquals(clazz, deserializedObj::class.java)
         assertTrue(deserializedObj is I)
         assertEquals(testVal, (deserializedObj as I).getName())
     }
@@ -372,8 +409,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
                         10.0F, 20.0F, null,
                         0b0101.toByte(), 0b1010.toByte(), null))
 
-        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
+        assertNotEquals(manyClass, deserializedObj::class.java)
         assertEquals(1,    deserializedObj::class.java.getMethod("getIntA").invoke(deserializedObj))
         assertEquals(2,    deserializedObj::class.java.getMethod("getIntB").invoke(deserializedObj))
         assertEquals(null, deserializedObj::class.java.getMethod("getIntC").invoke(deserializedObj))

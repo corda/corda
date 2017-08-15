@@ -16,7 +16,8 @@ class DeserializeSimpleTypesTests {
         private const val VERBOSE = false
     }
 
-    val sf = SerializerFactory()
+    val sf1 = SerializerFactory()
+    val sf2 = SerializerFactory()
 
     @Test
     fun testChar() {
@@ -74,8 +75,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Ljava.lang.Integer;", ia.ia::class.java.toString())
         assertEquals(SerializerFactory.nameForType(ia.ia::class.java), "int[]")
 
-        val serialisedIA = TestSerializationOutput(VERBOSE, sf).serialize(ia)
-        val deserializedIA = DeserializationInput(sf).deserialize(serialisedIA)
+        val serialisedIA = TestSerializationOutput(VERBOSE, sf1).serialize(ia)
+        val deserializedIA = DeserializationInput(sf1).deserialize(serialisedIA)
 
         assertEquals(ia.ia.size, deserializedIA.ia.size)
         assertEquals(ia.ia[0], deserializedIA.ia[0])
@@ -93,8 +94,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Ljava.lang.Integer;", ia.ia::class.java.toString())
         assertEquals(SerializerFactory.nameForType(ia.ia::class.java), "int[]")
 
-        val serialisedIA = TestSerializationOutput(VERBOSE, sf).serialize(ia)
-        val deserializedIA = DeserializationInput(sf).deserialize(serialisedIA)
+        val serialisedIA = TestSerializationOutput(VERBOSE, sf1).serialize(ia)
+        val deserializedIA = DeserializationInput(sf1).deserialize(serialisedIA)
 
         assertEquals(ia.ia.size, deserializedIA.ia.size)
         assertEquals(ia.ia[0], deserializedIA.ia[0])
@@ -116,8 +117,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [I", ia.ia::class.java.toString())
         assertEquals(SerializerFactory.nameForType(ia.ia::class.java), "int[p]")
 
-        val serialisedIA = TestSerializationOutput(VERBOSE, sf).serialize(ia)
-        val deserializedIA = DeserializationInput(sf).deserialize(serialisedIA)
+        val serialisedIA = TestSerializationOutput(VERBOSE, sf1).serialize(ia)
+        val deserializedIA = DeserializationInput(sf1).deserialize(serialisedIA)
 
         assertEquals(ia.ia.size, deserializedIA.ia.size)
         assertEquals(ia.ia[0], deserializedIA.ia[0])
@@ -134,8 +135,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Ljava.lang.Character;", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "char[]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -154,8 +155,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [C", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "char[p]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        var deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        var deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -166,7 +167,7 @@ class DeserializeSimpleTypesTests {
         v[0] = 'ই'; v[1] = ' '; v[2] = 'ਔ'
         val c2 = C(v)
 
-        deserializedC = DeserializationInput(sf).deserialize(TestSerializationOutput(VERBOSE, sf).serialize(c2))
+        deserializedC = DeserializationInput(sf1).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(c2))
 
         assertEquals(c2.c.size, deserializedC.c.size)
         assertEquals(c2.c[0], deserializedC.c[0])
@@ -183,8 +184,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Ljava.lang.Boolean;", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "boolean[]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -203,8 +204,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Z", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "boolean[p]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -222,8 +223,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Ljava.lang.Byte;", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "byte[]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -241,8 +242,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [B", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "binary")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -259,8 +260,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Ljava.lang.Short;", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "short[]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -278,8 +279,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [S", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "short[p]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -296,8 +297,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Ljava.lang.Long;", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "long[]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -315,8 +316,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [J", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "long[p]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -333,8 +334,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Ljava.lang.Float;", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "float[]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -352,8 +353,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [F", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "float[p]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -370,8 +371,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [Ljava.lang.Double;", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "double[]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -389,8 +390,8 @@ class DeserializeSimpleTypesTests {
         assertEquals("class [D", c.c::class.java.toString())
         assertEquals(SerializerFactory.nameForType(c.c::class.java), "double[p]")
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0], deserializedC.c[0])
@@ -403,8 +404,8 @@ class DeserializeSimpleTypesTests {
         class C(val c: Array<Array<Int>>)
         val c = C (arrayOf (arrayOf(1,2,3), arrayOf(4,5,6)))
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0].size, deserializedC.c[0].size)
@@ -424,8 +425,8 @@ class DeserializeSimpleTypesTests {
         c.c[0][0] = 1; c.c[0][1] = 2; c.c[0][2] = 3
         c.c[1][0] = 4; c.c[1][1] = 5; c.c[1][2] = 6
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         assertEquals(c.c.size, deserializedC.c.size)
         assertEquals(c.c[0].size, deserializedC.c[0].size)
@@ -448,12 +449,36 @@ class DeserializeSimpleTypesTests {
 
         for (i in 0..2) { for (j in 0..2) { for (k in 0..2) { c.c[i][j][k] = i + j + k } } }
 
-        val serialisedC = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        val deserializedC = DeserializationInput(sf).deserialize(serialisedC)
+        val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
+        val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
         for (i in 0..2) { for (j in 0..2) { for (k in 0..2) {
             assertEquals(c.c[i][j][k], deserializedC.c[i][j][k])
         }}}
+    }
+
+    @Test
+    fun nestedRepeatedTypes() {
+        class A(val a : A?, val b: Int)
+
+        var a = A(A(A(A(A(null, 1), 2), 3), 4), 5)
+
+        val sa = TestSerializationOutput(VERBOSE, sf1).serialize(a)
+        val da1 = DeserializationInput(sf1).deserialize(sa)
+        val da2 = DeserializationInput(sf2).deserialize(sa)
+
+        assertEquals(5, da1.b)
+        assertEquals(4, da1.a?.b)
+        assertEquals(3, da1.a?.a?.b)
+        assertEquals(2, da1.a?.a?.a?.b)
+        assertEquals(1, da1.a?.a?.a?.a?.b)
+
+        assertEquals(5, da2.b)
+        assertEquals(4, da2.a?.b)
+        assertEquals(3, da2.a?.a?.b)
+        assertEquals(2, da2.a?.a?.a?.b)
+        assertEquals(1, da2.a?.a?.a?.a?.b)
+
     }
 }
 
