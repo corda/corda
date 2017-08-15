@@ -51,6 +51,11 @@ UNRELEASED
   no longer auto-suggests these extension functions in completion unless you add import lines for them yourself
   (this is Kotlin IDE bug KT-15286).
 
+* ``:finance`` module now acting as a CorDapp with regard to flow registration, schemas and serializable types.
+
+* ``WebServerPluginRegistry`` now has a ``customizeJSONSerialization`` which can be overridden to extend the REST JSON
+  serializers. In particular the IRS demos must now register the ``BusinessCalendar`` serializers.
+
 Milestone 14
 ------------
 

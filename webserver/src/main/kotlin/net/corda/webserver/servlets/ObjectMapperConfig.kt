@@ -1,8 +1,6 @@
 package net.corda.webserver.servlets
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.jackson.JacksonSupport
 import javax.ws.rs.ext.ContextResolver
 import javax.ws.rs.ext.Provider
 
@@ -11,7 +9,6 @@ import javax.ws.rs.ext.Provider
  * and to organise serializers / deserializers for java.time.* classes as necessary.
  */
 @Provider
-class ObjectMapperConfig(rpc: CordaRPCOps) : ContextResolver<ObjectMapper> {
-    val defaultObjectMapper = JacksonSupport.createDefaultMapper(rpc)
+class ObjectMapperConfig(val defaultObjectMapper: ObjectMapper) : ContextResolver<ObjectMapper> {
     override fun getContext(type: Class<*>) = defaultObjectMapper
 }

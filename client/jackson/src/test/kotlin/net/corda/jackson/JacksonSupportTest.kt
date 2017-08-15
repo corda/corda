@@ -8,7 +8,6 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.transactions.SignedTransaction
-import net.corda.finance.parseCurrency
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MINI_CORP
@@ -53,7 +52,7 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
     @Test
     fun writeAmount() {
         val writer = mapper.writer().without(SerializationFeature.INDENT_OUTPUT)
-        assertEquals("""{"notional":"25000000.00 USD"}""", writer.writeValueAsString(Dummy(parseCurrency("$25000000"))))
+        assertEquals("""{"notional":"25000000.00 USD"}""", writer.writeValueAsString(Dummy(Amount.parseCurrency("$25000000"))))
     }
 
     @Test
