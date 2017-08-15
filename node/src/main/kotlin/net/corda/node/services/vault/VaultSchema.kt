@@ -68,8 +68,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     @Entity
     @Table(name = "vault_linear_states",
             indexes = arrayOf(Index(name = "external_id_index", columnList = "external_id"),
-                              Index(name = "uuid_index", columnList = "uuid"),
-                              Index(name = "deal_reference_index", columnList = "deal_reference")))
+                    Index(name = "uuid_index", columnList = "uuid")))
     class VaultLinearStates(
             /** [ContractState] attributes */
             @OneToMany(cascade = arrayOf(CascadeType.ALL))
@@ -82,18 +81,11 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
-            var uuid: UUID,
-
-            // TODO: DealState to be deprecated (collapsed into LinearState)
-
-            /** Deal State attributes **/
-            @Column(name = "deal_reference")
-            var dealReference: String
+            var uuid: UUID
     ) : PersistentState() {
-        constructor(uid: UniqueIdentifier, _dealReference: String, _participants: List<AbstractParty>) :
+        constructor(uid: UniqueIdentifier, _participants: List<AbstractParty>) :
                 this(externalId = uid.externalId,
                      uuid = uid.id,
-                     dealReference = _dealReference,
                      participants = _participants.map{ CommonSchemaV1.Party(it) }.toSet() )
     }
 
