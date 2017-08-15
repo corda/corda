@@ -24,7 +24,9 @@ class AbstractPartyToX500NameAsStringConverter(identitySvc: () -> IdentityServic
 
     override fun convertToDatabaseColumn(party: AbstractParty?): String? {
         party?.let {
-            return identityService.partyFromAnonymous(party)?.toString()
+            val partyName = identityService.partyFromAnonymous(party)?.toString()
+            if (partyName != null) return partyName
+            else log.warn ("Identity service unable to resolve AbstractParty: $party")
         }
         return null // non resolvable anonymous parties
     }
