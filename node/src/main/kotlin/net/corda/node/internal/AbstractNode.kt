@@ -737,7 +737,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             Pair(keys, keyStore.getCertificateChain(privateKeyAlias).toList())
         }
         val certPath = CertificateFactory.getInstance("X509").generateCertPath(certs)
-        partyKeys += keyPair
+        partyKeys += keys
         return Pair(PartyAndCertificate(loadedServiceName, keyPair.public, X509CertificateHolder(certs.first().encoded), certPath), keyPair)
     }
 
