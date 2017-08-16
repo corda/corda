@@ -235,7 +235,7 @@ fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(Com
                 vaultService.notifyAll(txs.map { it.tx })
             }
 
-            override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
+            override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService)
 
             override fun jdbcSession(): Connection = database.createSession()
         }
