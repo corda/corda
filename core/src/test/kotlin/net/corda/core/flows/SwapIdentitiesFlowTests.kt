@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
@@ -14,9 +14,9 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-class TransactionKeyFlowTests {
+class SwapIdentitiesFlowTests {
     @Test
-    fun `issue key`() {
+    fun `swap anonymous identities`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
         val mockNet = MockNetwork(false, true)
 
@@ -31,15 +31,16 @@ class TransactionKeyFlowTests {
         bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
         bobNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
 
+        bobNode.registerInitiatedFlow(Acceptor::class.java)
+
         // Run the flows
-        val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow(bob))
+        val requesterFlow = aliceNode.services.startFlow(Initiator(bob))
 
         // Get the results
-        val actual: Map<Party, AnonymousParty> = requesterFlow.resultFuture.getOrThrow().toMap()
-        assertEquals(2, actual.size)
+        val result = requesterFlow.resultFuture.getOrThrow()
         // Verify that the generated anonymous identities do not match the well known identities
-        val aliceAnonymousIdentity = actual[alice] ?: throw IllegalStateException()
-        val bobAnonymousIdentity = actual[bob] ?: throw IllegalStateException()
+        val aliceAnonymousIdentity = result.ourIdentity
+        val bobAnonymousIdentity = result.theirIdentity
         assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity)
         assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity)
 
@@ -54,5 +55,19 @@ class TransactionKeyFlowTests {
         assertFalse { bobAnonymousIdentity.owningKey in aliceNode.services.keyManagementService.keys }
 
         mockNet.stopNodes()
+    }
+
+    @InitiatingFlow
+    private class Initiator(val otherParty: Party) : FlowLogic<SwapIdentitiesFlow.Result>() {
+        @Suspendable
+        override fun call(): SwapIdentitiesFlow.Result = subFlow(SwapIdentitiesFlow(otherParty))
+    }
+
+    @InitiatedBy(Initiator::class)
+    private class Acceptor(val otherParty: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(SwapIdentitiesFlow(otherParty))
+        }
     }
 }

@@ -4,8 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.TransactionKeyFlow
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
@@ -38,12 +36,23 @@ open class CashPaymentFlow(
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_ID
-        val txIdentities = if (anonymous) {
-            subFlow(TransactionKeyFlow(recipient))
-        } else {
-            emptyMap<Party, AnonymousParty>()
-        }
-        val anonymousRecipient = txIdentities[recipient] ?: recipient
+        // TODO Now that SwapIdentitiesFlow is inlined we have two options:
+        // 1. Either delegate the question of anonymisation to the caller by making recipient an AbstractParty and remove
+        // the anonymous parameter. This makes most sense to me as CashPaymentFlow seems best suited as a sub-class being
+        // called by an outer flow. This outerflow would have a counterpart flow and these two flows would sub-flow
+        // SwapIdentitiesFlow at the correct places. With this solution the BoC demo should be updated with this outerflow
+        // design.
+        //
+        // 2. The other solution is to keep this similar to what was before. If anonymous is true then subFlow SwapIdentitiesFlow.
+        // However now that SwapIdentitiesFlow is inlined, this requires making CashPaymentFlow an @InitiatingFlow and thus
+        // requires an @InitiatedBy flow as well, whose only job would be to sub-flow SwapIdentitiesFlow. This probably has the
+        // least impact on the existing code.
+//        val txIdentities = if (anonymous) {
+//            subFlow(TransactionKeyFlow(recipient))
+//        } else {
+//            emptyMap<Party, AnonymousParty>()
+//        }
+        val anonymousRecipient = /*txIdentities.get(recipient) ?: */recipient
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(null as Party?)
         // TODO: Have some way of restricting this to states the caller controls
