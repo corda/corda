@@ -56,10 +56,13 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
      */
     @Throws(NotSerializableException::class)
     fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
+        println ("get - $declaredType")
         val declaredClass = declaredType.asClass() ?: throw NotSerializableException(
                 "Declared types of $declaredType are not supported.")
 
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
+
+        println ("actual type - $actualType")
 
         val serializer = if (Collection::class.java.isAssignableFrom(declaredClass)) {
             serializersByType.computeIfAbsent(declaredType) {
@@ -182,9 +185,11 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     private fun processSchema(schema: Schema, sentinel: Boolean = false) {
         val carpenterSchemas = CarpenterSchemas.newInstance()
         for (typeNotation in schema.types) {
+            println("processSchema: ${typeNotation.descriptor} ${typeNotation.name}")
             try {
                 processSchemaEntry(typeNotation)
             } catch (e: ClassNotFoundException) {
+                println("poop")
                 if (sentinel || (typeNotation !is CompositeType)) throw e
                 typeNotation.carpenterSchema(classloader, carpenterSchemas = carpenterSchemas)
             }
@@ -212,6 +217,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
 
     private fun processCompositeType(typeNotation: CompositeType) {
         // TODO: class loader logic, and compare the schema.
+        println("processCompositeType")
         val type = typeForName(typeNotation.name, classloader)
         get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
     }
