@@ -110,5 +110,5 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
         return result?.let(fromPersistentEntity)?.second
     }
 
-    operator fun contains(key: K) = cache.get(key) != null
+    operator fun contains(key: K) = get(key) != null
 }
