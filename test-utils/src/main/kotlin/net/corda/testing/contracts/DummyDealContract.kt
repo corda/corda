@@ -26,10 +26,6 @@ class DummyDealContract : Contract {
                     participants: List<AbstractParty> = listOf(),
                     ref: String) : this(contract, participants, UniqueIdentifier(ref))
 
-        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.owningKey.containsAny(ourKeys) }
-        }
-
         override fun generateAgreement(notary: Party): TransactionBuilder {
             throw UnsupportedOperationException("not implemented")
         }

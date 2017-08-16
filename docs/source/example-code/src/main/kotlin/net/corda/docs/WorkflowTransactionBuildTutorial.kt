@@ -3,7 +3,6 @@ package net.corda.docs
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
@@ -18,7 +17,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import java.security.PublicKey
 
 // Minimal state model of a manual approval process
 @CordaSerializable
@@ -51,10 +49,6 @@ data class TradeApprovalContract(private val blank: Void? = null) : Contract {
 
         val parties: List<Party> get() = listOf(source, counterparty)
         override val participants: List<AbstractParty> get() = parties
-
-        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.owningKey.containsAny(ourKeys) }
-        }
     }
 
     /**

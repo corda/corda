@@ -39,10 +39,6 @@ class DummyLinearContract : Contract {
             val linearBoolean: Boolean = true,
             val nonce: SecureHash = SecureHash.randomSHA256()) : LinearState, QueryableState {
 
-        override fun isRelevant(ourKeys: Set<java.security.PublicKey>): Boolean {
-            return participants.any { it.owningKey.containsAny(ourKeys) }
-        }
-
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(DummyLinearStateSchemaV1, DummyLinearStateSchemaV2)
 
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
