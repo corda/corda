@@ -102,6 +102,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
 
                 // execution
                 val results = query.resultList
+                session.close()
 
                 // final pagination check (fail-fast on too many results when no pagination specified)
                 if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
@@ -162,8 +163,10 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
         val criteria = criteriaBuilder.createQuery(String::class.java)
         val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
         criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
-        val query = getSession().createQuery(criteria)
+        val session = getSession()
+        val query = session.createQuery(criteria)
         val results = query.resultList
+        session.close()
         val distinctTypes = results.map { it }
 
         val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
