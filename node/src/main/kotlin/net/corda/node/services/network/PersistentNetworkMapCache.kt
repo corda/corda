@@ -31,6 +31,7 @@ import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.AddOrRemove
+import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
 import org.bouncycastle.asn1.x500.X500Name
@@ -57,9 +58,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         val logger = loggerFor<PersistentNetworkMapCache>()
     }
 
-    private var sessionFactory: SessionFactory = HibernateConfiguration(serviceHub.schemaService).sessionFactoryForRegisteredSchemas()
     private var registeredForPush = false
-
     // TODO Small explanation, partyNodes and registeredNodes is left in memory as it was before, because it will be removed in
     //  next PR that gets rid of services. These maps are used only for queries by service.
     override val partyNodes: List<NodeInfo> get() = registeredNodes.map { it.value }
@@ -150,11 +149,15 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         synchronized(_changed) {
             val previousNode = registeredNodes.put(node.legalIdentity.owningKey, node)
             if (previousNode == null) {
-                updateInfoDB(node)
-                changePublisher.onNext(MapChange.Added(node))
+                serviceHub.database.transaction {
+                    updateInfoDB(node)
+                    changePublisher.onNext(MapChange.Added(node))
+                }
             } else if (previousNode != node) {
-                updateInfoDB(node)
-                changePublisher.onNext(MapChange.Modified(node, previousNode))
+                serviceHub.database.transaction {
+                    updateInfoDB(node)
+                    changePublisher.onNext(MapChange.Modified(node, previousNode))
+                }
             }
         }
     }
@@ -162,8 +165,10 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override fun removeNode(node: NodeInfo) {
         synchronized(_changed) {
             registeredNodes.remove(node.legalIdentity.owningKey)
-            removeInfoDB(node)
-            changePublisher.onNext(MapChange.Removed(node))
+            serviceHub.database.transaction {
+                removeInfoDB(node)
+                changePublisher.onNext(MapChange.Removed(node))
+            }
         }
     }
 
@@ -210,10 +215,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     // TODO It will be properly merged into network map cache after services removal.
 
     private inline fun <T> createSession(block: (Session) -> T): T {
-        val session = sessionFactory.withOptions().
-                connection(TransactionManager.current().connection).
-                openSession()
-        return session.use { block(it) }
+        return DatabaseTransactionManager.current().session.let { block(it) }
     }
 
     private fun getAllInfos(session: Session): List<NodeInfoSchemaV1.PersistentNodeInfo> {
@@ -242,7 +244,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                 }
             }
             if (loadDBSuccess) {
-                _registrationFuture.set(Unit) // Useful only if we don't have NetworkMapService configured so StateMachineManager can start.
+                _registrationFuture.set(null) // Useful only if we don't have NetworkMapService configured so StateMachineManager can start.
             }
         }
     }
@@ -251,23 +253,18 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         createSession {
             // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
             val info = findByIdentityKey(it, nodeInfo.legalIdentity.owningKey)
-            it.clear()
             val nodeInfoEntry = generateMappedObject(nodeInfo)
-            val tx = it.beginTransaction()
             if (info.isNotEmpty()) {
                 nodeInfoEntry.id = info[0].id
             }
-            it.saveOrUpdate(nodeInfoEntry)
-            tx.commit()
+            it.merge(nodeInfoEntry)
         }
     }
 
     private fun removeInfoDB(nodeInfo: NodeInfo) {
         createSession {
             val info = findByIdentityKey(it, nodeInfo.legalIdentity.owningKey).single()
-            val tx = it.beginTransaction()
             it.remove(info)
-            tx.commit()
         }
     }
 
@@ -335,9 +332,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         serviceHub.database.transaction {
             createSession {
                 val result = getAllInfos(it)
-                val tx = it.beginTransaction()
                 for (nodeInfo in result) it.remove(nodeInfo)
-                tx.commit()
             }
         }
     }

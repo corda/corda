@@ -136,12 +136,7 @@ object NodeInfoSchemaV1 : MappedSchema(
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
                 : this(partyAndCert.party.owningKey.toBase58String(), partyAndCert.party.name.toString(), partyAndCert.certificate.serialize().bytes, partyAndCert.certPath.serialize().bytes, isMain)
         fun toLegalIdentityAndCert(): PartyAndCertificate {
-            return PartyAndCertificate(
-                    Party(X500Name(name),
-                            parsePublicKeyBase58(owningKey)),
-                    certificate.deserialize<X509CertificateHolder>(),
-                    certPath.deserialize<CertPath>()
-            )
+            return PartyAndCertificate(certPath.deserialize<CertPath>())
         }
     }
 }
