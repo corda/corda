@@ -6,11 +6,13 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import java.util.*
 
 /**
  * A command to initiate the cash flow with.
  */
+@Deprecated("Please use the flows directly, these will be removed in a later release")
 sealed class CashFlowCommand {
     abstract fun startFlow(proxy: CordaRPCOps): FlowHandle<AbstractCashFlow.Result>
 
@@ -22,7 +24,10 @@ sealed class CashFlowCommand {
                          val recipient: Party,
                          val notary: Party,
                          val anonymous: Boolean) : CashFlowCommand() {
-        override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(::CashIssueFlow, amount, issueRef, recipient, notary, anonymous)
+        override fun startFlow(proxy: CordaRPCOps): FlowHandle<AbstractCashFlow.Result> {
+            proxy.startFlow(::CashIssueFlow, amount, issueRef, notary).returnValue.getOrThrow()
+            return proxy.startFlow(::CashPaymentFlow, amount, recipient, anonymous)
+        }
     }
 
     /**

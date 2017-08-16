@@ -1,5 +1,6 @@
 package net.corda.core.contracts
 
+import net.corda.finance.*
 import org.junit.Test
 import java.math.BigDecimal
 import java.util.*
@@ -14,20 +15,13 @@ import kotlin.test.assertTrue
  */
 class AmountTests {
     @Test
-    fun basicCurrency() {
-        val expected = 1000L
-        val amount = Amount(expected, GBP)
-        assertEquals(expected, amount.quantity)
-    }
-
-    @Test
     fun `make sure Amount has decimal places`() {
         val x = Amount(1, Currency.getInstance("USD"))
         assertTrue("0.01" in x.toString())
     }
 
     @Test
-    fun decimalConversion() {
+    fun `decimal conversion`() {
         val quantity = 1234L
         val amountGBP = Amount(quantity, GBP)
         val expectedGBP = BigDecimal("12.34")
@@ -50,22 +44,6 @@ class AmountTests {
     }
 
     @Test
-    fun parsing() {
-        assertEquals(Amount(1234L, GBP), Amount.parseCurrency("£12.34"))
-        assertEquals(Amount(1200L, GBP), Amount.parseCurrency("£12"))
-        assertEquals(Amount(1000L, USD), Amount.parseCurrency("$10"))
-        assertEquals(Amount(5000L, JPY), Amount.parseCurrency("¥5000"))
-        assertEquals(Amount(500000L, RUB), Amount.parseCurrency("₽5000"))
-        assertEquals(Amount(1500000000L, CHF), Amount.parseCurrency("15,000,000 CHF"))
-    }
-
-    @Test
-    fun rendering() {
-        assertEquals("5000 JPY", Amount.parseCurrency("¥5000").toString())
-        assertEquals("50.12 USD", Amount.parseCurrency("$50.12").toString())
-    }
-
-    @Test
     fun split() {
         for (baseQuantity in 0..1000) {
             val baseAmount = Amount(baseQuantity.toLong(), GBP)
@@ -81,7 +59,7 @@ class AmountTests {
     }
 
     @Test
-    fun amountTransfersEquality() {
+    fun `amount transfers equality`() {
         val partyA = "A"
         val partyB = "B"
         val partyC = "C"
@@ -106,7 +84,7 @@ class AmountTests {
     }
 
     @Test
-    fun amountTransferAggregation() {
+    fun `amount transfer aggregation`() {
         val partyA = "A"
         val partyB = "B"
         val partyC = "C"
@@ -137,7 +115,7 @@ class AmountTests {
     }
 
     @Test
-    fun amountTransferApply() {
+    fun `amount transfer apply`() {
         val partyA = "A"
         val partyB = "B"
         val partyC = "C"
@@ -182,6 +160,5 @@ class AmountTests {
         assertEquals(originalTotals[Pair(partyC, USD)], newTotals3[Pair(partyC, USD)])
         assertEquals(originalTotals[Pair(partyA, GBP)], newTotals3[Pair(partyA, GBP)])
         assertEquals(originalTotals[Pair(partyB, GBP)], newTotals3[Pair(partyB, GBP)])
-
     }
 }

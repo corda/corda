@@ -65,9 +65,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
 
     fun commitTransaction(tx: Any, otherSide: Party) = client.commitTransaction(tx, otherSide)
 
-    override fun createServiceFlow(otherParty: Party, platformVersion: Int): FlowLogic<Void?> {
-        return ServiceFlow(otherParty, this)
-    }
+    override fun createServiceFlow(otherParty: Party): FlowLogic<Void?> = ServiceFlow(otherParty, this)
 
     private class ServiceFlow(val otherSide: Party, val service: BFTNonValidatingNotaryService) : FlowLogic<Void?>() {
         @Suspendable

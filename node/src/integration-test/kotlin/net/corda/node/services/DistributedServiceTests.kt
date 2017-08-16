@@ -1,7 +1,7 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.POUNDS
+import net.corda.finance.POUNDS
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
@@ -134,14 +134,10 @@ class DistributedServiceTests : DriverBasedTest() {
     }
 
     private fun issueCash(amount: Amount<Currency>) {
-        val issueHandle = aliceProxy.startFlow(
-                ::CashIssueFlow,
-                amount, OpaqueBytes.of(0), alice.nodeInfo.legalIdentity, raftNotaryIdentity)
-        issueHandle.returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(0), raftNotaryIdentity).returnValue.getOrThrow()
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        val payHandle = aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity)
-        payHandle.returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
     }
 }

@@ -1,8 +1,8 @@
 package net.corda.flows
 
 import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.`issued by`
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -42,9 +42,7 @@ class CashIssueFlowTests {
     fun `issue some cash`() {
         val expected = 500.DOLLARS
         val ref = OpaqueBytes.of(0x01)
-        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(expected, ref,
-                bankOfCorda,
-                notary)).resultFuture
+        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(expected, ref, notary)).resultFuture
         mockNet.runNetwork()
         val issueTx = future.getOrThrow().stx
         val output = issueTx.tx.outputsOfType<Cash.State>().single()
@@ -54,9 +52,8 @@ class CashIssueFlowTests {
     @Test
     fun `issue zero cash`() {
         val expected = 0.DOLLARS
-        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(expected, OpaqueBytes.of(0x01),
-                bankOfCorda,
-                notary)).resultFuture
+        val ref = OpaqueBytes.of(0x01)
+        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(expected, ref, notary)).resultFuture
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {
             future.getOrThrow()

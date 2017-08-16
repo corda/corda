@@ -1,4 +1,4 @@
-Cordapp Build Systems
+CorDapp Build Systems
 =====================
 
 Cordapps run on the Corda platform and integrate with it and each other. To learn more about the basics of a Cordapp
@@ -6,7 +6,7 @@ please read :doc:`cordapp-overview`. To learn about writing a Cordapp as a devel
 
 This article will specifically deal with how to build cordapps, specifically with Gradle.
 
-Cordapp JAR Format
+CorDapp JAR format
 ------------------
 
 The first step to integrating a Cordapp with Corda is to ensure it is in the correct format. The correct format of a JAR
@@ -21,6 +21,10 @@ other two JARs.
 
 The ``jar`` task included by default in the cordapp templates will automatically build your JAR in this format as long
 as your dependencies are correctly set.
+
+The filename of the jar must include some sort of unique identifier to deduplicate it from other releases of the same
+CorDapp. This is typically done by appending the version string. It should not change once the jar has been deployed on
+a node. If it is then make sure no one is checking ``FlowContext.appName`` (see :doc:`versioning`).
 
 Building against Corda
 ----------------------
@@ -57,7 +61,7 @@ versions can be found here: https://bintray.com/r3/corda/cordformation.
 
 In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
 
-Building against Cordapps
+Building against CorDapps
 -------------------------
 
 To build against a Cordapp you must add it as a ``cordapp`` dependency to your ``build.gradle``.

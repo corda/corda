@@ -166,17 +166,15 @@ class NodeTerminalView : Fragment() {
             webServer.open(config).then {
                 Platform.runLater {
                     launchWebButton.graphic = null
-                }
-                it.match({
-                    log.info("Web server for ${config.legalName} started on $it")
-                    Platform.runLater {
+                    it.match(success = {
+                        log.info("Web server for ${config.legalName} started on $it")
                         webURL = it
                         launchWebButton.text = "Reopen\nweb site"
                         app.hostServices.showDocument(it.toString())
-                    }
-                }, {
-                    launchWebButton.text = oldLabel
-                })
+                    }, failure = {
+                        launchWebButton.text = oldLabel
+                    })
+                }
             }
         }
     }

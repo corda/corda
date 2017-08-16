@@ -14,6 +14,9 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.node.services.queryBy
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.finance.DOLLARS
+import net.corda.finance.GBP
+import net.corda.finance.USD
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl
@@ -90,9 +93,8 @@ class CordaRPCOpsImplTest {
         }
 
         // Tell the monitoring service node to issue some cash
-        val anonymous = false
         val recipient = aliceNode.info.legalIdentity
-        val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, recipient, notaryNode.info.notaryIdentity, anonymous)
+        val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, notaryNode.info.notaryIdentity)
         mockNet.runNetwork()
 
         var issueSmId: StateMachineRunId? = null
@@ -131,9 +133,7 @@ class CordaRPCOpsImplTest {
         val result = rpc.startFlow(::CashIssueFlow,
                 100.DOLLARS,
                 OpaqueBytes(ByteArray(1, { 1 })),
-                aliceNode.info.legalIdentity,
-                notaryNode.info.notaryIdentity,
-                false
+                notaryNode.info.notaryIdentity
         )
 
         mockNet.runNetwork()
@@ -208,13 +208,7 @@ class CordaRPCOpsImplTest {
     fun `cash command by user not permissioned for cash`() {
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = emptySet())))
         assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
-            rpc.startFlow(::CashIssueFlow,
-                    Amount(100, USD),
-                    OpaqueBytes(ByteArray(1, { 1 })),
-                    aliceNode.info.legalIdentity,
-                    notaryNode.info.notaryIdentity,
-                    false
-            )
+            rpc.startFlow(::CashIssueFlow, Amount(100, USD), OpaqueBytes(ByteArray(1, { 1 })), notaryNode.info.notaryIdentity)
         }
     }
 

@@ -5,8 +5,8 @@ import net.corda.client.jfx.model.ProgressTrackingEvent
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.USD
+import net.corda.finance.DOLLARS
+import net.corda.finance.USD
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowInitiator
@@ -108,13 +108,10 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue works end to end`() {
-        val anonymous = false
         rpc.startFlow(::CashIssueFlow,
                 Amount(100, USD),
                 OpaqueBytes(ByteArray(1, { 1 })),
-                aliceNode.legalIdentity,
-                notaryNode.notaryIdentity,
-                anonymous
+                notaryNode.notaryIdentity
         )
 
         vaultUpdates.expectEvents(isStrict = false) {
@@ -136,7 +133,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     @Test
     fun `cash issue and move`() {
         val anonymous = false
-        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNode.legalIdentity, notaryNode.notaryIdentity, anonymous).returnValue.getOrThrow()
+        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
         rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity, anonymous).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null

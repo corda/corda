@@ -26,8 +26,8 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CashTransaction
 import net.corda.explorer.model.IssuerModel
@@ -36,8 +36,9 @@ import net.corda.explorer.views.bigDecimalFormatter
 import net.corda.explorer.views.byteFormatter
 import net.corda.explorer.views.stringConverter
 import net.corda.flows.AbstractCashFlow
+import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.flows.CashFlowCommand
-import net.corda.flows.IssuerFlow.IssuanceRequester
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
 import java.math.BigDecimal
@@ -94,12 +95,13 @@ class NewTransaction : Fragment() {
                 show()
             }
             val handle: FlowHandle<AbstractCashFlow.Result> = if (command is CashFlowCommand.IssueCash) {
-                rpcProxy.value!!.startFlow(::IssuanceRequester,
+                rpcProxy.value!!.startFlow(::CashIssueFlow,
+                        command.amount,
+                        command.issueRef,
+                        command.notary)
+                rpcProxy.value!!.startFlow(::CashPaymentFlow,
                         command.amount,
                         command.recipient,
-                        command.issueRef,
-                        myIdentity.value!!.legalIdentity,
-                        command.notary,
                         command.anonymous)
             } else {
                 command.startFlow(rpcProxy.value!!)

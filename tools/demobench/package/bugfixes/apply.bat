@@ -19,6 +19,12 @@ if not exist %1 (
     exit /b 1
 )
 
+rem Bugfixes:
+rem =========
+rem
+rem sun.swing.JLightweightFrame:473
+rem https://bugs.openjdk.java.net/browse/JDK-8185890
+
 if exist "%BUILDDIR%" rmdir /s /q "%BUILDDIR%"
 mkdir "%BUILDDIR%"
 

@@ -8,7 +8,7 @@ buildscript {
     ext.pkg_source = "$buildDir/packagesrc"
     ext.pkg_outDir = "$buildDir/javapackage"
     ext.dist_source = "$pkg_source/demobench-$version"
-    ext.pkg_version = "$version".indexOf('-') >= 0 ? "$version".substring(0, "$version".indexOf('-')) : version
+    ext.pkg_version = version.indexOf('-') >= 0 ? version.substring(0, version.indexOf('-')) : version
     ext.pkg_macosxKeyUserName = 'R3CEV'
 
     repositories {
@@ -25,8 +25,8 @@ evaluationDependsOn(':tools:explorer:capsule')
 
 mainClassName = 'net.corda.demobench.DemoBench'
 applicationDefaultJvmArgs = [
-        '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
-        '-Dorg.jboss.logging.provider=slf4j'
+    '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
+    '-Dorg.jboss.logging.provider=slf4j'
 ]
 
 repositories {
@@ -78,7 +78,7 @@ jar {
     manifest {
         attributes(
             'Main-Class': mainClassName,
-            'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
+            'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
         )
     }
 }
@@ -165,13 +165,14 @@ task javapackage(dependsOn: distZip) {
         }
 
         ant.taskdef(
-                resource: 'com/sun/javafx/tools/ant/antlib.xml',
-                classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
+            resource: 'com/sun/javafx/tools/ant/antlib.xml',
+            classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
         ant.deploy(nativeBundles: packageType, outdir: pkg_outDir, outfile: 'DemoBench', verbose: 'true') {
             application(name: 'Corda DemoBench', version: pkg_version, mainClass: mainClassName)
             info(title: 'Corda DemoBench', vendor: 'R3', description: 'A sales and educational tool for demonstrating Corda.')
+            //noinspection GroovyAssignabilityCheck
             resources {
                 fileset(dir: "$dist_source/lib", type: 'jar') {
                     include(name: '*.jar')
@@ -199,7 +200,9 @@ task javapackage(dependsOn: distZip) {
             bundleArgument(arg: 'mac.signing-key-user-name', value: pkg_macosxKeyUserName)
 
             platform {
+                //noinspection GroovyAssignabilityCheck
                 property(name: 'java.util.logging.config.class', value: 'net.corda.demobench.config.LoggingConfig')
+                //noinspection GroovyAssignabilityCheck
                 property(name: 'org.jboss.logging.provider', value: 'slf4j')
             }
 

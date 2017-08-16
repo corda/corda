@@ -11,12 +11,12 @@ import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
+import net.corda.core.crypto.getX509Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.div
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
@@ -53,9 +53,12 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
@@ -566,7 +569,7 @@ class DriverDSL(
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?: X509Utilities.getX509Name("${oneOf(names).commonName}-${p2pAddress.port}","London","demo@r3.com",null)
+        val name = providedName ?: getX509Name("${oneOf(names).commonName}-${p2pAddress.port}", "London", "demo@r3.com", null)
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(listOf(object : NodeDefinition {
             override fun getName() = name.toString()
             override fun getConfig() = configOf("p2pAddress" to p2pAddress.toString())
@@ -769,9 +772,8 @@ class DriverDSL(
                 log.info("Starting in-process Node ${nodeConf.myLegalName.commonName}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
-                val clock: Clock = if (nodeConf.useTestClock) TestClock() else NodeClock()
                 // TODO pass the version in?
-                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, clock, initialiseSerialization = false)
+                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, initialiseSerialization = false)
                 node.start()
                 val nodeThread = thread(name = nodeConf.myLegalName.commonName) {
                     node.run()

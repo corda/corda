@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
@@ -39,6 +40,12 @@ class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val database: CordaPersistence
 ) : CordaRPCOps {
+    override fun networkMapSnapshot(): List<NodeInfo> {
+        val (snapshot, updates) = networkMapFeed()
+        updates.notUsed()
+        return snapshot
+    }
+
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
         return database.transaction {
             services.networkMapCache.track()
@@ -64,10 +71,22 @@ class CordaRPCOpsImpl(
         }
     }
 
+    override fun verifiedTransactionsSnapshot(): List<SignedTransaction> {
+        val (snapshot, updates) = verifiedTransactionsFeed()
+        updates.notUsed()
+        return snapshot
+    }
+
     override fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
             services.validatedTransactions.track()
         }
+    }
+
+    override fun stateMachinesSnapshot(): List<StateMachineInfo> {
+        val (snapshot, updates) = stateMachinesFeed()
+        updates.notUsed()
+        return snapshot
     }
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
@@ -78,6 +97,12 @@ class CordaRPCOpsImpl(
                     changes.map { stateMachineUpdateFromStateMachineChange(it) }
             )
         }
+    }
+
+    override fun stateMachineRecordedTransactionMappingSnapshot(): List<StateMachineTransactionMapping> {
+        val (snapshot, updates) = stateMachineRecordedTransactionMappingFeed()
+        updates.notUsed()
+        return snapshot
     }
 
     override fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
@@ -149,10 +174,8 @@ class CordaRPCOpsImpl(
     override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.vaultService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
     override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
+    override fun partyFromAnonymous(party: AbstractParty): Party? = services.identityService.partyFromAnonymous(party)
     override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
-    @Suppress("DEPRECATION")
-    @Deprecated("Use partyFromX500Name instead")
-    override fun partyFromName(name: String) = services.identityService.partyFromName(name)
     override fun partyFromX500Name(x500Name: X500Name) = services.identityService.partyFromX500Name(x500Name)
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = services.identityService.partiesFromName(query, exactMatch)
     override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? = services.networkMapCache.getNodeByLegalIdentity(party)

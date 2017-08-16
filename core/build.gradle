@@ -2,6 +2,7 @@ apply plugin: 'kotlin'
 apply plugin: 'kotlin-jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda core'
 
@@ -40,21 +41,11 @@ dependencies {
     // AssertJ: for fluent assertions for testing
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
-    // TODO: Upgrade to junit-quickcheck 0.8, once it is released,
-    //       because it depends on org.javassist:javassist instead
-    //       of javassist:javassist.
-    testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
-    testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
-
     // Guava: Google utilities library.
     compile "com.google.guava:guava:$guava_version"
 
     // RxJava: observable streams of events.
     compile "io.reactivex:rxjava:$rxjava_version"
-
-    // Kryo: object graph serialization.
-    compile "com.esotericsoftware:kryo:4.0.0"
-    compile "de.javakaffee:kryo-serializers:0.41"
 
     // Apache JEXL: An embeddable expression evaluation library.
     // This may be temporary until we experiment with other ways to do on-the-fly contract specialisation via an API.

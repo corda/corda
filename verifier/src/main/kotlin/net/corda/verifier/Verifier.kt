@@ -7,6 +7,7 @@ import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -18,10 +19,10 @@ import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.serialization.AbstractKryoSerializationScheme
-import net.corda.nodeapi.serialization.KRYO_P2P_CONTEXT
-import net.corda.nodeapi.serialization.KryoHeaderV0_1
-import net.corda.nodeapi.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.AbstractKryoSerializationScheme
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -89,13 +90,13 @@ class Verifier {
 
         private fun initialiseSerialization() {
             SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                registerScheme(KryoVerifierSerializationScheme)
+                registerScheme(KryoVerifierSerializationScheme(this))
             }
             SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
         }
     }
 
-    object KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {
+    class KryoVerifierSerializationScheme(serializationFactory: SerializationFactory) : AbstractKryoSerializationScheme(serializationFactory) {
         override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
             return byteSequence.equals(KryoHeaderV0_1) && target == SerializationContext.UseCase.P2P
         }

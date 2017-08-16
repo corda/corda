@@ -1,8 +1,8 @@
 package net.corda.flows
 
 import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.`issued by`
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.trackBy
@@ -37,9 +37,7 @@ class CashPaymentFlowTests {
         notary = notaryNode.info.notaryIdentity
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 
-        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref,
-                bankOfCorda,
-                notary)).resultFuture
+        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
     }

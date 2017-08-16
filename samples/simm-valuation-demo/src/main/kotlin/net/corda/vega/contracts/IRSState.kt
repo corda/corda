@@ -19,7 +19,7 @@ data class IRSState(val swap: SwapData,
                     val seller: AbstractParty,
                     override val contract: OGTrade,
                     override val linearId: UniqueIdentifier = UniqueIdentifier(swap.id.first + swap.id.second)) : DealState {
-    override val ref: String = linearId.externalId!! // Same as the constructor for UniqueIdentified
+    val ref: String get() = linearId.externalId!! // Same as the constructor for UniqueIdentified
     override val participants: List<AbstractParty> get() = listOf(buyer, seller)
 
     override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
