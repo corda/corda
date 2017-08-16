@@ -8,9 +8,8 @@ import io.atomix.copycat.server.StateMachine
 import io.atomix.copycat.server.storage.snapshot.SnapshotReader
 import io.atomix.copycat.server.storage.snapshot.SnapshotWriter
 import net.corda.core.utilities.loggerFor
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.JDBCHashMap
-import java.util.*
+import net.corda.node.utilities.*
+import java.util.LinkedHashMap
 
 /**
  * A distributed map state machine that doesn't allow overriding values. The state machine is replicated
@@ -20,9 +19,9 @@ import java.util.*
  * to disk, and sharing them across the cluster. A new node joining the cluster will have to obtain and install a snapshot
  * containing the entire JDBC table contents.
  */
-class DistributedImmutableMap<K : Any, V : Any>(val db: CordaPersistence, tableName: String) : StateMachine(), Snapshottable {
+class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence, createMap: () -> PersistentMap<K, V, E, EK>) : StateMachine(), Snapshottable {
     companion object {
-        private val log = loggerFor<DistributedImmutableMap<*, *>>()
+        private val log = loggerFor<DistributedImmutableMap<*, *, *, *>>()
     }
 
     object Commands {
@@ -38,7 +37,7 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: CordaPersistence, tableN
         class Get<out K, V>(val key: K) : Query<V?>
     }
 
-    private val map = db.transaction { JDBCHashMap<K, V>(tableName) }
+    private val map = db.transaction { createMap() }
 
     /** Gets a value for the given [Commands.Get.key] */
     fun get(commit: Commit<Commands.Get<K, V>>): V? {

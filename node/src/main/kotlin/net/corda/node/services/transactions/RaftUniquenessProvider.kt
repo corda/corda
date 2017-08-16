@@ -18,16 +18,22 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.config.SSLConfiguration
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import javax.annotation.concurrent.ThreadSafe
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
 
 /**
  * A uniqueness provider that records committed input states in a distributed collection replicated and
@@ -41,8 +47,36 @@ import javax.annotation.concurrent.ThreadSafe
 class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
-        private val DB_TABLE_NAME = "notary_committed_states"
+
+        fun createKeyMap(): PersistentMap<String, String, RaftState, String> {
+            return PersistentMap(
+                    toPersistentEntityKey = { it },
+                    fromPersistentEntity = { Pair(
+                            it.key,
+                            it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)) },
+                    toPersistentEntity = { _key: String, _value: String ->
+                        RaftState().apply {
+                            key = _key
+                            value = _value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                        }
+                    },
+                    persistentEntityClass = RaftState::class.java
+            )
+        }
     }
+
+    @Entity
+    @javax.persistence.Table(name = "notary_committed_states")
+    class RaftState(
+
+            @Id
+            @Column
+            var key: String = "",
+
+            @Lob
+            @Column
+            var value: ByteArray = ByteArray(0)
+    )
 
     /** Directory storing the Raft log and state machine snapshots */
     private val storagePath: Path = services.configuration.baseDirectory
@@ -70,7 +104,7 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
 
     fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
-        val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(db, DB_TABLE_NAME) }
+        val stateMachineFactory = { DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createKeyMap) }
         val address = Address(myAddress.host, myAddress.port)
         val storage = buildStorage(storagePath)
         val transport = buildTransport(transportConfiguration)

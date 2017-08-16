@@ -28,13 +28,12 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
 
     lateinit var cluster: List<Member>
     lateinit var transaction: Transaction
-    lateinit var database: CordaPersistence
+    private val databases: List<CordaPersistence> = mutableListOf()
 
     @Before
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
         LogHelper.setLevel(NetworkMapService::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         cluster = setUpCluster()
     }
 
@@ -46,7 +45,7 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
             it.client.close()
             it.server.shutdown()
         }
-        database.close()
+        databases.forEach { it.close() }
     }
 
     @Test
@@ -87,8 +86,8 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
-
-        val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(database, "commited_states_${myAddress.port}") }
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties("serverNameTablePrefix", "${myAddress.port}"), identitySvc = ::makeTestIdentityService)
+        val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createKeyMap ) }
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)

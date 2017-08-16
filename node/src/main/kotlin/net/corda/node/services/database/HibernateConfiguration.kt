@@ -8,10 +8,10 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.parserTransactionIsolationLevel
+import org.hibernate.HibernateException
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.model.naming.Identifier
-import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+import org.hibernate.boot.model.naming.*
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
@@ -62,6 +62,25 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
                 .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase","true") == "true") "update" else "validate")
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("hibernate.connection.isolation", transactionIsolationLevel.toString())
+
+        val naming = databaseProperties.getProperty("serverNameTablePrefix",null)
+
+        if (naming != null) {
+            config.setImplicitNamingStrategy( object : ImplicitNamingStrategyJpaCompliantImpl() {
+
+                override fun determinePrimaryTableName(source: ImplicitEntityNameSource): Identifier {
+                    if (source == null) {
+                        // should never happen, but to be defensive...
+                        throw HibernateException("Entity naming information was not provided.")
+                    }
+
+                    val tableName = transformEntityName(source.entityNaming) ?: // todo : add info to error message - but how to know what to write since we failed to interpret the naming source
+                            throw HibernateException("Could not determine primary table name for entity")
+
+                    return toIdentifier(naming + tableName, source.buildingContext)
+                }
+            })
+        }
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
