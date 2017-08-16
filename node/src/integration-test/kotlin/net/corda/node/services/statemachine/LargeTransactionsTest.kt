@@ -1,19 +1,18 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.startFlow
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.unwrap
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.aliceBobAndNotary
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.driver.driver
+import net.corda.testing.dummyCommand
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -28,6 +27,7 @@ class LargeTransactionsTest {
         override fun call() {
             val tx = TransactionBuilder(notary = DUMMY_NOTARY)
                     .addOutputState(DummyState())
+                    .addCommand(dummyCommand(serviceHub.legalIdentityKey))
                     .addAttachment(hash1)
                     .addAttachment(hash2)
                     .addAttachment(hash3)
