@@ -16,27 +16,25 @@ Kotlin) file. We won't be using it, and it will cause build errors unless we rem
 
 Deploying our CorDapp
 ---------------------
-Let's take a look at the nodes we're going to deploy. Open the project's build file under ``java-source/build.gradle``
-or ``kotlin-source/build.gradle`` and scroll down to the ``task deployNodes`` section. This section defines four
-nodes - the Controller, and NodeA, NodeB and NodeC:
+Let's take a look at the nodes we're going to deploy. Open the project's ``build.gradle`` file and scroll down to the
+``task deployNodes`` section. This section defines three nodes - the Controller, NodeA, and NodeB:
 
 .. container:: codeset
 
     .. code-block:: kotlin
 
-        task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+        task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             directory "./build/nodes"
-            networkMap "CN=Controller,O=R3,OU=corda,L=London,C=GB"
+            networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK"
             node {
-                name "CN=Controller,O=R3,OU=corda,L=London,C=GB"
+                name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
                 advertisedServices = ["corda.notary.validating"]
                 p2pPort 10002
                 rpcPort 10003
-                webPort 10004
                 cordapps = []
             }
             node {
-                name "CN=NodeA,O=NodeA,L=London,C=GB"
+                name "CN=NodeA,O=NodeA,L=London,C=UK"
                 advertisedServices = []
                 p2pPort 10005
                 rpcPort 10006
@@ -50,15 +48,6 @@ nodes - the Controller, and NodeA, NodeB and NodeC:
                 p2pPort 10008
                 rpcPort 10009
                 webPort 10010
-                cordapps = []
-                rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
-            }
-            node {
-                name "CN=NodeC,O=NodeC,L=Paris,C=FR"
-                advertisedServices = []
-                p2pPort 10011
-                rpcPort 10012
-                webPort 10013
                 cordapps = []
                 rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
             }
@@ -85,8 +74,8 @@ We can do that now by running the following commands from the root of the projec
 
 Running the nodes
 -----------------
-Running ``deployNodes`` will build the nodes under both ``java-source/build/nodes`` and ``kotlin-source/build/nodes``.
-If we navigate to one of these folders, we'll see four node folder. Each node folder has the following structure:
+Running ``deployNodes`` will build the nodes under ``build/nodes``. If we navigate to one of these folders, we'll see
+the three node folders. Each node folder has the following structure:
 
     .. code:: python
 
@@ -102,17 +91,11 @@ Let's start the nodes by running the following commands from the root of the pro
 
 .. code:: python
 
-    // On Windows for a Java CorDapp
-    java-source/build/nodes/runnodes.bat
+    // On Windows
+    build/nodes/runnodes.bat
 
-    // On Windows for a Kotlin CorDapp
-    kotlin-source/build/nodes/runnodes.bat
-
-    // On Mac for a Java CorDapp
-    java-source/build/nodes/runnodes
-
-    // On Mac for a Kotlin CorDapp
-    kotlin-source/build/nodes/runnodes
+    // On Mac
+    build/nodes/runnodes
 
 This will start a terminal window for each node, and an additional terminal window for each node's webserver - eight
 terminal windows in all. Give each node a moment to start - you'll know it's ready when its terminal windows displays
