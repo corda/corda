@@ -5,7 +5,6 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.Amount
 import net.corda.core.internal.Emoji
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -54,12 +53,11 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
         val anonymous = false
         rpc.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
-        // pay random amounts of currency up to the requested amount, in parallel
-        val resultFutures = amounts.map { pennies ->
-            rpc.startFlow(::CashPaymentFlow, amount.copy(quantity = pennies), buyer, anonymous).returnValue
+        // Pay random amounts of currency up to the requested amount
+        amounts.forEach { pennies ->
+            // TODO This can't be done in parallel, perhaps due to soft-locking issues?
+            rpc.startFlow(::CashPaymentFlow, amount.copy(quantity = pennies), buyer, anonymous).returnValue.getOrThrow()
         }
-
-        resultFutures.transpose().getOrThrow()
         println("Cash issued to buyer")
 
         // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
