@@ -88,7 +88,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     lateinit var hibernatePersister: HibernateObserver
 
     fun makeVaultService(dataSourceProps: Properties, hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties(), { identityService })): VaultService {
-        val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
+        val vaultService = NodeVaultService(this, hibernateConfig)
         hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }

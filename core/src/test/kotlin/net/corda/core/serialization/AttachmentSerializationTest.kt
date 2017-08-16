@@ -18,12 +18,13 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
+import net.corda.services.schemas.AttachmentsSchemaV1
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import java.io.Serializable
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets.UTF_8
 import java.security.KeyPair
@@ -53,12 +54,12 @@ private fun MockNetwork.MockNode.hackAttachment(attachmentId: SecureHash, conten
  * @see NodeAttachmentService.importAttachment
  */
 private fun NodeAttachmentService.updateAttachment(attachmentId: SecureHash, data: ByteArray) {
-    with(session) {
-        withTransaction {
-            update(AttachmentEntity().apply {
-                attId = attachmentId
-                content = data
-            })
+    val session = getSession()
+    session.use {
+        val attachment = session.get<AttachmentsSchemaV1.Attachment>(AttachmentsSchemaV1.Attachment::class.java, attachmentId as Serializable)
+        attachment?.let {
+            attachment.content = data
+            session.save(attachment)
         }
     }
 }

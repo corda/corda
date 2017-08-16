@@ -1,6 +1,5 @@
 package net.corda.core.schemas
 
-import io.requery.Persistable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.serialization.CordaSerializable
@@ -58,10 +57,10 @@ open class MappedSchema(schemaFamily: Class<*>,
 @Embeddable
 data class PersistentStateRef(
         @Column(name = "transaction_id", length = 64)
-        var txId: String? = null,
+        var txId: String,
 
         @Column(name = "output_index")
-        var index: Int? = null
+        var index: Int
 ) : Serializable {
     constructor(stateRef: StateRef) : this(stateRef.txhash.bytes.toHexString(), stateRef.index)
 }
@@ -69,4 +68,4 @@ data class PersistentStateRef(
 /**
  * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
  */
-interface StatePersistable : Persistable
+interface StatePersistable

@@ -4,20 +4,17 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.services.ServiceInfo
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.services.schemas.AttachmentsSchemaV1
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestDatabaseProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -32,13 +29,10 @@ import kotlin.test.assertFailsWith
 
 class AttachmentTests {
     lateinit var mockNet: MockNetwork
-    lateinit var configuration: RequeryConfiguration
 
     @Before
     fun setUp() {
         mockNet = MockNetwork()
-        val dataSourceProperties = makeTestDataSourceProperties()
-        configuration = RequeryConfiguration(dataSourceProperties, databaseProperties = makeTestDatabaseProperties())
     }
 
     @After
@@ -137,11 +131,9 @@ class AttachmentTests {
         val corruptBytes = "arggghhhh".toByteArray()
         System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
 
-        val corruptAttachment = AttachmentEntity()
-        corruptAttachment.attId = id
-        corruptAttachment.content = attachment
+        val corruptAttachment = AttachmentsSchemaV1.Attachment(attId = id, content = attachment)
         n0.database.transaction {
-            n0.attachments.session.update(corruptAttachment)
+            n0.attachments.getSession().update(corruptAttachment)
         }
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
