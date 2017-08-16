@@ -488,7 +488,8 @@ class Obligation<P : Any> : Contract {
      */
     fun generateCloseOutNetting(tx: TransactionBuilder,
                                 signer: AbstractParty,
-                                vararg states: State<P>) {
+                                vararg inputs: StateAndRef<State<P>>) {
+        val states = inputs.map { it.state.data }
         val netState = states.firstOrNull()?.bilateralNetState
 
         requireThat {
@@ -498,6 +499,7 @@ class Obligation<P : Any> : Contract {
             "signer is in the state parties" using (signer in netState!!.partyKeys)
         }
 
+        tx.withItems(*inputs)
         val out = states.reduce(State<P>::net)
         if (out.quantity > 0L)
             tx.addOutputState(out)
@@ -567,10 +569,14 @@ class Obligation<P : Any> : Contract {
     fun generatePaymentNetting(tx: TransactionBuilder,
                                issued: Issued<Obligation.Terms<P>>,
                                notary: Party,
-                               vararg states: State<P>) {
+                               vararg inputs: StateAndRef<State<P>>) {
+        val states = inputs.map { it.state.data }
         requireThat {
             "all states are in the normal lifecycle state " using (states.all { it.lifecycle == Lifecycle.NORMAL })
         }
+
+        tx.withItems(*inputs)
+
         val groups = states.groupBy { it.multilateralNetState }
         val partyLookup = HashMap<PublicKey, AbstractParty>()
         val signers = states.map { it.beneficiary }.union(states.map { it.obligor }).toSet()

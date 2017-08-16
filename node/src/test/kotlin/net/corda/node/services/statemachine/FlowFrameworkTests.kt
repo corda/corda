@@ -593,7 +593,8 @@ class FlowFrameworkTests {
     @Test
     fun `wait for transaction`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-        ptx.addOutputState(DummyState())
+                .addOutputState(DummyState())
+                .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
         val committerFiber = node1.registerFlowFactory(WaitingFlows.Waiter::class) {
@@ -607,7 +608,8 @@ class FlowFrameworkTests {
     @Test
     fun `committer throws exception before calling the finality flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-        ptx.addOutputState(DummyState())
+                .addOutputState(DummyState())
+                .addCommand(dummyCommand())
         val stx = node1.services.signInitialTransaction(ptx)
 
         node1.registerFlowFactory(WaitingFlows.Waiter::class) {
@@ -623,7 +625,8 @@ class FlowFrameworkTests {
     @Test
     fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-        ptx.addOutputState(DummyState())
+                .addOutputState(DummyState())
+                .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
         node1.registerFlowFactory(VaultQueryFlow::class) {
