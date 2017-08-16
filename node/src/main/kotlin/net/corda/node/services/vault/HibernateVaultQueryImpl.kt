@@ -1,16 +1,17 @@
 package net.corda.node.services.vault
 
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.VaultQueryService
+import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
@@ -22,23 +23,20 @@ import net.corda.core.utilities.trace
 import net.corda.node.services.database.HibernateConfiguration
 import org.hibernate.Session
 import org.jetbrains.exposed.sql.transactions.TransactionManager
-import rx.subjects.PublishSubject
 import rx.Observable
 import java.lang.Exception
 import java.util.*
-import javax.persistence.EntityManager
 import javax.persistence.Tuple
 
 
 class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
-                              val updatesPublisher: PublishSubject<Vault.Update<ContractState>>) : SingletonSerializeAsToken(), VaultQueryService {
+                              val vault: VaultService) : SingletonSerializeAsToken(), VaultQueryService {
     companion object {
         val log = loggerFor<HibernateVaultQueryImpl>()
     }
 
     private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
     private val criteriaBuilder = sessionFactory.criteriaBuilder
-
 
     /**
      * Maintain a list of contract state interfaces to concrete types stored in the vault
@@ -47,7 +45,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
     private val contractTypeMappings = mutableMapOf<String, MutableSet<String>>()
 
     init {
-        updatesPublisher.subscribe { update ->
+        vault.rawUpdates.subscribe { update ->
             update.produced.forEach {
                 val concreteType = it.state.data.javaClass
                 log.trace { "State update of type: $concreteType" }
@@ -136,14 +134,14 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
         }
     }
 
-    private val mutex = ThreadBox({ updatesPublisher })
+    private val mutex = ThreadBox({ vault.updatesPublisher })
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
             val snapshotResults = _queryBy(criteria, paging, sorting, contractType)
             @Suppress("UNCHECKED_CAST")
-            val updates = updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
+            val updates = vault.updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
             DataFeed(snapshotResults, updates)
         }
     }
