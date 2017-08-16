@@ -46,13 +46,6 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
         }.also { registerCustomSerializers(it) }
     }
 
-    fun getSerializerFactory(): SerializerFactory {
-        return serializerFactoriesForContexts.computeIfAbsent(Pair(
-                AllWhitelist, SerializationDefaults.javaClass.classLoader)) {
-            SerializerFactory(AllWhitelist, SerializationDefaults.javaClass.classLoader)
-        }
-    }
-
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
         val serializerFactory = getSerializerFactory(context)
         return DeserializationInput(serializerFactory).deserialize(byteSequence, clazz)
