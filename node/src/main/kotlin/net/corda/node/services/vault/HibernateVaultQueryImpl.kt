@@ -102,7 +102,6 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
 
                 // execution
                 val results = query.resultList
-                session.close()
 
                 // final pagination check (fail-fast on too many results when no pagination specified)
                 if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
@@ -164,22 +163,23 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
         val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
         criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
         val session = getSession()
-        val query = session.createQuery(criteria)
-        val results = query.resultList
-        session.close()
-        val distinctTypes = results.map { it }
+        session.use {
+            val query = session.createQuery(criteria)
+            val results = query.resultList
+            val distinctTypes = results.map { it }
 
-        val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
-        distinctTypes.forEach { it ->
-            @Suppress("UNCHECKED_CAST")
-            val concreteType = Class.forName(it) as Class<ContractState>
-            val contractInterfaces = deriveContractInterfaces(concreteType)
-            contractInterfaces.map {
-                val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
-                contractInterface.add(concreteType.name)
+            val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
+            distinctTypes.forEach { type ->
+                @Suppress("UNCHECKED_CAST")
+                val concreteType = Class.forName(type) as Class<ContractState>
+                val contractInterfaces = deriveContractInterfaces(concreteType)
+                contractInterfaces.map {
+                    val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
+                    contractInterface.add(concreteType.name)
+                }
             }
+            return contractInterfaceToConcreteTypes
         }
-        return contractInterfaceToConcreteTypes
     }
 
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
