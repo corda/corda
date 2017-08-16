@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.getX509Name
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
@@ -15,7 +16,6 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.WHITESPACE
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configOf
@@ -125,7 +125,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 rpcUsers,
                 networkMapConf + configOverrides,
                 noNetworkMap)
-        return if (waitForConnection) node.nodeReadyFuture.map { node } else Futures.immediateFuture(node)
+        return if (waitForConnection) node.nodeReadyFuture.map { node } else doneFuture(node)
     }
 
     fun startNotaryCluster(notaryName: X500Name,

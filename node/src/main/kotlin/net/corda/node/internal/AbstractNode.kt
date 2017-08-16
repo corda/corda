@@ -13,6 +13,7 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
@@ -211,8 +212,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
 
             runOnStop += network::stop
-            // If we successfully  loaded network data from database, we set this future to Unit.
-            _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
+        }
+        // If we successfully  loaded network data from database, we set this future to Unit.
+        _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
+        database.transaction {
             smm.start()
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
@@ -589,7 +592,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // So we are ready to go.
             if (services.networkMapCache.loadDBSuccess) {
                 log.info("Node successfully loaded network map data from the database.")
-                Futures.immediateFuture(Unit)
+                doneFuture(Unit)
             } else {
                 netMapRegistration
             }
@@ -629,7 +632,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     /** This is overriden by the mock node implementation to enable operation without any network map service */
     protected open fun noNetworkMapConfigured(): CordaFuture<Unit> {
         if (services.networkMapCache.loadDBSuccess) {
-            return Futures.immediateFuture(Unit)
+            return doneFuture(Unit)
         } else {
             // TODO: There should be a consistent approach to configuration error exceptions.
             throw IllegalStateException("Configuration error: this node isn't being asked to act as the network map, nor " +
