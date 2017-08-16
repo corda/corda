@@ -42,17 +42,20 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
      * Maintain a list of contract state interfaces to concrete types stored in the vault
      * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
      */
-    private val contractTypeMappings = mutableMapOf<String, MutableSet<String>>()
+    private val contractTypeMappings = bootstrapContractStateTypes()
 
     init {
         vault.rawUpdates.subscribe { update ->
             update.produced.forEach {
                 val concreteType = it.state.data.javaClass
                 log.trace { "State update of type: $concreteType" }
-                val contractInterfaces = deriveContractInterfaces(concreteType)
-                contractInterfaces.map {
-                    val contractInterface = contractTypeMappings.getOrPut(it.name, { mutableSetOf() })
-                    contractInterface.add(concreteType.name)
+                val seen = contractTypeMappings.any { it.value.contains(concreteType.name) }
+                if (!seen) {
+                    val contractInterfaces = deriveContractInterfaces(concreteType)
+                    contractInterfaces.map {
+                        val contractInterface = contractTypeMappings.getOrPut(it.name, { mutableSetOf() })
+                        contractInterface.add(concreteType.name)
+                    }
                 }
             }
         }
@@ -150,6 +153,30 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
         return sessionFactory.withOptions().
                 connection(TransactionManager.current().connection).
                 openSession()
+    }
+
+    /**
+     * Derive list from existing vault states and then incrementally update using vault observables
+     */
+    fun bootstrapContractStateTypes(): MutableMap<String, MutableSet<String>> {
+        val criteria = criteriaBuilder.createQuery(String::class.java)
+        val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
+        criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
+        val query = getSession().createQuery(criteria)
+        val results = query.resultList
+        val distinctTypes = results.map { it }
+
+        val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
+        distinctTypes.forEach { it ->
+            @Suppress("UNCHECKED_CAST")
+            val concreteType = Class.forName(it) as Class<ContractState>
+            val contractInterfaces = deriveContractInterfaces(concreteType)
+            contractInterfaces.map {
+                val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
+                contractInterface.add(concreteType.name)
+            }
+        }
+        return contractInterfaceToConcreteTypes
     }
 
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
