@@ -122,7 +122,6 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
         package com.template.contract;
 
-        import com.google.common.collect.ImmutableSet;
         import com.template.state.IOUState;
         import net.corda.core.contracts.AuthenticatedObject;
         import net.corda.core.contracts.CommandData;
@@ -155,7 +154,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     check.using("The lender and the borrower cannot be the same entity.", lender != borrower);
 
                     // Constraints on the signers.
-                    check.using("There must only be one signer.", ImmutableSet.of(command.getSigners()).size() == 1);
+                    check.using("There must only be one signer.", command.getSigners().size() == 1);
                     check.using("The signer must be the lender.", command.getSigners().contains(lender.getOwningKey()));
 
                     return null;

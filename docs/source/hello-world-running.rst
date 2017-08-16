@@ -126,10 +126,8 @@ We want to create an IOU of 100 with Node B. We start the ``IOUFlow`` by typing:
 
         start IOUFlow iouValue: 99, otherParty: "NodeB"
 
-Node A and Node B will automatically agree an IOU.
-
-If the flow worked, it should have led to the recording of a new IOU in the vaults of both Node A and Node B. Equally
-importantly, Node C - although it sits on the same network - should not be aware of this transaction.
+Node A and Node B will automatically agree an IOU. If the flow worked, it should have led to the recording of a new IOU
+in the vaults of both Node A and Node B.
 
 We can check the flow has worked by using an RPC operation to check the contents of each node's vault. Typing ``run``
 will display a list of the available commands. We can examine the contents of a node's vault by running:
@@ -164,13 +162,6 @@ The vaults of Node A and Node B should both display the following output:
       ref:
         txhash: "656A1BF64D5AEEC6F6C944E287F34EF133336F5FC2C5BFB9A0BFAE25E826125F"
         index: 0
-    second: "(observable)"
-
-But the vault of Node C should output nothing!
-
-.. code:: python
-
-    first: []
     second: "(observable)"
 
 Conclusion
