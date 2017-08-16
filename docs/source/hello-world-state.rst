@@ -64,31 +64,26 @@ you wish to add them later, its as simple as adding an additional property to yo
 
 Defining IOUState
 -----------------
-Let's open ``TemplateState.java`` (for Java) or ``TemplateState.kt`` (for Kotlin) and update ``TemplateState`` to
+Let's open ``TemplateState.java`` (for Java) or ``App.kt`` (for Kotlin) and update ``TemplateState`` to
 define an ``IOUState``:
 
 .. container:: codeset
 
     .. code-block:: kotlin
 
-        package com.iou
-
-        import net.corda.core.contracts.ContractState
-        import net.corda.core.identity.Party
-
         class IOUState(val value: Int,
                        val lender: Party,
-                       val borrower: Party,
-		       override val contract: TemplateContract) : ContractState {
-
+                       val borrower: Party) : ContractState {
+            override val contract = TemplateContract()
             override val participants get() = listOf(lender, borrower)
         }
 
     .. code-block:: java
 
-        package com.iou;
+        package com.template.state;
 
         import com.google.common.collect.ImmutableList;
+        import com.template.contract.TemplateContract;
         import net.corda.core.contracts.ContractState;
         import net.corda.core.identity.AbstractParty;
         import net.corda.core.identity.Party;
@@ -99,7 +94,7 @@ define an ``IOUState``:
             private final int value;
             private final Party lender;
             private final Party borrower;
-            private final IOUContract contract = new IOUContract();
+            private final TemplateContract contract = new TemplateContract();
 
             public IOUState(int value, Party lender, Party borrower) {
                 this.value = value;
@@ -121,7 +116,7 @@ define an ``IOUState``:
 
             @Override
             // TODO: Once we've defined IOUContract, come back and update this.
-            public IOUContract getContract() {
+            public TemplateContract getContract() {
                 return contract;
             }
 
@@ -130,6 +125,8 @@ define an ``IOUState``:
                 return ImmutableList.of(lender, borrower);
             }
         }
+
+If you're following along in Java, you'll also need to rename ``TemplateState.java`` to ``IOUState.java``.
 
 We've made the following changes:
 

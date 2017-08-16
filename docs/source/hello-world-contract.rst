@@ -79,18 +79,19 @@ Defining IOUContract
 --------------------
 
 Let's write a contract that enforces these constraints. We'll do this by modifying either ``TemplateContract.java`` or
-``TemplateContract.kt`` and updating ``TemplateContract`` to define an ``IOUContract``:
+``App.kt`` and updating ``TemplateContract`` to define an ``IOUContract``:
 
 .. container:: codeset
 
     .. code-block:: kotlin
 
-        package com.iou
+        ...
 
         import net.corda.core.contracts.*
-        import net.corda.core.crypto.SecureHash
 
-        open class IOUContract : Contract {
+        ...
+
+        class IOUContract : Contract {
             // Our Create command.
             class Create : CommandData
 
@@ -109,7 +110,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
                     // Constraints on the signers.
                     "There must only be one signer." using (command.signers.toSet().size == 1)
-                    "The signer must be the borrower." using (command.signers.contains(out.borrower.owningKey))
+                    "The signer must be the lender." using (command.signers.contains(out.lender.owningKey))
                 }
             }
 
@@ -119,9 +120,10 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
     .. code-block:: java
 
-        package com.iou;
+        package com.template.contract;
 
         import com.google.common.collect.ImmutableSet;
+        import com.template.state.IOUState;
         import net.corda.core.contracts.AuthenticatedObject;
         import net.corda.core.contracts.CommandData;
         import net.corda.core.contracts.Contract;
@@ -146,7 +148,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     check.using("There should be one output state of type IOUState.", tx.getOutputs().size() == 1);
 
                     // IOU-specific constraints.
-                    final IOUState out = (IOUState) tx.getOutputs().getData().get(0);
+                    final IOUState out = (IOUState) tx.getOutputs().get(0).getData();
                     final Party lender = out.getLender();
                     final Party borrower = out.getBorrower();
                     check.using("The IOU's value must be non-negative.",out.getValue() > 0);
@@ -154,7 +156,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
                     // Constraints on the signers.
                     check.using("There must only be one signer.", ImmutableSet.of(command.getSigners()).size() == 1);
-                    check.using("The signer must be the borrower.", command.getSigners().contains(borrower.getOwningKey()));
+                    check.using("The signer must be the lender.", command.getSigners().contains(lender.getOwningKey()));
 
                     return null;
                 });
@@ -164,6 +166,8 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
             private final SecureHash legalContractReference = SecureHash.Companion.getZeroHash();
             @Override public final SecureHash getLegalContractReference() { return legalContractReference; }
         }
+
+If you're following along in Java, you'll also need to rename ``TemplateContract.java`` to ``IOUContract.java``.
 
 Let's walk through this code step by step.
 
@@ -254,7 +258,7 @@ other statements - in this case, we're extracting the transaction's single ``IOU
 
 Signer constraints
 ~~~~~~~~~~~~~~~~~~
-Finally, we require the borrower's signature on the transaction. A transaction's required signers is equal to the union
+Finally, we require the lender's signature on the transaction. A transaction's required signers is equal to the union
 of all the signers listed on the commands. We therefore extract the signers from the ``Create`` command we
 retrieved earlier.
 
