@@ -416,7 +416,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             // start/run/stop have re-entrancy assertions at the top, so it is OK.
             nodeExecutor.fetchFrom {
                 database.transaction {
-                    if (processedMessages[msg.uniqueMessageId] != null) {
+                    if (msg.uniqueMessageId in processedMessages) {
                         log.trace { "Discard duplicate message ${msg.uniqueMessageId} for ${msg.topicSession}" }
                     } else {
                         if (deliverTo.isEmpty()) {
