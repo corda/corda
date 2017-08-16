@@ -3,14 +3,14 @@ package net.corda.node.services
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.internal.div
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
+import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
@@ -23,6 +23,7 @@ import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
@@ -70,7 +71,9 @@ class BFTNotaryServiceTests {
     fun `all replicas start even if there is a new consensus during startup`() {
         val notary = bftNotaryCluster(minClusterSize(1), true) // This true adds a sleep to expose the race.
         val f = node.run {
-            val trivialTx = signInitialTransaction(notary) {}
+            val trivialTx = signInitialTransaction(notary) {
+                addOutputState(DummyContract.SingleOwnerState(owner = info.legalIdentity))
+            }
             // Create a new consensus while the redundant replica is sleeping:
             services.startFlow(NotaryFlow.Client(trivialTx)).resultFuture
         }
@@ -99,7 +102,7 @@ class BFTNotaryServiceTests {
                 services.recordTransactions(issueTx)
             }
             val spendTxs = (1..10).map {
-                signInitialTransaction(notary, true) {
+                signInitialTransaction(notary) {
                     addInputState(issueTx.tx.outRef<ContractState>(0))
                 }
             }
@@ -137,11 +140,11 @@ class BFTNotaryServiceTests {
 
 private fun AbstractNode.signInitialTransaction(
         notary: Party,
-        makeUnique: Boolean = false,
         block: TransactionBuilder.() -> Any?
-) = services.signInitialTransaction(TransactionBuilder(notary).apply {
-    block()
-    if (makeUnique) {
-        addAttachment(SecureHash.randomSHA256())
-    }
-})
+): SignedTransaction {
+    return services.signInitialTransaction(
+            TransactionBuilder(notary).apply {
+                addCommand(dummyCommand(services.legalIdentityKey))
+                block()
+            })
+}
