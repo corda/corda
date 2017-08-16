@@ -470,7 +470,7 @@ class ObligationTests {
                 input("Alice's $1,000,000")
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation.Clauses.Settle.legalContractReference) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation.cashSettlementLegalContractReference) }
                 attachment(attachment(cashContractBytes.inputStream()))
                 this.verifies()
             }
@@ -485,7 +485,7 @@ class ObligationTests {
                 output("Alice's $500,000 obligation to Bob") { halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB) }
                 output("Bob's $500,000") { 500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation.Clauses.Settle.legalContractReference) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation.cashSettlementLegalContractReference) }
                 attachment(attachment(cashContractBytes.inputStream()))
                 this.verifies()
             }
@@ -499,7 +499,7 @@ class ObligationTests {
                 input(1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE)
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation.Clauses.Settle.legalContractReference) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation.cashSettlementLegalContractReference) }
                 this `fails with` "all inputs are in the normal state"
             }
         }
@@ -512,7 +512,7 @@ class ObligationTests {
                 input("Alice's $1,000,000")
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation.Clauses.Settle.legalContractReference) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation.cashSettlementLegalContractReference) }
                 attachment(attachment(cashContractBytes.inputStream()))
                 this `fails with` "amount in settle command"
             }
@@ -538,7 +538,7 @@ class ObligationTests {
                 input("Alice's 1 FCOJ")
                 output("Bob's 1 FCOJ") { CommodityContract.State(oneUnitFcoj, BOB) }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneUnitFcoj.quantity, oneUnitFcojObligation.amount.token)) }
-                command(ALICE_PUBKEY) { CommodityContract.Commands.Move(Obligation.Clauses.Settle.legalContractReference) }
+                command(ALICE_PUBKEY) { CommodityContract.Commands.Move(Obligation.cashSettlementLegalContractReference) }
                 attachment(attachment(commodityContractBytes.inputStream()))
                 verifies()
             }
