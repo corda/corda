@@ -3,7 +3,7 @@ package net.corda.docs
 import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.USD
+import net.corda.finance.USD
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -112,8 +112,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
         sum + state.state.data.amount.quantity
     }
     val issueRef = OpaqueBytes.of(0)
-    val (parties, partyUpdates) = proxy.networkMapFeed()
-    partyUpdates.notUsed()
+    val parties = proxy.networkMapSnapshot()
     val notary = parties.first { it.advertisedServices.any { it.info.type.isNotary() } }.notaryIdentity
     val me = proxy.nodeIdentity().legalIdentity
     while (true) {
@@ -129,7 +128,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
             proxy.startFlow(::CashPaymentFlow, Amount(quantity, USD), me)
         } else {
             val quantity = Math.abs(random.nextLong() % 1000)
-            proxy.startFlow(::CashIssueFlow, Amount(quantity, USD), issueRef, me, notary)
+            proxy.startFlow(::CashIssueFlow, Amount(quantity, USD), issueRef, notary)
             ownedQuantity += quantity
         }
     }

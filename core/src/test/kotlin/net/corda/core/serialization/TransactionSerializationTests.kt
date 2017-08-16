@@ -5,6 +5,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
+import net.corda.finance.POUNDS
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Before

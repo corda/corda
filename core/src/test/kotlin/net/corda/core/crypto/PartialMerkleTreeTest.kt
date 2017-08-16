@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import com.esotericsoftware.kryo.KryoException
+
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
@@ -8,6 +8,8 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.testing.*
 import org.junit.Test
 import java.security.PublicKey
@@ -232,7 +234,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         assertFalse(pmt.verify(wrongRoot, inclHashes))
     }
 
-    @Test(expected = KryoException::class)
+    @Test(expected = Exception::class)
     fun `hash map serialization not allowed`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
         hm1.serialize()

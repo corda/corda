@@ -1,11 +1,12 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionKeyFlow
-import net.corda.core.identity.AnonymousPartyAndPath
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -26,7 +27,7 @@ open class CashPaymentFlow(
         val recipient: Party,
         val anonymous: Boolean,
         progressTracker: ProgressTracker,
-        val issuerConstraint: Set<Party>? = null) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
+        val issuerConstraint: Set<Party> = emptySet()) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
     constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, true, tracker())
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
@@ -38,14 +39,14 @@ open class CashPaymentFlow(
         val txIdentities = if (anonymous) {
             subFlow(TransactionKeyFlow(recipient))
         } else {
-            emptyMap<Party, AnonymousPartyAndPath>()
+            emptyMap<Party, AnonymousParty>()
         }
-        val anonymousRecipient = txIdentities.get(recipient)?.party ?: recipient
+        val anonymousRecipient = txIdentities.get(recipient) ?: recipient
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionBuilder(null as Party?)
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
-            serviceHub.vaultService.generateSpend(
+            Cash.generateSpend(serviceHub,
                     builder,
                     amount,
                     anonymousRecipient,

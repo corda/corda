@@ -1,7 +1,7 @@
 package net.corda.verifier
 
 import net.corda.client.mock.generateOrFail
-import net.corda.core.contracts.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes
@@ -118,7 +118,7 @@ class VerifierTests {
             val alice = aliceFuture.get()
             val notary = notaryFuture.get()
             startVerifier(notary)
-            alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), alice.nodeInfo.legalIdentity, notaryFuture.get().nodeInfo.notaryIdentity).returnValue.get()
+            alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notaryFuture.get().nodeInfo.notaryIdentity).returnValue.get()
             notary.waitUntilNumberOfVerifiers(1)
             for (i in 1..10) {
                 alice.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.get()

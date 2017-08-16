@@ -24,6 +24,7 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.IP_REQUEST_PREFIX
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
@@ -32,7 +33,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.serialization.*
+import net.corda.nodeapi.internal.serialization.*
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -58,8 +59,8 @@ import kotlin.system.exitProcess
 open class Node(override val configuration: FullNodeConfiguration,
                 advertisedServices: Set<ServiceInfo>,
                 val versionInfo: VersionInfo,
-                clock: Clock = NodeClock(),
-                val initialiseSerialization: Boolean = true) : AbstractNode(configuration, advertisedServices, clock) {
+                val initialiseSerialization: Boolean = true
+) : AbstractNode(configuration, advertisedServices, createClock(configuration)) {
     companion object {
         private val logger = loggerFor<Node>()
         var renderBasicInfoToConsole = true
@@ -75,6 +76,10 @@ open class Node(override val configuration: FullNodeConfiguration,
             println(message)
             println("Corda will now exit...")
             exitProcess(1)
+        }
+
+        private fun createClock(configuration: FullNodeConfiguration): Clock {
+            return if (configuration.useTestClock) TestClock() else NodeClock()
         }
     }
 
@@ -331,7 +336,8 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     private fun initialiseSerialization() {
         SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-            registerScheme(KryoServerSerializationScheme())
+            registerScheme(KryoServerSerializationScheme(this))
+            registerScheme(AMQPServerSerializationScheme())
         }
         SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
         SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT

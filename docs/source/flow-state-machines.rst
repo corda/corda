@@ -279,7 +279,7 @@ This code is longer but no more complicated. Here are some things to pay attenti
 
 1. We do some sanity checking on the proposed trade transaction received from the seller to ensure we're being offered
    what we expected to be offered.
-2. We create a cash spend using ``VaultService.generateSpend``. You can read the vault documentation to learn more about this.
+2. We create a cash spend using ``Cash.generateSpend``. You can read the vault documentation to learn more about this.
 3. We access the *service hub* as needed to access things that are transient and may change or be recreated
    whilst a flow is suspended, such as the wallet or the network map.
 4. We call ``CollectSignaturesFlow`` as a subflow to send the unfinished, still-invalid transaction to the seller so

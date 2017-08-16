@@ -4,7 +4,6 @@ import javafx.beans.InvalidationListener
 import javafx.beans.Observable
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.SimpleObjectProperty
-import net.corda.core.contracts.currency
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -59,7 +58,7 @@ class SettingsModel(path: Path = Paths.get("conf")) : Component(), Observable {
             String::class.java -> string(metadata.name, "") as T
             Int::class.java -> string(metadata.name, "0").toInt() as T
             Boolean::class.java -> boolean(metadata.name) as T
-            Currency::class.java -> currency(string(metadata.name, "USD")) as T
+            Currency::class.java -> Currency.getInstance(string(metadata.name, "USD")) as T
             Path::class.java -> Paths.get(string(metadata.name, "")).toAbsolutePath() as T
             else -> throw IllegalArgumentException("Unsupported type ${metadata.returnType}")
         }

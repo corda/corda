@@ -5,7 +5,7 @@ import net.corda.core.serialization.CordaSerializable
 
 /**
  * Custom class for holding signature data. This exists for later extension work to provide a standardised cross-platform
- * serialization format (i.e. not Kryo).
+ * serialization format.
  */
 @CordaSerializable
 data class CompositeSignaturesWithKeys(val sigs: List<TransactionSignature>) {

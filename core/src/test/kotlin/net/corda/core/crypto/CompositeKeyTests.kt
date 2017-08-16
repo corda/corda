@@ -8,9 +8,7 @@ import net.corda.core.internal.declaredField
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.node.utilities.loadKeyStore
-import net.corda.node.utilities.loadOrCreateKeyStore
-import net.corda.node.utilities.save
+import net.corda.node.utilities.*
 import net.corda.testing.TestDependencyInjectionBase
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Rule
@@ -86,7 +84,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `kryo encoded tree decodes correctly`() {
+    fun `encoded tree decodes correctly`() {
         val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
         val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
 

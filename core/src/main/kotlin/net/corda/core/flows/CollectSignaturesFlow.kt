@@ -49,7 +49,7 @@ import java.security.PublicKey
  *     builder.toWireTransaction().toLedgerTransaction(serviceHub).verify()
  *
  *     // Transaction creator signs transaction.
- *     val ptx = builder.signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
+ *     val ptx = serviceHub.signInitialTransaction(builder)
  *
  *     // Call to CollectSignaturesFlow.
  *     // The returned signed transaction will have all signatures appended apart from the notary's.
@@ -58,7 +58,7 @@ import java.security.PublicKey
  * @param partiallySignedTx Transaction to collect the remaining signatures for
  */
 // TODO: AbstractStateReplacementFlow needs updating to use this flow.
-// TODO: Update this flow to handle randomly generated keys when that works is complete.
+// TODO: Update this flow to handle randomly generated keys when that work is complete.
 class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
                             override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
 

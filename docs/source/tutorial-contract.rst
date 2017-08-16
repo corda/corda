@@ -106,7 +106,7 @@ A state is a class that stores data that is checked by the contract. A commercia
           override val participants = listOf(owner)
 
           fun withoutOwner() = copy(owner = AnonymousParty(NullPublicKey))
-          override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+          override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
       }
 
    .. sourcecode:: java
@@ -440,7 +440,7 @@ logic.
               is Commands.Redeem -> {
                   // Redemption of the paper requires movement of on-ledger cash.
                   val input = inputs.single()
-                  val received = tx.outputs.sumCashBy(input.owner)
+                  val received = tx.outputs.map{ it.data }.sumCashBy(input.owner)
                   val time = timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must be timestamped")
                   requireThat {
                       "the paper must have matured" using (time >= input.maturityDate)
@@ -672,9 +672,9 @@ Finally, we can do redemption.
    .. sourcecode:: kotlin
 
       @Throws(InsufficientBalanceException::class)
-      fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: VaultService) {
+      fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub) {
           // Add the cash movement using the states in our vault.
-          vault.generateSpend(tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
+          Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
           tx.addInputState(paper)
           tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner.owningKey))
       }
@@ -690,7 +690,7 @@ from the issuer of the commercial paper to the current owner. If we don't have e
 an exception is thrown. Then we add the paper itself as an input, but, not an output (as we wish to remove it
 from the ledger). Finally, we add a Redeem command that should be signed by the owner of the commercial paper.
 
-.. warning:: The amount we pass to the ``generateSpend`` function has to be treated first with ``withoutIssuer``.
+.. warning:: The amount we pass to the ``Cash.generateSpend`` function has to be treated first with ``withoutIssuer``.
    This reflects the fact that the way we handle issuer constraints is still evolving; the commercial paper
    contract requires payment in the form of a currency issued by a specific party (e.g. the central bank,
    or the issuers own bank perhaps). But the vault wants to assemble spend transactions using cash states from
@@ -699,7 +699,7 @@ from the ledger). Finally, we add a Redeem command that should be signed by the 
 
 A ``TransactionBuilder`` is not by itself ready to be used anywhere, so first, we must convert it to something that
 is recognised by the network. The most important next step is for the participating entities to sign it. Typically,
-an initiating flow will create an initial partially signed ``SignedTransaction`` by calling the ``serviceHub.signInitialTransaction`` method.
+an initiating flow will create an initial partially signed ``SignedTransaction`` by calling the ``serviceHub.toSignedTransaction`` method.
 Then the frozen ``SignedTransaction`` can be passed to other nodes by the flow, these can sign using ``serviceHub.createSignature`` and distribute.
 The ``CollectSignaturesFlow`` provides a generic implementation of this process that can be used as a ``subFlow`` .
 

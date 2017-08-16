@@ -1,9 +1,9 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.utilities.exactAdd
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.exactAdd
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.*
@@ -84,66 +84,6 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
                 return getDisplayTokenSize(token.product)
             }
             return BigDecimal.ONE
-        }
-
-        private val currencySymbols: Map<String, Currency> = mapOf(
-                "$" to USD,
-                "£" to GBP,
-                "€" to EUR,
-                "¥" to JPY,
-                "₽" to RUB
-        )
-        private val currencyCodes: Map<String, Currency> by lazy { Currency.getAvailableCurrencies().map { it.currencyCode to it }.toMap() }
-
-        /**
-         * Returns an amount that is equal to the given currency amount in text. Examples of what is supported:
-         *
-         * - 12 USD
-         * - 14.50 USD
-         * - 10 USD
-         * - 30 CHF
-         * - $10.24
-         * - £13
-         * - €5000
-         *
-         * Note this method does NOT respect internationalisation rules: it ignores commas and uses . as the
-         * decimal point separator, always. It also ignores the users locale:
-         *
-         * - $ is always USD,
-         * - £ is always GBP
-         * - € is always the Euro
-         * - ¥ is always Japanese Yen.
-         * - ₽ is always the Russian ruble.
-         *
-         * Thus an input of $12 expecting some other countries dollar will not work. Do your own parsing if
-         * you need correct handling of currency amounts with locale-sensitive handling.
-         *
-         * @throws IllegalArgumentException if the input string was not understood.
-         */
-        fun parseCurrency(input: String): Amount<Currency> {
-            val i = input.filter { it != ',' }
-            try {
-                // First check the symbols at the front.
-                for ((symbol, currency) in currencySymbols) {
-                    if (i.startsWith(symbol)) {
-                        val rest = i.substring(symbol.length)
-                        return fromDecimal(BigDecimal(rest), currency)
-                    }
-                }
-                // Now check the codes at the end.
-                val split = i.split(' ')
-                if (split.size == 2) {
-                    val (rest, code) = split
-                    for ((cc, currency) in currencyCodes) {
-                        if (cc == code) {
-                            return fromDecimal(BigDecimal(rest), currency)
-                        }
-                    }
-                }
-            } catch(e: Exception) {
-                throw IllegalArgumentException("Could not parse $input as a currency", e)
-            }
-            throw IllegalArgumentException("Did not recognise the currency in $input or could not parse")
         }
     }
 

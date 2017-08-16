@@ -14,10 +14,11 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
 import net.corda.core.utilities.hours
+import net.corda.finance.*
 import net.corda.testing.*
-import org.junit.After
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
+import org.junit.After
 import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -45,7 +46,7 @@ class ObligationTests {
             quantity = 1000.DOLLARS.quantity,
             beneficiary = CHARLIE
     )
-    val outState = inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2))
+    val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
     val miniCorpServices = MockServices(MINI_CORP_KEY)
     val notaryServices = MockServices(DUMMY_NOTARY_KEY)
 
@@ -69,27 +70,28 @@ class ObligationTests {
     fun trivial() {
         transaction {
             input { inState }
-            this `fails with` "the amounts balance"
 
             tweak {
                 output { outState.copy(quantity = 2000.DOLLARS.quantity) }
+                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
             tweak {
                 output { outState }
-                // No command arguments
-                this `fails with` "required net.corda.core.contracts.FungibleAsset.Commands.Move command"
+                command(CHARLIE.owningKey) { DummyCommandData }
+                // Invalid command
+                this `fails with` "required net.corda.contracts.asset.Obligation.Commands.Move command"
             }
             tweak {
                 output { outState }
-                command(DUMMY_PUBKEY_2) { Obligation.Commands.Move() }
+                command(BOB_PUBKEY) { Obligation.Commands.Move() }
                 this `fails with` "the owning keys are a subset of the signing keys"
             }
             tweak {
                 output { outState }
                 output { outState `issued by` MINI_CORP }
                 command(CHARLIE.owningKey) { Obligation.Commands.Move() }
-                this `fails with` "at least one asset input"
+                this `fails with` "at least one obligation input"
             }
             // Simple reallocation works.
             tweak {
@@ -108,7 +110,7 @@ class ObligationTests {
             output { outState }
             command(MINI_CORP_PUBKEY) { Obligation.Commands.Move() }
 
-            this `fails with` "there is at least one asset input"
+            this `fails with` "at least one obligation input"
         }
 
         // Check we can issue money only as long as the issuer institution is a command signer, i.e. any recognised
@@ -194,15 +196,7 @@ class ObligationTests {
             command(MEGA_CORP_PUBKEY) { Obligation.Commands.Issue() }
             tweak {
                 command(MEGA_CORP_PUBKEY) { Obligation.Commands.Issue() }
-                this `fails with` "List has more than one element."
-            }
-            tweak {
-                command(MEGA_CORP_PUBKEY) { Obligation.Commands.Move() }
-                this `fails with` "The following commands were not matched at the end of execution"
-            }
-            tweak {
-                command(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit(inState.amount.splitEvenly(2).first()) }
-                this `fails with` "The following commands were not matched at the end of execution"
+                this `fails with` "there is only a single issue command"
             }
             this.verifies()
         }
@@ -233,8 +227,8 @@ class ObligationTests {
     @Test
     fun `generate close-out net transaction`() {
         initialiseTestSerialization()
-        val obligationAliceToBob = oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)
-        val obligationBobToAlice = oneMillionDollars.OBLIGATION between Pair(BOB, ALICE)
+        val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB))
+        val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE))
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateCloseOutNetting(this, ALICE, obligationAliceToBob, obligationBobToAlice)
         }.toWireTransaction()
@@ -245,8 +239,8 @@ class ObligationTests {
     @Test
     fun `generate close-out net transaction with remainder`() {
         initialiseTestSerialization()
-        val obligationAliceToBob = (2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(ALICE, BOB)
-        val obligationBobToAlice = oneMillionDollars.OBLIGATION between Pair(BOB, ALICE)
+        val obligationAliceToBob = getStateAndRef((2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(ALICE, BOB))
+        val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE))
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateCloseOutNetting(this, ALICE, obligationAliceToBob, obligationBobToAlice)
         }.toWireTransaction()
@@ -260,10 +254,10 @@ class ObligationTests {
     @Test
     fun `generate payment net transaction`() {
         initialiseTestSerialization()
-        val obligationAliceToBob = oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)
-        val obligationBobToAlice = oneMillionDollars.OBLIGATION between Pair(BOB, ALICE)
+        val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB))
+        val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE))
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
-            Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.amount.token, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
+            Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.state.data.amount.token, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
         }.toWireTransaction()
         assertEquals(0, tx.outputs.size)
     }
@@ -272,15 +266,23 @@ class ObligationTests {
     @Test
     fun `generate payment net transaction with remainder`() {
         initialiseTestSerialization()
-        val obligationAliceToBob = oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)
-        val obligationBobToAlice = (2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(BOB, ALICE)
-        val tx = TransactionBuilder(null).apply {
-            Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.amount.token, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
+        val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB))
+        val obligationAliceToBobState = obligationAliceToBob.state.data
+        val obligationBobToAlice = getStateAndRef((2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(BOB, ALICE))
+        val obligationBobToAliceState = obligationBobToAlice.state.data
+        val tx = TransactionBuilder(DUMMY_NOTARY).apply {
+            Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBobState.amount.token, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
         }.toWireTransaction()
         assertEquals(1, tx.outputs.size)
-        val expected = obligationBobToAlice.copy(quantity = obligationBobToAlice.quantity - obligationAliceToBob.quantity)
+        val expected = obligationBobToAliceState.copy(quantity = obligationBobToAliceState.quantity - obligationAliceToBobState.quantity)
         val actual = tx.getOutput(0)
         assertEquals(expected, actual)
+    }
+
+    private inline fun <reified T: ContractState> getStateAndRef(state: T): StateAndRef<T> {
+        val txState = TransactionState(state, DUMMY_NOTARY)
+        return StateAndRef(txState, StateRef(SecureHash.randomSHA256(), 0))
+
     }
 
     /** Test generating a transaction to mark outputs as having defaulted. */
@@ -610,15 +612,20 @@ class ObligationTests {
     @Test
     fun zeroSizedValues() {
         transaction {
-            input { inState }
-            input { inState.copy(quantity = 0L) }
-            this `fails with` "zero sized inputs"
-        }
-        transaction {
-            input { inState }
-            output { inState }
-            output { inState.copy(quantity = 0L) }
-            this `fails with` "zero sized outputs"
+            command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+            tweak {
+                input { inState }
+                input { inState.copy(quantity = 0L) }
+
+                this `fails with` "zero sized inputs"
+            }
+            tweak {
+                input { inState }
+                output { inState }
+                output { inState.copy(quantity = 0L) }
+
+                this `fails with` "zero sized outputs"
+            }
         }
     }
 
@@ -628,6 +635,7 @@ class ObligationTests {
         transaction {
             input { inState }
             output { outState `issued by` MINI_CORP }
+            command(MINI_CORP_PUBKEY) { Obligation.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't mix currencies.
@@ -635,6 +643,7 @@ class ObligationTests {
             input { inState }
             output { outState.copy(quantity = 80000, template = megaCorpDollarSettlement) }
             output { outState.copy(quantity = 20000, template = megaCorpPoundSettlement) }
+            command(MINI_CORP_PUBKEY) { Obligation.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         transaction {
@@ -643,10 +652,11 @@ class ObligationTests {
                 inState.copy(
                         quantity = 15000,
                         template = megaCorpPoundSettlement,
-                        beneficiary = AnonymousParty(DUMMY_PUBKEY_2)
+                        beneficiary = AnonymousParty(BOB_PUBKEY)
                 )
             }
             output { outState.copy(quantity = 115000) }
+            command(MINI_CORP_PUBKEY) { Obligation.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't have superfluous input states from different issuers.
@@ -674,7 +684,7 @@ class ObligationTests {
 
             tweak {
                 command(CHARLIE.owningKey) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.amount.token)) }
-                this `fails with` "required net.corda.core.contracts.FungibleAsset.Commands.Move command"
+                this `fails with` "required net.corda.contracts.asset.Obligation.Commands.Move command"
 
                 tweak {
                     command(CHARLIE.owningKey) { Obligation.Commands.Move() }
@@ -716,19 +726,21 @@ class ObligationTests {
 
             // Can't merge them together.
             tweak {
-                output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2), quantity = 200000L) }
+                output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY), quantity = 200000L) }
+                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
             // Missing MiniCorp deposit
             tweak {
-                output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2)) }
-                output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2)) }
+                output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) }
+                output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) }
+                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
 
             // This works.
-            output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2)) }
-            output { inState.copy(beneficiary = AnonymousParty(DUMMY_PUBKEY_2)) `issued by` MINI_CORP }
+            output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) }
+            output { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) `issued by` MINI_CORP }
             command(CHARLIE.owningKey) { Obligation.Commands.Move() }
             this.verifies()
         }
@@ -738,12 +750,12 @@ class ObligationTests {
     fun multiCurrency() {
         // Check we can do an atomic currency trade tx.
         transaction {
-            val pounds = Obligation.State(Lifecycle.NORMAL, MINI_CORP, megaCorpPoundSettlement, 658.POUNDS.quantity, AnonymousParty(DUMMY_PUBKEY_2))
+            val pounds = Obligation.State(Lifecycle.NORMAL, MINI_CORP, megaCorpPoundSettlement, 658.POUNDS.quantity, AnonymousParty(BOB_PUBKEY))
             input { inState `owned by` CHARLIE }
             input { pounds }
-            output { inState `owned by` AnonymousParty(DUMMY_PUBKEY_2) }
+            output { inState `owned by` AnonymousParty(BOB_PUBKEY) }
             output { pounds `owned by` CHARLIE }
-            command(CHARLIE.owningKey, DUMMY_PUBKEY_2) { Obligation.Commands.Move() }
+            command(CHARLIE.owningKey, BOB_PUBKEY) { Obligation.Commands.Move() }
 
             this.verifies()
         }

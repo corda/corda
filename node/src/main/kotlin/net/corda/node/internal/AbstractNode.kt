@@ -29,8 +29,10 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.flows.IssuerFlow
-import net.corda.node.services.*
+import net.corda.node.services.ContractUpgradeHandler
+import net.corda.node.services.NotaryChangeHandler
+import net.corda.node.services.NotifyTransactionHandler
+import net.corda.node.services.TransactionKeyHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -62,10 +64,9 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.configureDatabase
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
@@ -208,9 +209,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 findRPCFlows(scanResult)
             }
 
-            // TODO Remove this once the cash stuff is in its own CorDapp
-            registerInitiatedFlow(IssuerFlow.Issuer::class.java)
-
             runOnStop += network::stop
             _networkMapRegistrationFuture.captureLater(registerWithNetworkMapIfConfigured())
             smm.start()
@@ -282,7 +280,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun handleCustomNotaryService(service: NotaryService) {
         runOnStop += service::stop
         service.start()
-        installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
+        installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
     }
 
     private inline fun <reified A : Annotation> Class<*>.requireAnnotation(): A {
@@ -297,7 +295,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .map { (initiatingFlow, initiatedFlows) ->
                     val sorted = initiatedFlows.sortedWith(FlowTypeHierarchyComparator(initiatingFlow))
                     if (sorted.size > 1) {
-                        log.warn("${initiatingFlow.name} has been specified as the inititating flow by multiple flows " +
+                        log.warn("${initiatingFlow.name} has been specified as the initiating flow by multiple flows " +
                                 "in the same type hierarchy: ${sorted.joinToString { it.name }}. Choosing the most " +
                                 "specific sub-type for registration: ${sorted[0].name}.")
                     }
@@ -344,9 +342,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
         val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
         require(classWithAnnotation == initiatingFlow) {
-            "${InitiatingFlow::class.java.name} must be annotated on ${initiatingFlow.name} and not on a super-type"
+            "${InitiatedBy::class.java.name} must point to ${classWithAnnotation.name} and not ${initiatingFlow.name}"
         }
-        val flowFactory = InitiatedFlowFactory.CorDapp(version, { ctor.newInstance(it) })
+        val jarFile = Paths.get(initiatedFlow.protectionDomain.codeSource.location.toURI())
+        val appName = if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
+            jarFile.fileName.toString().removeSuffix(".jar")
+        } else {
+            "<unknown>"
+        }
+        val flowFactory = InitiatedFlowFactory.CorDapp(version, appName, { ctor.newInstance(it) })
         val observable = internalRegisterFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
         log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
         return observable
@@ -390,7 +394,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * @suppress
      */
     @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party, Int) -> FlowLogic<*>) {
+    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party) -> FlowLogic<*>) {
         require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
@@ -399,10 +403,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun installCoreFlows() {
-        installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
-        installCoreFlow(NotaryChangeFlow::class) { otherParty, _ -> NotaryChangeHandler(otherParty) }
-        installCoreFlow(ContractUpgradeFlow::class) { otherParty, _ -> ContractUpgradeHandler(otherParty) }
-        installCoreFlow(TransactionKeyFlow::class) { otherParty, _ -> TransactionKeyHandler(otherParty) }
+        installCoreFlow(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
+        installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
+        installCoreFlow(ContractUpgradeFlow::class, ::ContractUpgradeHandler)
+        installCoreFlow(TransactionKeyFlow::class, ::TransactionKeyHandler)
     }
 
     /**
@@ -479,7 +483,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeVaultObservers() {
         VaultSoftLockManager(services.vaultService, smm)
         ScheduledActivityObserver(services)
-        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService, configuration.database ?: Properties()))
+        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService, configuration.database ?: Properties(), {services.identityService}))
     }
 
     private fun makeInfo(): NodeInfo {
@@ -538,7 +542,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            this.database = configureDatabase(props, configuration.database)
+            this.database = configureDatabase(props, configuration.database, identitySvc = { _services.identityService })
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             database.transaction {
                 log.info("Connected to ${database.database.vendor} database.")
@@ -567,7 +571,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     runOnStop += this::stop
                     start()
                 }
-                installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
+                installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
             } else {
                 log.info("Notary type ${notaryServiceType.id} does not match any built-in notary types. " +
                         "It is expected to be loaded via a CorDapp")
@@ -650,11 +654,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filterNotNull()
                 .toTypedArray()
         val service = InMemoryIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
-        services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentityAndCert) }
+        services.networkMapCache.partyNodes.forEach { service.verifyAndRegisterIdentity(it.legalIdentityAndCert) }
         services.networkMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
-                service.registerIdentity(mapChange.node.legalIdentityAndCert)
+                service.verifyAndRegisterIdentity(mapChange.node.legalIdentityAndCert)
             }
         }
         return service
@@ -711,24 +715,26 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        val (cert, keyPair) = keyStore.certificateAndKeyPair(privateKeyAlias)
-
+        val (cert, keys) = keyStore.certificateAndKeyPair(privateKeyAlias)
         // Get keys from keystore.
         val loadedServiceName = cert.subject
         if (loadedServiceName != serviceName)
             throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:$serviceName vs $loadedServiceName")
 
-        val certPath = CertificateFactory.getInstance("X509").generateCertPath(keyStore.getCertificateChain(privateKeyAlias).toList())
         // Use composite key instead if exists
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
-        val publicKey = if (keyStore.containsAlias(compositeKeyAlias)) {
-            Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
+        val (keyPair, certs) = if (keyStore.containsAlias(compositeKeyAlias)) {
+            val compositeKey = Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
+            val compositeKeyCert = keyStore.getCertificate(compositeKeyAlias)
+            // We have to create the certificate chain for the composite key manually, this is because in order to store
+            // the chain in keystore we need a private key, however there are no corresponding private key for composite key.
+            Pair(KeyPair(compositeKey, keys.private), listOf(compositeKeyCert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
         } else {
-            keyPair.public
+            Pair(keys, keyStore.getCertificateChain(privateKeyAlias).toList())
         }
-
-        partyKeys += keyPair
-        return Pair(PartyAndCertificate(loadedServiceName, publicKey, cert, certPath), keyPair)
+        val certPath = CertificateFactory.getInstance("X509").generateCertPath(certs)
+        partyKeys += keys
+        return Pair(PartyAndCertificate(loadedServiceName, keyPair.public, X509CertificateHolder(certs.first().encoded), certPath), keyPair)
     }
 
     private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
@@ -766,13 +772,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(this, configuration.dataSourceProperties, configuration.database) }
         override val vaultQueryService by lazy {
-            HibernateVaultQueryImpl(HibernateConfiguration(schemaService, configuration.database ?: Properties()), vaultService.updatesPublisher)
+            HibernateVaultQueryImpl(HibernateConfiguration(schemaService, configuration.database ?: Properties(), { identityService }), vaultService.updatesPublisher)
         }
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
         override val keyManagementService by lazy { makeKeyManagementService(identityService) }
-        override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch) }
+        override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch, serverThread = serverThread) }
         override val identityService by lazy {
             val trustStore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
             val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)

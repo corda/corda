@@ -1,57 +1,58 @@
 package net.corda.node.services.persistence
 
-import net.corda.core.crypto.SecureHash
-import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
-import net.corda.node.utilities.*
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.statements.InsertStatement
-import java.util.Collections.synchronizedMap
+import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
 
 /**
- * Simple checkpoint key value storage in DB using the underlying JDBCHashMap and transactional context of the call sites.
+ * Simple checkpoint key value storage in DB.
  */
 class DBCheckpointStorage : CheckpointStorage {
 
-    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}checkpoints") {
-        val checkpointId = secureHash("checkpoint_id")
-        val checkpoint = blob("checkpoint")
-    }
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
+    class DBCheckpoint(
+            @Id
+            @Column(name = "checkpoint_id", length = 64)
+            var checkpointId: String = "",
 
-    private class CheckpointMap : AbstractJDBCHashMap<SecureHash, SerializedBytes<Checkpoint>, Table>(Table, loadOnInit = false) {
-        override fun keyFromRow(row: ResultRow): SecureHash = row[table.checkpointId]
-
-        override fun valueFromRow(row: ResultRow): SerializedBytes<Checkpoint> = bytesFromBlob(row[table.checkpoint])
-
-        override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, SerializedBytes<Checkpoint>>, finalizables: MutableList<() -> Unit>) {
-            insert[table.checkpointId] = entry.key
-        }
-
-        override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, SerializedBytes<Checkpoint>>, finalizables: MutableList<() -> Unit>) {
-            insert[table.checkpoint] = bytesToBlob(entry.value, finalizables)
-        }
-    }
-
-    private val checkpointStorage = synchronizedMap(CheckpointMap())
+            @Lob
+            @Column(name = "checkpoint")
+            var checkpoint: ByteArray = ByteArray(0)
+    )
 
     override fun addCheckpoint(checkpoint: Checkpoint) {
-        checkpointStorage.put(checkpoint.id, checkpoint.serialize(context = CHECKPOINT_CONTEXT))
+        val session = DatabaseTransactionManager.current().session
+        session.save(DBCheckpoint().apply {
+            checkpointId = checkpoint.id.toString()
+            this.checkpoint = checkpoint.serializedFiber.bytes
+        })
     }
 
     override fun removeCheckpoint(checkpoint: Checkpoint) {
-        checkpointStorage.remove(checkpoint.id) ?: throw IllegalArgumentException("Checkpoint not found")
+        val session = DatabaseTransactionManager.current().session
+        val criteriaBuilder = session.criteriaBuilder
+        val delete = criteriaBuilder.createCriteriaDelete(DBCheckpoint::class.java)
+        val root = delete.from(DBCheckpoint::class.java)
+        delete.where(criteriaBuilder.equal(root.get<String>(DBCheckpoint::checkpointId.name), checkpoint.id.toString()))
+        session.createQuery(delete).executeUpdate()
     }
 
     override fun forEach(block: (Checkpoint) -> Boolean) {
-        synchronized(checkpointStorage) {
-            for (checkpoint in checkpointStorage.values) {
-                if (!block(checkpoint.deserialize(context = CHECKPOINT_CONTEXT))) {
-                    break
-                }
+        val session = DatabaseTransactionManager.current().session
+        val criteriaQuery = session.criteriaBuilder.createQuery(DBCheckpoint::class.java)
+        val root = criteriaQuery.from(DBCheckpoint::class.java)
+        criteriaQuery.select(root)
+        for (row in session.createQuery(criteriaQuery).resultList) {
+            val checkpoint = Checkpoint(SerializedBytes(row.checkpoint))
+            if (!block(checkpoint)) {
+                break
             }
         }
     }

@@ -3,7 +3,6 @@ package net.corda.verifier
 import net.corda.client.mock.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
@@ -12,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.getTestX509Name
 import java.io.ByteArrayInputStream
 import java.math.BigInteger
 import java.security.PublicKey
@@ -50,7 +50,7 @@ data class GeneratedLedger(
     }
 
     val commandsGenerator: Generator<List<Pair<Command<*>, Party>>> by lazy {
-        Generator.replicatePoisson(4.0, commandGenerator(identities))
+        Generator.replicatePoisson(4.0, commandGenerator(identities), atLeastOne = true)
     }
 
     /**
@@ -88,9 +88,41 @@ data class GeneratedLedger(
     }
 
     /**
+     * Generates an exit transaction.
+     * Invariants:
+     *   * The output list must be empty
+     */
+    fun exitTransactionGenerator(inputNotary: Party, inputsToChooseFrom: List<StateAndRef<ContractState>>): Generator<Pair<WireTransaction, GeneratedLedger>> {
+        val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
+        return inputsGen.combine(attachmentsGenerator, commandsGenerator) { inputs, txAttachments, commands ->
+            val newTransaction = WireTransaction(
+                    inputs.map { it.ref },
+                    txAttachments.map { it.id },
+                    emptyList(),
+                    commands.map { it.first },
+                    inputNotary,
+                    null
+            )
+
+            val availableOutputsMinusConsumed = HashMap(availableOutputs)
+            if (inputs.size == inputsToChooseFrom.size) {
+                availableOutputsMinusConsumed.remove(inputNotary)
+            } else {
+                availableOutputsMinusConsumed[inputNotary] = inputsToChooseFrom - inputs
+            }
+            val newAvailableOutputs = availableOutputsMinusConsumed
+            val newAttachments = attachments + txAttachments
+            val newIdentities = identities + commands.map { it.second }
+            val newLedger = GeneratedLedger(transactions + newTransaction, newAvailableOutputs, newAttachments, newIdentities)
+            Pair(newTransaction, newLedger)
+        }
+    }
+
+    /**
      * Generates a regular non-issue transaction.
      * Invariants:
      *   * Input and output notaries must be one and the same.
+     *   * There must be at least one input and output state.
      */
     fun regularTransactionGenerator(inputNotary: Party, inputsToChooseFrom: List<StateAndRef<ContractState>>): Generator<Pair<WireTransaction, GeneratedLedger>> {
         val outputsGen = outputsGenerator.map { outputs ->
@@ -136,8 +168,9 @@ data class GeneratedLedger(
             Generator.pickOne(availableOutputs.keys.toList()).flatMap { inputNotary ->
                 val inputsToChooseFrom = availableOutputs[inputNotary]!!
                 Generator.frequency(
-                        0.5 to issuanceGenerator,
-                        0.5 to regularTransactionGenerator(inputNotary, inputsToChooseFrom)
+                        0.3 to issuanceGenerator,
+                        0.3 to exitTransactionGenerator(inputNotary, inputsToChooseFrom),
+                        0.4 to regularTransactionGenerator(inputNotary, inputsToChooseFrom)
                 )
             }
         }
@@ -179,7 +212,7 @@ fun commandGenerator(partiesToPickFrom: Collection<Party>): Generator<Pair<Comma
 }
 
 val partyGenerator: Generator<Party> = Generator.int().combine(publicKeyGenerator) { n, key ->
-    Party(X509Utilities.getDevX509Name("Party$n"), key)
+    Party(getTestX509Name("Party$n"), key)
 }
 
 fun <A> pickOneOrMaybeNew(from: Collection<A>, generator: Generator<A>): Generator<A> {
@@ -193,4 +226,4 @@ fun <A> pickOneOrMaybeNew(from: Collection<A>, generator: Generator<A>): Generat
 }
 
 val attachmentGenerator: Generator<Attachment> = Generator.bytes(16).map(::GeneratedAttachment)
-val outputsGenerator = Generator.replicatePoisson(3.0, stateGenerator)
+val outputsGenerator = Generator.replicatePoisson(3.0, stateGenerator, atLeastOne = true)

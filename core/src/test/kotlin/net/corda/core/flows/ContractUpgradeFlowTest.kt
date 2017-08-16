@@ -13,6 +13,8 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.internal.Emoji
 import net.corda.core.utilities.getOrThrow
+import net.corda.finance.USD
+import net.corda.finance.`issued by`
 import net.corda.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.services.startFlowPermission
@@ -172,8 +174,7 @@ class ContractUpgradeFlowTest {
     @Test
     fun `upgrade Cash to v2`() {
         // Create some cash.
-        val anonymous = false
-        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), a.info.legalIdentity, notary, anonymous)).resultFuture
+        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx
         val stateAndRef = stx.tx.outRef<Cash.State>(0)

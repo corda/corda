@@ -162,8 +162,7 @@ data class Sort(val columns: Collection<SortColumn>) {
     enum class LinearStateAttribute(val attributeName: String) : Attribute {
         /** Vault Linear States */
         UUID("uuid"),
-        EXTERNAL_ID("externalId"),
-        DEAL_REFERENCE("dealReference")
+        EXTERNAL_ID("externalId")
     }
 
     enum class FungibleStateAttribute(val attributeName: String) : Attribute {

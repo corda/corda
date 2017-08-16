@@ -1,12 +1,9 @@
 package net.corda.testing.contracts
 
-import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.contracts.clauses.Clause
-import net.corda.core.contracts.clauses.FilterOn
-import net.corda.core.contracts.clauses.verifyClause
+import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.identity.AbstractParty
@@ -20,10 +17,17 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset.UTC
 
 class DummyLinearContract : Contract {
-    val clause: Clause<State, CommandData, Unit> = LinearState.ClauseVerifier()
-    override fun verify(tx: LedgerTransaction) = verifyClause(tx,
-            FilterOn(clause, { states -> states.filterIsInstance<State>() }),
-            emptyList())
+    override fun verify(tx: LedgerTransaction) {
+        val inputs = tx.inputs.map { it.state.data }.filterIsInstance<State>()
+        val outputs = tx.outputs.map { it.data }.filterIsInstance<State>()
+
+        val inputIds = inputs.map { it.linearId }.distinct()
+        val outputIds = outputs.map { it.linearId }.distinct()
+        requireThat {
+            "LinearStates are not merged" using (inputIds.count() == inputs.count())
+            "LinearStates are not split" using (outputIds.count() == outputs.count())
+        }
+    }
 
     data class State(
             override val linearId: UniqueIdentifier = UniqueIdentifier(),

@@ -3,7 +3,6 @@ package net.corda.testing.schemas
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
-import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Table
 import javax.persistence.Transient
@@ -21,10 +20,6 @@ object DummyDealStateSchemaV1 : MappedSchema(schemaFamily = DummyDealStateSchema
     @Entity
     @Table(name = "dummy_deal_states")
     class PersistentDummyDealState(
-
-            @Column(name = "deal_reference")
-            var dealReference: String,
-
             /** parent attributes */
             @Transient
             val uid: UniqueIdentifier

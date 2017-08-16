@@ -1,6 +1,6 @@
 package net.corda.demobench.model
 
-import net.corda.core.crypto.X509Utilities.getX509Name
+import net.corda.core.crypto.getX509Name
 import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
 import tornadofx.*

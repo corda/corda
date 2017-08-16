@@ -17,13 +17,12 @@ import net.corda.node.services.vault.schemas.requery.VaultSchema
 import net.corda.node.services.vault.schemas.requery.VaultStatesEntity
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_PUBKEY_1
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -42,7 +41,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties())
+        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
         newTransactionStorage()
         newRequeryStorage(dataSourceProperties)
     }
@@ -173,7 +172,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
             index = txnState.index
             stateStatus = Vault.StateStatus.UNCONSUMED
             contractStateClassName = DummyContract.SingleOwnerState::class.java.name
-            contractState = DummyContract.SingleOwnerState(owner = AnonymousParty(DUMMY_PUBKEY_1)).serialize().bytes
+            contractState = DummyContract.SingleOwnerState(owner = AnonymousParty(MEGA_CORP_PUBKEY)).serialize().bytes
             notaryName = txn.tx.notary!!.name.toString()
             notaryKey = txn.tx.notary!!.owningKey.toBase58String()
             recordedTime = Instant.now()
@@ -206,7 +205,7 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), index)),
                 attachments = emptyList(),
                 outputs = emptyList(),
-                commands = emptyList(),
+                commands = listOf(dummyCommand()),
                 notary = DUMMY_NOTARY,
                 timeWindow = null
         )

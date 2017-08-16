@@ -1,10 +1,8 @@
 package net.corda.core.node
 
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.testing.getTestX509Name
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

@@ -3,11 +3,9 @@ package net.corda.kotlin.rpc
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.getCashBalance
 import net.corda.contracts.getCashBalances
-import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.*
@@ -18,6 +16,10 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
+import net.corda.finance.DOLLARS
+import net.corda.finance.POUNDS
+import net.corda.finance.SWISS_FRANCS
+import net.corda.finance.USD
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.nodeapi.User
@@ -93,7 +95,7 @@ class StandaloneCordaRPClientTest {
 
     @Test
     fun `test starting flow`() {
-        rpcProxy.startFlow(::CashIssueFlow, 127.POUNDS, OpaqueBytes.of(0), notaryNode.legalIdentity, notaryNode.notaryIdentity)
+        rpcProxy.startFlow(::CashIssueFlow, 127.POUNDS, OpaqueBytes.of(0), notaryNode.notaryIdentity)
             .returnValue.getOrThrow(timeout)
     }
 
@@ -101,7 +103,7 @@ class StandaloneCordaRPClientTest {
     fun `test starting tracked flow`() {
         var trackCount = 0
         val handle = rpcProxy.startTrackedFlow(
-            ::CashIssueFlow, 429.DOLLARS, OpaqueBytes.of(0), notaryNode.legalIdentity, notaryNode.notaryIdentity
+            ::CashIssueFlow, 429.DOLLARS, OpaqueBytes.of(0), notaryNode.notaryIdentity
         )
         handle.progress.subscribe { msg ->
             log.info("Flow>> $msg")
@@ -130,7 +132,7 @@ class StandaloneCordaRPClientTest {
         }
 
         // Now issue some cash
-        rpcProxy.startFlow(::CashIssueFlow, 513.SWISS_FRANCS, OpaqueBytes.of(0), notaryNode.legalIdentity, notaryNode.notaryIdentity)
+        rpcProxy.startFlow(::CashIssueFlow, 513.SWISS_FRANCS, OpaqueBytes.of(0), notaryNode.notaryIdentity)
             .returnValue.getOrThrow(timeout)
         assertEquals(1, updateCount.get())
     }
@@ -147,7 +149,7 @@ class StandaloneCordaRPClientTest {
         }
 
         // Now issue some cash
-        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNode.legalIdentity, notaryNode.notaryIdentity)
+        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNode.notaryIdentity)
                 .returnValue.getOrThrow(timeout)
         assertNotEquals(0, updateCount.get())
 
@@ -161,7 +163,7 @@ class StandaloneCordaRPClientTest {
     @Test
     fun `test vault query by`() {
         // Now issue some cash
-        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNode.legalIdentity, notaryNode.notaryIdentity)
+        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNode.notaryIdentity)
                 .returnValue.getOrThrow(timeout)
 
         val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
@@ -189,10 +191,7 @@ class StandaloneCordaRPClientTest {
         val startCash = rpcProxy.getCashBalances()
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
-        val flowHandle = rpcProxy.startFlow(::CashIssueFlow,
-                629.DOLLARS, OpaqueBytes.of(0),
-                notaryNode.legalIdentity, notaryNode.legalIdentity
-        )
+        val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 629.DOLLARS, OpaqueBytes.of(0), notaryNode.legalIdentity)
         println("Started issuing cash, waiting on result")
         flowHandle.returnValue.get()
 
@@ -202,8 +201,7 @@ class StandaloneCordaRPClientTest {
     }
 
     private fun fetchNotaryIdentity(): NodeInfo {
-        val (nodeInfo, nodeUpdates) = rpcProxy.networkMapFeed()
-        nodeUpdates.notUsed()
+        val nodeInfo = rpcProxy.networkMapSnapshot()
         assertEquals(1, nodeInfo.size)
         return nodeInfo[0]
     }

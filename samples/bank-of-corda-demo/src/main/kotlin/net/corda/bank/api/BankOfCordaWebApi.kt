@@ -1,15 +1,16 @@
 package net.corda.bank.api
 
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.currency
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDateTime
+import java.util.*
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
@@ -18,7 +19,7 @@ import javax.ws.rs.core.Response
 @Path("bank")
 class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     data class IssueRequestParams(val amount: Long, val currency: String,
-                                  val issueToPartyName: X500Name, val issueToPartyRefAsString: String,
+                                  val issueToPartyName: X500Name, val issuerBankPartyRef: String,
                                   val issuerBankName: X500Name,
                                   val notaryName: X500Name,
                                   val anonymous: Boolean)
@@ -49,20 +50,21 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
         val notaryParty = rpc.partyFromX500Name(params.notaryName)
                 ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.notaryName} in identity service").build()
         val notaryNode = rpc.nodeIdentityFromParty(notaryParty)
-                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${notaryParty} in network map service").build()
+                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate $notaryParty in network map service").build()
 
-        val amount = Amount(params.amount, currency(params.currency))
-        val issuerToPartyRef = OpaqueBytes.of(params.issueToPartyRefAsString.toByte())
-        val anonymous = params.anonymous
+        val amount = Amount(params.amount, Currency.getInstance(params.currency))
+        val issuerBankPartyRef = OpaqueBytes.of(params.issuerBankPartyRef.toByte())
 
         // invoke client side of Issuer Flow: IssuanceRequester
         // The line below blocks and waits for the future to resolve.
         return try {
-            rpc.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty, notaryNode.notaryIdentity, anonymous).returnValue.getOrThrow()
+            rpc.startFlow(::CashIssueFlow, amount, issuerBankPartyRef, notaryNode.notaryIdentity).returnValue.getOrThrow()
+            rpc.startFlow(::CashPaymentFlow, amount, issueToParty, params.anonymous)
+                    .returnValue.getOrThrow().stx
             logger.info("Issue request completed successfully: $params")
             Response.status(Response.Status.CREATED).build()
         } catch (e: Exception) {
-            logger.error("Issue request failed: ${e}", e)
+            logger.error("Issue request failed", e)
             Response.status(Response.Status.FORBIDDEN).build()
         }
     }

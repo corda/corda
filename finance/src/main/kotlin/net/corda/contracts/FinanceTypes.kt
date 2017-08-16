@@ -13,9 +13,8 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TokenizableAssetInfo
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.services.*
+import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import java.math.BigDecimal
@@ -391,9 +390,6 @@ data class Commodity(val commodityCode: String,
  * implementation of general flows that manipulate many agreement types.
  */
 interface DealState : LinearState {
-    /** Human readable well known reference (e.g. trade reference) */
-    val ref: String
-
     /**
      * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
      * deal/agreement flow to generate the necessary transaction for potential implementations.

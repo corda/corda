@@ -2,9 +2,10 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
@@ -62,7 +63,7 @@ class FlowFrameworkTests {
     }
 
     private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
-    private val sessionTransfers = ArrayList<SessionTransfer>()
+    private val receivedSessionMessages = ArrayList<SessionTransfer>()
     private lateinit var node1: MockNode
     private lateinit var node2: MockNode
     private lateinit var notary1: MockNode
@@ -81,14 +82,14 @@ class FlowFrameworkTests {
         notary1 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
         notary2 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
 
-        mockNet.messagingNetwork.receivedMessages.toSessionTransfers().forEach { sessionTransfers += it }
+        receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
         mockNet.runNetwork()
 
         // We don't create a network map, so manually handle registrations
         val nodes = listOf(node1, node2, notary1, notary2)
         nodes.forEach { node ->
             nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
-                node.services.identityService.registerIdentity(identity)
+                node.services.identityService.verifyAndRegisterIdentity(identity)
             }
         }
     }
@@ -96,7 +97,7 @@ class FlowFrameworkTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        sessionTransfers.clear()
+        receivedSessionMessages.clear()
     }
 
     @Test
@@ -228,7 +229,7 @@ class FlowFrameworkTests {
         node2b.smm.executor.flush()
         fut1.getOrThrow()
 
-        val receivedCount = sessionTransfers.count { it.isPayloadTransfer }
+        val receivedCount = receivedSessionMessages.count { it.isPayloadTransfer }
         // Check flows completed cleanly and didn't get out of phase
         assertEquals(4, receivedCount, "Flow should have exchanged 4 unique messages")// Two messages each way
         // can't give a precise value as every addMessageHandler re-runs the undelivered messages
@@ -260,15 +261,15 @@ class FlowFrameworkTests {
         assertThat(node3Flow.receivedPayloads[0]).isEqualTo(payload)
 
         assertSessionTransfers(node2,
-                node1 sent sessionInit(SendFlow::class, 1, payload) to node2,
-                node2 sent sessionConfirm to node1,
+                node1 sent sessionInit(SendFlow::class, payload = payload) to node2,
+                node2 sent sessionConfirm() to node1,
                 node1 sent normalEnd to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
-                node1 sent sessionInit(SendFlow::class, 1, payload) to node3,
-                node3 sent sessionConfirm to node1,
+                node1 sent sessionInit(SendFlow::class, payload = payload) to node3,
+                node3 sent sessionConfirm() to node1,
                 node1 sent normalEnd to node3
                 //There's no session end from the other flows as they're manually suspended
         )
@@ -294,14 +295,14 @@ class FlowFrameworkTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(node2Payload) to node1,
                 node2 sent normalEnd to node1
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(ReceiveFlow::class) to node3,
-                node3 sent sessionConfirm to node1,
+                node3 sent sessionConfirm() to node1,
                 node3 sent sessionData(node3Payload) to node1,
                 node3 sent normalEnd to node1
         )
@@ -314,12 +315,13 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
 
         assertSessionTransfers(
-                node1 sent sessionInit(PingPongFlow::class, 1, 10L) to node2,
-                node2 sent sessionConfirm to node1,
+                node1 sent sessionInit(PingPongFlow::class, payload = 10L) to node2,
+                node2 sent sessionConfirm() to node1,
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
                 node2 sent sessionData(21L) to node1,
-                node1 sent normalEnd to node2
+                node1 sent normalEnd to node2,
+                node2 sent normalEnd to node1
         )
     }
 
@@ -329,9 +331,7 @@ class FlowFrameworkTests {
         node1.services.startFlow(CashIssueFlow(
                 2000.DOLLARS,
                 OpaqueBytes.of(0x01),
-                node1.info.legalIdentity,
-                notary1.info.notaryIdentity,
-                anonymous = false))
+                notary1.info.notaryIdentity))
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1..3) {
             val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity, anonymous = false))
@@ -344,7 +344,7 @@ class FlowFrameworkTests {
         val notary1Address: MessageRecipients = endpoint.getAddressOfParty(notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!)
         assertThat(notary1Address).isInstanceOf(InMemoryMessagingNetwork.ServiceHandle::class.java)
         assertEquals(notary1Address, endpoint.getAddressOfParty(notary2.services.networkMapCache.getPartyInfo(notary2.info.notaryIdentity)!!))
-        sessionTransfers.expectEvents(isStrict = false) {
+        receivedSessionMessages.expectEvents(isStrict = false) {
             sequence(
                     // First Pay
                     expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
@@ -391,6 +391,32 @@ class FlowFrameworkTests {
     }
 
     @Test
+    fun `receiving unexpected session end before entering sendAndReceive`() {
+        node2.registerFlowFactory(WaitForOtherSideEndBeforeSendAndReceive::class) { NoOpFlow() }
+        val sessionEndReceived = Semaphore(0)
+        receivedSessionMessagesObservable().filter { it.message is SessionEnd }.subscribe { sessionEndReceived.release() }
+        val resultFuture = node1.services.startFlow(
+                WaitForOtherSideEndBeforeSendAndReceive(node2.info.legalIdentity, sessionEndReceived)).resultFuture
+        mockNet.runNetwork()
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
+            resultFuture.getOrThrow()
+        }
+    }
+
+    @InitiatingFlow
+    private class WaitForOtherSideEndBeforeSendAndReceive(val otherParty: Party,
+                                                          @Transient val receivedOtherFlowEnd: Semaphore) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            // Kick off the flow on the other side ...
+            send(otherParty, 1)
+            // ... then pause this one until it's received the session-end message from the other side
+            receivedOtherFlowEnd.acquire()
+            sendAndReceive<Int>(otherParty, 2)
+        }
+    }
+
+    @Test
     fun `non-FlowException thrown on other side`() {
         val erroringFlowFuture = node2.registerFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { Exception("evil bug!") }
@@ -419,7 +445,7 @@ class FlowFrameworkTests {
 
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent erroredEnd() to node1
         )
     }
@@ -452,11 +478,11 @@ class FlowFrameworkTests {
 
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent erroredEnd(erroringFlow.get().exceptionThrown) to node1
         )
         // Make sure the original stack trace isn't sent down the wire
-        assertThat((sessionTransfers.last().message as ErrorSessionEnd).errorResponse!!.stackTrace).isEmpty()
+        assertThat((receivedSessionMessages.last().message as ErrorSessionEnd).errorResponse!!.stackTrace).isEmpty()
     }
 
     @Test
@@ -500,7 +526,7 @@ class FlowFrameworkTests {
 
         assertSessionTransfers(node2,
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
-                node2 sent sessionConfirm to node1,
+                node2 sent sessionConfirm() to node1,
                 node2 sent sessionData("Hello") to node1,
                 node1 sent erroredEnd() to node2
         )
@@ -567,7 +593,8 @@ class FlowFrameworkTests {
     @Test
     fun `wait for transaction`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-        ptx.addOutputState(DummyState())
+                .addOutputState(DummyState())
+                .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
         val committerFiber = node1.registerFlowFactory(WaitingFlows.Waiter::class) {
@@ -581,7 +608,8 @@ class FlowFrameworkTests {
     @Test
     fun `committer throws exception before calling the finality flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-        ptx.addOutputState(DummyState())
+                .addOutputState(DummyState())
+                .addCommand(dummyCommand())
         val stx = node1.services.signInitialTransaction(ptx)
 
         node1.registerFlowFactory(WaitingFlows.Waiter::class) {
@@ -597,7 +625,8 @@ class FlowFrameworkTests {
     @Test
     fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-        ptx.addOutputState(DummyState())
+                .addOutputState(DummyState())
+                .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
         node1.registerFlowFactory(VaultQueryFlow::class) {
@@ -627,26 +656,30 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `upgraded flow`() {
-        node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity))
+    fun `upgraded initiating flow`() {
+        node2.registerFlowFactory(UpgradedFlow::class, initiatedFlowVersion = 1) { SendFlow("Old initiated", it) }
+        val result = node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity)).resultFuture
         mockNet.runNetwork()
-        assertThat(sessionTransfers).startsWith(
-                node1 sent sessionInit(UpgradedFlow::class, 2) to node2
+        assertThat(receivedSessionMessages).startsWith(
+                node1 sent sessionInit(UpgradedFlow::class, flowVersion = 2) to node2,
+                node2 sent sessionConfirm(flowVersion = 1) to node1
         )
+        val (receivedPayload, node2FlowVersion) = result.getOrThrow()
+        assertThat(receivedPayload).isEqualTo("Old initiated")
+        assertThat(node2FlowVersion).isEqualTo(1)
     }
 
     @Test
-    fun `unsupported new flow version`() {
-        node2.internalRegisterFlowFactory(
-                UpgradedFlow::class.java,
-                InitiatedFlowFactory.CorDapp(version = 1, factory = ::DoubleInlinedSubFlow),
-                DoubleInlinedSubFlow::class.java,
-                track = false)
-        val result = node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity)).resultFuture
+    fun `upgraded initiated flow`() {
+        node2.registerFlowFactory(SendFlow::class, initiatedFlowVersion = 2) { UpgradedFlow(it) }
+        val initiatingFlow = SendFlow("Old initiating", node2.info.legalIdentity)
+        node1.services.startFlow(initiatingFlow)
         mockNet.runNetwork()
-        assertThatExceptionOfType(UnexpectedFlowEndException::class.java)
-                .isThrownBy { result.getOrThrow() }
-                .withMessageContaining("Version")
+        assertThat(receivedSessionMessages).startsWith(
+                node1 sent sessionInit(SendFlow::class, flowVersion = 1, payload = "Old initiating") to node2,
+                node2 sent sessionConfirm(flowVersion = 2) to node1
+        )
+        assertThat(initiatingFlow.getFlowContext(node2.info.legalIdentity).flowVersion).isEqualTo(2)
     }
 
     @Test
@@ -660,25 +693,25 @@ class FlowFrameworkTests {
 
     @Test
     fun `unknown class in session init`() {
-        node1.sendSessionMessage(SessionInit(random63BitValue(), "not.a.real.Class", 1, null), node2)
+        node1.sendSessionMessage(SessionInit(random63BitValue(), "not.a.real.Class", 1, "version", null), node2)
         mockNet.runNetwork()
-        assertThat(sessionTransfers).hasSize(2) // Only the session-init and session-reject are expected
-        val reject = sessionTransfers.last().message as SessionReject
+        assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
+        val reject = receivedSessionMessages.last().message as SessionReject
         assertThat(reject.errorMessage).isEqualTo("Don't know not.a.real.Class")
     }
 
     @Test
     fun `non-flow class in session init`() {
-        node1.sendSessionMessage(SessionInit(random63BitValue(), String::class.java.name, 1, null), node2)
+        node1.sendSessionMessage(SessionInit(random63BitValue(), String::class.java.name, 1, "version", null), node2)
         mockNet.runNetwork()
-        assertThat(sessionTransfers).hasSize(2) // Only the session-init and session-reject are expected
-        val reject = sessionTransfers.last().message as SessionReject
+        assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
+        val reject = receivedSessionMessages.last().message as SessionReject
         assertThat(reject.errorMessage).isEqualTo("${String::class.java.name} is not a flow")
     }
 
     @Test
     fun `single inlined sub-flow`() {
-        node2.registerFlowFactory(SendAndReceiveFlow::class, ::SingleInlinedSubFlow)
+        node2.registerFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
         val result = node1.services.startFlow(SendAndReceiveFlow(node2.info.legalIdentity, "Hello")).resultFuture
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
@@ -686,7 +719,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `double inlined sub-flow`() {
-        node2.registerFlowFactory(SendAndReceiveFlow::class, ::DoubleInlinedSubFlow)
+        node2.registerFlowFactory(SendAndReceiveFlow::class) { DoubleInlinedSubFlow(it) }
         val result = node1.services.startFlow(SendAndReceiveFlow(node2.info.legalIdentity, "Hello")).resultFuture
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
@@ -711,21 +744,22 @@ class FlowFrameworkTests {
     }
 
     private inline fun <reified P : FlowLogic<*>> MockNode.registerFlowFactory(
-        initiatingFlowClass: KClass<out FlowLogic<*>>,
-        noinline flowFactory: (Party) -> P): CordaFuture<P>
+            initiatingFlowClass: KClass<out FlowLogic<*>>,
+            initiatedFlowVersion: Int = 1,
+            noinline flowFactory: (Party) -> P): CordaFuture<P>
     {
-        val observable = internalRegisterFlowFactory(initiatingFlowClass.java, object : InitiatedFlowFactory<P> {
-            override fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): P {
-                return flowFactory(otherParty)
-            }
-        }, P::class.java, track = true)
+        val observable = internalRegisterFlowFactory(
+                initiatingFlowClass.java,
+                InitiatedFlowFactory.CorDapp(initiatedFlowVersion, "", flowFactory),
+                P::class.java,
+                track = true)
         return observable.toFuture()
     }
 
     private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): SessionInit {
-        return SessionInit(0, clientFlowClass.java.name, flowVersion, payload)
+        return SessionInit(0, clientFlowClass.java.name, flowVersion, "", payload)
     }
-    private val sessionConfirm = SessionConfirm(0, 0)
+    private fun sessionConfirm(flowVersion: Int = 1) = SessionConfirm(0, 0, flowVersion, "")
     private fun sessionData(payload: Any) = SessionData(0, payload)
     private val normalEnd = NormalSessionEnd(0)
     private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
@@ -738,11 +772,11 @@ class FlowFrameworkTests {
     }
 
     private fun assertSessionTransfers(vararg expected: SessionTransfer) {
-        assertThat(sessionTransfers).containsExactly(*expected)
+        assertThat(receivedSessionMessages).containsExactly(*expected)
     }
 
     private fun assertSessionTransfers(node: MockNode, vararg expected: SessionTransfer): List<SessionTransfer> {
-        val actualForNode = sessionTransfers.filter { it.from == node.id || it.to == node.network.myAddress }
+        val actualForNode = receivedSessionMessages.filter { it.from == node.id || it.to == node.network.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
         return actualForNode
     }
@@ -750,6 +784,10 @@ class FlowFrameworkTests {
     private data class SessionTransfer(val from: Int, val message: SessionMessage, val to: MessageRecipients) {
         val isPayloadTransfer: Boolean get() = message is SessionData || message is SessionInit && message.firstPayload != null
         override fun toString(): String = "$from sent $message to $to"
+    }
+
+    private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
+        return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
     }
 
     private fun Observable<MessageTransfer>.toSessionTransfers(): Observable<SessionTransfer> {
@@ -762,8 +800,8 @@ class FlowFrameworkTests {
 
     private fun sanitise(message: SessionMessage) = when (message) {
         is SessionData -> message.copy(recipientSessionId = 0)
-        is SessionInit -> message.copy(initiatorSessionId = 0)
-        is SessionConfirm -> message.copy(initiatorSessionId = 0, initiatedSessionId = 0)
+        is SessionInit -> message.copy(initiatorSessionId = 0, appName = "")
+        is SessionConfirm -> message.copy(initiatorSessionId = 0, initiatedSessionId = 0, appName = "")
         is NormalSessionEnd -> message.copy(recipientSessionId = 0)
         is ErrorSessionEnd -> message.copy(recipientSessionId = 0)
         else -> message
@@ -798,7 +836,6 @@ class FlowFrameworkTests {
             }
         }
     }
-
 
     @InitiatingFlow
     private open class SendFlow(val payload: Any, vararg val otherParties: Party) : FlowLogic<Unit>() {
@@ -921,9 +958,13 @@ class FlowFrameworkTests {
     }
 
     @InitiatingFlow(version = 2)
-    private class UpgradedFlow(val otherParty: Party) : FlowLogic<Any>() {
+    private class UpgradedFlow(val otherParty: Party) : FlowLogic<Pair<Any, Int>>() {
         @Suspendable
-        override fun call(): Any = receive<Any>(otherParty).unwrap { it }
+        override fun call(): Pair<Any, Int> {
+            val received = receive<Any>(otherParty).unwrap { it }
+            val otherFlowVersion = getFlowContext(otherParty).flowVersion
+            return Pair(received, otherFlowVersion)
+        }
     }
 
     private class SingleInlinedSubFlow(val otherParty: Party) : FlowLogic<Unit>() {

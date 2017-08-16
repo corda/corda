@@ -93,6 +93,13 @@ Several examples of entities and mappings are provided in the codebase, includin
 .. literalinclude:: ../../finance/src/main/kotlin/net/corda/schemas/CashSchemaV1.kt
     :language: kotlin
 
+Identity mapping
+----------------
+Schema entity attributes defined by identity types (``AbstractParty``, ``Party``, ``AnonymousParty``) are automatically
+processed to ensure only the ``X500Name`` of the identity is persisted where an identity is well known, otherwise a null
+value is stored in the associated column. To preserve privacy, identity keys are never persisted. Developers should use
+the ``IdentityService`` to resolve keys from well know X500 identity names.
+
 JDBC session
 ------------
 Apps may also interact directly with the underlying Node's database by using a standard

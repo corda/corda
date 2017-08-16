@@ -2,8 +2,8 @@
 
 package net.corda.core.contracts
 
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
 
@@ -11,40 +11,9 @@ import java.util.*
  * Defines a simple domain specific language for the specification of financial contracts. Currently covers:
  *
  *  - Some utilities for working with commands.
- *  - Code for working with currencies.
- *  - An Amount type that represents a positive quantity of a specific currency.
+ *  - An Amount type that represents a positive quantity of a specific token.
  *  - A simple language extension for specifying requirements in English, along with logic to enforce them.
- *
- *  TODO: Look into replacing Currency and Amount with CurrencyUnit and MonetaryAmount from the javax.money API (JSR 354)
  */
-
-//// Currencies ///////////////////////////////////////////////////////////////////////////////////////////////////////
-
-fun currency(code: String) = Currency.getInstance(code)!!
-
-@JvmField val USD = currency("USD")
-@JvmField val GBP = currency("GBP")
-@JvmField val EUR = currency("EUR")
-@JvmField val CHF = currency("CHF")
-@JvmField val JPY = currency("JPY")
-@JvmField val RUB = currency("RUB")
-
-fun <T : Any> AMOUNT(amount: Int, token: T): Amount<T> = Amount.fromDecimal(BigDecimal.valueOf(amount.toLong()), token)
-fun <T : Any> AMOUNT(amount: Double, token: T): Amount<T> = Amount.fromDecimal(BigDecimal.valueOf(amount), token)
-fun DOLLARS(amount: Int): Amount<Currency> = AMOUNT(amount, USD)
-fun DOLLARS(amount: Double): Amount<Currency> = AMOUNT(amount, USD)
-fun POUNDS(amount: Int): Amount<Currency> = AMOUNT(amount, GBP)
-fun SWISS_FRANCS(amount: Int): Amount<Currency> = AMOUNT(amount, CHF)
-
-val Int.DOLLARS: Amount<Currency> get() = DOLLARS(this)
-val Double.DOLLARS: Amount<Currency> get() = DOLLARS(this)
-val Int.POUNDS: Amount<Currency> get() = POUNDS(this)
-val Int.SWISS_FRANCS: Amount<Currency> get() = SWISS_FRANCS(this)
-
-infix fun Currency.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
-infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
-infix fun Currency.issuedBy(deposit: PartyAndReference) = Issued(deposit, this)
-infix fun Amount<Currency>.issuedBy(deposit: PartyAndReference) = Amount(quantity, displayTokenSize, token.issuedBy(deposit))
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -53,13 +22,6 @@ object Requirements {
     @Suppress("NOTHING_TO_INLINE")   // Inlining this takes it out of our committed ABI.
     infix inline fun String.using(expr: Boolean) {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
-    }
-    // Avoid overloading Kotlin keywords
-    @Deprecated("This function is deprecated, use 'using' instead",
-        ReplaceWith("using (expr)", "net.corda.core.contracts.Requirements.using"))
-    @Suppress("NOTHING_TO_INLINE")   // Inlining this takes it out of our committed ABI.
-    infix inline fun String.by(expr: Boolean) {
-        using(expr)
     }
 }
 
@@ -71,7 +33,7 @@ inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
 
 /** Filters the command list by type, party and public key all at once. */
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: PublicKey? = null,
-                                                                                         party: Party? = null) =
+                                                                                         party: AbstractParty? = null) =
         filter { it.value is T }.
                 filter { if (signer == null) true else signer in it.signers }.
                 filter { if (party == null) true else party in it.signingParties }.

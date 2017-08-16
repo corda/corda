@@ -10,18 +10,13 @@ import com.google.common.collect.testing.features.MapFeature
 import com.google.common.collect.testing.features.SetFeature
 import com.google.common.collect.testing.testers.*
 import junit.framework.TestSuite
-import net.corda.testing.TestDependencyInjectionBase
-import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.*
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
-import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
-import java.sql.Connection
 import java.util.*
 
 @RunWith(Suite::class)
@@ -47,7 +42,7 @@ class JDBCHashMapTestSuite {
         @BeforeClass
         fun before() {
             initialiseTestSerialization()
-            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { throw UnsupportedOperationException("Identity Service should not be in use") })
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
             memoryConstrainedMap = JDBCHashMap<String, String>("test_map_constrained", loadOnInit = false, maxBuckets = 1)
@@ -233,7 +228,7 @@ class JDBCHashMapTestSuite {
 
         @Before
         fun before() {
-            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { throw UnsupportedOperationException("Identity Service should not be in use") })
         }
 
         @After
