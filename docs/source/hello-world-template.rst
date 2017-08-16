@@ -40,22 +40,25 @@ Open a terminal window in the directory where you want to download the CorDapp t
 Template structure
 ------------------
 We can write our CorDapp in either Java or Kotlin, and will be providing the code in both languages throughout. To
-implement our IOU CorDapp in Java, we'll only need to modify three files:
+implement our IOU CorDapp in Java, we'll need to modify three files. For Kotlin, we'll simply be modifying the
+``App.kt`` file:
 
 .. container:: codeset
 
     .. code-block:: java
 
         // 1. The state
-        java-source/src/main/java/com/template/state/TemplateState.java
+        src/main/java/com/template/state/TemplateState.java
 
         // 2. The contract
-        java-source/src/main/java/com/template/contract/TemplateContract.java
+        src/main/java/com/template/contract/TemplateContract.java
 
         // 3. The flow
-        java-source/src/main/java/com/template/flow/TemplateFlow.java
+        src/main/java/com/template/flow/TemplateFlow.java
 
-For Kotlin, we'll simply be modifying the ``App.kt`` file.
+    .. code-block:: kotlin
+
+        src/main/kotlin/com/template/App.kt
 
 Progress so far
 ---------------

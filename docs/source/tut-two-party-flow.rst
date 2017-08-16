@@ -9,23 +9,25 @@ Updating the flow
 
 To update the flow, we'll need to do two things:
 
-* Update the borrower's side of the flow to request the lender's signature
-* Create a flow for the lender to run in response to a signature request from the borrower
+* Update the lender's side of the flow to request the borrower's signature
+* Create a flow for the borrower to run in response to a signature request from the lender
 
-Updating the borrower's flow
-----------------------------
+Updating the lender's flow
+--------------------------
 In the original CorDapp, we automated the process of notarising a transaction and recording it in every party's vault
 by invoking a built-in flow called ``FinalityFlow`` as a subflow. We're going to use another pre-defined flow, called
-``CollectSignaturesFlow``, to gather the lender's signature.
+``CollectSignaturesFlow``, to gather the borrower's signature.
 
-We also need to add the lender's public key to the transaction's command, making the lender one of the required signers
-on the transaction.
+We also need to add the borrower's public key to the transaction's command, making the borrower one of the required
+signers on the transaction.
 
 In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
 
 .. container:: codeset
 
     .. code-block:: kotlin
+
+        ...
 
         // We add the items to the builder.
         val state = IOUState(iouValue, me, otherParty)
@@ -39,12 +41,20 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         // Obtaining the counterparty's signature
-        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx))
+        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, CollectSignaturesFlow.tracker()))
 
         // Finalising the transaction.
         subFlow(FinalityFlow(fullySignedTx))
 
     .. code-block:: java
+
+        ...
+
+        import com.google.common.collect.ImmutableList;
+        import java.security.PublicKey;
+        import java.util.List;
+
+        ...
 
         // We add the items to the builder.
         IOUState state = new IOUState(iouValue, me, otherParty);
@@ -59,62 +69,39 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
         // Obtaining the counterparty's signature
-        final SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(signedTx, null));
+        final SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(signedTx, CollectSignaturesFlow.Companion.tracker()));
 
         // Finalising the transaction.
         subFlow(new FinalityFlow(fullySignedTx));
 
-To make the lender a required signer, we simply add the lender's public key to the list of signers on the command.
+        return null;
+
+To make the borrower a required signer, we simply add the borrower's public key to the list of signers on the command.
 
 ``CollectSignaturesFlow``, meanwhile, takes a transaction signed by the flow initiator, and returns a transaction
 signed by all the transaction's other required signers. We then pass this fully-signed transaction into
 ``FinalityFlow``.
 
-The lender's flow
------------------
-Reorganising our class
-^^^^^^^^^^^^^^^^^^^^^^
-Before we define the lender's flow, let's reorganise ``IOUFlow.java``/``IOUFlow.kt`` a little bit:
-
-* Rename ``IOUFlow`` to ``Initiator``
-* In Java, make the ``Initiator`` class static, rename its constructor to match the new name, and move the definition
-  inside an enclosing ``IOUFlow`` class
-* In Kotlin, move the definition of ``Initiator`` class inside an enclosing ``IOUFlow`` singleton object
-
-We will end up with the following structure:
-
-.. container:: codeset
-
-    .. code-block:: kotlin
-
-        object IOUFlow {
-            @InitiatingFlow
-            @StartableByRPC
-            class Initiator(val iouValue: Int,
-                val otherParty: Party) : FlowLogic<Unit>() {
-
-    .. code-block:: java
-
-        public class IOUFlow {
-            @InitiatingFlow
-            @StartableByRPC
-            public static class Initiator extends FlowLogic<Void> {
-
-Writing the lender's flow
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Creating the borrower's flow
+----------------------------
 We're now ready to write the lender's flow, which will respond to the borrower's attempt to gather our signature.
-
-Inside the ``IOUFlow`` class/singleton object, add the following class:
+In a new ``IOUFlowResponder.java`` file in Java, or within the ``App.kt`` file in Kotlin, add the following class:
 
 .. container:: codeset
 
     .. code-block:: kotlin
 
-        @InitiatedBy(Initiator::class)
-        class Acceptor(val otherParty: Party) : FlowLogic<Unit>() {
+        ...
+
+        import net.corda.core.transactions.SignedTransaction
+
+        ...
+
+        @InitiatedBy(IOUFlow::class)
+        class IOUFlowResponder(val otherParty: Party) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                val signTransactionFlow = object : SignTransactionFlow(otherParty) {
+                val signTransactionFlow = object : SignTransactionFlow(otherParty, SignTransactionFlow.tracker()) {
                     override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         val output = stx.tx.outputs.single().data
                         "This must be an IOU transaction." using (output is IOUState)
@@ -129,12 +116,26 @@ Inside the ``IOUFlow`` class/singleton object, add the following class:
 
     .. code-block:: java
 
-        @InitiatedBy(Initiator.class)
-        public static class Acceptor extends FlowLogic<Void> {
+        package com.template.flow;
 
+        import co.paralleluniverse.fibers.Suspendable;
+        import com.template.state.IOUState;
+        import net.corda.core.contracts.ContractState;
+        import net.corda.core.flows.FlowException;
+        import net.corda.core.flows.FlowLogic;
+        import net.corda.core.flows.InitiatedBy;
+        import net.corda.core.flows.SignTransactionFlow;
+        import net.corda.core.identity.Party;
+        import net.corda.core.transactions.SignedTransaction;
+        import net.corda.core.utilities.ProgressTracker;
+
+        import static net.corda.core.contracts.ContractsDSL.requireThat;
+
+        @InitiatedBy(IOUFlow.class)
+        public class IOUFlowResponder extends FlowLogic<Void> {
             private final Party otherParty;
 
-            public Acceptor(Party otherParty) {
+            public IOUFlowResponder(Party otherParty) {
                 this.otherParty = otherParty;
             }
 
@@ -142,8 +143,8 @@ Inside the ``IOUFlow`` class/singleton object, add the following class:
             @Override
             public Void call() throws FlowException {
                 class signTxFlow extends SignTransactionFlow {
-                    private signTxFlow(Party otherParty) {
-                        super(otherParty, null);
+                    private signTxFlow(Party otherParty, ProgressTracker progressTracker) {
+                        super(otherParty, progressTracker);
                     }
 
                     @Override
@@ -158,18 +159,19 @@ Inside the ``IOUFlow`` class/singleton object, add the following class:
                     }
                 }
 
-                subFlow(new signTxFlow(otherParty));
+                subFlow(new signTxFlow(otherParty, SignTransactionFlow.Companion.tracker()));
 
                 return null;
             }
         }
 
-As with the ``Initiator``, our ``Acceptor`` flow is a ``FlowLogic`` subclass where we've overridden ``FlowLogic.call``.
+As with the ``IOUFlow``, our ``IOUFlowResponder`` flow is a ``FlowLogic`` subclass where we've overridden
+``FlowLogic.call``.
 
-The flow is annotated with ``InitiatedBy(Initiator.class)``, which means that your node will invoke ``Acceptor.call``
-when it receives a message from a instance of ``Initiator`` running on another node. What will this message from the
-``Initiator`` be? If we look at the definition of ``CollectSignaturesFlow``, we can see that we'll be sent a
-``SignedTransaction``, and are expected to send back our signature over that transaction.
+The flow is annotated with ``InitiatedBy(IOUFlow.class)``, which means that your node will invoke
+``IOUFlowResponder.call`` when it receives a message from a instance of ``Initiator`` running on another node. What
+will this message from the ``IOUFlow`` be? If we look at the definition of ``CollectSignaturesFlow``, we can see that
+we'll be sent a ``SignedTransaction``, and are expected to send back our signature over that transaction.
 
 We could handle this manually. However, there is also a pre-defined flow called ``SignTransactionFlow`` that can handle
 this process for us automatically. ``SignTransactionFlow`` is an abstract class, and we must subclass it and override
@@ -179,7 +181,7 @@ Once we've defined the subclass, we invoke it using ``FlowLogic.subFlow``, and t
 and the lender's flow is conducted automatically.
 
 CheckTransactions
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^
 ``SignTransactionFlow`` will automatically verify the transaction and its signatures before signing it. However, just
 because a transaction is valid doesn't mean we necessarily want to sign. What if we don't want to deal with the
 counterparty in question, or the value is too high, or we're not happy with the transaction's structure?
