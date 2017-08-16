@@ -1,23 +1,21 @@
 package net.corda.node.services.vault
 
-import net.corda.contracts.*
+import net.corda.contracts.CommercialPaper
+import net.corda.contracts.Commodity
+import net.corda.contracts.DealState
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.toBase58String
-import net.corda.core.utilities.days
 import net.corda.core.identity.Party
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.utilities.seconds
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.toHexString
-import net.corda.node.services.database.HibernateConfiguration
-import net.corda.node.services.schema.NodeSchemaService
+import net.corda.core.utilities.*
+import net.corda.finance.*
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.schemas.CashSchemaV1
@@ -27,8 +25,9 @@ import net.corda.schemas.SampleCashSchemaV3
 import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
@@ -48,30 +47,17 @@ import java.util.*
 class VaultQueryTests : TestDependencyInjectionBase() {
 
     lateinit var services: MockServices
+    lateinit var notaryServices: MockServices
     val vaultSvc: VaultService get() = services.vaultService
     val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
     lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
-        val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
-        database.transaction {
-            val customSchemas = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1)
-            val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
-            services = object : MockServices(MEGA_CORP_KEY) {
-                override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
-
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-                    for (stx in txs) {
-                        validatedTransactions.addTransaction(stx)
-                    }
-                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultService.notifyAll(txs.map { it.tx })
-                }
-                override val vaultQueryService : VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
-            }
-        }
+        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY))
+        database = databaseAndServices.first
+        services = databaseAndServices.second
+        notaryServices = MockServices(DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
     }
 
     @After
@@ -85,7 +71,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties())
+        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
 
         setUpDb(database, 5000)
 
@@ -97,7 +83,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         _database.transaction {
 
             // create new states
-            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 10, 10, Random(0L))
             val linearStatesXYZ = services.fillWithSomeTestLinearStates(1, "XYZ")
             val linearStatesJKL = services.fillWithSomeTestLinearStates(2, "JKL")
             services.fillWithSomeTestLinearStates(3, "ABC")
@@ -108,10 +94,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sleep(delay)
 
             // consume some states
-            services.consumeLinearStates(linearStatesXYZ.states.toList())
-            services.consumeLinearStates(linearStatesJKL.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS)
+            services.consumeLinearStates(linearStatesXYZ.states.toList(), DUMMY_NOTARY)
+            services.consumeLinearStates(linearStatesJKL.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
             // Total unconsumed states = 4 + 3 + 2 + 1 (new cash change) = 10
             // Total consumed states = 6 + 1 + 2 + 1 = 10
@@ -141,7 +127,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed states simple`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
@@ -168,7 +154,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed states verbose`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
@@ -184,10 +170,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed states with count`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
@@ -195,7 +181,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(resultsBeforeConsume.states).hasSize(4)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
 
-            services.consumeCash(75.DOLLARS)
+            services.consumeCash(75.DOLLARS, notary = DUMMY_NOTARY)
 
             val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)
             val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(consumedCriteria, paging)
@@ -208,7 +194,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed cash states simple`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
@@ -223,7 +209,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed cash states verbose`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
@@ -239,15 +225,15 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed cash states sorted by state ref`() {
         database.transaction {
 
-            var stateRefs : MutableList<StateRef> = mutableListOf()
+            val stateRefs: MutableList<StateRef> = mutableListOf()
 
-            val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L))
+            val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 10, 10, Random(0L))
             val issuedStateRefs = issuedStates.states.map { it.ref }.toList()
             stateRefs.addAll(issuedStateRefs)
 
-            val spentStates = services.consumeCash(25.DOLLARS)
-            var consumedStateRefs = spentStates.consumed.map { it.ref }.toList()
-            var producedStateRefs = spentStates.produced.map { it.ref }.toList()
+            val spentStates = services.consumeCash(25.DOLLARS, notary = DUMMY_NOTARY)
+            val consumedStateRefs = spentStates.consumed.map { it.ref }.toList()
+            val producedStateRefs = spentStates.produced.map { it.ref }.toList()
             stateRefs.addAll(consumedStateRefs.plus(producedStateRefs))
 
             val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
@@ -270,9 +256,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed cash states sorted by state ref txnId and index`() {
         database.transaction {
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L))
-            services.consumeCash(10.DOLLARS)
-            services.consumeCash(10.DOLLARS)
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 10, 10, Random(0L))
+            val consumed = mutableSetOf<SecureHash>()
+            services.consumeCash(10.DOLLARS, notary = DUMMY_NOTARY).consumed.forEach { consumed += it.ref.txhash }
+            services.consumeCash(10.DOLLARS, notary = DUMMY_NOTARY).consumed.forEach { consumed += it.ref.txhash }
 
             val sortAttributeTxnId = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID)
             val sortAttributeIndex = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_INDEX)
@@ -283,13 +270,11 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             results.statesMetadata.forEach {
                 println(" ${it.ref}")
+                assertThat(it.status).isEqualTo(Vault.StateStatus.UNCONSUMED)
             }
-
-            // explicit sort order asc by txnId and then index:
-            // order by
-            //    vaultschem1_.transaction_id asc,
-            //    vaultschem1_.output_index asc
-            assertThat(results.states).hasSize(9)   // -2 CONSUMED + 1 NEW UNCONSUMED (change)
+            val sorted = results.states.sortedBy { it.ref.toString() }
+            assertThat(results.states).isEqualTo(sorted)
+            assertThat(results.states).allSatisfy { !consumed.contains(it.ref.txhash) }
         }
     }
 
@@ -317,7 +302,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed states for contract state types`() {
         database.transaction {
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
@@ -334,14 +319,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `consumed states`() {
         database.transaction {
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             val linearStates = services.fillWithSomeTestLinearStates(2, "TEST") // create 2 states with same externalId
             services.fillWithSomeTestLinearStates(8)
             val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            services.consumeLinearStates(linearStates.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS)
+            services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
@@ -353,10 +338,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `consumed states with count`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
@@ -364,7 +349,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(resultsBeforeConsume.states).hasSize(4)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
 
-            services.consumeCash(75.DOLLARS)
+            services.consumeCash(75.DOLLARS, notary = DUMMY_NOTARY)
 
             val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(consumedCriteria, paging)
@@ -376,14 +361,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `all states`() {
         database.transaction {
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             val linearStates = services.fillWithSomeTestLinearStates(2, "TEST") // create 2 results with same UID
             services.fillWithSomeTestLinearStates(8)
             val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            services.consumeLinearStates(linearStates.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS) // generates a new change state!
+            services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY) // generates a new change state!
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
@@ -395,7 +380,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `all states with count`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
@@ -403,7 +388,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(resultsBeforeConsume.states).hasSize(1)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(1)
 
-            services.consumeCash(50.DOLLARS)    // consumed 100 (spent), produced 50 (change)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)    // consumed 100 (spent), produced 50 (change)
 
             val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
             assertThat(resultsAfterConsume.states).hasSize(2)
@@ -411,14 +396,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
     }
 
-    val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
+    val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(21)) }
     val CASH_NOTARY: Party get() = Party(X500Name("CN=Cash Notary Service,O=R3,OU=corda,L=Zurich,C=CH"), CASH_NOTARY_KEY.public)
 
     @Test
     fun `unconsumed states by notary`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
@@ -466,7 +451,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed states with soft locking`() {
         database.transaction {
 
-            val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L)).states.toList()
+            val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 10, 10, Random(0L)).states.toList()
             vaultSvc.softLockReserve(UUID.randomUUID(), NonEmptySet.of(issuedStates[1].ref, issuedStates[2].ref, issuedStates[3].ref))
             val lockId1 = UUID.randomUUID()
             vaultSvc.softLockReserve(lockId1, NonEmptySet.of(issuedStates[4].ref, issuedStates[5].ref))
@@ -510,9 +495,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator EQUAL`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal(GBP.currencyCode) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -525,9 +510,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator NOT EQUAL`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notEqual(GBP.currencyCode) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -540,9 +525,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator GREATER_THAN`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(10.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(1.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(10.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.greaterThan(1000L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -555,9 +540,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator GREATER_THAN_OR_EQUAL`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(10.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(1.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(10.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.greaterThanOrEqual(1000L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -570,9 +555,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator LESS_THAN`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(10.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(1.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(10.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.lessThan(1000L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -585,9 +570,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator LESS_THAN_OR_EQUAL`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(10.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(1.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(10.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.lessThanOrEqual(1000L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -600,9 +585,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator BETWEEN`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(10.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(1.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(10.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.between(500L, 1500L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -615,9 +600,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator IN`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val currencies = listOf(CHF.currencyCode, GBP.currencyCode)
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.`in`(currencies) }
@@ -631,9 +616,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator NOT IN`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val currencies = listOf(CHF.currencyCode, GBP.currencyCode)
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notIn(currencies) }
@@ -647,9 +632,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator LIKE`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.like("%BP") }  // GPB
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -662,9 +647,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator NOT LIKE`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notLike("%BP") }  // GPB
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -677,9 +662,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator IS_NULL`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::issuerParty.isNull() }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -692,9 +677,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `logical operator NOT_NULL`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::issuerParty.notNull() }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
@@ -707,11 +692,11 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `aggregate functions without group clause`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
-            services.fillWithSomeTestCash(300.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
-            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(300.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(400.POUNDS, notaryServices, DUMMY_NOTARY, 4, 4, Random(0L))
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 5, 5, Random(0L))
 
             // DOCSTART VaultQueryExample21
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum() }
@@ -749,11 +734,11 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `aggregate functions with single group clause`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
-            services.fillWithSomeTestCash(300.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
-            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(300.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(400.POUNDS, notaryServices, DUMMY_NOTARY, 4, 4, Random(0L))
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 5, 5, Random(0L))
 
             // DOCSTART VaultQueryExample22
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
@@ -809,10 +794,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `aggregate functions sum by issuer and currency and sort by aggregate sum`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
-            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1), issuerKey = BOC_KEY)
-            services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
-            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2), issuerKey = BOC_KEY)
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
+            services.fillWithSomeTestCash(200.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1))
+            services.fillWithSomeTestCash(300.POUNDS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
+            services.fillWithSomeTestCash(400.POUNDS, notaryServices, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2))
 
             // DOCSTART VaultQueryExample23
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::issuerParty,
@@ -844,7 +829,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `aggregate functions count by contract type`() {
         database.transaction {
             // create new states
-            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 10, 10, Random(0L))
             services.fillWithSomeTestLinearStates(1, "XYZ")
             services.fillWithSomeTestLinearStates(2, "JKL")
             services.fillWithSomeTestLinearStates(3, "ABC")
@@ -870,7 +855,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `aggregate functions count by contract type and state status`() {
         database.transaction {
             // create new states
-            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 10, 10, Random(0L))
             val linearStatesXYZ = services.fillWithSomeTestLinearStates(1, "XYZ")
             val linearStatesJKL = services.fillWithSomeTestLinearStates(2, "JKL")
             services.fillWithSomeTestLinearStates(3, "ABC")
@@ -893,17 +878,17 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(dealStateCount).isEqualTo(3L)
 
             // consume some states
-            services.consumeLinearStates(linearStatesXYZ.states.toList())
-            services.consumeLinearStates(linearStatesJKL.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS)
+            services.consumeLinearStates(linearStatesXYZ.states.toList(), DUMMY_NOTARY)
+            services.consumeLinearStates(linearStatesJKL.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
+            val cashUpdates = services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
             // UNCONSUMED states (default)
 
             // count fungible assets
             val countCriteriaUnconsumed = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.UNCONSUMED)
             val fungibleStateCountUnconsumed = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteriaUnconsumed).otherResults.single() as Long
-            assertThat(fungibleStateCountUnconsumed).isEqualTo(5L)
+            assertThat(fungibleStateCountUnconsumed.toInt()).isEqualTo(10 - cashUpdates.consumed.size + cashUpdates.produced.size)
 
             // count linear states
             val linearStateCountUnconsumed = vaultQuerySvc.queryBy<LinearState>(countCriteriaUnconsumed).otherResults.single() as Long
@@ -918,7 +903,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // count fungible assets
             val countCriteriaConsumed = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.CONSUMED)
             val fungibleStateCountConsumed = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteriaConsumed).otherResults.single() as Long
-            assertThat(fungibleStateCountConsumed).isEqualTo(6L)
+            assertThat(fungibleStateCountConsumed.toInt()).isEqualTo(cashUpdates.consumed.size)
 
             // count linear states
             val linearStateCountConsumed = vaultQuerySvc.queryBy<LinearState>(countCriteriaConsumed).otherResults.single() as Long
@@ -936,7 +921,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed states recorded between two time intervals`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 3, 3, Random(0L))
 
             // DOCSTART VaultQueryExample6
             val start = TODAY
@@ -962,11 +947,11 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `states consumed after time`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            services.consumeCash(100.DOLLARS)
+            services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
 
             val asOfDateTime = TODAY
             val consumedAfterExpression = TimeCondition(
@@ -984,7 +969,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `all states with paging specification - first page`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 100, 100, Random(0L))
 
             // DOCSTART VaultQueryExample7
             val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, 10)
@@ -1001,7 +986,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `all states with paging specification  - last`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(95.DOLLARS, DUMMY_NOTARY, 95, 95, Random(0L))
+            services.fillWithSomeTestCash(95.DOLLARS, notaryServices, DUMMY_NOTARY, 95, 95, Random(0L))
 
             // Last page implies we need to perform a row count for the Query first,
             // and then re-query for a given offset defined by (count - pageSize)
@@ -1022,7 +1007,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 100, 100, Random(0L))
 
             val pagingSpec = PageSpecification(0, 10)
 
@@ -1039,7 +1024,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 100, 100, Random(0L))
 
             val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE + 1)  // overflow = -2147483648
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
@@ -1055,7 +1040,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
         database.transaction {
 
-            services.fillWithSomeTestCash(201.DOLLARS, DUMMY_NOTARY, 201, 201, Random(0L))
+            services.fillWithSomeTestCash(201.DOLLARS, notaryServices, DUMMY_NOTARY, 201, 201, Random(0L))
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria)
@@ -1095,8 +1080,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices)
             services.fillWithSomeTestLinearStates(10)
 
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>()
@@ -1108,9 +1093,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `consumed fungible assets`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.consumeCash(50.DOLLARS)
-            services.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
+            services.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices)
             services.fillWithSomeTestLinearStates(10)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
@@ -1123,7 +1108,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed cash fungible assets`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
 
             val results = vaultQuerySvc.queryBy<Cash.State>()
@@ -1135,8 +1120,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed cash fungible assets after spending`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.consumeCash(50.DOLLARS)
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
             // should now have x2 CONSUMED + x2 UNCONSUMED (one spent + one change)
 
             val results = vaultQuerySvc.queryBy<Cash.State>(FungibleAssetQueryCriteria())
@@ -1149,10 +1134,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `consumed cash fungible assets`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.consumeCash(50.DOLLARS)
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
             val linearStates = services.fillWithSomeTestLinearStates(10)
-            services.consumeLinearStates(linearStates.states.toList())
+            services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
@@ -1164,7 +1149,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed linear heads`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
@@ -1177,14 +1162,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `consumed linear heads`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             val linearStates = services.fillWithSomeTestLinearStates(2, "TEST") // create 2 states with same externalId
             services.fillWithSomeTestLinearStates(8)
             val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            services.consumeLinearStates(linearStates.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS)
+            services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val results = vaultQuerySvc.queryBy<LinearState>(criteria)
@@ -1201,8 +1186,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val issuedStates = services.fillWithSomeTestLinearStates(10)
 
             // DOCSTART VaultQueryExample8
-            val linearIds = issuedStates.states.map { it.state.data.linearId }.toList()
-            val criteria = LinearStateQueryCriteria(linearId = listOf(linearIds.first(), linearIds.last()))
+            val linearIds = issuedStates.states.map { it.state.data.linearId.id }.toList()
+            val criteria = LinearStateQueryCriteria(uuid = listOf(linearIds.first(), linearIds.last()))
             val results = vaultQuerySvc.queryBy<LinearState>(criteria)
             // DOCEND VaultQueryExample8
             assertThat(results.states).hasSize(2)
@@ -1217,8 +1202,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(1, "ID2")
             val linearState3 = services.fillWithSomeTestLinearStates(1, "ID3")
 
-            val linearIds = listOf(linearState1.states.first().state.data.linearId, linearState3.states.first().state.data.linearId)
-            val criteria = LinearStateQueryCriteria(linearId = linearIds)
+            val linearIds = listOf(linearState1.states.first().state.data.linearId.id, linearState3.states.first().state.data.linearId.id)
+            val criteria = LinearStateQueryCriteria(uuid = linearIds)
             val results = vaultQuerySvc.queryBy<LinearState>(criteria)
             assertThat(results.states).hasSize(2)
         }
@@ -1231,13 +1216,13 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val txns = services.fillWithSomeTestLinearStates(1, "TEST")
             val linearState = txns.states.first()
             val linearId = linearState.state.data.linearId
-            services.evolveLinearState(linearState)  // consume current and produce new state reference
-            services.evolveLinearState(linearState)  // consume current and produce new state reference
-            services.evolveLinearState(linearState)  // consume current and produce new state reference
+            services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
 
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
             // DOCSTART VaultQueryExample9
-            val linearStateCriteria = LinearStateQueryCriteria(linearId = listOf(linearId), status = Vault.StateStatus.ALL)
+            val linearStateCriteria = LinearStateQueryCriteria(uuid = listOf(linearId.id), status = Vault.StateStatus.ALL)
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria and vaultCriteria)
             // DOCEND VaultQueryExample9
@@ -1251,12 +1236,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             val txns = services.fillWithSomeTestLinearStates(2, "TEST")
             val linearStates = txns.states.toList()
-            services.evolveLinearStates(linearStates)  // consume current and produce new state reference
-            services.evolveLinearStates(linearStates)  // consume current and produce new state reference
-            services.evolveLinearStates(linearStates)  // consume current and produce new state reference
+            services.evolveLinearStates(linearStates, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearStates(linearStates, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearStates(linearStates, DUMMY_NOTARY)  // consume current and produce new state reference
 
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
-            val linearStateCriteria = LinearStateQueryCriteria(linearId = linearStates.map { it.state.data.linearId }, status = Vault.StateStatus.ALL)
+            val linearStateCriteria = LinearStateQueryCriteria(uuid = linearStates.map { it.state.data.linearId.id }, status = Vault.StateStatus.ALL)
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC)))
 
@@ -1278,7 +1263,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.EXTERNAL_ID), Sort.Direction.DESC)))
 
             val results = vaultQuerySvc.queryBy<DummyLinearContract.State>((vaultCriteria), sorting = sorting)
-            results.states.forEach { println("${it.state.data.linearString}") }
+            results.states.forEach { println(it.state.data.linearString) }
             assertThat(results.states).hasSize(6)
         }
     }
@@ -1288,14 +1273,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
 
             val linearStates = services.fillWithSomeTestLinearStates(10)
-            val uid = linearStates.states.first().state.data.linearId
+            val uid = linearStates.states.first().state.data.linearId.id
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            val linearStateCriteria = LinearStateQueryCriteria(linearId = listOf(uid))
-            val dealStateCriteria = LinearStateQueryCriteria(dealRef = listOf("123", "456", "789"))
+            val linearStateCriteria = LinearStateQueryCriteria(uuid = listOf(uid))
+            val dealStateCriteria = LinearStateQueryCriteria(externalId = listOf("123", "456", "789"))
             val compositeCriteria = linearStateCriteria or dealStateCriteria
 
-            val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.DEAL_REFERENCE), Sort.Direction.DESC)))
+            val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.EXTERNAL_ID), Sort.Direction.DESC)))
 
             val results = vaultQuerySvc.queryBy<LinearState>(compositeCriteria, sorting = sorting)
             assertThat(results.statesMetadata).hasSize(13)
@@ -1315,7 +1300,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "linearString"), Sort.Direction.DESC)))
 
             val results = vaultQuerySvc.queryBy<DummyLinearContract.State>((vaultCriteria), sorting = sorting)
-            results.states.forEach { println("${it.state.data.linearString}") }
+            results.states.forEach { println(it.state.data.linearString) }
             assertThat(results.states).hasSize(6)
         }
     }
@@ -1326,12 +1311,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             val txns = services.fillWithSomeTestLinearStates(1, "TEST")
             val linearState = txns.states.first()
-            val linearState2 = services.evolveLinearState(linearState)  // consume current and produce new state reference
-            val linearState3 = services.evolveLinearState(linearState2)  // consume current and produce new state reference
-            services.evolveLinearState(linearState3)  // consume current and produce new state reference
+            val linearState2 = services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
+            val linearState3 = services.evolveLinearState(linearState2, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearState(linearState3, DUMMY_NOTARY)  // consume current and produce new state reference
 
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
-            val linearStateCriteria = LinearStateQueryCriteria(linearId = txns.states.map { it.state.data.linearId }, status = Vault.StateStatus.CONSUMED)
+            val linearStateCriteria = LinearStateQueryCriteria(uuid = txns.states.map { it.state.data.linearId.id }, status = Vault.StateStatus.CONSUMED)
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC)))
             val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria), sorting = sorting)
@@ -1360,7 +1345,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             // DOCSTART VaultQueryExample10
-            val criteria = LinearStateQueryCriteria(dealRef = listOf("456", "789"))
+            val criteria = LinearStateQueryCriteria(externalId = listOf("456", "789"))
             val results = vaultQuerySvc.queryBy<DealState>(criteria)
             // DOCEND VaultQueryExample10
 
@@ -1379,7 +1364,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val all = vaultQuerySvc.queryBy<DealState>()
             all.states.forEach { println(it.state) }
 
-            val criteria = LinearStateQueryCriteria(dealRef = listOf("456"))
+            val criteria = LinearStateQueryCriteria(externalId = listOf("456"))
             val results = vaultQuerySvc.queryBy<DealState>(criteria)
             assertThat(results.states).hasSize(1)
         }
@@ -1411,10 +1396,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets for specific issuer party and refs`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(1))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(2))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(3))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), ref = OpaqueBytes.of(1))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), ref = OpaqueBytes.of(2))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), ref = OpaqueBytes.of(3))
 
             val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC),
                     issuerRef = listOf(BOC.ref(1).reference, BOC.ref(2).reference))
@@ -1426,21 +1411,24 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed fungible assets for selected issuer parties`() {
         // GBP issuer
-        val GBP_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(1001)) }
-        val GBP_CASH_ISSUER by lazy { Party(X500Name("CN=British Pounds Cash Issuer,O=R3,OU=corda,L=London,C=GB"), GBP_CASH_ISSUER_KEY.public).ref(1) }
+        val gbpCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1001))
+        val gbpCashIssuer = Party(X500Name("CN=British Pounds Cash Issuer,O=R3,OU=corda,L=London,C=GB"), gbpCashIssuerKey.public).ref(1)
+        val gbpCashIssuerServices = MockServices(gbpCashIssuerKey)
         // USD issuer
-        val USD_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(1002)) }
-        val USD_CASH_ISSUER by lazy { Party(X500Name("CN=US Dollars Cash Issuer,O=R3,OU=corda,L=New York,C=US"), USD_CASH_ISSUER_KEY.public).ref(1) }
+        val usdCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1002))
+        val usdCashIssuer = Party(X500Name("CN=US Dollars Cash Issuer,O=R3,OU=corda,L=New York,C=US"), usdCashIssuerKey.public).ref(1)
+        val usdCashIssuerServices = MockServices(usdCashIssuerKey)
         // CHF issuer
-        val CHF_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(1003)) }
-        val CHF_CASH_ISSUER by lazy { Party(X500Name("CN=Swiss Francs Cash Issuer,O=R3,OU=corda,L=Zurich,C=CH"), CHF_CASH_ISSUER_KEY.public).ref(1) }
+        val chfCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1003))
+        val chfCashIssuer = Party(X500Name("CN=Swiss Francs Cash Issuer,O=R3,OU=corda,L=Zurich,C=CH"), chfCashIssuerKey.public).ref(1)
+        val chfCashIssuerServices = MockServices(chfCashIssuerKey)
 
         database.transaction {
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (GBP_CASH_ISSUER), issuerKey = (GBP_CASH_ISSUER_KEY))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (USD_CASH_ISSUER), issuerKey = (USD_CASH_ISSUER_KEY))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (CHF_CASH_ISSUER), issuerKey = (CHF_CASH_ISSUER_KEY))
+            services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (gbpCashIssuer))
+            services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (usdCashIssuer))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (chfCashIssuer))
 
-            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(GBP_CASH_ISSUER.party, USD_CASH_ISSUER.party))
+            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(gbpCashIssuer.party, usdCashIssuer.party))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
         }
@@ -1450,9 +1438,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets by owner`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), issuerKey = MEGA_CORP_KEY, ownedBy = (MEGA_CORP))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
+                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MEGA_CORP))
 
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
@@ -1465,14 +1453,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible states for owners`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), issuerKey = MEGA_CORP_KEY, ownedBy = (MEGA_CORP))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MINI_CORP.ref(0), issuerKey = MINI_CORP_KEY, ownedBy = (MINI_CORP))  // irrelevant to this vault
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
+                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MEGA_CORP))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
+                    issuedBy = BOC.ref(0), ownedBy = (MINI_CORP))  // irrelevant to this vault
 
             // DOCSTART VaultQueryExample5.2
-            val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP,MINI_CORP))
+            val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP, BOC))
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample5.2
 
@@ -1486,9 +1474,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
 
             services.fillWithSomeTestLinearStates(10)
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
 
             // DOCSTART VaultQueryExample12
             val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(USD.currencyCode) }
@@ -1504,8 +1492,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed cash balance for single currency`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L))
 
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val sumCriteria = VaultCustomQueryCriteria(sum)
@@ -1525,12 +1513,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed cash balances for all currencies`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
-            services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
-            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
-            services.fillWithSomeTestCash(600.SWISS_FRANCS, DUMMY_NOTARY, 6, 6, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(300.POUNDS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(400.POUNDS, notaryServices, DUMMY_NOTARY, 4, 4, Random(0L))
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 5, 5, Random(0L))
+            services.fillWithSomeTestCash(600.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 6, 6, Random(0L))
 
             val ccyIndex = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val criteria = VaultCustomQueryCriteria(ccyIndex)
@@ -1550,10 +1538,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets for quantity greater than`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(10.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.fillWithSomeTestCash(25.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(50.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(10.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(25.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(50.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
 
             // DOCSTART VaultQueryExample13
             val fungibleAssetCriteria = FungibleAssetQueryCriteria(quantity = builder { greaterThan(2500L) })
@@ -1568,8 +1556,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets for issuer party`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)))
 
             // DOCSTART VaultQueryExample14
             val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC))
@@ -1584,10 +1572,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets for single currency and quantity greater than`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(50.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(50.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(GBP.currencyCode) }
             val customCriteria = VaultCustomQueryCriteria(ccyIndex)
@@ -1610,21 +1598,22 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper =
-                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        signWith(MEGA_CORP_KEY)
-                        signWith(DUMMY_NOTARY_KEY)
-                    }.toSignedTransaction()
+                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                        val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
+                        notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
+                    }
+
             services.recordTransactions(commercialPaper)
 
             // MegaCorp™ now issues £10,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue2 = 10000.POUNDS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper2 =
-                    CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        signWith(MEGA_CORP_KEY)
-                        signWith(DUMMY_NOTARY_KEY)
-                    }.toSignedTransaction()
+                    CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                        val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
+                        notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
+                    }
             services.recordTransactions(commercialPaper2)
 
             val ccyIndex = builder { CommercialPaperSchemaV1.PersistentCommercialPaperState::currency.equal(USD.currencyCode) }
@@ -1647,21 +1636,23 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper =
-                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        signWith(MEGA_CORP_KEY)
-                        signWith(DUMMY_NOTARY_KEY)
-                    }.toSignedTransaction()
+                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                        val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
+                        notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
+                    }
+            commercialPaper.verifyRequiredSignatures()
             services.recordTransactions(commercialPaper)
 
             // MegaCorp™ now issues £5,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue2 = 5000.POUNDS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper2 =
-                    CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        signWith(MEGA_CORP_KEY)
-                        signWith(DUMMY_NOTARY_KEY)
-                    }.toSignedTransaction()
+                    CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                        val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
+                        notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
+                    }
+            commercialPaper2.verifyRequiredSignatures()
             services.recordTransactions(commercialPaper2)
 
             val result = builder {
@@ -1687,9 +1678,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `query attempting to use unregistered schema`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             // CashSchemaV3 NOT registered with NodeSchemaService
             val logicalExpression = builder { SampleCashSchemaV3.PersistentCashState::currency.equal(GBP.currencyCode) }
@@ -1709,10 +1700,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
         database.transaction {
 
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(10.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(10.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(1.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
 
             // DOCSTART VaultQueryExample20
             val generalCriteria = VaultQueryCriteria(Vault.StateStatus.ALL)
@@ -1812,7 +1803,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestLinearStates(1, "TEST1")
             val aState = services.fillWithSomeTestLinearStates(1, "TEST2").states
-            services.consumeLinearStates(aState.toList())
+            services.consumeLinearStates(aState.toList(), DUMMY_NOTARY)
             val uuid = services.fillWithSomeTestLinearStates(1, "TEST3").states.first().state.data.linearId.id
 
             // 2 unconsumed states with same external ID, 1 with different external ID
@@ -1883,7 +1874,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
             database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 5, 5, Random(0L))
+                services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 5, 5, Random(0L))
                 val linearStates = services.fillWithSomeTestLinearStates(10).states
                 val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
@@ -1895,14 +1886,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 assertThat(snapshot.statesMetadata).hasSize(5)
 
                 // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
                 // add another deal
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }
@@ -1911,12 +1902,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 5) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 1) {}
                     }
             )
@@ -1928,17 +1919,17 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
             database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 5, 5, Random(0L))
+                services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 5, 5, Random(0L))
                 val linearStates = services.fillWithSomeTestLinearStates(10).states
                 val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
                 // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
                 // add another deal
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(100.POUNDS)
+                services.consumeCash(100.POUNDS, notary = DUMMY_NOTARY)
 
                 val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
                 val (snapshot, updates)  = vaultQuerySvc.trackBy<Cash.State>(criteria)
@@ -1947,9 +1938,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 assertThat(snapshot.statesMetadata).hasSize(1)
 
                 // consume more stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }
@@ -1959,12 +1950,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
                         require(consumed.size == 1) {}
-                        require(produced.size == 0) {}
+                        require(produced.isEmpty()) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
                         require(consumed.size == 5) {}
-                        require(produced.size == 0) {}
+                        require(produced.isEmpty()) {}
                     }
             )
         }
@@ -1975,17 +1966,17 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
             database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 5, 5, Random(0L))
+                services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 5, 5, Random(0L))
                 val linearStates = services.fillWithSomeTestLinearStates(10).states
                 val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
                 // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
                 // add another deal
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(99.POUNDS)
+                services.consumeCash(99.POUNDS, notary = DUMMY_NOTARY)
 
                 val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
                 val (snapshot, updates) = vaultQuerySvc.trackBy<Cash.State>(criteria)
@@ -1994,9 +1985,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 assertThat(snapshot.statesMetadata).hasSize(7)
 
                 // consume more stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }
@@ -2005,12 +1996,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 5) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 1) {}
                     },
                     expect { (consumed, produced, flowId) ->
@@ -2021,7 +2012,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
                         require(consumed.size == 5) {}
-                        require(produced.size == 0) {}
+                        require(produced.isEmpty()) {}
                     }
             )
         }
@@ -2032,7 +2023,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
             database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+                services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
                 val linearStates = services.fillWithSomeTestLinearStates(10).states
                 val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
@@ -2045,14 +2036,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 assertThat(snapshot.statesMetadata).hasSize(13)
 
                 // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
                 // add another deal
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }
@@ -2061,17 +2052,17 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 10) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 3) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 1) {}
                     }
             )
@@ -2083,7 +2074,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
             database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+                services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
                 val linearStates = services.fillWithSomeTestLinearStates(10).states
                 val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
@@ -2095,14 +2086,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 assertThat(snapshot.statesMetadata).hasSize(3)
 
                 // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
                 // add another deal
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }
@@ -2111,12 +2102,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 3) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 1) {}
                     }
             )

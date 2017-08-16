@@ -2,21 +2,22 @@ package net.corda.client.rpc.serialization
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.client.rpc.internal.RpcClientObservableSerializer
-import net.corda.core.serialization.DefaultKryoCustomizer
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.RPCKryo
-import net.corda.nodeapi.serialization.AbstractKryoSerializationScheme
-import net.corda.nodeapi.serialization.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.AbstractKryoSerializationScheme
+import net.corda.nodeapi.internal.serialization.DefaultKryoCustomizer
+import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
 
-class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {
+class KryoClientSerializationScheme(serializationFactory: SerializationFactory) : AbstractKryoSerializationScheme(serializationFactory) {
     override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
         return byteSequence == KryoHeaderV0_1 && (target == SerializationContext.UseCase.RPCClient || target == SerializationContext.UseCase.P2P)
     }
 
     override fun rpcClientKryoPool(context: SerializationContext): KryoPool {
         return KryoPool.Builder {
-            DefaultKryoCustomizer.customize(RPCKryo(RpcClientObservableSerializer, context.whitelist)).apply { classLoader = context.deserializationClassLoader }
+            DefaultKryoCustomizer.customize(RPCKryo(RpcClientObservableSerializer, serializationFactory, context)).apply { classLoader = context.deserializationClassLoader }
         }.build()
     }
 

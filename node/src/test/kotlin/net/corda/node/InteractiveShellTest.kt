@@ -4,18 +4,16 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_CA
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.shell.InteractiveShell
+import net.corda.testing.DUMMY_CA
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_IDENTITY
 import org.junit.Test
@@ -31,6 +29,7 @@ class InteractiveShellTest {
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
         constructor(party: Party) : this(party.name.toString())
+
         override fun call() = a
     }
 
@@ -70,39 +69,29 @@ class InteractiveShellTest {
     fun party() = check("party: \"${MEGA_CORP.name}\"", MEGA_CORP.name.toString())
 
     class DummyFSM(val logic: FlowA) : FlowStateMachine<Any?> {
+        override fun getFlowContext(otherParty: Party, sessionFlow: FlowLogic<*>): FlowContext {
+            throw UnsupportedOperationException("not implemented")
+        }
         override fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>, retrySend: Boolean): UntrustworthyData<T> {
             throw UnsupportedOperationException("not implemented")
         }
-
         override fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
             throw UnsupportedOperationException("not implemented")
         }
-
         override fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>) {
             throw UnsupportedOperationException("not implemented")
         }
-
         override fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction {
             throw UnsupportedOperationException("not implemented")
         }
-
-        override val serviceHub: ServiceHub
-            get() = throw UnsupportedOperationException()
-        override val logger: Logger
-            get() = throw UnsupportedOperationException()
-        override val id: StateMachineRunId
-            get() = throw UnsupportedOperationException()
-        override val resultFuture: CordaFuture<Any?>
-            get() = throw UnsupportedOperationException()
-        override val flowInitiator: FlowInitiator
-            get() = throw UnsupportedOperationException()
-
-        override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
-            // Do nothing
-        }
-
-        override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
-            // Do nothing
-        }
+        override val serviceHub: ServiceHub get() = throw UnsupportedOperationException()
+        override val logger: Logger get() = throw UnsupportedOperationException()
+        override val id: StateMachineRunId get() = throw UnsupportedOperationException()
+        override val resultFuture: CordaFuture<Any?> get() = throw UnsupportedOperationException()
+        override val flowInitiator: FlowInitiator get() = throw UnsupportedOperationException()
+        override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) = Unit
+        override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) = Unit
+        override fun flowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot? = null
+        override fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>) = Unit
     }
 }

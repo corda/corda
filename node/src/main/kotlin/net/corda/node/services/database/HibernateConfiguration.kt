@@ -1,7 +1,9 @@
 package net.corda.node.services.database
 
 import net.corda.core.internal.castIfPossible
+import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.converters.AbstractPartyToX500NameAsStringConverter
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
@@ -18,9 +20,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLogging: Boolean = false, val databaseProperties: Properties) {
-    constructor(schemaService: SchemaService, databaseProperties: Properties) : this(schemaService, false, databaseProperties)
-
+class HibernateConfiguration(val schemaService: SchemaService, val databaseProperties: Properties, private val identitySvc: () -> IdentityService) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
@@ -59,8 +59,8 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase","true") == "true") "update" else "validate")
-                .setProperty("hibernate.show_sql", "$useDefaultLogging")
-                .setProperty("hibernate.format_sql", "$useDefaultLogging")
+                .setProperty("hibernate.format_sql", "true")
+
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
@@ -79,6 +79,9 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
                     return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
                 }
             })
+            // register custom converters
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identitySvc))
+
             build()
         }
 

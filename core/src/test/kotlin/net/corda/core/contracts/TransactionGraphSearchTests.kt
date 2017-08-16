@@ -34,14 +34,15 @@ class TransactionGraphSearchTests : TestDependencyInjectionBase() {
         val notaryServices = MockServices(DUMMY_NOTARY_KEY)
 
         val originBuilder = TransactionBuilder(DUMMY_NOTARY)
-        originBuilder.addOutputState(DummyState(random31BitValue()))
-        originBuilder.addCommand(command, MEGA_CORP_PUBKEY)
+                .addOutputState(DummyState(random31BitValue()))
+                .addCommand(command, MEGA_CORP_PUBKEY)
 
         val originPtx = megaCorpServices.signInitialTransaction(originBuilder)
         val originTx = notaryServices.addSignature(originPtx)
 
         val inputBuilder = TransactionBuilder(DUMMY_NOTARY)
-        inputBuilder.addInputState(originTx.tx.outRef<DummyState>(0))
+                .addInputState(originTx.tx.outRef<DummyState>(0))
+                .addCommand(dummyCommand(MEGA_CORP_PUBKEY))
 
         val inputPtx = megaCorpServices.signInitialTransaction(inputBuilder)
         val inputTx = megaCorpServices.addSignature(inputPtx)

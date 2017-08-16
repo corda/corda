@@ -4,14 +4,16 @@ package net.corda.testing
 
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TypeOnlyCommandData
-import net.corda.core.crypto.*
-import net.corda.core.crypto.testing.DummyPublicKey
+import net.corda.core.crypto.CertificateAndKeyPair
+import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.User
 import net.corda.testing.driver.DriverDSLExposedInterface
 import org.bouncycastle.asn1.x500.X500Name
@@ -22,9 +24,6 @@ import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
 val TEST_TX_TIME: Instant get() = Instant.parse("2015-04-17T12:00:00.00Z")
-
-val DUMMY_PUBKEY_1: PublicKey get() = DummyPublicKey("x1")
-val DUMMY_PUBKEY_2: PublicKey get() = DummyPublicKey("x2")
 
 val DUMMY_KEY_1: KeyPair by lazy { generateKeyPair() }
 val DUMMY_KEY_2: KeyPair by lazy { generateKeyPair() }
@@ -75,7 +74,9 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
     CertificateAndKeyPair(cert, DUMMY_CA_KEY)
 }
 
-fun dummyCommand(vararg signers: PublicKey) = Command<TypeOnlyCommandData>(object : TypeOnlyCommandData() {}, signers.toList())
+fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public) ) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
+
+object DummyCommandData : TypeOnlyCommandData()
 
 val DUMMY_IDENTITY_1: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_PARTY)
 val DUMMY_PARTY: Party get() = Party(X500Name("CN=Dummy,O=Dummy,L=Madrid,C=ES"), DUMMY_KEY_1.public)

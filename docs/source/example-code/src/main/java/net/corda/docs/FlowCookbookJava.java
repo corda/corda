@@ -26,14 +26,15 @@ import net.corda.testing.contracts.DummyState;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.jetbrains.annotations.NotNull;
 
+import java.security.GeneralSecurityException;
 import java.security.PublicKey;
-import java.security.SignatureException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+
 import static net.corda.core.contracts.ContractsDSL.requireThat;
-import static net.corda.testing.TestConstants.getDUMMY_PUBKEY_1;
+import static net.corda.testing.TestConstants.getALICE_KEY;
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
@@ -108,7 +109,7 @@ public class FlowCookbookJava {
             // We'll be using a dummy public key for demonstration purposes.
             // These are built in to Corda, and are generally used for writing
             // tests.
-            PublicKey dummyPubKey = getDUMMY_PUBKEY_1();
+            PublicKey dummyPubKey = getALICE_KEY().getPublic();
 
             /*---------------------------
              * IDENTIFYING OTHER NODES *
@@ -506,7 +507,7 @@ public class FlowCookbookJava {
                 twiceSignedTx.checkSignaturesAreValid();
                 // DOCEND 37
 
-            } catch (SignatureException e) {
+            } catch (GeneralSecurityException e) {
                 // Handle this as required.
             }
 

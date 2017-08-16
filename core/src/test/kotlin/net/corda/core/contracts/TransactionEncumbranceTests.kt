@@ -4,6 +4,8 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.ledger

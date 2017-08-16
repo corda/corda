@@ -5,21 +5,20 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.TestDataVendingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.unwrap
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
-import net.corda.node.services.statemachine.SessionInit
-import net.corda.core.flows.TestDataVendingFlow
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -146,11 +145,11 @@ class AttachmentSerializationTest {
     }
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int, sendData: Boolean = false) {
-        server.internalRegisterFlowFactory(ClientLogic::class.java, object : InitiatedFlowFactory<ServerLogic> {
-            override fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): ServerLogic {
-                return ServerLogic(otherParty, sendData)
-            }
-        }, ServerLogic::class.java, track = false)
+        server.internalRegisterFlowFactory(
+                ClientLogic::class.java,
+                InitiatedFlowFactory.Core { ServerLogic(it, sendData) },
+                ServerLogic::class.java,
+                track = false)
         client.services.startFlow(clientLogic)
         mockNet.runNetwork(rounds)
     }
@@ -158,7 +157,9 @@ class AttachmentSerializationTest {
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.stop()
         client = mockNet.createNode(server.network.myAddress, client.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
+            override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+                                advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
+                                entropyRoot: BigInteger): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                     override fun startMessagingService(rpcOps: RPCOps) {
                         attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad

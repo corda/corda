@@ -6,9 +6,9 @@ import net.corda.client.jfx.model.observableList
 import net.corda.client.jfx.model.observableValue
 import net.corda.client.jfx.utils.ChosenList
 import net.corda.client.jfx.utils.map
-import net.corda.core.contracts.currency
 import net.corda.core.node.NodeInfo
 import tornadofx.*
+import java.util.*
 
 val ISSUER_SERVICE_TYPE = Regex("corda.issuer.(USD|GBP|CHF|EUR)")
 
@@ -34,7 +34,7 @@ class IssuerModel {
 
     private fun NodeInfo.issuerCurrency() = if (isIssuerNode()) {
         val issuer = advertisedServices.first { it.info.type.id.matches(ISSUER_SERVICE_TYPE) }
-        currency(issuer.info.type.id.substringAfterLast("."))
+        Currency.getInstance(issuer.info.type.id.substringAfterLast("."))
     } else
         null
 }

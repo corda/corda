@@ -90,8 +90,8 @@ interface ServiceHubInternal : PluginServiceHub {
     val configuration: NodeConfiguration
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+        require (txs.any()) { "No transactions passed in for recording" }
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
-        require(recordedTransactions.isNotEmpty()) { "No transactions passed in for recording" }
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
         if (stateMachineRunId != null) {
             recordedTransactions.forEach {
@@ -101,7 +101,7 @@ interface ServiceHubInternal : PluginServiceHub {
             log.warn("Transactions recorded from outside of a state machine")
         }
 
-        val toNotify = txs.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
+        val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
         vaultService.notifyAll(toNotify)
     }
 

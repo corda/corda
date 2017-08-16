@@ -7,8 +7,46 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
-* The concept of ``TransactionType`` has been removed. Transactions no longer carry a `type` property. All usages of
-  ``TransactionType.General.Builder()`` have to be replaced with ``TransactionBuilder()``.
+* Vault Query fix: filter by multiple issuer names in ``FungibleAssetQueryCriteria``
+
+* Following deprecated methods have been removed:
+  * In ``DataFeed``
+    * ``first`` and ``current``, replaced by ``snapshot``
+    * ``second`` and ``future``, replaced by ``updates``
+  * In ``CordaRPCOps``
+    * ``stateMachinesAndUpdates``, replaced by ``stateMachinesFeed``
+    * ``verifiedTransactions``, replaced by ``verifiedTransactionsFeed``
+    * ``stateMachineRecordedTransactionMapping``, replaced by ``stateMachineRecordedTransactionMappingFeed``
+    * ``networkMapUpdates``, replaced by ``networkMapFeed``
+
+* Due to security concerns and the need to remove the concept of state relevancy (which isn't needed in Corda),
+  ``ResolveTransactionsFlow`` has been made internal. Instead merge the receipt of the ``SignedTransaction`` and the subsequent
+  sub-flow call to ``ResolveTransactionsFlow`` with a single call to ``ReceiveTransactionFlow``. The flow running on the counterparty
+  must use ``SendTransactionFlow`` at the correct place. There is also ``ReceiveStateAndRefFlow`` and ``SendStateAndRefFlow`` for
+  dealing with ``StateAndRef``s.
+
+
+* Vault query soft locking enhancements and deprecations
+  * removed original ``VaultService`` ``softLockedStates` query mechanism.
+  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification
+    of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified
+    by set of lock ids)
+
+* Trader demo now issues cash and commercial paper directly from the bank node, rather than the seller node self-issuing
+  commercial paper but labelling it as if issued by the bank.
+
+* Merged handling of well known and confidential identities in the identity service. Registration now takes in an identity
+  (either type) plus supporting certificate path, and de-anonymisation simply returns the issuing identity where known.
+  If you specifically need well known identities, use the network map, which is the authoritative source of current well
+  known identities.
+
+* Currency-related API in ``net.corda.core.contracts.ContractsDSL`` has moved to ```net.corda.finance.CurrencyUtils`.
+
+* Remove `IssuerFlow` as it allowed nodes to request arbitrary amounts of cash to be issued from any remote node. Use
+  `CashIssueFlow` instead.
+
+Milestone 14
+------------
 
 * Changes in ``NodeInfo``:
 
@@ -37,7 +75,7 @@ UNRELEASED
 * Moved the core flows previously found in ``net.corda.flows`` into ``net.corda.core.flows``. This is so that all packages
   in the ``core`` module begin with ``net.corda.core``.
 
-* ``FinalityFlow`` now has can be subclassed, and the ``broadcastTransaction`` and ``lookupParties`` function can be
+* ``FinalityFlow`` can now be subclassed, and the ``broadcastTransaction`` and ``lookupParties`` function can be
   overriden in order to handle cases where no single transaction participant is aware of all parties, and therefore
   the transaction must be relayed between participants rather than sent from a single node.
 
@@ -60,32 +98,45 @@ UNRELEASED
    * ``Cordformation`` adds a ``corda`` and ``cordaRuntime`` configuration to projects which cordapp developers should
      use to exclude core Corda JARs from being built into Cordapp fat JARs.
 
-.. Milestone 15:
+* ``database`` field in ``AbstractNode`` class has changed the type from ``org.jetbrains.exposed.sql.Database`` to
+  ‘net.corda.node.utilities.CordaPersistence’ - no change is needed for the typical use
+  (i.e. services.database.transaction {  code block } ) however a change is required when Database was explicitly declared
 
-* Vault Query fix: filter by multiple issuer names in ``FungibleAssetQueryCriteria``
+* ``DigitalSignature.LegallyIdentifiable``, previously used to identify a signer (e.g. in Oracles), has been removed.
+  One can use the public key to derive the corresponding identity.
 
-* Following deprecated methods have been removed:
-  * In ``DataFeed``
-    * ``first`` and ``current``, replaced by ``snapshot``
-    * ``second`` and ``future``, replaced by ``updates``
-  * In ``CordaRPCOps``
-    * ``stateMachinesAndUpdates``, replaced by ``stateMachinesFeed``
-    * ``verifiedTransactions``, replaced by ``verifiedTransactionsFeed``
-    * ``stateMachineRecordedTransactionMapping``, replaced by ``stateMachineRecordedTransactionMappingFeed``
-    * ``networkMapUpdates``, replaced by ``networkMapFeed``
+* Vault Query improvements and fixes:
 
-* Due to security concerns and the need to remove the concept of state relevancy (which isn't needed in Corda),
-  ``ResolveTransactionsFlow`` has been made internal. Instead merge the receipt of the ``SignedTransaction`` and the subsequent
-  sub-flow call to ``ResolveTransactionsFlow`` with a single call to ``ReceiveTransactionFlow``. The flow running on the counterparty
-  must use ``SendTransactionFlow`` at the correct place. There is also ``ReceiveStateAndRefFlow`` and ``SendStateAndRefFlow`` for
-  dealing with ``StateAndRef``s.
+    * FIX inconsistent behaviour: Vault Query defaults to UNCONSUMED in all QueryCriteria types
 
+    * FIX serialization error: Vault Query over RPC when using custom attributes using VaultCustomQueryCriteria.
 
-* Vault query soft locking enhancements and deprecations
-  * removed original ``VaultService`` ``softLockedStates` query mechanism.
-  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification
-    of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified
-    by set of lock ids)
+    * Aggregate function support: extended VaultCustomQueryCriteria and associated DSL to enable specification of
+    Aggregate Functions (sum, max, min, avg, count) with, optional, group by clauses and sorting (on calculated aggregate)
+
+    * Pagination simplification
+    Pagination continues to be optional, but with following changes:
+      - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast with a ``VaultQueryException`` to alert the API user to the need to specify a PageSpecification.
+        Internally, we no longer need to calculate a results count (thus eliminating an expensive SQL query) unless a PageSpecification is supplied (note: that a value of -1 is returned for total_results in this scenario).
+        Internally, we now use the AggregateFunction capability to perform the count.
+      - Paging now starts from 1 (was previously 0).
+
+    * Additional Sort criteria: by StateRef (or constituents: txId, index)
+
+* Confidential identities API improvements
+
+    * Registering anonymous identities now takes in AnonymousPartyAndPath
+    * AnonymousParty.toString() now uses toStringShort() to match other toString() functions
+    * Add verifyAnonymousIdentity() function to verify without storing an identity
+    * Replace pathForAnonymous() with anonymousFromKey() which matches actual use-cases better
+    * Add unit test for fetching the anonymous identity from a key
+    * Update verifyAnonymousIdentity() function signature to match registerAnonymousIdentity()
+    * Rename AnonymisedIdentity to AnonymousPartyAndPath
+    * Remove certificate from AnonymousPartyAndPath as it's not actually used.
+    * Rename registerAnonymousIdentity() to verifyAndRegisterAnonymousIdentity()
+
+* Added JPA ``AbstractPartyConverter`` to ensure identity schema attributes are persisted securely according to type
+  (well known party, resolvable anonymous party, completely anonymous party).
 
 Milestone 13
 ------------
@@ -235,7 +286,7 @@ Milestone 12
        with the ``PrivateKey`` kept internally to the service.
      * Flows which used to acquire a node's ``KeyPair``, typically via ``ServiceHub.legalIdentityKey``,
        should instead use the helper methods on ``ServiceHub``. In particular to freeze a ``TransactionBuilder`` and
-       generate an initial partially signed ``SignedTransaction`` the flow should use ``ServiceHub.signInitialTransaction``.
+       generate an initial partially signed ``SignedTransaction`` the flow should use ``ServiceHub.toSignedTransaction``.
        Flows generating additional party signatures should use ``ServiceHub.createSignature``. Each of these methods is
        provided with two signatures. One version that signs with the default node key, the other which allows key selection
        by passing in the ``PublicKey`` partner of the desired signing key.

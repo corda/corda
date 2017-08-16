@@ -5,7 +5,7 @@ import net.corda.client.mock.pickN
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.contracts.USD
+import net.corda.finance.USD
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.vaultQueryBy

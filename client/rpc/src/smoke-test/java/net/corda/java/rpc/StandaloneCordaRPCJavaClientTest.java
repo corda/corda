@@ -65,8 +65,8 @@ public class StandaloneCordaRPCJavaClientTest {
     }
 
     private NodeInfo fetchNotaryIdentity() {
-        DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> nodeDataFeed = rpcProxy.networkMapFeed();
-        return nodeDataFeed.getSnapshot().get(0);
+        List<NodeInfo> nodeDataSnapshot = rpcProxy.networkMapSnapshot();
+        return nodeDataSnapshot.get(0);
     }
 
     @Test
@@ -75,7 +75,7 @@ public class StandaloneCordaRPCJavaClientTest {
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
                 dollars123, OpaqueBytes.of("1".getBytes()),
-                notaryNode.getLegalIdentity(), notaryNode.getLegalIdentity());
+                notaryNode.getLegalIdentity());
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 

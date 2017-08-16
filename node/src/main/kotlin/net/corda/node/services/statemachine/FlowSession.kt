@@ -1,7 +1,8 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.identity.Party
+import net.corda.core.flows.FlowContext
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.Party
 import net.corda.node.services.statemachine.FlowSessionState.Initiated
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -41,7 +42,7 @@ sealed class FlowSessionState {
         override val sendToParty: Party get() = otherParty
     }
 
-    data class Initiated(val peerParty: Party, val peerSessionId: Long) : FlowSessionState() {
+    data class Initiated(val peerParty: Party, val peerSessionId: Long, val context: FlowContext) : FlowSessionState() {
         override val sendToParty: Party get() = peerParty
     }
 }

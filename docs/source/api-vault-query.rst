@@ -350,6 +350,15 @@ Track unconsumed deal states or linear states (with snapshot including specifica
     :start-after: DOCSTART VaultJavaQueryExample4
     :end-before: DOCEND VaultJavaQueryExample4
 
+Troubleshooting
+---------------
+If the results your were expecting do not match actual returned query results we recommend you add an entry to your
+``log4j2.xml`` configuration file to enable display of executed SQL statements::
+
+        <Logger name="org.hibernate.SQL" level="debug" additivity="false"> 
+            <AppenderRef ref="Console-Appender"/> 
+        </Logger>
+
 Behavioural notes
 -----------------
 1. **TrackBy** updates do not take into account the full criteria specification due to different and more restrictive syntax

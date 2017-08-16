@@ -2,25 +2,17 @@ package net.corda.traderdemo.flow
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.days
-import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.flows.TwoPartyTradeFlow
-import org.bouncycastle.asn1.x500.X500Name
-import java.time.Instant
 import java.util.*
 
 @InitiatingFlow
@@ -51,7 +43,8 @@ class SellerFlow(val otherParty: Party,
 
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
         val cpOwnerKey = serviceHub.keyManagementService.freshKey()
-        val commercialPaper = selfIssueSomeCommercialPaper(serviceHub.myInfo.legalIdentity, notary)
+        val commercialPaper = serviceHub.vaultQueryService.queryBy(CommercialPaper.State::class.java).states.first()
+
 
         progressTracker.currentStep = TRADING
 
@@ -66,39 +59,4 @@ class SellerFlow(val otherParty: Party,
                 progressTracker.getChildProgressTracker(TRADING)!!)
         return subFlow(seller)
     }
-
-    @Suspendable
-    fun selfIssueSomeCommercialPaper(ownedBy: AbstractParty, notaryNode: NodeInfo): StateAndRef<CommercialPaper.State> {
-        // Make a fake company that's issued its own paper.
-        val party = Party(X500Name("CN=BankOfCorda,O=R3,L=New York,C=US"), serviceHub.legalIdentityKey)
-
-        val issuance: SignedTransaction = run {
-            val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
-                    Instant.now() + 10.days, notaryNode.notaryIdentity)
-
-            // TODO: Consider moving these two steps below into generateIssue.
-
-            // Attach the prospectus.
-            tx.addAttachment(serviceHub.attachments.openAttachment(PROSPECTUS_HASH)!!.id)
-
-            // Requesting a time-window to be set, all CP must have a validation window.
-            tx.setTimeWindow(Instant.now(), 30.seconds)
-
-            // Sign it as ourselves.
-            val stx = serviceHub.signInitialTransaction(tx)
-
-            subFlow(FinalityFlow(stx)).single()
-        }
-
-        // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
-        val move: SignedTransaction = run {
-            val builder = TransactionBuilder(notaryNode.notaryIdentity)
-            CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
-            val stx = serviceHub.signInitialTransaction(builder)
-            subFlow(FinalityFlow(stx)).single()
-        }
-
-        return move.tx.outRef(0)
-    }
-
 }

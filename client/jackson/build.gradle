@@ -20,12 +20,6 @@ dependencies {
 
     testCompile project(path: ':core', configuration: 'testArtifacts')
     testCompile "junit:junit:$junit_version"
-
-    // TODO: Upgrade to junit-quickcheck 0.8, once it is released,
-    //       because it depends on org.javassist:javassist instead
-    //       of javassist:javassist.
-    testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
-    testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
 }
 
 jar {

@@ -2,7 +2,6 @@
 
 package net.corda.core.contracts
 
-import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowLogicRef
@@ -211,26 +210,6 @@ interface LinearState : ContractState {
      * True if this should be tracked by our vault(s).
      */
     fun isRelevant(ourKeys: Set<PublicKey>): Boolean
-
-    /**
-     * Standard clause to verify the LinearState safety properties.
-     */
-    @CordaSerializable
-    class ClauseVerifier<in S : LinearState, C : CommandData> : Clause<S, C, Unit>() {
-        override fun verify(tx: LedgerTransaction,
-                            inputs: List<S>,
-                            outputs: List<S>,
-                            commands: List<AuthenticatedObject<C>>,
-                            groupingKey: Unit?): Set<C> {
-            val inputIds = inputs.map { it.linearId }.distinct()
-            val outputIds = outputs.map { it.linearId }.distinct()
-            requireThat {
-                "LinearStates are not merged" using (inputIds.count() == inputs.count())
-                "LinearStates are not split" using (outputIds.count() == outputs.count())
-            }
-            return emptySet()
-        }
-    }
 }
 // DOCEND 2
 

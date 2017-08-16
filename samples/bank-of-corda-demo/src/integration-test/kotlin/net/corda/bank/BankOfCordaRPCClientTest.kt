@@ -1,15 +1,15 @@
 package net.corda.bank
 
 import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.DOLLARS
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
-import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
-import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.finance.DOLLARS
+import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -21,7 +21,9 @@ class BankOfCordaRPCClientTest {
     @Test
     fun `issuer flow via RPC`() {
         driver(dsl = {
-            val bocManager = User("bocManager", "password1", permissions = setOf(startFlowPermission<IssuanceRequester>()))
+            val bocManager = User("bocManager", "password1", permissions = setOf(
+                    startFlowPermission<CashIssueFlow>(),
+                    startFlowPermission<CashPaymentFlow>()))
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
             val (nodeBankOfCorda, nodeBigCorporation) = listOf(
                     startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type)), listOf(bocManager)),
@@ -46,12 +48,14 @@ class BankOfCordaRPCClientTest {
             // Kick-off actual Issuer Flow
             val anonymous = true
             bocProxy.startFlow(
-                    ::IssuanceRequester,
+                    ::CashIssueFlow,
+                    1000.DOLLARS,
+                    BIG_CORP_PARTY_REF,
+                    nodeBankOfCorda.nodeInfo.notaryIdentity).returnValue.getOrThrow()
+            bocProxy.startFlow(
+                    ::CashPaymentFlow,
                     1000.DOLLARS,
                     nodeBigCorporation.nodeInfo.legalIdentity,
-                    BIG_CORP_PARTY_REF,
-                    nodeBankOfCorda.nodeInfo.legalIdentity,
-                    nodeBankOfCorda.nodeInfo.notaryIdentity,
                     anonymous).returnValue.getOrThrow()
 
             // Check Bank of Corda Vault Updates

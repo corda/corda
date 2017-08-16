@@ -4,7 +4,6 @@ package net.corda.core.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
@@ -64,8 +63,8 @@ sealed class QueryCriteria {
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
     data class LinearStateQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
-                                                                  val linearId: List<UniqueIdentifier>? = null,
-                                                                  val dealRef: List<String>? = null,
+                                                                  val uuid: List<UUID>? = null,
+                                                                  val externalId: List<String>? = null,
                                                                   override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))

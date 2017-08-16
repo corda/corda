@@ -7,6 +7,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Test
@@ -50,7 +51,11 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
 
     private fun makeDummyStateAndRef(data: Any): StateAndRef<*> {
         val dummyState = makeDummyState(data)
-        val fakeIssueTx = services.signInitialTransaction(TransactionBuilder(notary = DUMMY_NOTARY).addOutputState(dummyState))
+        val fakeIssueTx = services.signInitialTransaction(
+                TransactionBuilder(notary = DUMMY_NOTARY)
+                        .addOutputState(dummyState)
+                        .addCommand(dummyCommand())
+        )
         services.recordTransactions(fakeIssueTx)
         val dummyStateRef = StateRef(fakeIssueTx.id, 0)
         return StateAndRef(TransactionState(dummyState, DUMMY_NOTARY, null), dummyStateRef)

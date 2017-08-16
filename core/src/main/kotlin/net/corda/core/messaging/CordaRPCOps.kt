@@ -61,6 +61,11 @@ interface CordaRPCOps : RPCOps {
     override val protocolVersion: Int get() = nodeIdentity().platformVersion
 
     /**
+     * Returns a list of currently in-progress state machine infos.
+     */
+    fun stateMachinesSnapshot(): List<StateMachineInfo>
+
+    /**
      * Returns a data feed of currently in-progress state machine infos and an observable of future state machine adds/removes.
      */
     @RPCReturnsObservables
@@ -152,10 +157,20 @@ interface CordaRPCOps : RPCOps {
     // DOCEND VaultTrackAPIHelpers
 
     /**
+     * Returns a list of all recorded transactions.
+     */
+    fun verifiedTransactionsSnapshot(): List<SignedTransaction>
+
+    /**
      * Returns a data feed of all recorded transactions and an observable of future recorded ones.
      */
     @RPCReturnsObservables
     fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction>
+
+    /**
+     * Returns a snapshot list of existing state machine id - recorded transaction hash mappings.
+     */
+    fun stateMachineRecordedTransactionMappingSnapshot(): List<StateMachineTransactionMapping>
 
     /**
      * Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
@@ -163,6 +178,11 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping>
+
+    /**
+     * Returns all parties currently visible on the network with their advertised services.
+     */
+    fun networkMapSnapshot(): List<NodeInfo>
 
     /**
      * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
@@ -242,15 +262,18 @@ interface CordaRPCOps : RPCOps {
     // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
     // the node's state locally and query that directly.
     /**
+     * Returns the well known identity from an abstract party. This is intended to resolve the well known identity
+     * from a confidential identity, however it transparently handles returning the well known identity back if
+     * a well known identity is passed in.
+     *
+     * @param party identity to determine well known identity for.
+     * @return well known identity, if found.
+     */
+    fun partyFromAnonymous(party: AbstractParty): Party?
+    /**
      * Returns the [Party] corresponding to the given key, if found.
      */
     fun partyFromKey(key: PublicKey): Party?
-
-    /**
-     * Returns the [Party] with the given name as it's [Party.name]
-     */
-    @Deprecated("Use partyFromX500Name instead")
-    fun partyFromName(name: String): Party?
 
     /**
      * Returns the [Party] with the X.500 principal as it's [Party.name]
@@ -397,6 +420,29 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startTrac
         arg2: C,
         arg3: D
 ): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
+
+@Suppress("unused")
+inline fun <T : Any, A, B, C, D, E, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4)
+
+@Suppress("unused")
+inline fun <T : Any, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E, F) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        arg5: F
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
 
 /**
  * The Data feed contains a snapshot of the requested data and an [Observable] of future updates.
