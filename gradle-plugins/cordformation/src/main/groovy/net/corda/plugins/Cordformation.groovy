@@ -76,7 +76,7 @@ class Cordformation implements Plugin<Project> {
                                 "This can cause node stability problems. Please use 'corda' instead." +
                                 "See http://docs.corda.net/cordapp-build-systems.html")
                 } else {
-                    logger.info("Including dependency: $it")
+                    logger.info("Including dependency in CorDapp JAR: $it")
                 }
             }
             return filteredDeps.collect { configurations.runtime.files it }.flatten().toSet()
