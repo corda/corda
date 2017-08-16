@@ -184,11 +184,11 @@ class Obligation<P : Any> : Contract {
         /**
          * A command stating that a debt has been moved, optionally to fulfil another contract.
          *
-         * @param contractHash the contract this move is for the attention of. Only that contract's verify function
+         * @param contract the contract this move is for the attention of. Only that contract's verify function
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
-        data class Move(override val contractHash: SecureHash? = null) : Commands, FungibleAsset.Commands.Move
+        data class Move(override val contract: Class<out Contract>? = null) : Commands, FungibleAsset.Commands.Move
 
         /**
          * Allows new obligation states to be issued into existence: the nonce ("number used once") ensures the
@@ -307,10 +307,6 @@ class Obligation<P : Any> : Contract {
         }
     }
 
-    companion object {
-        internal val cashSettlementLegalContractReference = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
-    }
-
     private fun verifySettleCommand(tx: LedgerTransaction,
                                     inputs: List<FungibleAsset<Terms<P>>>,
                                     outputs: List<FungibleAsset<Terms<P>>>,
@@ -375,8 +371,8 @@ class Obligation<P : Any> : Contract {
         requireThat {
             // Insist that we can be the only contract consuming inputs, to ensure no other contract can think it's being
             // settled as well
-            "all move commands relate to this contract" using (moveCommands.map { it.value.contractHash }
-                    .all { it == null || it == cashSettlementLegalContractReference })
+            "all move commands relate to this contract" using (moveCommands.map { it.value.contract }
+                    .all { it == null || it == this@Obligation.javaClass })
             // Settle commands exclude all other commands, so we don't need to check for contracts moving at the same
             // time.
             "amounts paid must match recipients to settle" using inputs.map { it.owner }.containsAll(amountReceivedByOwner.keys)
@@ -474,7 +470,7 @@ class Obligation<P : Any> : Contract {
      * Generate a transaction performing close-out netting of two or more states.
      *
      * @param signer the party which will sign the transaction. Must be one of the obligor or beneficiary.
-     * @param states two or more states, which must be compatible for bilateral netting (same issuance definitions,
+     * @param inputs two or more states, which must be compatible for bilateral netting (same issuance definitions,
      * and same parties involved).
      */
     fun generateCloseOutNetting(tx: TransactionBuilder,

@@ -2,7 +2,6 @@ package net.corda.contracts.asset
 
 import net.corda.contracts.Commodity
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -60,11 +59,11 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         /**
          * A command stating that money has been moved, optionally to fulfil another contract.
          *
-         * @param contractHash the contract this move is for the attention of. Only that contract's verify function
+         * @param contract the contract this move is for the attention of. Only that contract's verify function
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
-        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
+        data class Move(override val contract: Class<out Contract>? = null) : FungibleAsset.Commands.Move, Commands
 
         /**
          * Allows new commodity states to be issued into existence: the nonce ("number used once") ensures the transaction

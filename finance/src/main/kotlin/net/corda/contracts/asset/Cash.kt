@@ -106,11 +106,11 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         /**
          * A command stating that money has been moved, optionally to fulfil another contract.
          *
-         * @param contractHash the contract this move is for the attention of. Only that contract's verify function
+         * @param contract the contract this move is for the attention of. Only that contract's verify function
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
-        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
+        data class Move(override val contract: Class<out Contract>? = null) : FungibleAsset.Commands.Move, Commands
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
@@ -263,7 +263,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * otherwise the set of eligible states wil be filtered to only include those from these issuers.
          * @param notary If null the notary source is ignored, if specified then only states marked
          * with this notary are included.
-         * @param lockId The [FlowLogic.runId.uuid] of the flow, which is used to soft reserve the states.
+         * @param lockId The [net.corda.core.flows.StateMachineRunId.uuid] of the flow, which is used to soft reserve the states.
          * Also, previous outputs of the flow will be eligible as they are implicitly locked with this id until the flow completes.
          * @param withIssuerRefs If not empty the specific set of issuer references to match against.
          * @return The matching states that were found. If sufficient funds were found these will be locked,
