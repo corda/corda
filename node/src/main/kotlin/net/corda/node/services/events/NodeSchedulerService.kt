@@ -88,7 +88,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     private class InnerState {
         var scheduledStates = createMap()
 
-        var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue({ a, b -> a.scheduledAt.compareTo(b.scheduledAt) })
+        var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue( { a, b -> a.scheduledAt.compareTo(b.scheduledAt) } )
 
         var rescheduled: SettableFuture<Boolean>? = null
     }
@@ -98,7 +98,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
-            scheduledStatesQueue.addAll(scheduledStates.all().map{ it.second }.toMutableList())
+            scheduledStatesQueue.addAll(scheduledStates.all().map { it.second } .toMutableList())
             rescheduleWakeUp()
         }
     }
