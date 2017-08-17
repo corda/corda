@@ -168,7 +168,6 @@ class PortfolioApiUtils(private val ownParty: Party) {
                 ),
                 common = mapOf(
                         "valuationDate" to trade.product.startDate.unadjusted,
-                        "hashLegalDocs" to "put hash here", // TODO
                         "interestRate" to mapOf(
                                 "name" to "TODO",
                                 "oracle" to "TODO",

@@ -32,7 +32,6 @@ var CommonViewModel = (function () {
         this.exposure = {};
         this.localBusinessDay = ["London", "NewYork"];
         this.dailyInterestAmount = "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360";
-        this.hashLegalDocs = "put hash here";
     }
     return CommonViewModel;
 }());
