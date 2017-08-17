@@ -13,6 +13,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
+import net.corda.finance.utils.sumCash
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1
