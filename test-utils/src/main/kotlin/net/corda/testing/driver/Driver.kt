@@ -33,6 +33,7 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
@@ -293,7 +294,13 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
         log.error("Driver shutting down because of exception", exception)
-        throw exception
+        if (exception is RPCException && !exception.message.isNullOrEmpty() && exception.message!!.contains("has not been instrumented")) {
+            val message = """${exception.message} Make sure you run the tests with the Quasar java agent attached to your JVM.
+            #See https://docs.corda.net/troubleshooting.html - 'Fiber classes not instrumented' for more details."""
+            throw RPCException(message.trimMargin("#"), exception.cause)
+        } else {
+            throw exception
+        }
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
