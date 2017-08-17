@@ -93,7 +93,7 @@ class PersistentMap<K, V, E, EK> (
     }
 
     /**
-     * Puts the value into the map and caches it.
+     * Associates the specified value with the specified key in this map and persists it.
      */
     operator fun set(key: K, value: V) {
         set(key, value, logWarning = false) {
@@ -113,7 +113,7 @@ class PersistentMap<K, V, E, EK> (
         }
     }
     /**
-     * Puts the value or replace existing one in the map and caches it.
+     * Associates the specified value with the specified key in this map and persists it.
      * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
