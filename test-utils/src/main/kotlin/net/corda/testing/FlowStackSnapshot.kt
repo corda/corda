@@ -73,7 +73,7 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
             }
             Frame(element, stackObjects)
         }
-        return FlowStackSnapshot(Instant.now(), flowClass, frames)
+        return FlowStackSnapshot(Instant.now(), flowClass.name, frames)
     }
 
     private val StackTraceElement.instrumentedAnnotation: Instrumented? get() {
