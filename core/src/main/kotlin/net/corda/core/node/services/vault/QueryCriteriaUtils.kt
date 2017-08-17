@@ -151,7 +151,7 @@ data class Sort(val columns: Collection<SortColumn>) {
 
     enum class VaultStateAttribute(val attributeName: String) : Attribute {
         /** Vault States */
-        NOTARY_NAME("notaryName"),
+        NOTARY_NAME("notary"),
         CONTRACT_TYPE("contractStateClassName"),
         STATE_STATUS("stateStatus"),
         RECORDED_TIME("recordedTime"),

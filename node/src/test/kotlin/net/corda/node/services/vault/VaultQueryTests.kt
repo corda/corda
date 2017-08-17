@@ -11,6 +11,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
@@ -50,11 +51,20 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     lateinit var notaryServices: MockServices
     val vaultSvc: VaultService get() = services.vaultService
     val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
+    val identitySvc: IdentityService = makeTestIdentityService()
     lateinit var database: CordaPersistence
+
+    // test cash notary
+    val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(21)) }
+    val CASH_NOTARY: Party get() = Party(X500Name("CN=Cash Notary Service,O=R3,OU=corda,L=Zurich,C=CH"), CASH_NOTARY_KEY.public)
+    val CASH_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CASH_NOTARY.nameOrNull()!!, CASH_NOTARY_KEY.public)
 
     @Before
     fun setUp() {
-        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY))
+        // register additional identities
+        identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
+        identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
+        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY), identitySvc = { identitySvc })
         database = databaseAndServices.first
         services = databaseAndServices.second
         notaryServices = MockServices(DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
@@ -71,7 +81,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { identitySvc })
 
         setUpDb(database, 5000)
 
@@ -396,9 +406,6 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
     }
 
-    val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(21)) }
-    val CASH_NOTARY: Party get() = Party(X500Name("CN=Cash Notary Service,O=R3,OU=corda,L=Zurich,C=CH"), CASH_NOTARY_KEY.public)
-
     @Test
     fun `unconsumed states by notary`() {
         database.transaction {
@@ -408,7 +415,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             // DOCSTART VaultQueryExample4
-            val criteria = VaultQueryCriteria(notaryName = listOf(CASH_NOTARY.name))
+            val criteria = VaultQueryCriteria(notary = listOf(CASH_NOTARY))
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample4
             assertThat(results.states).hasSize(3)
@@ -418,6 +425,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed linear states for single participant`() {
         database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
 
             services.fillWithSomeTestLinearStates(2, "TEST", participants = listOf(MEGA_CORP, MINI_CORP))
             services.fillWithSomeTestDeals(listOf("456"), participants = listOf(MEGA_CORP, BIG_CORP))
@@ -433,13 +441,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed linear states for two participants`() {
         database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
 
             services.fillWithSomeTestLinearStates(2, "TEST", participants = listOf(MEGA_CORP, MINI_CORP))
             services.fillWithSomeTestDeals(listOf("456"), participants = listOf(MEGA_CORP, BIG_CORP))
-            services.fillWithSomeTestDeals(listOf("123", "789"), participants = listOf(BIG_CORP))
+            services.fillWithSomeTestDeals(listOf("123", "789"), participants = listOf(MEGA_CORP))
 
             // DOCSTART VaultQueryExample5
-            val criteria = LinearStateQueryCriteria(participants = listOf(MEGA_CORP, MINI_CORP))
+            val criteria = LinearStateQueryCriteria(participants = listOf(BIG_CORP, MINI_CORP))
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample5
 
@@ -793,6 +802,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `aggregate functions sum by issuer and currency and sort by aggregate sum`() {
         database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
 
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
             services.fillWithSomeTestCash(200.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1))
@@ -1026,6 +1036,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 100, 100, Random(0L))
 
+            @Suppress("OVERFLOW_EXPECTED")
             val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE + 1)  // overflow = -2147483648
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
@@ -1375,7 +1386,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
         database.transaction {
 
-            val parties = listOf(MEGA_CORP)
+            val parties = listOf(MINI_CORP)
 
             services.fillWithSomeTestLinearStates(2, "TEST")
             services.fillWithSomeTestDeals(listOf("456"), parties)
@@ -1395,13 +1406,14 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed fungible assets for specific issuer party and refs`() {
         database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
 
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), ref = OpaqueBytes.of(1))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), ref = OpaqueBytes.of(2))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), ref = OpaqueBytes.of(3))
 
-            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC),
+            val criteria = FungibleAssetQueryCriteria(issuer = listOf(BOC),
                     issuerRef = listOf(BOC.ref(1).reference, BOC.ref(2).reference))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
@@ -1424,11 +1436,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val chfCashIssuerServices = MockServices(chfCashIssuerKey)
 
         database.transaction {
+
             services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (gbpCashIssuer))
             services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (usdCashIssuer))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (chfCashIssuer))
 
-            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(gbpCashIssuer.party, usdCashIssuer.party))
+            val criteria = FungibleAssetQueryCriteria(issuer = listOf(gbpCashIssuer.party, usdCashIssuer.party))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
         }
@@ -1438,16 +1451,15 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets by owner`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = BOC.ref(1))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MEGA_CORP))
+                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MINI_CORP))
 
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
-            assertThat(results.states).hasSize(1)
+            assertThat(results.states).hasSize(1)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
         }
     }
-
 
     @Test
     fun `unconsumed fungible states for owners`() {
@@ -1464,7 +1476,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample5.2
 
-            assertThat(results.states).hasSize(1)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
+            assertThat(results.states).hasSize(2)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
         }
     }
 
@@ -1555,12 +1567,13 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed fungible assets for issuer party`() {
         database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
 
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)))
 
             // DOCSTART VaultQueryExample14
-            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC))
+            val criteria = FungibleAssetQueryCriteria(issuer = listOf(BOC))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
             // DOCEND VaultQueryExample14
 
@@ -1820,6 +1833,41 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             }
             assertThat(results.statesMetadata).hasSize(3)
             assertThat(results.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `unconsumed linear heads for single participant`() {
+        database.transaction {
+            identitySvc.verifyAndRegisterIdentity(ALICE_IDENTITY)
+            services.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE))
+            services.fillWithSomeTestLinearStates(1)
+            services.fillWithSomeTestLinearStates(1, "TEST3")
+
+            val linearStateCriteria = LinearStateQueryCriteria(participants = listOf(ALICE))
+            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria)
+
+            assertThat(results.states).hasSize(1)
+            assertThat(results.states[0].state.data.linearId.externalId).isEqualTo("TEST1")
+        }
+    }
+
+    @Test
+    fun `unconsumed linear heads for multiple participants`() {
+        database.transaction {
+            identitySvc.verifyAndRegisterIdentity(ALICE_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(BOB_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(CHARLIE_IDENTITY)
+
+            services.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE,BOB,CHARLIE))
+            services.fillWithSomeTestLinearStates(1)
+            services.fillWithSomeTestLinearStates(1, "TEST3")
+
+            val linearStateCriteria = LinearStateQueryCriteria(participants = listOf(ALICE,BOB,CHARLIE))
+            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria)
+
+            assertThat(results.states).hasSize(1)
+            assertThat(results.states[0].state.data.linearId.externalId).isEqualTo("TEST1")
         }
     }
 
