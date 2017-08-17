@@ -7,7 +7,7 @@ import java.math.BigDecimal
 /**
  * Specifies the contract between two parties that trade an OpenGamma IRS. Currently can only agree to trade.
  */
-data class OGTrade(private val blank: Void? = null) : Contract {
+class OGTrade : Contract {
     override fun verify(tx: LedgerTransaction) {
         requireNotNull(tx.timeWindow) { "must have a time-window" }
         val groups: List<LedgerTransaction.InOutGroup<IRSState, UniqueIdentifier>> = tx.groupStates { state -> state.linearId }
