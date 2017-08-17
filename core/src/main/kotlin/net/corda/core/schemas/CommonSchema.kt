@@ -17,10 +17,17 @@ object CommonSchema
 /**
  * First version of the Vault ORM schema
  */
-object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, version = 1, mappedTypes = listOf(Party::class.java)) {
+object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, version = 1, mappedTypes = emptyList()) {
 
     @MappedSuperclass
     open class LinearState(
+            /** [ContractState] attributes */
+
+            /** X500Name of participant parties **/
+            @ElementCollection
+            @Column(name = "participants")
+            var participants: MutableSet<AbstractParty>? = null,
+
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
              */
@@ -31,18 +38,26 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             var uuid: UUID
 
     ) : PersistentState() {
-        constructor(uid: UniqueIdentifier) : this(externalId = uid.externalId, uuid = uid.id)
+        constructor(uid: UniqueIdentifier, _participants: Set<AbstractParty>)
+            : this(participants = _participants.toMutableSet(),
+                   externalId = uid.externalId,
+                   uuid = uid.id)
     }
 
     @MappedSuperclass
     open class FungibleState(
             /** [ContractState] attributes */
-            @OneToMany(cascade = arrayOf(CascadeType.ALL))
-            var participants: Set<CommonSchemaV1.Party>,
+
+            /** X500Name of participant parties **/
+            @ElementCollection
+            @Column(name = "participants")
+            var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
-            @OneToOne(cascade = arrayOf(CascadeType.ALL))
-            var ownerKey: CommonSchemaV1.Party,
+
+            /** X500Name of owner party **/
+            @Column(name = "owner_name")
+            var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
              *
@@ -55,42 +70,12 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             var quantity: Long,
 
             /** Issuer attributes */
-            @OneToOne(cascade = arrayOf(CascadeType.ALL))
-            var issuerParty: CommonSchemaV1.Party,
+
+            /** X500Name of issuer party **/
+            @Column(name = "issuer_name")
+            var issuer: AbstractParty,
 
             @Column(name = "issuer_reference")
             var issuerRef: ByteArray
-    ) : PersistentState() {
-        constructor(_participants: Set<AbstractParty>, _ownerKey: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: ByteArray)
-                : this(participants = _participants.map { CommonSchemaV1.Party(it) }.toSet(),
-                       ownerKey = CommonSchemaV1.Party(_ownerKey),
-                       quantity = _quantity,
-                       issuerParty = CommonSchemaV1.Party(_issuerParty),
-                       issuerRef = _issuerRef)
-    }
-
-    /**
-     *  Party entity (to be replaced by referencing final Identity Schema)
-     */
-    @Entity
-    @Table(name = "vault_party",
-            indexes = arrayOf(Index(name = "party_name_idx", columnList = "party_name")))
-    class Party(
-            @Id
-            @GeneratedValue
-            @Column(name = "party_id")
-            var id: Int,
-
-            /**
-             * [Party] attributes
-             */
-            @Column(name = "party_name")
-            var name: String,
-
-            @Column(name = "party_key", length = 65535) // TODO What is the upper limit on size of CompositeKey?)
-            var key: String
-    ) {
-        constructor(party: AbstractParty)
-                : this(0, party.nameOrNull()?.toString() ?: party.toString(), party.owningKey.toBase58String())
-    }
+    ) : PersistentState()
 }

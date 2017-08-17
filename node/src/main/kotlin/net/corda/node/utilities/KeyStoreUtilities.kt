@@ -1,8 +1,11 @@
 package net.corda.node.utilities
 
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CertificateAndKeyPair
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.cert
 import net.corda.core.internal.exists
 import net.corda.core.internal.read
+import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.write
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
@@ -145,8 +148,8 @@ fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): Certi
  * @return The X509Certificate found in the KeyStore under the specified alias.
  */
 fun KeyStore.getX509Certificate(alias: String): X509CertificateHolder {
-    val encoded = getCertificate(alias)?.encoded ?: throw IllegalArgumentException("No certificate under alias \"$alias\"")
-    return X509CertificateHolder(encoded)
+    val certificate = getCertificate(alias) ?: throw IllegalArgumentException("No certificate under alias \"$alias\"")
+    return certificate.toX509CertHolder()
 }
 
 /**
@@ -206,5 +209,5 @@ class KeyStoreWrapper(private val storePath: Path, private val storePassword: St
 
     fun getCertificate(alias: String): Certificate = keyStore.getCertificate(alias)
 
-    fun certificateAndKeyPair(alias: String) = keyStore.getCertificateAndKeyPair(alias, storePassword)
+    fun certificateAndKeyPair(alias: String): CertificateAndKeyPair = keyStore.getCertificateAndKeyPair(alias, storePassword)
 }

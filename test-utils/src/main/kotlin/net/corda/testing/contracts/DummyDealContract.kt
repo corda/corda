@@ -39,6 +39,7 @@ class DummyDealContract : Contract {
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is DummyDealStateSchemaV1 -> DummyDealStateSchemaV1.PersistentDummyDealState(
+                        _participants = participants.toSet(),
                         uid = linearId
                 )
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")

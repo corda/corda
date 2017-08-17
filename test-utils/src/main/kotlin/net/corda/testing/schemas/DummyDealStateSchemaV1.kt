@@ -1,6 +1,7 @@
 package net.corda.testing.schemas
 
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import javax.persistence.Entity
@@ -22,7 +23,10 @@ object DummyDealStateSchemaV1 : MappedSchema(schemaFamily = DummyDealStateSchema
     class PersistentDummyDealState(
             /** parent attributes */
             @Transient
+            val _participants: Set<AbstractParty>,
+
+            @Transient
             val uid: UniqueIdentifier
 
-    ) : CommonSchemaV1.LinearState(uid = uid)
+    ) : CommonSchemaV1.LinearState(uid, _participants)
 }
