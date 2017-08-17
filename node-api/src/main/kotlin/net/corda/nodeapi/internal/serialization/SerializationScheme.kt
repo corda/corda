@@ -28,7 +28,7 @@ object NotSupportedSeralizationScheme : SerializationScheme {
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> = doThrow()
 }
 
-data class SerializationContextImpl(override val preferedSerializationVersion: ByteSequence,
+data class SerializationContextImpl(override val preferredSerializationVersion: ByteSequence,
                                     override val deserializationClassLoader: ClassLoader,
                                     override val whitelist: ClassWhitelist,
                                     override val properties: Map<Any, Any>,
@@ -52,7 +52,7 @@ data class SerializationContextImpl(override val preferedSerializationVersion: B
         })
     }
 
-    override fun withPreferredSerializationVersion(versionHeader: ByteSequence) = copy(preferedSerializationVersion = versionHeader)
+    override fun withPreferredSerializationVersion(versionHeader: ByteSequence) = copy(preferredSerializationVersion = versionHeader)
 }
 
 private const val HEADER_SIZE: Int = 8
@@ -81,7 +81,7 @@ open class SerializationFactoryImpl : SerializationFactory {
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T = schemeFor(byteSequence, context.useCase).deserialize(byteSequence, clazz, context)
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        return schemeFor(context.preferedSerializationVersion, context.useCase).serialize(obj, context)
+        return schemeFor(context.preferredSerializationVersion, context.useCase).serialize(obj, context)
     }
 
     fun registerScheme(scheme: SerializationScheme) {

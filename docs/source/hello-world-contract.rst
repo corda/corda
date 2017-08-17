@@ -61,7 +61,7 @@ transfer them or redeem them for cash. One way to enforce this behaviour would b
 
   * Its value must be non-negative
   * The lender and the borrower cannot be the same entity
-  * The IOU's borrower must sign the transaction
+  * The IOU's lender must sign the transaction
 
 We can picture this transaction as follows:
 
@@ -113,7 +113,6 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
         package com.template.contract;
 
-        import com.google.common.collect.ImmutableSet;
         import com.template.state.IOUState;
         import net.corda.core.contracts.AuthenticatedObject;
         import net.corda.core.contracts.CommandData;
@@ -146,7 +145,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     check.using("The lender and the borrower cannot be the same entity.", lender != borrower);
 
                     // Constraints on the signers.
-                    check.using("There must only be one signer.", ImmutableSet.of(command.getSigners()).size() == 1);
+                    check.using("There must only be one signer.", command.getSigners().size() == 1);
                     check.using("The signer must be the lender.", command.getSigners().contains(lender.getOwningKey()));
 
                     return null;
@@ -166,7 +165,7 @@ The first thing we add to our contract is a *command*. Commands serve two functi
   example, a transaction proposing the creation of an IOU could have to satisfy different constraints to one redeeming
   an IOU
 * They allow us to define the required signers for the transaction. For example, IOU creation might require signatures
-  from the borrower alone, whereas the transfer of an IOU might require signatures from both the IOU's borrower and lender
+  from the lender only, whereas the transfer of an IOU might require signatures from both the IOU's borrower and lender
 
 Our contract has one command, a ``Create`` command. All commands must implement the ``CommandData`` interface.
 
@@ -206,7 +205,7 @@ following are true:
 * The transaction has inputs
 * The transaction doesn't have exactly one output
 * The IOU itself is invalid
-* The transaction doesn't require the borrower's signature
+* The transaction doesn't require the lender's signature
 
 Command constraints
 ~~~~~~~~~~~~~~~~~~~
@@ -257,7 +256,7 @@ We've now written an ``IOUContract`` constraining the evolution of each ``IOUSta
 * Creating an ``IOUState`` requires an issuance transaction with no inputs, a single ``IOUState`` output, and a
   ``Create`` command
 * The ``IOUState`` created by the issuance transaction must have a non-negative value, and the lender and borrower
-  must be different entities.
+  must be different entities
 
 Before we move on, make sure you go back and modify ``IOUState`` to point to the new ``IOUContract`` class.
 
