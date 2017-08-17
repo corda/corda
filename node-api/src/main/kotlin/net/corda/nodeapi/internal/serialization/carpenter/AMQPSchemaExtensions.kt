@@ -4,13 +4,11 @@ import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.Field as AMQPField
 import net.corda.nodeapi.internal.serialization.amqp.Schema as AMQPSchema
 
-fun AMQPSchema.carpenterSchema(
-        loaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader()))
-        : CarpenterSchemas {
+fun AMQPSchema.carpenterSchema(classloader: ClassLoader) : CarpenterSchemas {
     val rtn = CarpenterSchemas.newInstance()
 
     types.filterIsInstance<CompositeType>().forEach {
-        it.carpenterSchema(classLoaders = loaders, carpenterSchemas = rtn)
+        it.carpenterSchema(classloader, carpenterSchemas = rtn)
     }
 
     return rtn
@@ -19,10 +17,9 @@ fun AMQPSchema.carpenterSchema(
 /**
  * if we can load the class then we MUST know about all of it's composite elements
  */
-private fun CompositeType.validatePropertyTypes(
-        classLoaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader())) {
+private fun CompositeType.validatePropertyTypes(classloader: ClassLoader) {
     fields.forEach {
-        if (!it.validateType(classLoaders)) throw UncarpentableException(name, it.name, it.type)
+        if (!it.validateType(classloader)) throw UncarpentableException(name, it.name, it.type)
     }
 }
 
@@ -34,24 +31,21 @@ fun AMQPField.typeAsString() = if (type == "*") requires[0] else type
  *  b) add the class to the dependency tree in [carpenterSchemas] if it cannot be instantiated
  *     at this time
  *
- *  @param classLoaders list of classLoaders, defaulting toe the system class loader, that might
- *  be used to load objects
+ *  @param classloader the class loader provided dby the [SerializationContext]
  *  @param carpenterSchemas structure that holds the dependency tree and list of classes that
  *  need constructing
  *  @param force by default a schema is not added to [carpenterSchemas] if it already exists
  *  on the class path. For testing purposes schema generation can be forced
  */
-fun CompositeType.carpenterSchema(
-        classLoaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader()),
-        carpenterSchemas: CarpenterSchemas,
-        force: Boolean = false) {
-    if (classLoaders.exists(name)) {
-        validatePropertyTypes(classLoaders)
+fun CompositeType.carpenterSchema(classloader: ClassLoader,
+                                  carpenterSchemas: CarpenterSchemas,
+                                  force: Boolean = false) {
+    if (classloader.exists(name)) {
+        validatePropertyTypes(classloader)
         if (!force) return
     }
 
     val providesList = mutableListOf<Class<*>>()
-
     var isInterface = false
     var isCreatable = true
 
@@ -62,7 +56,7 @@ fun CompositeType.carpenterSchema(
         }
 
         try {
-            providesList.add(classLoaders.loadIfExists(it))
+            providesList.add(classloader.loadClass(it))
         } catch (e: ClassNotFoundException) {
             carpenterSchemas.addDepPair(this, name, it)
             isCreatable = false
@@ -73,7 +67,7 @@ fun CompositeType.carpenterSchema(
 
     fields.forEach {
         try {
-            m[it.name] = FieldFactory.newInstance(it.mandatory, it.name, it.getTypeAsClass(classLoaders))
+            m[it.name] = FieldFactory.newInstance(it.mandatory, it.name, it.getTypeAsClass(classloader))
         } catch (e: ClassNotFoundException) {
             carpenterSchemas.addDepPair(this, name, it.typeAsString())
             isCreatable = false
@@ -110,33 +104,18 @@ val typeStrToType: Map<Pair<String, Boolean>, Class<out Any?>> = mapOf(
         Pair("byte", false) to Byte::class.javaObjectType
 )
 
-fun AMQPField.getTypeAsClass(
-        classLoaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader())
-) = typeStrToType[Pair(type, mandatory)] ?: when (type) {
+fun AMQPField.getTypeAsClass(classloader: ClassLoader) = typeStrToType[Pair(type, mandatory)] ?: when (type) {
     "string" -> String::class.java
-    "*" -> classLoaders.loadIfExists(requires[0])
-    else -> classLoaders.loadIfExists(type)
+    "*" -> classloader.loadClass(requires[0])
+    else -> classloader.loadClass(type)
 }
 
-fun AMQPField.validateType(
-        classLoaders: List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader())
-) = when (type) {
+fun AMQPField.validateType(classloader: ClassLoader) = when (type) {
     "byte", "int", "string", "short", "long", "char", "boolean", "double", "float" -> true
-    "*" -> classLoaders.exists(requires[0])
-    else -> classLoaders.exists(type)
+    "*" -> classloader.exists(requires[0])
+    else -> classloader.exists(type)
 }
 
-private fun List<ClassLoader>.exists(clazz: String) = this.find {
-    try { it.loadClass(clazz); true } catch (e: ClassNotFoundException) { false }
-} != null
+private fun ClassLoader.exists(clazz: String) = run {
+    try { this.loadClass(clazz); true } catch (e: ClassNotFoundException) { false } }
 
-private fun List<ClassLoader>.loadIfExists(clazz: String): Class<*> {
-    this.forEach {
-        try {
-            return it.loadClass(clazz)
-        } catch (e: ClassNotFoundException) {
-            return@forEach
-        }
-    }
-    throw ClassNotFoundException(clazz)
-}

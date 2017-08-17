@@ -8,7 +8,7 @@ import net.corda.nodeapi.internal.serialization.carpenter.*
 // those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
 // versions of them up using its own internal class carpenter (each carpenter houses it's own loader). This
 // replicates the situation where a receiver doesn't have some or all elements of a schema present on it's classpath
-class DeserializeNeedingCarpentrySimpleTypesTest {
+class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
     companion object {
         /**
          * If you want to see the schema encoded into the envelope after serialisation change this to true
@@ -16,12 +16,12 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
         private const val VERBOSE = false
     }
 
-    val sf  = SerializerFactory()
-    val sf2 = SerializerFactory()
+    val sf  = testDefaultFactory()
+    val sf2 = testDefaultFactory()
 
     @Test
     fun singleInt() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "int" to NonNullableField(Integer::class.javaPrimitiveType!!)
         )))
 
@@ -41,7 +41,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleIntNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "int" to NullableField(Integer::class.java)
         )))
 
@@ -57,7 +57,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleIntNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "int" to NullableField(Integer::class.java)
         )))
 
@@ -73,7 +73,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleChar() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "char" to NonNullableField(Character::class.javaPrimitiveType!!)
         )))
 
@@ -86,7 +86,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleCharNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "char" to NullableField(Character::class.javaObjectType)
         )))
 
@@ -99,7 +99,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleCharNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "char" to NullableField(java.lang.Character::class.java)
         )))
 
@@ -112,7 +112,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleLong() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "long" to NonNullableField(Long::class.javaPrimitiveType!!)
         )))
 
@@ -126,7 +126,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleLongNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "long" to NullableField(Long::class.javaObjectType)
         )))
 
@@ -140,7 +140,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleLongNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "long" to NullableField(Long::class.javaObjectType)
         )))
 
@@ -153,7 +153,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleBoolean() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "boolean" to NonNullableField(Boolean::class.javaPrimitiveType!!)
         )))
 
@@ -166,7 +166,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleBooleanNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "boolean" to NullableField(Boolean::class.javaObjectType)
         )))
 
@@ -179,7 +179,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleBooleanNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "boolean" to NullableField(Boolean::class.javaObjectType)
         )))
 
@@ -192,7 +192,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleDouble() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "double" to NonNullableField(Double::class.javaPrimitiveType!!)
         )))
 
@@ -205,7 +205,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleDoubleNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "double" to NullableField(Double::class.javaObjectType)
         )))
 
@@ -218,7 +218,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleDoubleNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "double" to NullableField(Double::class.javaObjectType)
         )))
 
@@ -231,7 +231,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleShort() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "short" to NonNullableField(Short::class.javaPrimitiveType!!)
         )))
 
@@ -244,7 +244,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleShortNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "short" to NullableField(Short::class.javaObjectType)
         )))
 
@@ -257,7 +257,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleShortNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "short" to NullableField(Short::class.javaObjectType)
         )))
 
@@ -270,7 +270,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleFloat() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "float" to NonNullableField(Float::class.javaPrimitiveType!!)
         )))
 
@@ -283,7 +283,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleFloatNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "float" to NullableField(Float::class.javaObjectType)
         )))
 
@@ -296,7 +296,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleFloatNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "float" to NullableField(Float::class.javaObjectType)
         )))
 
@@ -309,7 +309,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleByte() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "byte" to NonNullableField(Byte::class.javaPrimitiveType!!)
         )))
 
@@ -324,7 +324,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleByteNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "byte" to NullableField(Byte::class.javaObjectType)
         )))
 
@@ -339,7 +339,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun singleByteNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema("single", mapOf(
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
                 "byte" to NullableField(Byte::class.javaObjectType)
         )))
 
@@ -353,11 +353,10 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
     @Test
     fun simpleTypeKnownInterface() {
         val clazz = ClassCarpenter().build (ClassSchema(
-                "oneType", mapOf("name" to NonNullableField(String::class.java)),
+                testName(), mapOf("name" to NonNullableField(String::class.java)),
                 interfaces = listOf (I::class.java)))
         val testVal = "Some Person"
         val classInstance = clazz.constructors[0].newInstance(testVal)
-
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(classInstance)
         val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
@@ -368,7 +367,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
 
     @Test
     fun manyTypes() {
-        val manyClass = ClassCarpenter().build (ClassSchema("many", mapOf(
+        val manyClass = ClassCarpenter().build (ClassSchema(testName(), mapOf(
                 "intA" to NonNullableField (Int::class.java),
                 "intB" to NullableField (Integer::class.java),
                 "intC" to NullableField (Integer::class.java),
@@ -397,7 +396,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest {
                 "byteB" to NullableField (Byte::class.javaObjectType),
                 "byteC" to NullableField (Byte::class.javaObjectType))))
 
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(
+        val serialisedBytes = TestSerializationOutput(VERBOSE, factory).serialize(
                 manyClass.constructors.first().newInstance(
                         1, 2, null,
                         "a", "b", null,
