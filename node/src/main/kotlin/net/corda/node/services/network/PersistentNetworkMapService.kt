@@ -1,6 +1,5 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
@@ -10,8 +9,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
 import java.security.cert.CertificateFactory
 import javax.persistence.*
@@ -69,15 +66,12 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
                             it.certPath.encoded
                     ) },
                     fromPersistentEntity = {
-                        // TODO: We should understand an X500Name database field type, rather than manually doing the conversion ourselves
-                        Pair(PartyAndCertificate(X500Name(it.nodeParty.name),
-                                parsePublicKeyBase58(it.nodeParty.owningKey),
-                                X509CertificateHolder(it.nodeParty.certificate),
-                                factory.generateCertPath(ByteArrayInputStream(it.nodeParty.certPath))),
+                        Pair(PartyAndCertificate(factory.generateCertPath(ByteArrayInputStream(it.nodeParty.certPath))),
                                 it.registrationInfo.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
                     toPersistentEntity = { key: PartyAndCertificate, value: NodeRegistrationInfo ->
                         NetworkNode().apply {
+                            // TODO: We should understand an X500Name database field type, rather than manually doing the conversion ourselves
                             nodeParty = NodeParty(
                                     key.name.toString(),
                                     key.owningKey.toBase58String(),
