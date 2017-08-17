@@ -5,6 +5,7 @@ package net.corda.testing
 
 import com.nhaarman.mockito_kotlin.spy
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
@@ -88,7 +89,9 @@ val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
-val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTARY_IDENTITY)
+val DUMMY_CASH_ISSUER_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_CASH_ISSUER.party as Party)
+
+val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)
 val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptySet(), DUMMY_CA.certificate.cert)
 
 val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)

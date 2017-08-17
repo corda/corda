@@ -10,6 +10,7 @@ import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
@@ -98,7 +99,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is CashSchemaV1 -> CashSchemaV1.PersistentCashState(
-                        owner = this.owner.owningKey.toBase58String(),
+                        owner = this.owner,
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),
@@ -323,7 +324,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
                         """ +
                                 (if (notary != null)
-                                    " AND vs.notary_key = '${notary.owningKey.toBase58String()}'" else "") +
+                                    " AND vs.notary_name = '${notary.name}'" else "") +
                                 (if (onlyFromIssuerParties.isNotEmpty())
                                     " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
                                 (if (withIssuerRefs.isNotEmpty())
