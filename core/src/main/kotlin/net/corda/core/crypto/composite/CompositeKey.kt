@@ -42,7 +42,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
         fun getInstance(asn1: ASN1Primitive): PublicKey {
             val keyInfo = SubjectPublicKeyInfo.getInstance(asn1)
-            require(keyInfo.algorithm.algorithm == CordaObjectIdentifier.compositeKey)
+            require(keyInfo.algorithm.algorithm == CordaObjectIdentifier.COMPOSITE_KEY)
             val sequence = ASN1Sequence.getInstance(keyInfo.parsePublicKey())
             val threshold = ASN1Integer.getInstance(sequence.getObjectAt(0)).positiveValue.toInt()
             val sequenceOfChildren = ASN1Sequence.getInstance(sequence.getObjectAt(1))
@@ -177,7 +177,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
         }
         keyVector.add(ASN1Integer(threshold.toLong()))
         keyVector.add(DERSequence(childrenVector))
-        return SubjectPublicKeyInfo(AlgorithmIdentifier(CordaObjectIdentifier.compositeKey), DERSequence(keyVector)).encoded
+        return SubjectPublicKeyInfo(AlgorithmIdentifier(CordaObjectIdentifier.COMPOSITE_KEY), DERSequence(keyVector)).encoded
     }
 
     override fun getFormat() = ASN1Encoding.DER

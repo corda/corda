@@ -7,14 +7,12 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.CommonQueryCriteria
-import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
-import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 import javax.persistence.Tuple
 import javax.persistence.criteria.*
@@ -68,9 +66,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
 
         // notary names
-        criteria.notaryName?.let {
-            val notaryNames = (criteria.notaryName as List<X500Name>).map { it.toString() }
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("notaryName").`in`(notaryNames)))
+        criteria.notary?.let {
+            predicateSet.add(criteriaBuilder.and(vaultStates.get<AbstractParty>("notary").`in`(criteria.notary)))
         }
 
         // state references
@@ -243,10 +240,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
         // owner
         criteria.owner?.let {
-            val ownerKeys = criteria.owner as List<AbstractParty>
-            val joinFungibleStateToParty = vaultFungibleStates.join<VaultSchemaV1.VaultFungibleStates, CommonSchemaV1.Party>("issuerParty")
-            val owners = ownerKeys.map { it.nameOrNull()?.toString() ?: it.toString()}
-            predicateSet.add(criteriaBuilder.and(joinFungibleStateToParty.get<CommonSchemaV1.Party>("name").`in`(owners)))
+            val owners = criteria.owner as List<AbstractParty>
+            predicateSet.add(criteriaBuilder.and(vaultFungibleStates.get<AbstractParty>("owner").`in`(owners)))
         }
 
         // quantity
@@ -255,11 +250,9 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
 
         // issuer party
-        criteria.issuerPartyName?.let {
-            val issuerParties = criteria.issuerPartyName as List<AbstractParty>
-            val joinFungibleStateToParty = vaultFungibleStates.join<VaultSchemaV1.VaultFungibleStates, CommonSchemaV1.Party>("issuerParty")
-            val issuerPartyNames = issuerParties.map { it.nameOrNull().toString() }
-            predicateSet.add(criteriaBuilder.and(joinFungibleStateToParty.get<CommonSchemaV1.Party>("name").`in`(issuerPartyNames)))
+        criteria.issuer?.let {
+            val issuerParties = criteria.issuer as List<AbstractParty>
+            predicateSet.add(criteriaBuilder.and(vaultFungibleStates.get<AbstractParty>("issuer").`in`(issuerParties)))
         }
 
         // issuer reference
@@ -271,9 +264,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         // participants
         criteria.participants?.let {
             val participants = criteria.participants as List<AbstractParty>
-            val joinFungibleStateToParty = vaultFungibleStates.join<VaultSchemaV1.VaultFungibleStates, CommonSchemaV1.Party>("participants")
-            val participantKeys = participants.map { it.nameOrNull().toString() }
-            predicateSet.add(criteriaBuilder.and(joinFungibleStateToParty.get<CommonSchemaV1.Party>("name").`in`(participantKeys)))
+            val joinLinearStateToParty = vaultFungibleStates.joinSet<VaultSchemaV1.VaultLinearStates, AbstractParty>("participants")
+            predicateSet.add(criteriaBuilder.and(joinLinearStateToParty.`in`(participants)))
             criteriaQuery.distinct(true)
         }
         return predicateSet
@@ -310,9 +302,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         // deal participants
         criteria.participants?.let {
             val participants = criteria.participants as List<AbstractParty>
-            val joinLinearStateToParty = vaultLinearStates.join<VaultSchemaV1.VaultLinearStates, CommonSchemaV1.Party>("participants")
-            val participantKeys = participants.map { it.nameOrNull().toString() }
-            predicateSet.add(criteriaBuilder.and(joinLinearStateToParty.get<CommonSchemaV1.Party>("name").`in`(participantKeys)))
+            val joinLinearStateToParty = vaultLinearStates.joinSet<VaultSchemaV1.VaultLinearStates, AbstractParty>("participants")
+            predicateSet.add(criteriaBuilder.and(joinLinearStateToParty.`in`(participants)))
             criteriaQuery.distinct(true)
         }
         return predicateSet

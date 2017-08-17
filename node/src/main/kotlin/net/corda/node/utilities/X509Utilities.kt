@@ -211,7 +211,7 @@ object X509Utilities {
                           nameConstraints: NameConstraints? = null): X509CertificateHolder {
 
         val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
-        val provider = Crypto.providerMap[signatureScheme.providerName]
+        val provider = Crypto.findProvider(signatureScheme.providerName)
         val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
 
         val signer = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
@@ -225,7 +225,7 @@ object X509Utilities {
      * Create certificate signing request using provided information.
      */
     fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
-        val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.providerMap[signatureScheme.providerName])
+        val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.findProvider(signatureScheme.providerName))
         return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).build(signer)
     }
 

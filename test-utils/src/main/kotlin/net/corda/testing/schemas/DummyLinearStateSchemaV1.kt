@@ -1,13 +1,12 @@
 package net.corda.testing.schemas
 
+import net.corda.core.contracts.ContractState
+import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import java.time.Instant
 import java.util.*
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Index
-import javax.persistence.Table
+import javax.persistence.*
 
 /**
  * An object used to fully qualify the [DummyLinearStateSchema] family name (i.e. independent of version).
@@ -24,6 +23,12 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
            indexes = arrayOf(Index(name = "external_id_idx", columnList = "external_id"),
                              Index(name = "uuid_idx", columnList = "uuid")))
     class PersistentDummyLinearState(
+            /** [ContractState] attributes */
+
+            /** X500Name of participant parties **/
+            @ElementCollection
+            var participants: MutableSet<AbstractParty>,
+
             /**
              * UniqueIdentifier
              */

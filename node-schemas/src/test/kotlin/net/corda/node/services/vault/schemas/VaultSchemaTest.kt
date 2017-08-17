@@ -314,7 +314,6 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
             contractStateClassName = state.data.javaClass.name
             contractState = state.serialize().bytes
             notaryName = state.notary.name.toString()
-            notaryKey = state.notary.owningKey.toBase58String()
             recordedTime = Instant.now()
         }
     }
@@ -655,15 +654,12 @@ class VaultSchemaTest : TestDependencyInjectionBase() {
 
     @Test
     fun insertWithBigCompositeKey() {
-        val keys = (1..314).map { generateKeyPair().public }
-        val bigNotaryKey = CompositeKey.Builder().addKeys(keys).build()
         val vaultStEntity = VaultStatesEntity().apply {
             txId = SecureHash.randomSHA256().toString()
             index = 314
             stateStatus = Vault.StateStatus.UNCONSUMED
             contractStateClassName = VaultNoopContract.VaultNoopState::class.java.name
             notaryName = "Huge distributed notary"
-            notaryKey = bigNotaryKey.toBase58String()
             recordedTime = Instant.now()
         }
         data.insert(vaultStEntity)
