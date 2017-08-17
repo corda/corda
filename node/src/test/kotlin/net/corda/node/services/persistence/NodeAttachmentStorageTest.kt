@@ -111,7 +111,11 @@ class NodeAttachmentStorageTest {
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
             val corruptAttachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = bytes)
-            storage.getSession().update(corruptAttachment)
+            val session = storage.getSession()
+            session.use {
+                session.update(corruptAttachment)
+                session.flush()
+            }
 
             val e = assertFailsWith<NodeAttachmentService.HashMismatchException> {
                 storage.openAttachment(id)!!.open().use { it.readBytes() }

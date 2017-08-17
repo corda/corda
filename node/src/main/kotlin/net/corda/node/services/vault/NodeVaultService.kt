@@ -78,29 +78,28 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
 
             val session = getSession()
             session.use {
-                producedStateRefsMap.forEach { it ->
+                producedStateRefsMap.forEach { stateAndRef ->
                     val state = VaultSchemaV1.VaultStates(
-                            notaryName = it.value.state.notary.name.toString(),
-                            contractStateClassName = it.value.state.data.javaClass.name,
-                            contractState = it.value.state.serialize(context = STORAGE_CONTEXT).bytes,
+                            notaryName = stateAndRef.value.state.notary.name.toString(),
+                            contractStateClassName = stateAndRef.value.state.data.javaClass.name,
+                            contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                             stateStatus = Vault.StateStatus.UNCONSUMED,
                             recordedTime = services.clock.instant())
-                            state.stateRef = PersistentStateRef(it.key)
-                            session.save(state)
-
-                    consumedStateRefs.forEach { stateRef ->
-                        val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
-                        state?.run {
-                            stateStatus = Vault.StateStatus.CONSUMED
-                            consumedTime = services.clock.instant()
-                            // remove lock (if held)
-                            if (lockId != null) {
-                                lockId = null
-                                lockUpdateTime = services.clock.instant()
-                                log.trace("Releasing soft lock on consumed state: $stateRef")
-                            }
-                            session.save(state)
+                    state.stateRef = PersistentStateRef(stateAndRef.key)
+                    session.save(state)
+                }
+                consumedStateRefs.forEach { stateRef ->
+                    val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
+                    state?.run {
+                        stateStatus = Vault.StateStatus.CONSUMED
+                        consumedTime = services.clock.instant()
+                        // remove lock (if held)
+                        if (lockId != null) {
+                            lockId = null
+                            lockUpdateTime = services.clock.instant()
+                            log.trace("Releasing soft lock on consumed state: $stateRef")
                         }
+                        session.save(state)
                     }
                 }
                 session.flush()
