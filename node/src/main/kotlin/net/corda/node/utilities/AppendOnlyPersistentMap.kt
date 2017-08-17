@@ -80,7 +80,7 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
 
     /**
      * Associates the specified value with the specified key in this map and persists it.
-     * If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw and error from the underlying storage.
+     * If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw an error from the underlying storage.
      */
     operator fun set(key: K, value: V) =
             set(key, value, logWarning = false) {
