@@ -276,7 +276,7 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
                         SET lockId = :myLockId,
                             lockUpdateTime = :mylockUpdateTime
                         WHERE stateStatus = :myStateStatus
-                        AND lockId = :myLockId OR lockId IS NULL
+                        AND (lockId = :myLockId OR lockId IS NULL)
                         AND stateRef IN :myStateRefs
                     """)
                     .setParameter( "myLockId", lockId.toString())
@@ -284,12 +284,14 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
                     .setParameter( "myStateStatus", Vault.StateStatus.UNCONSUMED)
                     .setParameter( "myStateRefs", stateRefs.map { PersistentStateRef(it) })
                     .executeUpdate()
+                session.transaction.commit()
 
                 if (updatedRows > 0 && updatedRows == stateRefs.size) {
                     log.trace("Reserving soft lock states for $lockId: $stateRefs")
                     FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
                 } else {
                     // revert partial soft locks
+                    session.transaction.begin()
                     val revertUpdatedRows = session.createQuery(
                         """
                             UPDATE VaultStates
@@ -302,12 +304,12 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
                         .setParameter( "mylockUpdateTime", softLockTimestamp)
                         .setParameter( "myStateRefs", stateRefs.map { PersistentStateRef(it) })
                         .executeUpdate()
+                    session.transaction.commit()
                     if (revertUpdatedRows > 0) {
                         log.trace("Reverting $revertUpdatedRows partially soft locked states for $lockId")
                     }
                     throw StatesNotAvailableException("Attempted to reserve $stateRefs for $lockId but only $updatedRows rows available")
                 }
-                session.transaction.commit()
             }
         } catch (e: Exception) {
             log.error("""soft lock update error attempting to reserve states for $lockId and $stateRefs")
