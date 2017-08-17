@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
@@ -133,7 +134,7 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     private lateinit var userService: RPCUserService
 
-    override fun makeMessagingService(): MessagingService {
+    override fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 
         val (serverAddress, advertisedAddress) = with(configuration) {
@@ -147,7 +148,7 @@ open class Node(override val configuration: FullNodeConfiguration,
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
 
-        val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) obtainLegalIdentity().owningKey else null
+        val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) legalIdentity.owningKey else null
         return NodeMessagingClient(
                 configuration,
                 versionInfo,

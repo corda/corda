@@ -1,7 +1,10 @@
 package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -114,6 +117,6 @@ interface IdentityService {
      * @param exactMatch If true, a case sensitive match is done against each component of each X.500 name.
      */
     fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
-
-    class UnknownAnonymousPartyException(msg: String) : Exception(msg)
 }
+
+class UnknownAnonymousPartyException(msg: String) : Exception(msg)

@@ -70,6 +70,7 @@ object Crypto {
      * RSA_SHA256 signature scheme using SHA256 as hash algorithm and MGF1 (with SHA256) as mask generation function.
      * Note: Recommended key size >= 3072 bits.
      */
+    @JvmField
     val RSA_SHA256 = SignatureScheme(
             1,
             "RSA_SHA256",
@@ -84,6 +85,7 @@ object Crypto {
     )
 
     /** ECDSA signature scheme using the secp256k1 Koblitz curve. */
+    @JvmField
     val ECDSA_SECP256K1_SHA256 = SignatureScheme(
             2,
             "ECDSA_SECP256K1_SHA256",
@@ -98,6 +100,7 @@ object Crypto {
     )
 
     /** ECDSA signature scheme using the secp256r1 (NIST P-256) curve. */
+    @JvmField
     val ECDSA_SECP256R1_SHA256 = SignatureScheme(
             3,
             "ECDSA_SECP256R1_SHA256",
@@ -112,6 +115,7 @@ object Crypto {
     )
 
     /** EdDSA signature scheme using the ed255519 twisted Edwards curve. */
+    @JvmField
     val EDDSA_ED25519_SHA512 = SignatureScheme(
             4,
             "EDDSA_ED25519_SHA512",
@@ -131,7 +135,10 @@ object Crypto {
      * SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers
      * at the cost of larger key sizes and loss of compatibility.
      */
+    @JvmField
     val SHA512_256 = DLSequence(arrayOf(NISTObjectIdentifiers.id_sha512_256))
+
+    @JvmField
     val SPHINCS256_SHA256 = SignatureScheme(
             5,
             "SPHINCS-256_SHA512",
@@ -146,13 +153,12 @@ object Crypto {
                     "at the cost of larger key sizes and loss of compatibility."
     )
 
-    /**
-     * Corda composite key type
-     */
+    /** Corda composite key type */
+    @JvmField
     val COMPOSITE_KEY = SignatureScheme(
             6,
             "COMPOSITE",
-            AlgorithmIdentifier(CordaObjectIdentifier.compositeKey),
+            AlgorithmIdentifier(CordaObjectIdentifier.COMPOSITE_KEY),
             emptyList(),
             CordaSecurityProvider.PROVIDER_NAME,
             CompositeKey.KEY_ALGORITHM,
@@ -163,13 +169,14 @@ object Crypto {
     )
 
     /** Our default signature scheme if no algorithm is specified (e.g. for key generation). */
+    @JvmField
     val DEFAULT_SIGNATURE_SCHEME = EDDSA_ED25519_SHA512
 
     /**
      * Supported digital signature schemes.
      * Note: Only the schemes added in this map will be supported (see [Crypto]).
      */
-    val supportedSignatureSchemes = listOf(
+    private val signatureSchemeMap: Map<String, SignatureScheme> = listOf(
             RSA_SHA256,
             ECDSA_SECP256K1_SHA256,
             ECDSA_SECP256R1_SHA256,
@@ -183,15 +190,15 @@ object Crypto {
      * algorithm identifiers.
      */
     private val algorithmMap: Map<AlgorithmIdentifier, SignatureScheme>
-            = (supportedSignatureSchemes.values.flatMap { scheme -> scheme.alternativeOIDs.map { oid -> Pair(oid, scheme) } }
-            + supportedSignatureSchemes.values.map { Pair(it.signatureOID, it) })
+            = (signatureSchemeMap.values.flatMap { scheme -> scheme.alternativeOIDs.map { Pair(it, scheme) } }
+            + signatureSchemeMap.values.map { Pair(it.signatureOID, it) })
             .toMap()
 
     // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
     // that could cause unexpected and suspicious behaviour.
     // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
     // The val is private to avoid any harmful state changes.
-    val providerMap: Map<String, Provider> = mapOf(
+    private val providerMap: Map<String, Provider> = mapOf(
             BouncyCastleProvider.PROVIDER_NAME to getBouncyCastleProvider(),
             CordaSecurityProvider.PROVIDER_NAME to CordaSecurityProvider(),
             "BCPQC" to BouncyCastlePQCProvider()) // unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
@@ -199,6 +206,14 @@ object Crypto {
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
         putAll(EdDSASecurityProvider())
         addKeyInfoConverter(EDDSA_ED25519_SHA512.signatureOID.algorithm, KeyInfoConverter(EDDSA_ED25519_SHA512))
+    }
+
+    @JvmStatic
+    fun supportedSignatureSchemes(): List<SignatureScheme> = ArrayList(signatureSchemeMap.values)
+
+    @JvmStatic
+    fun findProvider(name: String): Provider {
+        return providerMap[name] ?: throw IllegalArgumentException("Unrecognised provider: $name")
     }
 
     init {
@@ -219,8 +234,10 @@ object Crypto {
         }
     }
 
+    @JvmStatic
     fun findSignatureScheme(algorithm: AlgorithmIdentifier): SignatureScheme {
-        return algorithmMap[normaliseAlgorithmIdentifier(algorithm)] ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm.algorithm.id}")
+        return algorithmMap[normaliseAlgorithmIdentifier(algorithm)]
+                ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm.algorithm.id}")
     }
 
     /**
@@ -231,8 +248,11 @@ object Crypto {
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
-    @Throws(IllegalArgumentException::class)
-    fun findSignatureScheme(schemeCodeName: String): SignatureScheme = supportedSignatureSchemes[schemeCodeName] ?: throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $schemeCodeName")
+    @JvmStatic
+    fun findSignatureScheme(schemeCodeName: String): SignatureScheme {
+        return signatureSchemeMap[schemeCodeName]
+                ?: throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $schemeCodeName")
+    }
 
     /**
      * Retrieve the corresponding [SignatureScheme] based on the type of the input [Key].
@@ -242,7 +262,7 @@ object Crypto {
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested key type is not supported.
      */
-    @Throws(IllegalArgumentException::class)
+    @JvmStatic
     fun findSignatureScheme(key: PublicKey): SignatureScheme {
         val keyInfo = SubjectPublicKeyInfo.getInstance(key.encoded)
         return findSignatureScheme(keyInfo.algorithm)
@@ -256,7 +276,7 @@ object Crypto {
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested key type is not supported.
      */
-    @Throws(IllegalArgumentException::class)
+    @JvmStatic
     fun findSignatureScheme(key: PrivateKey): SignatureScheme {
         val keyInfo = PrivateKeyInfo.getInstance(key.encoded)
         return findSignatureScheme(keyInfo.privateKeyAlgorithm)
@@ -269,11 +289,12 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
-    @Throws(IllegalArgumentException::class)
+    @JvmStatic
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
         val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
-        return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+        val keyFactory = KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
+        return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
     }
 
     /**
@@ -284,8 +305,11 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
-    @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
-    fun decodePrivateKey(schemeCodeName: String, encodedKey: ByteArray): PrivateKey = decodePrivateKey(findSignatureScheme(schemeCodeName), encodedKey)
+    @JvmStatic
+    @Throws(InvalidKeySpecException::class)
+    fun decodePrivateKey(schemeCodeName: String, encodedKey: ByteArray): PrivateKey {
+        return decodePrivateKey(findSignatureScheme(schemeCodeName), encodedKey)
+    }
 
     /**
      * Decode a PKCS8 encoded key to its [PrivateKey] object based on the input scheme code name.
@@ -295,13 +319,18 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
-    @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
+    @JvmStatic
+    @Throws(InvalidKeySpecException::class)
     fun decodePrivateKey(signatureScheme: SignatureScheme, encodedKey: ByteArray): PrivateKey {
-        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
+        require(isSupportedSignatureScheme(signatureScheme)) {
+            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
+        }
         try {
-            return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+            val keyFactory = KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
+            return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
-            throw InvalidKeySpecException("This private key cannot be decoded, please ensure it is PKCS8 encoded and that it corresponds to the input scheme's code name.", ikse)
+            throw InvalidKeySpecException("This private key cannot be decoded, please ensure it is PKCS8 encoded and that " +
+                    "it corresponds to the input scheme's code name.", ikse)
         }
     }
 
@@ -312,11 +341,12 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
-    @Throws(IllegalArgumentException::class)
+    @JvmStatic
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
         val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
-        return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
+        val keyFactory = KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
+        return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
     }
 
     /**
@@ -328,8 +358,11 @@ object Crypto {
      * @throws InvalidKeySpecException if the given key specification
      * is inappropriate for this key factory to produce a public key.
      */
-    @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
-    fun decodePublicKey(schemeCodeName: String, encodedKey: ByteArray): PublicKey = decodePublicKey(findSignatureScheme(schemeCodeName), encodedKey)
+    @JvmStatic
+    @Throws(InvalidKeySpecException::class)
+    fun decodePublicKey(schemeCodeName: String, encodedKey: ByteArray): PublicKey {
+        return decodePublicKey(findSignatureScheme(schemeCodeName), encodedKey)
+    }
 
     /**
      * Decode an X509 encoded key to its [PrivateKey] object based on the input scheme code name.
@@ -340,19 +373,25 @@ object Crypto {
      * @throws InvalidKeySpecException if the given key specification
      * is inappropriate for this key factory to produce a public key.
      */
-    @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
+    @JvmStatic
+    @Throws(InvalidKeySpecException::class)
     fun decodePublicKey(signatureScheme: SignatureScheme, encodedKey: ByteArray): PublicKey {
-        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
+        require(isSupportedSignatureScheme(signatureScheme)) {
+            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
+        }
         try {
-            return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
+            val keyFactory = KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
+            return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
-            throw throw InvalidKeySpecException("This public key cannot be decoded, please ensure it is X509 encoded and that it corresponds to the input scheme's code name.", ikse)
+            throw throw InvalidKeySpecException("This public key cannot be decoded, please ensure it is X509 encoded and " +
+                    "that it corresponds to the input scheme's code name.", ikse)
         }
     }
 
     /**
      * Generic way to sign [ByteArray] data with a [PrivateKey]. Strategy on on identifying the actual signing scheme is based
-     * on the [PrivateKey] type, but if the schemeCodeName is known, then better use doSign(signatureScheme: String, privateKey: PrivateKey, clearData: ByteArray).
+     * on the [PrivateKey] type, but if the schemeCodeName is known, then better use
+     * doSign(signatureScheme: String, privateKey: PrivateKey, clearData: ByteArray).
      * @param privateKey the signer's [PrivateKey].
      * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
      * @return the digital signature (in [ByteArray]) on the input message.
@@ -360,7 +399,8 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
-    @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+    @JvmStatic
+    @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(privateKey: PrivateKey, clearData: ByteArray) = doSign(findSignatureScheme(privateKey), privateKey, clearData)
 
     /**
@@ -373,8 +413,11 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
-    @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-    fun doSign(schemeCodeName: String, privateKey: PrivateKey, clearData: ByteArray) = doSign(findSignatureScheme(schemeCodeName), privateKey, clearData)
+    @JvmStatic
+    @Throws(InvalidKeyException::class, SignatureException::class)
+    fun doSign(schemeCodeName: String, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
+        return doSign(findSignatureScheme(schemeCodeName), privateKey, clearData)
+    }
 
     /**
      * Generic way to sign [ByteArray] data with a [PrivateKey] and a known [Signature].
@@ -386,11 +429,14 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
-    @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+    @JvmStatic
+    @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(signatureScheme: SignatureScheme, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
-        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
+        require(isSupportedSignatureScheme(signatureScheme)) {
+            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
+        }
+        require(clearData.isNotEmpty()) { "Signing of an empty array is not permitted!" }
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
-        if (clearData.isEmpty()) throw Exception("Signing of an empty array is not permitted!")
         signature.initSign(privateKey)
         signature.update(clearData)
         return signature.sign()
@@ -398,20 +444,24 @@ object Crypto {
 
     /**
      * Generic way to sign [SignableData] objects with a [PrivateKey].
-     * [SignableData] is a wrapper over the transaction's id (Merkle root) in order to attach extra information, such as a timestamp or partial and blind signature indicators.
-     * @param privateKey the signer's [PrivateKey].
+     * [SignableData] is a wrapper over the transaction's id (Merkle root) in order to attach extra information, such as
+     * a timestamp or partial and blind signature indicators.
+     * @param keyPair the signer's [KeyPair].
      * @param signableData a [SignableData] object that adds extra information to a transaction.
-     * @return a [TransactionSignature] object than contains the output of a successful signing, signer's public key and the signature metadata.
+     * @return a [TransactionSignature] object than contains the output of a successful signing, signer's public key and
+     * the signature metadata.
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
-    @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+    @JvmStatic
+    @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
         val sigKey: SignatureScheme = findSignatureScheme(keyPair.private)
         val sigMetaData: SignatureScheme = findSignatureScheme(keyPair.public)
-        if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${sigMetaData.schemeCodeName}" +
-                " is not aligned with the key type: ${sigKey.schemeCodeName}.")
+        require(sigKey == sigMetaData) {
+            "Metadata schemeCodeName: ${sigMetaData.schemeCodeName} is not aligned with the key type: ${sigKey.schemeCodeName}."
+        }
         val signatureBytes = doSign(sigKey.schemeCodeName, keyPair.private, signableData.serialize().bytes)
         return TransactionSignature(signatureBytes, keyPair.public, signableData.signatureMetadata)
     }
@@ -430,8 +480,11 @@ object Crypto {
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
+    @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
-    fun doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = doVerify(findSignatureScheme(schemeCodeName), publicKey, signatureData, clearData)
+    fun doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
+        return doVerify(findSignatureScheme(schemeCodeName), publicKey, signatureData, clearData)
+    }
 
     /**
      * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the input public key's type.
@@ -448,8 +501,11 @@ object Crypto {
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
-    @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-    fun doVerify(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = doVerify(findSignatureScheme(publicKey), publicKey, signatureData, clearData)
+    @JvmStatic
+    @Throws(InvalidKeyException::class, SignatureException::class)
+    fun doVerify(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
+        return doVerify(findSignatureScheme(publicKey), publicKey, signatureData, clearData)
+    }
 
     /**
      * Method to verify a digital signature.
@@ -465,9 +521,12 @@ object Crypto {
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
-    @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+    @JvmStatic
+    @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
-        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
+        require(isSupportedSignatureScheme(signatureScheme)) {
+            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
+        }
         if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
         if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to verify!")
         val verificationResult = isValid(signatureScheme, publicKey, signatureData, clearData)
@@ -490,14 +549,16 @@ object Crypto {
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
-    @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+    @JvmStatic
+    @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
         val signableData = SignableData(txId, transactionSignature.signatureMetadata)
         return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
     }
 
     /**
-     * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the input public key's type.
+     * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the
+     * input public key's type.
      * It returns true if it succeeds and false if not. In comparison to [doVerify] if the key and signature
      * do not match it returns false rather than throwing an exception. Normally you should use the function which throws,
      * as it avoids the risk of failing to test the result.
@@ -507,14 +568,20 @@ object Crypto {
      * the passed-in signatureData is improperly encoded or of the wrong type,
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      */
+    @JvmStatic
     @Throws(SignatureException::class)
     fun isValid(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
         val signableData = SignableData(txId, transactionSignature.signatureMetadata)
-        return isValid(findSignatureScheme(transactionSignature.by), transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
+        return isValid(
+                findSignatureScheme(transactionSignature.by),
+                transactionSignature.by,
+                transactionSignature.bytes,
+                signableData.serialize().bytes)
     }
 
     /**
-     * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the input public key's type.
+     * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the
+     * input public key's type.
      * It returns true if it succeeds and false if not. In comparison to [doVerify] if the key and signature
      * do not match it returns false rather than throwing an exception. Normally you should use the function which throws,
      * as it avoids the risk of failing to test the result.
@@ -527,8 +594,11 @@ object Crypto {
      * the passed-in signatureData is improperly encoded or of the wrong type,
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      */
+    @JvmStatic
     @Throws(SignatureException::class)
-    fun isValid(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = isValid(findSignatureScheme(publicKey), publicKey, signatureData, clearData)
+    fun isValid(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
+        return isValid(findSignatureScheme(publicKey), publicKey, signatureData, clearData)
+    }
 
     /**
      * Method to verify a digital signature. In comparison to [doVerify] if the key and signature
@@ -544,9 +614,12 @@ object Crypto {
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
-    @Throws(SignatureException::class, IllegalArgumentException::class)
+    @JvmStatic
+    @Throws(SignatureException::class)
     fun isValid(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
-        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
+        require(isSupportedSignatureScheme(signatureScheme)) {
+            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
+        }
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         signature.initVerify(publicKey)
         signature.update(clearData)
@@ -560,7 +633,7 @@ object Crypto {
      * @return a KeyPair for the requested signature scheme code name.
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
-    @Throws(IllegalArgumentException::class)
+    @JvmStatic
     fun generateKeyPair(schemeCodeName: String): KeyPair = generateKeyPair(findSignatureScheme(schemeCodeName))
 
     /**
@@ -570,10 +643,12 @@ object Crypto {
      * @return a new [KeyPair] for the requested [SignatureScheme].
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
-    @Throws(IllegalArgumentException::class)
     @JvmOverloads
+    @JvmStatic
     fun generateKeyPair(signatureScheme: SignatureScheme = DEFAULT_SIGNATURE_SCHEME): KeyPair {
-        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
+        require(isSupportedSignatureScheme(signatureScheme)) {
+            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
+        }
         val keyPairGenerator = KeyPairGenerator.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
         if (signatureScheme.algSpec != null)
             keyPairGenerator.initialize(signatureScheme.algSpec, newSecureRandom())
@@ -638,13 +713,17 @@ object Crypto {
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      * @throws UnsupportedOperationException if deterministic key generation is not supported for this particular scheme.
      */
+    @JvmStatic
     fun deriveKeyPair(signatureScheme: SignatureScheme, privateKey: PrivateKey, seed: ByteArray): KeyPair {
-        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
-        when (signatureScheme) {
-            ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> return deriveKeyPairECDSA(signatureScheme.algSpec as ECParameterSpec, privateKey, seed)
-            EDDSA_ED25519_SHA512 -> return deriveKeyPairEdDSA(privateKey, seed)
+        require(isSupportedSignatureScheme(signatureScheme)) {
+            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
-        throw UnsupportedOperationException("Although supported for signing, deterministic key derivation is not currently implemented for ${signatureScheme.schemeCodeName}")
+        return when (signatureScheme) {
+            ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> deriveKeyPairECDSA(signatureScheme.algSpec as ECParameterSpec, privateKey, seed)
+            EDDSA_ED25519_SHA512 -> deriveKeyPairEdDSA(privateKey, seed)
+            else -> throw UnsupportedOperationException("Although supported for signing, deterministic key derivation is " +
+                    "not currently implemented for ${signatureScheme.schemeCodeName}")
+        }
     }
 
     /**
@@ -656,6 +735,7 @@ object Crypto {
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      * @throws UnsupportedOperationException if deterministic key generation is not supported for this particular scheme.
      */
+    @JvmStatic
     fun deriveKeyPair(privateKey: PrivateKey, seed: ByteArray): KeyPair {
         return deriveKeyPair(findSignatureScheme(privateKey), privateKey, seed)
     }
@@ -728,11 +808,13 @@ object Crypto {
      * @return a new [KeyPair] from an entropy input.
      * @throws IllegalArgumentException if the requested signature scheme is not supported for KeyPair generation using an entropy input.
      */
+    @JvmStatic
     fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
-        when (signatureScheme) {
-            EDDSA_ED25519_SHA512 -> return deriveEdDSAKeyPairFromEntropy(entropy)
+        return when (signatureScheme) {
+            EDDSA_ED25519_SHA512 -> deriveEdDSAKeyPairFromEntropy(entropy)
+            else -> throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair " +
+                    "generation: ${signatureScheme.schemeCodeName}")
         }
-        throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair generation: ${signatureScheme.schemeCodeName}")
     }
 
     /**
@@ -740,6 +822,7 @@ object Crypto {
      * @param entropy a [BigInteger] value.
      * @return a new [KeyPair] from an entropy input.
      */
+    @JvmStatic
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
     // custom key pair generator from entropy.
@@ -766,8 +849,12 @@ object Crypto {
     }
 
     private class KeyInfoConverter(val signatureScheme: SignatureScheme) : AsymmetricKeyInfoConverter {
-        override fun generatePublic(keyInfo: SubjectPublicKeyInfo?): PublicKey? = keyInfo?.let { decodePublicKey(signatureScheme, it.encoded) }
-        override fun generatePrivate(keyInfo: PrivateKeyInfo?): PrivateKey? = keyInfo?.let { decodePrivateKey(signatureScheme, it.encoded) }
+        override fun generatePublic(keyInfo: SubjectPublicKeyInfo?): PublicKey? {
+            return keyInfo?.let { decodePublicKey(signatureScheme, it.encoded) }
+        }
+        override fun generatePrivate(keyInfo: PrivateKeyInfo?): PrivateKey? {
+            return keyInfo?.let { decodePrivateKey(signatureScheme, it.encoded) }
+        }
     }
 
     /**
@@ -784,22 +871,29 @@ object Crypto {
      * @return true if the point lies on the curve or false if it doesn't.
      * @throws IllegalArgumentException if the requested signature scheme or the key type is not supported.
      */
-    @Throws(IllegalArgumentException::class)
+    @JvmStatic
     fun publicKeyOnCurve(signatureScheme: SignatureScheme, publicKey: PublicKey): Boolean {
-        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
-        when (publicKey) {
-            is BCECPublicKey -> return (publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid)
-            is EdDSAPublicKey -> return (publicKey.params == signatureScheme.algSpec && !isEdDSAPointAtInfinity(publicKey) && publicKey.a.isOnCurve)
+        require(isSupportedSignatureScheme(signatureScheme)) {
+            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
+        }
+        return when (publicKey) {
+            is BCECPublicKey -> publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid
+            is EdDSAPublicKey -> publicKey.params == signatureScheme.algSpec && !isEdDSAPointAtInfinity(publicKey) && publicKey.a.isOnCurve
             else -> throw IllegalArgumentException("Unsupported key type: ${publicKey::class}")
         }
     }
 
     // return true if EdDSA publicKey is point at infinity.
     // For EdDSA a custom function is required as it is not supported by the I2P implementation.
-    private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey) = publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
+    private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey): Boolean {
+        return publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
+    }
 
     /** Check if the requested [SignatureScheme] is supported by the system. */
-    fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean = supportedSignatureSchemes[signatureScheme.schemeCodeName] === signatureScheme
+    @JvmStatic
+    fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean {
+        return signatureScheme.schemeCodeName in signatureSchemeMap
+    }
 
     // validate a key, by checking its algorithmic params.
     private fun validateKey(signatureScheme: SignatureScheme, key: Key): Boolean {
@@ -812,19 +906,19 @@ object Crypto {
 
     // check if a public key satisfies algorithm specs (for ECC: key should lie on the curve and not being point-at-infinity).
     private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
-        when (key) {
-            is BCECPublicKey, is EdDSAPublicKey -> return publicKeyOnCurve(signatureScheme, key)
-            is BCRSAPublicKey, is BCSphincs256PublicKey -> return true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
+        return when (key) {
+            is BCECPublicKey, is EdDSAPublicKey -> publicKeyOnCurve(signatureScheme, key)
+            is BCRSAPublicKey, is BCSphincs256PublicKey -> true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
             else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
         }
     }
 
     // check if a private key satisfies algorithm specs.
     private fun validatePrivateKey(signatureScheme: SignatureScheme, key: PrivateKey): Boolean {
-        when (key) {
-            is BCECPrivateKey -> return key.parameters == signatureScheme.algSpec
-            is EdDSAPrivateKey -> return key.params == signatureScheme.algSpec
-            is BCRSAPrivateKey, is BCSphincs256PrivateKey -> return true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
+        return when (key) {
+            is BCECPrivateKey -> key.parameters == signatureScheme.algSpec
+            is EdDSAPrivateKey -> key.params == signatureScheme.algSpec
+            is BCRSAPrivateKey, is BCSphincs256PrivateKey -> true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
             else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
         }
     }
@@ -838,21 +932,20 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for a supported key factory to produce a private key.
      */
-    fun toSupportedPublicKey(key: SubjectPublicKeyInfo): PublicKey {
-        return Crypto.decodePublicKey(key.encoded)
-    }
+    @JvmStatic
+    fun toSupportedPublicKey(key: SubjectPublicKeyInfo): PublicKey = decodePublicKey(key.encoded)
 
     /**
      * Convert a public key to a supported implementation. This can be used to convert a SUN's EC key to an BC key.
-     * This method is usually required to retrieve a key (via its corresponding cert) from JKS keystores that by default return SUN implementations.
+     * This method is usually required to retrieve a key (via its corresponding cert) from JKS keystores that by default
+     * return SUN implementations.
      * @param key a public key.
      * @return a supported implementation of the input public key.
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for a supported key factory to produce a private key.
      */
-    fun toSupportedPublicKey(key: PublicKey): PublicKey {
-        return Crypto.decodePublicKey(key.encoded)
-    }
+    @JvmStatic
+    fun toSupportedPublicKey(key: PublicKey): PublicKey = decodePublicKey(key.encoded)
 
     /**
      * Convert a private key to a supported implementation. This can be used to convert a SUN's EC key to an BC key.
@@ -862,7 +955,6 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for a supported key factory to produce a private key.
      */
-    fun toSupportedPrivateKey(key: PrivateKey): PrivateKey {
-        return Crypto.decodePrivateKey(key.encoded)
-    }
+    @JvmStatic
+    fun toSupportedPrivateKey(key: PrivateKey): PrivateKey = decodePrivateKey(key.encoded)
 }

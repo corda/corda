@@ -14,7 +14,7 @@ import javax.persistence.Table
  * [VaultFungibleState] abstract schema
  */
 object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1,
-                                              mappedTypes = listOf(PersistentCommercialPaperState::class.java, CommonSchemaV1.Party::class.java)) {
+                                                    mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
     @Entity
     @Table(name = "cp_states_v2",
            indexes = arrayOf(Index(name = "ccy_code_index2", columnList = "ccy_code"),
@@ -44,5 +44,5 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             val _issuerParty: AbstractParty,
             @Transient
             val _issuerRef: ByteArray
-    ) : CommonSchemaV1.FungibleState(_participants, _owner, _quantity, _issuerParty, _issuerRef)
+    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef)
 }

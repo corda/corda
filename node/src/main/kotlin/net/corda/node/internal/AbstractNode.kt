@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.internal.VisibleForTesting
+import com.google.common.collect.Lists
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
@@ -66,7 +67,6 @@ import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
@@ -88,6 +88,9 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.stream.Collectors.toList
 import kotlin.collections.ArrayList
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
@@ -417,8 +420,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         checkpointStorage = DBCheckpointStorage()
         _services = ServiceHubInternalImpl()
         attachments = NodeAttachmentService(configuration.dataSourceProperties, services.monitoringService.metrics, configuration.database)
-        network = makeMessagingService()
-        info = makeInfo()
+        val legalIdentity = obtainIdentity("identity", configuration.myLegalName)
+        network = makeMessagingService(legalIdentity)
+        info = makeInfo(legalIdentity)
 
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService, services.vaultQueryService,
                 services.keyManagementService, services.identityService, platformClock, services.schedulerService)
@@ -486,12 +490,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService, configuration.database ?: Properties(), {services.identityService}))
     }
 
-    private fun makeInfo(): NodeInfo {
+    private fun makeInfo(legalIdentity: PartyAndCertificate): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
-        val legalIdentity = obtainLegalIdentity()
-        val allIdentitiesSet = (advertisedServiceEntries.map { it.identity } + legalIdentity).toNonEmptySet()
+        val allIdentities = (advertisedServiceEntries.map { it.identity } + legalIdentity).toNonEmptySet()
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, legalIdentity, allIdentitiesSet, platformVersion, advertisedServiceEntries, findMyLocation())
+        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, findMyLocation())
     }
 
     /**
@@ -502,7 +505,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return advertisedServices.map {
             val serviceId = it.type.id
             val serviceName = it.name ?: X500Name("${configuration.myLegalName},OU=$serviceId")
-            val identity = obtainKeyPair(serviceId, serviceName).first
+            val identity = obtainIdentity(serviceId, serviceName)
             ServiceEntry(it, identity)
         }
     }
@@ -613,8 +616,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val instant = platformClock.instant()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, instant.toEpochMilli(), ADD, expires)
-        val legalIdentityKey = obtainLegalIdentityKey()
-        val request = RegistrationRequest(reg.toWire(services.keyManagementService, legalIdentityKey.public), network.myAddress)
+        val request = RegistrationRequest(reg.toWire(services.keyManagementService, info.legalIdentityAndCert.owningKey), network.myAddress)
         return network.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
     }
 
@@ -680,15 +682,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         runOnStop.clear()
     }
 
-    protected abstract fun makeMessagingService(): MessagingService
+    protected abstract fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService
 
     protected abstract fun startMessagingService(rpcOps: RPCOps)
 
-    protected fun obtainLegalIdentity(): PartyAndCertificate = identityKeyPair.first
-    protected fun obtainLegalIdentityKey(): KeyPair = identityKeyPair.second
-    private val identityKeyPair by lazy { obtainKeyPair("identity", configuration.myLegalName) }
-
-    private fun obtainKeyPair(serviceId: String, serviceName: X500Name): Pair<PartyAndCertificate, KeyPair> {
+    private fun obtainIdentity(id: String, name: X500Name): PartyAndCertificate {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
@@ -697,50 +695,52 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // TODO: Integrate with Key management service?
         val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
-        val privateKeyAlias = "$serviceId-private-key"
-        val compositeKeyAlias = "$serviceId-composite-key"
+        val privateKeyAlias = "$id-private-key"
+        val compositeKeyAlias = "$id-composite-key"
 
         if (!keyStore.containsAlias(privateKeyAlias)) {
             val privKeyFile = configuration.baseDirectory / privateKeyAlias
-            val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
+            val pubIdentityFile = configuration.baseDirectory / "$id-public"
             val compositeKeyFile = configuration.baseDirectory / compositeKeyAlias
             // TODO: Remove use of [ServiceIdentityGenerator.generateToDisk].
             // Get keys from key file.
             // TODO: this is here to smooth out the key storage transition, remove this migration in future release.
             if (privKeyFile.exists()) {
-                migrateKeysFromFile(keyStore, serviceName, pubIdentityFile, privKeyFile, compositeKeyFile, privateKeyAlias, compositeKeyAlias)
+                migrateKeysFromFile(keyStore, name, pubIdentityFile, privKeyFile, compositeKeyFile, privateKeyAlias, compositeKeyAlias)
             } else {
-                log.info("$privateKeyAlias not found in keystore ${configuration.nodeKeystore}, generating fresh key!")
-                keyStore.saveNewKeyPair(serviceName, privateKeyAlias, generateKeyPair())
+                log.info("$privateKeyAlias not found in key store ${configuration.nodeKeystore}, generating fresh key!")
+                keyStore.saveNewKeyPair(name, privateKeyAlias, generateKeyPair())
             }
         }
 
-        val (cert, keys) = keyStore.certificateAndKeyPair(privateKeyAlias)
-        // Get keys from keystore.
-        val loadedServiceName = cert.subject
-        if (loadedServiceName != serviceName)
-            throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:$serviceName vs $loadedServiceName")
+        val (x509Cert, keys) = keyStore.certificateAndKeyPair(privateKeyAlias)
 
-        // Use composite key instead if exists
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
-        val (keyPair, certs) = if (keyStore.containsAlias(compositeKeyAlias)) {
-            val compositeKey = Crypto.toSupportedPublicKey(keyStore.getCertificate(compositeKeyAlias).publicKey)
-            val compositeKeyCert = keyStore.getCertificate(compositeKeyAlias)
+        val certificates = if (keyStore.containsAlias(compositeKeyAlias)) {
+            // Use composite key instead if it exists
+            val certificate = keyStore.getCertificate(compositeKeyAlias)
             // We have to create the certificate chain for the composite key manually, this is because in order to store
-            // the chain in keystore we need a private key, however there are no corresponding private key for composite key.
-            Pair(KeyPair(compositeKey, keys.private), listOf(compositeKeyCert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
+            // the chain in key store we need a private key, however there is no corresponding private key for the composite key.
+            Lists.asList(certificate, keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA))
         } else {
-            Pair(keys, keyStore.getCertificateChain(privateKeyAlias).toList())
+            keyStore.getCertificateChain(privateKeyAlias).let {
+                check(it[0].toX509CertHolder() == x509Cert) { "Certificates from key store do not line up!" }
+                it.asList()
+            }
         }
-        val certPath = CertificateFactory.getInstance("X509").generateCertPath(certs)
+
+        val subject = certificates[0].toX509CertHolder().subject
+        if (subject != name)
+            throw ConfigurationException("The name for $id doesn't match what's in the key store: $name vs $subject")
+
         partyKeys += keys
-        return Pair(PartyAndCertificate(loadedServiceName, keyPair.public, X509CertificateHolder(certs.first().encoded), certPath), keyPair)
+        return PartyAndCertificate(CertificateFactory.getInstance("X509").generateCertPath(certificates))
     }
 
     private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
                                     pubKeyFile: Path, privKeyFile: Path, compositeKeyFile:Path,
                                     privateKeyAlias: String, compositeKeyAlias: String) {
-        log.info("Migrating $privateKeyAlias from file to keystore...")
+        log.info("Migrating $privateKeyAlias from file to key store...")
         // Check that the identity in the config file matches the identity file we have stored to disk.
         // Load the private key.
         val publicKey = Crypto.decodePublicKey(pubKeyFile.readAll())
@@ -751,13 +751,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             keyStore.savePublicKey(serviceName, compositeKeyAlias, Crypto.decodePublicKey(compositeKeyFile.readAll()))
         }
         log.info("Finish migrating $privateKeyAlias from file to keystore.")
-    }
-
-    private fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair): PartyAndCertificate {
-        val certFactory = CertificateFactory.getInstance("X509")
-        val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
-        val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
-        return PartyAndCertificate(party, certHolder, certPath)
     }
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()

@@ -9,12 +9,12 @@ import net.corda.core.crypto.cert
 import net.corda.core.crypto.commonName
 import net.corda.core.internal.exists
 import net.corda.core.internal.toTypedArray
+import net.corda.core.internal.toX509CertHolder
 import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.loadKeyStore
 import net.corda.testing.ALICE
 import net.corda.testing.getTestX509Name
 import net.corda.testing.testNodeConfiguration
-import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -68,7 +68,7 @@ class NetworkRegistrationHelperTest {
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_TLS))
             val certificateChain = getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
             assertEquals(3, certificateChain.size)
-            assertEquals(listOf("CORDA_CLIENT_CA", "CORDA_INTERMEDIATE_CA", "CORDA_ROOT_CA"), certificateChain.map { X509CertificateHolder(it.encoded).subject.commonName })
+            assertEquals(listOf("CORDA_CLIENT_CA", "CORDA_INTERMEDIATE_CA", "CORDA_ROOT_CA"), certificateChain.map { it.toX509CertHolder().subject.commonName })
         }
 
         sslKeystore.run {
@@ -78,7 +78,7 @@ class NetworkRegistrationHelperTest {
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_TLS))
             val certificateChain = getCertificateChain(X509Utilities.CORDA_CLIENT_TLS)
             assertEquals(4, certificateChain.size)
-            assertEquals(listOf("CORDA_CLIENT_CA", "CORDA_CLIENT_CA", "CORDA_INTERMEDIATE_CA", "CORDA_ROOT_CA"), certificateChain.map { X509CertificateHolder(it.encoded).subject.commonName })
+            assertEquals(listOf("CORDA_CLIENT_CA", "CORDA_CLIENT_CA", "CORDA_INTERMEDIATE_CA", "CORDA_ROOT_CA"), certificateChain.map { it.toX509CertHolder().subject.commonName })
         }
 
         trustStore.run {

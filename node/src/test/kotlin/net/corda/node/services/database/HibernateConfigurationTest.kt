@@ -641,9 +641,8 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         // search predicate
         val cashStatesSchema = criteriaQuery.from(SampleCashSchemaV3.PersistentCashState::class.java)
 
-        val joinCashToParty = cashStatesSchema.join<SampleCashSchemaV3.PersistentCashState, CommonSchemaV1.Party>("owner")
-        val queryOwnerKey = BOB_PUBKEY.toBase58String()
-        criteriaQuery.where(criteriaBuilder.equal(joinCashToParty.get<CommonSchemaV1.Party>("key"), queryOwnerKey))
+        val queryOwner = BOB.name.toString()
+        criteriaQuery.where(criteriaBuilder.equal(cashStatesSchema.get<String>("owner"), queryOwner))
 
         val joinVaultStatesToCash = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), cashStatesSchema.get<PersistentStateRef>("stateRef"))
         criteriaQuery.where(joinVaultStatesToCash)
@@ -726,9 +725,9 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         // search predicate
         val cashStatesSchema = criteriaQuery.from(SampleCashSchemaV3.PersistentCashState::class.java)
 
-        val joinCashToParty = cashStatesSchema.join<SampleCashSchemaV3.PersistentCashState, CommonSchemaV1.Party>("participants")
-        val queryParticipantKeys = firstCashState.state.data.participants.map { it.owningKey.toBase58String() }
-        criteriaQuery.where(criteriaBuilder.equal(joinCashToParty.get<CommonSchemaV1.Party>("key"), queryParticipantKeys))
+        val queryParticipants = firstCashState.state.data.participants.map { it.nameOrNull().toString() }
+        val joinCashStateToParty = cashStatesSchema.joinSet<SampleCashSchemaV3.PersistentCashState, String>("participants")
+        criteriaQuery.where(criteriaBuilder.and(joinCashStateToParty.`in`(queryParticipants)))
 
         val joinVaultStatesToCash = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), cashStatesSchema.get<PersistentStateRef>("stateRef"))
         criteriaQuery.where(joinVaultStatesToCash)

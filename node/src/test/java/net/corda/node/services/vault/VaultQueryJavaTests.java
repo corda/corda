@@ -8,9 +8,7 @@ import net.corda.core.contracts.*;
 import net.corda.core.crypto.EncodingUtils;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.messaging.DataFeed;
-import net.corda.core.node.services.Vault;
-import net.corda.core.node.services.VaultQueryException;
-import net.corda.core.node.services.VaultQueryService;
+import net.corda.core.node.services.*;
 import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
@@ -44,6 +42,7 @@ import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.TestConstants.*;
 import static net.corda.testing.node.MockServicesKt.makeTestDatabaseAndMockServices;
+import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests extends TestDependencyInjectionBase {
@@ -58,7 +57,9 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         ArrayList<KeyPair> keys = new ArrayList<>();
         keys.add(getMEGA_CORP_KEY());
         keys.add(getDUMMY_NOTARY_KEY());
-        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(Collections.EMPTY_SET, keys);
+
+        IdentityService identitySvc = makeTestIdentityService();
+        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(Collections.EMPTY_SET, keys, () -> identitySvc);
         issuerServices = new MockServices(getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();

@@ -11,6 +11,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
+import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
@@ -25,7 +26,6 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
 import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
-import net.corda.node.utilities.getX509Certificate
 import net.corda.node.utilities.loadKeyStore
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
@@ -52,7 +52,6 @@ import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
 import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
 import org.apache.activemq.artemis.utils.ConfigurationHelper
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import rx.Subscription
 import java.io.IOException
 import java.math.BigInteger
@@ -273,12 +272,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val keyStore = loadKeyStore(config.sslKeystore, config.keyStorePassword)
         val trustStore = loadKeyStore(config.trustStoreFile, config.trustStorePassword)
-        val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_TLS)
 
-        // This is a sanity check and should not fail unless things have been misconfigured
-        require(ourCertificate.subject == config.myLegalName) {
-            "Legal name does not match with our subject CN: ${ourCertificate.subject}"
-        }
         val defaultCertPolicies = mapOf(
                 PEER_ROLE to CertificateChainCheckPolicy.RootMustMatch,
                 NODE_ROLE to CertificateChainCheckPolicy.LeafMustMatch,
@@ -512,12 +506,12 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
                 // Make sure certificate has the same name.
-                val peerCertificate = X509CertificateHolder(session.peerCertificateChain.first().encoded)
+                val peerCertificate = session.peerCertificateChain[0].toX509CertHolder()
                 require(peerCertificate.subject == expectedLegalName) {
                     "Peer has wrong subject name in the certificate - expected $expectedLegalName but got ${peerCertificate.subject}. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
-                X509Utilities.validateCertificateChain(X509CertificateHolder(session.localCertificates.last().encoded), *session.peerCertificates)
+                X509Utilities.validateCertificateChain(session.localCertificates.last().toX509CertHolder(), *session.peerCertificates)
                 server.onTcpConnection(peerLegalName)
             } catch (e: IllegalArgumentException) {
                 connection.close()

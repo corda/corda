@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -68,26 +69,26 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
     }
 
     /**
-     * Additional base features for a custom serializer for a particular class, that excludes subclasses.
+     * Additional base features for a custom serializer for a particular class [withInheritance] is false
+     * or super class / interfaces [withInheritance] is true
      */
-    abstract class Is<T>(protected val clazz: Class<T>) : CustomSerializer<T>() {
-        override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
+    abstract class CustomSerializerImp<T>(protected val clazz: Class<T>, protected val withInheritance: Boolean) : CustomSerializer<T>() {
         override val type: Type get() = clazz
         override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${nameForType(clazz)}"
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
+        override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
     }
+
+    /**
+     * Additional base features for a custom serializer for a particular class, that excludes subclasses.
+     */
+    abstract class Is<T>(clazz: Class<T>) : CustomSerializerImp<T>(clazz, false)
 
     /**
      * Additional base features for a custom serializer for all implementations of a particular interface or super class.
      */
-    abstract class Implements<T>(protected val clazz: Class<T>) : CustomSerializer<T>() {
-        override fun isSerializerFor(clazz: Class<*>): Boolean = this.clazz.isAssignableFrom(clazz)
-        override val type: Type get() = clazz
-        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${nameForType(clazz)}"
-        override fun writeClassInfo(output: SerializationOutput) {}
-        override val descriptor: Descriptor = Descriptor(typeDescriptor)
-    }
+    abstract class Implements<T>(clazz: Class<T>) : CustomSerializerImp<T>(clazz, true)
 
     /**
      * Additional base features over and above [Implements] or [Is] custom serializer for when the serialized form should be
@@ -96,15 +97,11 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      * The proxy class must use only types which are either native AMQP or other types for which there are pre-registered
      * custom serializers.
      */
-    abstract class Proxy<T, P>(protected val clazz: Class<T>,
+    abstract class Proxy<T, P>(clazz: Class<T>,
                                protected val proxyClass: Class<P>,
                                protected val factory: SerializerFactory,
-                               val withInheritance: Boolean = true) : CustomSerializer<T>() {
+                               withInheritance: Boolean = true) : CustomSerializerImp<T>(clazz, withInheritance) {
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
-        override val type: Type get() = clazz
-        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${nameForType(clazz)}"
-        override fun writeClassInfo(output: SerializationOutput) {}
-        override val descriptor: Descriptor = Descriptor(typeDescriptor)
 
         private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer(proxyClass, factory) }
 
@@ -151,25 +148,27 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      * @param unmake A lambda that extracts the string value for an instance, that defaults to the [toString] method.
      */
     abstract class ToString<T>(clazz: Class<T>, withInheritance: Boolean = false,
-                               private val maker: (String) -> T = clazz.getConstructor(String::class.java).let { `constructor` -> { string -> `constructor`.newInstance(string) } },
-                               private val unmaker: (T) -> String = { obj -> obj.toString() }) : Proxy<T, String>(clazz, String::class.java, /* Unused */ SerializerFactory(), withInheritance) {
+                               private val maker: (String) -> T = clazz.getConstructor(String::class.java).let {
+                                   `constructor` ->
+                                   { string -> `constructor`.newInstance(string) }
+                               },
+                               private val unmaker: (T) -> String = { obj -> obj.toString() })
+        : CustomSerializerImp<T>(clazz, withInheritance) {
 
         override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 
-        override val schemaForDocumentation = Schema(listOf(RestrictedType(nameForType(type), "", listOf(nameForType(type)), SerializerFactory.primitiveTypeName(String::class.java)!!, descriptor, emptyList())))
-
-        override fun toProxy(obj: T): String = unmaker(obj)
-
-        override fun fromProxy(proxy: String): T = maker(proxy)
+        override val schemaForDocumentation = Schema(
+                listOf(RestrictedType(nameForType(type), "", listOf(nameForType(type)),
+                        SerializerFactory.primitiveTypeName(String::class.java)!!,
+                        descriptor, emptyList())))
 
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput) {
-            val proxy = toProxy(obj)
-            data.putObject(proxy)
+            data.putObject(unmaker(obj))
         }
 
         override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): T {
             val proxy = input.readObject(obj, schema, String::class.java) as String
-            return fromProxy(proxy)
+            return maker(proxy)
         }
     }
 }
