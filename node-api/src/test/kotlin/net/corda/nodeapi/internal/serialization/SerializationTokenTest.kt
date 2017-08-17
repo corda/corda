@@ -7,7 +7,6 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.testing.TestDependencyInjectionBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -21,13 +20,8 @@ class SerializationTokenTest  : TestDependencyInjectionBase() {
 
     @Before
     fun setup() {
-        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
-        context = SerializationContextImpl(KryoHeaderV0_1,
-                javaClass.classLoader,
-                AllWhitelist,
-                emptyMap(),
-                true,
-                SerializationContext.UseCase.P2P)
+        factory = SerializationDefaults.SERIALIZATION_FACTORY
+        context = SerializationDefaults.CHECKPOINT_CONTEXT.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized
