@@ -39,7 +39,7 @@ class FlowTreeDataManager(val tree: JTree, val snapshotModel: FlowSnapshotTreeDa
      * Builds the flow directory hierarchy with the root being associated with the passed [flowsDirectory].
      * If the parameter is missing the function rebuilds current hierarchy and reloads (refreshes) current model.
      */
-    fun loadFlows(flowsDirectory: File? = root.userObjectAsFile()) {
+    fun loadFlows(flowsDirectory: File? = root.file) {
         root.userObject = flowsDirectory ?: return
         root.removeAllChildren()
 
@@ -81,8 +81,8 @@ class FlowTreeDataManager(val tree: JTree, val snapshotModel: FlowSnapshotTreeDa
     }
 
     private fun isSelected(dir: File?): Boolean {
-        val node = tree.selectedNode()
-        return node != null && dir == node.userObjectAsFile()
+        val node = tree.selectedNode
+        return node != null && dir == node.file
     }
 
     private fun startWatching(dir: File) {
@@ -100,18 +100,18 @@ class FlowTreeDataManager(val tree: JTree, val snapshotModel: FlowSnapshotTreeDa
         val parent = dir.parentFile
         if (parent.name == FLOWS_DIRECTORY) {
             // if a date directory has been added this means that that its parent is [FLOWS_DIRECTORY]
-            insertDateDirectory(dir, findInsertionIndex(root.childNodes(), dir.name))
+            insertDateDirectory(dir, findInsertionIndex(root.childNodes, dir.name))
         } else if (parent.parentFile.name == FLOWS_DIRECTORY) {
             // if a flow directory has been added this means that that the parent of its parent is [FLOWS_DIRECTORY]
-            val parentNode = root.childNodes().findByFile(parent) ?: return
-            flowModel.insertNodeInto(DefaultMutableTreeNode(dir), parentNode, findInsertionIndex(parentNode.childNodes(), dir.name))
+            val parentNode = root.childNodes.findByFile(parent) ?: return
+            flowModel.insertNodeInto(DefaultMutableTreeNode(dir), parentNode, findInsertionIndex(parentNode.childNodes, dir.name))
             startWatching(dir)
         }
     }
 
     private fun removeNodeFromFlowModel(dir: File) {
-        val selectedNode = tree.selectedNode()
-        if (selectedNode != null && selectedNode.userObjectAsFile() == dir) {
+        val selectedNode = tree.selectedNode
+        if (selectedNode != null && selectedNode.file == dir) {
             // Reload flows if the [dir] is currently selected
             loadFlows()
             return
@@ -123,10 +123,10 @@ class FlowTreeDataManager(val tree: JTree, val snapshotModel: FlowSnapshotTreeDa
             parentNode = root
         } else if (parent.parentFile.name == FLOWS_DIRECTORY) {
             // if a flow directory has been added this means that that the parent of its parent is [FLOWS_DIRECTORY]
-            parentNode = root.childNodes().findByFile(parent)
+            parentNode = root.childNodes.findByFile(parent)
         }
         if (parentNode != null) {
-            val node = parentNode.childNodes().findByFile(dir) ?: return
+            val node = parentNode.childNodes.findByFile(dir) ?: return
             flowModel.removeNodeFromParent(node)
         }
     }
@@ -206,10 +206,10 @@ class FlowTreeDataManager(val tree: JTree, val snapshotModel: FlowSnapshotTreeDa
     }
 }
 
-internal fun DefaultMutableTreeNode.userObjectAsFile() = userObject as? File
-internal fun DefaultMutableTreeNode.childNodes() = children().toList().mapNotNull { it as? DefaultMutableTreeNode }
-private fun List<DefaultMutableTreeNode>.findByFile(file: File) = find { it.userObjectAsFile() == file }
-private fun JTree.selectedNode() = lastSelectedPathComponent as? DefaultMutableTreeNode
+internal val DefaultMutableTreeNode.file get() = userObject as? File
+internal val DefaultMutableTreeNode.childNodes get() = children().toList().mapNotNull { it as? DefaultMutableTreeNode }
+private val JTree.selectedNode get() = lastSelectedPathComponent as? DefaultMutableTreeNode
+private fun List<DefaultMutableTreeNode>.findByFile(file: File) = find { it.file == file }
 
 internal fun addToModelAndRefresh(model: DefaultTreeModel,
                                   child: DefaultMutableTreeNode,

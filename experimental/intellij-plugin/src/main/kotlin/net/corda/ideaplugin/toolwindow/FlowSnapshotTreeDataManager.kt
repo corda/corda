@@ -3,19 +3,13 @@ package net.corda.ideaplugin.toolwindow
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.intellij.icons.AllIcons
+import net.corda.core.flows.FlowStackSnapshot
 import java.io.File
 import javax.swing.Icon
 import javax.swing.JTree
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.MutableTreeNode
-
-/**
- * Snapshot tree data descriptor. It is used as userObject in the [DefaultMutableTreeNode] class.
- */
-class SnapshotDataDescriptor(val data: Any?, val icon: Icon, val key: String? = null) {
-    override fun toString(): String = data?.toString() ?: "null"
-}
 
 /**
  * Manager class for flow snapshots. It is responsible for parsing data read from a snapshot file and constructing
@@ -27,7 +21,7 @@ class FlowSnapshotTreeDataManager(tree: JTree) {
     }
 
     // Root node for the snapshot hierarchy, which is an empty node.
-    private val root = DefaultMutableTreeNode(SnapshotDataDescriptor(null, AllIcons.Json.Object))
+    private val root = DefaultMutableTreeNode(Descriptor())
     // Snapshot tree model
     private val snapshotModel = DefaultTreeModel(root)
 
@@ -62,8 +56,8 @@ class FlowSnapshotTreeDataManager(tree: JTree) {
      * the model is updated accordingly.
      */
     fun addNodeToSnapshotModel(snapshotFile: File) {
-        val insertionIndex = -(root.childNodes().map {
-            (it.userObject as SnapshotDataDescriptor).key
+        val insertionIndex = -(root.childNodes.map {
+            it.file?.name
         }.binarySearch(extractFileName(snapshotFile))) - 1
         insertNodeToSnapshotModel(snapshotFile, insertionIndex)
     }
@@ -72,8 +66,9 @@ class FlowSnapshotTreeDataManager(tree: JTree) {
      * Removes the snapshot file from the snapshot hierarchy. The model is also updated after this operation.
      */
     fun removeNodeFromSnapshotModel(snapshotFile: File) {
-        val node = root.childNodes().find {
-            (it.userObject as SnapshotDataDescriptor).data == extractFileName(snapshotFile)
+        val snapshotFileName = extractFileName(snapshotFile)
+        val node = root.childNodes.find {
+            it.file?.name == snapshotFileName
         } as MutableTreeNode?
         if (node != null) {
             snapshotModel.removeNodeFromParent(node)
@@ -83,7 +78,23 @@ class FlowSnapshotTreeDataManager(tree: JTree) {
     }
 
     private fun insertNodeToSnapshotModel(snapshotFile: File, insertionIndex: Int = -1) {
-        buildChildrenModel(mapper.readTree(snapshotFile), root, extractFileName(snapshotFile), insertionIndex)
+        val fileNode = DefaultMutableTreeNode(Descriptor(snapshotFile, AllIcons.FileTypes.Custom, snapshotFile.name))
+        val snapshot = mapper.readValue(snapshotFile, FlowStackSnapshot::class.java)
+        fileNode.add(DefaultMutableTreeNode(Descriptor(snapshot.timestamp, AllIcons.Debugger.Db_primitive, "timestamp")))
+        fileNode.add(DefaultMutableTreeNode(Descriptor(snapshot.flowClass, AllIcons.Debugger.Db_primitive, "flowClass")))
+        val framesNode = DefaultMutableTreeNode(Descriptor(icon = AllIcons.Debugger.Db_array, label = "stackFrames"))
+        fileNode.add(framesNode)
+        snapshot.stackFrames.forEach {
+            val ste = it.stackTraceElement!!
+            val label = "${ste.className}.${ste.methodName}(line:${ste.lineNumber}) - ${ste.fileName}"
+            val frameNode = DefaultMutableTreeNode(Descriptor(icon = AllIcons.Debugger.StackFrame, label = label))
+            framesNode.add(frameNode)
+            it.stackObjects.mapIndexed { index: Int, stackItem: Any? ->
+                buildChildrenModel(mapper.convertValue(stackItem, JsonNode::class.java), frameNode, index.toString())
+            }
+        }
+
+        addToModelAndRefresh(snapshotModel, fileNode, root, insertionIndex)
     }
 
     private fun extractFileName(file: File): String {
@@ -92,22 +103,20 @@ class FlowSnapshotTreeDataManager(tree: JTree) {
 
     private fun buildChildrenModel(
             node: JsonNode?,
-            parent: DefaultMutableTreeNode, key: String? = null,
-            insertionIndex: Int = -1) {
+            parent: DefaultMutableTreeNode, label: String? = null) {
         val child: DefaultMutableTreeNode
         if (node == null || !node.isContainerNode) {
-            child = DefaultMutableTreeNode(SnapshotDataDescriptor(node, AllIcons.Debugger.Db_primitive, key))
-            addToModelAndRefresh(snapshotModel, child, parent, insertionIndex)
+            parent.add(DefaultMutableTreeNode(Descriptor(node, AllIcons.Debugger.Db_primitive, label)))
         } else {
             if (node.isArray) {
-                child = DefaultMutableTreeNode(SnapshotDataDescriptor(key, AllIcons.Debugger.Db_array))
-                addToModelAndRefresh(snapshotModel, child, parent, insertionIndex)
+                child = DefaultMutableTreeNode(Descriptor(icon = AllIcons.Debugger.Db_array, label = label))
+                parent.add(child)
                 node.mapIndexed { index: Int, item: JsonNode? ->
                     buildChildrenModel(item, child, index.toString())
                 }
             } else {
-                child = DefaultMutableTreeNode(SnapshotDataDescriptor(key, AllIcons.Json.Object))
-                addToModelAndRefresh(snapshotModel, child, parent, insertionIndex)
+                child = DefaultMutableTreeNode(Descriptor(icon = AllIcons.Json.Object, label = label))
+                parent.add(child)
                 node.fields().forEach {
                     buildChildrenModel(it.value, child, it.key)
                 }
@@ -115,3 +124,5 @@ class FlowSnapshotTreeDataManager(tree: JTree) {
         }
     }
 }
+
+class Descriptor(val value:Any? = null, val icon: Icon? = null, val label:String? = null)

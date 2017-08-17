@@ -70,7 +70,7 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
                 Frame(element, listOf())
             }
         }
-        return FlowStackSnapshot(flowClass = flowClass, stackFrames = frames)
+        return FlowStackSnapshot(flowClass = flowClass.name, stackFrames = frames)
     }
 
     private fun getInstrumentedAnnotation(element: StackTraceElement): Instrumented? {

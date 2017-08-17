@@ -8,7 +8,6 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.treeStructure.Tree
-import net.corda.ideaplugin.module.CordaModuleType
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -187,10 +186,10 @@ class CordaFlowToolWindow : ToolWindowFactory {
     private class SnapshotTreeRenderer : DefaultTreeCellRenderer() {
         override fun getTreeCellRendererComponent(tree: JTree?, value: Any?, sel: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean): Component {
             super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus)
-            val descriptor = (value as DefaultMutableTreeNode).userObject as SnapshotDataDescriptor
+            val descriptor = (value as DefaultMutableTreeNode).userObject as Descriptor
             icon = descriptor.icon
-            if (!descriptor.key.isNullOrEmpty()) {
-                text = "${descriptor.key}: ${descriptor.data.toString()}"
+            if (!descriptor.label.isNullOrEmpty()) {
+                text = descriptor.label + if (leaf) ": ${descriptor.value?.toString()}" else ""
             }
             return this
         }

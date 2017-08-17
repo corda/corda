@@ -57,7 +57,7 @@ private class FlowStackSnapshotDefaultFactory : FlowStackSnapshotFactory {
  */
 data class FlowStackSnapshot constructor(
         val timestamp: Long = System.currentTimeMillis(),
-        val flowClass: Class<*>? = null,
+        val flowClass: String? = null,
         val stackFrames: List<Frame> = listOf()
 ) {
     data class Frame(
