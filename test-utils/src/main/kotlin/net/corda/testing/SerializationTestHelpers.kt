@@ -61,8 +61,8 @@ fun initialiseTestSerialization() {
 
     // Now configure all the testing related delegates.
     (SerializationDefaults.SERIALIZATION_FACTORY as TestSerializationFactory).delegate = SerializationFactoryImpl().apply {
-        registerScheme(KryoClientSerializationScheme(this))
-        registerScheme(KryoServerSerializationScheme(this))
+        registerScheme(KryoClientSerializationScheme())
+        registerScheme(KryoServerSerializationScheme())
         registerScheme(AMQPClientSerializationScheme())
         registerScheme(AMQPServerSerializationScheme())
     }

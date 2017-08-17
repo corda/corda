@@ -21,10 +21,9 @@ fun Kryo.addToWhitelist(type: Class<*>) {
 }
 
 /**
- * @param amqpEnabled Setting this to true turns on experimental AMQP serialization for any class annotated with
- * [CordaSerializable].
+ * Corda specific class resolver which enables extra customisation for the purposes of serialization using Kryo
  */
-class CordaClassResolver(val serializationFactory: SerializationFactory, val serializationContext: SerializationContext) : DefaultClassResolver() {
+class CordaClassResolver(serializationContext: SerializationContext) : DefaultClassResolver() {
     val whitelist: ClassWhitelist = TransientClassWhiteList(serializationContext.whitelist)
 
     /** Returns the registration for the specified class, or null if the class is not registered.  */
@@ -74,13 +73,11 @@ class CordaClassResolver(val serializationFactory: SerializationFactory, val ser
         val references = kryo.references
         try {
             kryo.references = true
-            val serializer = if (objectInstance != null) {
-                KotlinObjectSerializer(objectInstance)
-            } else if (kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(type)) {
-                // Kotlin lambdas extend this class and any captured variables are stored in synthentic fields
-                FieldSerializer<Any>(kryo, type).apply { setIgnoreSyntheticFields(false) }
-            } else {
-                kryo.getDefaultSerializer(type)
+            val serializer = when {
+                objectInstance != null -> KotlinObjectSerializer(objectInstance)
+                kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(type) -> // Kotlin lambdas extend this class and any captured variables are stored in synthetic fields
+                    FieldSerializer<Any>(kryo, type).apply { setIgnoreSyntheticFields(false) }
+                else -> kryo.getDefaultSerializer(type)
             }
             return register(Registration(type, serializer, NAME.toInt()))
         } finally {
@@ -117,11 +114,9 @@ class CordaClassResolver(val serializationFactory: SerializationFactory, val ser
         // TODO: come up with a more efficient way.  e.g. segregate the name space by class loader.
         if (nameToClass != null) {
             val classesToRemove: MutableList<String> = ArrayList(nameToClass.size)
-            for (entry in nameToClass.entries()) {
-                if (entry.value.classLoader is AttachmentsClassLoader) {
-                    classesToRemove += entry.key
-                }
-            }
+            nameToClass.entries()
+                    .filter { it.value.classLoader is AttachmentsClassLoader }
+                    .forEach { classesToRemove += it.key }
             for (className in classesToRemove) {
                 nameToClass.remove(className)
             }
@@ -161,7 +156,7 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
 }
 
 /**
- * A whitelist that can be customised via the [CordaPluginRegistry], since implements [MutableClassWhitelist].
+ * A whitelist that can be customised via the [net.corda.core.node.CordaPluginRegistry], since implements [MutableClassWhitelist].
  */
 class TransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
     val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())

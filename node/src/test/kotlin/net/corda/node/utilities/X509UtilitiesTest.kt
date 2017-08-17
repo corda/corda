@@ -398,7 +398,7 @@ class X509UtilitiesTest {
 
     @Test
     fun `serialize - deserialize X509CertififcateHolder`() {
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
+        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
         val context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
                 AllWhitelist,
@@ -413,7 +413,7 @@ class X509UtilitiesTest {
 
     @Test
     fun `serialize - deserialize X509CertPath`() {
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
+        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
         val context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
                 AllWhitelist,
