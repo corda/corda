@@ -75,15 +75,8 @@ class PersistentMap<K, V, E, EK> (
                 // Value was cached already, store the new value in the DB (depends on tore implementation) and refresh cache.
                 uniqueInDb = false
                 synchronized(this) {
-                    val prev = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
-                    if (prev != null) {
-                        DatabaseTransactionManager.current().session.merge(toPersistentEntity(key,value))
-                    } else {
-                        DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
-                    }
-                    //cache.invalidate(key)
+                    merge(key, value)
                     cache.put(key,Optional.of(value))
-
                 }
             } else {
                 // This happens when the key was queried before with no value associated. We invalidate the cached null
@@ -109,21 +102,22 @@ class PersistentMap<K, V, E, EK> (
         }
     }
 
+    private fun merge(key: K, value: V): Boolean {
+        val prev = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+        return if (prev != null) {
+            DatabaseTransactionManager.current().session.merge(toPersistentEntity(key,value))
+            false
+        } else {
+            DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+            true
+        }
+    }
     /**
      * Puts the value or replace existing one in the map and caches it.
      * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
-        set(key, value) {
-            key, value ->
-            val prev = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
-            if (prev != null) {
-                DatabaseTransactionManager.current().session.merge(toPersistentEntity(key,value))
-                false
-            } else {
-                DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
-                true
-            }
+        set(key, value) { k, v -> merge(k,v)
         }
 
     private fun loadValue(key: K): V? {
