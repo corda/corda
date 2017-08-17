@@ -8,7 +8,6 @@ import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.serialization.*
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets
@@ -64,13 +63,6 @@ class CordaClassResolver(val serializationFactory: SerializationFactory, val ser
     }
 
     override fun registerImplicit(type: Class<*>): Registration {
-        // If something is not annotated, or AMQP is disabled, we stay serializing with Kryo.  This will typically be the
-        // case for flow checkpoints (ignoring all cases where AMQP is disabled) since our top level messaging data structures
-        // are annotated and once we enter AMQP serialisation we stay with it for the entire object subgraph.
-        if (checkForAnnotation(type) && AMQP_ENABLED) {
-            // Build AMQP serializer
-            return register(Registration(type, KryoAMQPSerializer(serializationFactory, serializationContext), NAME.toInt()))
-        }
 
         val objectInstance = try {
             type.kotlin.objectInstance
