@@ -27,7 +27,6 @@ import java.util.*
 import javax.persistence.EntityManager
 import javax.persistence.Tuple
 
-
 class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                               val updatesPublisher: PublishSubject<Vault.Update<ContractState>>) : SingletonSerializeAsToken(), VaultQueryService {
     companion object {

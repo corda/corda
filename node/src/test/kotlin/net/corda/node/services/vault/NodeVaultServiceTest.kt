@@ -93,7 +93,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val originalVaultQuery = vaultQuery
             val services2 = object : MockServices() {
                 override val vaultService: VaultService get() = originalVault
-                override fun recordTransactions(txs: Iterable<SignedTransaction>, notifyVault: Boolean) {
+                override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         validatedTransactions.addTransaction(stx)
                         vaultService.notify(stx.tx)

@@ -72,7 +72,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
-                override fun recordTransactions(txs: Iterable<SignedTransaction>, notifyVault: Boolean) {
+                override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         validatedTransactions.addTransaction(stx)
                     }

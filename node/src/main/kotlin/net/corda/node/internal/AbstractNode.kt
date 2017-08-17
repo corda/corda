@@ -88,6 +88,9 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.stream.Collectors.toList
 import kotlin.collections.ArrayList
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
@@ -809,9 +812,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return flowFactories[initiatingFlowClass]
         }
 
-        override fun recordTransactions(txs: Iterable<SignedTransaction>, notifyVault:Boolean) {
+        override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
             database.transaction {
-                super.recordTransactions(txs, notifyVault)
+                super.recordTransactions(notifyVault, txs)
             }
         }
         override fun jdbcSession(): Connection = database.createSession()

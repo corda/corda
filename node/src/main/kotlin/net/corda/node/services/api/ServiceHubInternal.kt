@@ -89,7 +89,7 @@ interface ServiceHubInternal : PluginServiceHub {
     val database: CordaPersistence
     val configuration: NodeConfiguration
 
-    override fun recordTransactions(txs: Iterable<SignedTransaction>, notifyVault: Boolean) {
+    override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
         require(txs.any()) { "No transactions passed in for recording" }
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id

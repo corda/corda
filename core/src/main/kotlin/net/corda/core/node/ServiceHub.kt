@@ -73,14 +73,14 @@ interface ServiceHub : ServicesForResolution {
      * @param txs The transactions to record.
      * @param notifyVault indicate if the vault should be notified for the update.
      */
-    fun recordTransactions(txs: Iterable<SignedTransaction>, notifyVault: Boolean)
+    fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>)
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing if [notifyVault] is true. This is expected to be run within a database transaction.
      */
-    fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction, notifyVault: Boolean) {
-        recordTransactions(listOf(first, *remaining), notifyVault)
+    fun recordTransactions(notifyVault: Boolean, first: SignedTransaction, vararg remaining: SignedTransaction) {
+        recordTransactions(notifyVault, listOf(first, *remaining))
     }
 
     /**
@@ -88,7 +88,7 @@ interface ServiceHub : ServicesForResolution {
      * further processing. This is expected to be run within a database transaction.
      */
     fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction) {
-        recordTransactions(first, *remaining, notifyVault = true)
+        recordTransactions(true, first, *remaining)
     }
 
     /**
@@ -96,7 +96,7 @@ interface ServiceHub : ServicesForResolution {
      * further processing. This is expected to be run within a database transaction.
      */
     fun recordTransactions(txs: Iterable<SignedTransaction>) {
-        recordTransactions(txs, notifyVault = true)
+        recordTransactions(true, txs)
     }
 
     /**
