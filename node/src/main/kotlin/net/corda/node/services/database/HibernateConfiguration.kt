@@ -29,7 +29,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
     val sessionFactories = ConcurrentHashMap<MappedSchema, SessionFactory>()
 
-    private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties?.getProperty("transactionIsolationLevel") ?:"")
+    private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?:"")
 
     init {
         schemaService.schemaOptions.map { it.key }.forEach { mappedSchema ->
