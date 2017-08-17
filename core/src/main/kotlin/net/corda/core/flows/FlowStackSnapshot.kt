@@ -7,7 +7,7 @@ import java.time.Instant
  */
 data class FlowStackSnapshot(
         val time: Instant,
-        val flowClass: Class<out FlowLogic<*>>,
+        val flowClass: String,
         val stackFrames: List<Frame>
 ) {
     data class Frame(
