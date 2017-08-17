@@ -54,21 +54,24 @@ class PersistentMap<K, V, E, EK> (
         return cache.asMap().map { entry -> Pair(entry.key as K, entry.value as V) }.asSequence()
     }
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> Boolean) : Boolean {
-        var inserted = false
-        var uniqueInDb = true
-        val existingInCache = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
-            inserted = true
-            // Value wasn't in the cache and might not be in DB.
-            // Store the value, depending on store implementation this may overwrite existing entry in DB.
-            uniqueInDb = store(key, value)
-            Optional.of(value)
+    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?): Boolean {
+        var insertionAttempt = false
+        var isUnique = true
+        val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
+            insertionAttempt = true
+            // Key wasn't in the cache and might be in the underlying storage.
+            // Depending on 'store' method, this may insert without checking key duplication or it may avoid inserting a duplicated key.
+            val existingInDb = store(key, value)
+            if (existingInDb != null) { // Always reuse an existing value from the storage of a duplicated key.
+                Optional.of(existingInDb)
+            } else {
+                Optional.of(value)
+            }
         }
-        if (!inserted) {
+        if (!insertionAttempt) {
             if (existingInCache.isPresent) {
-                // Value was cached already, store the new value in the DB (depends on tore implementation) and refresh cache.
-                uniqueInDb = false
-
+                // Key already exists in cache, do nothing.
+                isUnique = false
             } else {
                 // This happens when the key was queried before with no value associated. We invalidate the cached null
                 // value and recursively call set again. This is to avoid race conditions where another thread queries after
@@ -77,44 +80,47 @@ class PersistentMap<K, V, E, EK> (
                 return set(key, value, logWarning, store)
             }
         }
-        if (logWarning && !uniqueInDb && logWarning) {
+        if (logWarning && !isUnique) {
             log.warn("Double insert in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
         }
-        return uniqueInDb
+        return isUnique
     }
 
     /**
-     * Puts the value into the map and caches it.
+     * Associates the specified value with the specified key in this map and persists it.
+     * If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw and error from the underlying storage.
      */
-    operator fun set(key: K, value: V) {
-        set(key, value, logWarning = false) {
-            key,value ->  DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
-            true
-        }
-    }
+    operator fun set(key: K, value: V) =
+            set(key, value, logWarning = false) {
+                key,value -> DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                null
+            }
 
     /**
-     * Puts the value or replace existing one in the map and caches it.
+     * Associates the specified value with the specified key in this map and persists it.
+     * If the map previously contained a mapping for the key, the old value is not replaced.
      * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
-        set(key, value) {
-            key, value ->
-            val prev = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
-            if (prev != null) {
-                DatabaseTransactionManager.current().session.merge(toPersistentEntity(key,value))
-                false
-            } else {
-                DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
-                true
+            set(key, value) {
+                key, value ->
+                val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+                if (existingEntry == null) {
+                    DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                    null
+                } else {
+                    fromPersistentEntity(existingEntry).second
+                }
             }
-        }
 
     private fun loadValue(key: K): V? {
         val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
 
+    /**
+     * Removes the mapping for the specified key from this map and underlying storage if present.
+     */
     fun remove(key: K): V? {
         val result = cache.get(key).orElse(null)
         cache.invalidate(key)

@@ -188,7 +188,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         var scheduledFlow: FlowLogic<*>? = null
         mutex.locked {
             // need to remove us from those scheduled, but only if we are still next
-            val previousState = scheduledStates.get(scheduledState.ref)
+            val previousState = scheduledStates[scheduledState.ref]
             if (previousState != null && previousState === scheduledState) {
                 if (scheduledActivity == null) {
                     log.info("Scheduled state $scheduledState has rescheduled to never.")

@@ -79,8 +79,8 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
     }
 
     /**
-     * Puts the value into the map and the underlying storage.
-     * Inserting the duplicated key may be unpredictable.
+     * Associates the specified value with the specified key in this map and persists it.
+     * If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw and error from the underlying storage.
      */
     operator fun set(key: K, value: V) =
             set(key, value, logWarning = false) {
@@ -89,8 +89,8 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
             }
 
     /**
-     * Puts the value into the map and underlying storage.
-     * Duplicated key is not added into the map and underlying storage.
+     * Associates the specified value with the specified key in this map and persists it.
+     * If the map previously contained a mapping for the key, the old value is not replaced.
      * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
