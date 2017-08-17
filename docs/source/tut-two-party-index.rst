@@ -7,4 +7,3 @@ Two-party flows
    tut-two-party-introduction
    tut-two-party-contract
    tut-two-party-flow
-   tut-two-party-running
