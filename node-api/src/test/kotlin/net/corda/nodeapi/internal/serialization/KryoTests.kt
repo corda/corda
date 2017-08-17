@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.google.common.primitives.Ints
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.*
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ProgressTracker
@@ -16,7 +17,9 @@ import net.corda.testing.TestDependencyInjectionBase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.ExpectedException
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -27,6 +30,9 @@ import kotlin.test.assertTrue
 class KryoTests : TestDependencyInjectionBase() {
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
+
+    @get:Rule
+    val expectedEx: ExpectedException = ExpectedException.none()
 
     @Before
     fun setup() {
@@ -155,6 +161,26 @@ class KryoTests : TestDependencyInjectionBase() {
         override fun equals(other: Any?): Boolean = (this === other) || (other is Cyclic && this.value == other.value)
         override fun hashCode(): Int = value.hashCode()
         override fun toString(): String = "Cyclic($value)"
+    }
+
+    @Test
+    fun `serialize - deserialize PrivacySalt`() {
+        val expected = PrivacySalt(byteArrayOf(
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+            11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+            21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+            31, 32
+        ))
+        val serializedBytes = expected.serialize(factory, context)
+        val actual = serializedBytes.deserialize(factory, context)
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `all-zero PrivacySalt not allowed`() {
+        expectedEx.expect(IllegalArgumentException::class.java)
+        expectedEx.expectMessage("Privacy salt should not be all zeros.")
+        PrivacySalt(ByteArray(32))
     }
 
     @CordaSerializable

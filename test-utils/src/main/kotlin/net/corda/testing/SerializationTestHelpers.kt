@@ -111,8 +111,8 @@ class TestSerializationContext : SerializationContext {
 
     override fun toString(): String = stackTrace?.joinToString("\n") ?: "null"
 
-    override val preferedSerializationVersion: ByteSequence
-        get() = delegate!!.preferedSerializationVersion
+    override val preferredSerializationVersion: ByteSequence
+        get() = delegate!!.preferredSerializationVersion
     override val deserializationClassLoader: ClassLoader
         get() = delegate!!.deserializationClassLoader
     override val whitelist: ClassWhitelist

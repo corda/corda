@@ -6,11 +6,11 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
-import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.CordaPluginRegistry
@@ -110,6 +110,9 @@ object DefaultKryoCustomizer {
             register(NotaryChangeWireTransaction::class.java, NotaryChangeWireTransactionSerializer)
             register(PartyAndCertificate::class.java, PartyAndCertificateSerializer)
 
+            // Don't deserialize PrivacySalt via its default constructor.
+            register(PrivacySalt::class.java, PrivacySaltSerializer)
+
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }
         }
@@ -151,6 +154,20 @@ object DefaultKryoCustomizer {
                 list += kryo.readClassAndObject(input)
             }
             return list.toNonEmptySet()
+        }
+    }
+
+    /*
+     * Avoid deserialising PrivacySalt via its default constructor
+     * because the random number generator may not be available.
+     */
+    private object PrivacySaltSerializer : Serializer<PrivacySalt>() {
+        override fun write(kryo: Kryo, output: Output, obj: PrivacySalt) {
+            output.writeBytesWithLength(obj.bytes)
+        }
+
+        override fun read(kryo: Kryo, input: Input, type: Class<PrivacySalt>): PrivacySalt {
+            return PrivacySalt(input.readBytesWithLength())
         }
     }
 }
