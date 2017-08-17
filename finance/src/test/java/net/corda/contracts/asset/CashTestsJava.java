@@ -45,7 +45,7 @@ public class CashTestsJava {
                     tw.output(outState);
                     // issuedBy() can't be directly imported because it conflicts with other identically named functions
                     // with different overloads (for some reason).
-                    tw.output(CashKt.issuedBy(outState, getMINI_CORP()));
+                    tw.output(outState.issuedBy(getMINI_CORP()));
                     tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
                     return tw.failsWith("at least one cash input");
                 });

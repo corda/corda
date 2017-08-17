@@ -107,7 +107,7 @@ class CommercialPaperTestsGeneric {
                 input("paper")
                 input("alice's $900")
                 output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
-                output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE }
+                output("alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
                 this.verifies()

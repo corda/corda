@@ -3,7 +3,7 @@ package net.corda.node.services.vault;
 import com.google.common.collect.ImmutableSet;
 import kotlin.Pair;
 import net.corda.contracts.DealState;
-import net.corda.contracts.asset.Cash;
+import net.corda.contracts.asset.*;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.EncodingUtils;
 import net.corda.core.identity.AbstractParty;
@@ -34,13 +34,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER;
-import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER_KEY;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.TestConstants.*;
+import static net.corda.contracts.asset.CashUtilities.*;
 import static net.corda.testing.node.MockServicesKt.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,7 +56,6 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         ArrayList<KeyPair> keys = new ArrayList<>();
         keys.add(getMEGA_CORP_KEY());
         keys.add(getDUMMY_NOTARY_KEY());
-
         IdentityService identitySvc = makeTestIdentityService();
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(Collections.EMPTY_SET, keys, () -> identitySvc);
         issuerServices = new MockServices(getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
@@ -127,7 +125,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Amount<Currency> amount = new Amount<>(100, Currency.getInstance("USD"));
 
             VaultFiller.fillWithSomeTestCash(services,
-                                 new Amount<>(100, Currency.getInstance("USD")),
+                                 new Amount<Currency>(100, Currency.getInstance("USD")),
                     issuerServices,
                                  TestConstants.getDUMMY_NOTARY(),
                                 3,
@@ -135,7 +133,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
                                  new Random(),
                                  new OpaqueBytes("1".getBytes()),
                                 null,
-                                 getDUMMY_CASH_ISSUER());
+                                 CashUtilities.getDUMMY_CASH_ISSUER());
 
             VaultFiller.consumeCash(services, amount, getDUMMY_NOTARY());
 

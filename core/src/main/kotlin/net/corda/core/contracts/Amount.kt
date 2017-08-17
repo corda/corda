@@ -13,6 +13,7 @@ import java.util.*
  * indicative/displayed asset amounts in [BigDecimal] to fungible tokens represented by Amount objects.
  */
 interface TokenizableAssetInfo {
+    /** The nominal display unit size of a single token, potentially with trailing decimal display places if the scale parameter is non-zero. */
     val displayTokenSize: BigDecimal
 }
 
@@ -28,16 +29,14 @@ interface TokenizableAssetInfo {
  * multiplication are overflow checked and will throw [ArithmeticException] if the operation would have caused integer
  * overflow.
  *
- * @param quantity the number of tokens as a Long value.
- * @param displayTokenSize the nominal display unit size of a single token,
- * potentially with trailing decimal display places if the scale parameter is non-zero.
- * @param T the type of the token, for example [Currency].
- * T should implement TokenizableAssetInfo if automatic conversion to/from a display format is required.
- *
- * TODO Proper lookup of currencies in a locale and context sensitive fashion is not supported and is left to the application.
+ * @property quantity the number of tokens as a Long value.
+ * @property displayTokenSize the nominal display unit size of a single token, potentially with trailing decimal display places if the scale parameter is non-zero.
+ * @property token an instance of type T, usually a singleton.
+ * @param T the type of the token, for example [Currency]. T should implement TokenizableAssetInfo if automatic conversion to/from a display format is required.
  */
 @CordaSerializable
 data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal, val token: T) : Comparable<Amount<T>> {
+    // TODO Proper lookup of currencies in a locale and context sensitive fashion is not supported and is left to the application.
     companion object {
         /**
          * Build an Amount from a decimal representation. For example, with an input of "12.34 GBP",
@@ -73,6 +72,7 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
          * For other possible token types the asset token should implement TokenizableAssetInfo to
          * correctly report the designed nominal amount.
          */
+        @JvmStatic
         fun getDisplayTokenSize(token: Any): BigDecimal {
             if (token is TokenizableAssetInfo) {
                 return token.displayTokenSize
@@ -85,6 +85,28 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
             }
             return BigDecimal.ONE
         }
+
+        /**
+         * If the given iterable of [Amount]s yields any elements, sum them, throwing an [IllegalArgumentException] if
+         * any of the token types are mismatched; if the iterator yields no elements, return null.
+         */
+        @JvmStatic
+        fun <T : Any> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
+
+        /**
+         * Sums the amounts yielded by the given iterable, throwing an [IllegalArgumentException] if any of the token
+         * types are mismatched.
+         */
+        @JvmStatic
+        fun <T : Any> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
+
+        /**
+         * If the given iterable of [Amount]s yields any elements, sum them, throwing an [IllegalArgumentException] if
+         * any of the token types are mismatched; if the iterator yields no elements, return a zero amount of the given
+         * token type.
+         */
+        @JvmStatic
+        fun <T : Any> Iterable<Amount<T>>.sumOrZero(token: T) = if (iterator().hasNext()) sumOrThrow() else Amount.zero(token)
     }
 
     init {
@@ -106,8 +128,9 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
 
     /**
      * A checked addition operator is supported to simplify aggregation of Amounts.
+     * Mixing non-identical token types will throw [IllegalArgumentException].
+     *
      * @throws ArithmeticException if there is overflow of Amount tokens during the summation
-     * Mixing non-identical token types will throw [IllegalArgumentException]
      */
     operator fun plus(other: Amount<T>): Amount<T> {
         checkToken(other)
@@ -117,8 +140,9 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
     /**
      * A checked addition operator is supported to simplify netting of Amounts.
      * If this leads to the Amount going negative this will throw [IllegalArgumentException].
+     * Mixing non-identical token types will throw [IllegalArgumentException].
+     *
      * @throws ArithmeticException if there is Numeric underflow
-     * Mixing non-identical token types will throw [IllegalArgumentException]
      */
     operator fun minus(other: Amount<T>): Amount<T> {
         checkToken(other)
@@ -137,6 +161,11 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      */
     operator fun times(other: Long): Amount<T> = Amount(Math.multiplyExact(quantity, other), displayTokenSize, token)
 
+    /**
+     * The multiplication operator is supported to allow easy calculation for multiples of a primitive Amount.
+     * Note this is not a conserving operation, so it may not always be correct modelling of proper token behaviour.
+     * N.B. Division is not supported as fractional tokens are not representable by an Amount.
+     */
     operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), displayTokenSize, token)
 
     /**
@@ -159,7 +188,7 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      * of "1234" GBP, returns "12.34". The precise representation is controlled by the displayTokenSize,
      * which determines the size of a single token and controls the trailing decimal places via it's scale property.
      *
-     * @see Amount.Companion.fromDecimal
+     * @see Amount.fromDecimal
      */
     fun toDecimal(): BigDecimal = BigDecimal.valueOf(quantity, 0) * displayTokenSize
 
@@ -171,29 +200,27 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      * The result of fromDecimal is used to control the numerical formatting and
      * the token specifier appended is taken from token.toString.
      *
-     * @see Amount.Companion.fromDecimal
+     * @see Amount.fromDecimal
      */
     override fun toString(): String {
         return toDecimal().toPlainString() + " " + token
     }
 
+    /** @suppress */
     override fun compareTo(other: Amount<T>): Int {
         checkToken(other)
         return quantity.compareTo(other.quantity)
     }
 }
 
-
-fun <T : Any> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
-fun <T : Any> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
-fun <T : Any> Iterable<Amount<T>>.sumOrZero(token: T) = if (iterator().hasNext()) sumOrThrow() else Amount.zero(token)
-
-
 /**
  * Simple data class to associate the origin, owner, or holder of a particular Amount object.
- * @param source the holder of the Amount.
- * @param amount the Amount of asset available.
- * @param ref is an optional field used for housekeeping in the caller.
+ *
+ * @param P Any class type that can disambiguate where the amount came from.
+ * @param T The token type of the underlying [Amount].
+ * @property source the holder of the Amount.
+ * @property amount the Amount of asset available.
+ * @property ref is an optional field used for housekeeping in the caller.
  * e.g. to point back at the original Vault state objects.
  * @see SourceAndAmount.apply which processes a list of SourceAndAmount objects
  * and calculates the resulting Amount distribution as a new list of SourceAndAmount objects.
@@ -203,17 +230,17 @@ data class SourceAndAmount<T : Any, out P : Any>(val source: P, val amount: Amou
 /**
  * This class represents a possibly negative transfer of tokens from one vault state to another, possibly at a future date.
  *
- * @param quantityDelta is a signed Long value representing the exchanged number of tokens. If positive then
+ * @property quantityDelta is a signed Long value representing the exchanged number of tokens. If positive then
  * it represents the movement of Math.abs(quantityDelta) tokens away from source and receipt of Math.abs(quantityDelta)
  * at the destination. If the quantityDelta is negative then the source will receive Math.abs(quantityDelta) tokens
  * and the destination will lose Math.abs(quantityDelta) tokens.
  * Where possible the source and destination should be coded to ensure a positive quantityDelta,
  * but in various scenarios it may be more consistent to allow positive and negative values.
  * For example it is common for a bank to code asset flows as gains and losses from its perspective i.e. always the destination.
- * @param token represents the type of asset token as would be used to construct Amount<T> objects.
- * @param source is the [Party], [CompositeKey], or other identifier of the token source if quantityDelta is positive,
+ * @property token represents the type of asset token as would be used to construct Amount<T> objects.
+ * @property source is the [Party], [CompositeKey], or other identifier of the token source if quantityDelta is positive,
  * or the token sink if quantityDelta is negative. The type P should support value equality.
- * @param destination is the [Party], [CompositeKey], or other identifier of the token sink if quantityDelta is positive,
+ * @property destination is the [Party], [CompositeKey], or other identifier of the token sink if quantityDelta is positive,
  * or the token source if quantityDelta is negative. The type P should support value equality.
  */
 @CordaSerializable
@@ -245,9 +272,7 @@ class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
             return AmountTransfer(deltaTokenCount, token, source, destination)
         }
 
-        /**
-         * Helper to make a zero size AmountTransfer
-         */
+        /** Helper to make a zero size AmountTransfer. */
         @JvmStatic
         fun <T : Any, P : Any> zero(token: T,
                                     source: P,
@@ -284,6 +309,7 @@ class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
      */
     fun toDecimal(): BigDecimal = BigDecimal.valueOf(quantityDelta, 0) * Amount.getDisplayTokenSize(token)
 
+    /** @suppress */
     fun copy(quantityDelta: Long = this.quantityDelta,
              token: T = this.token,
              source: P = this.source,
@@ -313,7 +339,7 @@ class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
     }
 
     /**
-     * HashCode ensures that reversed source and destination equivalents will hash to the same value.
+     * This hash code function ensures that reversed source and destination equivalents will hash to the same value.
      */
     override fun hashCode(): Int {
         var result = Math.abs(quantityDelta).hashCode() // ignore polarity reversed values
@@ -322,18 +348,20 @@ class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
         return result
     }
 
+    /** @suppress */
     override fun toString(): String {
         return "Transfer from $source to $destination of ${this.toDecimal().toPlainString()} $token"
     }
 
     /**
-     * Novation is a common financial operation in which a bilateral exchange is modified so that the same
-     * relative asset exchange happens, but with each party exchanging versus a central counterparty, or clearing house.
+     * Returns a list of two new AmountTransfers each between one of the original parties and the centralParty. The net
+     * total exchange is the same as in the original input. Novation is a common financial operation in which a
+     * bilateral exchange is modified so that the same relative asset exchange happens, but with each party exchanging
+     * versus a central counterparty, or clearing house.
      *
      * @param centralParty The central party to face the exchange against.
-     * @return Returns a list of two new AmountTransfers each between one of the original parties and the centralParty.
-     * The net total exchange is the same as in the original input.
      */
+    @Suppress("UNUSED")
     fun novate(centralParty: P): List<AmountTransfer<T, P>> = listOf(copy(destination = centralParty), copy(source = centralParty))
 
     /**
@@ -343,7 +371,7 @@ class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
      * @param balances The source list of [SourceAndAmount] objects containing the funds to satisfy the exchange.
      * @param newRef An optional marker object which is attached to any new [SourceAndAmount] objects created in the output.
      * i.e. To the new payment destination entry and to any residual change output.
-     * @return The returned list is a copy of the original list, except that funds needed to cover the exchange
+     * @return A copy of the original list, except that funds needed to cover the exchange
      * will have been removed and a new output and possibly residual amount entry will be added at the end of the list.
      * @throws ArithmeticException if there is underflow in the summations.
      */

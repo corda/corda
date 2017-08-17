@@ -1,6 +1,7 @@
 package net.corda.contracts.asset
 
 import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount.Companion.sumOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor

@@ -18,7 +18,7 @@ import net.corda.client.jfx.utils.isNotNull
 import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.unique
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.sumOrNull
+import net.corda.core.contracts.Amount.Companion.sumOrNull
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party

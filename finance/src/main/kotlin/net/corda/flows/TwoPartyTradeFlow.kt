@@ -2,7 +2,6 @@ package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.OwnableState
 import net.corda.core.contracts.StateAndRef
@@ -18,6 +17,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import net.corda.finance.utils.sumCashBy
 import java.security.PublicKey
 import java.util.*
 

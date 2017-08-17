@@ -12,6 +12,10 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.*
+import net.corda.finance.utils.sumCash
+import net.corda.finance.utils.sumCashBy
+import net.corda.finance.utils.sumCashOrNull
+import net.corda.finance.utils.sumCashOrZero
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*

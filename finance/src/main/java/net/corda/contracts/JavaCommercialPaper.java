@@ -3,10 +3,8 @@ package net.corda.contracts;
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import kotlin.Pair;
-import kotlin.Unit;
-import net.corda.contracts.asset.Cash;
-import net.corda.contracts.asset.CashKt;
+import kotlin.*;
+import net.corda.contracts.asset.*;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.crypto.testing.NullPublicKey;
@@ -16,6 +14,7 @@ import net.corda.core.identity.Party;
 import net.corda.core.node.ServiceHub;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.TransactionBuilder;
+import net.corda.finance.utils.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -207,7 +206,7 @@ public class JavaCommercialPaper implements Contract {
                 final Instant time = null == timeWindow
                         ? null
                         : timeWindow.getUntilTime();
-                final Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs().stream().map(TransactionState::getData).collect(Collectors.toList()), input.getOwner());
+                final Amount<Issued<Currency>> received = StateSumming.sumCashBy(tx.getOutputStates(), input.getOwner());
 
                 requireThat(require -> {
                     require.using("must be timestamped", timeWindow != null);
