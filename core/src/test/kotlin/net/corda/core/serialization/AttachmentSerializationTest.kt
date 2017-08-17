@@ -56,10 +56,11 @@ private fun MockNetwork.MockNode.hackAttachment(attachmentId: SecureHash, conten
 private fun NodeAttachmentService.updateAttachment(attachmentId: SecureHash, data: ByteArray) {
     val session = getSession()
     session.use {
-        val attachment = session.get<AttachmentsSchemaV1.Attachment>(AttachmentsSchemaV1.Attachment::class.java, attachmentId as Serializable)
+        val attachment = session.get<AttachmentsSchemaV1.Attachment>(AttachmentsSchemaV1.Attachment::class.java, attachmentId.toString())
         attachment?.let {
             attachment.content = data
             session.save(attachment)
+            session.flush()
         }
     }
 }

@@ -16,6 +16,7 @@ import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.vault.VaultSchemaV1
+import net.corda.services.schemas.AttachmentsSchemaV1
 
 /**
  * Most basic implementation of [SchemaService].
@@ -44,6 +45,7 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
     val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
                   Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
+                  Pair(AttachmentsSchemaV1, SchemaService.SchemaOptions()),
                   Pair(NodeServicesV1, SchemaService.SchemaOptions()))
 
 

@@ -1,9 +1,6 @@
 package net.corda.services.schemas
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.requery.converters.BlobConverter
-import net.corda.core.schemas.requery.converters.SecureHashConverter
 import java.io.Serializable
 import javax.persistence.*
 
@@ -15,19 +12,18 @@ object AttachmentsSchema
 /**
  * First version of the Vault ORM schema
  */
-object AttachmentsSchemaV1 : MappedSchema(schemaFamily = AttachmentsSchema.javaClass, version = 1, mappedTypes = emptyList()) {
-
+object AttachmentsSchemaV1 : MappedSchema(schemaFamily = AttachmentsSchema.javaClass, version = 1,
+                                          mappedTypes = listOf(Attachment::class.java)) {
+    @Entity
     @Table(name = "attachments",
            indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
     class Attachment(
         @Id
-        @GeneratedValue
-        @Column(name = "att_id")
-        @Convert(converter = SecureHashConverter::class)
-        var attId: SecureHash,
+        @Column(name = "att_id", length = 65535)
+        var attId: String,
 
         @Column(name = "content")
-        @Convert(converter = BlobConverter::class)
+        @Lob
         var content: ByteArray
     ) : Serializable
 

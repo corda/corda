@@ -23,7 +23,7 @@ import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 
 /**
- * Stores attachments in H2 database.
+ * Stores attachments using Hibernate to database.
  */
 @ThreadSafe
 class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: MetricRegistry)
@@ -33,7 +33,6 @@ class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: Me
     }
 
     private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
-    private val session = getSession()
 
     @VisibleForTesting
     var checkAttachmentsOnLoad = true
@@ -41,10 +40,11 @@ class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: Me
     private val attachmentCount = metrics.counter("Attachments")
 
     init {
+        val session = getSession()
         session.use {
             val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(AttachmentsSchemaV1::class.java)))
+            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(AttachmentsSchemaV1.Attachment::class.java)))
             val count = session.createQuery(criteriaQuery).singleResult
             attachmentCount.inc(count)
         }
@@ -129,10 +129,16 @@ class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: Me
 
     }
 
-    override fun openAttachment(id: SecureHash): Attachment? =
-            session.use {
-                session.get<AttachmentsSchemaV1.Attachment>(AttachmentsSchemaV1.Attachment::class.java, id as Serializable)
-            }?.run { AttachmentImpl(id, { content }, checkAttachmentsOnLoad) }
+    override fun openAttachment(id: SecureHash): Attachment? {
+        val session = getSession()
+        session.use {
+            val attachment = session.get(AttachmentsSchemaV1.Attachment::class.java, id.toString())
+            attachment?.let {
+                return AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad)
+            }
+        }
+        return null
+    }
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     override fun importAttachment(jar: InputStream): SecureHash {
@@ -148,23 +154,22 @@ class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: Me
         checkIsAValidJAR(ByteArrayInputStream(bytes))
         val id = SecureHash.SHA256(hs.hash().asBytes())
 
-        val count =
-            session.use {
-                val criteriaBuilder = session.criteriaBuilder
-                val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-                val attachments = criteriaQuery.from(AttachmentsSchemaV1::class.java)
-                criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(AttachmentsSchemaV1::class.java)))
-                criteriaQuery.where(criteriaBuilder.equal(attachments.get<SecureHash>("attId"), id))
-                session.createQuery(criteriaQuery).singleResult
+        val session = getSession()
+        session.use {
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+            val attachments = criteriaQuery.from(AttachmentsSchemaV1.Attachment::class.java)
+            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(AttachmentsSchemaV1.Attachment::class.java)))
+            criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>("attId"), id.toString()))
+            val count = session.createQuery(criteriaQuery).singleResult
+
+            if (count > 0) {
+                throw FileAlreadyExistsException(id.toString())
             }
 
-        if (count > 0) {
-            throw FileAlreadyExistsException(id.toString())
-        }
-
-        session.use {
-            val attachment = AttachmentsSchemaV1.Attachment(attId = id, content = bytes)
+            val attachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = bytes)
             session.save(attachment)
+            session.flush()
         }
 
         attachmentCount.inc()

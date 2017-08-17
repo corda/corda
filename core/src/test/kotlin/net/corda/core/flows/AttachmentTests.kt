@@ -131,9 +131,13 @@ class AttachmentTests {
         val corruptBytes = "arggghhhh".toByteArray()
         System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
 
-        val corruptAttachment = AttachmentsSchemaV1.Attachment(attId = id, content = attachment)
+        val corruptAttachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = attachment)
         n0.database.transaction {
-            n0.attachments.getSession().update(corruptAttachment)
+            val session = n0.attachments.getSession()
+            session.use {
+                session.update(corruptAttachment)
+                session.flush()
+            }
         }
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.

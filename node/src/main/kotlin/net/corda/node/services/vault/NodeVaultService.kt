@@ -85,10 +85,10 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
                             contractState = it.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                             stateStatus = Vault.StateStatus.UNCONSUMED,
                             recordedTime = services.clock.instant())
-                    state.stateRef = PersistentStateRef(
-                            txId = it.key.txhash.toString(),
-                            index = it.key.index)
-                    session.save(state)
+                            state.stateRef = PersistentStateRef(
+                                    txId = it.key.txhash.toString(),
+                                    index = it.key.index)
+                            session.save(state)
 
                     consumedStateRefs.forEach { stateRef ->
                         val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
@@ -105,6 +105,7 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
                         }
                     }
                 }
+                session.flush()
             }
         }
         return update
@@ -248,6 +249,7 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
         session.use {
             val txnNoteEntity = VaultSchemaV1.VaultTxnNote(txnId.toString(), noteText)
             session.save(txnNoteEntity)
+            session.flush()
         }
     }
 
