@@ -2,19 +2,8 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import org.junit.Test
 import java.util.*
-import org.apache.qpid.proton.codec.Data
 
 class DeserializeCollectionTests {
-
-    class TestSerializationOutput(
-            private val verbose: Boolean,
-            serializerFactory: SerializerFactory = SerializerFactory()) : SerializationOutput(serializerFactory) {
-
-        override fun writeSchema(schema: Schema, data: Data) {
-            if (verbose) println(schema)
-            super.writeSchema(schema, data)
-        }
-    }
     companion object {
         /**
          * If you want to see the schema encoded into the envelope after serialisation change this to true
@@ -22,7 +11,7 @@ class DeserializeCollectionTests {
         private const val VERBOSE = false
     }
 
-    val sf = SerializerFactory()
+    val sf = testDefaultFactory()
 
     @Test
     fun mapTest() {
@@ -68,10 +57,10 @@ class DeserializeCollectionTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test(expected=java.lang.IllegalArgumentException::class)
+    @Test(expected=java.io.NotSerializableException::class)
     fun dictionaryTest() {
         data class C(val c: Dictionary<String, Int>)
-        var v : Hashtable<String, Int> = Hashtable()
+        val v : Hashtable<String, Int> = Hashtable()
         v.put ("a", 1)
         v.put ("b", 2)
         val c = C(v)
@@ -83,7 +72,7 @@ class DeserializeCollectionTests {
     @Test(expected=java.lang.IllegalArgumentException::class)
     fun hashtableTest() {
         data class C(val c: Hashtable<String, Int>)
-        var v : Hashtable<String, Int> = Hashtable()
+        val v : Hashtable<String, Int> = Hashtable()
         v.put ("a", 1)
         v.put ("b", 2)
         val c = C(v)
