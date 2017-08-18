@@ -290,4 +290,5 @@ We can now verify these groups individually:
 Legal prose
 -----------
 
+Currently, a ``Contract`` subtype may refer to the legal prose it implements via a ``LegalProseReference`` annotation.
 In the future, a contract's legal prose will be included as an attachment.

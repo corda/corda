@@ -336,6 +336,11 @@ interface Contract {
 }
 // DOCEND 5
 
+/** The annotated [Contract] implements the legal prose identified by the given URI. */
+@Target(AnnotationTarget.CLASS)
+@MustBeDocumented
+annotation class LegalProseReference(val uri: String)
+
 /**
  * Interface which can upgrade state objects issued by a contract to a new state object issued by a different contract.
  *
