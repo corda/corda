@@ -17,6 +17,7 @@ class PersistentMap<K, V, E, EK> (
         val toPersistentEntity: (key: K, value: V) -> E,
         val persistentEntityClass: Class<E>
 ) : MutableMap<K, V>, AbstractMap<K, V>() {
+
     private companion object {
         val log = loggerFor<PersistentMap<*, *, *, *>>()
     }
@@ -49,23 +50,18 @@ class PersistentMap<K, V, E, EK> (
         return cache.get(key).orElse(null)
     }
 
-    fun allPersisted(): Sequence<Pair<K, V>> {
-        val criteriaQuery = DatabaseTransactionManager.current().session.criteriaBuilder.createQuery(persistentEntityClass)
-        val root = criteriaQuery.from(persistentEntityClass)
-        criteriaQuery.select(root)
-        val query = DatabaseTransactionManager.current().session.createQuery(criteriaQuery)
-        val result = query.resultList
-        return result.map { x -> fromPersistentEntity(x) }.asSequence()
+    fun all(): Sequence<Pair<K, V>> {
+        return cache.asMap().map { entry -> Pair(entry.key as K, entry.value as V) }.asSequence()
     }
 
-    override val size = allPersisted().count()
+    override val size = all().count()
 
     private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> Boolean) : Boolean {
         var inserted = false
         var uniqueInDb = true
         val existingInCache = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
             inserted = true
-            // Value wasn't in the cache and might not be in DB.
+            // Value wasn't in the cache and wasn't in DB (because the cache is unbound).
             // Store the value, depending on store implementation this may overwrite existing entry in DB.
             uniqueInDb = store(key, value)
             Optional.of(value)
@@ -141,7 +137,7 @@ class PersistentMap<K, V, E, EK> (
     }
 
     private inner class EntryIterator : MutableIterator<MutableMap.MutableEntry<K, V>> {
-        private val iterator = allPersisted().map { NotReallyMutableEntry(it.first, it.second) }.iterator()
+        private val iterator = all().map { NotReallyMutableEntry(it.first, it.second) }.iterator()
 
         private var current: MutableMap.MutableEntry<K, V>? = null
 
