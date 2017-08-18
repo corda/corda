@@ -3,6 +3,8 @@ package net.corda.core.contracts
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import java.security.PublicKey
+import net.corda.core.contracts.Amount.Companion.sumOrNull
+import net.corda.core.contracts.Amount.Companion.sumOrZero
 
 class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException("Insufficient balance, missing $amountMissing")
 
@@ -51,12 +53,3 @@ interface FungibleAsset<T : Any> : OwnableState {
         }
     }
 }
-
-// Small DSL extensions.
-
-/** Sums the asset states in the list, returning null if there are none. */
-fun <T : Any> Iterable<ContractState>.sumFungibleOrNull() = filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrNull()
-
-/** Sums the asset states in the list, returning zero of the given token if there are none. */
-fun <T : Any> Iterable<ContractState>.sumFungibleOrZero(token: Issued<T>) = filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrZero(token)
-
