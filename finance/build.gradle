@@ -12,6 +12,7 @@ description 'Corda finance modules'
 dependencies {
     compile project(':core')
     compile project(':node-schemas')
+    compile "com.google.guava:guava:$guava_version"
 
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
