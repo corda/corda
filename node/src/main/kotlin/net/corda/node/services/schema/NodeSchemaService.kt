@@ -37,7 +37,7 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     DBTransactionMappingStorage.DBTransactionMapping::class.java,
                     PersistentKeyManagementService.PersistentKey::class.java,
                     PersistentUniquenessProvider.PersistentUniqueness::class.java,
-                    NodeSchedulerService.NodeScheduler::class.java
+                    NodeSchedulerService.PersistentScheduledState::class.java
                     ))
 
     // Required schemas are those used by internal Corda services

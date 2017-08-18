@@ -48,7 +48,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     companion object {
         private val log = loggerFor<NodeSchedulerService>()
 
-        fun createMap(): PersistentMap<StateRef, ScheduledStateRef, NodeScheduler, PersistentStateRef> {
+        fun createMap(): PersistentMap<StateRef, ScheduledStateRef, PersistentScheduledState, PersistentStateRef> {
             return PersistentMap(
                     toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                     fromPersistentEntity = {
@@ -59,19 +59,19 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
                             ScheduledStateRef(StateRef(SecureHash.parse(txId), index), it.scheduledAt))
                     },
                     toPersistentEntity = { key: StateRef, value: ScheduledStateRef ->
-                        NodeScheduler().apply {
+                        PersistentScheduledState().apply {
                             output = PersistentStateRef(key.txhash.toString(), key.index)
                             scheduledAt = value.scheduledAt
                         }
                     },
-                    persistentEntityClass = NodeScheduler::class.java
+                    persistentEntityClass = PersistentScheduledState::class.java
             )
         }
     }
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}scheduled_states")
-    class NodeScheduler (
+    class PersistentScheduledState(
             @EmbeddedId
             var output: PersistentStateRef = PersistentStateRef(),
 
