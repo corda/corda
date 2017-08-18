@@ -6,6 +6,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
@@ -18,7 +19,6 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
-import java.io.Serializable
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
 
@@ -48,16 +48,19 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     companion object {
         private val log = loggerFor<NodeSchedulerService>()
 
-        fun createMap(): PersistentMap<StateRef, ScheduledStateRef, NodeScheduler, NodeScheduler.StateRef> {
+        fun createMap(): PersistentMap<StateRef, ScheduledStateRef, NodeScheduler, PersistentStateRef> {
             return PersistentMap(
-                    toPersistentEntityKey = { NodeScheduler.StateRef(it.txhash.toString(), it.index) },
+                    toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                     fromPersistentEntity = {
-                        Pair(StateRef(SecureHash.parse(it.output.transactionId), it.output.outputIndex),
-                                ScheduledStateRef(StateRef(SecureHash.parse(it.output.transactionId), it.output.outputIndex), it.scheduledAt))
+                        //TODO null check will become obsolete after making DB/JPA columns not nullable
+                        var txId = it.output.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
+                        var index = it.output.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                        Pair(StateRef(SecureHash.parse(txId), index),
+                            ScheduledStateRef(StateRef(SecureHash.parse(txId), index), it.scheduledAt))
                     },
                     toPersistentEntity = { key: StateRef, value: ScheduledStateRef ->
                         NodeScheduler().apply {
-                            output = NodeScheduler.StateRef(key.txhash.toString(), key.index)
+                            output = PersistentStateRef(key.txhash.toString(), key.index)
                             scheduledAt = value.scheduledAt
                         }
                     },
@@ -70,20 +73,11 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}scheduled_states")
     class NodeScheduler (
             @EmbeddedId
-            var output: StateRef = StateRef(),
+            var output: PersistentStateRef = PersistentStateRef(),
 
-            @Column(name = "scheduled_at")
+            @Column(name = "scheduled_at", nullable = false)
             var scheduledAt: Instant = Instant.now()
-    ) {
-        @Embeddable
-        data class StateRef (
-                @Column(name = "transaction_id", length = 64)
-                var transactionId: String = "",
-
-                @Column(name = "output_index", length = 36)
-                var outputIndex: Int = 0
-        ): Serializable
-    }
+    )
 
     private class InnerState {
         var scheduledStates = createMap()
