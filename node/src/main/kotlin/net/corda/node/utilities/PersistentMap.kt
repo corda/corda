@@ -1,49 +1,57 @@
 package net.corda.node.utilities
 
+
+import com.google.common.cache.RemovalCause
+import com.google.common.cache.RemovalListener
+import com.google.common.cache.RemovalNotification
 import net.corda.core.utilities.loggerFor
 import java.util.*
 
 
 /**
- * Implements a caching layer on top of an *append-only* table accessed via Hibernate mapping. Note that if the same key is [put] twice the
- * behaviour is unpredictable! There is a best-effort check for double inserts, but this should *not* be relied on, so
- * ONLY USE THIS IF YOUR TABLE IS APPEND-ONLY
+ * Implements an unbound caching layer on top of a table accessed via Hibernate mapping.
  */
-class AppendOnlyPersistentMap<K, V, E, EK> (
+class PersistentMap<K, V, E, EK> (
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K,V>,
         val toPersistentEntity: (key: K, value: V) -> E,
-        val persistentEntityClass: Class<E>,
-        cacheBound: Long = 1024
-) { //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
+        val persistentEntityClass: Class<E>
+) {
 
     private companion object {
-        val log = loggerFor<AppendOnlyPersistentMap<*, *, *, *>>()
+        val log = loggerFor<PersistentMap<*, *, *, *>>()
     }
 
-    private val cache = NonInvalidatingCache<K, Optional<V>>(
-            bound = cacheBound,
+    private val cache = NonInvalidatingUnboundCache(
             concurrencyLevel = 8,
-            loadFunction = { key -> Optional.ofNullable(loadValue(key)) }
+            loadFunction = { key -> Optional.ofNullable(loadValue(key)) },
+            removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass)
     )
 
-    /**
-     * Returns the value associated with the key, first loading that value from the storage if necessary.
-     */
+    class ExplicitRemoval<K, V, E, EK>(val toPersistentEntityKey: (K) -> EK, val persistentEntityClass: Class<E>): RemovalListener<K,V> {
+        override fun onRemoval(notification: RemovalNotification<K, V>?) {
+            when (notification?.cause) {
+                RemovalCause.EXPLICIT -> {
+                    val session = DatabaseTransactionManager.current().session
+                    val elem = session.find(persistentEntityClass, toPersistentEntityKey(notification.key))
+                    if (elem != null) {
+                        session.remove(elem)
+                    }
+                }
+                RemovalCause.EXPIRED, RemovalCause.SIZE, RemovalCause.COLLECTED -> {
+                    log.error("Entry was removed from cache!!!")
+                }
+                //else do nothing for RemovalCause.REPLACED
+            }
+        }
+    }
+
     operator fun get(key: K): V? {
         return cache.get(key).orElse(null)
     }
 
-    /**
-     * Returns all key/value pairs from the underlying storage.
-     */
-    fun allPersisted(): Sequence<Pair<K, V>> {
-        val criteriaQuery = DatabaseTransactionManager.current().session.criteriaBuilder.createQuery(persistentEntityClass)
-        val root = criteriaQuery.from(persistentEntityClass)
-        criteriaQuery.select(root)
-        val query = DatabaseTransactionManager.current().session.createQuery(criteriaQuery)
-        val result = query.resultList
-        return result.map { x -> fromPersistentEntity(x) }.asSequence()
+    fun all(): Sequence<Pair<K, V>> {
+        return cache.asMap().map { entry -> Pair(entry.key as K, entry.value as V) }.asSequence()
     }
 
     private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?): Boolean {
@@ -110,4 +118,12 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
         return result?.let(fromPersistentEntity)?.second
     }
 
+    /**
+     * Removes the mapping for the specified key from this map and underlying storage if present.
+     */
+    fun remove(key: K): V? {
+        val result = cache.get(key).orElse(null)
+        cache.invalidate(key)
+        return result
+    }
 }

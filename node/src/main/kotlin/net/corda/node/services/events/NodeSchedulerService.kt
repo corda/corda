@@ -1,13 +1,12 @@
 package net.corda.node.services.events
 
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.contracts.*
 import net.corda.core.internal.ThreadBox
-import net.corda.core.contracts.SchedulableState
-import net.corda.core.contracts.ScheduledActivity
-import net.corda.core.contracts.ScheduledStateRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
@@ -16,12 +15,12 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import javax.annotation.concurrent.ThreadSafe
+import javax.persistence.*
 
 /**
  * A first pass of a simple [SchedulerService] that works with [MutableClock]s for testing, demonstrations and simulations
@@ -48,40 +47,44 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
 
     companion object {
         private val log = loggerFor<NodeSchedulerService>()
+
+        fun createMap(): PersistentMap<StateRef, ScheduledStateRef, PersistentScheduledState, PersistentStateRef> {
+            return PersistentMap(
+                    toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
+                    fromPersistentEntity = {
+                        //TODO null check will become obsolete after making DB/JPA columns not nullable
+                        var txId = it.output.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
+                        var index = it.output.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                        Pair(StateRef(SecureHash.parse(txId), index),
+                            ScheduledStateRef(StateRef(SecureHash.parse(txId), index), it.scheduledAt))
+                    },
+                    toPersistentEntity = { key: StateRef, value: ScheduledStateRef ->
+                        PersistentScheduledState().apply {
+                            output = PersistentStateRef(key.txhash.toString(), key.index)
+                            scheduledAt = value.scheduledAt
+                        }
+                    },
+                    persistentEntityClass = PersistentScheduledState::class.java
+            )
+        }
     }
 
-    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}scheduled_states") {
-        val output = stateRef("transaction_id", "output_index")
-        val scheduledAt = instant("scheduled_at")
-    }
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}scheduled_states")
+    class PersistentScheduledState(
+            @EmbeddedId
+            var output: PersistentStateRef = PersistentStateRef(),
 
-    // Variables inside InnerState are protected with a lock by the ThreadBox and aren't in scope unless you're
-    // inside mutex.locked {} code block. So we can't forget to take the lock unless we accidentally leak a reference
-    // to somewhere.
+            @Column(name = "scheduled_at", nullable = false)
+            var scheduledAt: Instant = Instant.now()
+    )
+
     private class InnerState {
-        var scheduledStates = object : AbstractJDBCHashMap<StateRef, ScheduledStateRef, Table>(Table, loadOnInit = true) {
-            override fun keyFromRow(row: ResultRow): StateRef = StateRef(row[table.output.txId], row[table.output.index])
+        var scheduledStates = createMap()
 
-            override fun valueFromRow(row: ResultRow): ScheduledStateRef {
-                return ScheduledStateRef(StateRef(row[table.output.txId], row[table.output.index]), row[table.scheduledAt])
-            }
+        var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue( { a, b -> a.scheduledAt.compareTo(b.scheduledAt) } )
 
-            override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<StateRef, ScheduledStateRef>, finalizables: MutableList<() -> Unit>) {
-                insert[table.output.txId] = entry.key.txhash
-                insert[table.output.index] = entry.key.index
-            }
-
-            override fun addValueToInsert(insert: InsertStatement, entry: Map.Entry<StateRef, ScheduledStateRef>, finalizables: MutableList<() -> Unit>) {
-                insert[table.scheduledAt] = entry.value.scheduledAt
-            }
-
-        }
-        var earliestState: ScheduledStateRef? = null
         var rescheduled: SettableFuture<Boolean>? = null
-
-        internal fun recomputeEarliest() {
-            earliestState = scheduledStates.values.sortedBy { it.scheduledAt }.firstOrNull()
-        }
     }
 
     private val mutex = ThreadBox(InnerState())
@@ -89,7 +92,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
-            recomputeEarliest()
+            scheduledStatesQueue.addAll(scheduledStates.all().map { it.second } .toMutableList())
             rescheduleWakeUp()
         }
     }
@@ -97,16 +100,20 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
         mutex.locked {
-            if (scheduledStates.put(action.ref, action) == null) {
+            val previousState = scheduledStates[action.ref]
+            scheduledStates[action.ref] = action
+            var previousEarliest = scheduledStatesQueue.peek()
+            scheduledStatesQueue.remove(previousState)
+            scheduledStatesQueue.add(action)
+            if (previousState == null) {
                 unfinishedSchedules.countUp()
             }
-            if (action.scheduledAt.isBefore(earliestState?.scheduledAt ?: Instant.MAX)) {
+
+            if (action.scheduledAt.isBefore(previousEarliest?.scheduledAt ?: Instant.MAX)) {
                 // We are earliest
-                earliestState = action
                 rescheduleWakeUp()
-            } else if (earliestState?.ref == action.ref && earliestState!!.scheduledAt != action.scheduledAt) {
+            } else if(previousEarliest?.ref == action.ref && previousEarliest.scheduledAt != action.scheduledAt) {
                 // We were earliest but might not be any more
-                recomputeEarliest()
                 rescheduleWakeUp()
             }
         }
@@ -117,9 +124,9 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         mutex.locked {
             val removedAction = scheduledStates.remove(ref)
             if (removedAction != null) {
+                scheduledStatesQueue.remove(removedAction)
                 unfinishedSchedules.countDown()
-                if (removedAction == earliestState) {
-                    recomputeEarliest()
+                if (removedAction == scheduledStatesQueue.peek()) {
                     rescheduleWakeUp()
                 }
             }
@@ -139,7 +146,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         val (scheduledState, ourRescheduledFuture) = mutex.alreadyLocked {
             rescheduled?.cancel(false)
             rescheduled = SettableFuture.create()
-            Pair(earliestState, rescheduled!!)
+            Pair(scheduledStatesQueue.peek(), rescheduled!!)
         }
         if (scheduledState != null) {
             schedulerTimerExecutor.execute {
@@ -157,7 +164,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        serverThread.fetchFrom {
+        serverThread.execute {
             services.database.transaction {
                 val scheduledFlow = getScheduledFlow(scheduledState)
                 if (scheduledFlow != null) {
@@ -175,28 +182,28 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         var scheduledFlow: FlowLogic<*>? = null
         mutex.locked {
             // need to remove us from those scheduled, but only if we are still next
-            scheduledStates.compute(scheduledState.ref) { _, value ->
-                if (value === scheduledState) {
-                    if (scheduledActivity == null) {
-                        log.info("Scheduled state $scheduledState has rescheduled to never.")
-                        unfinishedSchedules.countDown()
-                        null
-                    } else if (scheduledActivity.scheduledAt.isAfter(services.clock.instant())) {
-                        log.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
-                        ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
-                    } else {
-                        // TODO: FlowLogicRefFactory needs to sort out the class loader etc
-                        val flowLogic = FlowLogicRefFactoryImpl.toFlowLogic(scheduledActivity.logicRef)
-                        log.trace { "Scheduler starting FlowLogic $flowLogic" }
-                        scheduledFlow = flowLogic
-                        null
-                    }
+            val previousState = scheduledStates[scheduledState.ref]
+            if (previousState != null && previousState === scheduledState) {
+                if (scheduledActivity == null) {
+                    log.info("Scheduled state $scheduledState has rescheduled to never.")
+                    unfinishedSchedules.countDown()
+                    scheduledStates.remove(scheduledState.ref)
+                    scheduledStatesQueue.remove(scheduledState)
+                } else if (scheduledActivity.scheduledAt.isAfter(services.clock.instant())) {
+                    log.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
+                    var newState = ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
+                    scheduledStates[scheduledState.ref] = newState
+                    scheduledStatesQueue.remove(scheduledState)
+                    scheduledStatesQueue.add(newState)
                 } else {
-                    value
+                    val flowLogic = FlowLogicRefFactoryImpl.toFlowLogic(scheduledActivity.logicRef)
+                    log.trace { "Scheduler starting FlowLogic $flowLogic" }
+                    scheduledFlow = flowLogic
+                    scheduledStates.remove(scheduledState.ref)
+                    scheduledStatesQueue.remove(scheduledState)
                 }
             }
             // and schedule the next one
-            recomputeEarliest()
             rescheduleWakeUp()
         }
         return scheduledFlow
