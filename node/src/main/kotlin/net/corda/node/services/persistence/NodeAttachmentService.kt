@@ -164,7 +164,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
         val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
         criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
-        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>("attId"), id.toString()))
+        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), id.toString()))
         val count = session.createQuery(criteriaQuery).singleResult
         if (count > 0) {
             throw FileAlreadyExistsException(id.toString())
