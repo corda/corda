@@ -14,8 +14,6 @@ import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
@@ -96,35 +94,35 @@ class SerializationOutputTests {
 
     data class SortedSetWrapper(val set: SortedSet<Int>)
 
-    open class InheritedGeneric<X>(val foo: X)
+    open class InheritedGeneric<out X>(val foo: X)
 
     data class ExtendsGeneric(val bar: Int, val pub: String) : InheritedGeneric<String>(pub)
 
-    interface GenericInterface<X> {
+    interface GenericInterface<out X> {
         val pub: X
     }
 
     data class ImplementsGenericString(val bar: Int, override val pub: String) : GenericInterface<String>
 
-    data class ImplementsGenericX<Y>(val bar: Int, override val pub: Y) : GenericInterface<Y>
+    data class ImplementsGenericX<out Y>(val bar: Int, override val pub: Y) : GenericInterface<Y>
 
-    abstract class AbstractGenericX<Z> : GenericInterface<Z>
+    abstract class AbstractGenericX<out Z> : GenericInterface<Z>
 
-    data class InheritGenericX<A>(val duke: Double, override val pub: A) : AbstractGenericX<A>()
+    data class InheritGenericX<out A>(val duke: Double, override val pub: A) : AbstractGenericX<A>()
 
     data class CapturesGenericX(val foo: GenericInterface<String>)
 
     object KotlinObject
 
     class Mismatch(fred: Int) {
-        val ginger: Int = fred
+        private val ginger: Int = fred
 
         override fun equals(other: Any?): Boolean = (other as? Mismatch)?.ginger == ginger
         override fun hashCode(): Int = ginger
     }
 
     class MismatchType(fred: Long) {
-        val ginger: Int = fred.toInt()
+        private val ginger: Int = fred.toInt()
 
         override fun equals(other: Any?): Boolean = (other as? MismatchType)?.ginger == ginger
         override fun hashCode(): Int = ginger
@@ -246,7 +244,7 @@ class SerializationOutputTests {
 
     @Test(expected = IllegalArgumentException::class)
     fun `test dislike of HashMap`() {
-        val obj = WrapHashMap(HashMap<String, String>())
+        val obj = WrapHashMap(HashMap())
         serdes(obj)
     }
 
@@ -358,7 +356,7 @@ class SerializationOutputTests {
 
     @Test
     fun `test TreeMap property`() {
-        val obj = TreeMapWrapper(TreeMap<Int, Foo>())
+        val obj = TreeMapWrapper(TreeMap())
         obj.tree[456] = Foo("Fred", 123)
         serdes(obj)
     }
@@ -438,11 +436,10 @@ class SerializationOutputTests {
         }
     }
 
-    fun assertSerializedThrowableEquivalent(t: Throwable, desThrowable: Throwable) {
+    private fun assertSerializedThrowableEquivalent(t: Throwable, desThrowable: Throwable) {
         assertTrue(desThrowable is CordaRuntimeException) // Since we don't handle the other case(s) yet
         if (desThrowable is CordaRuntimeException) {
             assertEquals("${t.javaClass.name}: ${t.message}", desThrowable.message)
-            assertTrue(desThrowable is CordaRuntimeException)
             assertTrue(Objects.deepEquals(t.stackTrace, desThrowable.stackTrace))
             assertEquals(t.suppressed.size, desThrowable.suppressed.size)
             t.suppressed.zip(desThrowable.suppressed).forEach { (before, after) -> assertSerializedThrowableEquivalent(before, after) }

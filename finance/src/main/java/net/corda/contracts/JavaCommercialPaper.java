@@ -81,7 +81,7 @@ public class JavaCommercialPaper implements Contract {
             return owner;
         }
 
-        public Amount<Issued<Currency>> getFaceValue() {
+        Amount<Issued<Currency>> getFaceValue() {
             return faceValue;
         }
 
@@ -119,7 +119,7 @@ public class JavaCommercialPaper implements Contract {
             return result;
         }
 
-        public State withoutOwner() {
+        State withoutOwner() {
             return new State(issuance, new AnonymousParty(NullPublicKey.INSTANCE), faceValue, maturityDate);
         }
 
@@ -171,9 +171,7 @@ public class JavaCommercialPaper implements Contract {
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
         final List<AuthenticatedObject<CommandData>> commands = tx.getCommands().stream().filter(
-                it -> {
-                    return it.getValue() instanceof Commands;
-                }
+                it -> it.getValue() instanceof Commands
         ).collect(Collectors.toList());
         final AuthenticatedObject<CommandData> command = Iterables.getOnlyElement(commands);
         final TimeWindow timeWindow = tx.getTimeWindow();
@@ -247,7 +245,7 @@ public class JavaCommercialPaper implements Contract {
 
     @Suspendable
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, ServiceHub services) throws InsufficientBalanceException {
-        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), Collections.EMPTY_SET);
+        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), Collections.emptySet());
         tx.addInputState(paper);
         tx.addCommand(new Command<>(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
     }
