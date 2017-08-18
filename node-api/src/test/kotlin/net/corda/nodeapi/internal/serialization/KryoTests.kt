@@ -25,6 +25,7 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class KryoTests : TestDependencyInjectionBase() {
@@ -234,5 +235,35 @@ class KryoTests : TestDependencyInjectionBase() {
                 true,
                 SerializationContext.UseCase.P2P)
         pt.serialize(factory, context)
+    }
+
+    @Test
+    fun `serialize - deserialize Exception with suppressed`() {
+        val exception = IllegalArgumentException("fooBar")
+        val toBeSuppressedOnSenderSide = IllegalStateException("bazz1")
+        exception.addSuppressed(toBeSuppressedOnSenderSide)
+        val exception2 = exception.serialize(factory, context).deserialize(factory, context)
+        assertEquals(exception.message, exception2.message)
+
+        assertEquals(1, exception2.suppressed.size)
+        assertNotNull({ exception2.suppressed.find { it.message == toBeSuppressedOnSenderSide.message  }})
+
+        val toBeSuppressedOnReceiverSide = IllegalStateException("bazz2")
+        exception2.addSuppressed(toBeSuppressedOnReceiverSide)
+        assertTrue { exception2.suppressed.contains(toBeSuppressedOnReceiverSide) }
+        assertEquals(2, exception2.suppressed.size)
+    }
+
+    @Test
+    fun `serialize - deserialize Exception no suppressed`() {
+        val exception = IllegalArgumentException("fooBar")
+        val exception2 = exception.serialize(factory, context).deserialize(factory, context)
+        assertEquals(exception.message, exception2.message)
+        assertEquals(0, exception2.suppressed.size)
+
+        val toBeSuppressedOnReceiverSide = IllegalStateException("bazz2")
+        exception2.addSuppressed(toBeSuppressedOnReceiverSide)
+        assertEquals(1, exception2.suppressed.size)
+        assertTrue { exception2.suppressed.contains(toBeSuppressedOnReceiverSide) }
     }
 }

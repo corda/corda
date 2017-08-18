@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.serialization
 import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
@@ -566,3 +567,36 @@ object X509CertificateSerializer : Serializer<X509CertificateHolder>() {
 }
 
 fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializationContextKey) as? SerializeAsTokenContext
+
+/**
+ * For serializing instances if [Throwable] honoring the fact that [java.lang.Throwable.suppressedExceptions]
+ * might be un-initialized/empty.
+ * In the absence of this class [CompatibleFieldSerializer] will be used which will assign a *new* instance of
+ * unmodifiable collection to [java.lang.Throwable.suppressedExceptions] which will fail some sentinel identity checks
+ * e.g. in [java.lang.Throwable.addSuppressed]
+ */
+@ThreadSafe
+class ThrowableSerializer(kryo: Kryo) : CompatibleFieldSerializer<Throwable>(kryo, Throwable::class.java) {
+
+    private val suppressedField = Throwable::class.java.getDeclaredField("suppressedExceptions")
+
+    private val sentinelValue = let {
+        val sentinelField = Throwable::class.java.getDeclaredField("SUPPRESSED_SENTINEL")
+        sentinelField.isAccessible = true
+        sentinelField.get(null)
+    }
+
+    init {
+        suppressedField.isAccessible = true
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<Throwable>): Throwable {
+        val throwableRead = super.read(kryo, input, type)
+        if(throwableRead.suppressed.isEmpty()) {
+            throwableRead.setSuppressedToSentinel()
+        }
+        return throwableRead
+    }
+
+    private fun Throwable.setSuppressedToSentinel() = suppressedField.set(this, sentinelValue)
+}
