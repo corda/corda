@@ -1,6 +1,6 @@
 package net.corda.contracts.asset
 
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import net.corda.contracts.NetCommand
 import net.corda.contracts.NetType
 import net.corda.contracts.NettableState
@@ -18,6 +18,10 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.seconds
+import net.corda.finance.utils.sumFungibleOrNull
+import net.corda.finance.utils.sumObligations
+import net.corda.finance.utils.sumObligationsOrNull
+import net.corda.finance.utils.sumObligationsOrZero
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
@@ -779,18 +783,6 @@ fun <P : AbstractParty, T : Any> sumAmountsDue(balances: Map<Pair<P, P>, Amount<
 
     return sum
 }
-
-/** Sums the obligation states in the list, throwing an exception if there are none. All state objects in the list are presumed to be nettable. */
-fun <P : Any> Iterable<ContractState>.sumObligations(): Amount<Issued<Obligation.Terms<P>>>
-        = filterIsInstance<Obligation.State<P>>().map { it.amount }.sumOrThrow()
-
-/** Sums the obligation states in the list, returning null if there are none. */
-fun <P : Any> Iterable<ContractState>.sumObligationsOrNull(): Amount<Issued<Obligation.Terms<P>>>?
-        = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrNull()
-
-/** Sums the obligation states in the list, returning zero of the given product if there are none. */
-fun <P : Any> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligation.Terms<P>>): Amount<Issued<Obligation.Terms<P>>>
-        = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(issuanceDef)
 
 infix fun <T : Any> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
 infix fun <T : Any> Obligation.State<T>.between(parties: Pair<AbstractParty, AbstractParty>) = copy(obligor = parties.first, beneficiary = parties.second)

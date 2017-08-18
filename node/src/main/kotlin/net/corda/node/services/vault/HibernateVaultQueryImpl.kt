@@ -28,7 +28,6 @@ import java.lang.Exception
 import java.util.*
 import javax.persistence.Tuple
 
-
 class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                               val vault: VaultService) : SingletonSerializeAsToken(), VaultQueryService {
     companion object {

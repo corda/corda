@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.contracts.asset.sumCash
 import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
@@ -21,6 +20,7 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
+import net.corda.finance.utils.sumCash
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
@@ -94,13 +94,14 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val originalVaultQuery = vaultQuery
             val services2 = object : MockServices() {
                 override val vaultService: VaultService get() = originalVault
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         validatedTransactions.addTransaction(stx)
                         vaultService.notify(stx.tx)
                     }
                 }
-                override val vaultQueryService : VaultQueryService get() = originalVaultQuery
+
+                override val vaultQueryService: VaultQueryService get() = originalVaultQuery
             }
 
             val w2 = services2.vaultQueryService.queryBy<Cash.State>().states

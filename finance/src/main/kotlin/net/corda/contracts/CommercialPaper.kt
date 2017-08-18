@@ -2,7 +2,6 @@ package net.corda.contracts
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
 import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.crypto.toBase58String
@@ -15,6 +14,7 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.finance.utils.sumCashBy
 import net.corda.schemas.CommercialPaperSchemaV1
 import java.time.Instant
 import java.util.*
@@ -84,6 +84,9 @@ class CommercialPaper : Contract {
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
         }
+
+        /** @suppress */ infix fun `owned by`(owner: AbstractParty) = copy(owner = owner)
+        /** @suppress */ infix fun `with notary`(notary: Party) = TransactionState(this, notary)
     }
 
     interface Commands : CommandData {
@@ -188,7 +191,3 @@ class CommercialPaper : Contract {
         tx.addCommand(Commands.Redeem(), paper.state.data.owner.owningKey)
     }
 }
-
-infix fun CommercialPaper.State.`owned by`(owner: AbstractParty) = copy(owner = owner)
-infix fun CommercialPaper.State.`with notary`(notary: Party) = TransactionState(this, notary)
-infix fun ICommercialPaperState.`owned by`(newOwner: AbstractParty) = withOwner(newOwner)

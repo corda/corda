@@ -55,11 +55,10 @@ import kotlin.system.exitProcess
  * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
- * @param clock The clock used within the node and by all flows etc.
  */
 open class Node(override val configuration: FullNodeConfiguration,
                 advertisedServices: Set<ServiceInfo>,
-                val versionInfo: VersionInfo,
+                private val versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true
 ) : AbstractNode(configuration, advertisedServices, createClock(configuration)) {
     companion object {
@@ -128,7 +127,7 @@ open class Node(override val configuration: FullNodeConfiguration,
     // serialisation/deserialisation work.
     override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
 
-    var messageBroker: ArtemisMessagingServer? = null
+    private var messageBroker: ArtemisMessagingServer? = null
 
     private var shutdownHook: ShutdownHook? = null
 
@@ -337,7 +336,7 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     private fun initialiseSerialization() {
         SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-            registerScheme(KryoServerSerializationScheme(this))
+            registerScheme(KryoServerSerializationScheme())
             registerScheme(AMQPServerSerializationScheme())
         }
         SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT

@@ -71,7 +71,7 @@ class CordaRPCClient(
         fun initialiseSerialization() {
             try {
                 SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                    registerScheme(KryoClientSerializationScheme(this))
+                    registerScheme(KryoClientSerializationScheme())
                     registerScheme(AMQPClientSerializationScheme())
                 }
                 SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT

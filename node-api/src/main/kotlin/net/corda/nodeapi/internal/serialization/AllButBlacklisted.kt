@@ -39,6 +39,9 @@ object AllButBlacklisted : ClassWhitelist {
             Thread::class.java.name,
             HashSet::class.java.name,
             HashMap::class.java.name,
+            WeakHashMap::class.java.name,
+            Dictionary::class.java.name, // Deprecated (marked obsolete) in the jdk
+            Hashtable::class.java.name, // see [Dictionary]
             ClassLoader::class.java.name,
             Handler::class.java.name, // MemoryHandler, StreamHandler
             Runtime::class.java.name,

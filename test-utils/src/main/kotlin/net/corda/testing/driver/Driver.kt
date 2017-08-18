@@ -26,12 +26,10 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
@@ -47,7 +45,6 @@ import java.io.File
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
