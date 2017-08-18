@@ -27,9 +27,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.flows.CashExitFlow
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
@@ -383,11 +380,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filter { it.isUserInvokable() } +
                     // Add any core flows here
                     listOf(
-                            ContractUpgradeFlow::class.java,
-                            // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
-                            CashIssueFlow::class.java,
-                            CashExitFlow::class.java,
-                            CashPaymentFlow::class.java)
+                            ContractUpgradeFlow::class.java)
     }
 
     /**

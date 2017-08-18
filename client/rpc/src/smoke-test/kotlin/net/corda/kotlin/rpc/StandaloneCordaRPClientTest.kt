@@ -7,7 +7,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.getCashBalance
 import net.corda.contracts.getCashBalances
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.InputStreamAndHash
+import net.corda.core.internal.*
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault
@@ -32,8 +32,10 @@ import org.junit.Before
 import org.junit.Test
 import java.io.FilterInputStream
 import java.io.InputStream
+import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
@@ -43,11 +45,12 @@ class StandaloneCordaRPClientTest {
     private companion object {
         val log = loggerFor<StandaloneCordaRPClientTest>()
         val user = User("user1", "test", permissions = setOf("ALL"))
-        val port = AtomicInteger(15000)
+        val port = AtomicInteger(15200)
         const val attachmentSize = 2116
         val timeout = 60.seconds
     }
 
+    private lateinit var factory: NodeProcess.Factory
     private lateinit var notary: NodeProcess
     private lateinit var rpcProxy: CordaRPCOps
     private lateinit var connection: CordaRPCConnection
@@ -64,7 +67,9 @@ class StandaloneCordaRPClientTest {
 
     @Before
     fun setUp() {
-        notary = NodeProcess.Factory().create(notaryConfig)
+        factory = NodeProcess.Factory()
+        copyFinanceCordapp()
+        notary = factory.create(notaryConfig)
         connection = notary.connect()
         rpcProxy = connection.proxy
         notaryNode = fetchNotaryIdentity()
@@ -77,6 +82,15 @@ class StandaloneCordaRPClientTest {
         } finally {
             notary.close()
         }
+    }
+
+    private fun copyFinanceCordapp() {
+        val pluginsDir = (factory.baseDirectory(notaryConfig) / "plugins").createDirectories()
+        // Find the finance jar file for the smoke tests of this module
+        val financeJar = Paths.get("build", "resources", "smokeTest").list {
+            it.filter { "corda-finance" in it.toString() }.toList().single()
+        }
+        financeJar.copyToDirectory(pluginsDir)
     }
 
     @Test
@@ -189,6 +203,7 @@ class StandaloneCordaRPClientTest {
     @Test
     fun `test cash balances`() {
         val startCash = rpcProxy.getCashBalances()
+        println(startCash)
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
         val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 629.DOLLARS, OpaqueBytes.of(0), notaryNode.legalIdentity)

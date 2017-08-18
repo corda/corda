@@ -5,7 +5,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     compile project(':core')
-    compile project(':finance')
     testCompile project(':test-utils')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"

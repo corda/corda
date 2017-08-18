@@ -50,6 +50,9 @@ processSmokeTestResources {
     from(project(':node:capsule').tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
     }
+    from(project(':finance').tasks['jar']) {
+        rename 'finance-(.*)', 'finance.jar'
+    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in

@@ -5,11 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
-import com.fasterxml.jackson.databind.deser.std.StringArrayDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import net.corda.contracts.BusinessCalendar
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
@@ -29,12 +27,10 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.finance.parseCurrency
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigDecimal
 import java.security.PublicKey
-import java.time.LocalDate
 import java.util.*
 
 /**
@@ -84,8 +80,6 @@ object JacksonSupport {
             addSerializer(SecureHash.SHA256::class.java, SecureHashSerializer)
             addDeserializer(SecureHash::class.java, SecureHashDeserializer())
             addDeserializer(SecureHash.SHA256::class.java, SecureHashDeserializer())
-            addSerializer(BusinessCalendar::class.java, CalendarSerializer)
-            addDeserializer(BusinessCalendar::class.java, CalendarDeserializer)
 
             // For ed25519 pubkeys
             addSerializer(EdDSAPublicKey::class.java, PublicKeySerializer)
@@ -277,36 +271,6 @@ object JacksonSupport {
         }
     }
 
-    data class BusinessCalendarWrapper(val holidayDates: List<LocalDate>) {
-        fun toCalendar() = BusinessCalendar(holidayDates)
-    }
-
-    object CalendarSerializer : JsonSerializer<BusinessCalendar>() {
-        override fun serialize(obj: BusinessCalendar, generator: JsonGenerator, context: SerializerProvider) {
-            val calendarName = BusinessCalendar.calendars.find { BusinessCalendar.getInstance(it) == obj }
-            if (calendarName != null) {
-                generator.writeString(calendarName)
-            } else {
-                generator.writeObject(BusinessCalendarWrapper(obj.holidayDates))
-            }
-        }
-    }
-
-    object CalendarDeserializer : JsonDeserializer<BusinessCalendar>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): BusinessCalendar {
-            return try {
-                try {
-                    val array = StringArrayDeserializer.instance.deserialize(parser, context)
-                    BusinessCalendar.getInstance(*array)
-                } catch (e: Exception) {
-                    parser.readValueAs(BusinessCalendarWrapper::class.java).toCalendar()
-                }
-            } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid calendar(s) ${parser.text}: ${e.message}")
-            }
-        }
-    }
-
     object PublicKeySerializer : JsonSerializer<EdDSAPublicKey>() {
         override fun serialize(obj: EdDSAPublicKey, generator: JsonGenerator, provider: SerializerProvider) {
             check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
@@ -349,7 +313,7 @@ object JacksonSupport {
     object AmountDeserializer : JsonDeserializer<Amount<*>>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): Amount<*> {
             try {
-                return parseCurrency(parser.text)
+                return Amount.parseCurrency(parser.text)
             } catch (e: Exception) {
                 try {
                     val tree = parser.readValueAsTree<JsonNode>()
