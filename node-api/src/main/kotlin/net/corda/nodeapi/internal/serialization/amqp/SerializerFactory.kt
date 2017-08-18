@@ -221,7 +221,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
         } else {
             findCustomSerializer(clazz, declaredType) ?: run {
                 if (type.isArray()) {
-                    whitelisted(type.componentType())
+                    // Allow Object[] since this can be quite common (i.e. an untyped array)
+                    if(type.componentType() != Object::class.java) whitelisted(type.componentType())
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
@@ -260,10 +261,9 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
         }
     }
 
-    // Ignore SimpleFieldAccess as we add it to anything we build in the carpenter, and always allow Object as it has no
-    // fields and often shows up as an array type.
+    // Ignore SimpleFieldAccess as we add it to anything we build in the carpenter.
     internal fun isNotWhitelisted(clazz: Class<*>): Boolean = clazz == SimpleFieldAccess::class.java ||
-            (clazz != Object::class.java && !whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
+            (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
 
     // Recursively check the class, interfaces and superclasses for our annotation.
     internal fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
