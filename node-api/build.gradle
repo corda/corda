@@ -31,6 +31,9 @@ dependencies {
     compile "com.esotericsoftware:kryo:4.0.0"
     compile "de.javakaffee:kryo-serializers:0.41"
 
+    // For AMQP serialisation.
+    compile "org.apache.qpid:proton-j:0.19.0"
+
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
