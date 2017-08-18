@@ -107,6 +107,70 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
          */
         @JvmStatic
         fun <T : Any> Iterable<Amount<T>>.sumOrZero(token: T) = if (iterator().hasNext()) sumOrThrow() else Amount.zero(token)
+
+        private val currencySymbols: Map<String, Currency> = mapOf(
+                "$" to Currency.getInstance("USD"),
+                "£" to Currency.getInstance("GBP"),
+                "€" to Currency.getInstance("EUR"),
+                "¥" to Currency.getInstance("JPY"),
+                "₽" to Currency.getInstance("RUB")
+        )
+
+        private val currencyCodes: Map<String, Currency> by lazy {
+            Currency.getAvailableCurrencies().associateBy { it.currencyCode }
+        }
+
+        /**
+         * Returns an amount that is equal to the given currency amount in text. Examples of what is supported:
+         *
+         * - 12 USD
+         * - 14.50 USD
+         * - 10 USD
+         * - 30 CHF
+         * - $10.24
+         * - £13
+         * - €5000
+         *
+         * Note this method does NOT respect internationalisation rules: it ignores commas and uses . as the
+         * decimal point separator, always. It also ignores the users locale:
+         *
+         * - $ is always USD,
+         * - £ is always GBP
+         * - € is always the Euro
+         * - ¥ is always Japanese Yen.
+         * - ₽ is always the Russian ruble.
+         *
+         * Thus an input of $12 expecting some other countries dollar will not work. Do your own parsing if
+         * you need correct handling of currency amounts with locale-sensitive handling.
+         *
+         * @throws IllegalArgumentException if the input string was not understood.
+         */
+        @JvmStatic
+        fun parseCurrency(input: String): Amount<Currency> {
+            val i = input.filter { it != ',' }
+            try {
+                // First check the symbols at the front.
+                for ((symbol, currency) in currencySymbols) {
+                    if (i.startsWith(symbol)) {
+                        val rest = i.substring(symbol.length)
+                        return Amount.fromDecimal(BigDecimal(rest), currency)
+                    }
+                }
+                // Now check the codes at the end.
+                val split = i.split(' ')
+                if (split.size == 2) {
+                    val (rest, code) = split
+                    for ((cc, currency) in currencyCodes) {
+                        if (cc == code) {
+                            return Amount.fromDecimal(BigDecimal(rest), currency)
+                        }
+                    }
+                }
+            } catch(e: Exception) {
+                throw IllegalArgumentException("Could not parse $input as a currency", e)
+            }
+            throw IllegalArgumentException("Did not recognise the currency in $input or could not parse")
+        }
     }
 
     init {

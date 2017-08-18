@@ -18,11 +18,17 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static kotlin.test.AssertionsKt.assertEquals;
+import static kotlin.test.AssertionsKt.fail;
 import static net.corda.contracts.GetBalances.getCashBalance;
 
 public class StandaloneCordaRPCJavaClientTest {
@@ -32,6 +38,7 @@ public class StandaloneCordaRPCJavaClientTest {
 
     private AtomicInteger port = new AtomicInteger(15000);
 
+    private NodeProcess.Factory factory;
     private NodeProcess notary;
     private CordaRPCOps rpcProxy;
     private CordaRPCConnection connection;
@@ -49,7 +56,9 @@ public class StandaloneCordaRPCJavaClientTest {
 
     @Before
     public void setUp() {
-        notary = new NodeProcess.Factory().create(notaryConfig);
+        factory = new NodeProcess.Factory();
+        copyFinanceCordapp();
+        notary = factory.create(notaryConfig);
         connection = notary.connect();
         rpcProxy = connection.getProxy();
         notaryNode = fetchNotaryIdentity();
@@ -61,6 +70,28 @@ public class StandaloneCordaRPCJavaClientTest {
             connection.close();
         } finally {
             notary.close();
+        }
+    }
+
+    private void copyFinanceCordapp() {
+        Path pluginsDir = (factory.baseDirectory(notaryConfig).resolve("plugins"));
+        try {
+            Files.createDirectories(pluginsDir);
+        } catch (IOException ex) {
+            fail("Failed to create directories");
+        }
+        try (Stream<Path> paths = Files.walk(Paths.get("build", "resources", "smokeTest"))) {
+            paths.forEach(file -> {
+                if (file.toString().contains("corda-finance")) {
+                    try {
+                        Files.copy(file, pluginsDir.resolve(file.getFileName()));
+                    } catch (IOException ex) {
+                        fail("Failed to copy finance jar");
+                    }
+                }
+            });
+        } catch (IOException e) {
+            fail("Failed to walk files");
         }
     }
 

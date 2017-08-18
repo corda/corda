@@ -9,8 +9,8 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.concurrent.*
 import net.corda.core.node.services.queryBy
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -21,6 +21,7 @@ import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.FixingFlow
 import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.plugin.registerFinanceJSONMappers
 import net.corda.testing.DUMMY_CA
 import net.corda.testing.node.InMemoryMessagingNetwork
 import rx.Observable
@@ -44,6 +45,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     override fun startMainSimulation(): CordaFuture<Unit> {
         val future = openFuture<Unit>()
         om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap).map { it.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
+        registerFinanceJSONMappers(om)
 
         startIRSDealBetween(0, 1).thenMatch({
             // Next iteration is a pause.

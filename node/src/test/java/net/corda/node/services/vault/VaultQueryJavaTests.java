@@ -3,16 +3,21 @@ package net.corda.node.services.vault;
 import com.google.common.collect.ImmutableSet;
 import kotlin.Pair;
 import net.corda.contracts.DealState;
-import net.corda.contracts.asset.*;
+import net.corda.contracts.asset.Cash;
+import net.corda.contracts.asset.CashUtilities;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.EncodingUtils;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.messaging.DataFeed;
-import net.corda.core.node.services.*;
+import net.corda.core.node.services.IdentityService;
+import net.corda.core.node.services.Vault;
+import net.corda.core.node.services.VaultQueryException;
+import net.corda.core.node.services.VaultQueryService;
 import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
+import net.corda.core.schemas.MappedSchema;
 import net.corda.core.utilities.OpaqueBytes;
 import net.corda.node.utilities.CordaPersistence;
 import net.corda.schemas.CashSchemaV1;
@@ -34,12 +39,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static net.corda.contracts.asset.CashUtilities.getDUMMY_CASH_ISSUER;
+import static net.corda.contracts.asset.CashUtilities.getDUMMY_CASH_ISSUER_KEY;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.testing.CoreTestUtils.*;
-import static net.corda.testing.TestConstants.*;
-import static net.corda.contracts.asset.CashUtilities.*;
+import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
+import static net.corda.testing.TestConstants.getDUMMY_NOTARY_KEY;
 import static net.corda.testing.node.MockServicesKt.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,8 +63,10 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         ArrayList<KeyPair> keys = new ArrayList<>();
         keys.add(getMEGA_CORP_KEY());
         keys.add(getDUMMY_NOTARY_KEY());
+        Set<MappedSchema> requiredSchemas = new HashSet<>();
+        requiredSchemas.add(CashSchemaV1.INSTANCE);
         IdentityService identitySvc = makeTestIdentityService();
-        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(Collections.EMPTY_SET, keys, () -> identitySvc);
+        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(requiredSchemas, keys, () -> identitySvc);
         issuerServices = new MockServices(getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();
@@ -74,7 +83,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
      */
 
     /**
-     *  Static queryBy() tests
+     * Static queryBy() tests
      */
 
     @Test
@@ -125,15 +134,15 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Amount<Currency> amount = new Amount<>(100, Currency.getInstance("USD"));
 
             VaultFiller.fillWithSomeTestCash(services,
-                                 new Amount<Currency>(100, Currency.getInstance("USD")),
+                    new Amount<Currency>(100, Currency.getInstance("USD")),
                     issuerServices,
-                                 TestConstants.getDUMMY_NOTARY(),
-                                3,
-                                3,
-                                 new Random(),
-                                 new OpaqueBytes("1".getBytes()),
-                                null,
-                                 CashUtilities.getDUMMY_CASH_ISSUER());
+                    TestConstants.getDUMMY_NOTARY(),
+                    3,
+                    3,
+                    new Random(),
+                    new OpaqueBytes("1".getBytes()),
+                    null,
+                    CashUtilities.getDUMMY_CASH_ISSUER());
 
             VaultFiller.consumeCash(services, amount, getDUMMY_NOTARY());
 
@@ -177,7 +186,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             QueryCriteria compositeCriteria1 = dealCriteriaAll.or(linearCriteriaAll);
             QueryCriteria compositeCriteria2 = vaultCriteria.and(compositeCriteria1);
 
-            PageSpecification pageSpec  = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
+            PageSpecification pageSpec = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
             Vault.Page<LinearState> results = vaultQuerySvc.queryBy(LinearState.class, compositeCriteria2, pageSpec, sorting);
@@ -226,12 +235,12 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             } catch (NoSuchFieldException e) {
                 e.printStackTrace();
             }
-           return tx;
+            return tx;
         });
     }
 
     /**
-     *  Dynamic trackBy() tests
+     * Dynamic trackBy() tests
      */
 
     @Test
@@ -287,7 +296,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             QueryCriteria dealOrLinearIdCriteria = dealCriteria.or(linearCriteria);
             QueryCriteria compositeCriteria = dealOrLinearIdCriteria.and(vaultCriteria);
 
-            PageSpecification pageSpec  = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
+            PageSpecification pageSpec = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
             DataFeed<Vault.Page<ContractState>, Vault.Update<ContractState>> results = vaultQuerySvc.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);
@@ -302,7 +311,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     }
 
     /**
-     *  Aggregation Functions
+     * Aggregation Functions
      */
 
     @Test
