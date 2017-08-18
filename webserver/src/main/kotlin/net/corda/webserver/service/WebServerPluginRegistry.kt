@@ -1,5 +1,6 @@
 package net.corda.webserver.services
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.messaging.CordaRPCOps
 import java.util.function.Function
 
@@ -20,5 +21,11 @@ interface WebServerPluginRegistry {
      *  be specified with: javaClass.getResource("<folder-in-jar>").toExternalForm()
      */
     val staticServeDirs: Map<String, String> get() = emptyMap()
+
+    /**
+     * Optionally register extra JSON serializers to the default ObjectMapper provider
+     * @param om The [ObjectMapper] to register custom types against.
+     */
+    fun customizeJSONSerialization(om: ObjectMapper): Unit {}
 
 }
