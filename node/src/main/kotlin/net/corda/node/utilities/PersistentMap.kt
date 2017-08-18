@@ -62,19 +62,20 @@ class PersistentMap<K, V, E, EK> (
 
     override val size = all().count()
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> Boolean) : Boolean {
-        var inserted = false
+    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?) : Boolean {
+        var insertionAttempt = false
         var uniqueInDb = true
-        val existingInCache = cache.get(key) { //thread safe, if multiple threads may wait until the first one has loaded
-            inserted = true
+        val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
+            insertionAttempt = true
             // Value wasn't in the cache and wasn't in DB (because the cache is unbound).
             // Store the value, depending on store implementation this may overwrite existing entry in DB.
-            uniqueInDb = store(key, value)
+            val existingInDb = store(key, value)
+            uniqueInDb = existingInDb == true
             Optional.of(value)
         }
-        if (!inserted) {
+        if (!insertionAttempt) {
             if (existingInCache.isPresent) {
-                // Value was cached already, store the new value in the DB (depends on tore implementation) and refresh cache.
+                // Key already exists in cache, store the new value in the DB (depends on tore implementation) and refresh cache.
                 uniqueInDb = false
                 synchronized(this) {
                     merge(key, value)
@@ -88,7 +89,7 @@ class PersistentMap<K, V, E, EK> (
                 return set(key, value, logWarning, store)
             }
         }
-        if (logWarning && !uniqueInDb && logWarning) {
+        if (logWarning && !uniqueInDb) {
             log.warn("Double insert in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
         }
         return uniqueInDb
@@ -97,21 +98,20 @@ class PersistentMap<K, V, E, EK> (
     /**
      * Associates the specified value with the specified key in this map and persists it.
      */
-    operator fun set(key: K, value: V) {
-        set(key, value, logWarning = false) {
-            key,value ->  DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
-            true
-        }
-    }
+    operator fun set(key: K, value: V) =
+            set(key, value, logWarning = false) {
+                key,value ->  DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                null
+            }
 
-    private fun merge(key: K, value: V): Boolean {
-        val prev = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
-        return if (prev != null) {
+    private fun merge(key: K, value: V): V? {
+        val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+        return if (existingEntry != null) {
             DatabaseTransactionManager.current().session.merge(toPersistentEntity(key,value))
-            false
+            fromPersistentEntity(existingEntry).second
         } else {
             DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
-            true
+            null
         }
     }
     /**
@@ -119,8 +119,7 @@ class PersistentMap<K, V, E, EK> (
      * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
-        set(key, value) { k, v -> merge(k,v)
-        }
+        set(key, value) { k, v -> merge(k,v) }
 
     private fun loadValue(key: K): V? {
         val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
