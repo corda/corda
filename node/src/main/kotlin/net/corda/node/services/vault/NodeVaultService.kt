@@ -27,12 +27,10 @@ import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
-import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
-import org.hibernate.Session
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
@@ -49,14 +47,11 @@ import javax.persistence.criteria.Predicate
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val services: ServiceHub, hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsToken(), VaultService {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
     }
-
-    private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
-    private val criteriaBuilder = sessionFactory.criteriaBuilder
 
     private class InnerState {
         val _updatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()!!
@@ -76,11 +71,12 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
             val consumedStateRefs = update.consumed.map { it.ref }
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
-            val session = getSession()
-            session.use {
+            val session = DatabaseTransactionManager.current().
+            session
                 producedStateRefsMap.forEach { stateAndRef ->
                     val state = VaultSchemaV1.VaultStates(
                             notaryName = stateAndRef.value.state.notary.name.toString(),
+
                             contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                             contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                             stateStatus = Vault.StateStatus.UNCONSUMED,
@@ -100,9 +96,8 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
                             log.trace("Releasing soft lock on consumed state: $stateRef")
                         }
                         session.save(state)
-                    }
+
                 }
-                session.flush()
             }
         }
         return update
@@ -204,26 +199,26 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
         processAndNotify(netDelta)
     }
 
+    // TODO: replace this method in favour of a VaultQuery query
     private fun loadStates(refs: Collection<StateRef>): HashSet<StateAndRef<ContractState>> {
         val states = HashSet<StateAndRef<ContractState>>()
         if (refs.isNotEmpty()) {
+            val session = DatabaseTransactionManager.current().session
+            val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
             val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
-            val session = getSession()
-            session.use {
-                val statusPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), Vault.StateStatus.UNCONSUMED)
-                // TODO create a custom attribute converter for StateRef
-                val persistentStateRefs = (refs as List<StateRef>).map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
-                val compositeKey = vaultStates.get<PersistentStateRef>("stateRef")
-                val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
-                criteriaQuery.where(statusPredicate, stateRefsPredicate)
-                val results = session.createQuery(criteriaQuery).resultList
-                results.asSequence().forEach {
-                    val txHash = SecureHash.parse(it.stateRef?.txId!!)
-                    val index = it.stateRef?.index!!
-                    val state = it.contractState.deserialize<TransactionState<ContractState>>(context = STORAGE_CONTEXT)
-                    states.add(StateAndRef(state, StateRef(txHash, index)))
-                }
+            val statusPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), Vault.StateStatus.UNCONSUMED)
+            // TODO create a custom attribute converter for StateRef
+            val persistentStateRefs = (refs as List<StateRef>).map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
+            val compositeKey = vaultStates.get<PersistentStateRef>("stateRef")
+            val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
+            criteriaQuery.where(statusPredicate, stateRefsPredicate)
+            val results = session.createQuery(criteriaQuery).resultList
+            results.asSequence().forEach {
+                val txHash = SecureHash.parse(it.stateRef?.txId!!)
+                val index = it.stateRef?.index!!
+                val state = it.contractState.deserialize<TransactionState<ContractState>>(context = STORAGE_CONTEXT)
+                states.add(StateAndRef(state, StateRef(txHash, index)))
             }
         }
         return states
@@ -242,73 +237,62 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
     }
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
-        val session = getSession()
-        session.use {
-            val txnNoteEntity = VaultSchemaV1.VaultTxnNote(txnId.toString(), noteText)
-            session.save(txnNoteEntity)
-            session.flush()
-        }
+        val txnNoteEntity = VaultSchemaV1.VaultTxnNote(txnId.toString(), noteText)
+        DatabaseTransactionManager.current().session.save(txnNoteEntity)
     }
 
     override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
+        val session = DatabaseTransactionManager.current().session
+        val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultTxnNote::class.java)
         val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultTxnNote::class.java)
-        val session = getSession()
-        session.use {
-            val txIdPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("txId"), txnId.toString())
-            criteriaQuery.where(txIdPredicate)
-            val results = session.createQuery(criteriaQuery).resultList
-            return results.asIterable().map { it.note }
-        }
+        val txIdPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("txId"), txnId.toString())
+        criteriaQuery.where(txIdPredicate)
+        val results = session.createQuery(criteriaQuery).resultList
+        return results.asIterable().map { it.note }
     }
 
     @Throws(StatesNotAvailableException::class)
     override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
         val softLockTimestamp = services.clock.instant()
         try {
-            val session = getSession()
-            session.use {
-                session.transaction.begin()
-                val updatedRows = session.createQuery(
+            val session = DatabaseTransactionManager.current().session
+            val updatedRows = session.createQuery(
+                """
+                    UPDATE VaultStates
+                    SET lockId = :myLockId,
+                        lockUpdateTime = :mylockUpdateTime
+                    WHERE stateStatus = :myStateStatus
+                    AND (lockId = :myLockId OR lockId IS NULL)
+                    AND stateRef IN :myStateRefs
+                """)
+                .setParameter( "myLockId", lockId.toString())
+                .setParameter( "mylockUpdateTime", softLockTimestamp)
+                .setParameter( "myStateStatus", Vault.StateStatus.UNCONSUMED)
+                .setParameter( "myStateRefs", stateRefs.map { PersistentStateRef(it) })
+                .executeUpdate()
+
+            if (updatedRows > 0 && updatedRows == stateRefs.size) {
+                log.trace("Reserving soft lock states for $lockId: $stateRefs")
+                FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
+            } else {
+                // revert partial soft locks
+                val revertUpdatedRows = session.createQuery(
                     """
                         UPDATE VaultStates
-                        SET lockId = :myLockId,
-                            lockUpdateTime = :mylockUpdateTime
-                        WHERE stateStatus = :myStateStatus
-                        AND (lockId = :myLockId OR lockId IS NULL)
+                        SET lockId = NULL
+                        WHERE lockUpdateTime = :mylockUpdateTime
+                        AND lockId = :myLockId
                         AND stateRef IN :myStateRefs
                     """)
                     .setParameter( "myLockId", lockId.toString())
                     .setParameter( "mylockUpdateTime", softLockTimestamp)
-                    .setParameter( "myStateStatus", Vault.StateStatus.UNCONSUMED)
                     .setParameter( "myStateRefs", stateRefs.map { PersistentStateRef(it) })
                     .executeUpdate()
-                session.transaction.commit()
-
-                if (updatedRows > 0 && updatedRows == stateRefs.size) {
-                    log.trace("Reserving soft lock states for $lockId: $stateRefs")
-                    FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
-                } else {
-                    // revert partial soft locks
-                    session.transaction.begin()
-                    val revertUpdatedRows = session.createQuery(
-                        """
-                            UPDATE VaultStates
-                            SET lockId = NULL
-                            WHERE lockUpdateTime = :mylockUpdateTime
-                            AND lockId = :myLockId
-                            AND stateRef IN :myStateRefs
-                        """)
-                        .setParameter( "myLockId", lockId.toString())
-                        .setParameter( "mylockUpdateTime", softLockTimestamp)
-                        .setParameter( "myStateRefs", stateRefs.map { PersistentStateRef(it) })
-                        .executeUpdate()
-                    session.transaction.commit()
-                    if (revertUpdatedRows > 0) {
-                        log.trace("Reverting $revertUpdatedRows partially soft locked states for $lockId")
-                    }
-                    throw StatesNotAvailableException("Attempted to reserve $stateRefs for $lockId but only $updatedRows rows available")
+                if (revertUpdatedRows > 0) {
+                    log.trace("Reverting $revertUpdatedRows partially soft locked states for $lockId")
                 }
+                throw StatesNotAvailableException("Attempted to reserve $stateRefs for $lockId but only $updatedRows rows available")
             }
         } catch (e: Exception) {
             log.error("""soft lock update error attempting to reserve states for $lockId and $stateRefs")
@@ -321,52 +305,43 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
 
     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
         val softLockTimestamp = services.clock.instant()
+        val session = DatabaseTransactionManager.current().session
         if (stateRefs == null) {
-            val session = getSession()
-            session.use {
-                session.transaction.begin()
-                val update = session.createQuery(
+            val update = session.createQuery(
+                """
+                    UPDATE VaultStates
+                    SET lockId = NULL,
+                        lockUpdateTime = :mylockUpdateTime
+                    WHERE stateStatus = :myStateStatus
+                    AND lockId = :myLockId
+                """)
+                .setParameter("myLockId", lockId.toString())
+                .setParameter("mylockUpdateTime", softLockTimestamp)
+                .setParameter("myStateStatus", Vault.StateStatus.UNCONSUMED)
+                .executeUpdate()
+
+            if (update > 0) {
+                log.trace("Releasing $update soft locked states for $lockId")
+            }
+        } else {
+            try {
+                val updatedRows = session.createQuery(
                     """
                         UPDATE VaultStates
                         SET lockId = NULL,
                             lockUpdateTime = :mylockUpdateTime
                         WHERE stateStatus = :myStateStatus
                         AND lockId = :myLockId
+                        AND stateRef IN :myStateRefs
                     """)
                     .setParameter("myLockId", lockId.toString())
                     .setParameter("mylockUpdateTime", softLockTimestamp)
                     .setParameter("myStateStatus", Vault.StateStatus.UNCONSUMED)
+                    .setParameter( "myStateRefs", stateRefs.map { PersistentStateRef(it) })
                     .executeUpdate()
-                session.transaction.commit()
 
-                if (update > 0) {
-                    log.trace("Releasing $update soft locked states for $lockId")
-                }
-            }
-        } else {
-            try {
-                val session = getSession()
-                session.use {
-                    session.transaction.begin()
-                    val updatedRows = session.createQuery(
-                        """
-                            UPDATE VaultStates
-                            SET lockId = NULL,
-                                lockUpdateTime = :mylockUpdateTime
-                            WHERE stateStatus = :myStateStatus
-                            AND lockId = :myLockId
-                            AND stateRef IN :myStateRefs
-                        """)
-                        .setParameter("myLockId", lockId.toString())
-                        .setParameter("mylockUpdateTime", softLockTimestamp)
-                        .setParameter("myStateStatus", Vault.StateStatus.UNCONSUMED)
-                        .setParameter( "myStateRefs", stateRefs.map { PersistentStateRef(it) })
-                        .executeUpdate()
-                    session.transaction.commit()
-
-                    if (updatedRows > 0) {
-                        log.trace("Releasing $updatedRows soft locked states for $lockId and stateRefs $stateRefs")
-                    }
+                if (updatedRows > 0) {
+                    log.trace("Releasing $updatedRows soft locked states for $lockId and stateRefs $stateRefs")
                 }
             } catch (e: Exception) {
                 log.error("""soft lock update error attempting to release states for $lockId and $stateRefs")
@@ -504,11 +479,5 @@ class NodeVaultService(private val services: ServiceHub, hibernateConfig: Hibern
         is OwnableState -> state.owner.owningKey.containsAny(ourKeys)
         is LinearState -> state.isRelevant(ourKeys)
         else -> ourKeys.intersect(state.participants.map { it.owningKey }).isNotEmpty()
-    }
-
-    private fun getSession(): Session {
-        return sessionFactory.withOptions().
-                connection(TransactionManager.current().connection).
-                openSession()
     }
 }

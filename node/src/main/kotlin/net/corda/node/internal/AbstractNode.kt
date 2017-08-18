@@ -412,8 +412,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         _services = ServiceHubInternalImpl()
-        attachments = NodeAttachmentService(HibernateConfiguration(services.schemaService, configuration.database ?: Properties(), {services.identityService}),
-                                            services.monitoringService.metrics)
+        attachments = NodeAttachmentService(services.monitoringService.metrics)
         val legalIdentity = obtainIdentity("identity", configuration.myLegalName)
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
@@ -760,7 +759,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
-        override val vaultService by lazy { NodeVaultService(this, hibernateConfig) }
+        override val vaultService by lazy { NodeVaultService(this) }
         override val vaultQueryService by lazy {
             HibernateVaultQueryImpl(hibernateConfig, vaultService)
         }

@@ -12,11 +12,12 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.services.schemas.AttachmentsSchemaV1
-import org.hibernate.Session
-import org.jetbrains.exposed.sql.transactions.TransactionManager
-import java.io.*
+import java.io.ByteArrayInputStream
+import java.io.FilterInputStream
+import java.io.IOException
+import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Paths
 import java.util.jar.JarInputStream
@@ -26,13 +27,11 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments using Hibernate to database.
  */
 @ThreadSafe
-class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: MetricRegistry)
+class NodeAttachmentService(metrics: MetricRegistry)
     : AttachmentStorage, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<NodeAttachmentService>()
     }
-
-    private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
 
     @VisibleForTesting
     var checkAttachmentsOnLoad = true
@@ -40,14 +39,12 @@ class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: Me
     private val attachmentCount = metrics.counter("Attachments")
 
     init {
-        val session = getSession()
-        session.use {
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(AttachmentsSchemaV1.Attachment::class.java)))
-            val count = session.createQuery(criteriaQuery).singleResult
-            attachmentCount.inc(count)
-        }
+        val session = DatabaseTransactionManager.current().session
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(AttachmentsSchemaV1.Attachment::class.java)))
+        val count = session.createQuery(criteriaQuery).singleResult
+        attachmentCount.inc(count)
     }
 
     @CordaSerializable
@@ -130,12 +127,9 @@ class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: Me
     }
 
     override fun openAttachment(id: SecureHash): Attachment? {
-        val session = getSession()
-        session.use {
-            val attachment = session.get(AttachmentsSchemaV1.Attachment::class.java, id.toString())
-            attachment?.let {
-                return AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad)
-            }
+        val attachment = DatabaseTransactionManager.current().session.get(AttachmentsSchemaV1.Attachment::class.java, id.toString())
+        attachment?.let {
+            return AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad)
         }
         return null
     }
@@ -154,26 +148,21 @@ class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: Me
         checkIsAValidJAR(ByteArrayInputStream(bytes))
         val id = SecureHash.SHA256(hs.hash().asBytes())
 
-        val session = getSession()
-        session.use {
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            val attachments = criteriaQuery.from(AttachmentsSchemaV1.Attachment::class.java)
-            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(AttachmentsSchemaV1.Attachment::class.java)))
-            criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>("attId"), id.toString()))
-            val count = session.createQuery(criteriaQuery).singleResult
-
-            if (count > 0) {
-                throw FileAlreadyExistsException(id.toString())
-            }
-
-            val attachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = bytes)
-            session.save(attachment)
-            session.flush()
+        val session = DatabaseTransactionManager.current().session
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+        val attachments = criteriaQuery.from(AttachmentsSchemaV1.Attachment::class.java)
+        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(AttachmentsSchemaV1.Attachment::class.java)))
+        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>("attId"), id.toString()))
+        val count = session.createQuery(criteriaQuery).singleResult
+        if (count > 0) {
+            throw FileAlreadyExistsException(id.toString())
         }
 
-        attachmentCount.inc()
+        val attachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = bytes)
+        session.save(attachment)
 
+        attachmentCount.inc()
         log.info("Stored new attachment $id")
 
         return id
@@ -196,11 +185,5 @@ class NodeAttachmentService(hibernateConfig: HibernateConfiguration, metrics: Me
             count++
         }
         require(count > 0) { "Stream is either empty or not a JAR/ZIP" }
-    }
-
-    fun getSession(): Session {
-        return sessionFactory.withOptions().
-                connection(TransactionManager.current().connection).
-                openSession()
     }
 }

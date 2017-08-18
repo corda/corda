@@ -13,6 +13,7 @@ import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.configureDatabase
 import net.corda.services.schemas.AttachmentsSchemaV1
 import net.corda.testing.LogHelper
@@ -61,7 +62,7 @@ class NodeAttachmentStorageTest {
         val expectedHash = testJar.readAll().sha256()
 
         database.transaction {
-            val storage = NodeAttachmentService(hibernateConfig, MetricRegistry())
+            val storage = NodeAttachmentService(MetricRegistry())
             val id = testJar.read { storage.importAttachment(it) }
             assertEquals(expectedHash, id)
 
@@ -87,7 +88,7 @@ class NodeAttachmentStorageTest {
     fun `duplicates not allowed`() {
         val testJar = makeTestJar()
         database.transaction {
-            val storage = NodeAttachmentService(hibernateConfig, MetricRegistry())
+            val storage = NodeAttachmentService(MetricRegistry())
             testJar.read {
                 storage.importAttachment(it)
             }
@@ -102,8 +103,9 @@ class NodeAttachmentStorageTest {
     @Test
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
+        val id =
         database.transaction {
-            val storage = NodeAttachmentService(hibernateConfig, MetricRegistry())
+            val storage = NodeAttachmentService(MetricRegistry())
             val id = testJar.read { storage.importAttachment(it) }
 
             // Corrupt the file in the store.
@@ -111,12 +113,11 @@ class NodeAttachmentStorageTest {
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
             val corruptAttachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = bytes)
-            val session = storage.getSession()
-            session.use {
-                session.update(corruptAttachment)
-                session.flush()
-            }
-
+            DatabaseTransactionManager.current().session.update(corruptAttachment)
+            id
+        }
+        database.transaction {
+            val storage = NodeAttachmentService(MetricRegistry())
             val e = assertFailsWith<NodeAttachmentService.HashMismatchException> {
                 storage.openAttachment(id)!!.open().use { it.readBytes() }
             }
@@ -133,7 +134,7 @@ class NodeAttachmentStorageTest {
     @Test
     fun `non jar rejected`() {
         database.transaction {
-            val storage = NodeAttachmentService(hibernateConfig, MetricRegistry())
+            val storage = NodeAttachmentService(MetricRegistry())
             val path = fs.getPath("notajar")
             path.writeLines(listOf("Hey", "there!"))
             path.read {

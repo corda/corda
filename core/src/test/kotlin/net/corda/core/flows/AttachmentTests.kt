@@ -13,6 +13,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.services.schemas.AttachmentsSchemaV1
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -133,11 +134,7 @@ class AttachmentTests {
 
         val corruptAttachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = attachment)
         n0.database.transaction {
-            val session = n0.attachments.getSession()
-            session.use {
-                session.update(corruptAttachment)
-                session.flush()
-            }
+            DatabaseTransactionManager.current().session.update(corruptAttachment)
         }
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.

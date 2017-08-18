@@ -91,7 +91,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
-                override val vaultService: VaultService = NodeVaultService(this, HibernateConfiguration(NodeSchemaService(), databaseProperties,  { identityService }))
+                override val vaultService: VaultService = NodeVaultService(this)
                 override val testReference = this@NodeSchedulerServiceTest
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
