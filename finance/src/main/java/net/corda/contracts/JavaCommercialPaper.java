@@ -3,10 +3,9 @@ package net.corda.contracts;
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import kotlin.*;
-import net.corda.contracts.asset.*;
+import kotlin.Unit;
+import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
-import net.corda.core.crypto.SecureHash;
 import net.corda.core.crypto.testing.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
@@ -234,13 +233,6 @@ public class JavaCommercialPaper implements Contract {
                 });
             }
         }
-    }
-
-    @NotNull
-    @Override
-    public SecureHash getLegalContractReference() {
-        // TODO: Should return hash of the contract's contents, not its URI
-        return SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
     }
 
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary, Integer encumbrance) {

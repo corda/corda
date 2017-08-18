@@ -21,7 +21,6 @@ export class CommonModel {
   exposure: Object = null;
   localBusinessDay: Object = null;
   dailyInterestAmount: string = null;
-  hashLegalDocs: string = null;
   tradeID: string = null;
   eligibleCurrency: string;
 }

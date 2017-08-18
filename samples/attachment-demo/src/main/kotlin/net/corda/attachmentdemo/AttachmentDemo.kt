@@ -177,9 +177,6 @@ private fun printHelp(parser: OptionParser) {
 }
 
 class AttachmentContract : Contract {
-    override val legalContractReference: SecureHash
-        get() = SecureHash.zeroHash // TODO not implemented
-
     override fun verify(tx: LedgerTransaction) {
         val state = tx.outputsOfType<AttachmentContract.State>().single()
         val attachment = tx.attachments.single()

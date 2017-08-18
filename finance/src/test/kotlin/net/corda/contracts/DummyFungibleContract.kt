@@ -1,7 +1,6 @@
 package net.corda.contracts.asset
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
@@ -22,8 +21,6 @@ import java.security.PublicKey
 import java.util.*
 
 class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Commands, DummyFungibleContract.State>() {
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
-
     override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<DummyFungibleContract.Commands>>
             = commands.select<DummyFungibleContract.Commands>()
 
@@ -82,7 +79,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
 
     interface Commands : FungibleAsset.Commands {
 
-        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
+        data class Move(override val contract: Class<out Contract>? = null) : FungibleAsset.Commands.Move, Commands
 
         data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue, Commands
 

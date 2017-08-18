@@ -5,6 +5,7 @@ import net.corda.contracts.NetType
 import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -28,26 +29,26 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ObligationTests {
-    val defaultRef = OpaqueBytes.of(1)
-    val defaultIssuer = MEGA_CORP.ref(defaultRef)
-    val oneMillionDollars = 1000000.DOLLARS `issued by` defaultIssuer
-    val trustedCashContract = NonEmptySet.of(SecureHash.randomSHA256() as SecureHash)
-    val megaIssuedDollars = NonEmptySet.of(Issued(defaultIssuer, USD))
-    val megaIssuedPounds = NonEmptySet.of(Issued(defaultIssuer, GBP))
-    val fivePm: Instant = TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS) + 17.hours
-    val sixPm: Instant = fivePm + 1.hours
-    val megaCorpDollarSettlement = Obligation.Terms(trustedCashContract, megaIssuedDollars, fivePm)
-    val megaCorpPoundSettlement = megaCorpDollarSettlement.copy(acceptableIssuedProducts = megaIssuedPounds)
-    val inState = Obligation.State(
+    private val defaultRef = OpaqueBytes.of(1)
+    private val defaultIssuer = MEGA_CORP.ref(defaultRef)
+    private val oneMillionDollars = 1000000.DOLLARS `issued by` defaultIssuer
+    private val trustedCashContract = NonEmptySet.of(SecureHash.randomSHA256() as SecureHash)
+    private val megaIssuedDollars = NonEmptySet.of(Issued(defaultIssuer, USD))
+    private val megaIssuedPounds = NonEmptySet.of(Issued(defaultIssuer, GBP))
+    private val fivePm: Instant = TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS) + 17.hours
+    private val sixPm: Instant = fivePm + 1.hours
+    private val megaCorpDollarSettlement = Obligation.Terms(trustedCashContract, megaIssuedDollars, fivePm)
+    private val megaCorpPoundSettlement = megaCorpDollarSettlement.copy(acceptableIssuedProducts = megaIssuedPounds)
+    private val inState = Obligation.State(
             lifecycle = Lifecycle.NORMAL,
             obligor = MEGA_CORP,
             template = megaCorpDollarSettlement,
             quantity = 1000.DOLLARS.quantity,
             beneficiary = CHARLIE
     )
-    val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
-    val miniCorpServices = MockServices(MINI_CORP_KEY)
-    val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+    private val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
+    private val miniCorpServices = MockServices(MINI_CORP_KEY)
+    private val notaryServices = MockServices(DUMMY_NOTARY_KEY)
 
     private fun cashObligationTestRoots(
             group: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
@@ -294,7 +295,7 @@ class ObligationTests {
         // Generate a transaction issuing the obligation.
         var tx = TransactionBuilder(null).apply {
             val amount = Amount(100, Issued(defaultIssuer, USD))
-            Obligation<Currency>().generateCashIssue(this, ALICE, amount, dueBefore,
+            Obligation<Currency>().generateCashIssue(this, ALICE, cashContractBytes.sha256(), amount, dueBefore,
                     beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
         }
         var stx = miniCorpServices.signInitialTransaction(tx)
@@ -312,7 +313,7 @@ class ObligationTests {
         stx.verifyRequiredSignatures()
 
         // And set it back
-        stateAndRef = stx.tx.outRef<Obligation.State<Currency>>(0)
+        stateAndRef = stx.tx.outRef(0)
         tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateSetLifecycle(this, listOf(stateAndRef), Lifecycle.NORMAL, DUMMY_NOTARY)
         }
@@ -469,7 +470,8 @@ class ObligationTests {
                 input("Alice's $1,000,000")
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
+                attachment(attachment(cashContractBytes.inputStream()))
                 this.verifies()
             }
         }
@@ -483,7 +485,8 @@ class ObligationTests {
                 output("Alice's $500,000 obligation to Bob") { halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB) }
                 output("Bob's $500,000") { 500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
+                attachment(attachment(cashContractBytes.inputStream()))
                 this.verifies()
             }
         }
@@ -496,7 +499,7 @@ class ObligationTests {
                 input(1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE)
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
                 this `fails with` "all inputs are in the normal state"
             }
         }
@@ -509,7 +512,8 @@ class ObligationTests {
                 input("Alice's $1,000,000")
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
+                attachment(attachment(cashContractBytes.inputStream()))
                 this `fails with` "amount in settle command"
             }
         }
@@ -517,9 +521,10 @@ class ObligationTests {
 
     @Test
     fun `commodity settlement`() {
+        val commodityContractBytes = "https://www.big-book-of-banking-law.gov/commodity-claims.html".toByteArray()
         val defaultFcoj = Issued(defaultIssuer, Commodity.getInstance("FCOJ")!!)
         val oneUnitFcoj = Amount(1, defaultFcoj)
-        val obligationDef = Obligation.Terms(NonEmptySet.of(CommodityContract().legalContractReference), NonEmptySet.of(defaultFcoj), TEST_TX_TIME)
+        val obligationDef = Obligation.Terms(NonEmptySet.of(commodityContractBytes.sha256() as SecureHash), NonEmptySet.of(defaultFcoj), TEST_TX_TIME)
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
                 obligationDef, oneUnitFcoj.quantity, NULL_PARTY)
         // Try settling a simple commodity obligation
@@ -533,7 +538,8 @@ class ObligationTests {
                 input("Alice's 1 FCOJ")
                 output("Bob's 1 FCOJ") { CommodityContract.State(oneUnitFcoj, BOB) }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneUnitFcoj.quantity, oneUnitFcojObligation.amount.token)) }
-                command(ALICE_PUBKEY) { CommodityContract.Commands.Move(Obligation<Commodity>().legalContractReference) }
+                command(ALICE_PUBKEY) { CommodityContract.Commands.Move(Obligation::class.java) }
+                attachment(attachment(commodityContractBytes.inputStream()))
                 verifies()
             }
         }
@@ -904,8 +910,9 @@ class ObligationTests {
         assertEquals(expected, actual)
     }
 
-    val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
-        get() = Obligation.Terms(NonEmptySet.of(Cash().legalContractReference), NonEmptySet.of(this), TEST_TX_TIME)
-    val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
+    private val cashContractBytes = "https://www.big-book-of-banking-law.gov/cash-claims.html".toByteArray()
+    private val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
+        get() = Obligation.Terms(NonEmptySet.of(cashContractBytes.sha256() as SecureHash), NonEmptySet.of(this), TEST_TX_TIME)
+    private val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
         get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NULL_PARTY)
 }

@@ -450,8 +450,7 @@ We can see a list of the states in our node's vault using ``run vaultAndUpdates`
           linearId:
             externalId: null
             id: "84628565-2688-45ef-bb06-aae70fcf3be7"
-          contract:
-            legalContractReference: "4DDE2A47C361106CBAEC06CC40FE418A994822A3C8054851FEECD51207BFAF82"
+          contract: {}
           participants:
           - "CN=NodeB,O=NodeB,L=New York,C=US"
           - "CN=NodeA,O=NodeA,L=London,C=UK"
@@ -485,8 +484,7 @@ abbreviated the output below):
             linearId:
               externalId: null
               id: "84628565-2688-45ef-bb06-aae70fcf3be7"
-            contract:
-              legalContractReference: "4DDE2A47C361106CBAEC06CC40FE418A994822A3C8054851FEECD51207BFAF82"
+            contract: {}
             participants:
             - "CN=NodeB,O=NodeB,L=New York,C=US"
             - "CN=NodeA,O=NodeA,L=London,C=UK"

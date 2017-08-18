@@ -25,8 +25,8 @@ var AppComponent = (function () {
         this.counterparty = this.httpWrapperService.setCounterparty(value.id);
     };
     AppComponent.prototype.renderX500Name = function (x500Name) {
-        var name = x500Name
-        x500Name.split(',').forEach(function(element) {
+        var name = x500Name;
+        x500Name.split(',').forEach(function (element) {
             var keyValue = element.split('=');
             if (keyValue[0].toUpperCase() == 'CN') {
                 name = keyValue[1];
@@ -38,11 +38,11 @@ var AppComponent = (function () {
         var _this = this;
         this.httpWrapperService.getAbsolute("whoami").toPromise().then(function (data) {
             _this.whoAmI = _this.renderX500Name(data.self.text);
-            _this.counterParties = data.counterparties.map(function(x) {
-               return {
+            _this.counterParties = data.counterparties.map(function (x) {
+                return {
                     id: x.id,
-                    text:  _this.renderX500Name(x.text)
-               };
+                    text: this.renderX500Name(x.text)
+                };
             });
             if (_this.counterParties.length == 0) {
                 console.log("/whoami is returning no counterparties, the whole app won't run", data);

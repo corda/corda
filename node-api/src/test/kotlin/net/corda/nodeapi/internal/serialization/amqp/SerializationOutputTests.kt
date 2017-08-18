@@ -516,8 +516,6 @@ class SerializationOutputTests {
         override fun verify(tx: LedgerTransaction) {
 
         }
-
-        override val legalContractReference: SecureHash = SecureHash.Companion.sha256("FooContractLegal")
     }
 
     class FooState : ContractState {

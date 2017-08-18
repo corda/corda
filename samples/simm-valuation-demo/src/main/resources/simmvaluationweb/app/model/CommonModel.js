@@ -23,7 +23,6 @@ var CommonModel = (function () {
         this.exposure = null;
         this.localBusinessDay = null;
         this.dailyInterestAmount = null;
-        this.hashLegalDocs = null;
         this.tradeID = null;
     }
     return CommonModel;

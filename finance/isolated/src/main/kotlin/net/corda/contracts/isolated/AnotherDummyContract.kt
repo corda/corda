@@ -1,7 +1,6 @@
 package net.corda.contracts.isolated
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
@@ -24,9 +23,6 @@ class AnotherDummyContract : Contract, DummyContractBackdoor {
     override fun verify(tx: LedgerTransaction) {
         // Always accepts.
     }
-
-    // The "empty contract"
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://anotherdummy.org")
 
     override fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
         val state = State(magicNumber)

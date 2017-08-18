@@ -296,8 +296,8 @@ interface MoveCommand : CommandData {
      * Contract code the moved state(s) are for the attention of, for example to indicate that the states are moved in
      * order to settle an obligation contract's state object(s).
      */
-    // TODO: Replace SecureHash here with a general contract constraints object
-    val contractHash: SecureHash?
+    // TODO: Replace Class here with a general contract constraints object
+    val contract: Class<out Contract>?
 }
 
 /** Indicates that this transaction replaces the inputs contract state to another contract state */
@@ -333,14 +333,13 @@ interface Contract {
      */
     @Throws(IllegalArgumentException::class)
     fun verify(tx: LedgerTransaction)
-
-    /**
-     * Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
-     * the contract's contents).
-     */
-    val legalContractReference: SecureHash
 }
 // DOCEND 5
+
+/** The annotated [Contract] implements the legal prose identified by the given URI. */
+@Target(AnnotationTarget.CLASS)
+@MustBeDocumented
+annotation class LegalProseReference(val uri: String)
 
 /**
  * Interface which can upgrade state objects issued by a contract to a new state object issued by a different contract.
@@ -427,7 +426,7 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
  * A privacy salt is required to compute nonces per transaction component in order to ensure that an adversary cannot
  * use brute force techniques and reveal the content of a Merkle-leaf hashed value.
  * Because this salt serves the role of the seed to compute nonces, its size and entropy should be equal to the
- * underlying hash function used for Merkle tree generation, currently [SHA256], which has an output of 32 bytes.
+ * underlying hash function used for Merkle tree generation, currently [SecureHash.SHA256], which has an output of 32 bytes.
  * There are two constructors, one that generates a new 32-bytes random salt, and another that takes a [ByteArray] input.
  * The latter is required in cases where the salt value needs to be pre-generated (agreed between transacting parties),
  * but it is highlighted that one should always ensure it has sufficient entropy.

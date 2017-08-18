@@ -37,17 +37,11 @@ Just as every Corda state must implement the ``ContractState`` interface, every 
             // Implements the contract constraints in code.
             @Throws(IllegalArgumentException::class)
             fun verify(tx: LedgerTransaction)
-
-            // Expresses the contract constraints as legal prose.
-            val legalContractReference: SecureHash
         }
 
 You can read about function declarations in Kotlin `here <https://kotlinlang.org/docs/reference/functions.html>`_.
 
-We can see that ``Contract`` expresses its constraints in two ways:
-
-* In legal prose, through a hash referencing a legal contract that expresses the contract's constraints in legal prose
-* In code, through a ``verify`` function that takes a transaction as input, and:
+We can see that ``Contract`` expresses its constraints through a ``verify`` function that takes a transaction as input, and:
 
   * Throws an ``IllegalArgumentException`` if it rejects the transaction proposal
   * Returns silently if it accepts the transaction proposal
@@ -113,9 +107,6 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     "The signer must be the lender." using (command.signers.contains(out.lender.owningKey))
                 }
             }
-
-            // The legal contract reference - we'll leave this as a dummy hash for now.
-            override val legalContractReference = SecureHash.zeroHash
         }
 
     .. code-block:: java
@@ -160,10 +151,6 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     return null;
                 });
             }
-
-            // The legal contract reference - we'll leave this as a dummy hash for now.
-            private final SecureHash legalContractReference = SecureHash.Companion.getZeroHash();
-            @Override public final SecureHash getLegalContractReference() { return legalContractReference; }
         }
 
 If you're following along in Java, you'll also need to rename ``TemplateContract.java`` to ``IOUContract.java``.
