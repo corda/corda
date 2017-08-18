@@ -36,7 +36,7 @@ class KryoTests : TestDependencyInjectionBase() {
 
     @Before
     fun setup() {
-        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
+        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
         context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
                 AllWhitelist,
@@ -226,7 +226,7 @@ class KryoTests : TestDependencyInjectionBase() {
             }
         }
         Tmp()
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
+        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
         val context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
                 AllWhitelist,

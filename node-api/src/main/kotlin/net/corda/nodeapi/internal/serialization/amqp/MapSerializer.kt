@@ -5,6 +5,7 @@ import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
+import kotlin.collections.LinkedHashMap
 import kotlin.collections.Map
 import kotlin.collections.iterator
 import kotlin.collections.map
@@ -17,12 +18,15 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
     companion object {
-        private val supportedTypes: Map<Class<out Map<*, *>>, (Map<*, *>) -> Map<*, *>> = mapOf(
+        private val supportedTypes: Map<Class<out Any?>, (Map<*, *>) -> Map<*, *>> = mapOf(
+                // Interfaces
                 Map::class.java to { map -> Collections.unmodifiableMap(map) },
                 SortedMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) },
-                NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) }
+                NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) },
+                // concrete classes for user convenience
+                LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
+                TreeMap::class.java to { map -> TreeMap(map) }
         )
-
         private fun findConcreteType(clazz: Class<*>): (Map<*, *>) -> Map<*, *> {
             return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported map type $clazz.")
         }
@@ -40,7 +44,7 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        obj.javaClass.checkNotUnorderedHashMap()
+        obj.javaClass.checkNotUnsupportedHashMap()
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             // Write map
@@ -65,8 +69,17 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
                     input.readObjectOrNull(entry.value, schema, declaredType.actualTypeArguments[1])
 }
 
-internal fun Class<*>.checkNotUnorderedHashMap() {
+internal fun Class<*>.checkNotUnsupportedHashMap() {
     if (HashMap::class.java.isAssignableFrom(this) && !LinkedHashMap::class.java.isAssignableFrom(this)) {
-        throw IllegalArgumentException("Map type $this is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
+        throw IllegalArgumentException(
+                "Map type $this is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
+    }
+    else if (WeakHashMap::class.java.isAssignableFrom(this)) {
+        throw IllegalArgumentException ("Weak references with map types not supported. Suggested fix: "
+                                        + "use java.util.LinkedHashMap instead.")
+    }
+    else if (Dictionary::class.java.isAssignableFrom(this)) {
+        throw IllegalArgumentException (
+                "Unable to serialise deprecated type $this. Suggested fix: prefer java.util.map implementations")
     }
 }

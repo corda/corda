@@ -60,7 +60,7 @@ Currently, users need special permissions to start flows via RPC. These permissi
         ]
 
 .. note:: Currently, the node's web server has super-user access, meaning that it can run any RPC operation without
-logging in. This will be changed in a future release.
+   logging in. This will be changed in a future release.
 
 Observables
 -----------

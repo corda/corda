@@ -1,6 +1,6 @@
 package net.corda.node.services.persistence
 
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.DataFeed

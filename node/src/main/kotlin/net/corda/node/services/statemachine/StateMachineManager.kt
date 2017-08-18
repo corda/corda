@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
+import co.paralleluniverse.fibers.instrument.SuspendableHelper
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.KryoException
@@ -166,9 +167,17 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     val changes: Observable<Change> = mutex.content.changesPublisher.wrapWithDatabaseTransaction()
 
     fun start() {
+        checkQuasarJavaAgentPresence()
         restoreFibersFromCheckpoints()
         listenToLedgerTransactions()
         serviceHub.networkMapCache.mapServiceRegistered.then { executor.execute(this::resumeRestoredFibers) }
+    }
+
+    private fun checkQuasarJavaAgentPresence() {
+        check(SuspendableHelper.isJavaAgentActive(), {
+            """Missing the '-javaagent' JVM argument. Make sure you run the tests with the Quasar java agent attached to your JVM.
+               #See https://docs.corda.net/troubleshooting.html - 'Fiber classes not instrumented' for more details.""".trimMargin("#")
+        })
     }
 
     private fun listenToLedgerTransactions() {

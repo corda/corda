@@ -60,7 +60,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
 
     val key: KeyPair get() = keys.first()
 
-    override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+    override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
         txs.forEach {
             stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
         }
@@ -229,7 +229,7 @@ fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(Com
         object : MockServices(*(keys.toTypedArray())) {
             override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
-            override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+            override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                 for (stx in txs) {
                     validatedTransactions.addTransaction(stx)
                 }

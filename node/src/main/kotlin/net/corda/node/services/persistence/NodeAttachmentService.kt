@@ -1,7 +1,7 @@
 package net.corda.node.services.persistence
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream

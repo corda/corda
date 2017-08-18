@@ -1,7 +1,7 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import com.google.common.collect.Lists
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
@@ -801,9 +801,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return flowFactories[initiatingFlowClass]
         }
 
-        override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+        override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
             database.transaction {
-                super.recordTransactions(txs)
+                super.recordTransactions(notifyVault, txs)
             }
         }
         override fun jdbcSession(): Connection = database.createSession()
