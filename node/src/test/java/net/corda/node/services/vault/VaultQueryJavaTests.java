@@ -19,7 +19,7 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.core.schemas.MappedSchema;
 import net.corda.core.utilities.OpaqueBytes;
-import net.corda.node.utilities.CordaPersistence;
+import net.corda.node.utilities.*;
 import net.corda.schemas.CashSchemaV1;
 import net.corda.testing.TestConstants;
 import net.corda.testing.TestDependencyInjectionBase;
@@ -165,9 +165,9 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     @Test
     public void consumedDealStatesPagedSorted() throws VaultQueryException {
         List<String> dealIds = Arrays.asList("123", "456", "789");
+        @SuppressWarnings("unchecked")
         Triple<StateAndRef<LinearState>, UniqueIdentifier, Vault<DealState>> ids =
-            database.transaction(tx -> {
-
+            database.transaction((DatabaseTransaction tx) -> {
                 Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
                 StateAndRef<LinearState> linearState = states.getStates().iterator().next();
                 UniqueIdentifier uid = linearState.component1().getData().getLinearId();
