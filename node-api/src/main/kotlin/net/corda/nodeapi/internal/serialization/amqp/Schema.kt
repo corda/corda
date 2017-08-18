@@ -403,6 +403,6 @@ private fun fingerprintForObject(type: Type, contextType: Type?, alreadySeen: Mu
     propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory).fold(hasher.putUnencodedChars(name)) { orig, prop ->
         fingerprintForType(prop.resolvedType, type, alreadySeen, orig, factory).putUnencodedChars(prop.name).putUnencodedChars(if (prop.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
     }
-    interfacesForSerialization(type).map { fingerprintForType(it, type, alreadySeen, hasher, factory) }
+    interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, factory) }
     return hasher
 }

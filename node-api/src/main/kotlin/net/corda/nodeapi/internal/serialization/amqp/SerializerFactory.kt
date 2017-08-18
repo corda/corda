@@ -258,10 +258,12 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
 
     private fun whitelisted(type: Type) {
         val clazz = type.asClass()!!
-        if (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz)) {
+        if (isNotWhitelisted(clazz)) {
             throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
         }
     }
+
+    internal fun isNotWhitelisted(clazz: Class<*>): Boolean = (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
 
     // Recursively check the class, interfaces and superclasses for our annotation.
     internal fun hasAnnotationInHierarchy(type: Class<*>): Boolean {

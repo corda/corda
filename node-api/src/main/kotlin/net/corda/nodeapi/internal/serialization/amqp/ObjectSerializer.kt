@@ -25,7 +25,7 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
     private val typeName = nameForType(clazz)
 
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
-    private val interfaces = interfacesForSerialization(clazz) // TODO maybe this proves too much and we need annotations to restrict.
+    private val interfaces = interfacesForSerialization(clazz, factory) // We restrict to only those annotated or whitelisted
 
     internal val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
 

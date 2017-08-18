@@ -1,10 +1,12 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.CordaSerializable
 import org.junit.Test
 import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 
+@CordaSerializable
 interface I {
     fun getName() : String
 }
