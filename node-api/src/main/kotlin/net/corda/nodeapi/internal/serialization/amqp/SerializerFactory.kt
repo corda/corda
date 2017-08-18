@@ -4,10 +4,7 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.nodeapi.internal.serialization.carpenter.CarpenterSchemas
-import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
-import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
-import net.corda.nodeapi.internal.serialization.carpenter.carpenterSchema
+import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.GenericArrayType
@@ -263,7 +260,10 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
         }
     }
 
-    internal fun isNotWhitelisted(clazz: Class<*>): Boolean = (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
+    // Ignore SimpleFieldAccess as we add it to anything we build in the carpenter, and always allow Object as it has no
+    // fields and often shows up as an array type.
+    internal fun isNotWhitelisted(clazz: Class<*>): Boolean = clazz == SimpleFieldAccess::class.java ||
+            (clazz != Object::class.java && !whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
 
     // Recursively check the class, interfaces and superclasses for our annotation.
     internal fun hasAnnotationInHierarchy(type: Class<*>): Boolean {

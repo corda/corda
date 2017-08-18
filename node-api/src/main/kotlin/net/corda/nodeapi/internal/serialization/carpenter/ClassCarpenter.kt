@@ -121,6 +121,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
             with(cw) {
                 visit(V1_8, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, schema.jvmName, null, "java/lang/Object", interfaces)
+                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
 
                 generateAbstractGetters(schema)
 
@@ -139,6 +140,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             with(cw) {
                 visit(V1_8, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName, interfaces.toTypedArray())
                 visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
+
                 generateFields(schema)
                 generateConstructor(schema)
                 generateGetters(schema)
