@@ -77,6 +77,7 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
                 objectInstance != null -> KotlinObjectSerializer(objectInstance)
                 kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(type) -> // Kotlin lambdas extend this class and any captured variables are stored in synthetic fields
                     FieldSerializer<Any>(kryo, type).apply { setIgnoreSyntheticFields(false) }
+                Throwable::class.java.isAssignableFrom(type) -> ThrowableSerializer(kryo, type)
                 else -> kryo.getDefaultSerializer(type)
             }
             return register(Registration(type, serializer, NAME.toInt()))
