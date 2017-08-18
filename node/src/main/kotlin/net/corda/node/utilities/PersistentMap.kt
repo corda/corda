@@ -26,9 +26,15 @@ class PersistentMap<K, V, E, EK> (
             concurrencyLevel = 8,
             loadFunction = { key -> Optional.ofNullable(loadValue(key)) },
             removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass)
-    )
+    ).apply {
+        //preload to allow all() to take data only from the cache (cache is unbound)
+        val session = DatabaseTransactionManager.current().session
+        val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
+        criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
+        getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
+    }
 
-    class ExplicitRemoval<K, V, E, EK>(val toPersistentEntityKey: (K) -> EK, val persistentEntityClass: Class<E>): RemovalListener<K,V> {
+    class ExplicitRemoval<K, V, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>): RemovalListener<K,V> {
         override fun onRemoval(notification: RemovalNotification<K, V>?) {
             when (notification?.cause) {
                 RemovalCause.EXPLICIT -> {
@@ -51,7 +57,7 @@ class PersistentMap<K, V, E, EK> (
     }
 
     fun all(): Sequence<Pair<K, V>> {
-        return cache.asMap().map { entry -> Pair(entry.key as K, entry.value as V) }.asSequence()
+        return cache.asMap().map { entry -> Pair(entry.key as K, entry.value.get()) }.asSequence()
     }
 
     override val size = all().count()
