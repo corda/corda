@@ -580,19 +580,21 @@ fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializ
 @ThreadSafe
 class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>(false, true) {
 
-    private val suppressedField = Throwable::class.java.getDeclaredField("suppressedExceptions")
+    private companion object {
+        private val suppressedField = Throwable::class.java.getDeclaredField("suppressedExceptions")
 
-    private val sentinelValue = let {
-        val sentinelField = Throwable::class.java.getDeclaredField("SUPPRESSED_SENTINEL")
-        sentinelField.isAccessible = true
-        sentinelField.get(null)
+        private val sentinelValue = let {
+            val sentinelField = Throwable::class.java.getDeclaredField("SUPPRESSED_SENTINEL")
+            sentinelField.isAccessible = true
+            sentinelField.get(null)
+        }
+
+        init {
+            suppressedField.isAccessible = true
+        }
     }
 
-    init {
-        suppressedField.isAccessible = true
-    }
-
-    @SuppressWarnings("unchecked")
+    @Suppress("UNCHECKED_CAST")
     private val delegate: Serializer<Throwable> = ReflectionSerializerFactory.makeSerializer(kryo, FieldSerializer::class.java, type) as Serializer<Throwable>
 
     override fun write(kryo: Kryo, output: Output, throwable: Throwable) {
