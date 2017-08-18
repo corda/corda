@@ -65,7 +65,6 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
-            addDefaultSerializer(Throwable::class.java, ThrowableSerializer(this))
 
             // WARNING: reordering the registrations here will cause a change in the serialized form, since classes
             // with custom serializers get written as registration ids. This will break backwards-compatibility.

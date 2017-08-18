@@ -1,9 +1,11 @@
 package net.corda.nodeapi.internal.serialization
 
 import com.esotericsoftware.kryo.*
+import com.esotericsoftware.kryo.factories.ReflectionSerializerFactory
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
+import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
@@ -576,7 +578,7 @@ fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializ
  * e.g. in [java.lang.Throwable.addSuppressed]
  */
 @ThreadSafe
-class ThrowableSerializer(kryo: Kryo) : CompatibleFieldSerializer<Throwable>(kryo, Throwable::class.java) {
+class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>(false, true) {
 
     private val suppressedField = Throwable::class.java.getDeclaredField("suppressedExceptions")
 
@@ -590,8 +592,15 @@ class ThrowableSerializer(kryo: Kryo) : CompatibleFieldSerializer<Throwable>(kry
         suppressedField.isAccessible = true
     }
 
+    @SuppressWarnings("unchecked")
+    private val delegate: Serializer<Throwable> = ReflectionSerializerFactory.makeSerializer(kryo, FieldSerializer::class.java, type) as Serializer<Throwable>
+
+    override fun write(kryo: Kryo, output: Output, throwable: Throwable) {
+        delegate.write(kryo, output, throwable)
+    }
+
     override fun read(kryo: Kryo, input: Input, type: Class<Throwable>): Throwable {
-        val throwableRead = super.read(kryo, input, type)
+        val throwableRead = delegate.read(kryo, input, type)
         if(throwableRead.suppressed.isEmpty()) {
             throwableRead.setSuppressedToSentinel()
         }

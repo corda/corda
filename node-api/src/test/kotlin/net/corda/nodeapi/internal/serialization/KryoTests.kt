@@ -7,6 +7,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.google.common.primitives.Ints
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.*
+import net.corda.core.internal.FetchDataFlow
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
@@ -265,5 +266,13 @@ class KryoTests : TestDependencyInjectionBase() {
         exception2.addSuppressed(toBeSuppressedOnReceiverSide)
         assertEquals(1, exception2.suppressed.size)
         assertTrue { exception2.suppressed.contains(toBeSuppressedOnReceiverSide) }
+    }
+
+    @Test
+    fun `serialize - deserialize HashNotFound`() {
+        val randomHash = SecureHash.randomSHA256()
+        val exception = FetchDataFlow.HashNotFound(randomHash)
+        val exception2 = exception.serialize(factory, context).deserialize(factory, context)
+        assertEquals(randomHash, exception2.requested)
     }
 }
