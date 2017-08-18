@@ -12,9 +12,9 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.DatabaseTransactionManager
-import net.corda.services.schemas.AttachmentsSchemaV1
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -132,7 +132,7 @@ class AttachmentTests {
         val corruptBytes = "arggghhhh".toByteArray()
         System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
 
-        val corruptAttachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = attachment)
+        val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment)
         n0.database.transaction {
             DatabaseTransactionManager.current().session.update(corruptAttachment)
         }

@@ -19,13 +19,11 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.utilities.DatabaseTransactionManager
-import net.corda.services.schemas.AttachmentsSchemaV1
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
-import java.io.Serializable
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets.UTF_8
 import java.security.KeyPair
@@ -56,7 +54,7 @@ private fun MockNetwork.MockNode.hackAttachment(attachmentId: SecureHash, conten
  */
 private fun NodeAttachmentService.updateAttachment(attachmentId: SecureHash, data: ByteArray) {
     val session = DatabaseTransactionManager.current().session
-    val attachment = session.get<AttachmentsSchemaV1.Attachment>(AttachmentsSchemaV1.Attachment::class.java, attachmentId.toString())
+    val attachment = session.get<NodeAttachmentService.DBAttachment>(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString())
     attachment?.let {
         attachment.content = data
         session.save(attachment)

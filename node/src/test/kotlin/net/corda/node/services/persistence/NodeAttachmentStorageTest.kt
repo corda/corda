@@ -9,13 +9,10 @@ import net.corda.core.internal.read
 import net.corda.core.internal.readAll
 import net.corda.core.internal.write
 import net.corda.core.internal.writeLines
-import net.corda.node.services.database.HibernateConfiguration
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.configureDatabase
-import net.corda.services.schemas.AttachmentsSchemaV1
 import net.corda.testing.LogHelper
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
@@ -27,7 +24,6 @@ import java.nio.charset.Charset
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.Path
-import java.util.*
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import kotlin.test.assertEquals
@@ -38,16 +34,13 @@ class NodeAttachmentStorageTest {
     // Use an in memory file system for testing attachment storage.
     lateinit var fs: FileSystem
     lateinit var database: CordaPersistence
-    lateinit var dataSourceProperties: Properties
-    lateinit var hibernateConfig: HibernateConfiguration
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
-        dataSourceProperties = makeTestDataSourceProperties()
+        val dataSourceProperties = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
-        hibernateConfig = HibernateConfiguration(NodeSchemaService(setOf(AttachmentsSchemaV1)), makeTestDatabaseProperties(), ::makeTestIdentityService)
         fs = Jimfs.newFileSystem(Configuration.unix())
     }
 
@@ -112,7 +105,7 @@ class NodeAttachmentStorageTest {
             val bytes = testJar.readAll()
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
-            val corruptAttachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = bytes)
+            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
             DatabaseTransactionManager.current().session.merge(corruptAttachment)
             id
         }
