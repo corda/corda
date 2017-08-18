@@ -92,7 +92,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
             it.verify(serviceHub)
-            serviceHub.recordTransactions(it)
+            serviceHub.recordTransactions(false, it)
         }
 
         return signedTransaction?.let {

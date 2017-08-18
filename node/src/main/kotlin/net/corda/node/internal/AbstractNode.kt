@@ -801,9 +801,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return flowFactories[initiatingFlowClass]
         }
 
-        override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+        override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
             database.transaction {
-                super.recordTransactions(txs)
+                super.recordTransactions(notifyVault, txs)
             }
         }
         override fun jdbcSession(): Connection = database.createSession()

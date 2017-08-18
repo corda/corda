@@ -89,8 +89,8 @@ interface ServiceHubInternal : PluginServiceHub {
     val database: CordaPersistence
     val configuration: NodeConfiguration
 
-    override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-        require (txs.any()) { "No transactions passed in for recording" }
+    override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+        require(txs.any()) { "No transactions passed in for recording" }
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
         if (stateMachineRunId != null) {
@@ -101,8 +101,10 @@ interface ServiceHubInternal : PluginServiceHub {
             log.warn("Transactions recorded from outside of a state machine")
         }
 
-        val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
-        vaultService.notifyAll(toNotify)
+        if (notifyVault) {
+            val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
+            vaultService.notifyAll(toNotify)
+        }
     }
 
     /**
