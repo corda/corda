@@ -26,14 +26,11 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.ArtemisMessagingComponent
-import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
@@ -48,7 +45,6 @@ import java.io.File
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
@@ -294,13 +290,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
         log.error("Driver shutting down because of exception", exception)
-        if (exception is RPCException && !exception.message.isNullOrEmpty() && exception.message!!.contains("has not been instrumented")) {
-            val message = """${exception.message} Make sure you run the tests with the Quasar java agent attached to your JVM.
-            #See https://docs.corda.net/troubleshooting.html - 'Fiber classes not instrumented' for more details."""
-            throw RPCException(message.trimMargin("#"), exception.cause)
-        } else {
-            throw exception
-        }
+        throw exception
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
