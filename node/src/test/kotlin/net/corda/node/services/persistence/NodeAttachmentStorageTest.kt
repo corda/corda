@@ -113,7 +113,7 @@ class NodeAttachmentStorageTest {
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
             val corruptAttachment = AttachmentsSchemaV1.Attachment(attId = id.toString(), content = bytes)
-            DatabaseTransactionManager.current().session.update(corruptAttachment)
+            DatabaseTransactionManager.current().session.merge(corruptAttachment)
             id
         }
         database.transaction {
