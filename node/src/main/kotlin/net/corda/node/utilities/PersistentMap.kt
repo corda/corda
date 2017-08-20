@@ -57,7 +57,7 @@ class PersistentMap<K, V, E, EK> (
     }
 
     fun all(): Sequence<Pair<K, V>> {
-        return cache.asMap().asSequence().map { Pair(it.key,it.value.get()) }
+        return cache.asMap().asSequence().map { Pair(it.key, it.value.get()) }
     }
 
     override val size = cache.size().toInt()
@@ -251,9 +251,9 @@ class PersistentMap<K, V, E, EK> (
     }
 
     fun load() {
-        cache.getAll(
-                DatabaseTransactionManager.current().session
-                        .createCriteria(persistentEntityClass).list().map {  e -> fromPersistentEntity(e as E).first }.asIterable()
-        )
+        val session = DatabaseTransactionManager.current().session
+        val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
+        criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
+        cache.getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
     }
 }
