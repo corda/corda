@@ -84,7 +84,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
      */
     operator fun set(key: K, value: V) =
             set(key, value, logWarning = false) {
-                key,value -> DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                k, v -> DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
                 null
             }
 
@@ -95,10 +95,10 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
      */
     fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
             set(key, value) {
-                key, value ->
-                val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+                k, v ->
+                val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(k))
                 if (existingEntry == null) {
-                    DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                    DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
                     null
                 } else {
                     fromPersistentEntity(existingEntry).second

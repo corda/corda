@@ -11,7 +11,7 @@ import java.util.*
 /**
  * Implements an unbound caching layer on top of a table accessed via Hibernate mapping.
  */
-class PersistentMap<K, V, E, EK> (
+class PersistentMap<K, V, E, out EK> (
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K,V>,
         val toPersistentEntity: (key: K, value: V) -> E,
@@ -47,7 +47,7 @@ class PersistentMap<K, V, E, EK> (
                 RemovalCause.EXPIRED, RemovalCause.SIZE, RemovalCause.COLLECTED -> {
                     log.error("Entry was removed from cache!!!")
                 }
-                //else do nothing for RemovalCause.REPLACED
+                RemovalCause.REPLACED -> {}
             }
         }
     }
@@ -98,8 +98,8 @@ class PersistentMap<K, V, E, EK> (
     operator fun set(key: K, value: V) =
             set(key, value,
                     logWarning = false,
-                    store =  { key: K, value: V ->
-                        DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                    store =  { k: K, v: V ->
+                        DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
                         null
                     },
                     replace = { _: K, _: V -> Unit }
@@ -112,10 +112,10 @@ class PersistentMap<K, V, E, EK> (
      */
     fun addWithDuplicatesAllowed(key: K, value: V) =
             set(key, value,
-                    store = { key, value ->
-                        val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+                    store = { k, v ->
+                        val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(k))
                         if (existingEntry == null) {
-                            DatabaseTransactionManager.current().session.save(toPersistentEntity(key, value))
+                            DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
                             null
                         } else {
                             fromPersistentEntity(existingEntry).second
@@ -128,7 +128,7 @@ class PersistentMap<K, V, E, EK> (
      * Associates the specified value with the specified key in this map and persists it.
      * @return true if added key was unique, otherwise false
      */
-    fun addWithDuplicatesReplaced(key: K, value: V) =
+    private fun addWithDuplicatesReplaced(key: K, value: V) =
             set(key, value,
                     logWarning = false,
                     store = { k: K, v: V -> merge(k, v) },
