@@ -4,6 +4,7 @@ package net.corda.nodeapi.internal.serialization
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 
 /*
  * Serialisation contexts for the server.
@@ -30,3 +31,10 @@ val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
 object QuasarWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = true
 }
+
+val AMQP_STORAGE_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
+        SerializationDefaults.javaClass.classLoader,
+        AllButBlacklisted,
+        emptyMap(),
+        true,
+        SerializationContext.UseCase.Storage)
