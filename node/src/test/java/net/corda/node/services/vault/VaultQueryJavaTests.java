@@ -1,7 +1,7 @@
 package net.corda.node.services.vault;
 
 import com.google.common.collect.ImmutableSet;
-import kotlin.Pair;
+import kotlin.*;
 import net.corda.contracts.DealState;
 import net.corda.contracts.asset.Cash;
 import net.corda.contracts.asset.CashUtilities;
@@ -19,7 +19,7 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.core.schemas.MappedSchema;
 import net.corda.core.utilities.OpaqueBytes;
-import net.corda.node.utilities.CordaPersistence;
+import net.corda.node.utilities.*;
 import net.corda.schemas.CashSchemaV1;
 import net.corda.testing.TestConstants;
 import net.corda.testing.TestDependencyInjectionBase;
@@ -66,6 +66,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         Set<MappedSchema> requiredSchemas = new HashSet<>();
         requiredSchemas.add(CashSchemaV1.INSTANCE);
         IdentityService identitySvc = makeTestIdentityService();
+        @SuppressWarnings("unchecked")
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(requiredSchemas, keys, () -> identitySvc);
         issuerServices = new MockServices(getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
@@ -89,9 +90,10 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     @Test
     public void unconsumedLinearStates() throws VaultQueryException {
         database.transaction(tx -> {
-
             VaultFiller.fillWithSomeTestLinearStates(services, 3);
-
+            return tx;
+        });
+        database.transaction(tx -> {
             // DOCSTART VaultJavaQueryExample0
             Vault.Page<LinearState> results = vaultQuerySvc.queryBy(LinearState.class);
             // DOCEND VaultJavaQueryExample0
@@ -104,11 +106,12 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
     @Test
     public void unconsumedStatesForStateRefsSortedByTxnId() {
+        Vault<LinearState> issuedStates =
+            database.transaction(tx -> {
+                VaultFiller.fillWithSomeTestLinearStates(services, 8);
+                return VaultFiller.fillWithSomeTestLinearStates(services, 2);
+            });
         database.transaction(tx -> {
-
-            VaultFiller.fillWithSomeTestLinearStates(services, 8);
-            Vault<LinearState> issuedStates = VaultFiller.fillWithSomeTestLinearStates(services, 2);
-
             Stream<StateRef> stateRefsStream = StreamSupport.stream(issuedStates.getStates().spliterator(), false).map(StateAndRef::getRef);
             List<StateRef> stateRefs = stateRefsStream.collect(Collectors.toList());
 
@@ -129,13 +132,11 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
     @Test
     public void consumedCashStates() {
+        Amount<Currency> amount = new Amount<>(100, Currency.getInstance("USD"));
         database.transaction(tx -> {
-
-            Amount<Currency> amount = new Amount<>(100, Currency.getInstance("USD"));
-
             VaultFiller.fillWithSomeTestCash(services,
                     new Amount<Currency>(100, Currency.getInstance("USD")),
-                    issuerServices,
+                                 issuerServices,
                     TestConstants.getDUMMY_NOTARY(),
                     3,
                     3,
@@ -143,9 +144,13 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
                     new OpaqueBytes("1".getBytes()),
                     null,
                     CashUtilities.getDUMMY_CASH_ISSUER());
-
+            return tx;
+        });
+        database.transaction(tx -> {
             VaultFiller.consumeCash(services, amount, getDUMMY_NOTARY());
-
+            return tx;
+        });
+        database.transaction(tx -> {
             // DOCSTART VaultJavaQueryExample1
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.CONSUMED);
             Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
@@ -159,19 +164,24 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
     @Test
     public void consumedDealStatesPagedSorted() throws VaultQueryException {
+        List<String> dealIds = Arrays.asList("123", "456", "789");
+        @SuppressWarnings("unchecked")
+        Triple<StateAndRef<LinearState>, UniqueIdentifier, Vault<DealState>> ids =
+            database.transaction((DatabaseTransaction tx) -> {
+                Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
+                StateAndRef<LinearState> linearState = states.getStates().iterator().next();
+                UniqueIdentifier uid = linearState.component1().getData().getLinearId();
+
+                Vault<DealState> dealStates = VaultFiller.fillWithSomeTestDeals(services, dealIds);
+                return new Triple(linearState,uid,dealStates);
+            });
         database.transaction(tx -> {
-
-            Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
-            StateAndRef<LinearState> linearState = states.getStates().iterator().next();
-            UniqueIdentifier uid = linearState.component1().getData().getLinearId();
-
-            List<String> dealIds = Arrays.asList("123", "456", "789");
-            Vault<DealState> dealStates = VaultFiller.fillWithSomeTestDeals(services, dealIds);
-
             // consume states
-            VaultFiller.consumeDeals(services, (List<? extends StateAndRef<? extends DealState>>) dealStates.getStates(), getDUMMY_NOTARY());
-            VaultFiller.consumeLinearStates(services, Collections.singletonList(linearState), getDUMMY_NOTARY());
-
+            VaultFiller.consumeDeals(services, (List<? extends StateAndRef<? extends DealState>>) ids.getThird().getStates(), getDUMMY_NOTARY());
+            VaultFiller.consumeLinearStates(services, Collections.singletonList(ids.getFirst()), getDUMMY_NOTARY());
+            return tx;
+        });
+        database.transaction(tx -> {
             // DOCSTART VaultJavaQueryExample2
             Vault.StateStatus status = Vault.StateStatus.CONSUMED;
             @SuppressWarnings("unchecked")
@@ -179,7 +189,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
             QueryCriteria vaultCriteria = new VaultQueryCriteria(status, contractStateTypes);
 
-            List<UUID> linearIds = Collections.singletonList(uid.getId());
+            List<UUID> linearIds = Collections.singletonList(ids.getSecond().getId());
             QueryCriteria linearCriteriaAll = new LinearStateQueryCriteria(null, linearIds);
             QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(null, null, dealIds);
 
@@ -212,7 +222,9 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             VaultFiller.fillWithSomeTestCash(services, dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
             VaultFiller.fillWithSomeTestCash(services, dollars10, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
             VaultFiller.fillWithSomeTestCash(services, dollars1, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-
+            return tx;
+        });
+        database.transaction(tx -> {
             try {
                 // DOCSTART VaultJavaQueryExample3
                 QueryCriteria generalCriteria = new VaultQueryCriteria(Vault.StateStatus.ALL);
@@ -256,7 +268,9 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
                     new OpaqueBytes("1".getBytes()),
                     null,
                     getDUMMY_CASH_ISSUER());
-
+            return tx;
+        });
+        database.transaction(tx -> {
             // DOCSTART VaultJavaQueryExample4
             @SuppressWarnings("unchecked")
             Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
@@ -276,14 +290,16 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
     @Test
     public void trackDealStatesPagedSorted() {
+        List<String> dealIds = Arrays.asList("123", "456", "789");
+        UniqueIdentifier uid =
+            database.transaction(tx -> {
+                Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
+                UniqueIdentifier _uid = states.getStates().iterator().next().component1().getData().getLinearId();
+
+                VaultFiller.fillWithSomeTestDeals(services, dealIds);
+                return _uid;
+            });
         database.transaction(tx -> {
-
-            Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
-            UniqueIdentifier uid = states.getStates().iterator().next().component1().getData().getLinearId();
-
-            List<String> dealIds = Arrays.asList("123", "456", "789");
-            VaultFiller.fillWithSomeTestDeals(services, dealIds);
-
             // DOCSTART VaultJavaQueryExample5
             @SuppressWarnings("unchecked")
             Set<Class<ContractState>> contractStateTypes = new HashSet(Arrays.asList(DealState.class, LinearState.class));
@@ -331,6 +347,9 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             VaultFiller.fillWithSomeTestCash(services, pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
             VaultFiller.fillWithSomeTestCash(services, swissfrancs, issuerServices, TestConstants.getDUMMY_NOTARY(), 5, 5, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
 
+            return tx;
+        });
+        database.transaction(tx -> {
             try {
                 // DOCSTART VaultJavaQueryExample21
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
@@ -376,6 +395,9 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             VaultFiller.fillWithSomeTestCash(services, pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
             VaultFiller.fillWithSomeTestCash(services, swissfrancs, issuerServices, TestConstants.getDUMMY_NOTARY(), 5, 5, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
 
+            return tx;
+        });
+        database.transaction(tx -> {
             try {
                 // DOCSTART VaultJavaQueryExample22
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
@@ -434,7 +456,6 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     @SuppressWarnings("unchecked")
     public void aggregateFunctionsSumByIssuerAndCurrencyAndSortByAggregateSum() {
         database.transaction(tx -> {
-
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
             Amount<Currency> dollars200 = new Amount<>(200, Currency.getInstance("USD"));
             Amount<Currency> pounds300 = new Amount<>(300, Currency.getInstance("GBP"));
@@ -445,6 +466,9 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             VaultFiller.fillWithSomeTestCash(services, pounds300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
             VaultFiller.fillWithSomeTestCash(services, pounds400, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), new OpaqueBytes("1".getBytes()), null, getBOC().ref(new OpaqueBytes("1".getBytes())));
 
+            return tx;
+        });
+        database.transaction(tx -> {
             try {
                 // DOCSTART VaultJavaQueryExample23
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");

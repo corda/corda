@@ -63,9 +63,6 @@ dependencies {
 
     // JPA 2.1 annotations.
     compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
-
-    // Requery: SQL based query & persistence for Kotlin
-    compile "io.requery:requery-kotlin:$requery_version"
 }
 
 configurations {

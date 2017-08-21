@@ -14,6 +14,7 @@ import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.vault.VaultSchemaV1
 
@@ -36,7 +37,9 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     DBTransactionMappingStorage.DBTransactionMapping::class.java,
                     PersistentKeyManagementService.PersistentKey::class.java,
                     PersistentUniquenessProvider.PersistentUniqueness::class.java,
-                    NodeSchedulerService.PersistentScheduledState::class.java
+                    PersistentUniquenessProvider.PersistentUniqueness::class.java,
+                    NodeSchedulerService.PersistentScheduledState::class.java,
+                    NodeAttachmentService.DBAttachment::class.java
                     ))
 
     // Required schemas are those used by internal Corda services
@@ -45,7 +48,6 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
             mapOf(Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
                   Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
                   Pair(NodeServicesV1, SchemaService.SchemaOptions()))
-
 
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
         mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())

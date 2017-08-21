@@ -191,7 +191,7 @@ object BFTSMaRt {
         }
 
         override fun getStateManager() = stateManagerOverride
-        // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
+        // TODO: Use proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
         private val commitLog = services.database.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
         private val replica = run {

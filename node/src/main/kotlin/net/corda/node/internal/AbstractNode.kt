@@ -412,7 +412,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         _services = ServiceHubInternalImpl()
-        attachments = NodeAttachmentService(configuration.dataSourceProperties, services.monitoringService.metrics, configuration.database)
+        attachments = NodeAttachmentService(services.monitoringService.metrics)
         val legalIdentity = obtainIdentity("identity", configuration.myLegalName)
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
@@ -749,6 +749,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
     private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
+
+        private val hibernateConfig by lazy { HibernateConfiguration(schemaService, configuration.database ?: Properties(), { identityService }) }
+
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
@@ -756,9 +759,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
-        override val vaultService by lazy { NodeVaultService(this, configuration.dataSourceProperties, configuration.database) }
+        override val vaultService by lazy { NodeVaultService(this) }
         override val vaultQueryService by lazy {
-            HibernateVaultQueryImpl(HibernateConfiguration(schemaService, configuration.database ?: Properties(), { identityService }), vaultService)
+            HibernateVaultQueryImpl(hibernateConfig, vaultService)
         }
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with

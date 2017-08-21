@@ -8,6 +8,9 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
+import org.hibernate.annotations.Generated
+import org.hibernate.annotations.GenerationTime
+import java.io.Serializable
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -22,7 +25,7 @@ object VaultSchema
  */
 @CordaSerializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
-                                    mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java)) {
+                                    mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
     @Entity
     @Table(name = "vault_states",
             indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status")))
@@ -50,16 +53,16 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** refers to timestamp recorded upon entering CONSUMED state */
             @Column(name = "consumed_timestamp", nullable = true)
-            var consumedTime: Instant?,
+            var consumedTime: Instant? = null,
 
             /** used to denote a state has been soft locked (to prevent double spend)
              *  will contain a temporary unique [UUID] obtained from a flow session */
             @Column(name = "lock_id", nullable = true)
-            var lockId: String,
+            var lockId: String? = null,
 
             /** refers to the last time a lock was taken (reserved) or updated (released, re-reserved) */
             @Column(name = "lock_timestamp", nullable = true)
-            var lockUpdateTime: Instant?
+            var lockUpdateTime: Instant? = null
     ) : PersistentState()
 
     @Entity
@@ -132,5 +135,24 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
                      issuer = _issuerParty,
                      issuerRef = _issuerRef.bytes,
                      participants = _participants.toMutableSet())
+    }
+
+    @Entity
+    @Table(name = "vault_transaction_notes",
+           indexes = arrayOf(Index(name = "seq_no_index", columnList = "seq_no"),
+                             Index(name = "transaction_id_index", columnList = "transaction_id")))
+    class VaultTxnNote(
+        @Id
+        @GeneratedValue
+        @Column(name = "seq_no")
+        var seqNo: Int,
+
+        @Column(name = "transaction_id", length = 64)
+        var txId: String,
+
+        @Column(name = "note")
+        var note: String
+    ) : Serializable {
+        constructor(txId: String, note: String) : this(0, txId, note)
     }
 }

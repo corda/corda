@@ -7,6 +7,7 @@ import net.corda.core.schemas.converters.AbstractPartyToX500NameAsStringConverte
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.node.utilities.parserTransactionIsolationLevel
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
@@ -27,6 +28,8 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
 
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
     val sessionFactories = ConcurrentHashMap<MappedSchema, SessionFactory>()
+
+    private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?:"")
 
     init {
         schemaService.schemaOptions.map { it.key }.forEach { mappedSchema ->
@@ -60,6 +63,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase","true") == "true") "update" else "validate")
                 .setProperty("hibernate.format_sql", "true")
+                .setProperty("hibernate.connection.isolation", transactionIsolationLevel.toString())
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session

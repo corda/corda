@@ -12,31 +12,37 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.database.RequeryConfiguration
-import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
-import net.corda.node.services.persistence.schemas.requery.Models
-import java.io.ByteArrayInputStream
-import java.io.FilterInputStream
-import java.io.IOException
-import java.io.InputStream
+import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import java.io.*
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Paths
-import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
+import javax.persistence.*
 
 /**
- * Stores attachments in H2 database.
+ * Stores attachments using Hibernate to database.
  */
 @ThreadSafe
-class NodeAttachmentService(dataSourceProperties: Properties, metrics: MetricRegistry, databaseProperties: Properties?)
-    : AttachmentStorage, SingletonSerializeAsToken() {
+class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, SingletonSerializeAsToken() {
+
+    @Entity
+    @Table(name = "${NODE_DATABASE_PREFIX}attachments",
+           indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
+    class DBAttachment(
+            @Id
+            @Column(name = "att_id", length = 65535)
+            var attId: String,
+
+            @Column(name = "content")
+            @Lob
+            var content: ByteArray
+    ) : Serializable
+
     companion object {
         private val log = loggerFor<NodeAttachmentService>()
     }
-
-    val configuration = RequeryConfiguration(dataSourceProperties, databaseProperties = databaseProperties ?: Properties())
-    val session = configuration.sessionForModel(Models.PERSISTENCE)
 
     @VisibleForTesting
     var checkAttachmentsOnLoad = true
@@ -44,9 +50,12 @@ class NodeAttachmentService(dataSourceProperties: Properties, metrics: MetricReg
     private val attachmentCount = metrics.counter("Attachments")
 
     init {
-        session.withTransaction {
-            attachmentCount.inc(session.count(AttachmentEntity::class).get().value().toLong())
-        }
+        val session = DatabaseTransactionManager.current().session
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
+        val count = session.createQuery(criteriaQuery).singleResult
+        attachmentCount.inc(count)
     }
 
     @CordaSerializable
@@ -128,16 +137,13 @@ class NodeAttachmentService(dataSourceProperties: Properties, metrics: MetricReg
 
     }
 
-    override fun openAttachment(id: SecureHash): Attachment? = session.withTransaction {
-        try {
-            session.select(AttachmentEntity::class)
-                    .where(AttachmentEntity.ATT_ID.eq(id))
-                    .get()
-                    .single()
-        } catch (e: NoSuchElementException) {
-            null
+    override fun openAttachment(id: SecureHash): Attachment? {
+        val attachment = DatabaseTransactionManager.current().session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
+        attachment?.let {
+            return AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad)
         }
-    }?.run { AttachmentImpl(id, { content }, checkAttachmentsOnLoad) }
+        return null
+    }
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     override fun importAttachment(jar: InputStream): SecureHash {
@@ -153,25 +159,21 @@ class NodeAttachmentService(dataSourceProperties: Properties, metrics: MetricReg
         checkIsAValidJAR(ByteArrayInputStream(bytes))
         val id = SecureHash.SHA256(hs.hash().asBytes())
 
-        val count = session.withTransaction {
-            session.count(AttachmentEntity::class)
-                    .where(AttachmentEntity.ATT_ID.eq(id))
-                    .get().value()
-        }
-
+        val session = DatabaseTransactionManager.current().session
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+        val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
+        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
+        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), id.toString()))
+        val count = session.createQuery(criteriaQuery).singleResult
         if (count > 0) {
             throw FileAlreadyExistsException(id.toString())
         }
 
-        session.withTransaction {
-            val attachment = AttachmentEntity()
-            attachment.attId = id
-            attachment.content = bytes
-            session.insert(attachment)
-        }
+        val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
+        session.save(attachment)
 
         attachmentCount.inc()
-
         log.info("Stored new attachment $id")
 
         return id

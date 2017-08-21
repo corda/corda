@@ -7,6 +7,11 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* Removed usage of Requery ORM library (repalced with JPA/Hibernate)
+
+* Vault Query performance improvement (replaced expensive per query SQL statement to obtain concrete state types
+  with single query on start-up followed by dynamic updates using vault state observable))
+
 * Vault Query fix: filter by multiple issuer names in ``FungibleAssetQueryCriteria``
 
 * Following deprecated methods have been removed:
