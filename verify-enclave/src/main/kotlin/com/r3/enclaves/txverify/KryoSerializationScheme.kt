@@ -1,10 +1,13 @@
 package com.r3.enclaves.txverify
 
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.AbstractKryoSerializationScheme
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 
 @Suppress("UNUSED")
 private class KryoVerifierSerializationScheme(serializationFactory: SerializationFactory) : AbstractKryoSerializationScheme(serializationFactory) {
@@ -14,4 +17,16 @@ private class KryoVerifierSerializationScheme(serializationFactory: Serializatio
 
     override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
     override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
+
+    /*
+     * Registers the serialisation scheme as soon as the class is loaded into the JVM.
+     */
+    private companion object {
+        init {
+            SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
+                registerScheme(KryoVerifierSerializationScheme(this))
+            }
+            SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
+        }
+    }
 }
