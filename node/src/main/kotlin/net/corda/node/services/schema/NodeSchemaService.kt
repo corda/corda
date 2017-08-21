@@ -17,7 +17,6 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.vault.VaultSchemaV1
-import net.corda.services.schemas.AttachmentsSchemaV1
 
 /**
  * Most basic implementation of [SchemaService].
@@ -39,7 +38,7 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     PersistentKeyManagementService.PersistentKey::class.java,
                     PersistentUniquenessProvider.PersistentUniqueness::class.java,
                     PersistentUniquenessProvider.PersistentUniqueness::class.java,
-                    NodeSchedulerService.PersistentScheduledState::class.java
+                    NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java
                     ))
 

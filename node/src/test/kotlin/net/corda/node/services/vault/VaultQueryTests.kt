@@ -57,7 +57,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     // test cash notary
     val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(21)) }
     val CASH_NOTARY: Party get() = Party(X500Name("CN=Cash Notary Service,O=R3,OU=corda,L=Zurich,C=CH"), CASH_NOTARY_KEY.public)
-    val CASH_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CASH_NOTARY.nameOrNull()!!, CASH_NOTARY_KEY.public)
+    val CASH_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CASH_NOTARY.nameOrNull(), CASH_NOTARY_KEY.public)
 
     @Before
     fun setUp() {
@@ -1886,7 +1886,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE))
             services.fillWithSomeTestLinearStates(1)
             services.fillWithSomeTestLinearStates(1, "TEST3")
-
+        }
+        database.transaction {
             val linearStateCriteria = LinearStateQueryCriteria(participants = listOf(ALICE))
             val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria)
 
@@ -1905,7 +1906,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE,BOB,CHARLIE))
             services.fillWithSomeTestLinearStates(1)
             services.fillWithSomeTestLinearStates(1, "TEST3")
-
+        }
+        database.transaction {
             val linearStateCriteria = LinearStateQueryCriteria(participants = listOf(ALICE,BOB,CHARLIE))
             val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria)
 

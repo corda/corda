@@ -49,8 +49,8 @@ class ContractUpgradeFlowTest {
         notary = nodes.notaryNode.info.notaryIdentity
 
         val nodeIdentity = nodes.notaryNode.info.legalIdentitiesAndCerts.single { it.party == nodes.notaryNode.info.notaryIdentity }
-        a.services.identityService.registerIdentity(nodeIdentity)
-        b.services.identityService.registerIdentity(nodeIdentity)
+        a.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
+        b.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
     }
 
     @After

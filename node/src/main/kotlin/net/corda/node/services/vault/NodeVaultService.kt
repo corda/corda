@@ -2,12 +2,11 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
-import net.corda.core.crypto.toBase58String
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.tee
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
@@ -72,32 +71,29 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             val consumedStateRefs = update.consumed.map { it.ref }
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
-            val session = DatabaseTransactionManager.current().
-            session
-                producedStateRefsMap.forEach { stateAndRef ->
-                    val state = VaultSchemaV1.VaultStates(
-                            notaryName = stateAndRef.value.state.notary.name.toString(),
-
-                            contractStateClassName = stateAndRef.value.state.data.javaClass.name,
-                            contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
-                            stateStatus = Vault.StateStatus.UNCONSUMED,
-                            recordedTime = services.clock.instant())
-                    state.stateRef = PersistentStateRef(stateAndRef.key)
+            val session = DatabaseTransactionManager.current().session
+            producedStateRefsMap.forEach { stateAndRef ->
+                val state = VaultSchemaV1.VaultStates(
+                        notary = stateAndRef.value.state.notary,
+                        contractStateClassName = stateAndRef.value.state.data.javaClass.name,
+                        contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
+                        stateStatus = Vault.StateStatus.UNCONSUMED,
+                        recordedTime = services.clock.instant())
+                state.stateRef = PersistentStateRef(stateAndRef.key)
+                session.save(state)
+            }
+            consumedStateRefs.forEach { stateRef ->
+                val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
+                state?.run {
+                    stateStatus = Vault.StateStatus.CONSUMED
+                    consumedTime = services.clock.instant()
+                    // remove lock (if held)
+                    if (lockId != null) {
+                        lockId = null
+                        lockUpdateTime = services.clock.instant()
+                        log.trace("Releasing soft lock on consumed state: $stateRef")
+                    }
                     session.save(state)
-                }
-                consumedStateRefs.forEach { stateRef ->
-                    val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
-                    state?.run {
-                        stateStatus = Vault.StateStatus.CONSUMED
-                        consumedTime = services.clock.instant()
-                        // remove lock (if held)
-                        if (lockId != null) {
-                            lockId = null
-                            lockUpdateTime = services.clock.instant()
-                            log.trace("Releasing soft lock on consumed state: $stateRef")
-                        }
-                        session.save(state)
-
                 }
             }
         }
