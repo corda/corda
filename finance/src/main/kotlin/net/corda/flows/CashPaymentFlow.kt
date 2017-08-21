@@ -32,6 +32,7 @@ open class CashPaymentFlow(
     constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, true, tracker())
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
     constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean) : this(amount, recipient, anonymous, tracker())
+    constructor(request: PaymentRequest) : this(request.amount, request.recipient, request.anonymous, tracker(), request.issuerConstraint)
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
@@ -41,9 +42,9 @@ open class CashPaymentFlow(
         } else {
             emptyMap<Party, AnonymousParty>()
         }
-        val anonymousRecipient = txIdentities.get(recipient) ?: recipient
+        val anonymousRecipient = txIdentities[recipient] ?: recipient
         progressTracker.currentStep = GENERATING_TX
-        val builder: TransactionBuilder = TransactionBuilder(null as Party?)
+        val builder = TransactionBuilder(null as Party?)
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
             Cash.generateSpend(serviceHub,
@@ -62,4 +63,6 @@ open class CashPaymentFlow(
         finaliseTx(setOf(recipient), tx, "Unable to notarise spend")
         return Result(tx, anonymousRecipient)
     }
+
+    class PaymentRequest(amount: Amount<Currency>, val recipient: Party, val anonymous: Boolean, val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
 }

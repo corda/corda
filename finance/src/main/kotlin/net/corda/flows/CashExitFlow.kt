@@ -26,6 +26,7 @@ import java.util.*
 @StartableByRPC
 class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes) : this(amount, issueRef, tracker())
+    constructor(request: ExitRequest) : this(request.amount, request.issueRef, tracker())
 
     companion object {
         fun tracker() = ProgressTracker(GENERATING_TX, SIGNING_TX, FINALISING_TX)
@@ -39,7 +40,7 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
     @Throws(CashException::class)
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
-        val builder: TransactionBuilder = TransactionBuilder(notary = null as Party?)
+        val builder = TransactionBuilder(notary = null as Party?)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
         val exitStates = Cash.unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
@@ -71,4 +72,6 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         finaliseTx(participants, tx, "Unable to notarise exit")
         return Result(tx, null)
     }
+
+    class ExitRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes) : AbstractRequest(amount)
 }

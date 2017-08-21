@@ -8,7 +8,9 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.flows.CashFlowCommand
+import net.corda.flows.CashExitFlow.ExitRequest
+import net.corda.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.flows.CashPaymentFlow.PaymentRequest
 import java.util.*
 
 fun generateIssue(
@@ -17,12 +19,12 @@ fun generateIssue(
         notary: Party,
         possibleRecipients: List<Party>,
         anonymous: Boolean
-): Generator<CashFlowCommand.IssueCash> {
+): Generator<IssueAndPaymentRequest> {
     return generateAmount(1, max, Generator.pure(currency)).combine(
             Generator.pure(OpaqueBytes.of(0)),
             Generator.pickOne(possibleRecipients)
     ) { amount, ref, recipient ->
-        CashFlowCommand.IssueCash(amount, ref, recipient, notary, anonymous)
+        IssueAndPaymentRequest(amount, ref, recipient, notary, anonymous)
     }
 }
 
@@ -32,19 +34,19 @@ fun generateMove(
         issuer: Party,
         possibleRecipients: List<Party>,
         anonymous: Boolean
-): Generator<CashFlowCommand.PayCash> {
+): Generator<PaymentRequest> {
     return generateAmount(1, max, Generator.pure(Issued(PartyAndReference(issuer, OpaqueBytes.of(0)), currency))).combine(
             Generator.pickOne(possibleRecipients)
     ) { amount, recipient ->
-        CashFlowCommand.PayCash(amount.withoutIssuer(), recipient, issuer, anonymous)
+        PaymentRequest(amount.withoutIssuer(), recipient, anonymous, setOf(issuer))
     }
 }
 
 fun generateExit(
         max: Long,
         currency: Currency
-): Generator<CashFlowCommand.ExitCash> {
+): Generator<ExitRequest> {
     return generateAmount(1, max, Generator.pure(currency)).map { amount ->
-        CashFlowCommand.ExitCash(amount, OpaqueBytes.of(0))
+        ExitRequest(amount, OpaqueBytes.of(0))
     }
 }
