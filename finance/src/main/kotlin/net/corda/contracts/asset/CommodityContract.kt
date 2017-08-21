@@ -2,18 +2,17 @@ package net.corda.contracts.asset
 
 import net.corda.contracts.Commodity
 import net.corda.core.contracts.*
-import net.corda.core.crypto.newSecureRandom
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 import net.corda.finance.utils.sumCommodities
 import net.corda.finance.utils.sumCommoditiesOrNull
 import net.corda.finance.utils.sumCommoditiesOrZero
+import java.security.PublicKey
 import java.util.*
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -168,15 +167,3 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     override fun generateExitCommand(amount: Amount<Issued<Commodity>>) = Commands.Exit(amount)
     override fun generateMoveCommand() = Commands.Move()
 }
-
-/**
- * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
- * states cannot be added together (i.e. are different currencies).
- */
-fun Iterable<ContractState>.sumCommodities() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrThrow()
-
-/** Sums the cash states in the list, returning null if there are none. */
-@Suppress("unused") fun Iterable<ContractState>.sumCommoditiesOrNull() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrNull()
-
-/** Sums the cash states in the list, returning zero of the given currency if there are none. */
-fun Iterable<ContractState>.sumCommoditiesOrZero(currency: Issued<Commodity>) = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrZero(currency)
