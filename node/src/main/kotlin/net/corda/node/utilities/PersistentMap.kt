@@ -132,13 +132,15 @@ class PersistentMap<K, V, E, EK> (
             set(key, value,
                     logWarning = false,
                     store = { k: K, v: V -> merge(k, v) },
-                    replace = { k: K, v:V ->
-                            synchronized(this) {
-                            merge(key, value)
-                            cache.put(key,Optional.of(value))
-                        }
-                    }
+                    replace = { k: K, v: V -> replaceValue(k, v) }
             )
+
+    private fun replaceValue(key: K, value: V) {
+        synchronized(this) {
+            merge(key, value)
+            cache.put(key, Optional.of(value))
+        }
+    }
 
     private fun merge(key: K, value: V): V? {
         val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
@@ -167,7 +169,7 @@ class PersistentMap<K, V, E, EK> (
 
     private class NotReallyMutableEntry<K, V>(key: K, value: V) : AbstractMap.SimpleImmutableEntry<K, V>(key, value), MutableMap.MutableEntry<K, V> {
         override fun setValue(newValue: V): V {
-            throw UnsupportedOperationException("Not really mutable.  Implement if really required.")
+            throw UnsupportedOperationException("Not really mutable. Implement if really required.")
         }
     }
 
