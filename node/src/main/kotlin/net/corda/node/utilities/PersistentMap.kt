@@ -60,15 +60,15 @@ class PersistentMap<K, V, E, EK> (
         return cache.asMap().map { entry -> Pair(entry.key as K, entry.value.get()) }.asSequence()
     }
 
-    override val size = all().count()
+    override val size = cache.size().toInt()
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?, override: (K,V) -> Unit) : Boolean {
+    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?, replace: (K, V) -> Unit) : Boolean {
         var insertionAttempt = false
         var isUnique = true
         val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
             insertionAttempt = true
             // Value wasn't in the cache and wasn't in DB (because the cache is unbound).
-            // Store the value, depending on store implementation this may overwrite existing entry in DB.
+            // Store the value, depending on store implementation this may replace existing entry in DB.
             store(key, value)
             Optional.of(value)
         }
@@ -76,13 +76,13 @@ class PersistentMap<K, V, E, EK> (
             if (existingInCache.isPresent) {
                 // Key already exists in cache, store the new value in the DB (depends on tore implementation) and refresh cache.
                 isUnique = false
-                override(key, value)
+                replace(key, value)
             } else {
                 // This happens when the key was queried before with no value associated. We invalidate the cached null
                 // value and recursively call set again. This is to avoid race conditions where another thread queries after
                 // the invalidate but before the set.
                 cache.invalidate(key)
-                return set(key, value, logWarning, store, override)
+                return set(key, value, logWarning, store, replace)
             }
         }
         if (logWarning && !isUnique) {
@@ -93,24 +93,24 @@ class PersistentMap<K, V, E, EK> (
 
     /**
      * Associates the specified value with the specified key in this map and persists it.
-     * If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw an error from the underlying storage.
+     * WARNING! If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw an error from the underlying storage.
      */
-    operator fun set(key: K, value: V) = //TODO rename to setUnchecked
+    operator fun set(key: K, value: V) =
             set(key, value,
                     logWarning = false,
                     store =  { key: K, value: V ->
                         DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
                         null
                     },
-                    override = { _: K, _: V -> Unit }
+                    replace = { _: K, _: V -> Unit }
             )
 
     /**
      * Associates the specified value with the specified key in this map and persists it.
-     * If the map previously contained a mapping for the key, the old value is not replaced.
+     * WARNING! If the map previously contained a mapping for the key, the old value is not replaced.
      * @return true if added key was unique, otherwise false
      */
-    fun addWithDuplicatesAllowed(key: K, value: V) = //TODO rename setIfAbsent
+    fun addWithDuplicatesAllowed(key: K, value: V) =
             set(key, value,
                     store = { key, value ->
                         val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
@@ -121,26 +121,24 @@ class PersistentMap<K, V, E, EK> (
                             fromPersistentEntity(existingEntry).second
                         }
                     },
-                    override = { _: K, _: V -> Unit }
+                    replace = { _: K, _: V -> Unit }
             )
 
     /**
      * Associates the specified value with the specified key in this map and persists it.
      * @return true if added key was unique, otherwise false
      */
-    fun addWithDuplicatesOverwritten(key: K, value: V) = //TODO rename to set
+    fun addWithDuplicatesReplaced(key: K, value: V) =
             set(key, value,
                     logWarning = false,
                     store = { k: K, v: V -> merge(k, v) },
-                    override = { k: K, v:V -> override(k, v) }
+                    replace = { k: K, v:V ->
+                            synchronized(this) {
+                            merge(key, value)
+                            cache.put(key,Optional.of(value))
+                        }
+                    }
             )
-
-    private fun override(key: K, value: V) {
-        synchronized(this) {
-            merge(key, value)
-            cache.put(key,Optional.of(value))
-        }
-    }
 
     private fun merge(key: K, value: V): V? {
         val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
@@ -246,7 +244,7 @@ class PersistentMap<K, V, E, EK> (
 
     override fun put(key: K, value: V): V? {
         val old = cache.get(key)
-        addWithDuplicatesOverwritten(key, value)
+        addWithDuplicatesReplaced(key, value)
         return old.orElse(null)
     }
 }
