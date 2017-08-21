@@ -6,9 +6,8 @@ import net.corda.core.contracts.Amount
 import net.corda.finance.issuedBy
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.TransactionKeyFlow
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
@@ -33,13 +32,14 @@ class CashIssueFlow(val amount: Amount<Currency>,
     constructor(amount: Amount<Currency>,
                 issuerBankPartyRef: OpaqueBytes,
                 notary: Party) : this(amount, issuerBankPartyRef, notary, tracker())
+    constructor(request: IssueRequest) : this(request.amount, request.issueRef, request.notary, tracker())
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
         val issuerCert = serviceHub.myInfo.legalIdentityAndCert
 
         progressTracker.currentStep = GENERATING_TX
-        val builder: TransactionBuilder = TransactionBuilder(notary)
+        val builder = TransactionBuilder(notary)
         val issuer = issuerCert.party.ref(issuerBankPartyRef)
         val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), issuerCert.party, notary)
         progressTracker.currentStep = SIGNING_TX
@@ -48,4 +48,7 @@ class CashIssueFlow(val amount: Amount<Currency>,
         subFlow(FinalityFlow(tx))
         return Result(tx, issuerCert.party)
     }
+
+    @CordaSerializable
+    class IssueRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes, val notary: Party) : AbstractRequest(amount)
 }
