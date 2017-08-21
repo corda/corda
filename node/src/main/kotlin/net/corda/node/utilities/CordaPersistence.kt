@@ -20,15 +20,21 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
-class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: NodeSchemaService, val identitySvc: ()-> IdentityService, databaseProperties: Properties): Closeable {
+class CordaPersistence(var dataSource: HikariDataSource, private var nodeSchemaService: NodeSchemaService, val identitySvc: ()-> IdentityService, databaseProperties: Properties): Closeable {
 
     /** Holds Exposed database, the field will be removed once Exposed library is removed */
     lateinit var database: Database
     var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
+   val hibernateConfig: HibernateConfiguration by lazy (LazyThreadSafetyMode.NONE) {
+       transaction {
+        HibernateConfiguration(nodeSchemaService, databaseProperties, identitySvc)
+    }
+   }
+
     val entityManagerFactory: SessionFactory by lazy(LazyThreadSafetyMode.NONE) {
         transaction {
-            HibernateConfiguration(nodeSchemaService, databaseProperties, identitySvc).sessionFactoryForRegisteredSchemas()
+            hibernateConfig.sessionFactoryForRegisteredSchemas()
         }
     }
 
@@ -100,7 +106,7 @@ class CordaPersistence(var dataSource: HikariDataSource, var nodeSchemaService: 
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, entitySchemas: Set<MappedSchema> = emptySet<MappedSchema>(), identitySvc: ()-> IdentityService): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, entitySchemas: Set<MappedSchema> = emptySet(), identitySvc: ()-> IdentityService): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
     val persistence = CordaPersistence.connect(dataSource, NodeSchemaService(entitySchemas), identitySvc, databaseProperties ?: Properties())

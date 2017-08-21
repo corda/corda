@@ -480,7 +480,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeVaultObservers() {
         VaultSoftLockManager(services.vaultService, smm)
         ScheduledActivityObserver(services)
-        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService, configuration.database ?: Properties(), {services.identityService}))
+        HibernateObserver(services.vaultService.rawUpdates, services.database.hibernateConfig)
     }
 
     private fun makeInfo(legalIdentity: PartyAndCertificate): NodeInfo {
@@ -750,8 +750,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
 
-        private val hibernateConfig by lazy { HibernateConfiguration(schemaService, configuration.database ?: Properties(), { identityService }) }
-
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
@@ -761,7 +759,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(this) }
         override val vaultQueryService by lazy {
-            HibernateVaultQueryImpl(hibernateConfig, vaultService)
+            HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
         }
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with

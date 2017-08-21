@@ -21,13 +21,13 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, val databaseProperties: Properties, private val identitySvc: () -> IdentityService) {
+class HibernateConfiguration(val schemaService: SchemaService, private val databaseProperties: Properties, private val identitySvc: () -> IdentityService) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
 
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
-    val sessionFactories = ConcurrentHashMap<MappedSchema, SessionFactory>()
+    private val sessionFactories = ConcurrentHashMap<MappedSchema, SessionFactory>()
 
     private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?:"")
 
