@@ -7,6 +7,7 @@ import net.corda.finance.issuedBy
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
@@ -48,5 +49,6 @@ class CashIssueFlow(val amount: Amount<Currency>,
         return Result(tx, issuerCert.party)
     }
 
+    @CordaSerializable
     class IssueRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes, val notary: Party) : AbstractRequest(amount)
 }

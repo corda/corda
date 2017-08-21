@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
@@ -39,6 +40,7 @@ class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
         return subFlow(CashPaymentFlow(amount, recipient, anonymous))
     }
 
+    @CordaSerializable
     class IssueAndPaymentRequest(amount: Amount<Currency>,
                                  val issueRef: OpaqueBytes,
                                  val recipient: Party,

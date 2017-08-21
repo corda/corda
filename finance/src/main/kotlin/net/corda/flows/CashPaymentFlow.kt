@@ -8,6 +8,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionKeyFlow
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
@@ -64,5 +65,6 @@ open class CashPaymentFlow(
         return Result(tx, anonymousRecipient)
     }
 
+    @CordaSerializable
     class PaymentRequest(amount: Amount<Currency>, val recipient: Party, val anonymous: Boolean, val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
 }

@@ -31,7 +31,7 @@ open class EventGenerator(val parties: List<Party>, val currencies: List<Currenc
         IssueAndPaymentRequest(Amount(amount, ccy), issueRef, to, notary, anonymous = true)
     }
 
-    private val exitCashGenerator = amountGenerator.combine(issueRefGenerator, currencyGenerator) { amount, issueRef, ccy ->
+    protected val exitCashGenerator = amountGenerator.combine(issueRefGenerator, currencyGenerator) { amount, issueRef, ccy ->
         addToMap(ccy, -amount)
         ExitRequest(Amount(amount, ccy), issueRef)
     }
