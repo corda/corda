@@ -101,7 +101,28 @@ data class WireTransaction(
     /**
      * Builds whole Merkle tree for a transaction.
      */
-    val merkleTree: MerkleTree by lazy { MerkleTree.getMerkleTree(availableComponentHashes) }
+    val merkleTree: MerkleTree by lazy { fullMerkleTree() }
+
+    /**
+     * Builds the input states sub Merkle tree.
+     */
+    val inputsMerkleTree: MerkleTree? by lazy { inputsMerkleTree() }
+
+    private fun fullMerkleTree(): MerkleTree {
+        return if (!inputs.isEmpty()) {
+            MerkleTree.getMerkleTree(availableComponentHashes)
+        } else {
+            MerkleTree.getMerkleTree(listOf(inputsMerkleTree!!.hash) + availableComponentHashes.subList(inputs.size, availableComponentHashes.size))
+        }
+    }
+
+    private fun inputsMerkleTree(): MerkleTree? {
+        return if (!inputs.isEmpty()) {
+            MerkleTree.getMerkleTree(availableComponentHashes.subList(0, inputs.size))
+        } else {
+            null
+        }
+    }
 
     /**
      * Construction of partial transaction from WireTransaction based on filtering.
