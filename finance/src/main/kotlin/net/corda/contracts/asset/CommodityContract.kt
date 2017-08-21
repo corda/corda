@@ -48,7 +48,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         override val exitKeys: Set<PublicKey> = Collections.singleton(owner.owningKey)
         override val participants = listOf(owner)
 
-        override fun move(newAmount: Amount<Issued<Commodity>>, newOwner: AbstractParty): FungibleAsset<Commodity>
+        override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Commodity>>, newOwner: AbstractParty): FungibleAsset<Commodity>
                 = copy(amount = amount.copy(newAmount.quantity), owner = newOwner)
 
         override fun toString() = "Commodity($amount at ${amount.token.issuer} owned by $owner)"
@@ -77,7 +77,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        data class Exit(override val amount: Amount<Issued<Commodity>>) : FungibleAsset.ExitCommand<Commodity>
+        data class Exit(val amount: Amount<Issued<Commodity>>) : CommandData
     }
 
     override fun verify(tx: LedgerTransaction) {

@@ -1,8 +1,6 @@
 package net.corda.contracts.asset
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.newSecureRandom
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.Emoji
@@ -10,7 +8,6 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
@@ -36,7 +33,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
         override val contract = CASH_PROGRAM_ID
         override val participants = listOf(owner)
 
-        override fun move(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty): FungibleAsset<Currency>
+        override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty): FungibleAsset<Currency>
                 = copy(amount = amount.copy(newAmount.quantity), owner = newOwner)
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by $owner)"
@@ -83,7 +80,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
 
         class Issue : TypeOnlyCommandData()
 
-        data class Exit(override val amount: Amount<Issued<Currency>>) : FungibleAsset.ExitCommand<Currency>
+        data class Exit(val amount: Amount<Issued<Currency>>) : CommandData
     }
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)

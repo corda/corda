@@ -156,15 +156,15 @@ data class CommandAndState(val command: CommandData, val ownableState: OwnableSt
  * A contract state that can have a single owner.
  */
 interface OwnableState : ContractState {
-    /** There must be a MoveCommand signed by this key to claim the amount */
+    /** There must be a MoveCommand signed by this key to claim the amount. */
     val owner: AbstractParty
 
-    /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
+    /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone. */
     fun withNewOwner(newOwner: AbstractParty): CommandAndState
 }
 // DOCEND 3
 
-/** Something which is scheduled to happen at a point in time */
+/** Something which is scheduled to happen at a point in time. */
 interface Scheduled {
     val scheduledAt: Instant
 }

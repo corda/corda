@@ -1,6 +1,5 @@
 package net.corda.contracts.asset
 
-import net.corda.core.internal.VisibleForTesting
 import net.corda.contracts.NetCommand
 import net.corda.contracts.NetType
 import net.corda.contracts.NettableState
@@ -12,6 +11,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -139,7 +139,7 @@ class Obligation<P : Any> : Contract {
         override val participants: List<AbstractParty> = listOf(obligor, beneficiary)
         override val owner: AbstractParty = beneficiary
 
-        override fun move(newAmount: Amount<Issued<Terms<P>>>, newOwner: AbstractParty): State<P>
+        override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Terms<P>>>, newOwner: AbstractParty): State<P>
                 = copy(quantity = newAmount.quantity, beneficiary = newOwner)
 
         override fun toString() = when (lifecycle) {
@@ -221,7 +221,7 @@ class Obligation<P : Any> : Contract {
          * A command stating that the debt is being released by the beneficiary. Normally would indicate
          * either settlement outside of the ledger, or that the obligor is unable to pay.
          */
-        data class Exit<P : Any>(override val amount: Amount<Issued<Terms<P>>>) : FungibleAsset.ExitCommand<Terms<P>>
+        data class Exit<P : Any>(val amount: Amount<Issued<Terms<P>>>) : CommandData
     }
 
     override fun verify(tx: LedgerTransaction) {
@@ -507,7 +507,7 @@ class Obligation<P : Any> : Contract {
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
                      assetStates: List<StateAndRef<Obligation.State<P>>>): Set<PublicKey>
             = OnLedgerAsset.generateExit(tx, amountIssued, assetStates,
-            deriveState = { state, amount, owner -> state.copy(data = state.data.move(amount, owner)) },
+            deriveState = { state, amount, owner -> state.copy(data = state.data.withNewOwnerAndAmount(amount, owner)) },
             generateMoveCommand = { -> Commands.Move() },
             generateExitCommand = { amount -> Commands.Exit(amount) }
     )
@@ -670,13 +670,13 @@ class Obligation<P : Any> : Contract {
                 val assetState = ref.state.data
                 val amount = Amount(assetState.amount.quantity, assetState.amount.token.product)
                 if (obligationRemaining >= amount) {
-                    tx.addOutputState(assetState.move(assetState.amount, obligationOwner), notary)
+                    tx.addOutputState(assetState.withNewOwnerAndAmount(assetState.amount, obligationOwner), notary)
                     obligationRemaining -= amount
                 } else {
                     val change = Amount(obligationRemaining.quantity, assetState.amount.token)
                     // Split the state in two, sending the change back to the previous beneficiary
-                    tx.addOutputState(assetState.move(change, obligationOwner), notary)
-                    tx.addOutputState(assetState.move(assetState.amount - change, assetState.owner), notary)
+                    tx.addOutputState(assetState.withNewOwnerAndAmount(change, obligationOwner), notary)
+                    tx.addOutputState(assetState.withNewOwnerAndAmount(assetState.amount - change, assetState.owner), notary)
                     obligationRemaining -= Amount(0L, obligationRemaining.token)
                 }
                 assetSigners.add(assetState.owner)

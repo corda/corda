@@ -76,7 +76,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         override val contract = CASH_PROGRAM_ID
         override val participants = listOf(owner)
 
-        override fun move(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty): FungibleAsset<Currency>
+        override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty): FungibleAsset<Currency>
                 = copy(amount = amount.copy(newAmount.quantity), owner = newOwner)
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by $owner)"
@@ -128,7 +128,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        data class Exit(override val amount: Amount<Issued<Currency>>) : FungibleAsset.ExitCommand<Currency>
+        data class Exit(val amount: Amount<Issued<Currency>>) : CommandData
     }
 
     /**
