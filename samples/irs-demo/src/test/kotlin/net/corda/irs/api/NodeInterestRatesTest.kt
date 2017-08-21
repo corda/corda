@@ -58,7 +58,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         database.transaction {
             oracle = NodeInterestRates.Oracle(
                     MEGA_CORP,

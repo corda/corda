@@ -69,12 +69,13 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, identitySvc = ::makeTestIdentityService)
         val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
+        val createSchemaService = { NodeSchemaService(customSchemas) }
+        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, createSchemaService, ::makeTestIdentityService)
         database.transaction {
-            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), ::makeTestIdentityService)
+            hibernateConfig = HibernateConfiguration(createSchemaService, defaultDatabaseProperties, ::makeTestIdentityService)
             services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
-                override val vaultService: VaultService = makeVaultService(hibernateConfig)
+                override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
 
                 override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {

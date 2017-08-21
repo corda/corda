@@ -538,7 +538,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            this.database = configureDatabase(props, configuration.database, identitySvc = { _services.identityService })
+            this.database = configureDatabase(props, configuration.database, { _services.schemaService }, createIdentityService = { _services.identityService })
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             database.transaction {
                 log.info("Connected to ${database.database.vendor} database.")

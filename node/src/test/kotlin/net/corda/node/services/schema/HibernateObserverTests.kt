@@ -36,7 +36,7 @@ class HibernateObserverTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(HibernateObserver::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
     }
 
     @After
@@ -106,7 +106,7 @@ class HibernateObserverTests {
         }
 
         @Suppress("UNUSED_VARIABLE")
-        val observer = HibernateObserver(rawUpdatesPublisher, HibernateConfiguration(schemaService, makeTestDatabaseProperties(), ::makeTestIdentityService))
+        val observer = HibernateObserver(rawUpdatesPublisher, HibernateConfiguration({ schemaService }, makeTestDatabaseProperties(), ::makeTestIdentityService))
         database.transaction {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
             val parentRowCountResult = TransactionManager.current().connection.prepareStatement("select count(*) from Parents").executeQuery()

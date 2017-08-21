@@ -3,7 +3,6 @@ package net.corda.node.utilities
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.node.services.IdentityService
-import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import org.hibernate.SessionFactory
@@ -20,27 +19,28 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
-class CordaPersistence(var dataSource: HikariDataSource, private var nodeSchemaService: NodeSchemaService, val identitySvc: ()-> IdentityService, databaseProperties: Properties): Closeable {
+class CordaPersistence(var dataSource: HikariDataSource, private var createSchemaService: () -> NodeSchemaService,
+                       private val createIdentityService: ()-> IdentityService, databaseProperties: Properties): Closeable {
 
     /** Holds Exposed database, the field will be removed once Exposed library is removed */
     lateinit var database: Database
     var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
-   val hibernateConfig: HibernateConfiguration by lazy (LazyThreadSafetyMode.NONE) {
+   val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(nodeSchemaService, databaseProperties, identitySvc)
+            HibernateConfiguration(createSchemaService, databaseProperties, createIdentityService)
         }
    }
 
-    val entityManagerFactory: SessionFactory by lazy(LazyThreadSafetyMode.NONE) {
+    val entityManagerFactory: SessionFactory by lazy {
         transaction {
             hibernateConfig.sessionFactoryForRegisteredSchemas()
         }
     }
 
     companion object {
-        fun connect(dataSource: HikariDataSource, nodeSchemaService: NodeSchemaService, identitySvc: () -> IdentityService, databaseProperties: Properties): CordaPersistence {
-            return CordaPersistence(dataSource, nodeSchemaService, identitySvc, databaseProperties).apply {
+        fun connect(dataSource: HikariDataSource, createSchemaService: () -> NodeSchemaService, createIdentityService: () -> IdentityService, databaseProperties: Properties): CordaPersistence {
+            return CordaPersistence(dataSource, createSchemaService, createIdentityService, databaseProperties).apply {
                 DatabaseTransactionManager(this)
             }
         }
@@ -106,10 +106,10 @@ class CordaPersistence(var dataSource: HikariDataSource, private var nodeSchemaS
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, entitySchemas: Set<MappedSchema> = emptySet(), identitySvc: ()-> IdentityService): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, createSchemaService: () -> NodeSchemaService = { NodeSchemaService() }, createIdentityService: ()-> IdentityService): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
-    val persistence = CordaPersistence.connect(dataSource, NodeSchemaService(entitySchemas), identitySvc, databaseProperties ?: Properties())
+    val persistence = CordaPersistence.connect(dataSource, createSchemaService, createIdentityService, databaseProperties ?: Properties())
 
     //org.jetbrains.exposed.sql.Database will be removed once Exposed library is removed
     val database = Database.connect(dataSource) { _ -> ExposedTransactionManager() }
@@ -203,7 +203,7 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
         wrappingSubscriber.cleanUp()
         // If cleanup removed the last subscriber reset the system, as future subscribers might need the stream again
         if (wrappingSubscriber.delegates.isEmpty()) {
-            wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
+            wrappingSubscriber = DatabaseTransactionWrappingSubscriber(db)
         }
     }
 }

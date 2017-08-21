@@ -49,13 +49,13 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
         val transactionSchema = MappedSchema(schemaFamily = javaClass, version = 1,
                 mappedTypes = listOf(DBTransactionStorage.DBTransaction::class.java))
 
-        val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, transactionSchema)
+        val createSchemaService = { NodeSchemaService(setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, transactionSchema)) }
 
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), customSchemas, identitySvc = ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), createSchemaService, ::makeTestIdentityService)
 
         database.transaction {
 
-            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+            hibernateConfig = HibernateConfiguration(createSchemaService, makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
 
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultService get() {

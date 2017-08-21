@@ -74,7 +74,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
         val databaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, databaseProperties, identitySvc = ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, databaseProperties, createIdentityService = ::makeTestIdentityService)
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 

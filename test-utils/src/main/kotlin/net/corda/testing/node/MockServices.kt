@@ -87,7 +87,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
 
     lateinit var hibernatePersister: HibernateObserver
 
-    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties(), { identityService })): VaultService {
+    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration( { NodeSchemaService() }, makeTestDatabaseProperties(), { identityService })): VaultService {
         val vaultService = NodeVaultService(this)
         hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
@@ -219,13 +219,13 @@ fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRo
 
 fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1),
                                     keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
-                                    identitySvc: ()-> IdentityService = { makeTestIdentityService() }): Pair<CordaPersistence, MockServices> {
+                                    createIdentityService: () -> IdentityService = { makeTestIdentityService() }): Pair<CordaPersistence, MockServices> {
     val dataSourceProps = makeTestDataSourceProperties()
     val databaseProperties = makeTestDatabaseProperties()
-
-    val database = configureDatabase(dataSourceProps, databaseProperties, identitySvc = identitySvc)
+    val createSchemaService = { NodeSchemaService(customSchemas) }
+    val database = configureDatabase(dataSourceProps, databaseProperties, createSchemaService, createIdentityService)
     val mockService = database.transaction {
-        val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), databaseProperties,  identitySvc = identitySvc)
+        val hibernateConfig = HibernateConfiguration(createSchemaService, databaseProperties,  identitySvc = createIdentityService)
         object : MockServices(*(keys.toTypedArray())) {
             override val vaultService: VaultService = makeVaultService(hibernateConfig)
 

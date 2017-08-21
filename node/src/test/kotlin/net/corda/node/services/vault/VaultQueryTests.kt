@@ -17,6 +17,7 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.utilities.*
 import net.corda.finance.*
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.schemas.CashSchemaV1
@@ -64,7 +65,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         // register additional identities
         identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
         identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
-        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY), identitySvc = { identitySvc })
+        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY), createIdentityService = { identitySvc })
         database = databaseAndServices.first
         services = databaseAndServices.second
         notaryServices = MockServices(DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
@@ -81,7 +82,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { identitySvc })
+        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = { identitySvc })
 
         setUpDb(database, 5000)
 

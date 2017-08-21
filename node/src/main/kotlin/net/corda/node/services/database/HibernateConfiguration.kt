@@ -21,7 +21,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, private val databaseProperties: Properties, private val identitySvc: () -> IdentityService) {
+class HibernateConfiguration(createSchemaService: () -> SchemaService, private val databaseProperties: Properties, private val identitySvc: () -> IdentityService) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
@@ -30,10 +30,11 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
     private val sessionFactories = ConcurrentHashMap<MappedSchema, SessionFactory>()
 
     private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?:"")
+    var schemaService = createSchemaService()
 
     init {
         schemaService.schemaOptions.map { it.key }.forEach { mappedSchema ->
-            sessionFactories.computeIfAbsent(mappedSchema, { makeSessionFactoryForSchema(mappedSchema) })
+            sessionFactories.computeIfAbsent(mappedSchema, { sessionFactoryForSchemas(mappedSchema) })
         }
     }
 
@@ -46,14 +47,10 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
     }
 
     fun sessionFactoryForSchemas(vararg schemas: MappedSchema): SessionFactory {
-        return makeSessionFactoryForSchemas(schemas.iterator())
+        return makeSessionFactoryForSchemas(schemas.toSet())
     }
 
-    private fun makeSessionFactoryForSchema(schema: MappedSchema): SessionFactory {
-        return makeSessionFactoryForSchemas(setOf(schema).iterator())
-    }
-
-    private fun makeSessionFactoryForSchemas(schemas: Iterator<MappedSchema>): SessionFactory {
+    private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
         logger.info("Creating session factory for schemas: $schemas")
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
