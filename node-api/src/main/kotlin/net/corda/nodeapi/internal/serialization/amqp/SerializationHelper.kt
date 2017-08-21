@@ -103,23 +103,26 @@ private fun propertiesForSerializationFromAbstract(clazz: Class<*>, type: Type, 
     return rc
 }
 
-internal fun interfacesForSerialization(type: Type): List<Type> {
+internal fun interfacesForSerialization(type: Type, serializerFactory: SerializerFactory): List<Type> {
     val interfaces = LinkedHashSet<Type>()
-    exploreType(type, interfaces)
+    exploreType(type, interfaces, serializerFactory)
     return interfaces.toList()
 }
 
-private fun exploreType(type: Type?, interfaces: MutableSet<Type>) {
+private fun exploreType(type: Type?, interfaces: MutableSet<Type>, serializerFactory: SerializerFactory) {
     val clazz = type?.asClass()
     if (clazz != null) {
-        if (clazz.isInterface) interfaces += type
+        if (clazz.isInterface) {
+            if(serializerFactory.isNotWhitelisted(clazz)) return // We stop exploring once we reach a branch that has no `CordaSerializable` annotation or whitelisting.
+            else interfaces += type
+        }
         for (newInterface in clazz.genericInterfaces) {
             if (newInterface !in interfaces) {
-                exploreType(resolveTypeVariables(newInterface, type), interfaces)
+                exploreType(resolveTypeVariables(newInterface, type), interfaces, serializerFactory)
             }
         }
         val superClass = clazz.genericSuperclass ?: return
-        exploreType(resolveTypeVariables(superClass, type), interfaces)
+        exploreType(resolveTypeVariables(superClass, type), interfaces, serializerFactory)
     }
 }
 

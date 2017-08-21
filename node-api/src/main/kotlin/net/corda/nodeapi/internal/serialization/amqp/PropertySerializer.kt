@@ -54,6 +54,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
 
     companion object {
         fun make(name: String, readMethod: Method, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
+            readMethod.isAccessible = true
             if (SerializerFactory.isPrimitive(resolvedType)) {
                 return when(resolvedType) {
                     Char::class.java, Character::class.java -> AMQPCharPropertySerializer(name, readMethod)

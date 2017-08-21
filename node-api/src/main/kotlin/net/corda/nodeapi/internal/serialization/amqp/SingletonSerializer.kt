@@ -10,7 +10,7 @@ import java.lang.reflect.Type
  */
 class SingletonSerializer(override val type: Class<*>, val singleton: Any, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
-    private val interfaces = interfacesForSerialization(type)
+    private val interfaces = interfacesForSerialization(type, factory)
 
     private fun generateProvides(): List<String> = interfaces.map { it.typeName }
 

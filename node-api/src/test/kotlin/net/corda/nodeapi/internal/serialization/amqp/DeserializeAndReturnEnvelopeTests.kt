@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.CordaSerializable
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -42,5 +43,23 @@ class DeserializeAndReturnEnvelopeTests {
         assertEquals(2, obj.envelope.schema.types.size)
         assertNotEquals(null, obj.envelope.schema.types.find { it.name == classTestName("A") })
         assertNotEquals(null, obj.envelope.schema.types.find { it.name == classTestName("B") })
+    }
+
+    @Test
+    fun unannotatedInterfaceIsNotInSchema() {
+        @CordaSerializable
+        data class Foo(val bar: Int) : Comparable<Foo> {
+            override fun compareTo(other: Foo): Int = bar.compareTo(other.bar)
+        }
+
+        val a = Foo(123)
+        val factory = testDefaultFactoryWithWhitelist()
+        fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
+
+        assertTrue(obj.obj is Foo)
+        assertEquals(1, obj.envelope.schema.types.size)
+        assertNotEquals(null, obj.envelope.schema.types.find { it.name == classTestName("Foo") })
+        assertEquals(null, obj.envelope.schema.types.find { it.name == "java.lang.Comparable<${classTestName("Foo")}>" })
     }
 }
