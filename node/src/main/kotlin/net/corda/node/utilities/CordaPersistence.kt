@@ -27,9 +27,9 @@ class CordaPersistence(var dataSource: HikariDataSource, private var nodeSchemaS
     var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
    val hibernateConfig: HibernateConfiguration by lazy (LazyThreadSafetyMode.NONE) {
-       transaction {
-        HibernateConfiguration(nodeSchemaService, databaseProperties, identitySvc)
-    }
+        transaction {
+            HibernateConfiguration(nodeSchemaService, databaseProperties, identitySvc)
+        }
    }
 
     val entityManagerFactory: SessionFactory by lazy(LazyThreadSafetyMode.NONE) {
