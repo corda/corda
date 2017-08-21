@@ -24,7 +24,6 @@ import net.corda.flows.CashExitFlow
 import net.corda.flows.CashExitFlow.ExitRequest
 import net.corda.flows.CashIssueAndPaymentFlow
 import net.corda.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -44,7 +43,7 @@ class ExplorerSimulation(val options: OptionSet) {
             startFlowPermission<CashPaymentFlow>()
     ))
     private val manager = User("manager", "test", permissions = setOf(
-            startFlowPermission<CashIssueFlow>(),
+            startFlowPermission<CashIssueAndPaymentFlow>(),
             startFlowPermission<CashPaymentFlow>(),
             startFlowPermission<CashExitFlow>())
     )
@@ -186,8 +185,7 @@ class ExplorerSimulation(val options: OptionSet) {
             for (ref in 0..1) {
                 for ((currency, issuer) in issuers) {
                     val amount = Amount(1_000_000, currency)
-                    issuer.startFlow(::CashIssueFlow, amount, OpaqueBytes(ByteArray(1, { ref.toByte() })), notaryNode.nodeInfo.notaryIdentity).returnValue.getOrThrow()
-                    issuer.startFlow(::CashPaymentFlow, amount, it, anonymous)
+                    issuer.startFlow(::CashIssueAndPaymentFlow, amount, OpaqueBytes(ByteArray(1, { ref.toByte() })), it, anonymous, notaryNode.nodeInfo.notaryIdentity).returnValue.getOrThrow()
                 }
             }
         }
