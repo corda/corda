@@ -280,7 +280,7 @@ public class FlowCookbookJava {
             TypeOnlyCommandData typeOnlyCommandData = new DummyContract.Commands.Create();
             // 2. Include additional data which can be used by the contract
             //    during verification, alongside fulfilling the roles above
-            CommandData commandDataWithData = new Cash.Commands.Issue(12345678);
+            CommandData commandDataWithData = new Cash.Commands.Issue();
 
             // Attachments are identified by their hash.
             // The attachment with the corresponding hash must have been

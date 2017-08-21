@@ -156,15 +156,15 @@ data class CommandAndState(val command: CommandData, val ownableState: OwnableSt
  * A contract state that can have a single owner.
  */
 interface OwnableState : ContractState {
-    /** There must be a MoveCommand signed by this key to claim the amount */
+    /** There must be a MoveCommand signed by this key to claim the amount. */
     val owner: AbstractParty
 
-    /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
+    /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone. */
     fun withNewOwner(newOwner: AbstractParty): CommandAndState
 }
 // DOCEND 3
 
-/** Something which is scheduled to happen at a point in time */
+/** Something which is scheduled to happen at a point in time. */
 interface Scheduled {
     val scheduledAt: Instant
 }
@@ -282,12 +282,6 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) 
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
     override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString()}"
-}
-
-/** A common issue command, to enforce that issue commands have a nonce value. */
-// TODO: Revisit use of nonce values - should this be part of the TX rather than the command perhaps?
-interface IssueCommand : CommandData {
-    val nonce: Long
 }
 
 /** A common move command for contract states which can change owner. */

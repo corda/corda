@@ -143,10 +143,6 @@ class CashTests : TestDependencyInjectionBase() {
                         owner = AnonymousParty(ALICE_PUBKEY)
                 )
             }
-            tweak {
-                command(MINI_CORP_PUBKEY) { Cash.Commands.Issue(0) }
-                this `fails with` "has a nonce"
-            }
             command(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
             this.verifies()
         }

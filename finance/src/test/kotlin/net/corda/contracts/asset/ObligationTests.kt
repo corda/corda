@@ -129,10 +129,6 @@ class ObligationTests {
                         template = megaCorpDollarSettlement
                 )
             }
-            tweak {
-                command(MINI_CORP_PUBKEY) { Obligation.Commands.Issue(0) }
-                this `fails with` "has a nonce"
-            }
             command(MINI_CORP_PUBKEY) { Obligation.Commands.Issue() }
             this.verifies()
         }
@@ -189,7 +185,7 @@ class ObligationTests {
             this `fails with` ""
         }
 
-        // Can't have any other commands if we have an issue command (because the issue command overrules them)
+        // Can't have any other commands if we have an issue command (because the issue command overrules them).
         transaction {
             input { inState }
             output { inState.copy(quantity = inState.amount.quantity * 2) }
