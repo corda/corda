@@ -1059,7 +1059,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 100, 100, Random(0L))
         }
         database.transaction {
-            @Suppress("OVERFLOW_EXPECTED")
+            @Suppress("EXPECTED_CONDITION")
             val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE + 1)  // overflow = -2147483648
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
