@@ -1,11 +1,10 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.contracts.getCashBalance
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -20,6 +19,10 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
+import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.utils.sumCash
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*

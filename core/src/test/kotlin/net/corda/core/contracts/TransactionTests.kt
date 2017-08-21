@@ -1,12 +1,12 @@
 package net.corda.core.contracts
 
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import org.junit.Test

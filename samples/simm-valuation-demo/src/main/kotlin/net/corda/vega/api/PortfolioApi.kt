@@ -1,8 +1,6 @@
 package net.corda.vega.api
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
-import net.corda.client.rpc.notUsed
-import net.corda.contracts.DealState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
@@ -13,6 +11,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.getOrThrow
+import net.corda.finance.contracts.DealState
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState

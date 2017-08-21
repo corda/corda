@@ -407,10 +407,10 @@ list:
 .. sourcecode:: none
 
     com.example.flow.ExampleFlow$Initiator
-    net.corda.flows.CashExitFlow
-    net.corda.flows.CashIssueFlow
-    net.corda.flows.CashPaymentFlow
-    net.corda.flows.ContractUpgradeFlow
+    net.corda.finance.flows.CashExitFlow
+    net.corda.finance.flows.CashIssueFlow
+    net.corda.finance.flows.CashPaymentFlow
+    net.corda.finance.flows.ContractUpgradeFlow
 
 We can create a new IOU using the ``ExampleFlow$Initiator`` flow. For example, from the interactive shell of NodeA, you
 can agree an IOU of 50 with NodeB by running ``flow start Initiator iouValue: 50, otherParty: NodeB``.

@@ -1,6 +1,6 @@
 package net.corda.finance
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
 import org.junit.Test
 import kotlin.test.assertEquals
 

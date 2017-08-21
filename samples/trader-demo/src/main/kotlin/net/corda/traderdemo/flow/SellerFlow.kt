@@ -1,7 +1,6 @@
 package net.corda.traderdemo.flow
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.CommercialPaper
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -12,7 +11,8 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.flows.TwoPartyTradeFlow
+import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.flows.TwoPartyTradeFlow
 import java.util.*
 
 @InitiatingFlow

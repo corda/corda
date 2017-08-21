@@ -2,12 +2,6 @@
 
 package net.corda.testing.contracts
 
-import net.corda.contracts.Commodity
-import net.corda.contracts.DealState
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.CommodityContract
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.asset.DUMMY_OBLIGATION_ISSUER
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureMetadata
@@ -21,6 +15,12 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.finance.contracts.Commodity
+import net.corda.finance.contracts.DealState
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.CommodityContract
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.finance.contracts.asset.DUMMY_OBLIGATION_ISSUER
 import net.corda.testing.CHARLIE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY

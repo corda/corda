@@ -1,10 +1,8 @@
 package net.corda.node.services.persistence
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
-import net.corda.finance.USD
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
@@ -13,6 +11,8 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.finance.USD
+import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP

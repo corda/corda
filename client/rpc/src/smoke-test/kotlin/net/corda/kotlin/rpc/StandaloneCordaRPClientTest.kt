@@ -3,9 +3,6 @@ package net.corda.kotlin.rpc
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.getCashBalance
-import net.corda.contracts.getCashBalances
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.messaging.*
@@ -20,8 +17,11 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.USD
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.getCashBalance
+import net.corda.finance.contracts.getCashBalances
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess

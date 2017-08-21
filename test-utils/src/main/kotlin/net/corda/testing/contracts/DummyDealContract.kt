@@ -1,6 +1,5 @@
 package net.corda.testing.contracts
 
-import net.corda.contracts.DealState
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.containsAny
@@ -11,6 +10,7 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.finance.contracts.DealState
 import net.corda.testing.schemas.DummyDealStateSchemaV1
 import java.security.PublicKey
 

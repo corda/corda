@@ -2,7 +2,6 @@ package net.corda.loadtest.tests
 
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickN
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.AbstractParty
@@ -11,13 +10,14 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.USD
-import net.corda.flows.AbstractCashFlow.AbstractRequest
-import net.corda.flows.CashExitFlow
-import net.corda.flows.CashExitFlow.ExitRequest
-import net.corda.flows.CashIssueAndPaymentFlow
-import net.corda.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.flows.CashPaymentFlow
-import net.corda.flows.CashPaymentFlow.PaymentRequest
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.AbstractCashFlow.AbstractRequest
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
 import org.slf4j.LoggerFactory

@@ -1,11 +1,5 @@
 package net.corda.node.services.vault
 
-import net.corda.contracts.CommercialPaper
-import net.corda.contracts.Commodity
-import net.corda.contracts.DealState
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
@@ -18,12 +12,18 @@ import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.utilities.*
 import net.corda.finance.*
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.Commodity
+import net.corda.finance.contracts.DealState
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
+import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
+import net.corda.finance.schemas.CommercialPaperSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.schemas.CashSchemaV1
-import net.corda.schemas.CashSchemaV1.PersistentCashState
-import net.corda.schemas.CommercialPaperSchemaV1
-import net.corda.schemas.SampleCashSchemaV3
 import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
@@ -1106,7 +1106,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(states).hasSize(20)
             assertThat(metadata.first().contractStateClassName).isEqualTo("net.corda.testing.contracts.DummyLinearContract\$State")
             assertThat(metadata.first().status).isEqualTo(Vault.StateStatus.UNCONSUMED) // 0 = UNCONSUMED
-            assertThat(metadata.last().contractStateClassName).isEqualTo("net.corda.contracts.asset.Cash\$State")
+            assertThat(metadata.last().contractStateClassName).isEqualTo("net.corda.finance.contracts.asset.Cash\$State")
             assertThat(metadata.last().status).isEqualTo(Vault.StateStatus.CONSUMED)    // 1 = CONSUMED
         }
     }
