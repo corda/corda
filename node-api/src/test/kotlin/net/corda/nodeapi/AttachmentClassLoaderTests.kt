@@ -13,6 +13,8 @@ import net.corda.core.serialization.*
 import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.WireTransactionSerializer
 import net.corda.nodeapi.internal.serialization.withTokenContext
@@ -264,6 +266,32 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         assertNotNull(state3)
     }
 
+    @Test
+    fun `test serialization of SecureHash`() {
+        val secureHash = SecureHash.randomSHA256()
+        val bytes = secureHash.serialize()
+        val copiedSecuredHash = bytes.deserialize()
+
+        assertEquals(secureHash, copiedSecuredHash)
+    }
+
+    @Test
+    fun `test serialization of OpaqueBytes`() {
+        val opaqueBytes = OpaqueBytes("0123456789".toByteArray())
+        val bytes = opaqueBytes.serialize()
+        val copiedOpaqueBytes = bytes.deserialize()
+
+        assertEquals(opaqueBytes, copiedOpaqueBytes)
+    }
+
+    @Test
+    fun `test serialization of sub-sequence OpaqueBytes`() {
+        val bytesSequence = ByteSequence.of("0123456789".toByteArray(), 3 ,2)
+        val bytes = bytesSequence.serialize()
+        val copiedBytesSequence = bytes.deserialize()
+
+        assertEquals(bytesSequence, copiedBytesSequence)
+    }
 
     @Test
     fun `test serialization of WireTransaction with statically loaded contract`() {
