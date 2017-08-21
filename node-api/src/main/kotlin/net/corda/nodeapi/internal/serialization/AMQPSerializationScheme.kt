@@ -99,9 +99,3 @@ val AMQP_P2P_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
         emptyMap(),
         true,
         SerializationContext.UseCase.P2P)
-val AMQP_STORAGE_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
-        SerializationDefaults.javaClass.classLoader,
-        AllButBlacklisted,
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.Storage)
