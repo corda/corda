@@ -70,12 +70,12 @@ import javax.persistence.*
  */
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
-                          val versionInfo: VersionInfo,
-                          val serverAddress: NetworkHostAndPort,
-                          val myIdentity: PublicKey?,
-                          val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
+                          private val versionInfo: VersionInfo,
+                          private val serverAddress: NetworkHostAndPort,
+                          private val myIdentity: PublicKey?,
+                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                           val database: CordaPersistence,
-                          val networkMapRegistrationFuture: CordaFuture<Unit>,
+                          private val networkMapRegistrationFuture: CordaFuture<Unit>,
                           val monitoringService: MonitoringService,
                           advertisedAddress: NetworkHostAndPort = serverAddress
 ) : ArtemisMessagingComponent(), MessagingService {
@@ -117,11 +117,11 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                             Pair(it.message.deserialize( context = SerializationDefaults.STORAGE_CONTEXT),
                                     it.recipients.deserialize( context = SerializationDefaults.STORAGE_CONTEXT))
                     ) },
-                    toPersistentEntity = { _key: Long, value: Pair<Message, MessageRecipients> ->
+                    toPersistentEntity = { _key: Long, (_message: Message, _recipient: MessageRecipients): Pair<Message, MessageRecipients> ->
                         RetryMessage().apply {
                             key = _key
-                            message = value.first.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                            recipients = value.second.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                            message = _message.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                            recipients = _recipient.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                         }
                     },
                     persistentEntityClass = RetryMessage::class.java
@@ -141,13 +141,11 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         var verificationResponseConsumer: ClientConsumer? = null
     }
 
-    val messagesToRedeliver = database.transaction {
-        createMessageToRedeliver().apply {
-            load()
-        }
+    private val messagesToRedeliver = database.transaction {
+        createMessageToRedeliver()
     }
 
-    val scheduledMessageRedeliveries = ConcurrentHashMap<Long, ScheduledFuture<*>>()
+    private val scheduledMessageRedeliveries = ConcurrentHashMap<Long, ScheduledFuture<*>>()
 
     val verifierService = when (config.verifierType) {
         VerifierType.InMemory -> InMemoryTransactionVerifierService(numberOfWorkers = 4)
