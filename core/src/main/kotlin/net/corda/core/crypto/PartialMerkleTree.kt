@@ -131,7 +131,9 @@ class PartialMerkleTree(val root: PartialTree) {
         val usedHashes = ArrayList<SecureHash>()
         val verifyRoot = rootAndUsedHashes(root, usedHashes)
         // It means that we obtained more/fewer hashes than needed or different sets of hashes.
-        if (hashesToCheck.groupBy { it } != usedHashes.groupBy { it })
+        // We exclude the special oneHash from calculations, as it's only required for input state full visibility
+        // in non-validating notaries. For more info, see TODO in FilteredTransaction.buildMerkleTransaction.
+        if (hashesToCheck.filter { it != SecureHash.oneHash }.groupBy { it } != usedHashes.filter { it != SecureHash.oneHash }.groupBy { it })
             return false
         return (verifyRoot == merkleRootHash)
     }
@@ -152,6 +154,18 @@ class PartialMerkleTree(val root: PartialTree) {
                 val rightHash = rootAndUsedHashes(node.right, usedHashes)
                 return leftHash.hashConcat(rightHash)
             }
+        }
+    }
+
+    /**
+     * Recursive method to get the leftmost leaf in the tree. This is currently required to check if the first leaf is
+     * [SecureHash.oneHash] in transactions where there are no input states.
+     */
+    fun leftMostLeaf(node: PartialTree): SecureHash {
+        return when (node) {
+            is PartialTree.IncludedLeaf -> node.hash
+            is PartialTree.Leaf -> node.hash
+            is PartialTree.Node -> leftMostLeaf(node.left)
         }
     }
 }

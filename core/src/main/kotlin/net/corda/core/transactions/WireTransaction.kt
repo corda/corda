@@ -115,11 +115,14 @@ data class WireTransaction(
             // Use the root hash of the inputs sub Merkle Tree as first leaf in the whole Merkle tree.
             MerkleTree.getMerkleTree(listOf(inputsMerkleTree!!.hash) + availableComponentHashes.subList(inputs.size, availableComponentHashes.size))
         } else {
-            MerkleTree.getMerkleTree(availableComponentHashes)
+            // If there are no input states, add the oneHash as the leftmost leaf to avoid a certain security issue,
+            // where one can trick the non-validating notary by hiding all input states.
+            // OneHash was used instead of zeroHash to avoid confusion
+            MerkleTree.getMerkleTree(listOf(SecureHash.oneHash) + availableComponentHashes)
         }
     }
 
-    // Compute the input states sub Merkle Tree, as
+    // Compute the input states sub Merkle Tree.
     private fun inputStatesMerkleTree(): MerkleTree? {
         return if (!inputs.isEmpty()) {
             MerkleTree.getMerkleTree(availableComponentHashes.subList(0, inputs.size))

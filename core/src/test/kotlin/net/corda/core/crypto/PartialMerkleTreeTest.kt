@@ -203,7 +203,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `verify Partial Merkle Tree - too little leaves failure`() {
+    fun `verify Partial Merkle Tree - less leaves failure`() {
         val inclHashes = arrayListOf(hashed[3], hashed[5], hashed[0])
         val pmt = PartialMerkleTree.build(merkleTree, inclHashes)
         inclHashes.remove(hashed[0])
@@ -327,8 +327,6 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         assertTrue { nonValidatingFilteredTx.verifyAndAllInputsVisible() }
         assertFalse { someInputsFilteredTx.verifyAndAllInputsVisible() }
         assertFalse { oneInputFilteredTx.verifyAndAllInputsVisible() }
-        // TODO: the test below fails because you can trick the notary to believe there are no inputs at all.
-        //      Consider always using a Zero Hash as the first leaf.
-        // assertFalse { noInputsFilteredTx.verifyAndAllInputsVisible() }
+        assertFalse { noInputsFilteredTx.verifyAndAllInputsVisible() }
     }
 }

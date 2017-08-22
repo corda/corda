@@ -168,8 +168,12 @@ class FilteredTransaction private constructor(
             val pmt = if (!filteredLeaves.inputs.isEmpty()) {
                 PartialMerkleTree.build(merkleTree, listOf(inputsMerkleTree!!.hash)
                         + filteredLeaves.availableComponentHashes.subList(filteredLeaves.inputs.size, filteredLeaves.availableComponentHashes.size))
-            } else {
+            } else if (!wtx.inputs.isEmpty()) {
                 PartialMerkleTree.build(merkleTree, filteredLeaves.availableComponentHashes)
+            } else {
+                // TODO: Consider adding oneHash only when sending to non-validating notaries (but for instance not to Oracles).
+                //      To achieve the above, we might require a new boolean input to this function.
+                PartialMerkleTree.build(merkleTree, listOf(SecureHash.oneHash) + filteredLeaves.availableComponentHashes)
             }
 
             val inputsPmt = if (!filteredLeaves.inputs.isEmpty()) {
@@ -183,7 +187,7 @@ class FilteredTransaction private constructor(
     }
 
     /**
-     * Runs verification of Partial Merkle Branch against [rootHash].
+     * Runs verification of partial Merkle branch against [rootHash].
      */
     @Throws(MerkleTreeException::class)
     fun verify(): Boolean = verify(allInputsVisible = false)
@@ -210,7 +214,13 @@ class FilteredTransaction private constructor(
                 }
             partialMerkleTree.verify(rootHash, listOf(inputsRootHash) + hashes.subList(filteredLeaves.inputs.size, hashes.size))
         } else {
-            partialMerkleTree.verify(rootHash, hashes)
+            if (!allInputsVisible) {
+                partialMerkleTree.verify(rootHash, hashes)
+            } else {
+                // If the allInputsVisible flag is true, but we received no input leaves, then we should also check for
+                // the leftmost leaf to be equal to oneHash. See WireTransaction.fullMerkleTree() for more details.
+                partialMerkleTree.verify(rootHash, hashes) && partialMerkleTree.leftMostLeaf(partialMerkleTree.root) == SecureHash.oneHash
+            }
         }
     }
 }
