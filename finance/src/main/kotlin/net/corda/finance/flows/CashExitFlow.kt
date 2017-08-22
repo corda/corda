@@ -1,6 +1,8 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.asset.Cash
+import net.corda.contracts.asset.CashSelection
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
@@ -25,7 +27,7 @@ import java.util.*
  * issuer.
  */
 @StartableByRPC
-class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
+class CashExitFlow(val amount: Amount<Currency>, val issuerRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes) : this(amount, issueRef, tracker())
     constructor(request: ExitRequest) : this(request.amount, request.issueRef, tracker())
 
@@ -42,8 +44,8 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary = null as Party?)
-        val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
-        val exitStates = Cash.unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
+        val issuer = serviceHub.myInfo.legalIdentity.ref(issuerRef)
+        val exitStates = CashSelection.instance.unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
             Cash().generateExit(
                     builder,
