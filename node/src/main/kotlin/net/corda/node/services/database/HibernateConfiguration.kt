@@ -97,7 +97,13 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
             applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
                 override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
                     val default = super.toPhysicalTableName(name, context)
-                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
+                    val naming = databaseProperties.getProperty("serverNameTablePrefix",null)
+                    val prefix = if (naming != null) {
+                        tablePrefix + naming
+                    } else {
+                        tablePrefix
+                    }
+                    return Identifier.toIdentifier(prefix + default.text, default.isQuoted)
                 }
             })
             // register custom converters
