@@ -52,28 +52,28 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     fun `stores entries correctly`() {
         val client = cluster.last().client
 
-        val entries = mapOf("key1" to "value1".toByteArray(), "key2" to "value2".toByteArray())
+        val entries = mapOf("key1" to "value1", "key2" to "value2")
 
         val conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).getOrThrow()
         assertTrue { conflict.isEmpty() }
 
-        val value1 = client.submit(DistributedImmutableMap.Commands.Get<String, ByteArray>("key1"))
-        val value2 = client.submit(DistributedImmutableMap.Commands.Get<String, ByteArray>("key2"))
+        val value1 = client.submit(DistributedImmutableMap.Commands.Get<String, String>("key1"))
+        val value2 = client.submit(DistributedImmutableMap.Commands.Get<String, String>("key2"))
 
-        assertEquals(kotlin.text.String(value1.getOrThrow()!!), "value1")
-        assertEquals(kotlin.text.String(value2.getOrThrow()!!), "value2")
+        assertEquals(value1.getOrThrow(), "value1")
+        assertEquals(value2.getOrThrow(), "value2")
     }
 
     @Test
     fun `returns conflict for duplicate entries`() {
         val client = cluster.last().client
 
-        val entries = mapOf("key1" to "value1".toByteArray(), "key2" to "value2".toByteArray())
+        val entries = mapOf("key1" to "value1", "key2" to "value2")
 
         var conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).getOrThrow()
         assertTrue { conflict.isEmpty() }
         conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).getOrThrow()
-        assertTrue { conflict.map { e -> Pair(e.key, kotlin.text.String(e.value)) } == entries.map { e -> Pair(e.key, kotlin.text.String(e.value)) } }
+        assertTrue { conflict == entries }
     }
 
     private fun setUpCluster(nodeCount: Int = 3): List<Member> {
