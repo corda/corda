@@ -4,15 +4,13 @@ import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
 import net.corda.core.crypto.toBase64
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.loggerFor
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
-import java.lang.reflect.GenericArrayType
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
-import java.lang.reflect.TypeVariable
+import java.lang.reflect.*
 import java.util.*
 
 import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterField
@@ -316,6 +314,9 @@ private val NULLABLE_HASH: String = "Nullable = true"
 private val NOT_NULLABLE_HASH: String = "Nullable = false"
 private val ANY_TYPE_HASH: String = "Any type = true"
 private val TYPE_VARIABLE_HASH: String = "Type variable = true"
+private val WILDCARD_TYPE_HASH: String = "Wild card = true"
+
+private val logger by lazy { loggerFor<Schema>() }
 
 /**
  * The method generates a fingerprint for a given JVM [Type] that should be unique to the schema representation.
@@ -386,11 +387,16 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
             } else if (type is TypeVariable<*>) {
                 // TODO: include bounds
                 hasher.putUnencodedChars(type.name).putUnencodedChars(TYPE_VARIABLE_HASH)
-            } else {
+            } else if (type is WildcardType) {
+                hasher.putUnencodedChars(type.typeName).putUnencodedChars(WILDCARD_TYPE_HASH)
+            }
+            else {
                 throw NotSerializableException("Don't know how to hash")
             }
         } catch(e: NotSerializableException) {
-            throw NotSerializableException("${e.message} -> $type")
+            val msg = "${e.message} -> $type"
+            logger.error(msg, e)
+            throw NotSerializableException(msg)
         }
     }
 }
