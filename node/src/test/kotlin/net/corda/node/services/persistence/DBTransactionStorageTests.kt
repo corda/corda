@@ -38,8 +38,6 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
     lateinit var transactionStorage: DBTransactionStorage
     lateinit var services: MockServices
     val vault: VaultService get() = services.vaultService
-    // Hibernate configuration objects
-    lateinit var hibernateConfig: HibernateConfiguration
 
     @Before
     fun setUp() {
@@ -55,12 +53,10 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
 
         database.transaction {
 
-            hibernateConfig = HibernateConfiguration(createSchemaService, makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
-
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultService get() {
                     val vaultService = NodeVaultService(this)
-                    hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
+                    hibernatePersister = HibernateObserver(vaultService.rawUpdates, database.hibernateConfig)
                     return vaultService
                 }
 

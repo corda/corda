@@ -73,7 +73,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         val createSchemaService = { NodeSchemaService(customSchemas) }
         database = configureDatabase(dataSourceProps, defaultDatabaseProperties, createSchemaService, ::makeTestIdentityService)
         database.transaction {
-            hibernateConfig = HibernateConfiguration(createSchemaService, defaultDatabaseProperties, ::makeTestIdentityService)
+            hibernateConfig = database.hibernateConfig
             services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
                 override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
 

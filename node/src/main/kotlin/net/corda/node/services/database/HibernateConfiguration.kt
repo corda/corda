@@ -21,7 +21,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(createSchemaService: () -> SchemaService, private val databaseProperties: Properties, private val identitySvc: () -> IdentityService) {
+class HibernateConfiguration(createSchemaService: () -> SchemaService, private val databaseProperties: Properties, private val createIdentityScervice: () -> IdentityService) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
@@ -82,7 +82,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
                 }
             })
             // register custom converters
-            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identitySvc))
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityScervice))
 
             build()
         }

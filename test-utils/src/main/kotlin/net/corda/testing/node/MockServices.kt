@@ -225,9 +225,8 @@ fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(Com
     val createSchemaService = { NodeSchemaService(customSchemas) }
     val database = configureDatabase(dataSourceProps, databaseProperties, createSchemaService, createIdentityService)
     val mockService = database.transaction {
-        val hibernateConfig = HibernateConfiguration(createSchemaService, databaseProperties,  identitySvc = createIdentityService)
         object : MockServices(*(keys.toTypedArray())) {
-            override val vaultService: VaultService = makeVaultService(hibernateConfig)
+            override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
 
             override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                 for (stx in txs) {
@@ -237,7 +236,7 @@ fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(Com
                 vaultService.notifyAll(txs.map { it.tx })
             }
 
-            override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService)
+            override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
 
             override fun jdbcSession(): Connection = database.createSession()
         }
