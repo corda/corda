@@ -47,14 +47,14 @@ interface CashSelection {
         val instance = AtomicReference<CashSelection>()
 
         fun getInstance(metadata: () -> java.sql.DatabaseMetaData): CashSelection {
-            if  (instance.get() == null) {
+            return instance.get() ?: {
                 val _metadata = metadata()
                 val cashSelectionAlgos = ServiceLoader.load(CashSelection::class.java).toList()
                 val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
-                instance.set(cashSelectionAlgo ?: throw ClassNotFoundException("Unable to load compatible cash selection algorithm implementation for JDBC driver: $metadata. " +
-                                                                               "Please specify an implementation in META-INF/services/net.corda.contracts.asset.CashSelection"))
-            }
-            return instance.get()
+                instance.set(cashSelectionAlgo ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
+                                                                               "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection"))
+                instance.get()
+            }.invoke()
         }
     }
 
