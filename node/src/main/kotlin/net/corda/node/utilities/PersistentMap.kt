@@ -256,4 +256,14 @@ class PersistentMap<K, V, E, out EK> (
         criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
         cache.getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
     }
+
+    override fun clear() {
+        val session = DatabaseTransactionManager.current().session
+        val deleteQuery = session.criteriaBuilder.createCriteriaDelete(persistentEntityClass)
+        deleteQuery.from(persistentEntityClass)
+        synchronized(this) {
+            session.createQuery(deleteQuery).executeUpdate()
+            cache.invalidateAll()
+        }
+    }
 }

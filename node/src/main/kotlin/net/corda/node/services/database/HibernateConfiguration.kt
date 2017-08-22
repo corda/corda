@@ -63,30 +63,12 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("hibernate.connection.isolation", transactionIsolationLevel.toString())
 
-        val naming = databaseProperties.getProperty("serverNameTablePrefix",null)
-
-        if (naming != null) {
-            config.setImplicitNamingStrategy( object : ImplicitNamingStrategyJpaCompliantImpl() {
-
-                override fun determinePrimaryTableName(source: ImplicitEntityNameSource): Identifier {
-                    if (source == null) {
-                        // should never happen, but to be defensive...
-                        throw HibernateException("Entity naming information was not provided.")
-                    }
-
-                    val tableName = transformEntityName(source.entityNaming) ?:
-                            throw HibernateException("Could not determine primary table name for entity")
-
-                    return toIdentifier(naming + tableName, source.buildingContext)
-                }
-            })
-        }
-
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
-        val sessionFactory = buildSessionFactory(config, metadataSources, "")
+
+        val sessionFactory = buildSessionFactory(config, metadataSources, databaseProperties.getProperty("serverNameTablePrefix",""))
         logger.info("Created session factory for schemas: $schemas")
         return sessionFactory
     }
@@ -97,13 +79,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
             applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
                 override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
                     val default = super.toPhysicalTableName(name, context)
-                    val naming = databaseProperties.getProperty("serverNameTablePrefix",null)
-                    val prefix = if (naming != null) {
-                        tablePrefix + naming
-                    } else {
-                        tablePrefix
-                    }
-                    return Identifier.toIdentifier(prefix + default.text, default.isQuoted)
+                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
                 }
             })
             // register custom converters
