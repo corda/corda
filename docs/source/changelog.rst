@@ -6,6 +6,7 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Cash selection algorithm is now pluggable (with H2 being the default implementation)
 
 * Removed usage of Requery ORM library (repalced with JPA/Hibernate)
 
