@@ -17,6 +17,7 @@ import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
+import java.sql.DatabaseMetaData
 import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
@@ -25,13 +26,12 @@ import kotlin.concurrent.withLock
 class CashSelectionH2Impl : CashSelection {
 
     companion object {
-        val DIALECT = "org.hibernate.dialect.H2Dialect"
+        val JDBC_DRIVER_NAME = "H2 JDBC Driver"
         val log = loggerFor<CashSelectionH2Impl>()
     }
 
-    override fun isCompatible(dialect: String): Boolean {
-        // check Hibernate instance matches this dialect
-        return dialect == DIALECT
+    override fun isCompatible(metaData: DatabaseMetaData): Boolean {
+        return metaData.driverName == JDBC_DRIVER_NAME
     }
 
     // coin selection retry loop counter, sleep (msecs) and lock for selecting states

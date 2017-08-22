@@ -8,17 +8,17 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.OpaqueBytes
+import java.sql.DatabaseMetaData
 import java.util.*
 
 class CashSelectionMySQLImpl : CashSelection {
 
     companion object {
-        val DIALECT = "org.hibernate.dialect.MySQL5Dialect"
+        val JDBC_DRIVER_NAME = "MySQL JDBC Driver"
     }
 
-    override fun isCompatible(dialect: String): Boolean {
-        // check Hibernate instance matches this dialect
-        return dialect == CashSelectionH2Impl.DIALECT
+    override fun isCompatible(metadata: DatabaseMetaData): Boolean {
+        return metadata.driverName == JDBC_DRIVER_NAME
     }
 
     override fun unconsumedCashStatesForSpending(services: ServiceHub,

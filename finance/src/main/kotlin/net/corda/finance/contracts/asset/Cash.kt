@@ -10,7 +10,6 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.ServiceHub
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -25,7 +24,9 @@ import net.corda.finance.utils.sumCashOrZero
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
+import java.sql.DatabaseMetaData
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -38,21 +39,47 @@ val CASH_PROGRAM_ID = Cash()
 /**
  * Pluggable interface to allow for different cash selection provider implementations
  * Default implementation [CashSelectionH2Impl] uses H2 database and a custom function within H2 to perform aggregation.
- * Custom implementations must implement this interface and [CordaPluginRegistry], and declare the implementation in
- * META-INF/services/net.corda.plugin.<MyCustomPlugin>
+ * Custom implementations must implement this interface and declare their implementation in
+ * META-INF/services/net.corda.contracts.asset.CashSelection
  */
 interface CashSelection {
-
     companion object {
-        fun getInstance(dialect: String): CashSelection {
-            val cashSelectionAlgos = ServiceLoader.load(CashSelection::class.java).toList()
-            val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(dialect) }
-            return cashSelectionAlgo ?: CashSelectionH2Impl()
+        val instance = AtomicReference<CashSelection>()
+
+        fun getInstance(metadata: () -> java.sql.DatabaseMetaData): CashSelection {
+            if  (instance.get() == null) {
+                val _metadata = metadata()
+                val cashSelectionAlgos = ServiceLoader.load(CashSelection::class.java).toList()
+                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
+                instance.set(cashSelectionAlgo ?: throw ClassNotFoundException("Unable to load compatible cash selection algorithm implementation for JDBC driver: $metadata. " +
+                                                                               "Please specify an implementation in META-INF/services/net.corda.contracts.asset.CashSelection"))
+            }
+            return instance.get()
         }
     }
 
-    fun isCompatible(dialect: String): Boolean
+    /**
+     * Upon dynamically loading configured Cash Selection algorithms declared in META-INF/services
+     * this method determines whether the loaded implementation is compatible and usable with the currently
+     * loaded JDBC driver.
+     * Note: the first loaded implementation to pass this check will be used at run-time.
+     */
+    fun isCompatible(metadata: DatabaseMetaData): Boolean
 
+    /**
+     * Query to gather Cash states that are available
+     * @param services The service hub to allow access to the database session
+     * @param amount The amount of currency desired (ignoring issues, but specifying the currency)
+     * @param onlyFromIssuerParties If empty the operation ignores the specifics of the issuer,
+     * otherwise the set of eligible states wil be filtered to only include those from these issuers.
+     * @param notary If null the notary source is ignored, if specified then only states marked
+     * with this notary are included.
+     * @param lockId The FlowLogic.runId.uuid of the flow, which is used to soft reserve the states.
+     * Also, previous outputs of the flow will be eligible as they are implicitly locked with this id until the flow completes.
+     * @param withIssuerRefs If not empty the specific set of issuer references to match against.
+     * @return The matching states that were found. If sufficient funds were found these will be locked,
+     * otherwise what is available is returned unlocked for informational purposes.
+     */
     @Suspendable
     fun unconsumedCashStatesForSpending(services: ServiceHub,
                                         amount: Amount<Currency>,
@@ -266,8 +293,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                     = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
 
             // Retrieve unspent and unlocked cash states that meet our spending criteria.
-            // TODO: use 'services.database.hibernateConfig'
-            val acceptableCoins = CashSelection.getInstance(CashSelectionH2Impl.DIALECT).unconsumedCashStatesForSpending(services, amount, onlyFromParties, tx.notary, tx.lockId)
+            val acceptableCoins = CashSelection.getInstance({services.jdbcSession().metaData}).unconsumedCashStatesForSpending(services, amount, onlyFromParties, tx.notary, tx.lockId)
             return OnLedgerAsset.generateSpend(tx, amount, to, acceptableCoins,
                     { state, quantity, owner -> deriveState(state, quantity, owner) },
                     { Cash().generateMoveCommand() })
