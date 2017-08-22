@@ -8,8 +8,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
+import net.corda.flows.CashIssueAndPaymentFlow
 import net.corda.testing.http.HttpApi
 import java.util.*
 
@@ -49,9 +48,7 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
             val amount = Amount(params.amount, Currency.getInstance(params.currency))
             val issuerBankPartyRef = OpaqueBytes.of(params.issuerBankPartyRef.toByte())
 
-            rpc.startFlow(::CashIssueFlow, amount, issuerBankPartyRef, notaryNode.notaryIdentity)
-                    .returnValue.getOrThrow().stx
-            return rpc.startFlow(::CashPaymentFlow, amount, issueToParty, params.anonymous)
+            return rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, params.anonymous, notaryNode.notaryIdentity)
                     .returnValue.getOrThrow().stx
         }
     }

@@ -70,7 +70,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
                  'password'   : "test",
                  'permissions': ["StartFlow.net.corda.flows.CashPaymentFlow",
                                  "StartFlow.net.corda.flows.CashExitFlow",
-                                 "StartFlow.net.corda.flows.CashIssueFlow"]]
+                                 "StartFlow.net.corda.flows.CashIssueAndPaymentFlow"]]
         ]
     }
     node {
