@@ -8,6 +8,7 @@ import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedByte
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
+import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.nio.ByteBuffer
 import java.util.*
@@ -118,7 +119,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
         if (obj is DescribedType) {
             // Look up serializer in factory by descriptor
             val serializer = serializerFactory.get(obj.descriptor, schema)
-            if (serializer.type != type && !serializer.type.isSubClassOf(type) && !serializer.type.materiallyEquivalentTo(type))
+            if (serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) })
                 throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
                         "expected to be of type $type but was ${serializer.type}")
             return serializer.readObject(obj.described, schema, this)
@@ -129,6 +130,11 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
         }
     }
 
-    private fun Type.materiallyEquivalentTo(type: Type): Boolean =
-        asClass() == type.asClass()
+    /**
+     * TODO: Currently performs rather basic checks aimed in particular at [java.util.List<Command<?>>]
+     * In the future tighter control might be needed
+     */
+    private fun Type.materiallyEquivalentTo(that: Type): Boolean =
+        asClass() == that.asClass() && this is ParameterizedType && that is ParameterizedType &&
+                actualTypeArguments.size == that.actualTypeArguments.size
 }
