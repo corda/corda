@@ -51,9 +51,11 @@ interface CashSelection {
                 val _metadata = metadata()
                 val cashSelectionAlgos = ServiceLoader.load(CashSelection::class.java).toList()
                 val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
-                instance.set(cashSelectionAlgo ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
-                                                                               "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection"))
-                instance.get()
+                cashSelectionAlgo?.let {
+                    instance.set(cashSelectionAlgo)
+                    cashSelectionAlgo
+                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
+                                                  "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection")
             }.invoke()
         }
     }
