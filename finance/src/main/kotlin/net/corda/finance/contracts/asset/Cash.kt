@@ -2,6 +2,7 @@
 package net.corda.finance.contracts.asset
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.asset.cash.selection.CashSelectionH2Impl
 import net.corda.core.contracts.*
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.testing.NULL_PARTY
@@ -41,18 +42,16 @@ val CASH_PROGRAM_ID = Cash()
  * META-INF/services/net.corda.plugin.<MyCustomPlugin>
  */
 interface CashSelection {
-    private object Holder {
-        val INSTANCE: CashSelection
-        init {
-            val pluginRegistries = ServiceLoader.load(CordaPluginRegistry::class.java).toList()
-            val cashSelectionAlgo = pluginRegistries.filterIsInstance(CashSelection::class.java).singleOrNull()
-            INSTANCE = cashSelectionAlgo ?: CashSelectionH2Impl()
+
+    companion object {
+        fun getInstance(dialect: String): CashSelection {
+            val cashSelectionAlgos = ServiceLoader.load(CashSelection::class.java).toList()
+            val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(dialect) }
+            return cashSelectionAlgo ?: CashSelectionH2Impl()
         }
     }
 
-    companion object {
-        val instance: CashSelection by lazy { Holder.INSTANCE }
-    }
+    fun isCompatible(dialect: String): Boolean
 
     @Suspendable
     fun unconsumedCashStatesForSpending(services: ServiceHub,
@@ -267,7 +266,8 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                     = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
 
             // Retrieve unspent and unlocked cash states that meet our spending criteria.
-            val acceptableCoins = CashSelection.instance.unconsumedCashStatesForSpending(services, amount, onlyFromParties, tx.notary, tx.lockId)
+            // TODO: use 'services.database.hibernateConfig'
+            val acceptableCoins = CashSelection.getInstance(CashSelectionH2Impl.DIALECT).unconsumedCashStatesForSpending(services, amount, onlyFromParties, tx.notary, tx.lockId)
             return OnLedgerAsset.generateSpend(tx, amount, to, acceptableCoins,
                     { state, quantity, owner -> deriveState(state, quantity, owner) },
                     { Cash().generateMoveCommand() })

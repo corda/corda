@@ -1,7 +1,9 @@
-package net.corda.contracts.asset
+package net.corda.contracts.asset.cash.selection
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import net.corda.contracts.asset.Cash
+import net.corda.contracts.asset.CashSelection
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -10,7 +12,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.serialization.SerializationDefaults
@@ -21,9 +22,17 @@ import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class CashSelectionH2Impl : CashSelection, CordaPluginRegistry() {
+class CashSelectionH2Impl : CashSelection {
 
-    val log = loggerFor<CashSelectionH2Impl>()
+    companion object {
+        val DIALECT = "org.hibernate.dialect.H2Dialect"
+        val log = loggerFor<CashSelectionH2Impl>()
+    }
+
+    override fun isCompatible(dialect: String): Boolean {
+        // check Hibernate instance matches this dialect
+        return dialect == DIALECT
+    }
 
     // coin selection retry loop counter, sleep (msecs) and lock for selecting states
     private val MAX_RETRIES = 5

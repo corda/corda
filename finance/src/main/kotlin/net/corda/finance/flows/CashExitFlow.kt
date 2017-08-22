@@ -3,6 +3,7 @@ package net.corda.finance.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.CashSelection
+import net.corda.contracts.asset.cash.selection.CashSelectionH2Impl
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
@@ -45,7 +46,7 @@ class CashExitFlow(val amount: Amount<Currency>, val issuerRef: OpaqueBytes, pro
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary = null as Party?)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issuerRef)
-        val exitStates = CashSelection.instance.unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
+        val exitStates = CashSelection.getInstance(CashSelectionH2Impl.DIALECT).unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
             Cash().generateExit(
                     builder,

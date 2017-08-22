@@ -1,0 +1,2 @@
+net.corda.contracts.asset.cash.selection.CashSelectionH2Impl
+net.corda.contracts.asset.cash.selection.CashSelectionMySQLImpl
