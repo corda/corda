@@ -23,7 +23,7 @@ class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryS
         val parts = receive<Any>(otherSide).unwrap {
             when (it) {
                 is FilteredTransaction -> {
-                    it.verify()
+                    it.verifyAndAllInputsVisible()
                     TransactionParts(it.rootHash, it.filteredLeaves.inputs, it.filteredLeaves.timeWindow)
                 }
                 is NotaryChangeWireTransaction -> TransactionParts(it.id, it.inputs, null)

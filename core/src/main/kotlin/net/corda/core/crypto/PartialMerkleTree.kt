@@ -129,7 +129,7 @@ class PartialMerkleTree(val root: PartialTree) {
      */
     fun verify(merkleRootHash: SecureHash, hashesToCheck: List<SecureHash>): Boolean {
         val usedHashes = ArrayList<SecureHash>()
-        val verifyRoot = verify(root, usedHashes)
+        val verifyRoot = rootAndUsedHashes(root, usedHashes)
         // It means that we obtained more/fewer hashes than needed or different sets of hashes.
         if (hashesToCheck.groupBy { it } != usedHashes.groupBy { it })
             return false
@@ -140,7 +140,7 @@ class PartialMerkleTree(val root: PartialTree) {
      * Recursive calculation of root of this partial tree.
      * Modifies usedHashes to later check for inclusion with hashes provided.
      */
-    private fun verify(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash {
+    fun rootAndUsedHashes(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash {
         return when (node) {
             is PartialTree.IncludedLeaf -> {
                 usedHashes.add(node.hash)
@@ -148,8 +148,8 @@ class PartialMerkleTree(val root: PartialTree) {
             }
             is PartialTree.Leaf -> node.hash
             is PartialTree.Node -> {
-                val leftHash = verify(node.left, usedHashes)
-                val rightHash = verify(node.right, usedHashes)
+                val leftHash = rootAndUsedHashes(node.left, usedHashes)
+                val rightHash = rootAndUsedHashes(node.right, usedHashes)
                 return leftHash.hashConcat(rightHash)
             }
         }

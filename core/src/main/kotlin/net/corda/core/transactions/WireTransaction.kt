@@ -99,24 +99,28 @@ data class WireTransaction(
     }
 
     /**
-     * Builds whole Merkle tree for a transaction.
+     * Builds whole Merkle tree for a transaction. If input states exist, the first leaf of this tree is
+     * the root hash of [inputsMerkleTree].
      */
     val merkleTree: MerkleTree by lazy { fullMerkleTree() }
 
     /**
-     * Builds the input states sub Merkle tree.
+     * Builds the input states sub Merkle tree. This is required so non-validated notaries can see
+     * the number of all inputs in a transaction.
      */
-    val inputsMerkleTree: MerkleTree? by lazy { inputsMerkleTree() }
+    val inputsMerkleTree: MerkleTree? by lazy { inputStatesMerkleTree() }
 
     private fun fullMerkleTree(): MerkleTree {
         return if (!inputs.isEmpty()) {
-            MerkleTree.getMerkleTree(availableComponentHashes)
-        } else {
+            // Use the root hash of the inputs sub Merkle Tree as first leaf in the whole Merkle tree.
             MerkleTree.getMerkleTree(listOf(inputsMerkleTree!!.hash) + availableComponentHashes.subList(inputs.size, availableComponentHashes.size))
+        } else {
+            MerkleTree.getMerkleTree(availableComponentHashes)
         }
     }
 
-    private fun inputsMerkleTree(): MerkleTree? {
+    // Compute the input states sub Merkle Tree, as
+    private fun inputStatesMerkleTree(): MerkleTree? {
         return if (!inputs.isEmpty()) {
             MerkleTree.getMerkleTree(availableComponentHashes.subList(0, inputs.size))
         } else {
