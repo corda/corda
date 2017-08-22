@@ -125,7 +125,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val masterNodeFuture = startNode(
                 getX509Name("${notaryName.commonName}-0", "London", "demo@r3.com", null),
                 advertisedServices = setOf(serviceInfo),
-                configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0]))
+                configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
+                "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.commonName}0".replace(Regex("=|,| |-"),"") else "")))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
@@ -133,7 +134,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
-                            "notaryClusterAddresses" to listOf(nodeAddresses[0])))
+                            "notaryClusterAddresses" to listOf(nodeAddresses[0]),
+                            "database" to mapOf("serverNameTablePrefix" to "${notaryName.commonName}$it".replace(Regex("=|,| |-"), ""))))
         }
 
         return remainingNodesFutures.transpose().flatMap { remainingNodes ->
