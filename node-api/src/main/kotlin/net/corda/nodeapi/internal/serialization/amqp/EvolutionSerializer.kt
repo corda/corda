@@ -5,12 +5,11 @@ import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.io.NotSerializableException
 import kotlin.reflect.KFunction
-import kotlin.reflect.full.primaryConstructor
-import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.javaType
 
 /**
- *
+ * Serializer for deserialising objects whose definition has changed since they
+ * were serialised
  */
 class EvolutionSerializer(
         clazz: Type,
@@ -22,8 +21,13 @@ class EvolutionSerializer(
     override val propertySerializers: Collection<PropertySerializer> = listOf()
 
     /**
-     * represents a paramter as would be passed to the constructor of the class as it was
+     * represents a parameter as would be passed to the constructor of the class as it was
      * when it was serialised and NOT how that class appears now
+     *
+     * @param type The jvm type of the parameter
+     * @param idx where in the parameter list this parameter falls. required as the parameter
+     * order may have been changed and we need to know where into the list to look
+     * @param property object to read the actual property value
      */
     data class oldParam (val type: Type, val idx: Int, val property: PropertySerializer)
 
@@ -64,10 +68,10 @@ class EvolutionSerializer(
          * @param new is the Serializer built for the Class as it exists now, not
          * how it was serialised and persisted.
          */
-        fun make (old: schemaAndDescriptor, new: ObjectSerializer,
+        fun make (old: CompositeType, new: ObjectSerializer,
                   factory: SerializerFactory) : AMQPSerializer<Any> {
 
-            val oldFieldToType = (old.schema.types.first() as CompositeType).fields.map {
+            val oldFieldToType = old.fields.map {
                 it.name as String? to it.getTypeAsClass(factory.classloader) as Type
             }.toMap()
 
@@ -77,7 +81,7 @@ class EvolutionSerializer(
 
             val oldArgs = mutableMapOf<String, oldParam>()
             var idx = 0
-            (old.schema.types.first() as CompositeType).fields.forEach {
+            old.fields.forEach {
                 val returnType = it.getTypeAsClass(factory.classloader)
                 oldArgs[it.name] = oldParam(
                         returnType, idx++, PropertySerializer.make(it.name, null, returnType, factory))
@@ -91,6 +95,13 @@ class EvolutionSerializer(
         throw IllegalAccessException ("It should be impossible to write an evolution serializer")
     }
 
+    /**
+     * Unlike a normal [readObject] call where we simply apply the parameter deserialisers
+     * to the object list of values we need to map that list, which is ordered per the
+     * constructor of the original state of the object, we need to map the new parameter order
+     * of the current constructor onto that list inserting nulls where new parameters are
+     * encountered
+     */
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 

@@ -30,9 +30,6 @@ data class schemaAndDescriptor (val schema: Schema, val typeDescriptor: Any)
 // TODO: profile for performance in general
 // TODO: use guava caches etc so not unbounded
 // TODO: do we need to support a transient annotation to exclude certain properties?
-// TODO: incorporate the class carpenter for classes not on the classpath.
-// TODO: apply class loader logic and an "app context" throughout this code.
-// TODO: schema evolution solution when the fingerprints do not line up.
 // TODO: allow definition of well known types that are left out of the schema.
 // TODO: generally map Object to '*' all over the place in the schema and make sure use of '*' amd '?' is consistent and documented in generics.
 // TODO: found a document that states textual descriptors are Symbols.  Adjust schema class appropriately.
@@ -50,9 +47,9 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     val classloader : ClassLoader
         get() = classCarpenter.classloader
 
-    fun getEvolutionSerializer(schema: schemaAndDescriptor, newSerializer: ObjectSerializer) : AMQPSerializer<Any> {
-        return serializersByDescriptor.computeIfAbsent(schema.typeDescriptor) {
-            EvolutionSerializer.make(schema, newSerializer, this)
+    fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: ObjectSerializer) : AMQPSerializer<Any> {
+        return serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+            EvolutionSerializer.make(typeNotation as CompositeType, newSerializer, this)
         }
     }
 
@@ -163,9 +160,9 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     @Throws(NotSerializableException::class)
     fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer<Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
-            processSchema(schema)
-            serializersByDescriptor[typeDescriptor] ?:
-                    throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
+            processSchema(schemaAndDescriptor(schema, typeDescriptor))
+            serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException(
+                    "Could not find type matching descriptor $typeDescriptor.")
         }()
     }
 
@@ -196,8 +193,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
                 // if we just successfully built a serialiser for the type but the type fingerprint
                 // doesn't match that of the serialised object then we are dealing with an older
                 // instance of the class, as such we need to build an evolverSerilaiser
-                if (serialiser.typeDescriptor != schema.typeDescriptor) {
-                    getEvolutionSerializer(schema, serialiser as ObjectSerializer)
+                if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
+                    getEvolutionSerializer(typeNotation, serialiser as ObjectSerializer)
                 }
             } catch (e: ClassNotFoundException) {
                 if (sentinel || (typeNotation !is CompositeType)) throw e

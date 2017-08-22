@@ -188,4 +188,31 @@ class EvolvabilityTests {
         assertEquals ("hello", deserializedCC.b)
     }
 
+    @Test
+    fun changeSubType() {
+        val sf = testDefaultFactory()
+        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.changeSubType")
+        val f = File(path.toURI())
+        val oa = 100
+        val ia = 200
+
+        // Original version of the class as it was serialised
+        //
+        // data class Inner (val a: Int)
+        // data class Outer (val a: Int, val b: Inner)
+        // val scc = SerializationOutput(sf).serialize(Outer(oa, Inner (ia)))
+        // f.writeBytes(scc.bytes)
+        // println ("Path = $path")
+
+        // Add a parameter to inner but keep outer unchanged
+        data class Inner (val a: Int, val b: String?)
+        data class Outer (val a: Int, val b: Inner)
+
+        val sc2 = f.readBytes()
+        val outer = DeserializationInput(sf).deserialize(SerializedBytes<Outer>(sc2))
+
+        assertEquals (oa, outer.a)
+        assertEquals (ia, outer.b.a)
+        assertEquals (null, outer.b.b)
+    }
 }
