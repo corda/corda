@@ -1,14 +1,14 @@
 package net.corda.client.mock
 
 import net.corda.core.contracts.Amount
-import net.corda.finance.GBP
-import net.corda.finance.USD
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.finance.GBP
+import net.corda.finance.USD
 import java.util.*
-import net.corda.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.flows.CashExitFlow.ExitRequest
-import net.corda.flows.CashPaymentFlow.PaymentRequest
+import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
 
 /**
  * [Generator]s for incoming/outgoing cash flow events between parties. It doesn't necessarily generate correct events!

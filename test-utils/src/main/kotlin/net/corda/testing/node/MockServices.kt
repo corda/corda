@@ -13,6 +13,8 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
+import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.node.VersionInfo
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.WritableTransactionStorage
@@ -28,8 +30,6 @@ import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.schemas.CashSchemaV1
-import net.corda.schemas.CommercialPaperSchemaV1
 import net.corda.testing.*
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.bouncycastle.operator.ContentSigner

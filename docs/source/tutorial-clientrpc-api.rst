@@ -132,7 +132,7 @@ When starting a standalone node using a configuration file we must supply the RP
 .. code-block:: text
 
     rpcUsers : [
-        { username=user, password=password, permissions=[ StartFlow.net.corda.flows.CashFlow ] }
+        { username=user, password=password, permissions=[ StartFlow.net.corda.finance.flows.CashFlow ] }
     ]
 
 When using the gradle Cordformation plugin to configure and deploy a node you must supply the RPC credentials in a similar
@@ -143,7 +143,7 @@ manner:
         rpcUsers = [
                 ['username' : "user",
                  'password' : "password",
-                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+                 'permissions' : ["StartFlow.net.corda.finance.flows.CashFlow"]]
         ]
 
 You can then deploy and launch the nodes (Notary and Alice) as follows:

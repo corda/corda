@@ -61,6 +61,9 @@ UNRELEASED
 * ``WebServerPluginRegistry`` now has a ``customizeJSONSerialization`` which can be overridden to extend the REST JSON
   serializers. In particular the IRS demos must now register the ``BusinessCalendar`` serializers.
 
+* Moved ``:finance`` gradle project files into a ``net.corda.finance`` package namespace.
+  This may require adjusting imports of Cash flow references and also of ``StartFlow`` permission in ``gradle.build`` files.
+
 Milestone 14
 ------------
 

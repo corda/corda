@@ -5,7 +5,6 @@ package net.corda.testing
 
 import com.nhaarman.mockito_kotlin.spy
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
@@ -15,6 +14,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.config.configureDevKeyAndTrustStores

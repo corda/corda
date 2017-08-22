@@ -19,7 +19,6 @@ import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.*
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
@@ -35,6 +34,7 @@ import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.ui.*
 import net.corda.explorer.views.*
+import net.corda.finance.contracts.asset.Cash
 import org.fxmisc.easybind.EasyBind
 import tornadofx.*
 import java.time.Instant

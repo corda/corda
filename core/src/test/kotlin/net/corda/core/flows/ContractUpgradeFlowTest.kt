@@ -1,7 +1,6 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -15,7 +14,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
 import net.corda.finance.`issued by`
-import net.corda.flows.CashIssueFlow
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.services.startFlowPermission
 import net.corda.nodeapi.User

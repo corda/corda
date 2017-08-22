@@ -9,13 +9,13 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
+import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.uploadFile
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.plugin.registerFinanceJSONMappers
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY

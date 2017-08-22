@@ -2,7 +2,7 @@ package net.corda.vega.plugin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.node.CordaPluginRegistry
-import net.corda.plugin.registerFinanceJSONMappers
+import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.vega.api.PortfolioApi
 import net.corda.webserver.services.WebServerPluginRegistry
 import java.util.function.Function

@@ -16,7 +16,10 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
-import net.corda.flows.*
+import net.corda.finance.flows.AbstractCashFlow
+import net.corda.finance.flows.CashException
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import java.util.*
 
 // DOCSTART CustomVaultQuery

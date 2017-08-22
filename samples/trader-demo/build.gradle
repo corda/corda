@@ -42,8 +42,8 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
-            'StartFlow.net.corda.flows.CashIssueFlow',
-            'StartFlow.net.corda.flows.CashPaymentFlow',
+            'StartFlow.net.corda.finance.flows.CashIssueFlow',
+            'StartFlow.net.corda.finance.flows.CashPaymentFlow',
             'StartFlow.net.corda.traderdemo.flow.CommercialPaperIssueFlow',
             'StartFlow.net.corda.traderdemo.flow.SellerFlow'
     ]]]

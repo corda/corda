@@ -1,10 +1,8 @@
 package net.corda.node.services.vault;
 
 import com.google.common.collect.ImmutableSet;
-import kotlin.*;
-import net.corda.contracts.DealState;
-import net.corda.contracts.asset.Cash;
-import net.corda.contracts.asset.CashUtilities;
+import kotlin.Pair;
+import kotlin.Triple;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.EncodingUtils;
 import net.corda.core.identity.AbstractParty;
@@ -19,8 +17,12 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.core.schemas.MappedSchema;
 import net.corda.core.utilities.OpaqueBytes;
-import net.corda.node.utilities.*;
-import net.corda.schemas.CashSchemaV1;
+import net.corda.finance.contracts.DealState;
+import net.corda.finance.contracts.asset.Cash;
+import net.corda.finance.contracts.asset.CashUtilities;
+import net.corda.finance.schemas.CashSchemaV1;
+import net.corda.node.utilities.CordaPersistence;
+import net.corda.node.utilities.DatabaseTransaction;
 import net.corda.testing.TestConstants;
 import net.corda.testing.TestDependencyInjectionBase;
 import net.corda.testing.contracts.DummyLinearContract;
@@ -39,11 +41,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static net.corda.contracts.asset.CashUtilities.getDUMMY_CASH_ISSUER;
-import static net.corda.contracts.asset.CashUtilities.getDUMMY_CASH_ISSUER_KEY;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
+import static net.corda.finance.contracts.asset.CashUtilities.getDUMMY_CASH_ISSUER;
+import static net.corda.finance.contracts.asset.CashUtilities.getDUMMY_CASH_ISSUER_KEY;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
 import static net.corda.testing.TestConstants.getDUMMY_NOTARY_KEY;

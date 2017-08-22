@@ -8,7 +8,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.testing.http.HttpApi
 import java.util.*
 

@@ -6,9 +6,9 @@ import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.flows.CashExitFlow
-import net.corda.flows.CashIssueAndPaymentFlow
-import net.corda.flows.CashPaymentFlow
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User

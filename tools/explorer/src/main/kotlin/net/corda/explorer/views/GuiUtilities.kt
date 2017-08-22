@@ -13,10 +13,10 @@ import javafx.util.StringConverter
 import net.corda.client.jfx.model.Models
 import net.corda.client.jfx.model.NetworkIdentityModel
 import net.corda.client.jfx.utils.map
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.finance.contracts.asset.Cash
 import tornadofx.*
 
 /**

@@ -1,7 +1,6 @@
 package net.corda.irs.contract
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import net.corda.contracts.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowLogicRefFactory
@@ -11,6 +10,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.finance.contracts.*
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow

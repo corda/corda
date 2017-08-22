@@ -6,7 +6,6 @@ import net.corda.client.mock.EventGenerator
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickOne
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.thenMatch
@@ -19,12 +18,13 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.GBP
 import net.corda.finance.USD
-import net.corda.flows.AbstractCashFlow
-import net.corda.flows.CashExitFlow
-import net.corda.flows.CashExitFlow.ExitRequest
-import net.corda.flows.CashIssueAndPaymentFlow
-import net.corda.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.flows.CashPaymentFlow
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.AbstractCashFlow
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User

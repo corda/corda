@@ -3,13 +3,11 @@ package net.corda.java.rpc;
 import net.corda.client.rpc.CordaRPCConnection;
 import net.corda.core.contracts.Amount;
 import net.corda.core.messaging.CordaRPCOps;
-import net.corda.core.messaging.DataFeed;
 import net.corda.core.messaging.FlowHandle;
 import net.corda.core.node.NodeInfo;
-import net.corda.core.node.services.NetworkMapCache;
 import net.corda.core.utilities.OpaqueBytes;
-import net.corda.flows.AbstractCashFlow;
-import net.corda.flows.CashIssueFlow;
+import net.corda.finance.flows.AbstractCashFlow;
+import net.corda.finance.flows.CashIssueFlow;
 import net.corda.nodeapi.User;
 import net.corda.smoketesting.NodeConfig;
 import net.corda.smoketesting.NodeProcess;
@@ -29,7 +27,7 @@ import java.util.stream.Stream;
 
 import static kotlin.test.AssertionsKt.assertEquals;
 import static kotlin.test.AssertionsKt.fail;
-import static net.corda.contracts.GetBalances.getCashBalance;
+import static net.corda.finance.contracts.GetBalances.getCashBalance;
 
 public class StandaloneCordaRPCJavaClientTest {
     private List<String> perms = Collections.singletonList("ALL");

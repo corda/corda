@@ -20,7 +20,6 @@ import net.corda.client.jfx.utils.filterNotNull
 import net.corda.client.jfx.utils.lift
 import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.sequence
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.commonName
@@ -39,6 +38,7 @@ import net.corda.explorer.model.CordaWidget
 import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.sign
 import net.corda.explorer.ui.setCustomCellFactory
+import net.corda.finance.contracts.asset.Cash
 import org.bouncycastle.asn1.x500.X500Name
 import tornadofx.*
 import java.util.*

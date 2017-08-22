@@ -3,7 +3,6 @@
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -23,6 +22,7 @@ import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState

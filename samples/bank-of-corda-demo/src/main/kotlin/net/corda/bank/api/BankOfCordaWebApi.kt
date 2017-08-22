@@ -6,7 +6,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDateTime
 import java.util.*

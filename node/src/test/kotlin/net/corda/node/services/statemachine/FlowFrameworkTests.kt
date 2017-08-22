@@ -5,7 +5,6 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
-import net.corda.finance.DOLLARS
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
@@ -27,8 +26,9 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
+import net.corda.finance.DOLLARS
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.checkpoints

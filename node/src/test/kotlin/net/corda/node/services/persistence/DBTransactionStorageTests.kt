@@ -10,6 +10,9 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV2
+import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
@@ -18,9 +21,6 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.schemas.CashSchemaV1
-import net.corda.schemas.SampleCashSchemaV2
-import net.corda.schemas.SampleCashSchemaV3
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties

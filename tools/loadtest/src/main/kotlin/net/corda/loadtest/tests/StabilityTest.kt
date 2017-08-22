@@ -9,12 +9,12 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.USD
-import net.corda.flows.CashExitFlow
-import net.corda.flows.CashExitFlow.ExitRequest
-import net.corda.flows.CashIssueAndPaymentFlow
-import net.corda.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.flows.CashPaymentFlow
-import net.corda.flows.CashPaymentFlow.PaymentRequest
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
 import net.corda.loadtest.LoadTest
 
 
