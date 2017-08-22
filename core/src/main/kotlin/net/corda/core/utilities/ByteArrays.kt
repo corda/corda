@@ -139,7 +139,10 @@ fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of
 fun ByteArray.toHexString(): String = DatatypeConverter.printHexBinary(this)
 fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
 
-private class OpaqueBytesSubSequence(override val bytes: ByteArray, override val offset: Int, override val size: Int) : ByteSequence() {
+/**
+ * Class is public for serialization purposes
+ */
+class OpaqueBytesSubSequence(override val bytes: ByteArray, override val offset: Int, override val size: Int) : ByteSequence() {
     init {
         require(offset >= 0 && offset < bytes.size)
         require(size >= 0 && size <= bytes.size)
