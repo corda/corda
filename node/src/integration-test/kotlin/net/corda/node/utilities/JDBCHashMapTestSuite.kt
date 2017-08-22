@@ -42,7 +42,7 @@ class JDBCHashMapTestSuite {
         @BeforeClass
         fun before() {
             initialiseTestSerialization()
-            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { throw UnsupportedOperationException("Identity Service should not be in use") })
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = { throw UnsupportedOperationException("Identity Service should not be in use") })
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
             memoryConstrainedMap = JDBCHashMap<String, String>("test_map_constrained", loadOnInit = false, maxBuckets = 1)
@@ -228,7 +228,7 @@ class JDBCHashMapTestSuite {
 
         @Before
         fun before() {
-            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = { throw UnsupportedOperationException("Identity Service should not be in use") })
+            database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = { throw UnsupportedOperationException("Identity Service should not be in use") })
         }
 
         @After

@@ -21,39 +21,37 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, val databaseProperties: Properties, private val identitySvc: () -> IdentityService) {
+class HibernateConfiguration(createSchemaService: () -> SchemaService, private val databaseProperties: Properties, private val createIdentityScervice: () -> IdentityService) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
 
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
-    val sessionFactories = ConcurrentHashMap<MappedSchema, SessionFactory>()
+    private val sessionFactories = ConcurrentHashMap<Set<MappedSchema>, SessionFactory>()
 
     private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?:"")
+    var schemaService = createSchemaService()
 
     init {
-        schemaService.schemaOptions.map { it.key }.forEach { mappedSchema ->
-            sessionFactories.computeIfAbsent(mappedSchema, { makeSessionFactoryForSchema(mappedSchema) })
-        }
+        logger.info("Init HibernateConfiguration for schemas: ${schemaService.schemaOptions.keys}")
+        sessionFactoryForRegisteredSchemas()
     }
 
     fun sessionFactoryForRegisteredSchemas(): SessionFactory {
-        return sessionFactoryForSchemas(*schemaService.schemaOptions.map { it.key }.toTypedArray())
+        return sessionFactoryForSchemas(*schemaService.schemaOptions.keys.toTypedArray())
     }
 
     fun sessionFactoryForSchema(schema: MappedSchema): SessionFactory {
-        return sessionFactories.computeIfAbsent(schema, { sessionFactoryForSchemas(schema) })
+        return sessionFactoryForSchemas(schema)
     }
 
+    //vararg to set conversions left to preserve method signature for now
     fun sessionFactoryForSchemas(vararg schemas: MappedSchema): SessionFactory {
-        return makeSessionFactoryForSchemas(schemas.iterator())
+        val schemaSet: Set<MappedSchema> = schemas.toSet()
+        return sessionFactories.computeIfAbsent(schemaSet, { makeSessionFactoryForSchemas(schemaSet) })
     }
 
-    private fun makeSessionFactoryForSchema(schema: MappedSchema): SessionFactory {
-        return makeSessionFactoryForSchemas(setOf(schema).iterator())
-    }
-
-    private fun makeSessionFactoryForSchemas(schemas: Iterator<MappedSchema>): SessionFactory {
+    private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
         logger.info("Creating session factory for schemas: $schemas")
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
@@ -84,7 +82,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val databasePrope
                 }
             })
             // register custom converters
-            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identitySvc))
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityScervice))
 
             build()
         }

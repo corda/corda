@@ -16,6 +16,7 @@ import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.InMemoryNetworkMapCache
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -36,7 +37,7 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()
     val identityService: IdentityService = InMemoryIdentityService(trustRoot = trustRoot)
-    val database: CordaPersistence = configureDatabase(config.dataSourceProperties, config.database, identitySvc = {InMemoryIdentityService(trustRoot = trustRoot)})
+    val database: CordaPersistence = configureDatabase(config.dataSourceProperties, config.database, { NodeSchemaService() }, { InMemoryIdentityService(trustRoot = trustRoot) })
     val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
     // TODO: We should have a dummy service hub rather than change behaviour in tests
