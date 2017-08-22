@@ -5,10 +5,9 @@ import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.flows.CashExitFlow
-import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashIssueAndPaymentFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -67,8 +66,7 @@ private class BankOfCordaDriver {
                                 BANK_USERNAME,
                                 "test",
                                 permissions = setOf(
-                                        startFlowPermission<CashPaymentFlow>(),
-                                        startFlowPermission<CashIssueFlow>(),
+                                        startFlowPermission<CashIssueAndPaymentFlow>(),
                                         startFlowPermission<CashExitFlow>()))
                         val bigCorpUser = User(BIGCORP_USERNAME, "test",
                                 permissions = setOf(
@@ -86,8 +84,7 @@ private class BankOfCordaDriver {
                 Role.ISSUE_CASH_RPC -> {
                     println("Requesting Cash via RPC ...")
                     val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10006)).requestRPCIssue(requestParams)
-                    if (result is SignedTransaction)
-                        println("Success!! You transaction receipt is ${result.tx.id}")
+                    println("Success!! You transaction receipt is ${result.tx.id}")
                 }
                 Role.ISSUE_CASH_WEB -> {
                     println("Requesting Cash via Web ...")

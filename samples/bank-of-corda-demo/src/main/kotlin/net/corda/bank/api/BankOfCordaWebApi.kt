@@ -6,8 +6,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
+import net.corda.flows.CashIssueAndPaymentFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDateTime
 import java.util.*
@@ -45,8 +44,7 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
         // Resolve parties via RPC
         val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)
                 ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issueToPartyName} in identity service").build()
-        val issuerBankParty = rpc.partyFromX500Name(params.issuerBankName)
-                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issuerBankName} in identity service").build()
+        rpc.partyFromX500Name(params.issuerBankName) ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issuerBankName} in identity service").build()
         val notaryParty = rpc.partyFromX500Name(params.notaryName)
                 ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.notaryName} in identity service").build()
         val notaryNode = rpc.nodeIdentityFromParty(notaryParty)
@@ -58,13 +56,11 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
         // invoke client side of Issuer Flow: IssuanceRequester
         // The line below blocks and waits for the future to resolve.
         return try {
-            rpc.startFlow(::CashIssueFlow, amount, issuerBankPartyRef, notaryNode.notaryIdentity).returnValue.getOrThrow()
-            rpc.startFlow(::CashPaymentFlow, amount, issueToParty, params.anonymous)
-                    .returnValue.getOrThrow().stx
-            logger.info("Issue request completed successfully: $params")
+            rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, params.anonymous, notaryNode.notaryIdentity).returnValue.getOrThrow()
+            logger.info("Issue and payment request completed successfully: $params")
             Response.status(Response.Status.CREATED).build()
         } catch (e: Exception) {
-            logger.error("Issue request failed", e)
+            logger.error("Issue and payment request failed", e)
             Response.status(Response.Status.FORBIDDEN).build()
         }
     }
