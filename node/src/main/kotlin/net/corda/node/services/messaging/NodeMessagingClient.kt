@@ -11,6 +11,9 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
@@ -36,13 +39,12 @@ import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
+import javax.persistence.*
 
 // TODO: Stop the wallet explorer and other clients from using this class and get rid of persistentInbox
 
@@ -68,12 +70,12 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
-                          val versionInfo: VersionInfo,
-                          val serverAddress: NetworkHostAndPort,
-                          val myIdentity: PublicKey?,
-                          val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
+                          private val versionInfo: VersionInfo,
+                          private val serverAddress: NetworkHostAndPort,
+                          private val myIdentity: PublicKey?,
+                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                           val database: CordaPersistence,
-                          val networkMapRegistrationFuture: CordaFuture<Unit>,
+                          private val networkMapRegistrationFuture: CordaFuture<Unit>,
                           val monitoringService: MonitoringService,
                           advertisedAddress: NetworkHostAndPort = serverAddress
 ) : ArtemisMessagingComponent(), MessagingService {
@@ -93,6 +95,38 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         private val verifierResponseAddress = "$VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX.${random63BitValue()}"
 
         private val messageMaxRetryCount: Int = 3
+
+        fun createProcessedMessage(): AppendOnlyPersistentMap<UUID, Instant, ProcessedMessage, String> {
+            return AppendOnlyPersistentMap(
+                    toPersistentEntityKey = { it.toString() },
+                    fromPersistentEntity = { Pair(UUID.fromString(it.uuid), it.insertionTime) },
+                    toPersistentEntity = { key: UUID, value: Instant ->
+                        ProcessedMessage().apply {
+                            uuid = key.toString()
+                            insertionTime = value
+                        }
+                    },
+                    persistentEntityClass = ProcessedMessage::class.java
+            )
+        }
+
+        fun createMessageToRedeliver(): PersistentMap<Long, Pair<Message, MessageRecipients>, RetryMessage, Long> {
+            return PersistentMap(
+                    toPersistentEntityKey = { it },
+                    fromPersistentEntity = { Pair(it.key,
+                            Pair(it.message.deserialize( context = SerializationDefaults.STORAGE_CONTEXT),
+                                    it.recipients.deserialize( context = SerializationDefaults.STORAGE_CONTEXT))
+                    ) },
+                    toPersistentEntity = { _key: Long, (_message: Message, _recipient: MessageRecipients): Pair<Message, MessageRecipients> ->
+                        RetryMessage().apply {
+                            key = _key
+                            message = _message.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                            recipients = _recipient.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                        }
+                    },
+                    persistentEntityClass = RetryMessage::class.java
+            )
+        }
     }
 
     private class InnerState {
@@ -107,11 +141,11 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         var verificationResponseConsumer: ClientConsumer? = null
     }
 
-    val messagesToRedeliver = database.transaction {
-        JDBCHashMap<Long, Pair<Message, MessageRecipients>>("${NODE_DATABASE_PREFIX}message_retry", true)
+    private val messagesToRedeliver = database.transaction {
+        createMessageToRedeliver()
     }
 
-    val scheduledMessageRedeliveries = ConcurrentHashMap<Long, ScheduledFuture<*>>()
+    private val scheduledMessageRedeliveries = ConcurrentHashMap<Long, ScheduledFuture<*>>()
 
     val verifierService = when (config.verifierType) {
         VerifierType.InMemory -> InMemoryTransactionVerifierService(numberOfWorkers = 4)
@@ -139,17 +173,33 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
 
-    private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}message_ids") {
-        val uuid = uuidString("message_id")
-    }
+    private val processedMessages = createProcessedMessage()
 
-    private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(
-            object : AbstractJDBCHashSet<UUID, Table>(Table, loadOnInit = true) {
-                override fun elementFromRow(row: ResultRow): UUID = row[table.uuid]
-                override fun addElementToInsert(insert: InsertStatement, entry: UUID, finalizables: MutableList<() -> Unit>) {
-                    insert[table.uuid] = entry
-                }
-            }
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_ids")
+    class ProcessedMessage(
+            @Id
+            @Column(name = "message_id", length = 36)
+            var uuid: String = "",
+
+            @Column(name = "insertion_time")
+            var insertionTime: Instant = Instant.now()
+    )
+
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_retry")
+    class RetryMessage(
+            @Id
+            @Column(name = "message_id", length = 36)
+            var key: Long = 0,
+
+            @Lob
+            @Column
+            var message: ByteArray = ByteArray(0),
+
+            @Lob
+            @Column
+            var recipients: ByteArray = ByteArray(0)
     )
 
     fun start(rpcOps: RPCOps, userService: RPCUserService) {
@@ -374,7 +424,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                             callHandlers(msg, deliverTo)
                         }
                         // TODO We will at some point need to decide a trimming policy for the id's
-                        processedMessages += msg.uniqueMessageId
+                        processedMessages[msg.uniqueMessageId] = Instant.now()
                     }
                 }
             }
