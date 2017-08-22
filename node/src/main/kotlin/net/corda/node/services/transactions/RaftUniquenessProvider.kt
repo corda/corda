@@ -18,6 +18,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -47,16 +48,16 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
 
-        fun createKeyMap(): PersistentMap<String, ByteArray, RaftState, String> {
+        fun createKeyMap(): PersistentMap<String, Any, RaftState, String> {
             return PersistentMap(
                     toPersistentEntityKey = { it },
                     fromPersistentEntity = {
-                        Pair(it.key, it.value)
+                        Pair(it.key, if(it.value is ByteArray) it.value else it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
-                    toPersistentEntity = { k: String, v: ByteArray ->
+                    toPersistentEntity = { k: String, v: Any ->
                         RaftState().apply {
                             key = k
-                            value = v
+                            value = if(v is ByteArray) v else v.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                         }
                     },
                     persistentEntityClass = RaftState::class.java
