@@ -1,13 +1,13 @@
-package net.corda.contracts.asset.cash.selection
+package net.corda.finance.contracts.asset.cash.selection
 
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.CashSelection
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.CashSelection
 import java.sql.DatabaseMetaData
 import java.util.*
 

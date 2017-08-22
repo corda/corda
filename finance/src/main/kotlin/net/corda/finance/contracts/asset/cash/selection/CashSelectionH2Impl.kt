@@ -1,9 +1,7 @@
-package net.corda.contracts.asset.cash.selection
+package net.corda.finance.contracts.asset.cash.selection
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.CashSelection
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -17,6 +15,8 @@ import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.CashSelection
 import java.sql.DatabaseMetaData
 import java.sql.SQLException
 import java.util.*

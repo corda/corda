@@ -1,9 +1,6 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.CashSelection
-import net.corda.contracts.asset.cash.selection.CashSelectionH2Impl
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
@@ -17,6 +14,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.CashSelection
 import net.corda.finance.issuedBy
 import java.util.*
 
