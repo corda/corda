@@ -240,6 +240,14 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         hm1.serialize()
     }
 
+    @Test
+    fun `verify all inputs are visible Partial Merkle Tree`() {
+        val inclHashes = listOf(hashed[3], hashed[5])
+        val pmt = PartialMerkleTree.build(merkleTree, inclHashes)
+        val wrongRoot = hashed[3].hashConcat(hashed[5])
+        assertFalse(pmt.verify(wrongRoot, inclHashes))
+    }
+
     private fun makeSimpleCashWtx(
             notary: Party,
             privacySalt: PrivacySalt = PrivacySalt(),
@@ -255,5 +263,72 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
                 timeWindow = timeWindow,
                 privacySalt = privacySalt
         )
+    }
+
+    @Test
+    fun `filtered transaction all inputs visible`() {
+        val input1 = StateRef(SecureHash.randomSHA256(), 0)
+        val input2 = StateRef(SecureHash.randomSHA256(), 0)
+        val input3 = StateRef(SecureHash.randomSHA256(), 0)
+
+        val wtx = WireTransaction(
+                // add 3 inputs
+                inputs = listOf(input1, input2, input3),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = DUMMY_NOTARY,
+                timeWindow = TimeWindow.fromOnly(TEST_TX_TIME)
+        )
+
+        fun nonValidatingNotaryFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> true
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        fun someInputsFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> elem == input1 || elem == input3 // Not including input2.
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        fun oneInputFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> elem == input1 // Not including input2 and input3.
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        fun noInputsFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        val nonValidatingFilteredTx = wtx.buildFilteredTransaction(Predicate(::nonValidatingNotaryFiltering))
+        val someInputsFilteredTx = wtx.buildFilteredTransaction(Predicate(::someInputsFiltering))
+        val oneInputFilteredTx = wtx.buildFilteredTransaction(Predicate(::oneInputFiltering))
+        val noInputsFilteredTx = wtx.buildFilteredTransaction(Predicate(::noInputsFiltering))
+
+        // Partial tree verification should pass if we don't care about input state visibility.
+        assertTrue { nonValidatingFilteredTx.verify() }
+        assertTrue { someInputsFilteredTx.verify() }
+        assertTrue { oneInputFilteredTx.verify() }
+        assertTrue { noInputsFilteredTx.verify() }
+
+        // verifyAndAllInputsVisible tests should only pass if all input states are visible.
+        assertTrue { nonValidatingFilteredTx.verifyAndAllInputsVisible() }
+        assertFalse { someInputsFilteredTx.verifyAndAllInputsVisible() }
+        assertFalse { oneInputFilteredTx.verifyAndAllInputsVisible() }
+        // TODO: the test below fails because you can trick the notary to believe there are no inputs at all.
+        //      Consider always using a Zero Hash as the first leaf.
+        // assertFalse { noInputsFilteredTx.verifyAndAllInputsVisible() }
     }
 }

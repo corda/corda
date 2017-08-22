@@ -163,26 +163,21 @@ class FilteredTransaction private constructor(
         ): FilteredTransaction {
             val filteredLeaves = wtx.filterWithFun(filtering)
             val merkleTree = wtx.merkleTree
-            val inputsSize = filteredLeaves.inputs.size
+            val inputsMerkleTree = wtx.inputsMerkleTree
 
-            val inputsMerkleTree = if (inputsSize != 0) {
-                wtx.inputsMerkleTree
-            } else {
-                null
-            }
-
-            val inputsPmt = if (inputsMerkleTree != null) {
-                PartialMerkleTree.build(inputsMerkleTree, filteredLeaves.availableComponentHashes.subList(0, inputsSize))
-            } else {
-                null
-            }
-
-            val pmt = if (inputsMerkleTree != null) {
-                PartialMerkleTree.build(merkleTree, listOf(inputsMerkleTree.hash)
-                        + filteredLeaves.availableComponentHashes.subList(inputsSize, filteredLeaves.availableComponentHashes.size))
+            val pmt = if (!filteredLeaves.inputs.isEmpty()) {
+                PartialMerkleTree.build(merkleTree, listOf(inputsMerkleTree!!.hash)
+                        + filteredLeaves.availableComponentHashes.subList(filteredLeaves.inputs.size, filteredLeaves.availableComponentHashes.size))
             } else {
                 PartialMerkleTree.build(merkleTree, filteredLeaves.availableComponentHashes)
             }
+
+            val inputsPmt = if (!filteredLeaves.inputs.isEmpty()) {
+                PartialMerkleTree.build(inputsMerkleTree!!, filteredLeaves.availableComponentHashes.subList(0, filteredLeaves.inputs.size))
+            } else {
+                null
+            }
+
             return FilteredTransaction(merkleTree.hash, filteredLeaves, pmt, inputsPmt)
         }
     }
@@ -194,7 +189,7 @@ class FilteredTransaction private constructor(
     fun verify(): Boolean = verify(allInputsVisible = false)
 
     /**
-     * This method is invokesd by non-validating notaries to runs verification of partial Merkle branch against [rootHash]
+     * This method is invoked by non-validating notaries to run verification of partial Merkle branch against [rootHash]
      * and on the same time ensure all input states are visible.
      */
     @Throws(MerkleTreeException::class)
@@ -205,19 +200,14 @@ class FilteredTransaction private constructor(
         if (hashes.isEmpty())
             throw MerkleTreeException("Transaction without included leaves.")
 
-        val inputsRootHash = if (!filteredLeaves.inputs.isEmpty()) {
-            if (!allInputsVisible) {
-                // We use the input-states partial Merkle tree root as inputsRootHash.
-                partialInputsMerkleTree?.rootAndUsedHashes(partialInputsMerkleTree.root, ArrayList<SecureHash>())
-            } else {
-                // We use the inputs list to create the input-states sub Merkle tree root, to ensure all of them are visible.
-                MerkleTree.getMerkleTree(filteredLeaves.availableComponentHashes.subList(0, filteredLeaves.inputs.size)).hash
-            }
-        } else {
-            null
-        }
-
-        return if (inputsRootHash != null) {
+        return if (!filteredLeaves.inputs.isEmpty()) {
+            val inputsRootHash = if (!allInputsVisible) {
+                    // We use the input-states partial Merkle tree root as inputsRootHash.
+                    partialInputsMerkleTree!!.rootAndUsedHashes(partialInputsMerkleTree.root, ArrayList<SecureHash>())
+                } else {
+                    // We use the inputs list to create the input-states sub Merkle tree root, so as to ensure all of them are visible.
+                    MerkleTree.getMerkleTree(filteredLeaves.availableComponentHashes.subList(0, filteredLeaves.inputs.size)).hash
+                }
             partialMerkleTree.verify(rootHash, listOf(inputsRootHash) + hashes.subList(filteredLeaves.inputs.size, hashes.size))
         } else {
             partialMerkleTree.verify(rootHash, hashes)
