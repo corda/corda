@@ -3,6 +3,7 @@ package net.corda.node.utilities
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.node.services.IdentityService
+import net.corda.node.services.api.SchemaService
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import org.hibernate.SessionFactory
@@ -19,7 +20,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
-class CordaPersistence(var dataSource: HikariDataSource, private var createSchemaService: () -> NodeSchemaService,
+class CordaPersistence(var dataSource: HikariDataSource, private var createSchemaService: () -> SchemaService,
                        private val createIdentityService: ()-> IdentityService, databaseProperties: Properties): Closeable {
 
     /** Holds Exposed database, the field will be removed once Exposed library is removed */
@@ -39,7 +40,7 @@ class CordaPersistence(var dataSource: HikariDataSource, private var createSchem
     }
 
     companion object {
-        fun connect(dataSource: HikariDataSource, createSchemaService: () -> NodeSchemaService, createIdentityService: () -> IdentityService, databaseProperties: Properties): CordaPersistence {
+        fun connect(dataSource: HikariDataSource, createSchemaService: () -> SchemaService, createIdentityService: () -> IdentityService, databaseProperties: Properties): CordaPersistence {
             return CordaPersistence(dataSource, createSchemaService, createIdentityService, databaseProperties).apply {
                 DatabaseTransactionManager(this)
             }
@@ -106,7 +107,7 @@ class CordaPersistence(var dataSource: HikariDataSource, private var createSchem
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, createSchemaService: () -> NodeSchemaService = { NodeSchemaService() }, createIdentityService: ()-> IdentityService): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, createSchemaService: () -> SchemaService = { NodeSchemaService() }, createIdentityService: () -> IdentityService): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
     val persistence = CordaPersistence.connect(dataSource, createSchemaService, createIdentityService, databaseProperties ?: Properties())
