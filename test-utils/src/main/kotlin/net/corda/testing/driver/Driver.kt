@@ -631,14 +631,14 @@ class DriverDSL(
                 rpcUsers = rpcUsers,
                 verifierType = verifierType,
                 customOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString(),
-                        "database.serverNameTablePrefix" to if (nodeNames.isNotEmpty()) nodeNames.first().toString().replace(Regex("=|,| "),"") else ""),
+                        "database.serverNameTablePrefix" to if (nodeNames.isNotEmpty()) nodeNames.first().toString().replace(Regex("[^0-9A-Za-z]+"),"") else ""),
                 startInSameProcess = startInSameProcess
         )
         // All other nodes will join the cluster
         val restNotaryFutures = nodeNames.drop(1).map {
             val nodeAddress = portAllocation.nextHostAndPort()
             val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()),
-                    "database.serverNameTablePrefix" to it.toString().replace(Regex("=|,| "), ""))
+                    "database.serverNameTablePrefix" to it.toString().replace(Regex("[^0-9A-Za-z]+"), ""))
             startNode(it, advertisedServices, rpcUsers, verifierType, configOverride)
         }
 
