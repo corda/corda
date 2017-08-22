@@ -2,7 +2,7 @@
 package net.corda.finance.contracts.asset
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.cash.selection.CashSelectionH2Impl
+import net.corda.finance.contracts.asset.cash.selection.CashSelectionH2Impl
 import net.corda.core.contracts.*
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.testing.NULL_PARTY
