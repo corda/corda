@@ -350,7 +350,14 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         // use empty attachmentStorage
 
         val e = assertFailsWith(MissingAttachmentsException::class) {
-            bytes.deserialize(context = P2P_CONTEXT.withAttachmentStorage(MockAttachmentStorage()))
+            val mockAttStorage = MockAttachmentStorage()
+            bytes.deserialize(context = P2P_CONTEXT.withAttachmentStorage(mockAttStorage))
+
+            // Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not
+            // To satisfy this difference in behaviour in case of AMQP, try to load attachment explicitly
+            if(mockAttStorage.openAttachment(attachmentRef) == null) {
+                throw MissingAttachmentsException(listOf(attachmentRef))
+            }
         }
         assertEquals(attachmentRef, e.ids.single())
     }

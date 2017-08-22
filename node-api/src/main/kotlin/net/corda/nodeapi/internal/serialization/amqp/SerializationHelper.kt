@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.reflect.TypeToken
 import org.apache.qpid.proton.codec.Data
+import java.beans.IndexedPropertyDescriptor
 import java.beans.Introspector
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -92,7 +93,7 @@ private fun constructorParamTakesReturnTypeOfGetter(getter: Method, param: KPara
 
 private fun propertiesForSerializationFromAbstract(clazz: Class<*>, type: Type, factory: SerializerFactory): Collection<PropertySerializer> {
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
-    val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.sortedBy { it.name }
+    val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.sortedBy { it.name }.filterNot { it is IndexedPropertyDescriptor }
     val rc: MutableList<PropertySerializer> = ArrayList(properties.size)
     for (property in properties) {
         // Check that the method has a getter in java.

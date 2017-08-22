@@ -20,24 +20,19 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             throw NotSerializableException("Expected ${rawType.typeParameters.size} for ${rawType.name} but found ${params.size}")
         }
         // We do not check bounds.  Both our use cases (Collection and Map) are not bounded.
-        if (rawType.typeParameters.any { boundedType(it) }) throw NotSerializableException("Bounded types in ParameterizedTypes not supported, but found a bound in $rawType")
+        // Doesn't cater well for: [net.corda.core.contracts.TransactionState]
+        //if (rawType.typeParameters.any { boundedType(it) }) throw NotSerializableException("Bounded types in ParameterizedTypes not supported, but found a bound in $rawType")
     }
 
     private fun boundedType(type: TypeVariable<out Class<out Any>>): Boolean {
         return !(type.bounds.size == 1 && type.bounds[0] == Object::class.java)
     }
 
-    val isFullyWildcarded: Boolean = params.all { it == SerializerFactory.AnyType }
-
     private val _typeName: String = makeTypeName()
 
     private fun makeTypeName(): String {
-        return if (isFullyWildcarded) {
-            rawType.name
-        } else {
-            val paramsJoined = params.map { it.typeName }.joinToString(", ")
-            "${rawType.name}<$paramsJoined>"
-        }
+        val paramsJoined = params.map { it.typeName }.joinToString(", ")
+        return "${rawType.name}<$paramsJoined>"
     }
 
     companion object {
@@ -96,7 +91,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                             typeStart = pos++
                         } else if (!needAType) {
                             throw NotSerializableException("Not expecting a type")
-                        } else if (params[pos] == '*') {
+                        } else if (params[pos] == '?') {
                             pos++
                         } else if (!params[pos].isJavaIdentifierStart()) {
                             throw NotSerializableException("Invalid character at start of type: ${params[pos]}")

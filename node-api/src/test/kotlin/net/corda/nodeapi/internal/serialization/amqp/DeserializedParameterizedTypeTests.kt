@@ -34,6 +34,11 @@ class DeserializedParameterizedTypeTests {
         verify("java.util.Map<java.lang.String, java.lang.Integer> ")
     }
 
+    @Test
+    fun `test list of commands`() {
+        verify("java.util.List<net.corda.core.contracts.Command<?>>")
+    }
+
     @Test(expected = NotSerializableException::class)
     fun `test trailing text`() {
         verify("java.util.Map<java.lang.String, java.lang.Integer>foo")
