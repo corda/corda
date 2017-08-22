@@ -74,7 +74,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
                         throw HibernateException("Entity naming information was not provided.")
                     }
 
-                    val tableName = transformEntityName(source.entityNaming) ?: // todo : add info to error message - but how to know what to write since we failed to interpret the naming source
+                    val tableName = transformEntityName(source.entityNaming) ?:
                             throw HibernateException("Could not determine primary table name for entity")
 
                     return toIdentifier(naming + tableName, source.buildingContext)
