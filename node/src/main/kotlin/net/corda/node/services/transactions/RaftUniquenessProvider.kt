@@ -24,7 +24,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.utilities.AppendOnlyClearablePersistentMap
+import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.CordaPersistence
 import net.corda.nodeapi.config.SSLConfiguration
 import java.nio.file.Path
@@ -48,8 +48,8 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
 
-        fun createKeyMap(): AppendOnlyClearablePersistentMap<String, Any, RaftState, String> {
-            return AppendOnlyClearablePersistentMap(
+        fun createKeyMap(): AppendOnlyPersistentMap<String, Any, RaftState, String> {
+            return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it },
                     fromPersistentEntity = {
                         Pair(it.key, if(it.value is ByteArray) it.value else it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
@@ -103,7 +103,8 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
 
     fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
-        val stateMachineFactory = { DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createKeyMap) }
+        val stateMachineFactory = {
+            DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createKeyMap) }
         val address = Address(myAddress.host, myAddress.port)
         val storage = buildStorage(storagePath)
         val transport = buildTransport(transportConfiguration)
