@@ -383,7 +383,9 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                 val startingHash = if (isCollectionOrMap(clazz)) {
                     hasher.putUnencodedChars(clazz.name)
                 } else {
-                    hasher.putUnencodedChars(type.typeName)
+                    hasher.fingerprintWithCustomSerializerOrElse(factory, clazz, type) {
+                        fingerprintForObject(type, type, alreadySeen, hasher, factory)
+                    }
                 }
                 // ... and concatentate the type data for each parameter type.
                 type.actualTypeArguments.fold(startingHash) { orig, paramType -> fingerprintForType(paramType, type, alreadySeen, orig, factory) }
