@@ -1,10 +1,12 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.CordaSerializerConstructor
 import net.corda.nodeapi.internal.serialization.carpenter.getTypeAsClass
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.io.NotSerializableException
 import kotlin.reflect.KFunction
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.javaType
 
 /**
@@ -48,15 +50,20 @@ class EvolutionSerializer(
 
             val oldArgumentSet = oldArgs.map { Pair (it.key, it.value) }
 
+            var maxConstructorVersion = Integer.MIN_VALUE
+            var constructor: KFunction<Any>? = null
             clazz.kotlin.constructors.forEach {
-                if (oldArgumentSet.containsAll(it.parameters.map { v -> Pair(v.name, v.type.javaType) })) {
-                    return it
+                val version = it.findAnnotation<CordaSerializerConstructor>()?.version ?: Integer.MIN_VALUE
+                if (oldArgumentSet.containsAll(it.parameters.map { v -> Pair(v.name, v.type.javaType) }) &&
+                        version > maxConstructorVersion) {
+                    constructor = it
+                    maxConstructorVersion = version
                 }
             }
 
             // if we didn't get an exact match revert to existing behaviour, if the new parameters
             // are not mandatory (i.e. nullable) things are fine
-            return constructorForDeserialization(type)
+            return constructor ?: constructorForDeserialization(type)
         }
 
         /**
