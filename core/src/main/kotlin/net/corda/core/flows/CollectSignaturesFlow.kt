@@ -131,8 +131,11 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
      * @param signingKey the key the party should use to sign the transaction.
      */
     @Suspendable private fun collectSignature(counterparty: Party, signingKey: PublicKey): TransactionSignature {
-        // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
+        // SendTransactionFlow allows counterparty to access our data to resolve the transaction.
         subFlow(SendTransactionFlow(counterparty, partiallySignedTx))
+        // Send the key we expect the counterparty to sign with - this is important where they may have several
+        // keys to sign with, as it makes it faster for them to identify the key to sign with, and more straight forward
+        // for us to check we have the expected signature returned.
         send(counterparty, signingKey)
         return receive<TransactionSignature>(counterparty).unwrap {
             require(signingKey.isFulfilledBy(it.by)) { "Not signed by the required signing key." }
@@ -196,7 +199,13 @@ abstract class SignTransactionFlow(val otherParty: Party,
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
         val stx = subFlow(ReceiveTransactionFlow(otherParty, checkSufficientSignatures = false))
-        val signingKey = receive<PublicKey>(otherParty).unwrap { serviceHub.keyManagementService.filterMyKeys(listOf(it)).single() }
+        // Receive the signing key that the party requesting the signature expects us to sign with. Having this provided
+        // means we only have to check we own that one key, rather than matching all keys in the transaction against all
+        // keys we own.
+        val signingKey = receive<PublicKey>(otherParty).unwrap {
+            // TODO: We should have a faster way of verifying we own a single key
+            serviceHub.keyManagementService.filterMyKeys(listOf(it)).single()
+        }
         progressTracker.currentStep = VERIFYING
         // Check that the Responder actually needs to sign.
         checkMySignatureRequired(stx, signingKey)
