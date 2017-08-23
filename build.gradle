@@ -127,6 +127,11 @@ allprojects {
     tasks.withType(Test) {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperties['java.io.tmpdir'] = buildDir
+
+        // Ensures that "net.corda.testing.amqp.enable" is passed correctly from Gradle command line
+        // down to JVM executing unit test. It looks like we are running unit tests in the forked mode
+        // and all the "-D" parameters passed to Gradle not making it to unit test level
+        systemProperty("net.corda.testing.amqp.enable", System.getProperty("net.corda.testing.amqp.enable"))
     }
 
     group 'net.corda'

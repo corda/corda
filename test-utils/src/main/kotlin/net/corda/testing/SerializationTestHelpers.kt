@@ -66,7 +66,11 @@ fun initialiseTestSerialization() {
         registerScheme(AMQPClientSerializationScheme())
         registerScheme(AMQPServerSerializationScheme())
     }
-    (SerializationDefaults.P2P_CONTEXT as TestSerializationContext).delegate = KRYO_P2P_CONTEXT
+    (SerializationDefaults.P2P_CONTEXT as TestSerializationContext).delegate = if (java.lang.Boolean.getBoolean("net.corda.testing.amqp.enable")) {
+        AMQP_P2P_CONTEXT
+    } else {
+        KRYO_P2P_CONTEXT
+    }
     (SerializationDefaults.RPC_SERVER_CONTEXT as TestSerializationContext).delegate = KRYO_RPC_SERVER_CONTEXT
     (SerializationDefaults.RPC_CLIENT_CONTEXT as TestSerializationContext).delegate = KRYO_RPC_CLIENT_CONTEXT
     (SerializationDefaults.STORAGE_CONTEXT as TestSerializationContext).delegate = KRYO_STORAGE_CONTEXT
