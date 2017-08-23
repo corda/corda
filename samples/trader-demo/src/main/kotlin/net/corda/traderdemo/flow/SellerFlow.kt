@@ -6,7 +6,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
@@ -42,9 +41,8 @@ class SellerFlow(val otherParty: Party,
         progressTracker.currentStep = SELF_ISSUING
 
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
-        val cpOwnerKey = serviceHub.keyManagementService.freshKey()
+        val cpOwner = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, false)
         val commercialPaper = serviceHub.vaultQueryService.queryBy(CommercialPaper.State::class.java).states.first()
-
 
         progressTracker.currentStep = TRADING
 
@@ -55,7 +53,7 @@ class SellerFlow(val otherParty: Party,
                 notary,
                 commercialPaper,
                 amount,
-                AnonymousParty(cpOwnerKey),
+                cpOwner,
                 progressTracker.getChildProgressTracker(TRADING)!!)
         return subFlow(seller)
     }

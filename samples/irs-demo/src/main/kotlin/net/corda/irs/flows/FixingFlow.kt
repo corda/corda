@@ -8,6 +8,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.SchedulableFlow
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
@@ -110,8 +111,7 @@ object FixingFlow {
         }
 
         override val myKey: PublicKey get() {
-            dealToFix.state.data.participants.single { it.owningKey == serviceHub.myInfo.legalIdentity.owningKey }
-            return serviceHub.legalIdentityKey
+            return serviceHub.keyManagementService.filterMyKeys(dealToFix.state.data.participants.map(AbstractParty::owningKey)).single()
         }
 
         override val notaryNode: NodeInfo get() {
