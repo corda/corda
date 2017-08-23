@@ -159,7 +159,7 @@ class CollectSignaturesFlowTests {
     fun `no need to collect any signatures`() {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, a.info.legalIdentity.ref(1))
         val ptx = a.services.signInitialTransaction(onePartyDummyContract)
-        val flow = a.services.startFlow(CollectSignaturesFlow(ptx, ptx.tx.commands.single().signers))
+        val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
         result.verifyRequiredSignatures()
@@ -172,7 +172,7 @@ class CollectSignaturesFlowTests {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, a.info.legalIdentity.ref(1))
         val miniCorpServices = MockServices(MINI_CORP_KEY)
         val ptx = miniCorpServices.signInitialTransaction(onePartyDummyContract)
-        val flow = a.services.startFlow(CollectSignaturesFlow(ptx, ptx.tx.commands.single().signers))
+        val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException>("The Initiator of CollectSignaturesFlow must have signed the transaction.") {
             flow.resultFuture.getOrThrow()
@@ -187,7 +187,7 @@ class CollectSignaturesFlowTests {
                 b.info.legalIdentity.ref(3))
         val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)
         val signedByBoth = b.services.addSignature(signedByA)
-        val flow = a.services.startFlow(CollectSignaturesFlow(signedByBoth, signedByBoth.tx.commands.single().signers))
+        val flow = a.services.startFlow(CollectSignaturesFlow(signedByBoth))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
         println(result.tx)
