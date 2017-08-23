@@ -8,8 +8,6 @@ import java.time.*
  * A serializer for [ZoneId] that uses a proxy object to write out the string form.
  */
 class ZoneIdSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<ZoneId, ZoneIdSerializer.ZoneIdProxy>(ZoneId::class.java, ZoneIdProxy::class.java, factory) {
-    override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
-
     override fun toProxy(obj: ZoneId): ZoneIdProxy = ZoneIdProxy(obj.id)
 
     override fun fromProxy(proxy: ZoneIdProxy): ZoneId = ZoneId.of(proxy.id)

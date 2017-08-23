@@ -14,7 +14,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      * This is a collection of custom serializers that this custom serializer depends on.  e.g. for proxy objects
      * that refer to other custom types etc.
      */
-    abstract val additionalSerializers: Iterable<CustomSerializer<out Any>>
+    open val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 
     /**
      * This method should return true if the custom serializer can serialize an instance of the class passed as the
@@ -45,7 +45,6 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      */
     // TODO: should this be a custom serializer at all, or should it just be a plain AMQPSerializer?
     class SubClass<T>(protected val clazz: Class<*>, protected val superClassSerializer: CustomSerializer<T>) : CustomSerializer<T>() {
-        override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
         // TODO: should this be empty or contain the schema of the super?
         override val schemaForDocumentation = Schema(emptyList())
 
@@ -154,8 +153,6 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
                                },
                                private val unmaker: (T) -> String = { obj -> obj.toString() })
         : CustomSerializerImp<T>(clazz, withInheritance) {
-
-        override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 
         override val schemaForDocumentation = Schema(
                 listOf(RestrictedType(nameForType(type), "", listOf(nameForType(type)),
