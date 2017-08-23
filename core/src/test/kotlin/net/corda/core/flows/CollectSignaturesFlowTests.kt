@@ -85,10 +85,11 @@ class CollectSignaturesFlowTests {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
                 val myInputKeys = state.participants.map { it.owningKey }
+                val myKeys = myInputKeys + (identities[serviceHub.myInfo.legalIdentity] ?: serviceHub.myInfo.legalIdentity).owningKey
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(state, command)
                 val ptx = serviceHub.signInitialTransaction(builder)
-                val stx = subFlow(CollectSignaturesFlow(ptx, identities, myInputKeys))
+                val stx = subFlow(CollectSignaturesFlow(ptx, myKeys))
                 val ftx = subFlow(FinalityFlow(stx)).single()
 
                 return ftx

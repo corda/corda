@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.toBase58String
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
@@ -58,17 +57,14 @@ import java.security.PublicKey
  *     val stx = subFlow(CollectSignaturesFlow(ptx))
  *
  * @param partiallySignedTx Transaction to collect the remaining signatures for
- * @param outputIdentities mapping from well known identities to anonymised identities used in the transaction outputs.
- * @param myInputKeys set of keys in the transaction which are owned by this node. This includes keys used on commands, not
- * just in the output states. If null, the default well known identity of the node is used.
+ * @param myOptionalKeys set of keys in the transaction which are owned by this node. This includes keys used on commands, not
+ * just in the states. If null, the default well known identity of the node is used.
  */
 // TODO: AbstractStateReplacementFlow needs updating to use this flow.
 class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: SignedTransaction,
-                            val outputIdentities: Map<Party, AnonymousParty>,
-                            val myInputKeys: Iterable<PublicKey>?,
-                            override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
-    @JvmOverloads constructor(partiallySignedTx: SignedTransaction, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, emptyMap(), null, progressTracker)
-    @JvmOverloads constructor(partiallySignedTx: SignedTransaction, myInputKeys: Iterable<PublicKey>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, emptyMap(), myInputKeys, progressTracker)
+                                                       val myOptionalKeys: Iterable<PublicKey>?,
+                                                       override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
+    @JvmOverloads constructor(partiallySignedTx: SignedTransaction, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, null, progressTracker)
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counterparties.")
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")
@@ -79,12 +75,11 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
     }
 
     @Suspendable override fun call(): SignedTransaction {
-        val myInputIdentities: List<PartyAndCertificate> = if (myInputKeys != null)
-            myInputKeys.map { serviceHub.identityService.certificateFromKey(it) }.requireNoNulls()
+        val myInputIdentities: List<PartyAndCertificate> = if (myOptionalKeys != null)
+            myOptionalKeys.map { serviceHub.identityService.certificateFromKey(it) }.requireNoNulls()
         else
             listOf(serviceHub.myInfo.legalIdentityAndCert)
-        val myOutputIdentity = outputIdentities[serviceHub.myInfo.legalIdentity] ?: serviceHub.myInfo.legalIdentity
-        val myKeys = (myInputIdentities.map { it.party.owningKey } + myOutputIdentity.owningKey).toSet()
+        val myKeys = myInputIdentities.map { it.party.owningKey }
 
         // Check the signatures which have already been provided and that the transaction is valid.
         // Usually just the Initiator and possibly an oracle would have signed at this point.
