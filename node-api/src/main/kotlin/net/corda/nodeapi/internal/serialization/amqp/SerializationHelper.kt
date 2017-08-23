@@ -74,7 +74,8 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
     val rc: MutableList<PropertySerializer> = ArrayList(kotlinConstructor.parameters.size)
     for (param in kotlinConstructor.parameters) {
         val name = param.name ?: throw NotSerializableException("Constructor parameter of $clazz has no name.")
-        val matchingProperty = properties[name] ?: throw NotSerializableException("No property matching constructor parameter named $name of $clazz." +
+        val matchingProperty = properties[name] ?:
+                throw NotSerializableException("No property matching constructor parameter named $name of $clazz." +
                 " If using Java, check that you have the -parameters option specified in the Java compiler.")
         // Check that the method has a getter in java.
         val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz." +
@@ -163,21 +164,20 @@ private fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
 }
 
 internal fun Type.asClass(): Class<*>? {
-    return if (this is Class<*>) {
-        this
-    } else if (this is ParameterizedType) {
-        this.rawType.asClass()
-    } else if (this is GenericArrayType) {
-        this.genericComponentType.asClass()?.arrayClass()
-    } else null
+    return when {
+        this is Class<*> -> this
+        this is ParameterizedType -> this.rawType.asClass()
+        this is GenericArrayType -> this.genericComponentType.asClass()?.arrayClass()
+        else -> null
+    }
 }
 
 internal fun Type.asArray(): Type? {
-    return if (this is Class<*>) {
-        this.arrayClass()
-    } else if (this is ParameterizedType) {
-        DeserializedGenericArrayType(this)
-    } else null
+    return when {
+        this is Class<*> -> this.arrayClass()
+        this is ParameterizedType -> DeserializedGenericArrayType(this)
+        else -> null
+    }
 }
 
 internal fun Class<*>.arrayClass(): Class<*> = java.lang.reflect.Array.newInstance(this, 0).javaClass

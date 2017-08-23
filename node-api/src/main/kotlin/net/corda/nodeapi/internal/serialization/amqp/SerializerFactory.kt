@@ -156,7 +156,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer<Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
             processSchema(schema)
-            serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
+            serializersByDescriptor[typeDescriptor] ?:
+                    throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
         }()
     }
 
