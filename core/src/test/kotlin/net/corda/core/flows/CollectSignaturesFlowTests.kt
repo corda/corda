@@ -140,9 +140,12 @@ class CollectSignaturesFlowTests {
 
     @Test
     fun `successfully collects two signatures`() {
+        val bConfidentialIdentity = b.services.keyManagementService.freshKeyAndCert(b.info.legalIdentityAndCert, false)
+        // Normally this is handled by TransactionKeyFlow, but here we have to manually let A know about the identity
+        a.services.identityService.verifyAndRegisterIdentity(bConfidentialIdentity)
         registerFlowOnAllNodes(TestFlowTwo.Responder::class)
         val magicNumber = 1337
-        val parties = listOf(a.info.legalIdentity, b.info.legalIdentity, c.info.legalIdentity)
+        val parties = listOf(a.info.legalIdentity, bConfidentialIdentity.party, c.info.legalIdentity)
         val state = DummyContract.MultiOwnerState(magicNumber, parties)
         val flow = a.services.startFlow(TestFlowTwo.Initiator(state))
         mockNet.runNetwork()

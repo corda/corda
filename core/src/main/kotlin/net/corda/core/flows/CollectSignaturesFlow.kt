@@ -4,10 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.toBase58String
-import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -107,7 +105,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         if (unsigned.isEmpty()) return partiallySignedTx
 
         // Collect signatures from all counter-parties and append them to the partially signed transaction.
-        val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it) }
+        val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it.first, it.second) }
         val stx = partiallySignedTx + counterpartySignatures
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
@@ -120,20 +118,25 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
     /**
      * Lookup the [Party] object for each [PublicKey] using the [ServiceHub.networkMapCache].
      */
-    @Suspendable private fun keysToParties(keys: Collection<PublicKey>): List<Party> = keys.map {
-        serviceHub.identityService.partyFromAnonymous(AnonymousParty(it))
+    @Suspendable private fun keysToParties(keys: Collection<PublicKey>): List<Pair<Party, PublicKey>> = keys.map {
+        val party = serviceHub.identityService.partyFromAnonymous(AnonymousParty(it))
                 ?: throw IllegalStateException("Party ${it.toBase58String()} not found on the network.")
+        Pair(party, it)
     }
 
     // DOCSTART 1
     /**
      * Get and check the required signature.
+     *
+     * @param counterparty the party to request a signature from.
+     * @param signingKey the key the party should use to sign the transaction.
      */
-    @Suspendable private fun collectSignature(counterparty: Party): TransactionSignature {
+    @Suspendable private fun collectSignature(counterparty: Party, signingKey: PublicKey): TransactionSignature {
         // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
         subFlow(SendTransactionFlow(counterparty, partiallySignedTx))
+        send(counterparty, signingKey)
         return receive<TransactionSignature>(counterparty).unwrap {
-            require(counterparty.owningKey.isFulfilledBy(it.by)) { "Not signed by the required Party." }
+            require(signingKey.isFulfilledBy(it.by)) { "Not signed by the required signing key." }
             it
         }
     }
@@ -194,9 +197,10 @@ abstract class SignTransactionFlow(val otherParty: Party,
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
         val stx = subFlow(ReceiveTransactionFlow(otherParty, checkSufficientSignatures = false))
+        val signingKey = receive<PublicKey>(otherParty).unwrap { serviceHub.keyManagementService.filterMyKeys(listOf(it)).single() }
         progressTracker.currentStep = VERIFYING
         // Check that the Responder actually needs to sign.
-        checkMySignatureRequired(stx)
+        checkMySignatureRequired(stx, signingKey)
         // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
         checkSignatures(stx)
         stx.tx.toLedgerTransaction(serviceHub).verify()
@@ -211,7 +215,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
         }
         // Sign and send back our signature to the Initiator.
         progressTracker.currentStep = SIGNING
-        val mySignature = serviceHub.createSignature(stx)
+        val mySignature = serviceHub.createSignature(stx, signingKey)
         send(otherParty, mySignature)
 
         // Return the fully signed transaction once it has been committed.
@@ -256,10 +260,8 @@ abstract class SignTransactionFlow(val otherParty: Party,
      */
     @Suspendable abstract protected fun checkTransaction(stx: SignedTransaction)
 
-    @Suspendable private fun checkMySignatureRequired(stx: SignedTransaction) {
-        // TODO: Revisit when key management is properly fleshed out.
-        val myKey = serviceHub.myInfo.legalIdentity.owningKey
-        require(myKey in stx.tx.requiredSigningKeys) {
+    @Suspendable private fun checkMySignatureRequired(stx: SignedTransaction, signingKey: PublicKey) {
+        require(signingKey in stx.tx.requiredSigningKeys) {
             "Party is not a participant for any of the input states of transaction ${stx.id}"
         }
     }
