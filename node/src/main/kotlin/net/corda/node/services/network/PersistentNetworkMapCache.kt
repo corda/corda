@@ -250,15 +250,24 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     }
 
     private fun updateInfoDB(nodeInfo: NodeInfo) {
-        createSession {
-            // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
-            val info = findByIdentityKey(it, nodeInfo.legalIdentity.owningKey)
-            val nodeInfoEntry = generateMappedObject(nodeInfo)
-            if (info.isNotEmpty()) {
-                nodeInfoEntry.id = info[0].id
-            }
-            it.merge(nodeInfoEntry)
+        // TODO Temporary workaround to force isolated transaction (otherwise it causes race conditions when processing
+        //  network map registration on network map node)
+        val session = serviceHub.database.entityManagerFactory.withOptions().connection(serviceHub.database.dataSource.connection
+                .apply {
+                    autoCommit = false
+                    transactionIsolation = 1
+                }).openSession()
+
+        val tx = session.beginTransaction()
+        // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
+        val info = findByIdentityKey(session, nodeInfo.legalIdentity.owningKey)
+        val nodeInfoEntry = generateMappedObject(nodeInfo)
+        if (info.isNotEmpty()) {
+            nodeInfoEntry.id = info[0].id
         }
+        session.merge(nodeInfoEntry)
+        tx.commit()
+        session.close()
     }
 
     private fun removeInfoDB(nodeInfo: NodeInfo) {
