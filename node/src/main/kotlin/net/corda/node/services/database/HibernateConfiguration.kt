@@ -8,7 +8,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.parserTransactionIsolationLevel
-import org.hibernate.HibernateException
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.*

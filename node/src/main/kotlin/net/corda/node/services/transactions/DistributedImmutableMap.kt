@@ -19,7 +19,7 @@ import java.util.LinkedHashMap
  * to disk, and sharing them across the cluster. A new node joining the cluster will have to obtain and install a snapshot
  * containing the entire JDBC table contents.
  */
-class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence, createMap: () -> PersistentMap<K, V, E, EK>) : StateMachine(), Snapshottable {
+class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence, createMap: () -> AppendOnlyClearablePersistentMap<K, V, E, EK>) : StateMachine(), Snapshottable {
     companion object {
         private val log = loggerFor<DistributedImmutableMap<*, *, *, *>>()
     }
@@ -79,7 +79,7 @@ class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence,
     override fun snapshot(writer: SnapshotWriter) {
         db.transaction {
             writer.writeInt(map.size)
-            map.entries.forEach { writer.writeObject(it.key to it.value) }
+            map.all().forEach { writer.writeObject(it.key to it.value) }
         }
     }
 
@@ -91,7 +91,7 @@ class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence,
             // TODO: read & put entries in batches
             for (i in 1..size) {
                 val (key, value) = reader.readObject<Pair<K, V>>()
-                map.put(key, value)
+                map[key] = value
             }
         }
     }

@@ -15,7 +15,6 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.WHITESPACE
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configOf

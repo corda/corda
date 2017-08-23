@@ -24,8 +24,8 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.utilities.AppendOnlyClearablePersistentMap
 import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.config.SSLConfiguration
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -48,8 +48,8 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
 
-        fun createKeyMap(): PersistentMap<String, Any, RaftState, String> {
-            return PersistentMap(
+        fun createKeyMap(): AppendOnlyClearablePersistentMap<String, Any, RaftState, String> {
+            return AppendOnlyClearablePersistentMap(
                     toPersistentEntityKey = { it },
                     fromPersistentEntity = {
                         Pair(it.key, if(it.value is ByteArray) it.value else it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
