@@ -23,6 +23,7 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.OpaqueBytesSubSequenceSerializer(this))
             }
         }
     }
