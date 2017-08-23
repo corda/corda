@@ -33,7 +33,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
-import net.corda.node.utilities.AppendOnlyClearablePersistentMap
+import net.corda.node.utilities.AppendOnlyPersistentMap
 import java.nio.file.Path
 import java.util.*
 
@@ -172,7 +172,7 @@ object BFTSMaRt {
      */
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
-                           createMap: () -> AppendOnlyClearablePersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef>,
+                           createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef>,
                            protected val services: ServiceHubInternal,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
@@ -260,7 +260,7 @@ object BFTSMaRt {
             // LinkedHashMap for deterministic serialisation
             val m = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
             services.database.transaction {
-                commitLog.all().forEach { m[it.key] = it.value }
+                commitLog.allPersisted().forEach { m[it.first] = it.second }
             }
             return m.serialize().bytes
         }

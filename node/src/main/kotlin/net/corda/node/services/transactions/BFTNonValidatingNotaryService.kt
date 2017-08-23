@@ -18,7 +18,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.utilities.AppendOnlyClearablePersistentMap
+import net.corda.node.utilities.AppendOnlyPersistentMap
 import org.bouncycastle.asn1.x500.X500Name
 import kotlin.concurrent.thread
 
@@ -89,8 +89,8 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
         }
     }
 
-    private fun createMap(): AppendOnlyClearablePersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef> {
-        return AppendOnlyClearablePersistentMap(
+    private fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef> {
+        return AppendOnlyPersistentMap(
                 toPersistentEntityKey = { PersistentUniquenessProvider.PersistentUniqueness.StateRef(it.txhash.toString(), it.index) },
                 fromPersistentEntity = {
                     Pair(StateRef(SecureHash.parse(it.id.txId), it.id.index),
@@ -110,7 +110,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
     }
     private class Replica(config: BFTSMaRtConfig,
                           replicaId: Int,
-                          createMap: () -> AppendOnlyClearablePersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef>,
+                          createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef>,
                           services: ServiceHubInternal,
                           timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, createMap, services, timeWindowChecker) {
 
