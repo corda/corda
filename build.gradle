@@ -14,7 +14,7 @@ buildscript {
     //
     // TODO: Sort this alphabetically.
     ext.kotlin_version = constants.getProperty("kotlinVersion")
-    ext.quasar_version = '0.7.6'    // TODO: Upgrade to 0.7.7+ when Quasar bug 238 is resolved.
+    ext.quasar_version = '0.7.9'
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1
     // TODO: Upgrade gradle-capsule-plugin to a version with capsule:1.0.3
