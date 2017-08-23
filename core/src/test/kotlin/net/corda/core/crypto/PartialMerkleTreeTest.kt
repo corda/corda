@@ -3,6 +3,7 @@ package net.corda.core.crypto
 
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash.Companion.oneHash
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.deserialize
@@ -312,21 +313,80 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
             }
         }
 
+        // Example filtering, i.e. for Oracles.
+        fun commandsOnlyFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is Command<*> -> true
+                else -> false
+            }
+        }
+
         val nonValidatingFilteredTx = wtx.buildFilteredTransaction(Predicate(::nonValidatingNotaryFiltering))
         val someInputsFilteredTx = wtx.buildFilteredTransaction(Predicate(::someInputsFiltering))
         val oneInputFilteredTx = wtx.buildFilteredTransaction(Predicate(::oneInputFiltering))
         val noInputsFilteredTx = wtx.buildFilteredTransaction(Predicate(::noInputsFiltering))
+        val commandsFilteredTx = wtx.buildFilteredTransaction(Predicate(::commandsOnlyFiltering))
 
         // Partial tree verification should pass if we don't care about input state visibility.
         assertTrue { nonValidatingFilteredTx.verify() }
         assertTrue { someInputsFilteredTx.verify() }
         assertTrue { oneInputFilteredTx.verify() }
         assertTrue { noInputsFilteredTx.verify() }
+        assertTrue { commandsFilteredTx.verify() }
 
-        // verifyAndAllInputsVisible tests should only pass if all input states are visible.
+        // VerifyAndAllInputsVisible tests should only pass if all input states are visible.
         assertTrue { nonValidatingFilteredTx.verifyAndAllInputsVisible() }
         assertFalse { someInputsFilteredTx.verifyAndAllInputsVisible() }
         assertFalse { oneInputFilteredTx.verifyAndAllInputsVisible() }
         assertFalse { noInputsFilteredTx.verifyAndAllInputsVisible() }
+        assertFalse { commandsFilteredTx.verifyAndAllInputsVisible() }
+
+        // Leftmost leaf is not oneHash, because there are inputs states in the initial WireTransaction.
+        assertNotEquals(nonValidatingFilteredTx.partialMerkleTree.leftMostLeaf(nonValidatingFilteredTx.partialMerkleTree.root), oneHash)
+    }
+
+    @Test
+    fun `filtered transaction where wtx has no inputs`() {
+        val wtx = WireTransaction(
+                inputs = emptyList(),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = DUMMY_NOTARY,
+                timeWindow = TimeWindow.fromOnly(TEST_TX_TIME)
+        )
+
+        fun nonValidatingNotaryFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> true
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        // Example filtering, i.e. for Oracles.
+        fun commandsOnlyFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is Command<*> -> true
+                else -> false
+            }
+        }
+
+        val nonValidatingFilteredTx = wtx.buildFilteredTransaction(Predicate(::nonValidatingNotaryFiltering))
+        val commandsFilteredTx = wtx.buildFilteredTransaction(Predicate(::commandsOnlyFiltering))
+
+        // Partial tree verification should pass if we don't care about input state visibility.
+        assertTrue { nonValidatingFilteredTx.verify() }
+        assertTrue { commandsFilteredTx.verify() }
+
+        // verifyAndAllInputsVisible tests should only pass if all input states are visible.
+        assertTrue { nonValidatingFilteredTx.verifyAndAllInputsVisible() }
+        // It's true that in this case where initial WireTransaction has no input states,
+        // anyone receiving a filteredTx (e.g. an Oracle) has knowledge on the fact there are not input states at all.
+        // For more info, see TODO in FilteredTransaction.buildMerkleTransaction.
+        assertTrue { commandsFilteredTx.verifyAndAllInputsVisible() }
+
+        // If there are no input states in the initial WireTransaction (as this in this case), check if the leftmost leaf is oneHash.
+        assertEquals(nonValidatingFilteredTx.partialMerkleTree.leftMostLeaf(nonValidatingFilteredTx.partialMerkleTree.root), oneHash)
     }
 }

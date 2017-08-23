@@ -171,8 +171,10 @@ class FilteredTransaction private constructor(
             } else if (!wtx.inputs.isEmpty()) {
                 PartialMerkleTree.build(merkleTree, filteredLeaves.availableComponentHashes)
             } else {
-                // TODO: Consider adding oneHash only when sending to non-validating notaries (but for instance not to Oracles).
-                //      To achieve the above, we might require a new boolean input to this function.
+                // TODO: Consider adding oneHash only when sending to non-validating notaries (but not to Oracles or
+                //      other entities that do not require full input state visibility).
+                //      To achieve the above, we might introduce a new boolean input to this function, to decide
+                //      if oneHash should be included in partial tree build.
                 PartialMerkleTree.build(merkleTree, listOf(SecureHash.oneHash) + filteredLeaves.availableComponentHashes)
             }
 

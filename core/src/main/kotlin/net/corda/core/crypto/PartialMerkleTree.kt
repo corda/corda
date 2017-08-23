@@ -133,7 +133,7 @@ class PartialMerkleTree(val root: PartialTree) {
         // It means that we obtained more/fewer hashes than needed or different sets of hashes.
         // We exclude the special oneHash from calculations, as it's only required for input state full visibility
         // in non-validating notaries. For more info, see TODO in FilteredTransaction.buildMerkleTransaction.
-        if (hashesToCheck.filter { it != SecureHash.oneHash }.groupBy { it } != usedHashes.filter { it != SecureHash.oneHash }.groupBy { it })
+        if (hashesToCheck.groupBy { it } != usedHashes.filter { it != SecureHash.oneHash }.groupBy { it })
             return false
         return (verifyRoot == merkleRootHash)
     }
