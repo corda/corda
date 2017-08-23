@@ -2,15 +2,14 @@ package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SignableData
-import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.Party
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker
+import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
@@ -19,6 +18,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.utilities.PersistentMap
+import org.bouncycastle.asn1.x500.X500Name
 import kotlin.concurrent.thread
 
 /**
@@ -49,7 +50,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
             thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
                 configHandle.use {
                     val timeWindowChecker = TimeWindowChecker(services.clock)
-                    val replica = Replica(it, replicaId, "bft_smart_notary_committed_states", services, timeWindowChecker)
+                    val replica = Replica(it, replicaId, { createMap() }, services, timeWindowChecker)
                     replicaHolder.set(replica)
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
@@ -88,11 +89,30 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
         }
     }
 
+    private fun createMap(): PersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef> {
+        return PersistentMap(
+                toPersistentEntityKey = { PersistentUniquenessProvider.PersistentUniqueness.StateRef(it.txhash.toString(), it.index) },
+                fromPersistentEntity = {
+                    Pair(StateRef(SecureHash.parse(it.id.txId), it.id.index),
+                            UniquenessProvider.ConsumingTx(SecureHash.parse(it.consumingTxHash), it.consumingIndex,
+                                    Party(X500Name(it.party.name), parsePublicKeyBase58(it.party.owningKey))))
+                },
+                toPersistentEntity = { key: StateRef, value: UniquenessProvider.ConsumingTx ->
+                    PersistentUniquenessProvider.PersistentUniqueness().apply {
+                        id = PersistentUniquenessProvider.PersistentUniqueness.StateRef(key.txhash.toString(), key.index)
+                        consumingTxHash = value.id.toString()
+                        consumingIndex = value.inputIndex
+                        party = PersistentUniquenessProvider.PersistentUniqueness.Party(value.requestingParty.name.toString())
+                    }
+                },
+                persistentEntityClass = PersistentUniquenessProvider.PersistentUniqueness::class.java
+        )
+    }
     private class Replica(config: BFTSMaRtConfig,
                           replicaId: Int,
-                          tableName: String,
+                          createMap: () -> PersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef>,
                           services: ServiceHubInternal,
-                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, tableName, services, timeWindowChecker) {
+                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, createMap, services, timeWindowChecker) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()

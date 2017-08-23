@@ -33,7 +33,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
-import net.corda.node.utilities.JDBCHashMap
+import net.corda.node.utilities.PersistentMap
 import java.nio.file.Path
 import java.util.*
 
@@ -172,7 +172,7 @@ object BFTSMaRt {
      */
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
-                           tableName: String,
+                           createMap: () -> PersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef>,
                            protected val services: ServiceHubInternal,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
@@ -191,9 +191,8 @@ object BFTSMaRt {
         }
 
         override fun getStateManager() = stateManagerOverride
-        // TODO: Use proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
-        private val commitLog = services.database.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
+        private val commitLog = services.database.transaction { createMap() }
         private val replica = run {
             config.waitUntilReplicaWillNotPrintStackTrace(replicaId)
             @Suppress("LeakingThis")
