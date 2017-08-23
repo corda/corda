@@ -25,8 +25,11 @@ import java.io.IOException
 import java.io.NotSerializableException
 import java.math.BigDecimal
 import java.nio.ByteBuffer
-import java.time.Instant
+import java.time.*
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalUnit
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -576,12 +579,142 @@ class SerializationOutputTests {
     }
 
     @Test
-    fun `test StateRef serialize`() {
+    fun `test durations serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(factory))
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.DurationSerializer(factory))
 
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(factory2))
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.DurationSerializer(factory2))
+
+        val obj = Duration.of(1000000L, ChronoUnit.MILLIS)
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test local date serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateSerializer(factory2))
+
+        val obj = LocalDate.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test local time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalTimeSerializer(factory2))
+
+        val obj = LocalTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test local date time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateTimeSerializer(factory2))
+
+        val obj = LocalDateTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test zoned date time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ZonedDateTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ZonedDateTimeSerializer(factory2))
+
+        val obj = ZonedDateTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test offset time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetTimeSerializer(factory2))
+
+        val obj = OffsetTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test offset date time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetDateTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetDateTimeSerializer(factory2))
+
+        val obj = OffsetDateTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test year serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.YearSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.YearSerializer(factory2))
+
+        val obj = Year.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test year month serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.YearMonthSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.YearMonthSerializer(factory2))
+
+        val obj = YearMonth.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test month day serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.MonthDaySerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.MonthDaySerializer(factory2))
+
+        val obj = MonthDay.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test period serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.PeriodSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.PeriodSerializer(factory2))
+
+        val obj = Period.of(99, 98, 97)
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test StateRef serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
 
         val obj = StateRef(SecureHash.randomSHA256(), 0)
         serdes(obj, factory, factory2)

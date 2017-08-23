@@ -22,8 +22,20 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.X500NameSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer)
-                register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(this))
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.OpaqueBytesSubSequenceSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.DurationSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.ZonedDateTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.ZoneIdSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetDateTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.YearSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.YearMonthSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.MonthDaySerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.PeriodSerializer(this))
             }
         }
     }
