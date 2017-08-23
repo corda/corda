@@ -131,10 +131,10 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     }
 
     /**
-     * TODO: Currently performs rather basic checks aimed in particular at [java.util.List<Command<?>>]
+     * TODO: Currently performs rather basic checks aimed in particular at [java.util.List<Command<?>>] and
+     * [java.lang.Class<? extends net.corda.core.contracts.Contract>]
      * In the future tighter control might be needed
      */
     private fun Type.materiallyEquivalentTo(that: Type): Boolean =
-        asClass() == that.asClass() && this is ParameterizedType && that is ParameterizedType &&
-                actualTypeArguments.size == that.actualTypeArguments.size
+        asClass() == that.asClass() && that is ParameterizedType
 }
