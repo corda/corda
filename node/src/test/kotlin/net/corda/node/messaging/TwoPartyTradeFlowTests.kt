@@ -325,6 +325,11 @@ class TwoPartyTradeFlowTests {
         val bankNode = makeNodeWithTracking(notaryNode.network.myAddress, BOC.name)
         val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
+        val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
+        allNodes.forEach { node ->
+            allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.verifyAndRegisterIdentity(identity) }
+        }
+
         ledger(aliceNode.services, initialiseSerialization = false) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
