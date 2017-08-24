@@ -83,25 +83,4 @@ fun <V> Collection<CordaFuture<out V>>.transpose(): CordaFuture<List<V>> {
     return transpose
 }
 
-/** The contravariant members of [OpenFuture]. */
-interface ValueOrException<in V> {
-    /** @return whether this future actually changed. */
-    fun set(value: V): Boolean
-
-    /** @return whether this future actually changed. */
-    fun setException(t: Throwable): Boolean
-
-    /** When the given future has an outcome, make this future have the same outcome. */
-    fun captureLater(f: CordaFuture<out V>) = f.then { capture { f.getOrThrow() } }
-
-    /** Run the given block (in the foreground) and set this future to its outcome. */
-    fun capture(block: () -> V): Boolean {
-        return set(try {
-            block()
-        } catch (t: Throwable) {
-            return setException(t)
-        })
-    }
-}
-
 internal fun <V> Future<V>.get(timeout: Duration? = null): V = if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)
