@@ -5,10 +5,10 @@ import net.corda.core.internal.logElapsedTime
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
@@ -111,7 +111,15 @@ class RPCClient<I : RPCOps>(
         /** The RPC protocol version reported by the server */
         val serverProtocolVersion: Int
 
-        fun close(gracefully: Boolean = true)
+        /**
+         * Closes this client without notifying the server.
+         */
+        fun forceClose()
+
+        /**
+         * Closes this client gracefully by sending a notification to the server.
+         */
+        fun notifyServerAndClose()
     }
 
     /**
@@ -170,9 +178,22 @@ class RPCClient<I : RPCOps>(
                 object : RPCConnection<I> {
                     override val proxy = ops
                     override val serverProtocolVersion = serverProtocolVersion
-                    override fun close(gracefully: Boolean) {
-                        proxyHandler.close(gracefully)
+
+                    private fun close(notify: Boolean) {
+                        if (notify) {
+                            proxyHandler.notifyServerAndClose()
+                        } else {
+                            proxyHandler.forceClose()
+                        }
                         serverLocator.close()
+                    }
+
+                    override fun notifyServerAndClose() {
+                        close(true)
+                    }
+
+                    override fun forceClose() {
+                        close(false)
                     }
 
                     override fun close() {
@@ -180,7 +201,7 @@ class RPCClient<I : RPCOps>(
                     }
                 }
             } catch (exception: Throwable) {
-                proxyHandler.close()
+                proxyHandler.notifyServerAndClose()
                 serverLocator.close()
                 throw exception
             }

@@ -271,13 +271,29 @@ class RPCClientProxyHandler(
     }
 
     /**
-     * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
+     * Closes this handler without notifying observables.
      */
-    fun close(gracefully: Boolean = true) {
+    fun forceClose() {
+        close(false)
+    }
+
+    /**
+     * Closes this handler and sends notifications to all observables.
+     */
+    fun notifyServerAndClose() {
+        close(true)
+    }
+
+    /**
+     * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
+     *
+     * @param notify whether to notify observables or not.
+     */
+    private fun close(notify: Boolean = true) {
         sessionAndConsumer?.sessionFactory?.close()
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
-        reapObservables(gracefully)
+        reapObservables(notify)
         reaperExecutor?.shutdownNow()
         sessionAndProducerPool.close().forEach {
             it.sessionFactory.close()
