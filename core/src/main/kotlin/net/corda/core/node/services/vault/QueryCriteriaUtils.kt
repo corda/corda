@@ -11,19 +11,16 @@ import kotlin.reflect.jvm.javaGetter
 @CordaSerializable
 interface Operator
 
-@CordaSerializable
 enum class BinaryLogicalOperator : Operator {
     AND,
     OR
 }
 
-@CordaSerializable
 enum class EqualityComparisonOperator : Operator {
     EQUAL,
     NOT_EQUAL
 }
 
-@CordaSerializable
 enum class BinaryComparisonOperator : Operator {
     LESS_THAN,
     LESS_THAN_OR_EQUAL,
@@ -31,19 +28,16 @@ enum class BinaryComparisonOperator : Operator {
     GREATER_THAN_OR_EQUAL,
 }
 
-@CordaSerializable
 enum class NullOperator : Operator {
     IS_NULL,
     NOT_NULL
 }
 
-@CordaSerializable
 enum class LikenessOperator : Operator {
     LIKE,
     NOT_LIKE
 }
 
-@CordaSerializable
 enum class CollectionOperator : Operator {
     IN,
     NOT_IN
