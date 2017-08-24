@@ -10,8 +10,7 @@ import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.parserTransactionIsolationLevel
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.model.naming.Identifier
-import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+import org.hibernate.boot.model.naming.*
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
@@ -67,7 +66,8 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
-        val sessionFactory = buildSessionFactory(config, metadataSources, "")
+
+        val sessionFactory = buildSessionFactory(config, metadataSources, databaseProperties.getProperty("serverNameTablePrefix",""))
         logger.info("Created session factory for schemas: $schemas")
         return sessionFactory
     }

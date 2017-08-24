@@ -15,7 +15,6 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.WHITESPACE
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configOf
@@ -125,7 +124,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val masterNodeFuture = startNode(
                 getX509Name("${notaryName.commonName}-0", "London", "demo@r3.com", null),
                 advertisedServices = setOf(serviceInfo),
-                configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0]))
+                configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
+                    "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.commonName}0".replace(Regex("[^0-9A-Za-z]+"),"") else "")))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
@@ -133,7 +133,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
-                            "notaryClusterAddresses" to listOf(nodeAddresses[0])))
+                            "notaryClusterAddresses" to listOf(nodeAddresses[0]),
+                            "database" to mapOf("serverNameTablePrefix" to "${notaryName.commonName}$it".replace(Regex("[^0-9A-Za-z]+"), ""))))
         }
 
         return remainingNodesFutures.transpose().flatMap { remainingNodes ->

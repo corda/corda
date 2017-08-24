@@ -209,9 +209,10 @@ fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().to
     return props
 }
 
-fun makeTestDatabaseProperties(): Properties {
+fun makeTestDatabaseProperties(key: String? = null, value: String? = null): Properties {
     val props = Properties()
     props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
+    if (key != null) { props.setProperty(key, value) }
     return props
 }
 

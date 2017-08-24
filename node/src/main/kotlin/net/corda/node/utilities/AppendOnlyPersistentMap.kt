@@ -34,6 +34,8 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
         return cache.get(key).orElse(null)
     }
 
+    val size get() = allPersisted().toList().size
+
     /**
      * Returns all key/value pairs from the underlying storage.
      */
@@ -105,10 +107,28 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
                 }
             }
 
+    fun putAll(entries: Map<K,V>) {
+        entries.forEach {
+            set(it.key, it.value)
+        }
+    }
+
     private fun loadValue(key: K): V? {
         val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
 
     operator fun contains(key: K) = get(key) != null
+
+    /**
+     * Removes all of the mappings from this map and underlying storage. The map will be empty after this call returns.
+     * WARNING!! The method is not thread safe.
+     */
+    fun clear() {
+        val session = DatabaseTransactionManager.current().session
+        val deleteQuery = session.criteriaBuilder.createCriteriaDelete(persistentEntityClass)
+        deleteQuery.from(persistentEntityClass)
+        session.createQuery(deleteQuery).executeUpdate()
+        cache.invalidateAll()
+    }
 }

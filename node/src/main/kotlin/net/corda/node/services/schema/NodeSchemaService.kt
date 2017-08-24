@@ -18,6 +18,7 @@ import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.vault.VaultSchemaV1
 
 /**
@@ -44,7 +45,9 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     PersistentNetworkMapService.NetworkNode::class.java,
                     PersistentNetworkMapService.NetworkSubscriber::class.java,
                     NodeMessagingClient.ProcessedMessage::class.java,
-                    NodeMessagingClient.RetryMessage::class.java
+                    NodeMessagingClient.RetryMessage::class.java,
+                    NodeAttachmentService.DBAttachment::class.java,
+                    RaftUniquenessProvider.RaftState::class.java
                     ))
 
     // Required schemas are those used by internal Corda services
