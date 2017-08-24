@@ -43,7 +43,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
 
     @Test
     fun `(Alice) fulfilled by Alice signature`() {
-        println(aliceKey.serialize().hash)
+        println(aliceKey.public.serialize().hash)
         assertTrue { alicePublicKey.isFulfilledBy(aliceSignature.by) }
         assertFalse { alicePublicKey.isFulfilledBy(charlieSignature.by) }
     }
