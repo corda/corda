@@ -189,7 +189,7 @@ dependencies {
 }
 
 task integrationTest(type: Test) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
@@ -200,7 +200,7 @@ task smokeTestJar(type: Jar) {
 
 task smokeTest(type: Test) {
     dependsOn smokeTestJar
-    testClassesDir = sourceSets.smokeTest.output.classesDir
+    testClassesDirs = sourceSets.smokeTest.output.classesDirs
     classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
