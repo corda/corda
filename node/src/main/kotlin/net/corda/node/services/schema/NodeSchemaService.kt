@@ -17,6 +17,7 @@ import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.vault.VaultSchemaV1
@@ -40,6 +41,7 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     DBTransactionMappingStorage.DBTransactionMapping::class.java,
                     PersistentKeyManagementService.PersistentKey::class.java,
                     PersistentUniquenessProvider.PersistentUniqueness::class.java,
+                    PersistentUniquenessProvider.PersistentNotaryCommit::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
                     PersistentNetworkMapService.NetworkNode::class.java,
@@ -47,7 +49,8 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     NodeMessagingClient.ProcessedMessage::class.java,
                     NodeMessagingClient.RetryMessage::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
-                    RaftUniquenessProvider.RaftState::class.java
+                    RaftUniquenessProvider.RaftState::class.java,
+                    BFTNonValidatingNotaryService.PersistedCommittedState::class.java
                     ))
 
     // Required schemas are those used by internal Corda services
