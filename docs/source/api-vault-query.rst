@@ -70,6 +70,15 @@ There are four implementations of this interface which can be chained together t
 
     .. note:: It is a requirement to register any custom contract schemas to be used in Vault Custom queries in the associated `CordaPluginRegistry` configuration for the respective CorDapp using the ``requiredSchemas`` configuration field (which specifies a set of `MappedSchema`)
 
+All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators, as also illustrated above.
+
+All ``QueryCriteria`` implementations provide an explicitly specifiable set of common attributes:
+
+1. State status attribute (``Vault.StateStatus``), which defaults to filtering on UNCONSUMED states.
+   When chaining several criterias using AND / OR, the last value of this attribute will override any previous.
+2. Contract state types (``<Set<Class<out ContractState>>``), which will contain at minimum one type (by default this will be ``ContractState`` which resolves to all types).
+   When chaining several criteria using AND / OR, all specified contract state types are combined into a single set.
+
 An example of a custom query is illustrated here:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
@@ -77,10 +86,6 @@ An example of a custom query is illustrated here:
     :start-after: DOCSTART VaultQueryExample20
     :end-before: DOCEND VaultQueryExample20
 
-All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators, as also illustrated above.
-
-All ``QueryCriteria`` implementations provide an explicitly specifiable ``StateStatus`` attribute which defaults to filtering on UNCONSUMED states.
-	   
 .. note:: Custom contract states that implement the ``Queryable`` interface may now extend common schemas types ``FungiblePersistentState`` or, ``LinearPersistentState``.  Previously, all custom contracts extended the root ``PersistentState`` class and defined repeated mappings of ``FungibleAsset`` and ``LinearState`` attributes. See ``SampleCashSchemaV2`` and ``DummyLinearStateSchemaV2`` as examples.
 
 Examples of these ``QueryCriteria`` objects are presented below for Kotlin and Java.
