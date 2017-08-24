@@ -144,10 +144,6 @@ dependencies {
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
 
-    // Exposed: Kotlin SQL library - under evaluation
-    // TODO: Upgrade to Exposed 0.7 (has API changes)
-    compile "org.jetbrains.exposed:exposed:0.5.0"
-
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:2.5.1"
 

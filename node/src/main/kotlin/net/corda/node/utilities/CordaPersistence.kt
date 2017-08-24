@@ -7,7 +7,6 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import org.hibernate.SessionFactory
-import org.jetbrains.exposed.sql.Database
 
 import rx.Observable
 import rx.Subscriber
@@ -18,13 +17,14 @@ import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 
+/**
+ * Table prefix for all tables owned by the node module.
+ */
+const val NODE_DATABASE_PREFIX = "node_"
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
 class CordaPersistence(var dataSource: HikariDataSource, private var createSchemaService: () -> SchemaService,
                        private val createIdentityService: ()-> IdentityService, databaseProperties: Properties): Closeable {
-
-    /** Holds Exposed database, the field will be removed once Exposed library is removed */
-    lateinit var database: Database
     var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
    val hibernateConfig: HibernateConfiguration by lazy {
@@ -111,10 +111,6 @@ fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Prop
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
     val persistence = CordaPersistence.connect(dataSource, createSchemaService, createIdentityService, databaseProperties ?: Properties())
-
-    //org.jetbrains.exposed.sql.Database will be removed once Exposed library is removed
-    val database = Database.connect(dataSource) { _ -> ExposedTransactionManager() }
-    persistence.database = database
 
     // Check not in read-only mode.
     persistence.transaction {
