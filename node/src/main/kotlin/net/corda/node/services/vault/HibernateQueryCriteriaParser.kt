@@ -30,7 +30,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     // incrementally build list of join predicates
     private val joinPredicates = mutableListOf<Predicate>()
     // incrementally build list of root entities (for later use in Sort parsing)
-    private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>()
+    private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
     private val aggregateExpressions = mutableListOf<Expression<*>>()
 
     var stateTypes: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
