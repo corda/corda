@@ -82,7 +82,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
      *  Clear network map data from nodes' databases.
      */
     fun clearAllNodeInfoDb() {
-        nodes.forEach { (it.services.networkMapCache as PersistentNetworkMapCache).clearAllNodeInfos() }
+        nodes.forEach { it.services.networkMapCache.clearNetworkMapCache() }
     }
 
     /**
