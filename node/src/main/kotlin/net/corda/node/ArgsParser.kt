@@ -35,6 +35,7 @@ class ArgsParser {
     private val isRegistrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
     private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
     private val helpArg = optionParser.accepts("help").forHelp()
+    private val printNodeInfoAndQuit = optionParser.accepts("printNodeInfoAndQuit", "TODO")
 
     fun parse(vararg args: String): CmdLineOptions {
         val optionSet = optionParser.parse(*args)
@@ -50,7 +51,8 @@ class ArgsParser {
         val isVersion = optionSet.has(isVersionArg)
         val noLocalShell = optionSet.has(noLocalShellArg)
         val sshdServer = optionSet.has(sshdServerArg)
-        return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole, isRegistration, isVersion, noLocalShell, sshdServer)
+        val printNodeInfoAndQuit = optionSet.has(printNodeInfoAndQuit)
+        return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole, isRegistration, isVersion, noLocalShell, sshdServer, printNodeInfoAndQuit)
     }
 
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
@@ -64,7 +66,8 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val isRegistration: Boolean,
                           val isVersion: Boolean,
                           val noLocalShell: Boolean,
-                          val sshdServer: Boolean) {
+                          val sshdServer: Boolean,
+                          val printNodeInfoAndQuit: Boolean) {
     fun loadConfig() = ConfigHelper
                 .loadConfig(baseDirectory, configFile)
                 .parseAs<FullNodeConfiguration>()
