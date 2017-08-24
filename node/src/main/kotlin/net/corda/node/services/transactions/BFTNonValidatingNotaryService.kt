@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
@@ -93,13 +94,17 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}bft_smart_notary_committed_states")
-    class PersistedCommittedState(id: PersistentUniquenessProvider.PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentUniquenessProvider.PersistentParty)
+    class PersistedCommittedState(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentUniquenessProvider.PersistentParty)
         : PersistentUniquenessProvider.PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
 
-    fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentUniquenessProvider.PersistentStateRef> =
+    fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef> =
             AppendOnlyPersistentMap(
-                    toPersistentEntityKey = { PersistentUniquenessProvider.PersistentStateRef(it.txhash.toString(), it.index) },
-                    fromPersistentEntity = { Pair(StateRef(txhash = SecureHash.parse(it.id.txId), index = it.id.index),
+                    toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
+                    fromPersistentEntity = {
+                        //TODO null check will become obsolete after making DB/JPA columns not nullable
+                        var txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
+                        var index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                        Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
                             UniquenessProvider.ConsumingTx(
                                     id = SecureHash.parse(it.consumingTxHash),
                                     inputIndex = it.consumingIndex,
@@ -109,7 +114,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
                     },
                     toPersistentEntity = { (txHash, index) : StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
                         PersistedCommittedState(
-                                id = PersistentUniquenessProvider.PersistentStateRef(txHash.toString(), index),
+                                id = PersistentStateRef(txHash.toString(), index),
                                 consumingTxHash = id.toString(),
                                 consumingIndex = inputIndex,
                                 party = PersistentUniquenessProvider.PersistentParty(requestingParty.name.toString(),
@@ -121,7 +126,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
 
     private class Replica(config: BFTSMaRtConfig,
                           replicaId: Int,
-                          createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentUniquenessProvider.PersistentStateRef>,
+                          createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef>,
                           services: ServiceHubInternal,
                           timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, createMap, services, timeWindowChecker) {
 

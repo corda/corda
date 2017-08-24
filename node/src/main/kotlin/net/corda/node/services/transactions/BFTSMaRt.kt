@@ -22,6 +22,7 @@ import net.corda.core.internal.declaredField
 import net.corda.core.internal.toTypedArray
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
@@ -173,7 +174,7 @@ object BFTSMaRt {
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
                            createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx,
-                                   BFTNonValidatingNotaryService.PersistedCommittedState, PersistentUniquenessProvider.PersistentStateRef>,
+                                   BFTNonValidatingNotaryService.PersistedCommittedState, PersistentStateRef>,
                            protected val services: ServiceHubInternal,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {

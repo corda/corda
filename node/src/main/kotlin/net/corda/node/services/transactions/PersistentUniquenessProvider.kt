@@ -8,6 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.*
@@ -37,15 +38,6 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
     )
 
     @Embeddable
-    data class PersistentStateRef(
-            @Column(name = "transaction_id")
-            var txId: String = "",
-
-            @Column(name = "output_index", length = 36)
-            var index: Int = 0
-    ): Serializable
-
-    @Embeddable
     data class PersistentParty(
             @Column(name = "requesting_party_name")
             var name: String = "",
@@ -73,7 +65,10 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                 AppendOnlyPersistentMap(
                         toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                         fromPersistentEntity = {
-                            Pair(StateRef(txhash = SecureHash.parse(it.id.txId), index = it.id.index),
+                            //TODO null check will become obsolete after making DB/JPA columns not nullable
+                            var txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
+                            var index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                            Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
                                     UniquenessProvider.ConsumingTx(
                                             id = SecureHash.parse(it.consumingTxHash),
                                             inputIndex = it.consumingIndex,
