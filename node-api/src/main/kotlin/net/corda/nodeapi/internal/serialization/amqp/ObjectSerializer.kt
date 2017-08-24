@@ -19,6 +19,7 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
     init {
         val kotlinConstructor = constructorForDeserialization(clazz)
         javaConstructor = kotlinConstructor?.javaConstructor
+        javaConstructor?.isAccessible = true
         propertySerializers = propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
 
