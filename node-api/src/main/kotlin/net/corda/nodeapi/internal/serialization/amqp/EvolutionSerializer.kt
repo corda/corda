@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.CordaSerializerConstructor
+import net.corda.core.serialization.EvolvedSerializerConstructor
 import net.corda.nodeapi.internal.serialization.carpenter.getTypeAsClass
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -16,7 +16,8 @@ import kotlin.reflect.jvm.javaType
 class EvolutionSerializer(
         clazz: Type,
         factory: SerializerFactory,
-        val oldParams : Map<String, oldParam>,
+        val oldParams : Map<String, OldParam>,
+        val newParams : Map<String, Boolean>,
         override val kotlinConstructor: KFunction<Any>?) : ObjectSerializer (clazz, factory) {
 
     // explicitly null this out as we won't be using this list
@@ -31,7 +32,10 @@ class EvolutionSerializer(
      * order may have been changed and we need to know where into the list to look
      * @param property object to read the actual property value
      */
-    data class oldParam (val type: Type, val idx: Int, val property: PropertySerializer)
+    data class OldParam (val type: Type, val idx: Int, val property: PropertySerializer) {
+        fun readProperty(paramValues: List<*>, schema: Schema, input: DeserializationInput) =
+                property.readProperty(paramValues[idx], schema, input)
+    }
 
     companion object {
         /**
@@ -53,7 +57,7 @@ class EvolutionSerializer(
             var maxConstructorVersion = Integer.MIN_VALUE
             var constructor: KFunction<Any>? = null
             clazz.kotlin.constructors.forEach {
-                val version = it.findAnnotation<CordaSerializerConstructor>()?.version ?: Integer.MIN_VALUE
+                val version = it.findAnnotation<EvolvedSerializerConstructor>()?.version ?: Integer.MIN_VALUE
                 if (oldArgumentSet.containsAll(it.parameters.map { v -> Pair(v.name, v.type.javaType) }) &&
                         version > maxConstructorVersion) {
                     constructor = it
@@ -67,7 +71,7 @@ class EvolutionSerializer(
         }
 
         /**
-         * Build a serialization object for deserialisation only of objects serislaised
+         * Build a serialization object for deserialisation only of objects serialised
          * as different versions of a class
          *
          * @param old is an object holding the schema that represents the object
@@ -86,15 +90,17 @@ class EvolutionSerializer(
                     throw NotSerializableException(
                             "Attempt to deserialize an interface: new.type. Serialized form is invalid.")
 
-            val oldArgs = mutableMapOf<String, oldParam>()
+            val oldArgs = mutableMapOf<String, OldParam>()
             var idx = 0
             old.fields.forEach {
                 val returnType = it.getTypeAsClass(factory.classloader)
-                oldArgs[it.name] = oldParam(
+                oldArgs[it.name] = OldParam(
                         returnType, idx++, PropertySerializer.make(it.name, null, returnType, factory))
             }
 
-            return EvolutionSerializer(new.type, factory, oldArgs, constructor)
+            val newArgs = constructor.parameters.associateBy({ it.name!! }, {it.type.isMarkedNullable})
+
+            return EvolutionSerializer(new.type, factory, oldArgs, newArgs, constructor)
         }
     }
 
@@ -112,17 +118,14 @@ class EvolutionSerializer(
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
-        val newArgs = kotlinConstructor?.parameters?.associateBy({ it.name!! }, {it.type.isMarkedNullable}) ?:
-            throw NotSerializableException ("Bad Constructor selected for object $obj")
-
-        return construct(newArgs.map {
+        return construct(newParams.map {
             val param = oldParams[it.key]
             if (param == null && !it.value) {
                 throw NotSerializableException(
                         "New parameter ${it.key} is mandatory, should be nullable for evolution to worK")
             }
 
-            param?.property?.readProperty(obj[param.idx], schema, input)
+            param?.readProperty(obj, schema, input)
         })
     }
 }

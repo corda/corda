@@ -15,6 +15,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     override val type: Type get() = clazz
     open internal val propertySerializers: Collection<PropertySerializer>
     open val kotlinConstructor = constructorForDeserialization(clazz)
+    val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
 
     init {
         propertySerializers = propertiesForSerialization(kotlinConstructor, clazz, factory)
@@ -71,9 +72,10 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
 
     fun construct(properties: List<Any?>): Any {
-        val javaConstructor = kotlinConstructor?.javaConstructor ?:
+        if (javaConstructor == null) {
             throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
+        }
 
-        return javaConstructor.newInstance(*properties.toTypedArray())
+        return javaConstructor!!.newInstance(*properties.toTypedArray())
     }
 }

@@ -191,8 +191,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
                 val serialiser = processSchemaEntry(typeNotation)
 
                 // if we just successfully built a serialiser for the type but the type fingerprint
-                // doesn't match that of the serialised object then we are dealing with an older
-                // instance of the class, as such we need to build an evolverSerilaiser
+                // doesn't match that of the serialised object then we are dealing with  different
+                // instance of the class, as such we need to build an EvolutionSerialiser
                 if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
                     getEvolutionSerializer(typeNotation, serialiser as ObjectSerializer)
                 }

@@ -1,13 +1,20 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.CordaSerializerConstructor
+import net.corda.core.serialization.EvolvedSerializerConstructor
 
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
 
+// To regenerate any of the binary test files do the following
+//
+//  1. Uncomment the code where the original form of the class is defined in the test
+//  2. Comment out the rest of the test
+//  3. Run the test
+//  4. Using the printed path copy that file to the resources directory
+//  5. Comment back out the generation code and uncomment the actual test
 class EvolvabilityTests {
 
     @Test
@@ -104,7 +111,7 @@ class EvolvabilityTests {
 
         // Expected to throw as we can't construct the new type as it contains a newly
         // added parameter that isn't optional, i.e. not nullable and there isn't
-        // a compiler that takes the old parameters
+        // a constructor that takes the old parameters
         DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
     }
 
@@ -180,7 +187,7 @@ class EvolvabilityTests {
 
         @Suppress("UNUSED")
         data class CC (val a: Int, val b: String) {
-            @CordaSerializerConstructor(1)
+            @EvolvedSerializerConstructor(1)
             constructor (a: Int) : this (a, "hello")
         }
 
@@ -239,7 +246,7 @@ class EvolvabilityTests {
         data class CC (val a: Int, val b: Int, val c: String, val d: String) {
             // ensure none of the original parameters align with the initial
             // construction order
-            @CordaSerializerConstructor(1)
+            @EvolvedSerializerConstructor(1)
             constructor (c: String, a: Int, b: Int) : this (a, b, c, "wibble")
         }
 
@@ -275,7 +282,7 @@ class EvolvabilityTests {
             // ensure none of the original parameters align with the initial
             // construction order
             @Suppress("UNUSED")
-            @CordaSerializerConstructor(1)
+            @EvolvedSerializerConstructor(1)
             constructor (c: String, a: Int) : this (a, c, "wibble")
         }
 
@@ -317,11 +324,11 @@ class EvolvabilityTests {
 
         @Suppress("UNUSED")
         data class C (val e: Int, val c: Int, val b: Int, val a: Int, val d: Int) {
-            @CordaSerializerConstructor(1)
+            @EvolvedSerializerConstructor(1)
             constructor (b: Int, a: Int) : this (-1, -1, b, a, -1)
-            @CordaSerializerConstructor(2)
+            @EvolvedSerializerConstructor(2)
             constructor (a: Int, c: Int, b: Int) : this (-1, c, b, a, -1)
-            @CordaSerializerConstructor(3)
+            @EvolvedSerializerConstructor(3)
             constructor (a: Int, b: Int, c: Int, d: Int) : this (-1, c, b, a, d)
         }
 
@@ -411,13 +418,13 @@ class EvolvabilityTests {
 
         @Suppress("UNUSED")
         data class C (val b: Int, val c: Int, val d: Int, val e: Int, val f: Int, val g: Int) {
-            @CordaSerializerConstructor(1)
+            @EvolvedSerializerConstructor(1)
             constructor (b: Int, c: Int) : this (b, c, -1, -1, -1, -1)
-            @CordaSerializerConstructor(2)
+            @EvolvedSerializerConstructor(2)
             constructor (b: Int, c: Int, d: Int) : this (b, c, d, -1, -1, -1)
-            @CordaSerializerConstructor(3)
+            @EvolvedSerializerConstructor(3)
             constructor (b: Int, c: Int, d: Int, e: Int) : this (b, c, d, e, -1, -1)
-            @CordaSerializerConstructor(4)
+            @EvolvedSerializerConstructor(4)
             constructor (b: Int, c: Int, d: Int, e: Int, f: Int) : this (b, c, d, e, f, -1)
         }
 

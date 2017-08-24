@@ -6,6 +6,6 @@ package net.corda.core.serialization
  */
 @Target(AnnotationTarget.CONSTRUCTOR)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class CordaSerializerConstructor(val version: Int)
+annotation class EvolvedSerializerConstructor(val version: Int)
 
 
