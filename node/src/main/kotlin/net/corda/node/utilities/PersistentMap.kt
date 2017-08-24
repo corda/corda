@@ -60,7 +60,7 @@ class PersistentMap<K, V, E, out EK> (
         return cache.asMap().asSequence().map { Pair(it.key, it.value.get()) }
     }
 
-    override val size = cache.size().toInt()
+    override val size get() = cache.size().toInt()
 
     private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?, replace: (K, V) -> Unit) : Boolean {
         var insertionAttempt = false

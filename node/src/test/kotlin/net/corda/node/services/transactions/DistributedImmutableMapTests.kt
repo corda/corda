@@ -88,7 +88,7 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
         val address = Address(myAddress.host, myAddress.port)
         val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties("serverNameTablePrefix", "PORT_${myAddress.port}_"), createIdentityService = ::makeTestIdentityService)
         databases.add(database)
-        val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createKeyMap ) }
+        val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createMap) }
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)

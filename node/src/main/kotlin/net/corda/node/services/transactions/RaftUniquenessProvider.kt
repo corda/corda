@@ -48,21 +48,20 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
 
-        fun createKeyMap(): AppendOnlyPersistentMap<String, Any, RaftState, String> {
-            return AppendOnlyPersistentMap(
-                    toPersistentEntityKey = { it },
-                    fromPersistentEntity = {
-                        Pair(it.key, if(it.value is ByteArray) it.value else it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
-                    },
-                    toPersistentEntity = { k: String, v: Any ->
-                        RaftState().apply {
-                            key = k
-                            value = if(v is ByteArray) v else v.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                        }
-                    },
-                    persistentEntityClass = RaftState::class.java
-            )
-        }
+        fun createMap(): AppendOnlyPersistentMap<String, Any, RaftState, String> =
+                AppendOnlyPersistentMap(
+                        toPersistentEntityKey = { it },
+                        fromPersistentEntity = {
+                            Pair(it.key, it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
+                        },
+                        toPersistentEntity = { k: String, v: Any ->
+                            RaftState().apply {
+                                key = k
+                                value = v.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                            }
+                        },
+                        persistentEntityClass = RaftState::class.java
+                )
     }
 
     @Entity
@@ -104,7 +103,7 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
     fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
         val stateMachineFactory = {
-            DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createKeyMap) }
+            DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createMap) }
         val address = Address(myAddress.host, myAddress.port)
         val storage = buildStorage(storagePath)
         val transport = buildTransport(transportConfiguration)
