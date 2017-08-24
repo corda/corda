@@ -2,10 +2,9 @@ package net.corda.verifier
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.*
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.div
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort

@@ -1,6 +1,6 @@
 package net.corda.core.concurrent;
 
-import net.corda.core.internal.concurrent.OpenFuture;
+import net.corda.core.concurrent.OpenFuture;
 import org.junit.Test;
 
 import java.io.EOFException;

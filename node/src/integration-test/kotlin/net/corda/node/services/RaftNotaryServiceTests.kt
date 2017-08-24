@@ -8,8 +8,8 @@ import net.corda.testing.DUMMY_BANK_A
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.concurrent.map
+import net.corda.core.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.AbstractNode

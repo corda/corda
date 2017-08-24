@@ -1,6 +1,6 @@
 package net.corda.core.utilities
 
-import net.corda.core.internal.concurrent.get
+import net.corda.core.concurrent.get
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

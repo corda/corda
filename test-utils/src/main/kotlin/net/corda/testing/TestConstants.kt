@@ -9,7 +9,7 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.transactions.ValidatingNotaryService

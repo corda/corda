@@ -16,7 +16,7 @@ import net.corda.core.crypto.commonName
 import net.corda.core.crypto.getX509Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.*
+import net.corda.core.concurrent.*
 import net.corda.core.internal.div
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps

@@ -12,8 +12,8 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.concurrent.OpenFuture
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.concurrent.OpenFuture
+import net.corda.core.concurrent.openFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.write

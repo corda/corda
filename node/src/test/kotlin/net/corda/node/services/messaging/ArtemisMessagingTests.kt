@@ -3,8 +3,8 @@ package net.corda.node.services.messaging
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.concurrent.doneFuture
+import net.corda.core.concurrent.openFuture
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
