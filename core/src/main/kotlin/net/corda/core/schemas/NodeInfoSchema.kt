@@ -1,18 +1,12 @@
 package net.corda.core.schemas
 
-import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceEntry
-import net.corda.core.node.WorldCoordinate
-import net.corda.core.node.WorldMapLocation
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import java.io.Serializable
 import java.security.cert.CertPath
 import javax.persistence.CascadeType
@@ -61,7 +55,15 @@ object NodeInfoSchemaV1 : MappedSchema(
 
             @Column(name = "advertised_services")
             @ElementCollection
-            var advertisedServices: List<DBServiceEntry> = emptyList()
+            var advertisedServices: List<DBServiceEntry> = emptyList(),
+
+            /**
+             * serial is an increasing value which represents the version of [NodeInfo].
+             * Not expected to be sequential, but later versions of the registration must have higher values
+             * Similar to the serial number on DNS records.
+             */
+            @Column(name = "serial")
+            val serial: Long
     ) {
         fun toNodeInfo(): NodeInfo {
             return NodeInfo(
@@ -71,7 +73,8 @@ object NodeInfoSchemaV1 : MappedSchema(
                     this.platformVersion,
                     this.advertisedServices.map {
                         it.serviceEntry?.deserialize<ServiceEntry>() ?: throw IllegalStateException("Service entry shouldn't be null")
-                    }
+                    },
+                    this.serial
             )
         }
     }

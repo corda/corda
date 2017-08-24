@@ -29,7 +29,8 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
                     val legalIdentityAndCert: PartyAndCertificate,
                     val legalIdentitiesAndCerts: Set<PartyAndCertificate>,
                     val platformVersion: Int,
-                    val advertisedServices: List<ServiceEntry> = emptyList()
+                    val advertisedServices: List<ServiceEntry> = emptyList(),
+                    val serial: Long
 ) {
     init {
         require(advertisedServices.none { it.identity == legalIdentityAndCert }) {

@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.testing.ALICE
@@ -68,7 +69,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         assert(NetworkMapService.type !in alice.info.advertisedServices.map { it.info.type })
         assertEquals(null, alice.inNodeNetworkMapService)
         assertEquals(infos.size, partyNodes.size)
-        assertEquals(infos, partyNodes.toSet())
+        assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
     }
 
     @Test
@@ -80,7 +81,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         nodes.forEach {
             val partyNodes = it.services.networkMapCache.partyNodes
             assertEquals(infos.size, partyNodes.size)
-            assertEquals(infos, partyNodes.toSet())
+            assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
         }
         checkConnectivity(nodes)
     }
@@ -94,7 +95,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         nodes.forEach {
             val partyNodes = it.services.networkMapCache.partyNodes
             assertEquals(infos.size, partyNodes.size)
-            assertEquals(infos, partyNodes.toSet())
+            assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
         }
         checkConnectivity(nodes)
     }
@@ -108,7 +109,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
     @Test
     fun `start node without networkMapService and no database - fail`() {
-        assertFails { startNode(CHARLIE.name, noNetworkMap = true) }
+        assertFails { startNode(CHARLIE.name, noNetworkMap = true).getOrThrow(2.seconds) }
     }
 
     @Test
@@ -117,20 +118,20 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         // Start 2 nodes pointing at network map, but don't start network map service.
         val otherNodes = startNodesWithPort(parties, noNetworkMap = false)
         otherNodes.forEach { node ->
-            assert(infos.any { it == node.info })
+            assert(infos.any { it.legalIdentity == node.info.legalIdentity })
         }
         // Start node that is not in databases of other nodes. Point to NMS. Which has't started yet.
         val charlie = startNodesWithPort(listOf(CHARLIE), noNetworkMap = false)[0]
         otherNodes.forEach {
-            assert(charlie.info !in it.services.networkMapCache.partyNodes)
+            assert(charlie.info.legalIdentity !in it.services.networkMapCache.partyNodes.map { it.legalIdentity })
         }
         // Start Network Map and see that charlie node appears in caches.
         val nms = startNodesWithPort(listOf(DUMMY_NOTARY), noNetworkMap = false)[0]
         nms.startupComplete.get()
         assert(nms.inNodeNetworkMapService != null)
-        assert(infos.any {it == nms.info})
+        assert(infos.any {it.legalIdentity == nms.info.legalIdentity})
         otherNodes.forEach {
-            assert(nms.info in it.services.networkMapCache.partyNodes)
+            assert(nms.info.legalIdentity in it.services.networkMapCache.partyNodes.map { it.legalIdentity })
         }
         charlie.nodeReadyFuture.get() // Finish registration.
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
@@ -138,7 +139,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val cacheB = otherNodes[1].services.networkMapCache.partyNodes
         val cacheC = charlie.services.networkMapCache.partyNodes
         assertEquals(4, cacheC.size) // Charlie fetched data from NetworkMap
-        assert(charlie.info in cacheB) // Other nodes also fetched data from Network Map with node C.
+        assert(charlie.info.legalIdentity in cacheB.map { it.legalIdentity }) // Other nodes also fetched data from Network Map with node C.
         assertEquals(cacheA.toSet(), cacheB.toSet())
         assertEquals(cacheA.toSet(), cacheC.toSet())
     }
