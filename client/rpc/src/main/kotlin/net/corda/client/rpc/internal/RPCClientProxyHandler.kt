@@ -10,14 +10,17 @@ import com.google.common.cache.RemovalCause
 import com.google.common.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import net.corda.core.internal.ThreadBox
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.LazyPool
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
+import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.utilities.*
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.*
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -159,7 +162,7 @@ class RPCClientProxyHandler(
                 ThreadFactoryBuilder().setNameFormat("rpc-client-reaper-%d").setDaemon(true).build()
         )
         reaperScheduledFuture = reaperExecutor!!.scheduleAtFixedRate(
-                this::reapObservables,
+                this::reapObservablesAndNotify,
                 rpcConfiguration.reapInterval.toMillis(),
                 rpcConfiguration.reapInterval.toMillis(),
                 TimeUnit.MILLISECONDS
@@ -270,11 +273,11 @@ class RPCClientProxyHandler(
     /**
      * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
      */
-    fun close() {
+    fun close(gracefully: Boolean = true) {
         sessionAndConsumer?.sessionFactory?.close()
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
-        reapObservables()
+        reapObservables(gracefully)
         reaperExecutor?.shutdownNow()
         sessionAndProducerPool.close().forEach {
             it.sessionFactory.close()
@@ -315,8 +318,11 @@ class RPCClientProxyHandler(
         lifeCycle.transition(State.SERVER_VERSION_NOT_SET, State.STARTED)
     }
 
-    private fun reapObservables() {
+    private fun reapObservablesAndNotify() = reapObservables()
+
+    private fun reapObservables(notify: Boolean = true) {
         observableContext.observableMap.cleanUp()
+        if (!notify) return
         val observableIds = observablesToReap.locked {
             if (observables.isNotEmpty()) {
                 val temporary = observables

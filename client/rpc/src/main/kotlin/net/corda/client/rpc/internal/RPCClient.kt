@@ -110,6 +110,8 @@ class RPCClient<I : RPCOps>(
         val proxy: I
         /** The RPC protocol version reported by the server */
         val serverProtocolVersion: Int
+
+        fun close(gracefully: Boolean = true)
     }
 
     /**
@@ -168,9 +170,13 @@ class RPCClient<I : RPCOps>(
                 object : RPCConnection<I> {
                     override val proxy = ops
                     override val serverProtocolVersion = serverProtocolVersion
-                    override fun close() {
-                        proxyHandler.close()
+                    override fun close(gracefully: Boolean) {
+                        proxyHandler.close(gracefully)
                         serverLocator.close()
+                    }
+
+                    override fun close() {
+                        close(true)
                     }
                 }
             } catch (exception: Throwable) {

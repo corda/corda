@@ -54,7 +54,7 @@ class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invo
     override fun close() {
         timer.cancel()
         try {
-            rpcConnection?.close()
+            rpcConnection?.close(false)
         } catch (e: Exception) {
             log.error("Failed to close RPC connection (Error: {})", e.message)
         }
