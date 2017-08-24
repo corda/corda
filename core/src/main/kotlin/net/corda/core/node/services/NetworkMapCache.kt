@@ -148,4 +148,9 @@ interface NetworkMapCache {
                 "Your options are: ${notaryNodes.map { "\"${it.notaryIdentity.name}\"" }.joinToString()}.")
         return notary.advertisedServices.any { it.info.type.isValidatingNotary() }
     }
+
+    /**
+     * Clear all network map data from local node cache.
+     */
+    fun clearNetworkMapCache()
 }

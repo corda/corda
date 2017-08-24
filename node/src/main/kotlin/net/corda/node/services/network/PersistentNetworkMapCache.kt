@@ -333,11 +333,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         )
     }
 
-    /**
-     * Clear all network map data in nodes' databases.
-     */
-    @VisibleForTesting
-    fun clearAllNodeInfos() {
+    override fun clearNetworkMapCache() {
         serviceHub.database.transaction {
             createSession {
                 val result = getAllInfos(it)
