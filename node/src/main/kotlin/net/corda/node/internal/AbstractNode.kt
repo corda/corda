@@ -157,10 +157,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open val rpcOps: CordaRPCOps by lazy { CordaRPCOpsImpl(services, smm, database) }   // Lazy to avoid init ordering issue with the SMM.
 
-    open fun findMyLocation(): WorldMapLocation? {
-        return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
-    }
-
     open fun start() {
         require(!started) { "Node has already been started" }
 
@@ -490,7 +486,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val advertisedServiceEntries = makeServiceEntries()
         val allIdentities = advertisedServiceEntries.map { it.identity }.toSet() // TODO Add node's legalIdentity (after services removal).
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, findMyLocation())
+        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries)
     }
 
     /**

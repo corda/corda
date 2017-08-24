@@ -254,7 +254,6 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         //  network map registration on network map node)
         val session = serviceHub.database.entityManagerFactory.withOptions().connection(serviceHub.database.dataSource.connection
                 .apply {
-                    autoCommit = false
                     transactionIsolation = 1
                 }).openSession()
 
@@ -328,8 +327,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                         // TODO It's workaround to keep the main identity, will be removed in future PR getting rid of services.
                         + NodeInfoSchemaV1.DBPartyAndCertificate(nodeInfo.legalIdentityAndCert, isMain = true),
                 platformVersion = nodeInfo.platformVersion,
-                advertisedServices = nodeInfo.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it.serialize().bytes) },
-                worldMapLocation = nodeInfo.worldMapLocation
+                advertisedServices = nodeInfo.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it.serialize().bytes) }
         )
     }
 

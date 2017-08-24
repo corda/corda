@@ -61,10 +61,7 @@ object NodeInfoSchemaV1 : MappedSchema(
 
             @Column(name = "advertised_services")
             @ElementCollection
-            var advertisedServices: List<DBServiceEntry> = emptyList(),
-
-            @Column(name = "world_map_location", nullable = true)
-            val worldMapLocation: WorldMapLocation?
+            var advertisedServices: List<DBServiceEntry> = emptyList()
     ) {
         fun toNodeInfo(): NodeInfo {
             return NodeInfo(
@@ -74,8 +71,8 @@ object NodeInfoSchemaV1 : MappedSchema(
                     this.platformVersion,
                     this.advertisedServices.map {
                         it.serviceEntry?.deserialize<ServiceEntry>() ?: throw IllegalStateException("Service entry shouldn't be null")
-                    },
-                    this.worldMapLocation)
+                    }
+            )
         }
     }
 
@@ -101,7 +98,7 @@ object NodeInfoSchemaV1 : MappedSchema(
     }
 
     @Embeddable // TODO To be removed with services.
-    class DBServiceEntry(
+    data class DBServiceEntry(
             @Column(length = 65535)
             val serviceEntry: ByteArray? = null
     )
@@ -111,7 +108,7 @@ object NodeInfoSchemaV1 : MappedSchema(
      */
     @Entity
     @Table(name = "node_info_party_cert")
-    class DBPartyAndCertificate(
+    data class DBPartyAndCertificate(
             @Id
             @Column(name = "owning_key", length = 65535, nullable = false)
             val owningKey: String,

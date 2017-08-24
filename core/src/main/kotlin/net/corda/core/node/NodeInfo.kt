@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.crypto.locationOrNull
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.ServiceInfo
@@ -28,8 +29,8 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
                     val legalIdentityAndCert: PartyAndCertificate,
                     val legalIdentitiesAndCerts: Set<PartyAndCertificate>,
                     val platformVersion: Int,
-                    val advertisedServices: List<ServiceEntry> = emptyList(),
-                    val worldMapLocation: WorldMapLocation? = null) {
+                    val advertisedServices: List<ServiceEntry> = emptyList()
+) {
     init {
         require(advertisedServices.none { it.identity == legalIdentityAndCert }) {
             "Service identities must be different from node legal identity"
@@ -40,5 +41,13 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
     val notaryIdentity: Party get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
     fun serviceIdentities(type: ServiceType): List<Party> {
         return advertisedServices.mapNotNull { if (it.info.type.isSubTypeOf(type)) it.identity.party else null }
+    }
+
+    /**
+     * Uses node's owner X500 name to infer the node's location. Used in Explorer in map view.
+     */
+    fun getWorldMapLocation(): WorldMapLocation? {
+        val nodeOwnerLocation = legalIdentity.name.locationOrNull
+        return nodeOwnerLocation?.let { CityDatabase[it] }
     }
 }
