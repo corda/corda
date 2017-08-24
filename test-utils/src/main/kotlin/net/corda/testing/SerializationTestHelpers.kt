@@ -66,7 +66,10 @@ fun initialiseTestSerialization() {
         registerScheme(AMQPClientSerializationScheme())
         registerScheme(AMQPServerSerializationScheme())
     }
-    (SerializationDefaults.P2P_CONTEXT as TestSerializationContext).delegate = if (java.lang.Boolean.getBoolean("net.corda.testing.amqp.enable")) {
+
+    val AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
+    // TODO: Remove these "if" conditions once we fully switched to AMQP
+    (SerializationDefaults.P2P_CONTEXT as TestSerializationContext).delegate = if (java.lang.Boolean.getBoolean(AMQP_ENABLE_PROP_NAME)) {
         AMQP_P2P_CONTEXT
     } else {
         KRYO_P2P_CONTEXT
