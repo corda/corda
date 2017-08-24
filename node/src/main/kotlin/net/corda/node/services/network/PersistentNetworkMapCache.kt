@@ -327,7 +327,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                         // TODO It's workaround to keep the main identity, will be removed in future PR getting rid of services.
                         + NodeInfoSchemaV1.DBPartyAndCertificate(nodeInfo.legalIdentityAndCert, isMain = true),
                 platformVersion = nodeInfo.platformVersion,
-                advertisedServices = nodeInfo.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it.serialize().bytes) }
+                advertisedServices = nodeInfo.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it.serialize().bytes) },
+                serial = nodeInfo.serial
         )
     }
 

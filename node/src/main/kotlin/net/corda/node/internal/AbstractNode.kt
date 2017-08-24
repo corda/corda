@@ -486,7 +486,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val advertisedServiceEntries = makeServiceEntries()
         val allIdentities = advertisedServiceEntries.map { it.identity }.toSet() // TODO Add node's legalIdentity (after services removal).
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries)
+        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, platformClock.instant().toEpochMilli())
     }
 
     /**
@@ -615,7 +615,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // Register this node against the network
         val instant = platformClock.instant()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
-        val reg = NodeRegistration(info, instant.toEpochMilli(), ADD, expires)
+        val reg = NodeRegistration(info, info.serial, ADD, expires)
         val request = RegistrationRequest(reg.toWire(services.keyManagementService, info.legalIdentityAndCert.owningKey), network.myAddress)
         return network.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
     }
