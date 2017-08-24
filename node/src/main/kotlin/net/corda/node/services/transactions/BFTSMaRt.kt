@@ -172,7 +172,8 @@ object BFTSMaRt {
      */
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
-                           createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef>,
+                           createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx,
+                                   BFTNonValidatingNotaryService.PersistedCommittedState, PersistentUniquenessProvider.PersistentStateRef>,
                            protected val services: ServiceHubInternal,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {

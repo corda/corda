@@ -19,7 +19,9 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import org.bouncycastle.asn1.x500.X500Name
+import javax.persistence.Entity
 import kotlin.concurrent.thread
 
 /**
@@ -89,28 +91,37 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
         }
     }
 
-    private fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef> {
-        return AppendOnlyPersistentMap(
-                toPersistentEntityKey = { PersistentUniquenessProvider.PersistentUniqueness.StateRef(it.txhash.toString(), it.index) },
-                fromPersistentEntity = {
-                    Pair(StateRef(SecureHash.parse(it.id.txId), it.id.index),
-                            UniquenessProvider.ConsumingTx(SecureHash.parse(it.consumingTxHash), it.consumingIndex,
-                                    Party(X500Name(it.party.name), parsePublicKeyBase58(it.party.owningKey))))
-                },
-                toPersistentEntity = { key: StateRef, value: UniquenessProvider.ConsumingTx ->
-                    PersistentUniquenessProvider.PersistentUniqueness().apply {
-                        id = PersistentUniquenessProvider.PersistentUniqueness.StateRef(key.txhash.toString(), key.index)
-                        consumingTxHash = value.id.toString()
-                        consumingIndex = value.inputIndex
-                        party = PersistentUniquenessProvider.PersistentUniqueness.Party(value.requestingParty.name.toString())
-                    }
-                },
-                persistentEntityClass = PersistentUniquenessProvider.PersistentUniqueness::class.java
-        )
-    }
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}bft_smart_notary_committed_states")
+    class PersistedCommittedState(id: PersistentUniquenessProvider.PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentUniquenessProvider.PersistentParty)
+        : PersistentUniquenessProvider.PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
+
+    fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentUniquenessProvider.PersistentStateRef> =
+            AppendOnlyPersistentMap(
+                    toPersistentEntityKey = { PersistentUniquenessProvider.PersistentStateRef(it.txhash.toString(), it.index) },
+                    fromPersistentEntity = { Pair(StateRef(txhash = SecureHash.parse(it.id.txId), index = it.id.index),
+                            UniquenessProvider.ConsumingTx(
+                                    id = SecureHash.parse(it.consumingTxHash),
+                                    inputIndex = it.consumingIndex,
+                                    requestingParty = Party(
+                                            name = X500Name(it.party.name),
+                                            owningKey = parsePublicKeyBase58(it.party.owningKey))))
+                    },
+                    toPersistentEntity = { (txHash, index) : StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
+                        PersistedCommittedState(
+                                id = PersistentUniquenessProvider.PersistentStateRef(txHash.toString(), index),
+                                consumingTxHash = id.toString(),
+                                consumingIndex = inputIndex,
+                                party = PersistentUniquenessProvider.PersistentParty(requestingParty.name.toString(),
+                                        requestingParty.owningKey.toBase58String())
+                        )
+                    },
+                    persistentEntityClass = PersistedCommittedState::class.java
+            )
+
     private class Replica(config: BFTSMaRtConfig,
                           replicaId: Int,
-                          createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniquenessProvider.PersistentUniqueness, PersistentUniquenessProvider.PersistentUniqueness.StateRef>,
+                          createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentUniquenessProvider.PersistentStateRef>,
                           services: ServiceHubInternal,
                           timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, createMap, services, timeWindowChecker) {
 

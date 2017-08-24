@@ -3,6 +3,7 @@ package net.corda.node.services.transactions
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.parsePublicKeyBase58
+import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.UniquenessException
@@ -20,41 +21,44 @@ import javax.persistence.*
 @ThreadSafe
 class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsToken() {
 
-   @Entity
-   @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_commit_log")
-   class PersistentUniqueness (
+    @MappedSuperclass
+    open class PersistentUniqueness (
+            @EmbeddedId
+            var id: PersistentStateRef = PersistentStateRef(),
 
-           @EmbeddedId
-           var id: StateRef = StateRef(),
+            @Column(name = "consuming_transaction_id")
+            var consumingTxHash: String = "",
 
-           @Column(name = "consuming_transaction_id")
-           var consumingTxHash: String = "",
+            @Column(name = "consuming_input_index", length = 36)
+            var consumingIndex: Int = 0,
 
-           @Column(name = "consuming_input_index", length = 36)
-           var consumingIndex: Int = 0,
+            @Embedded
+            var party: PersistentParty = PersistentParty()
+    )
 
-           @Embedded
-           var party: Party = Party()
-   ) {
+    @Embeddable
+    data class PersistentStateRef(
+            @Column(name = "transaction_id")
+            var txId: String = "",
 
-       @Embeddable
-       data class StateRef (
-               @Column(name = "transaction_id")
-               var txId: String = "",
+            @Column(name = "output_index", length = 36)
+            var index: Int = 0
+    ): Serializable
 
-               @Column(name = "output_index", length = 36)
-               var index: Int = 0
-       ) : Serializable
+    @Embeddable
+    data class PersistentParty(
+            @Column(name = "requesting_party_name")
+            var name: String = "",
 
-       @Embeddable
-       data class Party  (
-               @Column(name = "requesting_party_name")
-               var name: String = "",
+            @Column(name = "requesting_party_key", length = 255)
+            var owningKey: String = ""
+    ): Serializable
 
-               @Column(name = "requesting_party_key", length = 255)
-               var owningKey: String = ""
-       ) : Serializable
-   }
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_commit_log")
+    class PersistentNotaryCommit(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentParty):
+            PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
+
 
     private class InnerState {
         val committedStates = createMap()
@@ -65,26 +69,29 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
     companion object {
         private val log = loggerFor<PersistentUniquenessProvider>()
 
-        fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentUniqueness, PersistentUniqueness.StateRef> {
-            return AppendOnlyPersistentMap(
-                    toPersistentEntityKey = { PersistentUniqueness.StateRef(it.txhash.toString(), it.index) },
-                    fromPersistentEntity = {
-                        Pair(StateRef(SecureHash.parse(it.id.txId), it.id.index),
-                                UniquenessProvider.ConsumingTx(SecureHash.parse(it.consumingTxHash), it.consumingIndex,
-                                        Party(X500Name(it.party.name), parsePublicKeyBase58(it.party.owningKey))))
+        fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentNotaryCommit, PersistentStateRef> =
+                AppendOnlyPersistentMap(
+                        toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
+                        fromPersistentEntity = {
+                            Pair(StateRef(txhash = SecureHash.parse(it.id.txId), index = it.id.index),
+                                    UniquenessProvider.ConsumingTx(
+                                            id = SecureHash.parse(it.consumingTxHash),
+                                            inputIndex = it.consumingIndex,
+                                            requestingParty = Party(
+                                                    name = X500Name(it.party.name),
+                                                    owningKey = parsePublicKeyBase58(it.party.owningKey))))
+                        },
+                        toPersistentEntity = { (txHash, index) : StateRef, (id, inputIndex, requestingParty) : UniquenessProvider.ConsumingTx ->
+                            PersistentNotaryCommit(
+                                    id = PersistentStateRef(txHash.toString(), index),
+                                    consumingTxHash = id.toString(),
+                                    consumingIndex = inputIndex,
+                                    party = PersistentParty(requestingParty.name.toString(), requestingParty.owningKey.toBase58String())
+                            )
                     },
-                    toPersistentEntity = { key: StateRef, value: UniquenessProvider.ConsumingTx ->
-                        PersistentUniqueness().apply {
-                            id = PersistentUniqueness.StateRef(key.txhash.toString(), key.index)
-                            consumingTxHash = value.id.toString()
-                            consumingIndex = value.inputIndex
-                            party = PersistentUniqueness.Party(value.requestingParty.name.toString())
-                        }
-                    },
-                    persistentEntityClass = PersistentUniqueness::class.java
+                    persistentEntityClass = PersistentNotaryCommit::class.java
             )
         }
-    }
 
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
 
