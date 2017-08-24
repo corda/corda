@@ -1,14 +1,9 @@
 @file:JvmName("CordaFutureUtils")
 package net.corda.core.concurrent
 
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.match
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
 import java.time.Duration
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -108,8 +103,5 @@ interface ValueOrException<in V> {
         })
     }
 }
-
-/** A [CordaFuture] with additional methods to complete it with a value, exception or the outcome of another future. */
-interface OpenFuture<V> : ValueOrException<V>, CordaFuture<V>
 
 internal fun <V> Future<V>.get(timeout: Duration? = null): V = if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)
