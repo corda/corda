@@ -10,14 +10,17 @@ import com.google.common.cache.RemovalCause
 import com.google.common.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import net.corda.core.internal.ThreadBox
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.LazyPool
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
+import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.utilities.*
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.*
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -159,7 +162,7 @@ class RPCClientProxyHandler(
                 ThreadFactoryBuilder().setNameFormat("rpc-client-reaper-%d").setDaemon(true).build()
         )
         reaperScheduledFuture = reaperExecutor!!.scheduleAtFixedRate(
-                this::reapObservables,
+                this::reapObservablesAndNotify,
                 rpcConfiguration.reapInterval.toMillis(),
                 rpcConfiguration.reapInterval.toMillis(),
                 TimeUnit.MILLISECONDS
@@ -268,13 +271,36 @@ class RPCClientProxyHandler(
     }
 
     /**
-     * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
+     * Closes this handler without notifying observables.
+     * This method clears up only local resources and as such does not block on any network resources.
      */
-    fun close() {
+    fun forceClose() {
+        close(false)
+    }
+
+    /**
+     * Closes this handler and sends notifications to all observables, so it can immediately clean up resources.
+     * Notifications sent to observables are to be acknowledged, therefore this call blocks until all acknowledgements are received.
+     * If this is not convenient see the [forceClose] method.
+     * If an observable is not accessible this method may block for a duration of the message broker timeout.
+     */
+    fun notifyServerAndClose() {
+        close(true)
+    }
+
+    /**
+     * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
+     * When observables are to be notified (i.e. the [notify] parameter is true),
+     * the method blocks until all the messages are acknowledged by the observables.
+     * Note: If any of the observables is inaccessible, the method blocks for the duration of the timeout set on the message broker.
+     *
+     * @param notify whether to notify observables or not.
+     */
+    private fun close(notify: Boolean = true) {
         sessionAndConsumer?.sessionFactory?.close()
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
-        reapObservables()
+        reapObservables(notify)
         reaperExecutor?.shutdownNow()
         sessionAndProducerPool.close().forEach {
             it.sessionFactory.close()
@@ -315,8 +341,11 @@ class RPCClientProxyHandler(
         lifeCycle.transition(State.SERVER_VERSION_NOT_SET, State.STARTED)
     }
 
-    private fun reapObservables() {
+    private fun reapObservablesAndNotify() = reapObservables()
+
+    private fun reapObservables(notify: Boolean = true) {
         observableContext.observableMap.cleanUp()
+        if (!notify) return
         val observableIds = observablesToReap.locked {
             if (observables.isNotEmpty()) {
                 val temporary = observables

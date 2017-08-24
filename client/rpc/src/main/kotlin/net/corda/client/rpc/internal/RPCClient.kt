@@ -5,10 +5,10 @@ import net.corda.core.internal.logElapsedTime
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
@@ -110,6 +110,21 @@ class RPCClient<I : RPCOps>(
         val proxy: I
         /** The RPC protocol version reported by the server */
         val serverProtocolVersion: Int
+
+        /**
+         * Closes this client without notifying the server.
+         * The server will eventually clear out the RPC message queue and disconnect subscribed observers,
+         * but this may take longer than desired, so to conserve resources you should normally use [notifyServerAndClose].
+         * This method is helpful when the node may be shutting down or
+         * have already shut down and you don't want to block waiting for it to come back.
+         */
+        fun forceClose()
+
+        /**
+         * Closes this client gracefully by sending a notification to the server, so it can immediately clean up resources.
+         * If the server is not available this method may block for a short period until it's clear the server is not coming back.
+         */
+        fun notifyServerAndClose()
     }
 
     /**
@@ -168,13 +183,30 @@ class RPCClient<I : RPCOps>(
                 object : RPCConnection<I> {
                     override val proxy = ops
                     override val serverProtocolVersion = serverProtocolVersion
-                    override fun close() {
-                        proxyHandler.close()
+
+                    private fun close(notify: Boolean) {
+                        if (notify) {
+                            proxyHandler.notifyServerAndClose()
+                        } else {
+                            proxyHandler.forceClose()
+                        }
                         serverLocator.close()
+                    }
+
+                    override fun notifyServerAndClose() {
+                        close(true)
+                    }
+
+                    override fun forceClose() {
+                        close(false)
+                    }
+
+                    override fun close() {
+                        close(true)
                     }
                 }
             } catch (exception: Throwable) {
-                proxyHandler.close()
+                proxyHandler.notifyServerAndClose()
                 serverLocator.close()
                 throw exception
             }
