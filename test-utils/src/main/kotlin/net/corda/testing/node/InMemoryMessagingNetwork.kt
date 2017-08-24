@@ -18,7 +18,6 @@ import net.corda.core.utilities.trace
 import net.corda.node.services.messaging.*
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.JDBCHashSet
 import net.corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
@@ -312,7 +311,7 @@ class InMemoryMessagingNetwork(
 
         private inner class InnerState {
             val handlers: MutableList<Handler> = ArrayList()
-            val pendingRedelivery = JDBCHashSet<MessageTransfer>("pending_messages", loadOnInit = true)
+            val pendingRedelivery = LinkedHashSet<MessageTransfer>()
         }
 
         private val state = ThreadBox(InnerState())
