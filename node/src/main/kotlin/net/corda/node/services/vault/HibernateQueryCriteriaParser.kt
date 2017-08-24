@@ -13,6 +13,9 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
+import org.hibernate.query.criteria.internal.expression.LiteralExpression
+import org.hibernate.query.criteria.internal.predicate.ComparisonPredicate
+import org.hibernate.query.criteria.internal.predicate.InPredicate
 import java.util.*
 import javax.persistence.Tuple
 import javax.persistence.criteria.*
@@ -32,17 +35,13 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     // incrementally build list of root entities (for later use in Sort parsing)
     private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
     private val aggregateExpressions = mutableListOf<Expression<*>>()
+    private val commonPredicates = mutableMapOf<Pair<String,Operator>, Predicate>()   // schema attribute Name, operator -> predicate
 
     var stateTypes: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
 
     override fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria) : Collection<Predicate> {
         log.trace { "Parsing VaultQueryCriteria: $criteria" }
         val predicateSet = mutableSetOf<Predicate>()
-
-        // contract State Types
-        val contractTypes = deriveContractTypes(criteria.contractStateTypes)
-        if (contractTypes.isNotEmpty())
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
         // soft locking
         criteria.softLockingCondition?.let {
@@ -91,12 +90,14 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         return predicateSet
     }
 
-    private fun deriveContractTypes(contractStateTypes: Set<Class<out ContractState>>? = null): List<String> {
+    private fun deriveContractTypes(contractStateTypes: Set<Class<out ContractState>>? = null): Set<String> {
+        log.trace { "Contract types to be derived: primary ($contractType), additional ($contractStateTypes)" }
         val combinedContractStateTypes = contractStateTypes?.plus(contractType) ?: setOf(contractType)
         combinedContractStateTypes.filter { it.name != ContractState::class.java.name }.let {
-            val interfaces = it.flatMap { contractTypeMappings[it.name] ?: listOf(it.name) }
+            val interfaces = it.flatMap { contractTypeMappings[it.name] ?: setOf(it.name) }
             val concrete = it.filter { !it.isInterface }.map { it.name }
-            return interfaces.plus(concrete)
+            log.trace { "Derived contract types: ${interfaces.union(concrete)}" }
+            return interfaces.union(concrete)
         }
     }
 
@@ -233,11 +234,6 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultFungibleStates.get<PersistentStateRef>("stateRef"))
         predicateSet.add(joinPredicate)
 
-        // contract State Types
-        val contractTypes = deriveContractTypes()
-        if (contractTypes.isNotEmpty())
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
-
         // owner
         criteria.owner?.let {
             val owners = criteria.owner as List<AbstractParty>
@@ -282,11 +278,6 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
         joinPredicates.add(joinPredicate)
 
-        // contract State Types
-        val contractTypes = deriveContractTypes()
-        if (contractTypes.isNotEmpty())
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
-
         // linear ids UUID
         criteria.uuid?.let {
             val uuids = criteria.uuid as List<UUID>
@@ -321,11 +312,6 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
             val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
             joinPredicates.add(joinPredicate)
-
-            // contract State Types
-            val contractTypes = deriveContractTypes()
-            if (contractTypes.isNotEmpty())
-                predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("contractStateClassName").`in`(contractTypes)))
 
             // resolve general criteria expressions
             parseExpression(entityRoot, criteria.expression, predicateSet)
@@ -379,11 +365,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
         val selections =
                 if (aggregateExpressions.isEmpty())
-                    listOf(vaultStates).plus(rootEntities.map { it.value })
+                    rootEntities.map { it.value }
                 else
                     aggregateExpressions
         criteriaQuery.multiselect(selections)
-        val combinedPredicates = joinPredicates.plus(predicateSet)
+        val combinedPredicates = joinPredicates.plus(predicateSet).plus(commonPredicates.values)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
 
         return predicateSet
@@ -391,14 +377,39 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
     override fun parseCriteria(criteria: CommonQueryCriteria): Collection<Predicate> {
         log.trace { "Parsing CommonQueryCriteria: $criteria" }
-        val predicateSet = mutableSetOf<Predicate>()
 
         // state status
         stateTypes = criteria.status
-        if (criteria.status != Vault.StateStatus.ALL)
-            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
+        if (criteria.status != Vault.StateStatus.ALL) {
+            val predicateID = Pair(VaultSchemaV1.VaultStates::stateStatus.name, EqualityComparisonOperator.EQUAL)
+            if (commonPredicates.containsKey(predicateID)) {
+                val existingStatus = ((commonPredicates[predicateID] as ComparisonPredicate).rightHandOperand as LiteralExpression).literal
+                if (existingStatus != criteria.status) {
+                    log.warn("Overriding previous attribute [${VaultSchemaV1.VaultStates::stateStatus.name}] value $existingStatus with ${criteria.status}")
+                    commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), criteria.status))
+                }
+            }
+            else {
+                commonPredicates.put(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), criteria.status))
+            }
+        }
 
-        return predicateSet
+        // contract state types
+        val contractTypes = deriveContractTypes(criteria.contractStateTypes)
+        if (contractTypes.isNotEmpty()) {
+            val predicateID = Pair(VaultSchemaV1.VaultStates::contractStateClassName.name, CollectionOperator.IN)
+            if (commonPredicates.containsKey(predicateID)) {
+                val existingTypes = (commonPredicates[predicateID]!!.expressions[0] as InPredicate<*>).values.map { (it as LiteralExpression).literal }.toSet()
+                if (existingTypes != contractTypes) {
+                    log.warn("Enriching previous attribute [${VaultSchemaV1.VaultStates::contractStateClassName.name}] values [$existingTypes] with [$contractTypes]")
+                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractTypes.plus(existingTypes))))
+                }
+            } else {
+                commonPredicates.put(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractTypes)))
+            }
+        }
+
+        return emptySet()
     }
 
     private fun parse(sorting: Sort) {
