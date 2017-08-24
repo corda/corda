@@ -67,7 +67,9 @@ public class StandaloneCordaRPCJavaClientTest {
         try {
             connection.close();
         } finally {
-            notary.close();
+            if(notary != null) {
+                notary.close();
+            }
         }
     }
 
