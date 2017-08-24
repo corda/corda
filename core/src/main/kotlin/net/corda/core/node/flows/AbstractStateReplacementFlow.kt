@@ -1,18 +1,12 @@
-package net.corda.core.flows
+package net.corda.core.node.flows
 
-import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
+import net.corda.core.flows.FlowLogic
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
-import java.security.PublicKey
 
 /**
  * Abstract flow to be used for replacing one state with another, for example when changing the notary of a state.
@@ -26,7 +20,7 @@ abstract class AbstractStateReplacementFlow {
      *
      * @param M the type of a class representing proposed modification by the instigator.
      */
-    @CordaSerializable
+    @net.corda.core.serialization.CordaSerializable
     data class Proposal<out M>(val stateRef: StateRef, val modification: M)
 
     /**
@@ -36,7 +30,7 @@ abstract class AbstractStateReplacementFlow {
      * @param participants the parties involved in the upgrade transaction.
      * @param myKey key
      */
-    data class UpgradeTx(val stx: SignedTransaction, val participants: Iterable<PublicKey>, val myKey: PublicKey)
+    data class UpgradeTx(val stx: SignedTransaction, val participants: Iterable<java.security.PublicKey>, val myKey: java.security.PublicKey)
 
     /**
      * The [Instigator] assembles the transaction for state replacement and sends out change proposals to all participants
@@ -51,20 +45,20 @@ abstract class AbstractStateReplacementFlow {
     abstract class Instigator<out S : ContractState, out T : ContractState, out M>(
             val originalState: StateAndRef<S>,
             val modification: M,
-            override val progressTracker: ProgressTracker = Instigator.tracker()) : FlowLogic<StateAndRef<T>>() {
+            override val progressTracker: net.corda.core.utilities.ProgressTracker = AbstractStateReplacementFlow.Instigator.Companion.tracker()) : FlowLogic<StateAndRef<T>>() {
         companion object {
-            object SIGNING : ProgressTracker.Step("Requesting signatures from other parties")
-            object NOTARY : ProgressTracker.Step("Requesting notary signature")
+            object SIGNING : net.corda.core.utilities.ProgressTracker.Step("Requesting signatures from other parties")
+            object NOTARY : net.corda.core.utilities.ProgressTracker.Step("Requesting notary signature")
 
-            fun tracker() = ProgressTracker(SIGNING, NOTARY)
+            fun tracker() = net.corda.core.utilities.ProgressTracker(SIGNING, NOTARY)
         }
 
-        @Suspendable
+        @co.paralleluniverse.fibers.Suspendable
         @Throws(StateReplacementException::class)
         override fun call(): StateAndRef<T> {
             val (stx, participantKeys, myKey) = assembleTx()
 
-            progressTracker.currentStep = SIGNING
+            progressTracker.currentStep = AbstractStateReplacementFlow.Instigator.Companion.SIGNING
 
             val signatures = if (participantKeys.singleOrNull() == myKey) {
                 getNotarySignatures(stx)
@@ -92,10 +86,10 @@ abstract class AbstractStateReplacementFlow {
          * @return a triple of the transaction, the public keys of all participants, and the participating public key of
          * this node.
          */
-        abstract protected fun assembleTx(): UpgradeTx
+        abstract protected fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx
 
-        @Suspendable
-        private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<TransactionSignature> {
+        @co.paralleluniverse.fibers.Suspendable
+        private fun collectSignatures(participants: Iterable<java.security.PublicKey>, stx: SignedTransaction): List<net.corda.core.crypto.TransactionSignature> {
             val parties = participants.map {
                 val participantNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
@@ -112,20 +106,20 @@ abstract class AbstractStateReplacementFlow {
             return allSignatures
         }
 
-        @Suspendable
-        private fun getParticipantSignature(party: Party, stx: SignedTransaction): TransactionSignature {
-            val proposal = Proposal(originalState.ref, modification)
+        @co.paralleluniverse.fibers.Suspendable
+        private fun getParticipantSignature(party: net.corda.core.identity.Party, stx: SignedTransaction): net.corda.core.crypto.TransactionSignature {
+            val proposal = AbstractStateReplacementFlow.Proposal(originalState.ref, modification)
             subFlow(SendTransactionFlow(party, stx))
-            return sendAndReceive<TransactionSignature>(party, proposal).unwrap {
+            return sendAndReceive<net.corda.core.crypto.TransactionSignature>(party, proposal).unwrap {
                 check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verify(stx.id)
                 it
             }
         }
 
-        @Suspendable
-        private fun getNotarySignatures(stx: SignedTransaction): List<TransactionSignature> {
-            progressTracker.currentStep = NOTARY
+        @co.paralleluniverse.fibers.Suspendable
+        private fun getNotarySignatures(stx: SignedTransaction): List<net.corda.core.crypto.TransactionSignature> {
+            progressTracker.currentStep = AbstractStateReplacementFlow.Instigator.Companion.NOTARY
             try {
                 return subFlow(NotaryFlow.Client(stx))
             } catch (e: NotaryException) {
@@ -136,23 +130,23 @@ abstract class AbstractStateReplacementFlow {
 
     // Type parameter should ideally be Unit but that prevents Java code from subclassing it (https://youtrack.jetbrains.com/issue/KT-15964).
     // We use Void? instead of Unit? as that's what you'd use in Java.
-    abstract class Acceptor<in T>(val otherSide: Party,
-                                  override val progressTracker: ProgressTracker = Acceptor.tracker()) : FlowLogic<Void?>() {
+    abstract class Acceptor<in T>(val otherSide: net.corda.core.identity.Party,
+                                  override val progressTracker: net.corda.core.utilities.ProgressTracker = AbstractStateReplacementFlow.Acceptor.Companion.tracker()) : FlowLogic<Void?>() {
         companion object {
-            object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
-            object APPROVING : ProgressTracker.Step("State replacement approved")
+            object VERIFYING : net.corda.core.utilities.ProgressTracker.Step("Verifying state replacement proposal")
+            object APPROVING : net.corda.core.utilities.ProgressTracker.Step("State replacement approved")
 
-            fun tracker() = ProgressTracker(VERIFYING, APPROVING)
+            fun tracker() = net.corda.core.utilities.ProgressTracker(VERIFYING, APPROVING)
         }
 
-        @Suspendable
+        @co.paralleluniverse.fibers.Suspendable
         @Throws(StateReplacementException::class)
         override fun call(): Void? {
-            progressTracker.currentStep = VERIFYING
+            progressTracker.currentStep = AbstractStateReplacementFlow.Acceptor.Companion.VERIFYING
             // We expect stx to have insufficient signatures here
             val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false))
             checkMySignatureRequired(stx)
-            val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
+            val maybeProposal: net.corda.core.utilities.UntrustworthyData<Proposal<T>> = receive(otherSide)
             maybeProposal.unwrap {
                 verifyProposal(stx, it)
             }
@@ -160,12 +154,12 @@ abstract class AbstractStateReplacementFlow {
             return null
         }
 
-        @Suspendable
+        @co.paralleluniverse.fibers.Suspendable
         private fun approve(stx: SignedTransaction) {
-            progressTracker.currentStep = APPROVING
+            progressTracker.currentStep = AbstractStateReplacementFlow.Acceptor.Companion.APPROVING
 
             val mySignature = sign(stx)
-            val swapSignatures = sendAndReceive<List<TransactionSignature>>(otherSide, mySignature)
+            val swapSignatures = sendAndReceive<List<net.corda.core.crypto.TransactionSignature>>(otherSide, mySignature)
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifyRequiredSignatures.
             val allSignatures = swapSignatures.unwrap { signatures ->
@@ -188,7 +182,7 @@ abstract class AbstractStateReplacementFlow {
          * The proposal is returned if acceptable, otherwise a [StateReplacementException] is thrown.
          */
         @Throws(StateReplacementException::class)
-        abstract protected fun verifyProposal(stx: SignedTransaction, proposal: Proposal<T>)
+        abstract protected fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<T>)
 
         private fun checkMySignatureRequired(stx: SignedTransaction) {
             // TODO: use keys from the keyManagementService instead
@@ -203,11 +197,8 @@ abstract class AbstractStateReplacementFlow {
             require(myKey in requiredKeys) { "Party is not a participant for any of the input states of transaction ${stx.id}" }
         }
 
-        private fun sign(stx: SignedTransaction): TransactionSignature {
+        private fun sign(stx: SignedTransaction): net.corda.core.crypto.TransactionSignature {
             return serviceHub.createSignature(stx)
         }
     }
 }
-
-open class StateReplacementException @JvmOverloads constructor(message: String? = null, cause: Throwable? = null)
-    : FlowException(message, cause)

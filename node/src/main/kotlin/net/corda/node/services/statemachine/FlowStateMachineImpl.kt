@@ -14,6 +14,7 @@ import net.corda.core.internal.abbreviate
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.staticField
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent

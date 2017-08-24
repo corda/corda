@@ -1,15 +1,9 @@
-package net.corda.core.flows
+package net.corda.core.node.flows
 
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
-import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ProgressTracker
 
 /**
  * A flow to be used for changing a state's Notary. This is required since all input states to a transaction
@@ -21,16 +15,16 @@ import net.corda.core.utilities.ProgressTracker
  * use the new updated state for future transactions.
  */
 @InitiatingFlow
-class NotaryChangeFlow<out T : ContractState>(
-        originalState: StateAndRef<T>,
-        newNotary: Party,
-        progressTracker: ProgressTracker = AbstractStateReplacementFlow.Instigator.tracker())
+class NotaryChangeFlow<out T : net.corda.core.contracts.ContractState>(
+        originalState: net.corda.core.contracts.StateAndRef<T>,
+        newNotary: net.corda.core.identity.Party,
+        progressTracker: net.corda.core.utilities.ProgressTracker = AbstractStateReplacementFlow.Instigator.Companion.tracker())
     : AbstractStateReplacementFlow.Instigator<T, T, Party>(originalState, newNotary, progressTracker) {
 
     override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
         val inputs = resolveEncumbrances(originalState)
 
-        val tx = NotaryChangeWireTransaction(
+        val tx = net.corda.core.transactions.NotaryChangeWireTransaction(
                 inputs.map { it.ref },
                 originalState.state.notary,
                 modification
@@ -39,18 +33,18 @@ class NotaryChangeFlow<out T : ContractState>(
         val participantKeys = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()
         // TODO: We need a much faster way of finding our key in the transaction
         val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()
-        val signableData = SignableData(tx.id, SignatureMetadata(serviceHub.myInfo.platformVersion, Crypto.findSignatureScheme(myKey).schemeNumberID))
+        val signableData = net.corda.core.crypto.SignableData(tx.id, SignatureMetadata(serviceHub.myInfo.platformVersion, Crypto.findSignatureScheme(myKey).schemeNumberID))
         val mySignature = serviceHub.keyManagementService.sign(signableData, myKey)
-        val stx = SignedTransaction(tx, listOf(mySignature))
+        val stx = net.corda.core.transactions.SignedTransaction(tx, listOf(mySignature))
 
         return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey)
     }
 
     /** Resolves the encumbrance state chain for the given [state] */
-    private fun resolveEncumbrances(state: StateAndRef<T>): List<StateAndRef<T>> {
+    private fun resolveEncumbrances(state: net.corda.core.contracts.StateAndRef<T>): List<net.corda.core.contracts.StateAndRef<T>> {
         val states = mutableListOf(state)
         while (states.last().state.encumbrance != null) {
-            val encumbranceStateRef = StateRef(states.last().ref.txhash, states.last().state.encumbrance!!)
+            val encumbranceStateRef = net.corda.core.contracts.StateRef(states.last().ref.txhash, states.last().state.encumbrance!!)
             val encumbranceState = serviceHub.toStateAndRef<T>(encumbranceStateRef)
             states.add(encumbranceState)
         }

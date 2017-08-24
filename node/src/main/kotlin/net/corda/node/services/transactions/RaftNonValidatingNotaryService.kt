@@ -1,6 +1,6 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.flows.NotaryFlow
+import net.corda.core.node.flows.NotaryFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService

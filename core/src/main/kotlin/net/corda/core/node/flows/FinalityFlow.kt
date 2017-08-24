@@ -1,14 +1,13 @@
-package net.corda.core.flows
+package net.corda.core.node.flows
 
-import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.ResolveTransactionsFlow
-import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -35,16 +34,16 @@ import net.corda.core.utilities.toNonEmptySet
  * @param extraRecipients A list of additional participants to inform of the transaction.
  */
 open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
-                   val extraRecipients: Set<Party>,
-                   override val progressTracker: ProgressTracker) : FlowLogic<List<SignedTransaction>>() {
-    val extraParticipants: Set<Participant> = extraRecipients.map { it -> Participant(it, it) }.toSet()
-    constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(listOf(transaction), extraParticipants, tracker())
-    constructor(transaction: SignedTransaction) : this(listOf(transaction), emptySet(), tracker())
+                        val extraRecipients: Set<Party>,
+                        override val progressTracker: ProgressTracker) : FlowLogic<List<SignedTransaction>>() {
+    val extraParticipants: Set<FinalityFlow.Participant> = extraRecipients.map { it -> FinalityFlow.Participant(it, it) }.toSet()
+    constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(listOf(transaction), extraParticipants, FinalityFlow.Companion.tracker())
+    constructor(transaction: SignedTransaction) : this(listOf(transaction), emptySet(), FinalityFlow.Companion.tracker())
     constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(listOf(transaction), emptySet(), progressTracker)
 
     companion object {
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
-            override fun childProgressTracker() = NotaryFlow.Client.tracker()
+            override fun childProgressTracker() = NotaryFlow.Client.Companion.tracker()
         }
 
         object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to participants")
@@ -56,7 +55,7 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
     open protected val me
         get() = serviceHub.myInfo.legalIdentity
 
-    @Suspendable
+    @co.paralleluniverse.fibers.Suspendable
     @Throws(NotaryException::class)
     override fun call(): List<SignedTransaction> {
         // Note: this method is carefully broken up to minimize the amount of data reachable from the stack at
@@ -64,12 +63,12 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         //
         // Lookup the resolved transactions and use them to map each signed transaction to the list of participants.
         // Then send to the notary if needed, record locally and distribute.
-        progressTracker.currentStep = NOTARISING
-        val notarisedTxns: List<Pair<SignedTransaction, Set<Participant>>> = resolveDependenciesOf(transactions)
+        progressTracker.currentStep = FinalityFlow.Companion.NOTARISING
+        val notarisedTxns: List<Pair<SignedTransaction, Set<FinalityFlow.Participant>>> = resolveDependenciesOf(transactions)
                 .map { (stx, ltx) -> Pair(notariseAndRecord(stx), lookupParties(ltx)) }
 
         // Each transaction has its own set of recipients, but extra recipients get them all.
-        progressTracker.currentStep = BROADCASTING
+        progressTracker.currentStep = FinalityFlow.Companion.BROADCASTING
         for ((stx, parties) in notarisedTxns) {
             broadcastTransaction(stx, (parties + extraParticipants).filter { it.wellKnown != me })
         }
@@ -84,15 +83,15 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
      * @param participants the participants to send the transaction to. This is expected to include extra participants
      * and exclude the local node.
      */
-    @Suspendable
-    open protected fun broadcastTransaction(stx: SignedTransaction, participants: Iterable<Participant>) {
+    @co.paralleluniverse.fibers.Suspendable
+    open protected fun broadcastTransaction(stx: SignedTransaction, participants: Iterable<FinalityFlow.Participant>) {
         val wellKnownParticipants = participants.map { it.wellKnown }.filterNotNull()
         if (wellKnownParticipants.isNotEmpty()) {
             subFlow(BroadcastTransactionFlow(stx, wellKnownParticipants.toNonEmptySet()))
         }
     }
 
-    @Suspendable
+    @co.paralleluniverse.fibers.Suspendable
     private fun notariseAndRecord(stx: SignedTransaction): SignedTransaction {
         val notarised = if (needsNotarySignature(stx)) {
             val notarySignatures = subFlow(NotaryFlow.Client(stx))
@@ -122,7 +121,7 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
      *
      * @return the set of participants and their resolved well known identities (where known).
      */
-    open protected fun lookupParties(ltx: LedgerTransaction): Set<Participant> {
+    open protected fun lookupParties(ltx: LedgerTransaction): Set<FinalityFlow.Participant> {
         // Calculate who is meant to see the results based on the participants involved.
         return extractParticipants(ltx)
                 .map(this::partyFromAnonymous)
@@ -140,16 +139,16 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
     /**
      * Helper function which wraps [IdentityService.partyFromAnonymous] so it can be called as a lambda function.
      */
-    protected fun partyFromAnonymous(anon: AbstractParty): Participant {
-        return Participant(anon, serviceHub.identityService.partyFromAnonymous(anon))
+    protected fun partyFromAnonymous(anon: AbstractParty): FinalityFlow.Participant {
+        return FinalityFlow.Participant(anon, serviceHub.identityService.partyFromAnonymous(anon))
     }
 
     private fun resolveDependenciesOf(signedTransactions: Iterable<SignedTransaction>): List<Pair<SignedTransaction, LedgerTransaction>> {
         // Make sure the dependencies come before the dependers.
-        val sorted = ResolveTransactionsFlow.topologicalSort(signedTransactions.toList())
+        val sorted = ResolveTransactionsFlow.Companion.topologicalSort(signedTransactions.toList())
         // Build a ServiceHub that consults the argument list as well as what's in local tx storage so uncommitted
         // transactions can depend on each other.
-        val augmentedLookup = object : ServiceHub by serviceHub {
+        val augmentedLookup = object : net.corda.core.node.ServiceHub by serviceHub {
             val hashToTx = sorted.associateBy { it.id }
             override fun loadState(stateRef: StateRef): TransactionState<*> {
                 val provided: TransactionState<ContractState>? = hashToTx[stateRef.txhash]?.let { it.tx.outputs[stateRef.index] }

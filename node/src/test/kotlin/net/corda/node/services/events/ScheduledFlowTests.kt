@@ -7,6 +7,7 @@ import net.corda.core.crypto.containsAny
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.node.flows.FinalityFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.queryBy

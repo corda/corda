@@ -8,6 +8,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.messaging.startFlow
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig

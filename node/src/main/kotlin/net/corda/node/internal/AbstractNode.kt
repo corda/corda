@@ -19,6 +19,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
+import net.corda.core.node.flows.*
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SerializeAsToken
@@ -34,7 +35,6 @@ import net.corda.node.services.TransactionKeyHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
-import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.InMemoryIdentityService

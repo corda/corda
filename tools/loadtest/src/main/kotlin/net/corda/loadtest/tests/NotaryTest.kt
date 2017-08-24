@@ -4,10 +4,10 @@ import net.corda.client.mock.Generator
 import net.corda.client.mock.int
 import net.corda.client.mock.pickOne
 import net.corda.client.mock.replicate
-import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.flows.FinalityFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY

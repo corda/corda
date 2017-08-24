@@ -3,6 +3,7 @@ package net.corda.core.flows
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.node.flows.TransactionKeyFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB

@@ -5,7 +5,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.NotaryException
+import net.corda.core.node.flows.NotaryException
 import net.corda.core.identity.Party
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker

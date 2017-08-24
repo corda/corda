@@ -1,4 +1,4 @@
-package net.corda.core.flows
+package net.corda.core.node.flows
 
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
@@ -13,8 +13,8 @@ import net.corda.core.utilities.ProgressTracker
  * @param extraRecipients A list of additional participants to inform of the transaction.
  */
 class ManualFinalityFlow(transactions: Iterable<SignedTransaction>,
-                   recipients: Set<Party>,
-                   progressTracker: ProgressTracker) : FinalityFlow(transactions, recipients, progressTracker) {
-    constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(listOf(transaction), extraParticipants, tracker())
-    override fun lookupParties(ltx: LedgerTransaction): Set<Participant> = emptySet()
+                         recipients: Set<Party>,
+                         progressTracker: ProgressTracker) : FinalityFlow(transactions, recipients, progressTracker) {
+    constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(listOf(transaction), extraParticipants, FinalityFlow.Companion.tracker())
+    override fun lookupParties(ltx: LedgerTransaction): Set<FinalityFlow.Participant> = emptySet()
 }

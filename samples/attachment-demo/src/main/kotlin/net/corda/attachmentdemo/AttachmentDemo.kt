@@ -8,7 +8,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FinalityFlow
+import net.corda.core.node.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
