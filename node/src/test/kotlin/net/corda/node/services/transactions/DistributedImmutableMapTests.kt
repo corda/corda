@@ -10,12 +10,12 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.DatabaseTransaction
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
 import net.corda.testing.node.makeTestIdentityService
-import org.jetbrains.exposed.sql.Transaction
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -27,7 +27,7 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     data class Member(val client: CopycatClient, val server: CopycatServer)
 
     lateinit var cluster: List<Member>
-    lateinit var transaction: Transaction
+    lateinit var transaction: DatabaseTransaction
     private val databases: MutableList<CordaPersistence> = mutableListOf()
 
     @Before

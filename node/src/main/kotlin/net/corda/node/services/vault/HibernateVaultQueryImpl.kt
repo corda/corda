@@ -21,8 +21,8 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.utilities.DatabaseTransactionManager
 import org.hibernate.Session
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.Observable
 import java.lang.Exception
 import java.util.*
@@ -157,7 +157,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
 
     private fun getSession(): Session {
         return sessionFactory.withOptions().
-                connection(TransactionManager.current().connection).
+                connection(DatabaseTransactionManager.current().connection).
                 openSession()
     }
 
