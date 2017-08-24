@@ -211,7 +211,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun noNetworkMapConfigured() = doneFuture(Unit)
 
         // There is no need to slow down the unit tests by initialising CityDatabase
-        override fun findMyLocation(): WorldMapLocation? = null
+        open fun findMyLocation(): WorldMapLocation? = null // It's left only for NetworkVisualiserSimulation
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 

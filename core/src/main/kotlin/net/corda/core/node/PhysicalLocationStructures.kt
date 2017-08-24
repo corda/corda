@@ -2,17 +2,15 @@ package net.corda.core.node
 
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
-import javax.persistence.Embeddable
 
 data class ScreenCoordinate(val screenX: Double, val screenY: Double)
 
 /** A latitude/longitude pair. */
 @CordaSerializable
-@Embeddable // Nulls are only added because of Hibernate default constructors.
-data class WorldCoordinate(val latitude: Double? = null, val longitude: Double? = null) {
+data class WorldCoordinate(val latitude: Double, val longitude: Double) {
     init {
-        require(latitude?.let { it in -90..90 } ?: true)
-        require(longitude?.let {it in -180..180 } ?: true)
+        require(latitude in -90..90)
+        require(longitude in -180..180)
     }
 
     /**
@@ -26,8 +24,8 @@ data class WorldCoordinate(val latitude: Double? = null, val longitude: Double? 
     @Suppress("unused") // Used from the visualiser GUI.
     fun project(screenWidth: Double, screenHeight: Double, topLatitude: Double, bottomLatitude: Double,
                 leftLongitude: Double, rightLongitude: Double): ScreenCoordinate {
-        require(latitude!! in bottomLatitude..topLatitude)
-        require(longitude!! in leftLongitude..rightLongitude)
+        require(latitude in bottomLatitude..topLatitude)
+        require(longitude in leftLongitude..rightLongitude)
 
         fun deg2rad(deg: Double) = deg * Math.PI / 180.0
         val leftLngRad = deg2rad(leftLongitude)
@@ -47,8 +45,7 @@ data class WorldCoordinate(val latitude: Double? = null, val longitude: Double? 
  * The [countryCode] field is a two letter ISO country code.
  */
 @CordaSerializable
-@Embeddable
-data class WorldMapLocation(val coordinate: WorldCoordinate? = null, val description: String? = null, val countryCode: String? = null)
+data class WorldMapLocation(val coordinate: WorldCoordinate, val description: String, val countryCode: String)
 
 /**
  * A simple lookup table of city names to their coordinates. Lookups are case insensitive.

@@ -27,10 +27,13 @@ import javafx.util.Duration
 import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
+import net.corda.core.crypto.locationOrNull
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.Party
+import net.corda.core.node.CityDatabase
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ScreenCoordinate
+import net.corda.core.node.WorldMapLocation
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
 import tornadofx.*
@@ -99,7 +102,7 @@ class Network : CordaView() {
                         copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())).apply { minWidth = 400.0 }
                     }
                     row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
-                    node.worldMapLocation?.apply { row("Location :") { label(this@apply.description!!) } }
+                    node.getWorldMapLocation()?.apply { row("Location :") { label(this@apply.description!!) } }
                 }
             }
             setOnMouseClicked {
@@ -123,7 +126,7 @@ class Network : CordaView() {
             contentDisplay = ContentDisplay.TOP
             val coordinate = Bindings.createObjectBinding({
                 // These coordinates are obtained when we generate the map using TileMill.
-                node.worldMapLocation?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: ScreenCoordinate(0.0, 0.0)
+                node.getWorldMapLocation()?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: ScreenCoordinate(0.0, 0.0)
             }, arrayOf(mapPane.widthProperty(), mapPane.heightProperty()))
             // Center point of the label.
             layoutXProperty().bind(coordinate.map { it.screenX - width / 2 })
