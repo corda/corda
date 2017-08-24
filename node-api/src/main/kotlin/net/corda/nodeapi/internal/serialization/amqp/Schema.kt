@@ -252,7 +252,12 @@ data class CompositeType(override val name: String, override val label: String?,
     }
 }
 
-data class RestrictedType(override val name: String, override val label: String?, override val provides: List<String>, val source: String, override val descriptor: Descriptor, val choices: List<Choice>) : TypeNotation() {
+data class RestrictedType(override val name: String,
+                          override val label: String?,
+                          override val provides: List<String>,
+                          val source: String,
+                          override val descriptor: Descriptor,
+                          val choices: List<Choice>) : TypeNotation() {
     companion object : DescribedTypeConstructor<RestrictedType> {
         val DESCRIPTOR = DescriptorRegistry.RESTRICTED_TYPE.amqpDescriptor
 
@@ -290,6 +295,9 @@ data class RestrictedType(override val name: String, override val label: String?
         }
         sb.append(">\n")
         sb.append("  $descriptor\n")
+        choices.forEach {
+            sb.append("  $it\n")
+        }
         sb.append("</type>")
         return sb.toString()
     }
@@ -403,14 +411,13 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
             if (type is SerializerFactory.AnyType) {
                 hasher.putUnencodedChars(ANY_TYPE_HASH)
             } else if (type is Class<*>) {
-                if (type.isArray) {
-                    fingerprintForType(type.componentType, contextType, alreadySeen, hasher, factory).putUnencodedChars(ARRAY_HASH)
-                } else if (SerializerFactory.isPrimitive(type)) {
-                    hasher.putUnencodedChars(type.name)
-                } else if (isCollectionOrMap(type)) {
-                    hasher.putUnencodedChars(type.name)
-                } else {
-                    hasher.fingerprintWithCustomSerializerOrElse(factory, type, type) {
+                when {
+                    type.isArray -> fingerprintForType(type.componentType, contextType, alreadySeen, hasher, factory).putUnencodedChars(ARRAY_HASH)
+                    SerializerFactory.isPrimitive(type) ||
+                    isCollectionOrMap(type) ||
+                    type.isEnum -> hasher.putUnencodedChars(type.name)
+                    else ->
+                        hasher.fingerprintWithCustomSerializerOrElse(factory, type, type) {
                         if (type.kotlin.objectInstance != null) {
                             // TODO: name collision is too likely for kotlin objects, we need to introduce some reference
                             // to the CorDapp but maybe reference to the JAR in the short term.

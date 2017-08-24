@@ -21,7 +21,6 @@ data class schemaAndDescriptor (val schema: Schema, val typeDescriptor: Any)
 /**
  * Factory of serializers designed to be shared across threads and invocations.
  */
-// TODO: enums
 // TODO: object references - need better fingerprinting?
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: Inner classes etc. Should we allow? Currently not considered.
@@ -66,18 +65,20 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
 
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
-        val serializer = if (Collection::class.java.isAssignableFrom(declaredClass)) {
-            serializersByType.computeIfAbsent(declaredType) {
-                CollectionSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
-                        declaredClass, arrayOf(AnyType), null), this)
+        val serializer = when {
+            (Collection::class.java.isAssignableFrom(declaredClass)) -> { serializersByType.computeIfAbsent(declaredType) {
+                    CollectionSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
+                            declaredClass, arrayOf(AnyType), null), this)
+                }
             }
-        } else if (Map::class.java.isAssignableFrom(declaredClass)) {
-            serializersByType.computeIfAbsent(declaredClass) {
+            Map::class.java.isAssignableFrom(declaredClass) -> serializersByType.computeIfAbsent(declaredClass) {
                 makeMapSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
                         declaredClass, arrayOf(AnyType, AnyType), null))
             }
-        } else {
-            makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
+            Enum::class.java.isAssignableFrom(declaredClass) -> serializersByType.computeIfAbsent(declaredClass) {
+                EnumSerializer(actualType, actualClass ?: declaredClass, this)
+            }
+            else -> makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
         }
 
         serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
@@ -248,8 +249,9 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     }
 
     internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
-        // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is AbstractMap, only Map.
-        // Otherwise it needs to inject additional schema for a RestrictedType source of the super type.  Could be done, but do we need it?
+        // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is
+        // AbstractMap, only Map. Otherwise it needs to inject additional schema for a RestrictedType source of the
+        // super type.  Could be done, but do we need it?
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
                 val declaredSuperClass = declaredType.asClass()?.superclass
@@ -258,7 +260,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
                 } else {
                     // Make a subclass serializer for the subclass and return that...
                     @Suppress("UNCHECKED_CAST")
-                    return CustomSerializer.SubClass<Any>(clazz, customSerializer as CustomSerializer<Any>)
+                    return CustomSerializer.SubClass(clazz, customSerializer as CustomSerializer<Any>)
                 }
             }
         }
@@ -277,7 +279,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
             (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
 
     // Recursively check the class, interfaces and superclasses for our annotation.
-    internal fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
+    private fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
         return type.isAnnotationPresent(CordaSerializable::class.java) ||
                 type.interfaces.any { hasAnnotationInHierarchy(it) }
                 || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
