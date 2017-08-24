@@ -272,13 +272,17 @@ class RPCClientProxyHandler(
 
     /**
      * Closes this handler without notifying observables.
+     * This method clears up only local resources and as such does not block on any network resources.
      */
     fun forceClose() {
         close(false)
     }
 
     /**
-     * Closes this handler and sends notifications to all observables.
+     * Closes this handler and sends notifications to all observables, so it can immediately clean up resources.
+     * Notifications sent to observables are to be acknowledged, therefore this call blocks until all acknowledgements are received.
+     * If this is not convenient see the [forceClose] method.
+     * If an observable is not accessible this method may block for a duration of the message broker timeout.
      */
     fun notifyServerAndClose() {
         close(true)
@@ -286,6 +290,9 @@ class RPCClientProxyHandler(
 
     /**
      * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
+     * When observables are to be notified (i.e. the [notify] parameter is true),
+     * the method blocks until all the messages are acknowledged by the observables.
+     * Note: If any of the observables is inaccessible, the method blocks for the duration of the timeout set on the message broker.
      *
      * @param notify whether to notify observables or not.
      */
