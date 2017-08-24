@@ -4,7 +4,6 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
-import java.lang.reflect.Constructor
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaConstructor
 
@@ -13,12 +12,11 @@ import kotlin.reflect.jvm.javaConstructor
  */
 open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
-    open internal val propertySerializers: Collection<PropertySerializer>
     open val kotlinConstructor = constructorForDeserialization(clazz)
     val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
 
-    init {
-        propertySerializers = propertiesForSerialization(kotlinConstructor, clazz, factory)
+    open internal val propertySerializers: Collection<PropertySerializer> by lazy {
+        propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
 
     private val typeName = nameForType(clazz)
@@ -66,16 +64,8 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         return propertySerializers.map { Field(it.name, it.type, it.requires, it.default, null, it.mandatory, false) }
     }
 
-    private fun generateProvides(): List<String> {
-        return interfaces.map { nameForType(it) }
-    }
+    private fun generateProvides(): List<String> = interfaces.map { nameForType(it) }
 
-
-    fun construct(properties: List<Any?>): Any {
-        if (javaConstructor == null) {
+    fun construct(properties: List<Any?>) = javaConstructor?.newInstance(*properties.toTypedArray()) ?:
             throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
-        }
-
-        return javaConstructor!!.newInstance(*properties.toTypedArray())
-    }
 }

@@ -19,15 +19,15 @@ class EvolutionSerializer(
         val readers: List<OldParam?>,
         override val kotlinConstructor: KFunction<Any>?) : ObjectSerializer(clazz, factory) {
 
-    // explicitly null this out as we won't be using this list
-    override val propertySerializers: Collection<PropertySerializer> = listOf()
+    // explicitly set as empty to indicate it's unused by this type of serializer
+    override val propertySerializers: Collection<PropertySerializer> = emptyList()
 
     /**
-     * represents a parameter as would be passed to the constructor of the class as it was
+     * Represents a parameter as would be passed to the constructor of the class as it was
      * when it was serialised and NOT how that class appears now
      *
      * @param type The jvm type of the parameter
-     * @param idx where in the parameter list this parameter falls. required as the parameter
+     * @param idx where in the parameter list this parameter falls. Required as the parameter
      * order may have been changed and we need to know where into the list to look
      * @param property object to read the actual property value
      */
@@ -87,7 +87,7 @@ class EvolutionSerializer(
 
             val constructor = getEvolverConstructor(new.type, oldFieldToType) ?:
                     throw NotSerializableException(
-                            "Attempt to deserialize an interface: new.type. Serialized form is invalid.")
+                            "Attempt to deserialize an interface: ${new.type}. Serialized form is invalid.")
 
             val oldArgs = mutableMapOf<String, OldParam>()
             var idx = 0
@@ -118,6 +118,8 @@ class EvolutionSerializer(
      * constructor of the original state of the object, we need to map the new parameter order
      * of the current constructor onto that list inserting nulls where new parameters are
      * encountered
+     *
+     * TODO: Object references
      */
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")

@@ -1,8 +1,11 @@
 package net.corda.core.serialization
 
 /**
- * This annotation is a marker to indicate which secondary constructors shuold be considered, and in which
+ * This annotation is a marker to indicate which secondary constructors should be considered, and in which
  * order, for evolving objects during their deserialisation.
+ *
+ * Versions will be considered in descending order, currently duplicate versions will result in
+ * non deterministic behaviour when deserialising objects
  */
 @Target(AnnotationTarget.CONSTRUCTOR)
 @Retention(AnnotationRetention.RUNTIME)
