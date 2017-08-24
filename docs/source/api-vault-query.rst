@@ -322,22 +322,22 @@ Query for consumed deal states or linear ids, specify a paging specification and
 
 Aggregations on cash using various functions:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryJavaTests.kt
-    :language: kotlin
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
     :start-after: DOCSTART VaultJavaQueryExample21
     :end-before: DOCEND VaultJavaQueryExample21
 
 Aggregations on cash grouped by currency for various functions:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryJavaTests.kt
-    :language: kotlin
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
     :start-after: DOCSTART VaultJavaQueryExample22
     :end-before: DOCEND VaultJavaQueryExample22
 
 Sum aggregation on cash grouped by issuer party and currency and sorted by sum:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryJavaTests.kt
-    :language: kotlin
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
     :start-after: DOCSTART VaultJavaQueryExample23
     :end-before: DOCEND VaultJavaQueryExample23
 

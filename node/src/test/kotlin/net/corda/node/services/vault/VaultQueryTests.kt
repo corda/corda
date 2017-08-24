@@ -1992,7 +1992,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun trackCashStates_unconsumed() {
         val updates =
             database.transaction {
+                // DOCSTART VaultQueryExample15
                 vaultQuerySvc.trackBy<Cash.State>().updates     // UNCONSUMED default
+                // DOCEND VaultQueryExample15
             }
         val (linearStates,dealStates) =
             database.transaction {
