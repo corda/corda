@@ -2,7 +2,6 @@ package net.corda.core.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.unwrap
 
 open class DataVendingFlow(val otherSide: Party, val payload: Any) : net.corda.core.flows.FlowLogic<Void?>() {

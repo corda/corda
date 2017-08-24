@@ -1,4 +1,4 @@
-package net.corda.core.internal
+package net.corda.core.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.AbstractAttachment
@@ -9,8 +9,8 @@ import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
-import net.corda.core.internal.FetchDataFlow.HashNotFound
+import net.corda.core.node.flows.FetchDataFlow.DownloadedVsRequestedDataMismatch
+import net.corda.core.node.flows.FetchDataFlow.HashNotFound
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken

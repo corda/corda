@@ -5,7 +5,6 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.utilities.unwrap
 
 /**

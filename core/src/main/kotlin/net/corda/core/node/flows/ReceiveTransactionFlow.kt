@@ -24,7 +24,7 @@ constructor(private val otherParty: Party, private val checkSufficientSignatures
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     override fun call(): SignedTransaction {
         return receive<SignedTransaction>(otherParty).unwrap {
-            subFlow(net.corda.core.internal.ResolveTransactionsFlow(it, otherParty))
+            subFlow(ResolveTransactionsFlow(it, otherParty))
             it.verify(serviceHub, checkSufficientSignatures)
             it
         }

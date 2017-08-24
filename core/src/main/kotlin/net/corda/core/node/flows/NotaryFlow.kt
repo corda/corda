@@ -11,7 +11,6 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchDataFlow
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable

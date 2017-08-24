@@ -7,6 +7,7 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.flows.CollectSignaturesFlow
 import net.corda.core.node.flows.FinalityFlow
+import net.corda.core.node.flows.SignTransactionFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
