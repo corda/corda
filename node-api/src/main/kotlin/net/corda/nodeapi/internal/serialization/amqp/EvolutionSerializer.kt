@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.EvolvedSerializerConstructor
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.nodeapi.internal.serialization.carpenter.getTypeAsClass
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -16,9 +16,8 @@ import kotlin.reflect.jvm.javaType
 class EvolutionSerializer(
         clazz: Type,
         factory: SerializerFactory,
-        val oldParams : Map<String, OldParam>,
-        val newParams : Map<String, Boolean>,
-        override val kotlinConstructor: KFunction<Any>?) : ObjectSerializer (clazz, factory) {
+        val readers: List<OldParam?>,
+        override val kotlinConstructor: KFunction<Any>?) : ObjectSerializer(clazz, factory) {
 
     // explicitly null this out as we won't be using this list
     override val propertySerializers: Collection<PropertySerializer> = listOf()
@@ -32,7 +31,7 @@ class EvolutionSerializer(
      * order may have been changed and we need to know where into the list to look
      * @param property object to read the actual property value
      */
-    data class OldParam (val type: Type, val idx: Int, val property: PropertySerializer) {
+    data class OldParam(val type: Type, val idx: Int, val property: PropertySerializer) {
         fun readProperty(paramValues: List<*>, schema: Schema, input: DeserializationInput) =
                 property.readProperty(paramValues[idx], schema, input)
     }
@@ -52,12 +51,12 @@ class EvolutionSerializer(
             val clazz: Class<*> = type.asClass()!!
             if (!isConcrete(clazz)) return null
 
-            val oldArgumentSet = oldArgs.map { Pair (it.key, it.value) }
+            val oldArgumentSet = oldArgs.map { Pair(it.key, it.value) }
 
             var maxConstructorVersion = Integer.MIN_VALUE
             var constructor: KFunction<Any>? = null
             clazz.kotlin.constructors.forEach {
-                val version = it.findAnnotation<EvolvedSerializerConstructor>()?.version ?: Integer.MIN_VALUE
+                val version = it.findAnnotation<DeprecatedConstructorForDeserialization>()?.version ?: Integer.MIN_VALUE
                 if (oldArgumentSet.containsAll(it.parameters.map { v -> Pair(v.name, v.type.javaType) }) &&
                         version > maxConstructorVersion) {
                     constructor = it
@@ -79,8 +78,8 @@ class EvolutionSerializer(
          * @param new is the Serializer built for the Class as it exists now, not
          * how it was serialised and persisted.
          */
-        fun make (old: CompositeType, new: ObjectSerializer,
-                  factory: SerializerFactory) : AMQPSerializer<Any> {
+        fun make(old: CompositeType, new: ObjectSerializer,
+                 factory: SerializerFactory): AMQPSerializer<Any> {
 
             val oldFieldToType = old.fields.map {
                 it.name as String? to it.getTypeAsClass(factory.classloader) as Type
@@ -98,14 +97,19 @@ class EvolutionSerializer(
                         returnType, idx++, PropertySerializer.make(it.name, null, returnType, factory))
             }
 
-            val newArgs = constructor.parameters.associateBy({ it.name!! }, {it.type.isMarkedNullable})
+            val readers = constructor.parameters.map {
+                oldArgs[it.name!!] ?: if (!it.type.isMarkedNullable) {
+                    throw NotSerializableException(
+                            "New parameter ${it.name} is mandatory, should be nullable for evolution to worK")
+                } else null
+            }
 
-            return EvolutionSerializer(new.type, factory, oldArgs, newArgs, constructor)
+            return EvolutionSerializer(new.type, factory, readers, constructor)
         }
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        throw IllegalAccessException ("It should be impossible to write an evolution serializer")
+        throw IllegalAccessException("It should be impossible to write an evolution serializer")
     }
 
     /**
@@ -118,15 +122,7 @@ class EvolutionSerializer(
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
-        return construct(newParams.map {
-            val param = oldParams[it.key]
-            if (param == null && !it.value) {
-                throw NotSerializableException(
-                        "New parameter ${it.key} is mandatory, should be nullable for evolution to worK")
-            }
-
-            param?.readProperty(obj, schema, input)
-        })
+        return construct(readers.map { it?.readProperty(obj, schema, input) })
     }
 }
 
