@@ -109,7 +109,13 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                   noNetworkMap: Boolean = false,
                   waitForConnection: Boolean = true): CordaFuture<Node> {
         val networkMapConf = if (noNetworkMap) {
-            mapOf()
+            // Nonexistent network map service address.
+            mapOf(
+                    "networkMapService" to mapOf(
+                            "address" to "localhost:10000",
+                            "legalName" to networkMapNode.info.legalIdentity.name.toString()
+                    )
+            )
         } else {
             mapOf(
                     "networkMapService" to mapOf(
