@@ -2,7 +2,7 @@ package net.corda.services.messaging
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.internal.elapsedTime
 import net.corda.core.internal.times
 import net.corda.core.messaging.MessageRecipients
@@ -38,7 +38,7 @@ class P2PMessagingTest : NodeBasedTest() {
     @Test
     fun `network map will work after restart`() {
         val identities = listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
-        fun startNodes() = identities.map { startNode(it.name) }.transpose()
+        fun startNodes() = transpose(identities.map { startNode(it.name) })
 
         val startUpDuration = elapsedTime { startNodes().getOrThrow() }
         // Start the network map a second time - this will restore message queues from the journal.
@@ -74,7 +74,7 @@ class P2PMessagingTest : NodeBasedTest() {
                 DUMMY_MAP.name,
                 advertisedServices = setOf(distributedService),
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
-        val (serviceNode2, alice) = listOf(
+        val (serviceNode2, alice) = transpose(listOf(
                 startNode(
                         SERVICE_2_NAME,
                         advertisedServices = setOf(distributedService),
@@ -82,7 +82,7 @@ class P2PMessagingTest : NodeBasedTest() {
                                 "notaryNodeAddress" to freeLocalHostAndPort().toString(),
                                 "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),
                 startNode(ALICE.name)
-        ).transpose().getOrThrow()
+        )).getOrThrow()
 
         assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), DISTRIBUTED_SERVICE_NAME, alice)
     }

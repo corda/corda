@@ -1,8 +1,8 @@
 package net.corda.verifier
 
 import net.corda.client.mock.generateOrFail
-import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.LedgerTransaction
@@ -41,7 +41,7 @@ class VerifierTests {
             val alice = aliceFuture.get()
             startVerifier(alice)
             alice.waitUntilNumberOfVerifiers(1)
-            val results = transactions.map { alice.verifyTransaction(it) }.transpose().get()
+            val results = transpose(transactions.map { alice.verifyTransaction(it) }).get()
             results.forEach {
                 if (it != null) {
                     throw it
@@ -61,7 +61,7 @@ class VerifierTests {
                 startVerifier(alice)
             }
             alice.waitUntilNumberOfVerifiers(numberOfVerifiers)
-            val results = transactions.map { alice.verifyTransaction(it) }.transpose().get()
+            val results = transpose(transactions.map { alice.verifyTransaction(it) }).get()
             results.forEach {
                 if (it != null) {
                     throw it
@@ -85,7 +85,7 @@ class VerifierTests {
             val futures = transactions.map { transaction ->
                 val future = alice.verifyTransaction(transaction)
                 // Kill verifiers as results are coming in, forcing artemis to redistribute.
-                future.map {
+                map(future) {
                     val remaining = remainingTransactionsCount.decrementAndGet()
                     when (remaining) {
                         33 -> verifier1.get().process.destroy()
@@ -94,7 +94,7 @@ class VerifierTests {
                     it
                 }
             }
-            futures.transpose().get()
+            transpose(futures).get()
         }
     }
 
@@ -106,7 +106,7 @@ class VerifierTests {
             val alice = aliceFuture.get()
             val futures = transactions.map { alice.verifyTransaction(it) }
             startVerifier(alice)
-            futures.transpose().get()
+            transpose(futures).get()
         }
     }
 

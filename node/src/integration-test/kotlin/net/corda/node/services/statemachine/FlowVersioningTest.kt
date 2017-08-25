@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.ALICE
@@ -16,9 +16,9 @@ import org.junit.Test
 class FlowVersioningTest : NodeBasedTest() {
     @Test
     fun `getFlowContext returns the platform version for core flows`() {
-        val (alice, bob) = listOf(
+        val (alice, bob) = transpose(listOf(
                 startNode(ALICE.name, platformVersion = 2),
-                startNode(BOB.name, platformVersion = 3)).transpose().getOrThrow()
+                startNode(BOB.name, platformVersion = 3))).getOrThrow()
         bob.installCoreFlow(PretendInitiatingCoreFlow::class, ::PretendInitiatedCoreFlow)
         val (alicePlatformVersionAccordingToBob, bobPlatformVersionAccordingToAlice) = alice.services.startFlow(
                 PretendInitiatingCoreFlow(bob.info.legalIdentity)).resultFuture.getOrThrow()

@@ -329,8 +329,8 @@ simultaneously. But it gets complicated when you want to issue or exit one state
 Things get harder still once you want to split and merge states. We say states are *fungible* if they are
 treated identically to each other by the recipient, despite the fact that they aren't quite identical. Dollar bills are
 fungible because even though one may be worn/a bit dirty and another may be crisp and new, they are still both worth
-exactly $1. Likewise, ten $1 bills are almost exactly equivalent to one $10 bill. On the other hand, $10 and ?10 are not
-fungible: if you tried to pay for something that cost ?20 with $10+?10 notes your trade would not be accepted.
+exactly $1. Likewise, ten $1 bills are almost exactly equivalent to one $10 bill. On the other hand, $10 and £10 are not
+fungible: if you tried to pay for something that cost £20 with $10+£10 notes your trade would not be accepted.
 
 To make all this easier the contract API provides a notion of groups. A group is a set of input states and output states
 that should be checked for validity together.
@@ -339,11 +339,11 @@ Consider the following simplified currency trade transaction:
 
 * **Input**:  $12,000 owned by Alice   (A)
 * **Input**:   $3,000 owned by Alice   (A)
-* **Input**:  ?10,000 owned by Bob     (B)
-* **Output**: ?10,000 owned by Alice   (B)
+* **Input**:  £10,000 owned by Bob     (B)
+* **Output**: £10,000 owned by Alice   (B)
 * **Output**: $15,000 owned by Bob     (A)
 
-In this transaction Alice and Bob are trading $15,000 for ?10,000. Alice has her money in the form of two different
+In this transaction Alice and Bob are trading $15,000 for £10,000. Alice has her money in the form of two different
 inputs e.g. because she received the dollars in two payments. The input and output amounts do balance correctly, but
 the cash smart contract must consider the pounds and the dollars separately because they are not fungible: they cannot
 be merged together. So we have two groups: A and B.

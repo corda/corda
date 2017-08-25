@@ -1,7 +1,7 @@
 package net.corda.irs
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
@@ -44,19 +44,19 @@ class IRSDemoTest : IntegrationTestCategory {
     @Test
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
-            val (controller, nodeA, nodeB) = listOf(
+            val (controller, nodeA, nodeB) = transpose(listOf(
                     startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
                     startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
                     startNode(DUMMY_BANK_B.name)
-            ).transpose().getOrThrow()
+            )).getOrThrow()
 
             log.info("All nodes started")
 
-            val (controllerAddr, nodeAAddr, nodeBAddr) = listOf(
+            val (controllerAddr, nodeAAddr, nodeBAddr) = transpose(listOf(
                     startWebserver(controller),
                     startWebserver(nodeA),
                     startWebserver(nodeB)
-            ).transpose().getOrThrow().map { it.listenAddress }
+            )).getOrThrow().map { it.listenAddress }
 
             log.info("All webservers started")
 

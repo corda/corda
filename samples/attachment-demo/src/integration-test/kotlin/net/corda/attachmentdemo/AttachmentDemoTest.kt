@@ -1,7 +1,7 @@
 package net.corda.attachmentdemo
 
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
@@ -19,11 +19,11 @@ class AttachmentDemoTest {
         val numOfExpectedBytes = 10_000_000
         driver(dsl = {
             val demoUser = listOf(User("demo", "demo", setOf(startFlowPermission<AttachmentDemoFlow>())))
-            val (nodeA, nodeB) = listOf(
+            val (nodeA, nodeB) = transpose(listOf(
                     startNode(DUMMY_BANK_A.name, rpcUsers = demoUser),
                     startNode(DUMMY_BANK_B.name, rpcUsers = demoUser),
                     startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
-            ).transpose().getOrThrow()
+            )).getOrThrow()
 
             val senderThread = CompletableFuture.supplyAsync {
                 nodeA.rpcClientToNode().start(demoUser[0].username, demoUser[0].password).use {
