@@ -271,7 +271,7 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
 
     init {
         require(bytes.size == 32) { "Privacy salt should be 32 bytes." }
-        require(!bytes.all { it == 0.toByte() }) { "Privacy salt should not be all zeros." }
+        require(bytes.any { it != 0.toByte() }) { "Privacy salt should not be all zeros." }
     }
 }
 

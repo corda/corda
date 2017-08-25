@@ -2,10 +2,14 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58
 import net.corda.core.utilities.toSHA256Bytes
 import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.security.*
 
 /**
@@ -184,3 +188,26 @@ fun random63BitValue(): Long {
         }
     }
 }
+
+/**
+ * Compute the hash of each serialised component so as to be used as Merkle tree leaf. The resultant output (leaf) is
+ * calculated as SHA256d(nonce || serializedComponent), where nonce is computed from [computeNonce].
+ */
+fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
+        componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
+
+/** Return the SHA256d(nonce || serializedComponent). */
+fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)
+
+/** Serialise the object and return the hash of the serialized bytes. */
+fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationDefaults.P2P_CONTEXT.withoutReferences()).bytes.sha256()
+
+/**
+ * Method to compute a nonce based on privacySalt, component group index and component internal index.
+ * SHA256d is used to prevent length extension attacks.
+ * @param privacySalt a [PrivacySalt].
+ * @param groupIndex the fixed index (ordinal) of this component group.
+ * @param internalIndex the internal index of this object in its corresponding components list.
+ * @return SHA256d(privacySalt || groupIndex || internalIndex)
+ */
+fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())
