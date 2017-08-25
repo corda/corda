@@ -287,7 +287,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         // linear ids externalId
         criteria.externalId?.let {
             val externalIds = criteria.externalId as List<String>
-            predicateSet.add(criteriaBuilder.and(vaultLinearStates.get<String>("externalId").`in`(externalIds)))
+            if (externalIds.isNotEmpty())
+                predicateSet.add(criteriaBuilder.and(vaultLinearStates.get<String>("externalId").`in`(externalIds)))
         }
 
         // deal participants
