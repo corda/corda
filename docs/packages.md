@@ -5,11 +5,12 @@ the java.time API, some core types, and Kotlin data classes.
 
 # Package net.corda.client.jfx.model
 
-Data models for the JavaFX client to Corda. These contain observables which are updated via the Corda RPC interface and notify JavaFX of changes.
+Data models for binding data feeds from Corda nodes into a JavaFX user interface, by presenting the data as [javafx.beans.Observable]
+types.
 
 # Package net.corda.client.jfx.utils
 
-Utility classes (i.e. data classes) used by the JavaFX client.
+Utility classes (i.e. data classes) used by the Corda JavaFX client.
 
 # Package net.corda.client.mock
 
@@ -21,7 +22,8 @@ RPC client interface to Corda, for use both by user-facing client and integratio
 
 # Package net.corda.core.concurrent
 
-Concurrency/multi-threading support classes for Corda, primarily providing support for the promises pattern.
+Provides a simplified [java.util.concurrent.Future] class that allows registration of a callback to execute when the future
+is complete.
 
 # Package net.corda.core.contracts
 
@@ -47,8 +49,7 @@ Data classes which model different forms of identity (potentially with supportin
 
 # Package net.corda.core.internal
 
-APIs and implementations which are currently being revised and are subject to future change. Generally these should be
-treated as non-public.
+Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
 
 # Package net.corda.core.jackson
 
@@ -74,3 +75,16 @@ actual states rather than state references).
 # Package net.corda.finance.utils
 
 A collection of utilities for summing financial states, for example, summing obligations to get total debts.
+
+# Package net.corda.node.internal
+
+Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
+
+# Package net.corda.node.services
+
+Implementations of services used by Corda nodes.
+
+# Package net.corda.node.services.api
+
+Non-core node service APIs; typically these are not used outside of the node itself.
+
