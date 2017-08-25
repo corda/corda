@@ -1,4 +1,4 @@
-package net.corda.jackson
+package net.corda.client.jackson
 
 import com.fasterxml.jackson.databind.SerializationFeature
 import net.corda.core.contracts.Amount

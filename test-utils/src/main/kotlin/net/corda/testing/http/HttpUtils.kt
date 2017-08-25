@@ -22,7 +22,7 @@ object HttpUtils {
                 .readTimeout(60, TimeUnit.SECONDS).build()
     }
     val defaultMapper: ObjectMapper by lazy {
-        net.corda.jackson.JacksonSupport.createNonRpcMapper()
+        net.corda.client.jackson.JacksonSupport.createNonRpcMapper()
     }
 
     fun putJson(url: URL, data: String): Boolean {

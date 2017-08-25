@@ -1,4 +1,4 @@
-package net.corda.jackson
+package net.corda.client.jackson
 
 import net.corda.core.crypto.SecureHash
 import org.junit.Assert.assertArrayEquals

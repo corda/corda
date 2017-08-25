@@ -61,7 +61,7 @@ class IRSDemoTest : IntegrationTestCategory {
             log.info("All webservers started")
 
             val (_, nodeAApi, nodeBApi) = listOf(controller, nodeA, nodeB).zip(listOf(controllerAddr, nodeAAddr, nodeBAddr)).map {
-                val mapper = net.corda.jackson.JacksonSupport.createDefaultMapper(it.first.rpc)
+                val mapper = net.corda.client.jackson.JacksonSupport.createDefaultMapper(it.first.rpc)
                 registerFinanceJSONMappers(mapper)
                 HttpApi.fromHostAndPort(it.second, "api/irs", mapper = mapper)
             }

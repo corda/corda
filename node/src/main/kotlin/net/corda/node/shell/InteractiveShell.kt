@@ -21,8 +21,8 @@ import net.corda.core.internal.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.utilities.loggerFor
-import net.corda.jackson.JacksonSupport
-import net.corda.jackson.StringToMethodCallParser
+import net.corda.client.jackson.JacksonSupport
+import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
