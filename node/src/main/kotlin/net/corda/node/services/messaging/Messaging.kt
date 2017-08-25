@@ -9,7 +9,6 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.node.services.api.DEFAULT_SESSION_ID
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
@@ -28,6 +27,14 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 interface MessagingService {
+    companion object {
+        /**
+         * Session ID to use for services listening for the first message in a session (before a
+         * specific session ID has been established).
+         */
+        val DEFAULT_SESSION_ID = 0L
+    }
+
     /**
      * The provided function will be invoked for each received message whose topic matches the given string.  The callback
      * will run on threads provided by the messaging service, and the callback is expected to be thread safe as a result.
@@ -112,7 +119,7 @@ interface MessagingService {
  * @param sessionID identifier for the session the message is part of. For messages sent to services before the
  * construction of a session, use [DEFAULT_SESSION_ID].
  */
-fun MessagingService.createMessage(topic: String, sessionID: Long = DEFAULT_SESSION_ID, data: ByteArray): Message
+fun MessagingService.createMessage(topic: String, sessionID: Long = MessagingService.DEFAULT_SESSION_ID, data: ByteArray): Message
         = createMessage(TopicSession(topic, sessionID), data)
 
 /**
@@ -191,8 +198,8 @@ interface MessageHandlerRegistration
  * a session is established, use [DEFAULT_SESSION_ID].
  */
 @CordaSerializable
-data class TopicSession(val topic: String, val sessionID: Long = DEFAULT_SESSION_ID) {
-    fun isBlank() = topic.isBlank() && sessionID == DEFAULT_SESSION_ID
+data class TopicSession(val topic: String, val sessionID: Long = MessagingService.DEFAULT_SESSION_ID) {
+    fun isBlank() = topic.isBlank() && sessionID == MessagingService.DEFAULT_SESSION_ID
     override fun toString(): String = "$topic.$sessionID"
 }
 
