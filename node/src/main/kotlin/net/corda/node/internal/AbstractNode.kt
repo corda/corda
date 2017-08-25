@@ -416,14 +416,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val legalIdentity = obtainIdentity("identity", configuration.myLegalName)
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
-        saveToFile(this)
-        System.getProperty("corda.NodeInfoQuit")?.let {
-            log.info("Peacefully quitting after having written my NodeInfo to disk")
-            System.exit(0)
-        }
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService, services.vaultQueryService,
                 services.keyManagementService, services.identityService, platformClock, services.schedulerService)
         makeAdvertisedServices(tokenizableServices)
+
+        System.getProperty("corda.NodeInfoQuit")?.let {
+            saveToFile(this)
+            log.info("Peacefully quitting after having written my NodeInfo to disk")
+            System.exit(0)
+        }
+
         return tokenizableServices
     }
 
@@ -491,7 +493,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val advertisedServiceEntries = makeServiceEntries()
         val allIdentities = advertisedServiceEntries.map { it.identity }.toSet() // TODO Add node's legalIdentity (after services removal).
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, platformClock.instant().toEpochMilli())
+        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, 0)
     }
 
     /**

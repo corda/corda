@@ -169,7 +169,7 @@ class Cordform extends DefaultTask {
         }
         
         for (source in nodes) {
-            for (destination in nodes) {
+            for (destination in nodes) if (source.nodeDir != destination.nodeDir) {
                 project.copy {
                     from "${source.nodeDir.toString()}/"
                     include 'nodeInfo-*'

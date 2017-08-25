@@ -50,7 +50,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
     // This name "Notary" is hard-coded into BankOfCordaClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.
-    networkMap "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
+    //networkMap "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
     node {
         name "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
         advertisedServices = ["corda.notary.validating"]
