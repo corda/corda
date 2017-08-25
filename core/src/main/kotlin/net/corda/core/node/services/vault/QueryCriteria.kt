@@ -4,12 +4,12 @@ package net.corda.core.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
-import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
 import javax.persistence.criteria.Predicate
@@ -65,6 +65,7 @@ sealed class QueryCriteria {
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
     data class LinearStateQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
+                                                                  val linearId: List<UniqueIdentifier>? = null,
                                                                   val uuid: List<UUID>? = null,
                                                                   val externalId: List<String>? = null,
                                                                   override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
