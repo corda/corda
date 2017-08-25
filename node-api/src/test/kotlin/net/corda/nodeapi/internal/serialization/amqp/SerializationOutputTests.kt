@@ -15,11 +15,13 @@ import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
 import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.testing.BOB_IDENTITY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
+import org.junit.Ignore
 import org.junit.Test
 import java.io.IOException
 import java.io.NotSerializableException
@@ -708,6 +710,48 @@ class SerializationOutputTests {
 
         val obj = Period.of(99, 98, 97)
         serdes(obj, factory, factory2)
+    }
+
+    // TODO: ignored due to Proton-J bug https://issues.apache.org/jira/browse/PROTON-1551
+    @Ignore
+    @Test
+    fun `test certificate holder serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+
+        val obj = BOB_IDENTITY.certificate
+        serdes(obj, factory, factory2)
+    }
+
+    // TODO: ignored due to Proton-J bug https://issues.apache.org/jira/browse/PROTON-1551
+    @Ignore
+    @Test
+    fun `test party and certificate serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory2))
+
+        val obj = BOB_IDENTITY
+        serdes(obj, factory, factory2)
+    }
+
+    class OtherGeneric<T : Any>
+
+    open class GenericSuperclass<T : Any>(val param: OtherGeneric<T>)
+
+    class GenericSubclass(param: OtherGeneric<String>) : GenericSuperclass<String>(param) {
+        override fun equals(other: Any?): Boolean = other is GenericSubclass // This is a bit lame but we just want to check it doesn't throw exceptions
+    }
+
+    @Test
+    fun `test generic in constructor serialize`() {
+        val obj = GenericSubclass(OtherGeneric<String>())
+        serdes(obj)
     }
 
     @Test
