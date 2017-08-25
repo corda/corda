@@ -11,7 +11,6 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.utilities.*
 import net.corda.finance.*
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
@@ -1338,8 +1337,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.EXTERNAL_ID), Sort.Direction.DESC)))
 
             val results = vaultQuerySvc.queryBy<LinearState>(compositeCriteria, sorting = sorting)
-            assertThat(results.statesMetadata).hasSize(13)
-            assertThat(results.states).hasSize(13)
+            assertThat(results.statesMetadata).hasSize(4)
+            assertThat(results.states).hasSize(4)
         }
     }
 
@@ -1860,13 +1859,13 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 services.fillWithSomeTestLinearStates(1, "TEST1")
                 val aState = services.fillWithSomeTestLinearStates(1, "TEST2").states
                 services.consumeLinearStates(aState.toList(), DUMMY_NOTARY)
-                services.fillWithSomeTestLinearStates(1, "TEST3").states.first().state.data.linearId.id
+                services.fillWithSomeTestLinearStates(1, "TEST1").states.first().state.data.linearId.id
 
-                // 2 unconsumed states with same external ID, 1 with different external ID
+                // 2 unconsumed states with same external ID, 1 consumed with different external ID
             }
         database.transaction {
             val results = builder {
-                val externalIdCondition = VaultSchemaV1.VaultLinearStates::externalId.equal("TEST2")
+                val externalIdCondition = VaultSchemaV1.VaultLinearStates::externalId.equal("TEST1")
                 val externalIdCustomCriteria = VaultCustomQueryCriteria(externalIdCondition)
 
                 val uuidCondition = VaultSchemaV1.VaultLinearStates::uuid.equal(uuid)
@@ -1875,8 +1874,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 val criteria = externalIdCustomCriteria or uuidCustomCriteria
                 vaultQuerySvc.queryBy<LinearState>(criteria)
             }
-            assertThat(results.statesMetadata).hasSize(3)
-            assertThat(results.states).hasSize(3)
+            assertThat(results.statesMetadata).hasSize(2)
+            assertThat(results.states).hasSize(2)
         }
     }
 
@@ -1957,6 +1956,34 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
     }
 
+    @Test
+    fun `enriched and overridden composite query handles defaults correctly`() {
+        database.transaction {
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices)
+            services.fillWithSomeTestLinearStates(1, "ABC")
+            services.fillWithSomeTestDeals(listOf("123"))
+        }
+
+        database.transaction {
+            // Base criteria
+            val baseCriteria = VaultQueryCriteria(notary = listOf(DUMMY_NOTARY),
+                                                  status = Vault.StateStatus.CONSUMED)
+
+            // Enrich and override QueryCriteria with additional default attributes (such as soft locks)
+            val enrichedCriteria = VaultQueryCriteria(contractStateTypes = setOf(DealState::class.java),  // enrich
+                                                      softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(UUID.randomUUID())),
+                                                      status = Vault.StateStatus.UNCONSUMED)  // override
+            // Sorting
+            val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
+            val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
+
+            // Execute query
+            val results = services.vaultQueryService.queryBy<FungibleAsset<*>>(baseCriteria and enrichedCriteria, sorter).states
+            assertThat(results).hasSize(4)
+        }
+    }
+
     /**
      * Dynamic trackBy() tests
      */
@@ -1965,7 +1992,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun trackCashStates_unconsumed() {
         val updates =
             database.transaction {
+                // DOCSTART VaultQueryExample15
                 vaultQuerySvc.trackBy<Cash.State>().updates     // UNCONSUMED default
+                // DOCEND VaultQueryExample15
             }
         val (linearStates,dealStates) =
             database.transaction {

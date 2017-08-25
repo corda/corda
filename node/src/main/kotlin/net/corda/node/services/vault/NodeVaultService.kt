@@ -336,78 +336,6 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
     }
 
-    // TODO We shouldn't need to rewrite the query if we could modify the defaults.
-    private class QueryEditor<out T : ContractState>(val services: ServiceHub,
-                                                     val lockId: UUID,
-                                                     val contractType: Class<out T>) : IQueryCriteriaParser {
-        var alreadyHasVaultQuery: Boolean = false
-        var modifiedCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(contractStateTypes = setOf(contractType),
-                softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)),
-                status = Vault.StateStatus.UNCONSUMED)
-
-        override fun parseCriteria(criteria: QueryCriteria.CommonQueryCriteria): Collection<Predicate> {
-            modifiedCriteria = criteria
-            return emptyList()
-        }
-
-        override fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria): Collection<Predicate> {
-            modifiedCriteria = criteria
-            return emptyList()
-        }
-
-        override fun parseCriteria(criteria: QueryCriteria.LinearStateQueryCriteria): Collection<Predicate> {
-            modifiedCriteria = criteria
-            return emptyList()
-        }
-
-        override fun <L : PersistentState> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate> {
-            modifiedCriteria = criteria
-            return emptyList()
-        }
-
-        override fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate> {
-            modifiedCriteria = criteria.copy(contractStateTypes = setOf(contractType),
-                    softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)),
-                    status = Vault.StateStatus.UNCONSUMED)
-            alreadyHasVaultQuery = true
-            return emptyList()
-        }
-
-        override fun parseOr(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
-            parse(left)
-            val modifiedLeft = modifiedCriteria
-            parse(right)
-            val modifiedRight = modifiedCriteria
-            modifiedCriteria = modifiedLeft.or(modifiedRight)
-            return emptyList()
-        }
-
-        override fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
-            parse(left)
-            val modifiedLeft = modifiedCriteria
-            parse(right)
-            val modifiedRight = modifiedCriteria
-            modifiedCriteria = modifiedLeft.and(modifiedRight)
-            return emptyList()
-        }
-
-        override fun parse(criteria: QueryCriteria, sorting: Sort?): Collection<Predicate> {
-            val basicQuery = modifiedCriteria
-            criteria.visit(this)
-            modifiedCriteria = if (alreadyHasVaultQuery) modifiedCriteria else criteria.and(basicQuery)
-            return emptyList()
-        }
-
-        fun queryForEligibleStates(criteria: QueryCriteria): Vault.Page<T> {
-            val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
-            val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
-            parse(criteria, sorter)
-
-            return services.vaultQueryService.queryBy(contractType, modifiedCriteria, sorter)
-        }
-    }
-
-
     @Suspendable
     @Throws(StatesNotAvailableException::class)
     override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
@@ -418,9 +346,13 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             return emptyList()
         }
 
-        // TODO This helper code re-writes the query to alter the defaults on things such as soft locks
-        // and then runs the query. Ideally we would not need to do this.
-        val results = QueryEditor(services, lockId, contractType).queryForEligibleStates(eligibleStatesQuery)
+        // Enrich QueryCriteria with additional default attributes (such as soft locks)
+        val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
+        val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
+        val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
+                contractStateTypes = setOf(contractType),
+                softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)))
+        val results = services.vaultQueryService.queryBy(contractType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
         var claimedAmount = 0L
         val claimedStates = mutableListOf<StateAndRef<T>>()

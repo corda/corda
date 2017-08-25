@@ -192,8 +192,8 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             QueryCriteria vaultCriteria = new VaultQueryCriteria(status, contractStateTypes);
 
             List<UUID> linearIds = Collections.singletonList(ids.getSecond().getId());
-            QueryCriteria linearCriteriaAll = new LinearStateQueryCriteria(null, linearIds);
-            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(null, null, dealIds);
+            QueryCriteria linearCriteriaAll = new LinearStateQueryCriteria(null, linearIds, null, status);
+            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(null, null, dealIds, status);
 
             QueryCriteria compositeCriteria1 = dealCriteriaAll.or(linearCriteriaAll);
             QueryCriteria compositeCriteria2 = vaultCriteria.and(compositeCriteria1);

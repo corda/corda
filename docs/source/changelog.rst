@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Vault query common attributes (state status and contract state types) are now handled correctly when using composite
+  criteria specifications. State status is overridable. Contract states types are aggregatable.
+
 * Cash selection algorithm is now pluggable (with H2 being the default implementation)
 
 * Removed usage of Requery ORM library (repalced with JPA/Hibernate)
