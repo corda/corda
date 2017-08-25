@@ -1,5 +1,6 @@
 package net.corda.core.utilities
 
+import net.corda.core.serialization.CordaSerializable
 import java.net.URI
 
 /**
@@ -7,6 +8,7 @@ import java.net.URI
  * @param host a hostname or IP address. IPv6 addresses must not be enclosed in square brackets.
  * @param port a valid port number.
  */
+@CordaSerializable
 data class NetworkHostAndPort(val host: String, val port: Int) {
     companion object {
         internal val invalidPortFormat = "Invalid port: %s"

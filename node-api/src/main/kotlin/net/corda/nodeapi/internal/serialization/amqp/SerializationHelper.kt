@@ -81,7 +81,7 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
         val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz." +
                 " If using Java and the parameter name looks anonymous, check that you have the -parameters option specified in the Java compiler.")
         val returnType = resolveTypeVariables(getter.genericReturnType, type)
-        if (constructorParamTakesReturnTypeOfGetter(getter, param)) {
+        if (constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param)) {
             rc += PropertySerializer.make(name, getter, returnType, factory)
         } else {
             throw NotSerializableException("Property type $returnType for $name of $clazz differs from constructor parameter type ${param.type.javaType}")
@@ -90,7 +90,10 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
     return rc
 }
 
-private fun constructorParamTakesReturnTypeOfGetter(getter: Method, param: KParameter): Boolean = TypeToken.of(param.type.javaType).isSupertypeOf(getter.genericReturnType)
+private fun constructorParamTakesReturnTypeOfGetter(getterReturnType: Type, rawGetterReturnType: Type, param: KParameter): Boolean {
+    val typeToken = TypeToken.of(param.type.javaType)
+    return typeToken.isSupertypeOf(getterReturnType) || typeToken.isSupertypeOf(rawGetterReturnType)
+}
 
 private fun propertiesForSerializationFromAbstract(clazz: Class<*>, type: Type, factory: SerializerFactory): Collection<PropertySerializer> {
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.

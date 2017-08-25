@@ -37,6 +37,8 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.MonthDaySerializer(this))
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.PeriodSerializer(this))
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.ClassSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory))
             }
         }
     }

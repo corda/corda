@@ -373,7 +373,7 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                             // to the CorDapp but maybe reference to the JAR in the short term.
                             hasher.putUnencodedChars(type.name)
                         } else {
-                            fingerprintForObject(type, contextType, alreadySeen, hasher, factory)
+                            fingerprintForObject(type, type, alreadySeen, hasher, factory)
                         }
                     }
                 }
