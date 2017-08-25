@@ -1,14 +1,13 @@
 package net.corda.node.messaging
 
 import net.corda.core.node.services.ServiceInfo
-import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.TopicStringValidator
 import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.node.MockNetwork
-import org.junit.After
 import net.corda.testing.resetTestSerialization
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.util.*
@@ -70,7 +69,7 @@ class InMemoryMessagingTests {
         }
 
         // Node 1 sends a message and it should end up in finalDelivery, after we run the network
-        node1.network.send(node1.network.createMessage("test.topic", DEFAULT_SESSION_ID, bits), node2.network.myAddress)
+        node1.network.send(node1.network.createMessage("test.topic", data = bits), node2.network.myAddress)
 
         mockNet.runNetwork(rounds = 1)
 
@@ -87,7 +86,7 @@ class InMemoryMessagingTests {
 
         var counter = 0
         listOf(node1, node2, node3).forEach { it.network.addMessageHandler { _, _ -> counter++ } }
-        node1.network.send(node2.network.createMessage("test.topic", DEFAULT_SESSION_ID, bits), mockNet.messagingNetwork.everyoneOnline)
+        node1.network.send(node2.network.createMessage("test.topic", data = bits), mockNet.messagingNetwork.everyoneOnline)
         mockNet.runNetwork(rounds = 1)
         assertEquals(3, counter)
     }
@@ -106,8 +105,8 @@ class InMemoryMessagingTests {
             received++
         }
 
-        val invalidMessage = node2.network.createMessage("invalid_message", DEFAULT_SESSION_ID, ByteArray(0))
-        val validMessage = node2.network.createMessage("valid_message", DEFAULT_SESSION_ID, ByteArray(0))
+        val invalidMessage = node2.network.createMessage("invalid_message", data = ByteArray(0))
+        val validMessage = node2.network.createMessage("valid_message", data = ByteArray(0))
         node2.network.send(invalidMessage, node1.network.myAddress)
         mockNet.runNetwork()
         assertEquals(0, received)
@@ -118,8 +117,8 @@ class InMemoryMessagingTests {
 
         // Here's the core of the test; previously the unhandled message would cause runNetwork() to abort early, so
         // this would fail. Make fresh messages to stop duplicate uniqueMessageId causing drops
-        val invalidMessage2 = node2.network.createMessage("invalid_message", DEFAULT_SESSION_ID, ByteArray(0))
-        val validMessage2 = node2.network.createMessage("valid_message", DEFAULT_SESSION_ID, ByteArray(0))
+        val invalidMessage2 = node2.network.createMessage("invalid_message", data = ByteArray(0))
+        val validMessage2 = node2.network.createMessage("valid_message", data = ByteArray(0))
         node2.network.send(invalidMessage2, node1.network.myAddress)
         node2.network.send(validMessage2, node1.network.myAddress)
         mockNet.runNetwork()

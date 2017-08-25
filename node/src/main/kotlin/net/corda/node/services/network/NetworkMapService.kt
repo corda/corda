@@ -1,12 +1,12 @@
 package net.corda.node.services.network
 
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.ThreadBox
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -20,9 +20,9 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.AbstractNodeService
-import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.MessageHandlerRegistration
+import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ServiceRequestMessage
 import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.network.NetworkMapService.*
@@ -172,7 +172,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         handlers += addMessageHandler(QUERY_TOPIC) { req: QueryIdentityRequest -> processQueryRequest(req) }
         handlers += addMessageHandler(REGISTER_TOPIC) { req: RegistrationRequest -> processRegistrationRequest(req) }
         handlers += addMessageHandler(SUBSCRIPTION_TOPIC) { req: SubscribeRequest -> processSubscriptionRequest(req) }
-        handlers += network.addMessageHandler(PUSH_ACK_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
+        handlers += network.addMessageHandler(PUSH_ACK_TOPIC) { message, _ ->
             val req = message.data.deserialize<UpdateAcknowledge>()
             processAcknowledge(req)
         }
@@ -290,7 +290,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         //       to a MessageRecipientGroup that nodes join/leave, rather than the network map
         //       service itself managing the group
         val update = NetworkMapService.Update(wireReg, newMapVersion, network.myAddress).serialize().bytes
-        val message = network.createMessage(PUSH_TOPIC, DEFAULT_SESSION_ID, update)
+        val message = network.createMessage(PUSH_TOPIC, data = update)
 
         subscribers.locked {
             // Remove any stale subscribers

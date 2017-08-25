@@ -9,11 +9,9 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
-import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
-import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -126,7 +124,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
         val receivedMessages = LinkedBlockingQueue<Message>()
 
         val messagingClient = createAndStartClientAndServer(receivedMessages)
-        val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg".toByteArray())
+        val message = messagingClient.createMessage(topic, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -142,10 +140,10 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
         val receivedMessages = LinkedBlockingQueue<Message>()
 
         val messagingClient = createAndStartClientAndServer(receivedMessages)
-        val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg".toByteArray())
+        val message = messagingClient.createMessage(topic, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
+        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, data = "second msg".toByteArray())
         messagingClient.send(networkMapMessage, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -167,11 +165,11 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
 
         val messagingClient = createAndStartClientAndServer(receivedMessages)
         for (iter in 1..iterations) {
-            val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg $iter".toByteArray())
+            val message = messagingClient.createMessage(topic, data = "first msg $iter".toByteArray())
             messagingClient.send(message, messagingClient.myAddress)
         }
 
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, DEFAULT_SESSION_ID, "second msg".toByteArray())
+        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, data = "second msg".toByteArray())
         messagingClient.send(networkMapMessage, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()

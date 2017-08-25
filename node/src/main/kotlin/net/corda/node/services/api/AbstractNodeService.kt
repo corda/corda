@@ -27,7 +27,7 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
             addMessageHandler(topic: String,
                               crossinline handler: (Q) -> R,
                               crossinline exceptionConsumer: (Message, Exception) -> Unit): MessageHandlerRegistration {
-        return network.addMessageHandler(topic, DEFAULT_SESSION_ID) { message, _ ->
+        return network.addMessageHandler(topic, MessagingService.DEFAULT_SESSION_ID) { message, _ ->
             try {
                 val request = message.data.deserialize<Q>()
                 val response = handler(request)
