@@ -137,13 +137,15 @@ class Cordform extends DefaultTask {
                 it.build()
             }
             generateNodeInfos()
-            throw new IllegalStateException("The networkMap property refers to a node that isn't configured ($networkMapNodeName)")
-        }
-        nodes.each {
-            if(it != networkMapNode) {
-                it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
+
+            println "Starting without networkMapNode, this an experimental feature"
+        } else {
+            nodes.each {
+                if (it != networkMapNode) {
+                    it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
+                }
+                it.build()
             }
-            it.build()
         }
     }
 
