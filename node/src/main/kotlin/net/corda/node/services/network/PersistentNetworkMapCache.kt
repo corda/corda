@@ -9,6 +9,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.div
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -37,9 +38,9 @@ import net.corda.node.utilities.wrapWithDatabaseTransaction
 import org.bouncycastle.asn1.x500.X500Name
 import org.hibernate.Session
 import org.hibernate.SessionFactory
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.nio.file.Files
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
@@ -339,5 +340,33 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                 for (nodeInfo in result) it.remove(nodeInfo)
             }
         }
+    }
+
+    private fun loadFromFiles() {
+        logger.info("Loading network map from files..")
+        val configuration = serviceHub.configuration
+
+        val nodeInfoDirectory = configuration.baseDirectory / NodeInfoSerializer.NODE_INFO_FOLDER
+
+        if (Files.isDirectory(nodeInfoDirectory)) {
+            var readFiles = 0
+            for (file in nodeInfoDirectory.toFile().walk().maxDepth(1)) if (file.isFile) {
+                try {
+                    logger.info("Reading NodeInfo from file: ${file}")
+                    val nodeInfo = NodeInfoSerializer.loadFromFile(file)
+                    registeredNodes.put(nodeInfo.legalIdentityAndCert.owningKey, nodeInfo)
+                    logger.info("Loaded ${nodeInfo.legalIdentity.name.toString()}")
+                    changePublisher.onNext(MapChange.Added(nodeInfo)) // Redeploy bridges after reading from DB on startup.
+                    readFiles++
+                } catch (e: Exception) {
+                    logger.error("Exception parsing NodeInfo from file. ${file}: " + e)
+                    e.printStackTrace()
+                }
+            }
+            logger.info("Succesfully read and loaded ${readFiles} NodeInfo files.")
+        } else {
+            logger.info("$nodeInfoDirectory isn't a Directory, not loading NodeInfo from files")
+        }
+
     }
 }

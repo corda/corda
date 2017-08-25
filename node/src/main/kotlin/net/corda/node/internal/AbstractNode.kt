@@ -44,10 +44,9 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.*
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
-import net.corda.node.services.network.NodeRegistration
-import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -417,10 +416,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val legalIdentity = obtainIdentity("identity", configuration.myLegalName)
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
-
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService, services.vaultQueryService,
                 services.keyManagementService, services.identityService, platformClock, services.schedulerService)
         makeAdvertisedServices(tokenizableServices)
+
+        System.getProperty("corda.NodeInfoQuit")?.let {
+            NodeInfoSerializer.saveToFile(this)
+            log.info("Peacefully quitting after having written my NodeInfo to disk")
+            System.exit(0)
+        }
+
         return tokenizableServices
     }
 
@@ -488,7 +493,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val advertisedServiceEntries = makeServiceEntries()
         val allIdentities = advertisedServiceEntries.map { it.identity }.toSet() // TODO Add node's legalIdentity (after services removal).
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, platformClock.instant().toEpochMilli())
+        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, 0)
     }
 
     /**
