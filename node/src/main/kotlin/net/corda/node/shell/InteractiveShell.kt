@@ -110,7 +110,6 @@ object InteractiveShell {
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("clearNMC", "Clear node's NetworkMapCache", ClearNetworkMapCache::class.java)
         val shell = ShellLifecycle(dir).start(config)
 
         if (runSSH) {
@@ -210,14 +209,6 @@ object InteractiveShell {
 
     // TODO: This should become the default renderer rather than something used specifically by commands.
     private val yamlMapper by lazy { createOutputMapper(YAMLFactory()) }
-
-    /**
-     * Clear all network map data from local node cache.
-     */
-    @JvmStatic
-    fun clearNetworkMapCache() {
-        node.services.networkMapCache.clearNetworkMapCache()
-    }
 
     /**
      * Called from the 'flow' shell command. Takes a name fragment and finds a matching flow, or prints out

@@ -182,6 +182,10 @@ class CordaRPCOpsImpl(
 
     override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
 
+    override fun clearNetworkMapCache() {
+        services.networkMapCache.clearNetworkMapCache()
+    }
+
     companion object {
         private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
             return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.flowInitiator, flowLogic.track())
