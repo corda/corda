@@ -6,6 +6,7 @@ Corda has been architected from the ground up to encourage usage of industry sta
 Corda provides a number of flexible query mechanisms for accessing the Vault:
 
 - Vault Query API
+- using a JDBC session (as described in :ref:`Persistence <jdbc_session_ref>`)
 - custom JPA_/JPQL_ queries
 - custom 3rd party Data Access frameworks such as `Spring Data <http://projects.spring.io/spring-data>`_
 
@@ -62,7 +63,7 @@ There are four implementations of this interface which can be chained together t
 	   
 	.. note:: All contract states that extend the ``FungibleAsset`` now automatically persist that interfaces common state attributes to the **vault_fungible_states** table.
 
-3. ``LinearStateQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``LinearState`` and ``DealState`` contract state interfaces, used to represent entities that continuously supercede themselves, all of which share the same *linearId* (eg. trade entity states such as the ``IRSState`` defined in the SIMM valuation demo). Filterable attributes include: participant(s), linearId(s), dealRef(s).
+3. ``LinearStateQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``LinearState`` and ``DealState`` contract state interfaces, used to represent entities that continuously supercede themselves, all of which share the same *linearId* (eg. trade entity states such as the ``IRSState`` defined in the SIMM valuation demo). Filterable attributes include: participant(s), linearId(s), uuid(s), and externalId(s).
 	   
 	.. note:: All contract states that extend ``LinearState`` or ``DealState`` now automatically persist those interfaces common state attributes to the **vault_linear_states** table.
 
@@ -70,14 +71,14 @@ There are four implementations of this interface which can be chained together t
 
     .. note:: It is a requirement to register any custom contract schemas to be used in Vault Custom queries in the associated `CordaPluginRegistry` configuration for the respective CorDapp using the ``requiredSchemas`` configuration field (which specifies a set of `MappedSchema`)
 
-All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators, as also illustrated above.
+All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators.
 
 All ``QueryCriteria`` implementations provide an explicitly specifiable set of common attributes:
 
 1. State status attribute (``Vault.StateStatus``), which defaults to filtering on UNCONSUMED states.
    When chaining several criterias using AND / OR, the last value of this attribute will override any previous.
-2. Contract state types (``<Set<Class<out ContractState>>``), which will contain at minimum one type (by default this will be ``ContractState`` which resolves to all types).
-   When chaining several criteria using AND / OR, all specified contract state types are combined into a single set.
+2. Contract state types (``<Set<Class<out ContractState>>``), which will contain at minimum one type (by default this will be ``ContractState`` which resolves to all state types).
+   When chaining several criteria using ``and`` and ``or`` operators, all specified contract state types are combined into a single set.
 
 An example of a custom query is illustrated here:
 
@@ -107,7 +108,7 @@ An example of a custom query in Java is illustrated here:
     :start-after: DOCSTART VaultJavaQueryExample3
     :end-before: DOCEND VaultJavaQueryExample3
 
-.. note:: Current queries by ``Party`` specify the ``AbstractParty`` which may be concrete or anonymous. In the later case, where an anonymous party does not have an associated X500Name, then no query results will ever be produced. For performance reasons, queries do not use PublicKey as search criteria. Ongoing design work on identity manangement is likely to enhance identity based queries (including composite key criteria selection).
+.. note:: Queries by ``Party`` specify the ``AbstractParty`` which may be concrete or anonymous. In the later case, where an anonymous party does not have an associated X500Name, no query results will ever be produced. For performance reasons, queries do not use PublicKey as search criteria.
 
 Pagination
 ----------
@@ -154,8 +155,6 @@ Query for unconsumed states for a given notary:
     :start-after: DOCSTART VaultQueryExample4
     :end-before: DOCEND VaultQueryExample4
 
-.. note:: We are using the notaries X500Name as our search identifier.
-
 Query for unconsumed states for a given set of participants:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
@@ -170,7 +169,7 @@ Query for unconsumed states recorded between two time intervals:
     :start-after: DOCSTART VaultQueryExample6
     :end-before: DOCEND VaultQueryExample6
 
-.. note:: This example illustrates usage of a Between ColumnPredicate.
+.. note:: This example illustrates usage of a ``Between`` ``ColumnPredicate``.
 
 Query for all states with pagination specification (10 results per page):
 
@@ -179,7 +178,14 @@ Query for all states with pagination specification (10 results per page):
     :start-after: DOCSTART VaultQueryExample7
     :end-before: DOCEND VaultQueryExample7
 
-.. note:: The result set metadata field `totalStatesAvailable` allows you to further paginate accordingly.
+.. note:: The result set metadata field `totalStatesAvailable` allows you to further paginate accordingly as demonstrated in the following example.
+
+Query for all states using pagination specification and iterate using `totalStatesAvailable` field until no further pages available:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/events/ScheduledFlowTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExamplePaging
+    :end-before: DOCEND VaultQueryExamplePaging
 
 **LinearState and DealState queries using** ``LinearStateQueryCriteria``
 
@@ -389,77 +395,4 @@ The Corda Tutorials provide examples satisfying these additional Use Cases:
  .. _JPQL: http://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#hql
  .. _JPA: https://docs.spring.io/spring-data/jpa/docs/current/reference/html
 
-Upgrading from previous releases
----------------------------------
-
-Here follows a selection of the most common upgrade scenarios:
-
-1. ServiceHub usage to obtain Unconsumed states for a given contract state type
-   
-   Previously:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-		val yoStates = b.vault.unconsumedStates<Yo.State>()
-
-This query returned an ``Iterable<StateAndRef<T>>`` 
-
-   Now:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-		val yoStates = b.vault.queryBy<Yo.State>().states
-
-The query returns a ``Vault.Page`` result containing:
-
-	- states as a ``List<StateAndRef<T : ContractState>>`` up to a maximum of ``DEFAULT_PAGE_SIZE`` (200) where no ``PageSpecification`` provided, otherwise returns results according to the parameters ``pageNumber`` and ``pageSize`` specified in the supplied ``PageSpecification``.
-	- states metadata as a ``List<Vault.StateMetadata>`` containing Vault State metadata held in the Vault states table.
-	- a ``total`` number of results available if ``PageSpecification`` provided (otherwise returns -1). For pagination, this value can be used to issue subsequent queries with appropriately specified ``PageSpecification`` parameters (according to your paging needs and/or maximum memory capacity for holding large data sets). Note it is your responsibility to manage page numbers and sizes.
-	- status types used in this query: UNCONSUMED, CONSUMED, ALL
-	- other results as a [List] of any type (eg. aggregate function results with/without group by)
-
-2. ServiceHub usage obtaining linear heads for a given contract state type
-   
-   Previously:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-		val iouStates = serviceHub.vaultService.linearHeadsOfType<IOUState>()
-		val iouToSettle = iouStates[linearId] ?: throw Exception("IOUState with linearId $linearId not found.")
-
-   Now:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-		val criteria = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(linearId))
-		val iouStates = serviceHub.vaultService.queryBy<IOUState>(criteria).states
-
-		val iouToSettle = iouStates.singleOrNull() ?: throw Exception("IOUState with linearId $linearId not found.")
-   
-3. RPC usage was limited to using the ``vaultAndUpdates`` RPC method, which returned a snapshot and streaming updates as an Observable. 
-   In many cases, queries were not interested in the streaming updates. 
-
-   Previously:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-		val iouStates = services.vaultAndUpdates().first.filter { it.state.data is IOUState }
-
-   Now:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-		val iouStates = services.vaultQueryBy<IOUState>()
  

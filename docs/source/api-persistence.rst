@@ -100,6 +100,8 @@ processed to ensure only the ``X500Name`` of the identity is persisted where an 
 value is stored in the associated column. To preserve privacy, identity keys are never persisted. Developers should use
 the ``IdentityService`` to resolve keys from well know X500 identity names.
 
+.. _jdbc_session_ref:
+
 JDBC session
 ------------
 Apps may also interact directly with the underlying Node's database by using a standard

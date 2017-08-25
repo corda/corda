@@ -870,7 +870,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         val nativeQuery = "SELECT v.transaction_id, v.output_index FROM vault_states v WHERE v.state_status = 0"
 
         database.transaction {
-            val jdbcSession = database.createSession()
+            val jdbcSession = services.jdbcSession()
             val prepStatement = jdbcSession.prepareStatement(nativeQuery)
             val rs = prepStatement.executeQuery()
         // DOCEND JdbcSession
