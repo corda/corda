@@ -11,12 +11,11 @@ API: Transactions
 
 Transaction workflow
 --------------------
-There are four states the transaction can occupy:
+At any time, a transaction can occupy one of three states:
 
-* ``TransactionBuilder``, a builder for a transaction in construction
-* ``WireTransaction``, an immutable transaction
+* ``TransactionBuilder``, a builder for an in-construction transaction
 * ``SignedTransaction``, an immutable transaction with 1+ associated signatures
-* ``LedgerTransaction``, a transaction that can be checked for validity
+* ``LedgerTransaction``, an immutable transaction that can be checked for validity
 
 Here are the possible transitions between transaction states:
 
@@ -26,8 +25,8 @@ TransactionBuilder
 ------------------
 Creating a builder
 ^^^^^^^^^^^^^^^^^^
-The first step when creating a transaction is to instantiate a ``TransactionBuilder``. We can create a builder for each
-transaction type as follows:
+The first step when creating a new transaction is to instantiate a ``TransactionBuilder``. We create a builder for a
+transaction as follows:
 
 .. container:: codeset
 
@@ -342,7 +341,7 @@ SignedTransaction
 -----------------
 A ``SignedTransaction`` is a combination of:
 
-* An immutable ``WireTransaction``
+* An immutable transaction
 * A list of signatures over that transaction
 
 .. container:: codeset
@@ -357,45 +356,9 @@ transaction's signatures.
 
 Verifying the transaction's contents
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-To verify a transaction, we need to retrieve any states in the transaction chain that our node doesn't
-currently have in its local storage from the proposer(s) of the transaction. This process is handled by a built-in flow
-called ``ReceiveTransactionFlow``. See :doc:`api-flows` for more details.
-
-When verifying a ``SignedTransaction``, we don't verify the ``SignedTransaction`` *per se*, but rather the
-``WireTransaction`` it contains. We extract this ``WireTransaction`` as follows:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 31
-       :end-before: DOCEND 31
-       :dedent: 12
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 31
-       :end-before: DOCEND 31
-       :dedent: 12
-
-However, this still isn't enough. The ``WireTransaction`` holds its inputs as ``StateRef`` instances, and its
-attachments as hashes. These do not provide enough information to properly validate the transaction's contents. To
-resolve these into actual ``ContractState`` and ``Attachment`` instances, we need to use the ``ServiceHub`` to convert
-the ``WireTransaction`` into a ``LedgerTransaction``:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 32
-       :end-before: DOCEND 32
-       :dedent: 12
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 32
-       :end-before: DOCEND 32
-       :dedent: 12
+To verify a transaction, we need to retrieve any states in the transaction chain that our node doesn't currently have
+in its local storage from the proposer(s) of the transaction. This process is handled by a built-in flow called
+``ReceiveTransactionFlow``. See :doc:`api-flows` for more details.
 
 We can now *verify* the transaction to ensure that it satisfies the contracts of all the transaction's input and output
 states:
@@ -415,7 +378,26 @@ states:
        :dedent: 12
 
 We will generally also want to conduct some additional validation of the transaction, beyond what is provided for in
-the contract. Here's an example of how we might do this:
+its contracts. However, the ``SignedTransaction`` holds its inputs as ``StateRef`` instances, and its attachments as
+hashes. These do not provide enough information to properly validate the transaction's contents. To resolve these into
+actual ``ContractState`` and ``Attachment`` instances, we need to use the ``ServiceHub`` to convert the
+``SignedTransaction`` into a ``LedgerTransaction``:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 32
+       :end-before: DOCEND 32
+       :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 32
+       :end-before: DOCEND 32
+       :dedent: 12
+
+We can now perform additional verification. Here's a simple example:
 
 .. container:: codeset
 
@@ -558,8 +540,8 @@ Or using another one of our public keys, as follows:
 
 Notarising and recording
 ^^^^^^^^^^^^^^^^^^^^^^^^
-Notarising and recording a transaction is handled by a built-in flow called ``FinalityFlow``. See
-:doc:`api-flows` for more details.
+Notarising and recording a transaction is handled by a built-in flow called ``FinalityFlow``. See :doc:`api-flows` for
+more details.
 
 Notary-change transactions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
