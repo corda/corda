@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import com.codahale.metrics.Gauge
 import io.atomix.catalyst.buffer.BufferInput
 import io.atomix.catalyst.buffer.BufferOutput
 import io.atomix.catalyst.serializer.Serializer
@@ -94,6 +95,22 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
 
     private lateinit var _clientFuture: CompletableFuture<CopycatClient>
     private lateinit var server: CopycatServer
+
+
+    init {
+        services.monitoringService.metrics.register("RaftCluster.ThisServerStatus", Gauge<String> {
+            server.state().name
+        })
+
+        services.monitoringService.metrics.register("RaftCluster.MembersCount", Gauge<Int> {
+            server.cluster().members().size
+        })
+
+        services.monitoringService.metrics.register("RaftCluster.Members", Gauge<List<String>> {
+            server.cluster().members().map { it.address().toString() }
+        })
+    }
+
     /**
      * Copycat clients are responsible for connecting to the cluster and submitting commands and queries that operate
      * on the cluster's replicated state machine.
