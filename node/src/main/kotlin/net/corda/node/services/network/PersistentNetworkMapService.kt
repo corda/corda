@@ -30,7 +30,10 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}network_map_nodes")
     class NetworkNode(
-            @EmbeddedId
+            @Id
+            @Column
+            var publicKey: String = "",
+
             @Column
             var nodeParty: NodeParty = NodeParty(),
 
@@ -52,34 +55,29 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
 
             @Column(name = "node_party_path", length = 4096)
             var certPath: ByteArray = ByteArray(0)
-    ): Serializable
+    )
 
     private companion object {
         private val factory = CertificateFactory.getInstance("X.509")
 
-        fun createNetworkNodesMap(): PersistentMap<PartyAndCertificate, NodeRegistrationInfo, NetworkNode, NodeParty> {
+        fun createNetworkNodesMap(): PersistentMap<PartyAndCertificate, NodeRegistrationInfo, NetworkNode, String> {
             return PersistentMap(
-                    toPersistentEntityKey = {  NodeParty(
-                            it.name.toString(),
-                            it.owningKey.toBase58String(),
-                            it.certificate.encoded,
-                            it.certPath.encoded
-                    ) },
+                    toPersistentEntityKey = { it.owningKey.toBase58String() },
                     fromPersistentEntity = {
                         Pair(PartyAndCertificate(factory.generateCertPath(ByteArrayInputStream(it.nodeParty.certPath))),
                                 it.registrationInfo.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
                     toPersistentEntity = { key: PartyAndCertificate, value: NodeRegistrationInfo ->
-                        NetworkNode().apply {
-                            // TODO: We should understand an X500Name database field type, rather than manually doing the conversion ourselves
-                            nodeParty = NodeParty(
+                        NetworkNode(
+                                publicKey = key.owningKey.toBase58String(),
+                                nodeParty = NodeParty(
                                     key.name.toString(),
                                     key.owningKey.toBase58String(),
                                     key.certificate.encoded,
                                     key.certPath.encoded
+                                ),
+                                registrationInfo = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                             )
-                            registrationInfo = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                        }
                     },
                     persistentEntityClass = NetworkNode::class.java
             )
