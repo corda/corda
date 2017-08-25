@@ -9,10 +9,10 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
+import net.corda.nodeapi.ArtemisMessagingComponent
 import java.io.ByteArrayInputStream
 import java.security.cert.CertificateFactory
 import javax.persistence.*
-import java.io.Serializable
 import java.util.*
 
 /**
@@ -30,77 +30,77 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}network_map_nodes")
     class NetworkNode(
-            @EmbeddedId
+            @Id @Column(name = "node_party_key")
+            var publicKey: String = "",
+
             @Column
             var nodeParty: NodeParty = NodeParty(),
 
-            @Lob
-            @Column
+            @Lob @Column
             var registrationInfo: ByteArray = ByteArray(0)
     )
 
     @Embeddable
-    data class NodeParty(
+    class NodeParty(
             @Column(name = "node_party_name")
             var name: String = "",
-
-            @Column(name = "node_party_key", length = 4096)
-            var owningKey: String = "", // PublicKey
 
             @Column(name = "node_party_certificate", length = 4096)
             var certificate: ByteArray = ByteArray(0),
 
             @Column(name = "node_party_path", length = 4096)
             var certPath: ByteArray = ByteArray(0)
-    ): Serializable
+    )
 
     private companion object {
         private val factory = CertificateFactory.getInstance("X.509")
 
-        fun createNetworkNodesMap(): PersistentMap<PartyAndCertificate, NodeRegistrationInfo, NetworkNode, NodeParty> {
+        fun createNetworkNodesMap(): PersistentMap<PartyAndCertificate, NodeRegistrationInfo, NetworkNode, String> {
             return PersistentMap(
-                    toPersistentEntityKey = {  NodeParty(
-                            it.name.toString(),
-                            it.owningKey.toBase58String(),
-                            it.certificate.encoded,
-                            it.certPath.encoded
-                    ) },
+                    toPersistentEntityKey = { it.owningKey.toBase58String() },
                     fromPersistentEntity = {
                         Pair(PartyAndCertificate(factory.generateCertPath(ByteArrayInputStream(it.nodeParty.certPath))),
                                 it.registrationInfo.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
                     toPersistentEntity = { key: PartyAndCertificate, value: NodeRegistrationInfo ->
-                        NetworkNode().apply {
-                            // TODO: We should understand an X500Name database field type, rather than manually doing the conversion ourselves
-                            nodeParty = NodeParty(
-                                    key.name.toString(),
-                                    key.owningKey.toBase58String(),
-                                    key.certificate.encoded,
-                                    key.certPath.encoded
-                            )
-                            registrationInfo = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                        }
+                        NetworkNode(
+                                publicKey = key.owningKey.toBase58String(),
+                                nodeParty = NodeParty(
+                                        key.name.toString(),
+                                        key.certificate.encoded,
+                                        key.certPath.encoded
+                                ),
+                                registrationInfo = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                        )
                     },
                     persistentEntityClass = NetworkNode::class.java
             )
         }
 
-        fun createNetworkSubscribersMap(): PersistentMap<SingleMessageRecipient, LastAcknowledgeInfo, NetworkSubscriber, ByteArray> {
+        fun createNetworkSubscribersMap(): PersistentMap<SingleMessageRecipient, LastAcknowledgeInfo, NetworkSubscriber, String> {
             return PersistentMap(
-                    toPersistentEntityKey = { it.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes},
+                    toPersistentEntityKey = { it.getPrimaryKeyBasedOnSubType() },
                     fromPersistentEntity = {
                         Pair(it.key.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
                                 it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
-                    toPersistentEntity = { _key: SingleMessageRecipient, _value: LastAcknowledgeInfo ->
-                        NetworkSubscriber().apply {
-                            key = _key.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                            value = _value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                        }
+                    toPersistentEntity = { k: SingleMessageRecipient, v: LastAcknowledgeInfo ->
+                        NetworkSubscriber(
+                                id = k.getPrimaryKeyBasedOnSubType(),
+                                key = k.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes,
+                                value = v.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                        )
                     },
                     persistentEntityClass = NetworkSubscriber::class.java
             )
         }
+
+        fun SingleMessageRecipient.getPrimaryKeyBasedOnSubType() =
+                if (this is ArtemisMessagingComponent.ArtemisPeerAddress) {
+                    this.hostAndPort.toString()
+                } else {
+                    this.toString()
+                }
     }
 
     override val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo> =
@@ -109,7 +109,9 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}network_map_subscribers")
     class NetworkSubscriber(
-            @Id
+            @Id @Column
+            var id: String = "",
+
             @Column(length = 4096)
             var key: ByteArray = ByteArray(0),
 
