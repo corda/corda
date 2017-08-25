@@ -1,9 +1,9 @@
 package net.corda.client.rpc
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.concurrent.CordaFutures.Companion.doneFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.thenMatch
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.getRpcContext
@@ -58,6 +58,8 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
 
     inner class TestOpsImpl : TestOps {
         override val protocolVersion = 1
+        // Do not remove the return type of the following method as the generated corresponding Java counterpart will have
+        // 2 methods (1 returning Void and the other returning void). In result this test suit will fail.
         override fun barf(): Unit = throw IllegalArgumentException("Barf!")
         override fun void() {}
         override fun someCalculation(str: String, num: Int) = "$str $num"
@@ -65,6 +67,8 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         override fun makeListenableFuture() = doneFuture(1)
         override fun makeComplicatedObservable() = complicatedObservable
         override fun makeComplicatedListenableFuture() = complicatedListenableFuturee
+        // Do not remove the return type of the following method as the generated corresponding Java counterpart will have
+        // 2 methods (1 returning Void and the other returning void). In result this test suit will fail.
         override fun addedLater(): Unit = throw IllegalStateException()
         override fun captureUser(): String = getRpcContext().currentUser.username
     }
@@ -160,9 +164,9 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
             val clientQuotes = LinkedBlockingQueue<String>()
             val clientFuture = proxy.makeComplicatedListenableFuture()
 
-            clientFuture.thenMatch({
+            thenMatch(clientFuture, {
                 val name = it.first
-                it.second.thenMatch({
+                thenMatch(it.second, {
                     clientQuotes += "Quote by $name: $it"
                 }, {})
             }, {})

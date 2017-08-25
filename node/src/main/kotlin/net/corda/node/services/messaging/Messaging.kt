@@ -2,7 +2,7 @@ package net.corda.node.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo

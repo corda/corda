@@ -3,10 +3,10 @@ package net.corda.node.internal
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.concurrent.CordaFutures.Companion.doneFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.flatMap
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.thenMatch
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
@@ -259,7 +259,7 @@ open class Node(override val configuration: FullNodeConfiguration,
      */
     override fun registerWithNetworkMap(): CordaFuture<Unit> {
         val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: doneFuture(Unit)
-        return networkMapConnection.flatMap { super.registerWithNetworkMap() }
+        return flatMap(networkMapConnection) { super.registerWithNetworkMap() }
     }
 
     override fun myAddresses(): List<NetworkHostAndPort> {
@@ -306,7 +306,7 @@ open class Node(override val configuration: FullNodeConfiguration,
         }
         super.start()
 
-        networkMapRegistrationFuture.thenMatch({
+        thenMatch(networkMapRegistrationFuture, {
             serverThread.execute {
                 // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
                 //

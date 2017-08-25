@@ -3,8 +3,8 @@
 package net.corda.core
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.thenMatch
 import rx.Observable
 import rx.Observer
 
@@ -12,7 +12,7 @@ import rx.Observer
 
 fun <A> CordaFuture<out A>.toObservable(): Observable<A> {
     return Observable.create { subscriber ->
-        thenMatch({
+        thenMatch(this, {
             subscriber.onNext(it)
             subscriber.onCompleted()
         }, {

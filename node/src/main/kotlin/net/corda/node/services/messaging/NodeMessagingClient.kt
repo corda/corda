@@ -2,8 +2,8 @@ package net.corda.node.services.messaging
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.concurrent.andForget
-import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.concurrent.CordaFutures.Companion.andForget
+import net.corda.core.internal.concurrent.CordaFutures.Companion.thenMatch
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
@@ -232,7 +232,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
             // Create a queue, consumer and producer for handling P2P network messages.
             p2pConsumer = makeP2PConsumer(session, true)
-            networkMapRegistrationFuture.thenMatch({
+            thenMatch(networkMapRegistrationFuture, {
                 state.locked {
                     log.info("Network map is complete, so removing filter from P2P consumer.")
                     try {
@@ -334,7 +334,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         while (!networkMapRegistrationFuture.isDone && processMessage(consumer)) {
         }
         with(networkMapRegistrationFuture) {
-            if (isDone) getOrThrow() else andForget(log) // Trigger node shutdown here to avoid deadlock in shutdown hooks.
+            if (isDone) getOrThrow() else andForget(this, log) // Trigger node shutdown here to avoid deadlock in shutdown hooks.
         }
     }
 

@@ -3,7 +3,7 @@ package net.corda.testing.node
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService

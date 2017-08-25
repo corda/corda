@@ -1,7 +1,7 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
@@ -32,12 +32,12 @@ class TraderDemoTest : NodeBasedTest() {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
-        val (nodeA, nodeB, bankNode) = listOf(
+        val (nodeA, nodeB, bankNode) = transpose(listOf(
                 startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)),
                 startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)),
                 startNode(BOC.name, rpcUsers = listOf(bankUser)),
                 startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        ).transpose().getOrThrow()
+        )).getOrThrow()
 
         nodeA.registerInitiatedFlow(BuyerFlow::class.java)
 

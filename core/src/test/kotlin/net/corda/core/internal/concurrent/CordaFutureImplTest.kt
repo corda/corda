@@ -2,6 +2,12 @@ package net.corda.core.internal.concurrent
 
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.andForget
+import net.corda.core.internal.concurrent.CordaFutures.Companion.flatMap
+import net.corda.core.internal.concurrent.CordaFutures.Companion.fork
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions
 import org.junit.Test
@@ -18,9 +24,9 @@ class CordaFutureTest {
     fun `fork works`() {
         val e = Executors.newSingleThreadExecutor()
         try {
-            assertEquals(100, e.fork { 100 }.getOrThrow())
+            assertEquals(100, fork(e) { 100 }.getOrThrow())
             val x = Exception()
-            val f = e.fork { throw x }
+            val f = fork(e) { throw x }
             Assertions.assertThatThrownBy { f.getOrThrow() }.isSameAs(x)
         } finally {
             e.shutdown()
@@ -45,21 +51,21 @@ class CordaFutureTest {
     fun `map works`() {
         run {
             val f = CordaFutureImpl<Int>()
-            val g = f.map { it * 2 }
+            val g = map(f) { it * 2 }
             f.set(100)
             assertEquals(200, g.getOrThrow())
         }
         run {
             val f = CordaFutureImpl<Int>()
             val x = Exception()
-            val g = f.map { throw x }
+            val g = map(f) { throw x }
             f.set(100)
             Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
         }
         run {
             val block = mock<(Any?) -> Any?>()
             val f = CordaFutureImpl<Int>()
-            val g = f.map(block)
+            val g = map(f, block)
             val x = Exception()
             f.setException(x)
             Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
@@ -71,28 +77,28 @@ class CordaFutureTest {
     fun `flatMap works`() {
         run {
             val f = CordaFutureImpl<Int>()
-            val g = f.flatMap { CordaFutureImpl<Int>().apply { set(it * 2) } }
+            val g = flatMap(f) { CordaFutureImpl<Int>().apply { set(it * 2) } }
             f.set(100)
             assertEquals(200, g.getOrThrow())
         }
         run {
             val f = CordaFutureImpl<Int>()
             val x = Exception()
-            val g = f.flatMap { CordaFutureImpl<Void>().apply { setException(x) } }
+            val g = flatMap(f) { CordaFutureImpl<Void>().apply { setException(x) } }
             f.set(100)
             Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
         }
         run {
             val f = CordaFutureImpl<Int>()
             val x = Exception()
-            val g: CordaFuture<Void> = f.flatMap { throw x }
+            val g: CordaFuture<Void> = flatMap(f) { throw x }
             f.set(100)
             Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
         }
         run {
             val block = mock<(Any?) -> CordaFuture<*>>()
             val f = CordaFutureImpl<Int>()
-            val g = f.flatMap(block)
+            val g = flatMap(f, block)
             val x = Exception()
             f.setException(x)
             Assertions.assertThatThrownBy { g.getOrThrow() }.isSameAs(x)
@@ -105,7 +111,7 @@ class CordaFutureTest {
         val log = mock<Logger>()
         val throwable = Exception("Boom")
         val executor = Executors.newSingleThreadExecutor()
-        executor.fork { throw throwable }.andForget(log)
+        andForget(fork(executor) { throw throwable }, log)
         executor.shutdown()
         while (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
             // Do nothing.
@@ -118,10 +124,10 @@ class TransposeTest {
     private val a = openFuture<Int>()
     private val b = openFuture<Int>()
     private val c = openFuture<Int>()
-    private val f = listOf(a, b, c).transpose()
+    private val f = transpose(listOf(a, b, c))
     @Test
     fun `transpose empty collection`() {
-        assertEquals(emptyList(), emptyList<CordaFuture<*>>().transpose().getOrThrow())
+        assertEquals(emptyList(), transpose(emptyList<CordaFuture<*>>()).getOrThrow())
     }
 
     @Test

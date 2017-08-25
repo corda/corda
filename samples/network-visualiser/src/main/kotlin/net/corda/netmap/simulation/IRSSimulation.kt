@@ -10,7 +10,11 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.concurrent.CordaFutures.Companion.flatMap
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.thenMatch
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.node.services.queryBy
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -45,14 +49,14 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     override fun startMainSimulation(): CordaFuture<Unit> {
         // TODO: Determine why this isn't happening via the network map
         mockNet.nodes.map { it.services.identityService }.forEach { service ->
-            mockNet.nodes.forEach { node -> service.registerIdentity(node.info.legalIdentityAndCert) }
+            mockNet.nodes.forEach { node -> service.verifyAndRegisterIdentity(node.info.legalIdentityAndCert) }
         }
 
         val future = openFuture<Unit>()
         om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap).map { it.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
         registerFinanceJSONMappers(om)
 
-        startIRSDealBetween(0, 1).thenMatch({
+        thenMatch(startIRSDealBetween(0, 1), {
             // Next iteration is a pause.
             executeOnNextIteration.add {}
             executeOnNextIteration.add {
@@ -68,14 +72,14 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
                     executeOnNextIteration.add {
                         val f = doNextFixing(0, 1)
                         if (f != null) {
-                            f.thenMatch(::onSuccess, ::onFailure)
+                            thenMatch(f, ::onSuccess, ::onFailure)
                         } else {
                             // All done!
                             future.set(Unit)
                         }
                     }
                 }
-                initialFixFuture!!.thenMatch(::onSuccess, ::onFailure)
+                thenMatch(initialFixFuture!!, ::onSuccess, ::onFailure)
             }
         }, {})
         return future
@@ -107,7 +111,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         if (nextFixingDate > currentDateAndTime.toLocalDate())
             currentDateAndTime = nextFixingDate.atTime(15, 0)
 
-        return listOf(futA, futB).transpose().map { Unit }
+        return map(transpose(listOf(futA, futB))) { Unit }
     }
 
     private fun startIRSDealBetween(i: Int, j: Int): CordaFuture<SignedTransaction> {
@@ -141,7 +145,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val acceptDealFlows: Observable<AcceptDealFlow> = node2.registerInitiatedFlow(AcceptDealFlow::class.java)
 
         @Suppress("UNCHECKED_CAST")
-       val acceptorTxFuture = acceptDealFlows.toFuture().flatMap {
+       val acceptorTxFuture = flatMap(acceptDealFlows.toFuture()) {
             (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture
         }
 
@@ -154,7 +158,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
                 node1.services.legalIdentityKey)
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
-        return listOf(instigatorTxFuture, acceptorTxFuture).transpose().flatMap { instigatorTxFuture }
+        return flatMap(transpose(listOf(instigatorTxFuture, acceptorTxFuture))) { instigatorTxFuture }
     }
 
     override fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {

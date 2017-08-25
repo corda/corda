@@ -1,8 +1,8 @@
 package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.RPCClientConfiguration
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.flatMap
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.User
@@ -40,14 +40,14 @@ open class AbstractRPCTest {
     ): TestProxy<I> {
         return when (mode) {
             RPCTestMode.InVm ->
-                startInVmRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration).flatMap {
-                    startInVmRpcClient<I>(rpcUser.username, rpcUser.password, clientConfiguration).map {
+                flatMap(startInVmRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration)) {
+                    map(startInVmRpcClient<I>(rpcUser.username, rpcUser.password, clientConfiguration)) {
                         TestProxy(it, { startInVmArtemisSession(rpcUser.username, rpcUser.password) })
                     }
                 }
             RPCTestMode.Netty ->
-                startRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration).flatMap { server ->
-                    startRpcClient<I>(server.broker.hostAndPort!!, rpcUser.username, rpcUser.password, clientConfiguration).map {
+                flatMap(startRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration)) { server ->
+                    map(startRpcClient<I>(server.broker.hostAndPort!!, rpcUser.username, rpcUser.password, clientConfiguration)) {
                         TestProxy(it, { startArtemisSession(server.broker.hostAndPort!!, rpcUser.username, rpcUser.password) })
                     }
                 }

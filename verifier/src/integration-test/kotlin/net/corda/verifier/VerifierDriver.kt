@@ -5,7 +5,11 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.concurrent.CordaFutures.Companion.doneFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.fork
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
+import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.div
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -175,7 +179,7 @@ data class VerifierDriverDSL(
 
     override fun startVerificationRequestor(name: X500Name): CordaFuture<VerificationRequestorHandle> {
         val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
-        return driverDSL.executorService.fork {
+        return fork(driverDSL.executorService) {
             startVerificationRequestorInternal(name, hostAndPort)
         }
     }
@@ -248,7 +252,7 @@ data class VerifierDriverDSL(
         log.info("Starting verifier connecting to address $address")
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
-        val processFuture = driverDSL.executorService.fork {
+        val processFuture = fork(driverDSL.executorService) {
             val verifierName = getTestX509Name("verifier$id")
             val baseDirectory = driverDSL.driverDirectory / verifierName.commonName
             val config = createConfiguration(baseDirectory, address)
@@ -258,7 +262,7 @@ data class VerifierDriverDSL(
             ProcessUtilities.startJavaProcess<Verifier>(listOf(baseDirectory.toString()), jdwpPort = jdwpPort)
         }
         driverDSL.shutdownManager.registerProcessShutdown(processFuture)
-        return processFuture.map(::VerifierHandle)
+        return map(processFuture, ::VerifierHandle)
     }
 
     private fun <A> NodeHandle.connectToNode(closure: (ClientSession) -> A): A {

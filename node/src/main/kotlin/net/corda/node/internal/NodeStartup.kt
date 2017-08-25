@@ -5,18 +5,14 @@ import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.orgName
-import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.CordaFutures.Companion.thenMatch
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
-import net.corda.node.utilities.TestClock
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
@@ -102,7 +98,7 @@ open class NodeStartup(val args: Array<String>) {
         node.start()
         printPluginsAndServices(node)
 
-        node.networkMapRegistrationFuture.thenMatch({
+        thenMatch(node.networkMapRegistrationFuture, {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             // TODO: Replace this with a standard function to get an unambiguous rendering of the X.500 name.
             val name = node.info.legalIdentity.name.orgName ?: node.info.legalIdentity.name.commonName
@@ -156,13 +152,12 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): FullNodeConfiguration {
-        val conf = try {
+        return try {
             cmdlineOptions.loadConfig()
         } catch (e: ConfigException) {
             println("Unable to load the configuration file: ${e.rootCause.message}")
             exitProcess(2)
         }
-        return conf
     }
 
     open protected fun banJavaSerialisation(conf: FullNodeConfiguration) {
@@ -173,13 +168,12 @@ open class NodeStartup(val args: Array<String>) {
         // Manifest properties are only available if running from the corda jar
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
-        val versionInfo = VersionInfo(
+        return VersionInfo(
                 manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
                 manifestValue("Corda-Release-Version") ?: "Unknown",
                 manifestValue("Corda-Revision") ?: "Unknown",
                 manifestValue("Corda-Vendor") ?: "Unknown"
         )
-        return versionInfo
     }
 
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {

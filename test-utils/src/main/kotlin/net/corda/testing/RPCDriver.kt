@@ -9,8 +9,8 @@ import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.concurrent.fork
-import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.fork
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
 import net.corda.core.internal.div
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
@@ -336,13 +336,13 @@ data class RPCDriverDSL(
             configuration: RPCServerConfiguration,
             ops: I
     ): CordaFuture<RpcServerHandle> {
-        return startInVmRpcBroker(rpcUser, maxFileSize, maxBufferedBytesPerClient).map { broker ->
+        return map(startInVmRpcBroker(rpcUser, maxFileSize, maxBufferedBytesPerClient)) { broker ->
             startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker)
         }
     }
 
     override fun <I : RPCOps> startInVmRpcClient(rpcOpsClass: Class<I>, username: String, password: String, configuration: RPCClientConfiguration): CordaFuture<I> {
-        return driverDSL.executorService.fork {
+        return fork(driverDSL.executorService) {
             val client = RPCClient<I>(inVmClientTransportConfiguration, configuration)
             val connection = client.start(rpcOpsClass, username, password)
             driverDSL.shutdownManager.registerShutdown {
@@ -374,7 +374,7 @@ data class RPCDriverDSL(
             customPort: NetworkHostAndPort?,
             ops: I
     ): CordaFuture<RpcServerHandle> {
-        return startRpcBroker(serverName, rpcUser, maxFileSize, maxBufferedBytesPerClient, customPort).map { broker ->
+        return map(startRpcBroker(serverName, rpcUser, maxFileSize, maxBufferedBytesPerClient, customPort)) { broker ->
             startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker)
         }
     }
@@ -386,7 +386,7 @@ data class RPCDriverDSL(
             password: String,
             configuration: RPCClientConfiguration
     ): CordaFuture<I> {
-        return driverDSL.executorService.fork {
+        return fork(driverDSL.executorService) {
             val client = RPCClient<I>(ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), rpcAddress, null), configuration)
             val connection = client.start(rpcOpsClass, username, password)
             driverDSL.shutdownManager.registerShutdown {
@@ -397,7 +397,7 @@ data class RPCDriverDSL(
     }
 
     override fun <I : RPCOps> startRandomRpcClient(rpcOpsClass: Class<I>, rpcAddress: NetworkHostAndPort, username: String, password: String): CordaFuture<Process> {
-        val processFuture = driverDSL.executorService.fork {
+        val processFuture = fork(driverDSL.executorService) {
             ProcessUtilities.startJavaProcess<RandomRpcUser>(listOf(rpcOpsClass.name, rpcAddress.toString(), username, password))
         }
         driverDSL.shutdownManager.registerProcessShutdown(processFuture)
@@ -426,7 +426,7 @@ data class RPCDriverDSL(
     ): CordaFuture<RpcBrokerHandle> {
         val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
         addressMustNotBeBound(driverDSL.executorService, hostAndPort)
-        return driverDSL.executorService.fork {
+        return fork(driverDSL.executorService) {
             val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)
             val server = ActiveMQServerImpl(artemisConfig, SingleUserSecurityManager(rpcUser))
             server.start()
@@ -443,7 +443,7 @@ data class RPCDriverDSL(
     }
 
     override fun startInVmRpcBroker(rpcUser: User, maxFileSize: Int, maxBufferedBytesPerClient: Long): CordaFuture<RpcBrokerHandle> {
-        return driverDSL.executorService.fork {
+        return fork(driverDSL.executorService) {
             val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)
             val server = EmbeddedActiveMQ()
             server.setConfiguration(artemisConfig)

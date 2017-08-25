@@ -1,6 +1,6 @@
 package net.corda.core.concurrent
 
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.internal.VisibleForTesting
 import org.slf4j.Logger

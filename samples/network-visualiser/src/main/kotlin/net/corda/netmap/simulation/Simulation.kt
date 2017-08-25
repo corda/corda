@@ -8,9 +8,9 @@ import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.flatMap
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.doneFuture
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
@@ -261,12 +261,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val networkInitialisationFinished = mockNet.nodes.map { it.networkMapRegistrationFuture }.transpose()
+    val networkInitialisationFinished = transpose(mockNet.nodes.map { it.networkMapRegistrationFuture })
 
     fun start(): CordaFuture<Unit> {
         mockNet.startNodes()
         // Wait for all the nodes to have finished registering with the network map service.
-        return networkInitialisationFinished.flatMap { startMainSimulation() }
+        return flatMap(networkInitialisationFinished) { startMainSimulation() }
     }
 
     /**
