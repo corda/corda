@@ -25,16 +25,16 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()
 
-    val aliceKey = generateKeyPair()
-    val bobKey = generateKeyPair()
-    val charlieKey = generateKeyPair()
+    private val aliceKey = generateKeyPair()
+    private val bobKey = generateKeyPair()
+    private val charlieKey = generateKeyPair()
 
-    val alicePublicKey: PublicKey = aliceKey.public
-    val bobPublicKey: PublicKey = bobKey.public
-    val charliePublicKey: PublicKey = charlieKey.public
+    private val alicePublicKey: PublicKey = aliceKey.public
+    private val bobPublicKey: PublicKey = bobKey.public
+    private val charliePublicKey: PublicKey = charlieKey.public
 
-    val message = OpaqueBytes("Transaction".toByteArray())
-    val secureHash = message.sha256()
+    private val message = OpaqueBytes("Transaction".toByteArray())
+    private val secureHash = message.sha256()
 
     // By lazy is required so that the serialisers are configured before vals initialisation takes place (they internally invoke serialise).
     val aliceSignature by lazy { aliceKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID))) }
@@ -43,7 +43,6 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
 
     @Test
     fun `(Alice) fulfilled by Alice signature`() {
-        println(aliceKey.public.serialize().hash)
         assertTrue { alicePublicKey.isFulfilledBy(aliceSignature.by) }
         assertFalse { alicePublicKey.isFulfilledBy(charlieSignature.by) }
     }
