@@ -299,6 +299,11 @@ interface CordaRPCOps : RPCOps {
      * @return the node info if available.
      */
     fun nodeIdentityFromParty(party: AbstractParty): NodeInfo?
+
+    /**
+     * Clear all network map data from local node cache.
+     */
+    fun clearNetworkMapCache()
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
