@@ -51,10 +51,6 @@ Data classes which model different forms of identity (potentially with supportin
 
 Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
 
-# Package net.corda.core.jackson
-
-Support classes for integrating the Jackson JSON serializer/deserializer with Corda.
-
 # Package net.corda.core.node.services
 
 Services which run within a Corda node and provide various pieces of functionality such as identity management, transaction storage, etc.
@@ -75,6 +71,10 @@ actual states rather than state references).
 # Package net.corda.finance.utils
 
 A collection of utilities for summing financial states, for example, summing obligations to get total debts.
+
+# Package net.corda.jackson
+
+Support classes for integrating the Jackson JSON serializer/deserializer with Corda.
 
 # Package net.corda.node.internal
 
