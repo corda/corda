@@ -157,18 +157,6 @@ class Cordform extends DefaultTask {
             process.inputStream.eachLine {println it}
         }
         for (source in nodes) {
-            println "${directory}/"
-
-            println "${source.nodeDir.toString()}/additional-node-infos/"
-/*
-            project.copy {
-                    from "${directory}/"
-                    include 'nodeInfo-*'
-                    into "${source.nodeDir.toString()}/additional-node-infos/"
-                }*/
-        }
-        
-        for (source in nodes) {
             for (destination in nodes) if (source.nodeDir != destination.nodeDir) {
                 project.copy {
                     from "${source.nodeDir.toString()}/"

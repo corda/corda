@@ -31,7 +31,7 @@ class PartyAndCertificate(val certPath: CertPath) {
 
     override fun equals(other: Any?): Boolean = other === this || other is PartyAndCertificate && other.party == party
     override fun hashCode(): Int = party.hashCode()
-    override fun toString(): String = party.toString() + certPath.toString()
+    override fun toString(): String = party.toString()
 
     /** Verify the certificate path is valid. */
     fun verify(trustAnchor: TrustAnchor): PKIXCertPathValidatorResult {
