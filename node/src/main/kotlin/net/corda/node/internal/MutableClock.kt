@@ -1,4 +1,4 @@
-package net.corda.node.utilities
+package net.corda.node.internal
 
 import rx.Observable
 import rx.Subscriber
