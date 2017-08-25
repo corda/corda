@@ -100,6 +100,8 @@ end tell""")
         OS.LINUX -> {
             // Start shell to keep window open unless java terminated normally or due to SIGTERM:
             val command = "${unixCommand()}; [ $? -eq 0 -o $? -eq 143 ] || sh"
+
+            java.lang.System.out.print(command)
             if (isTmux()) {
                 listOf("tmux", "new-window", "-n", nodeName, command)
             } else {

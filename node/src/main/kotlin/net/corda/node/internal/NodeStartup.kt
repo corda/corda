@@ -113,10 +113,8 @@ open class NodeStartup(val args: Array<String>) {
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
             node.startupComplete.then {
                 try {
-                    if (cmdlineOptions.printNodeInfoAndQuit) {
-                        saveToFile()
-                        node.info
-                    }
+                    saveToFile(node)
+                    if (cmdlineOptions.printNodeInfoAndQuit) System.exit(0)
                     InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, node)
                 } catch(e: Throwable) {
                     logger.error("Shell failed to start", e)

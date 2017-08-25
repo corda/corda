@@ -132,8 +132,13 @@ class Cordform extends DefaultTask {
         }
         installRunScript()
         def networkMapNode = getNodeByName(networkMapNodeName)
-        if (networkMapNode == null)
+        if (networkMapNode == null){
+            nodes.each {
+                it.build()
+            }
+            generateNodeInfos()
             throw new IllegalStateException("The networkMap property refers to a node that isn't configured ($networkMapNodeName)")
+        }
         nodes.each {
             if(it != networkMapNode) {
                 it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
@@ -141,4 +146,37 @@ class Cordform extends DefaultTask {
             it.build()
         }
     }
+
+    void generateNodeInfos() {
+        nodes.each { Node node ->
+            def nodeJar = new File(node.nodeDir, Node.NODEJAR_NAME)
+            def process = new ProcessBuilder("java", "-Dcorda.NodeInfoQuit=1" , "-jar", Node.NODEJAR_NAME)
+                    .directory(node.nodeDir)
+                    .redirectErrorStream(true)
+                    .start()
+            process.inputStream.eachLine {println it}
+        }
+        for (source in nodes) {
+            println "${directory}/"
+
+            println "${source.nodeDir.toString()}/additional-node-infos/"
+/*
+            project.copy {
+                    from "${directory}/"
+                    include 'nodeInfo-*'
+                    into "${source.nodeDir.toString()}/additional-node-infos/"
+                }*/
+        }
+        
+        for (source in nodes) {
+            for (destination in nodes) {
+                project.copy {
+                    from "${source.nodeDir.toString()}/"
+                    include 'nodeInfo-*'
+                    into "${destination.nodeDir.toString()}/additional-node-infos/"
+                }
+            }
+        }
+    }
+
 }
