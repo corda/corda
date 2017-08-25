@@ -244,11 +244,13 @@ data class TestLedgerDSLInterpreter private constructor(
             transactionLabel: String?,
             transactionBuilder: TransactionBuilder,
             dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> R,
-            transactionMap: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
+            transactionMap: HashMap<SecureHash, WireTransactionWithLocation> = HashMap(),
+            /** If set to true, will add dummy components to [transactionBuilder] to make it valid. */
+            fillTransaction: Boolean = false
     ): WireTransaction {
         val transactionLocation = getCallerLocation()
         val transactionInterpreter = interpretTransactionDsl(transactionBuilder, dsl)
-        makeTxValid(transactionBuilder)
+        if (fillTransaction) fillTransaction(transactionBuilder)
         // Create the WireTransaction
         val wireTransaction = transactionInterpreter.toWireTransaction()
         // Record the output states
@@ -271,7 +273,7 @@ data class TestLedgerDSLInterpreter private constructor(
      * The base transaction may not be valid, but it still gets recorded to the ledger. This causes a test failure,
      * even though is not being used for anything afterwards.
      */
-    private fun makeTxValid(transactionBuilder: TransactionBuilder) {
+    private fun fillTransaction(transactionBuilder: TransactionBuilder) {
         if (transactionBuilder.commands().isEmpty()) transactionBuilder.addCommand(dummyCommand())
         if (transactionBuilder.inputStates().isEmpty() && transactionBuilder.outputStates().isEmpty()) {
             transactionBuilder.addOutputState(DummyContract.SingleOwnerState(owner = ALICE))
@@ -288,7 +290,7 @@ data class TestLedgerDSLInterpreter private constructor(
             transactionLabel: String?,
             transactionBuilder: TransactionBuilder,
             dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> Unit
-    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, nonVerifiedTransactionWithLocations)
+    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, nonVerifiedTransactionWithLocations, fillTransaction =  true)
 
     override fun tweak(
             dsl: LedgerDSL<TestTransactionDSLInterpreter,
