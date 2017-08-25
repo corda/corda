@@ -30,7 +30,7 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}network_map_nodes")
     class NetworkNode(
-            @Id @Column
+            @Id @Column(name = "node_party_key")
             var publicKey: String = "",
 
             @Column
@@ -44,9 +44,6 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
     class NodeParty(
             @Column(name = "node_party_name")
             var name: String = "",
-
-            @Column(name = "node_party_key", length = 4096)
-            var owningKey: String = "", // PublicKey
 
             @Column(name = "node_party_certificate", length = 4096)
             var certificate: ByteArray = ByteArray(0),
@@ -70,7 +67,6 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
                                 publicKey = key.owningKey.toBase58String(),
                                 nodeParty = NodeParty(
                                         key.name.toString(),
-                                        key.owningKey.toBase58String(),
                                         key.certificate.encoded,
                                         key.certPath.encoded
                                 ),
@@ -83,14 +79,14 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
 
         fun createNetworkSubscribersMap(): PersistentMap<SingleMessageRecipient, LastAcknowledgeInfo, NetworkSubscriber, String> {
             return PersistentMap(
-                    toPersistentEntityKey = { it.getPrimaryKeyBasedOnSubtype() },
+                    toPersistentEntityKey = { it.getPrimaryKeyBasedOnSubType() },
                     fromPersistentEntity = {
                         Pair(it.key.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
                                 it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
                     toPersistentEntity = { k: SingleMessageRecipient, v: LastAcknowledgeInfo ->
                         NetworkSubscriber(
-                                id = k.getPrimaryKeyBasedOnSubtype(),
+                                id = k.getPrimaryKeyBasedOnSubType(),
                                 key = k.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes,
                                 value = v.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                         )
@@ -99,7 +95,7 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
             )
         }
 
-        fun SingleMessageRecipient.getPrimaryKeyBasedOnSubtype() =
+        fun SingleMessageRecipient.getPrimaryKeyBasedOnSubType() =
                 if (this is ArtemisMessagingComponent.ArtemisPeerAddress) {
                     this.hostAndPort.toString()
                 } else {
