@@ -377,11 +377,11 @@ states:
        :end-before: DOCEND 33
        :dedent: 12
 
-We will generally also want to conduct some additional validation of the transaction, beyond what is provided for in
-its contracts. However, the ``SignedTransaction`` holds its inputs as ``StateRef`` instances, and its attachments as
-hashes. These do not provide enough information to properly validate the transaction's contents. To resolve these into
-actual ``ContractState`` and ``Attachment`` instances, we need to use the ``ServiceHub`` to convert the
-``SignedTransaction`` into a ``LedgerTransaction``:
+We can also conduct additional validation of the transaction, beyond what is performed by its contracts. However, the
+``SignedTransaction`` holds its inputs as ``StateRef`` instances, and its attachments as hashes. These do not provide
+enough information to properly validate the transaction's contents. To resolve these into actual ``ContractState`` and
+``Attachment`` instances, we need to use the ``ServiceHub`` to convert the ``SignedTransaction`` into a
+``LedgerTransaction``:
 
 .. container:: codeset
 

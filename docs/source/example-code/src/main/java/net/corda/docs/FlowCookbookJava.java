@@ -453,7 +453,7 @@ public class FlowCookbookJava {
 
                 // We can now perform our additional verification.
                 // DOCSTART 34
-                DummyState outputState = (DummyState) ledgerTx.getOutputs().get(0).getData();
+                DummyState outputState = ledgerTx.outputsOfType(DummyState.class).get(0);
                 if (outputState.getMagicNumber() != 777) {
                     // ``FlowException`` is a special exception type. It will be
                     // propagated back to any counterparty flows waiting for a
