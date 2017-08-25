@@ -1,7 +1,7 @@
 package net.corda.node.services.transactions
 
 import com.google.common.util.concurrent.MoreExecutors
-import net.corda.core.internal.concurrent.fork
+import net.corda.core.concurrent.fork
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction

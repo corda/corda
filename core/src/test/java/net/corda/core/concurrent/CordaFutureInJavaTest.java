@@ -1,6 +1,5 @@
 package net.corda.core.concurrent;
 
-import net.corda.core.internal.concurrent.OpenFuture;
 import org.junit.Test;
 
 import java.io.EOFException;
@@ -10,8 +9,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static net.corda.core.internal.concurrent.CordaFutureImplKt.doneFuture;
-import static net.corda.core.internal.concurrent.CordaFutureImplKt.openFuture;
+import static net.corda.core.concurrent.CordaFutureUtils.doneFuture;
+import static net.corda.core.concurrent.CordaFutureUtils.openFuture;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

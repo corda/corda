@@ -9,8 +9,8 @@ import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.concurrent.fork
-import net.corda.core.internal.concurrent.map
+import net.corda.core.concurrent.fork
+import net.corda.core.concurrent.map
 import net.corda.core.internal.div
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort

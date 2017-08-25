@@ -1,8 +1,8 @@
 package net.corda.verifier
 
 import net.corda.client.mock.generateOrFail
-import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.concurrent.map
+import net.corda.core.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.LedgerTransaction

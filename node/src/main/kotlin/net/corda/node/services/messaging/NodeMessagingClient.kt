@@ -2,8 +2,8 @@ package net.corda.node.services.messaging
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.concurrent.andForget
-import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.concurrent.andForget
+import net.corda.core.concurrent.thenMatch
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients

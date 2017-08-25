@@ -8,7 +8,7 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.internal.toX509CertHolder
