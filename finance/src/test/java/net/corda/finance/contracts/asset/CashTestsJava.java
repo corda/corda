@@ -1,6 +1,5 @@
 package net.corda.finance.contracts.asset;
 
-import kotlin.Unit;
 import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.utilities.OpaqueBytes;
@@ -22,44 +21,41 @@ public class CashTestsJava {
 
     @Test
     public void trivial() {
-        ledger(lg -> {
-            lg.transaction(tx -> {
-                tx.input(inState);
+        transaction(tx -> {
+            tx.input(inState);
 
-                tx.tweak(tw -> {
-                    tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), new AnonymousParty(getMINI_CORP_PUBKEY())));
-                    tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
-                    return tw.failsWith("the amounts balance");
-                });
-
-                tx.tweak(tw -> {
-                    tw.output(outState);
-                    tw.command(getMEGA_CORP_PUBKEY(), DummyCommandData.INSTANCE);
-                    // Invalid command
-                    return tw.failsWith("required net.corda.finance.contracts.asset.Cash.Commands.Move command");
-                });
-                tx.tweak(tw -> {
-                    tw.output(outState);
-                    tw.command(getMINI_CORP_PUBKEY(), new Cash.Commands.Move());
-                    return tw.failsWith("the owning keys are a subset of the signing keys");
-                });
-                tx.tweak(tw -> {
-                    tw.output(outState);
-                    // issuedBy() can't be directly imported because it conflicts with other identically named functions
-                    // with different overloads (for some reason).
-                    tw.output(outState.issuedBy(getMINI_CORP()));
-                    tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
-                    return tw.failsWith("at least one cash input");
-                });
-
-                // Simple reallocation works.
-                return tx.tweak(tw -> {
-                    tw.output(outState);
-                    tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
-                    return tw.verifies();
-                });
+            tx.tweak(tw -> {
+                tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), new AnonymousParty(getMINI_CORP_PUBKEY())));
+                tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
+                return tw.failsWith("the amounts balance");
             });
-            return Unit.INSTANCE;
+
+            tx.tweak(tw -> {
+                tw.output(outState);
+                tw.command(getMEGA_CORP_PUBKEY(), DummyCommandData.INSTANCE);
+                // Invalid command
+                return tw.failsWith("required net.corda.finance.contracts.asset.Cash.Commands.Move command");
+            });
+            tx.tweak(tw -> {
+                tw.output(outState);
+                tw.command(getMINI_CORP_PUBKEY(), new Cash.Commands.Move());
+                return tw.failsWith("the owning keys are a subset of the signing keys");
+            });
+            tx.tweak(tw -> {
+                tw.output(outState);
+                // issuedBy() can't be directly imported because it conflicts with other identically named functions
+                // with different overloads (for some reason).
+                tw.output(outState.issuedBy(getMINI_CORP()));
+                tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
+                return tw.failsWith("at least one cash input");
+            });
+
+            // Simple reallocation works.
+            return tx.tweak(tw -> {
+                tw.output(outState);
+                tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
+                return tw.verifies();
+            });
         });
     }
 }
