@@ -14,7 +14,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.Node
-import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -167,7 +166,7 @@ class P2PMessagingTest : NodeBasedTest() {
         distributedServiceNodes.forEach {
             val nodeName = it.info.legalIdentity.name
             var ignoreRequests = false
-            it.network.addMessageHandler(dummyTopic, DEFAULT_SESSION_ID) { netMessage, _ ->
+            it.network.addMessageHandler(dummyTopic) { netMessage, _ ->
                 requestsReceived.incrementAndGet()
                 firstRequestReceived.countDown()
                 // The node which receives the first request will ignore all requests
@@ -210,7 +209,7 @@ class P2PMessagingTest : NodeBasedTest() {
     }
 
     private fun Node.respondWith(message: Any) {
-        network.addMessageHandler(javaClass.name, DEFAULT_SESSION_ID) { netMessage, _ ->
+        network.addMessageHandler(javaClass.name) { netMessage, _ ->
             val request = netMessage.data.deserialize<TestRequest>()
             val response = network.createMessage(javaClass.name, request.sessionID, message.serialize().bytes)
             network.send(response, request.replyTo)
