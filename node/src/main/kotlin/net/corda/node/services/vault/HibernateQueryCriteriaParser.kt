@@ -2,7 +2,6 @@ package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
@@ -278,13 +277,6 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
         joinPredicates.add(joinPredicate)
-
-        // linear ids
-        criteria.linearId?.let {
-            // WARNING: UniqueIdentifier equality test only uses UUID
-            val uniqueIdentifiers = criteria.linearId as List<UniqueIdentifier>
-            predicateSet.add(criteriaBuilder.and(vaultLinearStates.get<UUID>("uuid").`in`(uniqueIdentifiers.map { it.id })))
-        }
 
         // linear ids UUID
         criteria.uuid?.let {

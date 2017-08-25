@@ -192,8 +192,8 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             QueryCriteria vaultCriteria = new VaultQueryCriteria(status, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = Collections.singletonList(ids.getSecond());
-            QueryCriteria linearCriteriaAll = new LinearStateQueryCriteria(null, linearIds);
-            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(null, null, null, dealIds);
+            QueryCriteria linearCriteriaAll = new LinearStateQueryCriteria(null, linearIds, Vault.StateStatus.UNCONSUMED, null);
+            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(null, null, dealIds);
 
             QueryCriteria compositeCriteria1 = dealCriteriaAll.or(linearCriteriaAll);
             QueryCriteria compositeCriteria2 = compositeCriteria1.and(vaultCriteria);
@@ -309,8 +309,8 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
             List<UniqueIdentifier> linearIds = Collections.singletonList(uid);
             List<AbstractParty> dealParty = Collections.singletonList(getMEGA_CORP());
-            QueryCriteria dealCriteria = new LinearStateQueryCriteria(dealParty, null, null, dealIds);
-            QueryCriteria linearCriteria = new LinearStateQueryCriteria(dealParty, linearIds);
+            QueryCriteria dealCriteria = new LinearStateQueryCriteria(dealParty, null, dealIds);
+            QueryCriteria linearCriteria = new LinearStateQueryCriteria(dealParty, linearIds, Vault.StateStatus.UNCONSUMED, null);
             QueryCriteria dealOrLinearIdCriteria = dealCriteria.or(linearCriteria);
             QueryCriteria compositeCriteria = dealOrLinearIdCriteria.and(vaultCriteria);
 
