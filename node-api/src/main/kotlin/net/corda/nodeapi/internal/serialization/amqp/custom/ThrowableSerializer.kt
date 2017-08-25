@@ -19,7 +19,7 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
                 val constructor = constructorForDeserialization(obj.javaClass)
                 val props = propertiesForSerialization(constructor, obj.javaClass, factory)
                 for (prop in props) {
-                    extraProperties[prop.name] = prop.readMethod.invoke(obj)
+                    extraProperties[prop.name] = prop.readMethod!!.invoke(obj)
                 }
             } catch(e: NotSerializableException) {
             }

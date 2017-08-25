@@ -10,7 +10,7 @@ import kotlin.reflect.jvm.javaGetter
 /**
  * Base class for serialization of a property of an object.
  */
-sealed class PropertySerializer(val name: String, val readMethod: Method, val resolvedType: Type) {
+sealed class PropertySerializer(val name: String, val readMethod: Method?, val resolvedType: Type) {
     abstract fun writeClassInfo(output: SerializationOutput)
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
     abstract fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any?
@@ -44,7 +44,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
     }
 
     private fun generateMandatory(): Boolean {
-        return isJVMPrimitive || !readMethod.returnsNullable()
+        return isJVMPrimitive || !(readMethod?.returnsNullable() ?: true)
     }
 
     private fun Method.returnsNullable(): Boolean {
@@ -53,8 +53,8 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
     }
 
     companion object {
-        fun make(name: String, readMethod: Method, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
-            readMethod.isAccessible = true
+        fun make(name: String, readMethod: Method?, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
+            readMethod?.isAccessible = true
             if (SerializerFactory.isPrimitive(resolvedType)) {
                 return when(resolvedType) {
                     Char::class.java, Character::class.java -> AMQPCharPropertySerializer(name, readMethod)
@@ -69,7 +69,10 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
     /**
      * A property serializer for a complex type (another object).
      */
-    class DescribedTypePropertySerializer(name: String, readMethod: Method, resolvedType: Type, private val lazyTypeSerializer: () -> AMQPSerializer<*>) : PropertySerializer(name, readMethod, resolvedType) {
+    class DescribedTypePropertySerializer(
+            name: String, readMethod: Method?,
+            resolvedType: Type,
+            private val lazyTypeSerializer: () -> AMQPSerializer<*>) : PropertySerializer(name, readMethod, resolvedType) {
         // This is lazy so we don't get an infinite loop when a method returns an instance of the class.
         private val typeSerializer: AMQPSerializer<*> by lazy { lazyTypeSerializer() }
 
@@ -84,14 +87,14 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            output.writeObjectOrNull(readMethod.invoke(obj), data, resolvedType)
+            output.writeObjectOrNull(readMethod!!.invoke(obj), data, resolvedType)
         }
     }
 
     /**
      * A property serializer for most AMQP primitive type (Int, String, etc).
      */
-    class AMQPPrimitivePropertySerializer(name: String, readMethod: Method, resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
+    class AMQPPrimitivePropertySerializer(name: String, readMethod: Method?, resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
         override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
@@ -99,7 +102,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            val value = readMethod.invoke(obj)
+            val value = readMethod!!.invoke(obj)
             if (value is ByteArray) {
                 data.putObject(Binary(value))
             } else {
@@ -113,7 +116,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
      * value of the character is stored in numeric UTF-16 form and on deserialisation requires explicit
      * casting back to a char otherwise it's treated as an Integer and a TypeMismatch occurs
      */
-    class AMQPCharPropertySerializer(name: String, readMethod: Method) :
+    class AMQPCharPropertySerializer(name: String, readMethod: Method?) :
             PropertySerializer(name, readMethod, Character::class.java) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
@@ -122,7 +125,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            val input = readMethod.invoke(obj)
+            val input = readMethod!!.invoke(obj)
             if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
         }
     }
