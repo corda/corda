@@ -86,13 +86,15 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
     // Graph cycle detection in the composite key structure to avoid infinite loops on CompositeKey graph traversal and
     // when recursion is used (i.e. in isFulfilledBy()).
-    // An IdentityHashMap Vs HashMap is used, because a graph cycle causes infinite loop on the CompositeKey.hashCode().
+    // An IdentityHashMap Vs HashMap is used, because a graph cycle causes infinite recursion on the CompositeKey.hashCode().
+    // Also CompositeKey.toString() cannot be used as it will create infinite recursion since "toString()" method relies on serialization.
+    // Kryo has a way to solve this but AMQP doesn't cater for those (invalid?) data structures.
     private fun cycleDetection(visitedMap: IdentityHashMap<CompositeKey, Boolean>) {
         for ((node) in children) {
             if (node is CompositeKey) {
                 val curVisitedMap = IdentityHashMap<CompositeKey, Boolean>()
                 curVisitedMap.putAll(visitedMap)
-                require(!curVisitedMap.contains(node)) { "Cycle detected for CompositeKey: $node" }
+                require(!curVisitedMap.contains(node)) { "Cycle detected" }
                 curVisitedMap.put(node, true)
                 node.cycleDetection(curVisitedMap)
             }
