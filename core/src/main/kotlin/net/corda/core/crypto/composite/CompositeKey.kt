@@ -262,7 +262,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             else if (n == 1) {
                 require(threshold == null || threshold == children.first().weight)
                 { "Trying to build invalid CompositeKey, threshold value different than weight of single child node." }
-                children.first().node // We can assume that this node is a correct CompositeKey.
+                children.first().node // Returning the only child node which is [PublicKey] itself
             } else throw IllegalArgumentException("Trying to build CompositeKey without child nodes.")
         }
     }
