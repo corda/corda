@@ -1,6 +1,7 @@
 package net.corda.testing
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.jackson.JacksonSupport
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.StartableByRPC
@@ -10,7 +11,6 @@ import net.corda.core.internal.list
 import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
-import net.corda.jackson.JacksonSupport
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver

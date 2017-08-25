@@ -1,11 +1,11 @@
-package net.corda.jackson
+package net.corda.client.jackson
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimap
-import net.corda.jackson.StringToMethodCallParser.ParsedMethodCall
+import net.corda.client.jackson.StringToMethodCallParser.ParsedMethodCall
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method

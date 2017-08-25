@@ -20,7 +20,7 @@ import net.corda.finance.flows.TwoPartyDealFlow.Instigator
 import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.FixingFlow
-import net.corda.jackson.JacksonSupport
+import net.corda.client.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.DUMMY_CA
 import net.corda.testing.node.InMemoryMessagingNetwork
