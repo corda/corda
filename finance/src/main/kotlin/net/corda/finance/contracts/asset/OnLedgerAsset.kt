@@ -2,6 +2,7 @@ package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.Amount.Companion.sumOrThrow
+import net.corda.core.contracts.Amount.Companion.zero
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
@@ -13,6 +14,9 @@ import java.util.*
 //
 // Generic contract for assets on a ledger
 //
+
+/** A simple holder for a (possibly anonymous) [AbstractParty] and a quantity of tokens */
+data class PartyAndAmount<T : Any>(val party: AbstractParty, val amount: Amount<T>)
 
 /**
  * An asset transaction may split and merge assets represented by a set of (issuer, depositRef) pairs, across multiple
@@ -56,6 +60,38 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
                                                          acceptableStates: List<StateAndRef<S>>,
                                                          deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
                                                          generateMoveCommand: () -> CommandData): Pair<TransactionBuilder, List<PublicKey>> {
+            return generateSpend(tx, listOf(PartyAndAmount(to, amount)), acceptableStates, deriveState, generateMoveCommand)
+        }
+
+        /**
+         * Adds to the given transaction states that move amounts of a fungible asset to the given parties, using only
+         * the provided acceptable input states to find a solution (not all of them may be used in the end). A change
+         * output will be generated if the state amounts don't exactly fit.
+         *
+         * The fungible assets must all be of the same type and the amounts must be summable i.e. amounts of the same
+         * token.
+         *
+         * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
+         *           to move the cash will be added on top.
+         * @param amount How much currency to send.
+         * @param to a key of the recipient.
+         * @param acceptableStates a list of acceptable input states to use.
+         * @param deriveState a function to derive an output state based on an input state, amount for the output
+         * and public key to pay to.
+         * @param T A type representing a token
+         * @param S A fungible asset state type
+         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         *         the resulting transaction for it to be valid.
+         * @throws InsufficientBalanceException when a cash spending transaction fails because
+         *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+         */
+        @Throws(InsufficientBalanceException::class)
+        @JvmStatic
+        fun <S : FungibleAsset<T>, T: Any> generateSpend(tx: TransactionBuilder,
+                                                         payments: List<PartyAndAmount<T>>,
+                                                         acceptableStates: List<StateAndRef<S>>,
+                                                         deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
+                                                         generateMoveCommand: () -> CommandData): Pair<TransactionBuilder, List<PublicKey>> {
             // Discussion
             //
             // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -80,43 +116,69 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
             // different notaries, or at least group states by notary and take the set with the
             // highest total value.
 
-            // notary may be associated with locked state only
+            // TODO: Check that re-running this on the same transaction multiple times does the right thing.
+
+            // The notary may be associated with a locked state only.
             tx.notary = acceptableStates.firstOrNull()?.state?.notary
 
-            val (gathered, gatheredAmount) = gatherCoins(acceptableStates, amount)
-
-            val takeChangeFrom = gathered.firstOrNull()
-            val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-                Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.amount.token)
-            } else {
-                null
-            }
+            // Calculate the total amount we're sending (they must be all of a compatible token).
+            val totalSendAmount = payments.map { it.amount }.sumOrThrow()
+            // Select a subset of the available states we were given that sums up to >= totalSendAmount.
+            val (gathered, gatheredAmount) = gatherCoins(acceptableStates, totalSendAmount)
+            check(gatheredAmount >= totalSendAmount)
             val keysUsed = gathered.map { it.state.data.owner.owningKey }
 
-            val states = gathered.groupBy { it.state.data.amount.token.issuer }.map {
-                val coins = it.value
-                val totalAmount = coins.map { it.state.data.amount }.sumOrThrow()
-                deriveState(coins.first().state, totalAmount, to)
-            }.sortedBy { it.data.amount.quantity }
-
-            val outputs = if (change != null) {
-                // Just copy a key across as the change key. In real life of course, this works but leaks private data.
-                // In bitcoinj we derive a fresh key here and then shuffle the outputs to ensure it's hard to follow
-                // value flows through the transaction graph.
-                val existingOwner = gathered.first().state.data.owner
-                // Add a change output and adjust the last output downwards.
-                states.subList(0, states.lastIndex) +
-                        states.last().let {
-                            val spent = it.data.amount.withoutIssuer() - change.withoutIssuer()
-                            deriveState(it, Amount(spent.quantity, it.data.amount.token), it.data.owner)
-                        } +
-                        states.last().let {
-                            deriveState(it, Amount(change.quantity, it.data.amount.token), existingOwner)
+            // Now calculate the output states. This is complicated by the fact that a single payment may require
+            // multiple output states, due to the need to keep states separated by issuer. We start by figuring out
+            // how much we've gathered for each issuer: this map will keep track of how much we've used from each
+            // as we work our way through the payments.
+            val statesGroupedByIssuer = gathered.groupBy { it.state.data.amount.token }
+            val remainingFromEachIssuer= statesGroupedByIssuer
+                    .mapValues {
+                        it.value.map {
+                            it.state.data.amount
+                        }.sumOrThrow()
+                    }.toList().toMutableList()
+            val outputStates = mutableListOf<TransactionState<S>>()
+            for ((party, paymentAmount) in payments) {
+                var remainingToPay= paymentAmount.quantity
+                while (remainingToPay > 0) {
+                    val (token, remainingFromCurrentIssuer) = remainingFromEachIssuer.last()
+                    val templateState = statesGroupedByIssuer[token]!!.first().state
+                    val delta = remainingFromCurrentIssuer.quantity - remainingToPay
+                    when {
+                        delta > 0 -> {
+                            // The states from the current issuer more than covers this payment.
+                            outputStates += deriveState(templateState, Amount(remainingToPay, token), party)
+                            remainingFromEachIssuer[0] = Pair(token, Amount(delta, token))
+                            remainingToPay = 0
                         }
-            } else states
+                        delta == 0L -> {
+                            // The states from the current issuer exactly covers this payment.
+                            outputStates += deriveState(templateState, Amount(remainingToPay, token), party)
+                            remainingFromEachIssuer.removeAt(remainingFromEachIssuer.lastIndex)
+                            remainingToPay = 0
+                        }
+                        delta < 0 -> {
+                            // The states from the current issuer don't cover this payment, so we'll have to use >1 output
+                            // state to cover this payment.
+                            outputStates += deriveState(templateState, remainingFromCurrentIssuer, party)
+                            remainingFromEachIssuer.removeAt(remainingFromEachIssuer.lastIndex)
+                            remainingToPay -= remainingFromCurrentIssuer.quantity
+                        }
+                    }
+                }
+            }
+
+            // Whatever values we have left over for each issuer must become change outputs.
+            val myself = gathered.first().state.data.owner
+            for ((token, amount) in remainingFromEachIssuer) {
+                val templateState = statesGroupedByIssuer[token]!!.first().state
+                outputStates += deriveState(templateState, amount, myself)
+            }
 
             for (state in gathered) tx.addInputState(state)
-            for (state in outputs) tx.addOutputState(state)
+            for (state in outputStates) tx.addOutputState(state)
 
             // What if we already have a move command with the right keys? Filter it out here or in platform code?
             tx.addCommand(generateMoveCommand(), keysUsed)

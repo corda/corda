@@ -4,6 +4,7 @@ package net.corda.finance.contracts.asset
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.finance.contracts.asset.cash.selection.CashSelectionH2Impl
 import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount.Companion.sumOrThrow
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.crypto.toBase58String
@@ -290,13 +291,42 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                           amount: Amount<Currency>,
                           to: AbstractParty,
                           onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
+            return generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), onlyFromParties)
+        }
 
+        /**
+         * Generate a transaction that moves an amount of currency to the given pubkey.
+         *
+         * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
+         *
+         * @param services The [ServiceHub] to provide access to the database session.
+         * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
+         *           to move the cash will be added on top.
+         * @param amount How much currency to send.
+         * @param to a key of the recipient.
+         * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
+         *                        of given parties. This can be useful if the party you're trying to pay has expectations
+         *                        about which type of asset claims they are willing to accept.
+         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         *         the resulting transaction for it to be valid.
+         * @throws InsufficientBalanceException when a cash spending transaction fails because
+         *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+         */
+        @JvmStatic
+        @Throws(InsufficientBalanceException::class)
+        @Suspendable
+        fun generateSpend(services: ServiceHub,
+                          tx: TransactionBuilder,
+                          payments: List<PartyAndAmount<Currency>>,
+                          onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
             fun deriveState(txState: TransactionState<Cash.State>, amt: Amount<Issued<Currency>>, owner: AbstractParty)
                     = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
 
             // Retrieve unspent and unlocked cash states that meet our spending criteria.
-            val acceptableCoins = CashSelection.getInstance({services.jdbcSession().metaData}).unconsumedCashStatesForSpending(services, amount, onlyFromParties, tx.notary, tx.lockId)
-            return OnLedgerAsset.generateSpend(tx, amount, to, acceptableCoins,
+            val totalAmount = payments.map { it.amount }.sumOrThrow()
+            val cashSelection = CashSelection.getInstance({ services.jdbcSession().metaData })
+            val acceptableCoins = cashSelection.unconsumedCashStatesForSpending(services, totalAmount, onlyFromParties, tx.notary, tx.lockId)
+            return OnLedgerAsset.generateSpend(tx, payments, acceptableCoins,
                     { state, quantity, owner -> deriveState(state, quantity, owner) },
                     { Cash().generateMoveCommand() })
         }

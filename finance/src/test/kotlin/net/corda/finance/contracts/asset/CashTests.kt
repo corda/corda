@@ -59,6 +59,7 @@ class CashTests : TestDependencyInjectionBase() {
         database = databaseAndServices.first
         miniCorpServices = databaseAndServices.second
 
+        // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
         database.transaction {
             miniCorpServices.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
                     ownedBy = OUR_IDENTITY_1, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
@@ -447,6 +448,7 @@ class CashTests : TestDependencyInjectionBase() {
     val OUR_IDENTITY_1: AbstractParty get() = AnonymousParty(OUR_KEY.public)
 
     val THEIR_IDENTITY_1 = AnonymousParty(MINI_CORP_PUBKEY)
+    val THEIR_IDENTITY_2 = AnonymousParty(CHARLIE_PUBKEY)
 
     fun makeCash(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1) =
             StateAndRef(
@@ -464,13 +466,13 @@ class CashTests : TestDependencyInjectionBase() {
     /**
      * Generate an exit transaction, removing some amount of cash from the ledger.
      */
-    fun makeExit(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1): WireTransaction {
+    private fun makeExit(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1): WireTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         Cash().generateExit(tx, Amount(amount.quantity, Issued(corp.ref(depositRef), amount.token)), WALLET)
         return tx.toWireTransaction()
     }
 
-    fun makeSpend(amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
+    private fun makeSpend(amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
             Cash.generateSpend(miniCorpServices, tx, amount, dest)
@@ -627,16 +629,14 @@ class CashTests : TestDependencyInjectionBase() {
                 wtx
             }
         database.transaction {
-            @Suppress("UNCHECKED_CAST")
-            val vaultState0 = vaultStatesUnconsumed.elementAt(0)
-            val vaultState1 = vaultStatesUnconsumed.elementAt(1)
-            @Suppress("UNCHECKED_CAST")
-            val vaultState2 = vaultStatesUnconsumed.elementAt(2)
+            val vaultState0: StateAndRef<Cash.State> = vaultStatesUnconsumed.elementAt(0)
+            val vaultState1: StateAndRef<Cash.State> = vaultStatesUnconsumed.elementAt(1)
+            val vaultState2: StateAndRef<Cash.State> = vaultStatesUnconsumed.elementAt(2)
             assertEquals(vaultState0.ref, wtx.inputs[0])
             assertEquals(vaultState1.ref, wtx.inputs[1])
             assertEquals(vaultState2.ref, wtx.inputs[2])
             assertEquals(vaultState0.state.data.copy(owner = THEIR_IDENTITY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
-            assertEquals(vaultState2.state.data.copy(owner = THEIR_IDENTITY_1), wtx.getOutput(0))
+            assertEquals(vaultState2.state.data.copy(owner = THEIR_IDENTITY_1), wtx.outputs[0].data)
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
@@ -773,5 +773,29 @@ class CashTests : TestDependencyInjectionBase() {
 
             this.verifies()
         }
+    }
+
+    @Test
+    fun multiSpend() {
+        initialiseTestSerialization()
+        val tx = TransactionBuilder(DUMMY_NOTARY)
+        database.transaction {
+            val payments = listOf(
+                    PartyAndAmount(THEIR_IDENTITY_1, 400.DOLLARS),
+                    PartyAndAmount(THEIR_IDENTITY_2, 150.DOLLARS)
+            )
+            Cash.generateSpend(miniCorpServices, tx, payments)
+        }
+        val wtx = tx.toWireTransaction()
+        fun out(i: Int) = wtx.getOutput(i) as Cash.State
+        assertEquals(4, wtx.outputs.size)
+        assertEquals(80.DOLLARS, out(0).amount.withoutIssuer())
+        assertEquals(320.DOLLARS, out(1).amount.withoutIssuer())
+        assertEquals(150.DOLLARS, out(2).amount.withoutIssuer())
+        assertEquals(30.DOLLARS, out(3).amount.withoutIssuer())
+        assertEquals(MINI_CORP, out(0).amount.token.issuer.party)
+        assertEquals(MEGA_CORP, out(1).amount.token.issuer.party)
+        assertEquals(MEGA_CORP, out(2).amount.token.issuer.party)
+        assertEquals(MEGA_CORP, out(3).amount.token.issuer.party)
     }
 }
