@@ -144,7 +144,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     /** Same as notifyAll but with a single transaction. */
     fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
-    
+
     private fun notifyRegular(txns: Iterable<WireTransaction>) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
             val myKeys = services.keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
@@ -372,22 +372,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         return claimedStates
     }
 
-    // TODO : Persists this in DB.
-    private val authorisedUpgrade = mutableMapOf<StateRef, Class<out UpgradedContract<*, *>>>()
 
-    override fun getAuthorisedContractUpgrade(ref: StateRef) = authorisedUpgrade[ref]
-
-    override fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) {
-        val upgrade = upgradedContractClass.newInstance()
-        if (upgrade.legacyContract != stateAndRef.state.data.contract.javaClass) {
-            throw IllegalArgumentException("The contract state cannot be upgraded using provided UpgradedContract.")
-        }
-        authorisedUpgrade.put(stateAndRef.ref, upgradedContractClass)
-    }
-
-    override fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>) {
-        authorisedUpgrade.remove(stateAndRef.ref)
-    }
 
     @VisibleForTesting
     internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {

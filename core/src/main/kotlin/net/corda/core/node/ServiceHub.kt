@@ -46,6 +46,7 @@ interface ServiceHub : ServicesForResolution {
     val vaultService: VaultService
     val vaultQueryService: VaultQueryService
     val keyManagementService: KeyManagementService
+    val contractUpgradeService: ContractUpgradeService
 
     /**
      * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.

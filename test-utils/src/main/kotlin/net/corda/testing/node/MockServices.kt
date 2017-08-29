@@ -26,6 +26,7 @@ import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransacti
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
+import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
@@ -155,6 +156,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *keys)
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
+    override val contractUpgradeService: ContractUpgradeService = ContractUpgradeServiceImpl()
     override val vaultQueryService: VaultQueryService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
