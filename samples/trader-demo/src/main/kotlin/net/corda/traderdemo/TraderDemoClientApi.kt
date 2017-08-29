@@ -1,8 +1,5 @@
 package net.corda.traderdemo
 
-import net.corda.contracts.CommercialPaper
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.Amount
 import net.corda.core.internal.Emoji
 import net.corda.core.messaging.CordaRPCOps
@@ -14,8 +11,11 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.USD
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
+import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.getCashBalance
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.calculateRandomlySizedAmounts

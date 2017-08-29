@@ -3,7 +3,6 @@ package net.corda.docs;
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.crypto.TransactionSignature;
@@ -21,6 +20,7 @@ import net.corda.core.transactions.WireTransaction;
 import net.corda.core.utilities.ProgressTracker;
 import net.corda.core.utilities.ProgressTracker.Step;
 import net.corda.core.utilities.UntrustworthyData;
+import net.corda.finance.contracts.asset.Cash;
 import net.corda.testing.contracts.DummyContract;
 import net.corda.testing.contracts.DummyState;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -28,6 +28,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
+import java.security.SignatureException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -280,7 +281,7 @@ public class FlowCookbookJava {
             TypeOnlyCommandData typeOnlyCommandData = new DummyContract.Commands.Create();
             // 2. Include additional data which can be used by the contract
             //    during verification, alongside fulfilling the roles above
-            CommandData commandDataWithData = new Cash.Commands.Issue(12345678);
+            CommandData commandDataWithData = new Cash.Commands.Issue();
 
             // Attachments are identified by their hash.
             // The attachment with the corresponding hash must have been
@@ -394,15 +395,18 @@ public class FlowCookbookJava {
             ----------------------------*/
             progressTracker.setCurrentStep(TX_VERIFICATION);
 
-            // Verifying a transaction will also verify every transaction in the transaction's dependency chain, which will require
-            // transaction data access on counterparty's node. The ``SendTransactionFlow`` can be used to automate the sending
-            // and data vending process. The ``SendTransactionFlow`` will listen for data request until the transaction
-            // is resolved and verified on the other side:
+            // Verifying a transaction will also verify every transaction in
+            // the transaction's dependency chain, which will require
+            // transaction data access on counterparty's node. The
+            // ``SendTransactionFlow`` can be used to automate the sending and
+            // data vending process. The ``SendTransactionFlow`` will listen
+            // for data request until the transaction is resolved and verified
+            // on the other side:
             // DOCSTART 12
             subFlow(new SendTransactionFlow(counterparty, twiceSignedTx));
 
             // Optional request verification to further restrict data access.
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx){
+            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx) {
                 @Override
                 protected void verifyDataRequest(@NotNull FetchDataFlow.Request.Data dataRequest) {
                     // Extra request verification.
@@ -425,41 +429,43 @@ public class FlowCookbookJava {
             List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterparty));
             // DOCEND 14
 
-            // A ``SignedTransaction`` is a pairing of a ``WireTransaction``
-            // with signatures over this ``WireTransaction``. We don't verify
-            // a signed transaction per se, but rather the ``WireTransaction``
-            // it contains.
-            // DOCSTART 31
-            WireTransaction wireTx = twiceSignedTx.getTx();
-            // DOCEND 31
-            // Before we can verify the transaction, we need the
-            // ``ServiceHub`` to use our node's local storage to resolve the
-            // transaction's inputs and attachments into actual objects,
-            // rather than just references. We do this by converting the
-            // ``WireTransaction`` into a ``LedgerTransaction``.
-            // DOCSTART 32
-            LedgerTransaction ledgerTx = wireTx.toLedgerTransaction(getServiceHub());
-            // DOCEND 32
-            // We can now verify the transaction.
-            // DOCSTART 33
-            ledgerTx.verify();
-            // DOCEND 33
+            try {
 
-            // We'll often want to perform our own additional verification
-            // too. Just because a transaction is valid based on the contract
-            // rules and requires our signature doesn't mean we have to
-            // sign it! We need to make sure the transaction represents an
-            // agreement we actually want to enter into.
-            // DOCSTART 34
-            DummyState outputState = (DummyState) wireTx.getOutputs().get(0).getData();
-            if (outputState.getMagicNumber() != 777) {
-                // ``FlowException`` is a special exception type. It will be
-                // propagated back to any counterparty flows waiting for a
-                // message from this flow, notifying them that the flow has
-                // failed.
-                throw new FlowException("We expected a magic number of 777.");
+                // We can now verify the transaction to ensure that it satisfies
+                // the contracts of all the transaction's input and output states.
+                // DOCSTART 33
+                twiceSignedTx.verify(getServiceHub());
+                // DOCEND 33
+
+                // We'll often want to perform our own additional verification
+                // too. Just because a transaction is valid based on the contract
+                // rules and requires our signature doesn't mean we have to
+                // sign it! We need to make sure the transaction represents an
+                // agreement we actually want to enter into.
+
+                // To do this, we need to convert our ``SignedTransaction``
+                // into a ``LedgerTransaction``. This will use our ServiceHub
+                // to resolve the transaction's inputs and attachments into
+                // actual objects, rather than just references.
+                // DOCSTART 32
+                LedgerTransaction ledgerTx = twiceSignedTx.toLedgerTransaction(getServiceHub());
+                // DOCEND 32
+
+                // We can now perform our additional verification.
+                // DOCSTART 34
+                DummyState outputState = ledgerTx.outputsOfType(DummyState.class).get(0);
+                if (outputState.getMagicNumber() != 777) {
+                    // ``FlowException`` is a special exception type. It will be
+                    // propagated back to any counterparty flows waiting for a
+                    // message from this flow, notifying them that the flow has
+                    // failed.
+                    throw new FlowException("We expected a magic number of 777.");
+                }
+                // DOCEND 34
+
+            } catch (GeneralSecurityException e) {
+                // Handle this as required.
             }
-            // DOCEND 34
 
             // Of course, if you are not a required signer on the transaction,
             // you have no power to decide whether it is valid or not. If it

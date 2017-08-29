@@ -1,12 +1,9 @@
 package net.corda.irs.api
 
-import net.corda.contracts.Fix
-import net.corda.contracts.FixOf
-import net.corda.contracts.asset.CASH
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.`issued by`
-import net.corda.contracts.asset.`owned by`
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.`with notary`
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
@@ -15,6 +12,12 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
+import net.corda.finance.contracts.Fix
+import net.corda.finance.contracts.FixOf
+import net.corda.finance.contracts.asset.CASH
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.`issued by`
+import net.corda.finance.contracts.asset.`owned by`
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -58,7 +61,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         database.transaction {
             oracle = NodeInterestRates.Oracle(
                     MEGA_CORP,

@@ -1,7 +1,9 @@
 package net.corda.node.services.database
 
-import net.corda.contracts.asset.*
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
 import net.corda.core.node.services.Vault
@@ -13,15 +15,19 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
+import net.corda.finance.contracts.asset.DummyFungibleContract
+import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV2
+import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.schemas.CashSchemaV1
-import net.corda.schemas.SampleCashSchemaV2
-import net.corda.schemas.SampleCashSchemaV3
 import net.corda.testing.*
 import net.corda.testing.contracts.consumeCash
 import net.corda.testing.contracts.fillWithSomeTestCash
@@ -69,12 +75,13 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, identitySvc = ::makeTestIdentityService)
         val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
+        val createSchemaService = { NodeSchemaService(customSchemas) }
+        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, createSchemaService, ::makeTestIdentityService)
         database.transaction {
-            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), ::makeTestIdentityService)
+            hibernateConfig = database.hibernateConfig
             services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
-                override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
+                override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
 
                 override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {

@@ -1,21 +1,21 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.Emoji
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.queryBy
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.internal.Emoji
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
 import net.corda.finance.`issued by`
-import net.corda.flows.CashIssueFlow
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.services.startFlowPermission
 import net.corda.nodeapi.User
@@ -49,8 +49,8 @@ class ContractUpgradeFlowTest {
         notary = nodes.notaryNode.info.notaryIdentity
 
         val nodeIdentity = nodes.notaryNode.info.legalIdentitiesAndCerts.single { it.party == nodes.notaryNode.info.notaryIdentity }
-        a.services.identityService.registerIdentity(nodeIdentity)
-        b.services.identityService.registerIdentity(nodeIdentity)
+        a.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
+        b.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
     }
 
     @After
@@ -203,7 +203,7 @@ class ContractUpgradeFlowTest {
             override val contract = CashV2()
             override val participants = owners
 
-            override fun move(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
+            override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
             override fun toString() = "${Emoji.bagOfCash}New Cash($amount at ${amount.token.issuer} owned by $owner)"
             override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Cash.Commands.Move(), copy(owners = listOf(newOwner)))
         }

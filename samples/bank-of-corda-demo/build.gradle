@@ -68,9 +68,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcUsers = [
                 ['username'   : "bankUser",
                  'password'   : "test",
-                 'permissions': ["StartFlow.net.corda.flows.CashPaymentFlow",
-                                 "StartFlow.net.corda.flows.CashExitFlow",
-                                 "StartFlow.net.corda.flows.CashIssueFlow"]]
+                 'permissions': ["StartFlow.net.corda.finance.flows.CashPaymentFlow",
+                                 "StartFlow.net.corda.finance.flows.CashExitFlow",
+                                 "StartFlow.net.corda.finance.flows.CashIssueAndPaymentFlow"]]
         ]
     }
     node {
@@ -89,7 +89,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 }
 
 task integrationTest(type: Test, dependsOn: []) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 

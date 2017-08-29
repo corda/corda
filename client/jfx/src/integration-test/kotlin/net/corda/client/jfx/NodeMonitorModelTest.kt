@@ -2,15 +2,13 @@ package net.corda.client.jfx
 
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.ProgressTrackingEvent
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
-import net.corda.finance.DOLLARS
-import net.corda.finance.USD
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
@@ -22,9 +20,11 @@ import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.flows.CashExitFlow
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
+import net.corda.finance.DOLLARS
+import net.corda.finance.USD
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService

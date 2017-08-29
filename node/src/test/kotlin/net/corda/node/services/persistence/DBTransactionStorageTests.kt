@@ -10,6 +10,9 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV2
+import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
@@ -18,9 +21,6 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
-import net.corda.schemas.CashSchemaV1
-import net.corda.schemas.SampleCashSchemaV2
-import net.corda.schemas.SampleCashSchemaV3
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -38,8 +38,6 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
     lateinit var transactionStorage: DBTransactionStorage
     lateinit var services: MockServices
     val vault: VaultService get() = services.vaultService
-    // Hibernate configuration objects
-    lateinit var hibernateConfig: HibernateConfiguration
 
     @Before
     fun setUp() {
@@ -49,18 +47,16 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
         val transactionSchema = MappedSchema(schemaFamily = javaClass, version = 1,
                 mappedTypes = listOf(DBTransactionStorage.DBTransaction::class.java))
 
-        val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, transactionSchema)
+        val createSchemaService = { NodeSchemaService(setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, transactionSchema)) }
 
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), customSchemas, identitySvc = ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), createSchemaService, ::makeTestIdentityService)
 
         database.transaction {
 
-            hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
-
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultService get() {
-                    val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
-                    hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
+                    val vaultService = NodeVaultService(this)
+                    hibernatePersister = HibernateObserver(vaultService.rawUpdates, database.hibernateConfig)
                     return vaultService
                 }
 

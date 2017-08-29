@@ -1,11 +1,6 @@
 package net.corda.node.messaging
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.CommercialPaper
-import net.corda.contracts.asset.CASH
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.`issued by`
-import net.corda.contracts.asset.`owned by`
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
@@ -35,8 +30,13 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
-import net.corda.flows.TwoPartyTradeFlow.Buyer
-import net.corda.flows.TwoPartyTradeFlow.Seller
+import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.CASH
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.`issued by`
+import net.corda.finance.contracts.asset.`owned by`
+import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
+import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.config.NodeConfiguration
@@ -325,6 +325,11 @@ class TwoPartyTradeFlowTests {
         val bankNode = makeNodeWithTracking(notaryNode.network.myAddress, BOC.name)
         val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
+        val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
+        allNodes.forEach { node ->
+            allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.verifyAndRegisterIdentity(identity) }
+        }
+
         ledger(aliceNode.services, initialiseSerialization = false) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
@@ -425,6 +430,11 @@ class TwoPartyTradeFlowTests {
         val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
         val bankNode = makeNodeWithTracking(notaryNode.network.myAddress, BOC.name)
         val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
+
+        val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
+        allNodes.forEach { node ->
+            allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.verifyAndRegisterIdentity(identity) }
+        }
 
         ledger(aliceNode.services, initialiseSerialization = false) {
 

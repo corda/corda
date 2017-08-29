@@ -10,12 +10,12 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.DatabaseTransaction
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
 import net.corda.testing.node.makeTestIdentityService
-import org.jetbrains.exposed.sql.Transaction
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -27,14 +27,13 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     data class Member(val client: CopycatClient, val server: CopycatServer)
 
     lateinit var cluster: List<Member>
-    lateinit var transaction: Transaction
-    lateinit var database: CordaPersistence
+    lateinit var transaction: DatabaseTransaction
+    private val databases: MutableList<CordaPersistence> = mutableListOf()
 
     @Before
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
         LogHelper.setLevel(NetworkMapService::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
         cluster = setUpCluster()
     }
 
@@ -46,7 +45,7 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
             it.client.close()
             it.server.shutdown()
         }
-        database.close()
+        databases.forEach { it.close() }
     }
 
     @Test
@@ -87,8 +86,9 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
-
-        val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(database, "commited_states_${myAddress.port}") }
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties("serverNameTablePrefix", "PORT_${myAddress.port}_"), createIdentityService = ::makeTestIdentityService)
+        databases.add(database)
+        val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createMap) }
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)

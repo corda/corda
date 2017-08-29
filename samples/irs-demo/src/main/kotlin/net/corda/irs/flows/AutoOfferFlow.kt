@@ -1,7 +1,6 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.DealState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
@@ -10,10 +9,11 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.flows.TwoPartyDealFlow
-import net.corda.flows.TwoPartyDealFlow.Acceptor
-import net.corda.flows.TwoPartyDealFlow.AutoOffer
-import net.corda.flows.TwoPartyDealFlow.Instigator
+import net.corda.finance.contracts.DealState
+import net.corda.finance.flows.TwoPartyDealFlow
+import net.corda.finance.flows.TwoPartyDealFlow.Acceptor
+import net.corda.finance.flows.TwoPartyDealFlow.AutoOffer
+import net.corda.finance.flows.TwoPartyDealFlow.Instigator
 
 /**
  * This whole class is really part of a demo just to initiate the agreement of a deal with a simple

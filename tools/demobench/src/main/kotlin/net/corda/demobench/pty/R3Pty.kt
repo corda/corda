@@ -58,8 +58,6 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
         executor.submit {
             val exitValue = connector.waitFor()
             log.info("Terminal has exited (value={})", exitValue)
-            // TODO: Remove this arbitrary sleep when https://github.com/corda/corda/issues/689 is fixed.
-            try { Thread.sleep(SECONDS.toMillis(2)) } catch (e: InterruptedException) {}
             onExit(exitValue)
         }
 

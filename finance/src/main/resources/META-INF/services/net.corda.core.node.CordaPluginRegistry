@@ -1,1 +1,1 @@
-net.corda.plugin.FinancePluginRegistry
+net.corda.finance.plugin.FinancePluginRegistry

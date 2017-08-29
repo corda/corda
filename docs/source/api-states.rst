@@ -129,7 +129,7 @@ For example, here is a relatively complex state definition, for a state represen
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/contracts/asset/Cash.kt
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/asset/Cash.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1

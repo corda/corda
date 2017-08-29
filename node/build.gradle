@@ -76,7 +76,6 @@ processSmokeTestResources {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-    compile project(':node-schemas')
     compile project(':node-api')
     compile project(':client:rpc')
     compile project(':cordform-common')
@@ -145,10 +144,6 @@ dependencies {
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
 
-    // Exposed: Kotlin SQL library - under evaluation
-    // TODO: Upgrade to Exposed 0.7 (has API changes)
-    compile "org.jetbrains.exposed:exposed:0.5.0"
-
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:2.5.1"
 
@@ -180,9 +175,6 @@ dependencies {
     compile 'commons-codec:commons-codec:1.10'
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
-    // Requery: object mapper for Kotlin
-    compile "io.requery:requery-kotlin:$requery_version"
-
     // FastClasspathScanner: classpath scanning
     compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
 
@@ -197,7 +189,7 @@ dependencies {
 }
 
 task integrationTest(type: Test) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
@@ -208,7 +200,7 @@ task smokeTestJar(type: Jar) {
 
 task smokeTest(type: Test) {
     dependsOn smokeTestJar
-    testClassesDir = sourceSets.smokeTest.output.classesDir
+    testClassesDirs = sourceSets.smokeTest.output.classesDirs
     classpath = sourceSets.smokeTest.runtimeClasspath
 }
 

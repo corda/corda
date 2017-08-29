@@ -3,13 +3,14 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.requireThat
-import net.corda.testing.contracts.DummyContract
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.MINI_CORP_KEY
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import org.junit.After
@@ -77,16 +78,18 @@ class CollectSignaturesFlowTests {
         }
 
         @InitiatedBy(TestFlow.Initiator::class)
-        class Responder(val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        class Responder(val otherParty: Party, val identities: Map<Party, AnonymousParty>) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val state = receive<DummyContract.MultiOwnerState>(otherParty).unwrap { it }
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
-                val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
+                val myInputKeys = state.participants.map { it.owningKey }
+                val myKeys = myInputKeys + (identities[serviceHub.myInfo.legalIdentity] ?: serviceHub.myInfo.legalIdentity).owningKey
+                val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(state, command)
                 val ptx = serviceHub.signInitialTransaction(builder)
-                val stx = subFlow(CollectSignaturesFlow(ptx))
+                val stx = subFlow(CollectSignaturesFlow(ptx, myKeys))
                 val ftx = subFlow(FinalityFlow(stx)).single()
 
                 return ftx
@@ -103,10 +106,11 @@ class CollectSignaturesFlowTests {
             @Suspendable
             override fun call(): SignedTransaction {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
-                val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
+                val myInputKeys = state.participants.map { it.owningKey }
+                val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(state, command)
                 val ptx = serviceHub.signInitialTransaction(builder)
-                val stx = subFlow(CollectSignaturesFlow(ptx))
+                val stx = subFlow(CollectSignaturesFlow(ptx, myInputKeys))
                 val ftx = subFlow(FinalityFlow(stx)).single()
 
                 return ftx
@@ -136,9 +140,12 @@ class CollectSignaturesFlowTests {
 
     @Test
     fun `successfully collects two signatures`() {
+        val bConfidentialIdentity = b.services.keyManagementService.freshKeyAndCert(b.info.legalIdentityAndCert, false)
+        // Normally this is handled by TransactionKeyFlow, but here we have to manually let A know about the identity
+        a.services.identityService.verifyAndRegisterIdentity(bConfidentialIdentity)
         registerFlowOnAllNodes(TestFlowTwo.Responder::class)
         val magicNumber = 1337
-        val parties = listOf(a.info.legalIdentity, b.info.legalIdentity, c.info.legalIdentity)
+        val parties = listOf(a.info.legalIdentity, bConfidentialIdentity.party, c.info.legalIdentity)
         val state = DummyContract.MultiOwnerState(magicNumber, parties)
         val flow = a.services.startFlow(TestFlowTwo.Initiator(state))
         mockNet.runNetwork()

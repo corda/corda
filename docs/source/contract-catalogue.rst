@@ -23,6 +23,11 @@ Cash shares a common superclass, ``OnLedgerAsset``, with the Commodity contract.
 assets which can be issued, moved and exited on chain, with the subclasses handling asset-specific data types and
 behaviour.
 
+.. note:: Corda supports a pluggable cash selection algorithm by implementing the ``CashSelection`` interface.
+          The default implementation uses an H2 specific query that can be overridden for different database providers.
+          Please see ``CashSelectionH2Impl`` and its associated declaration in
+          ``META-INF\services\net.corda.finance.contracts.asset.CashSelection``
+
 Commodity
 ---------
 

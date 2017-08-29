@@ -8,7 +8,6 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
-import io.requery.util.CloseableIterator
 import net.corda.core.internal.LazyPool
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
@@ -103,14 +102,9 @@ open class SerializationFactoryImpl : SerializationFactory {
 
 private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
     override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
-        val message = if (closeable is CloseableIterator<*>) {
-            "A live Iterator pointing to the database has been detected during flow checkpointing. This may be due " +
-                    "to a Vault query - move it into a private method."
-        } else {
-            "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
+        val message = "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
                     "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
                     "confined to a private method or the reference is nulled out."
-        }
         throw UnsupportedOperationException(message)
     }
 
@@ -224,34 +218,6 @@ val KRYO_P2P_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         emptyMap(),
         true,
         SerializationContext.UseCase.P2P)
-val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.RPCServer)
-val KRYO_RPC_CLIENT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.RPCClient)
-val KRYO_STORAGE_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        AllButBlacklisted,
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.Storage)
-val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        QuasarWhitelist,
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.Checkpoint)
-
-object QuasarWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = true
-}
 
 interface SerializationScheme {
     // byteSequence expected to just be the 8 bytes necessary for versioning

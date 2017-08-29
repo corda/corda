@@ -20,7 +20,6 @@ The Corda repository comprises the following folders:
 * **lib** contains some dependencies
 * **node** contains the core code of the Corda node (eg: node driver, node services, messaging, persistence)
 * **node-api** contains data structures shared between the node and the client module, e.g. types sent via RPC
-* **node-schemas** contains entity classes used to represent relational database tables
 * **samples** contains all our Corda demos and code samples
 * **test-utils** contains some utilities for unit testing contracts ( the contracts testing DSL) and protocols (the
   mock network) implementation

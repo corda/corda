@@ -1,8 +1,10 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.core.serialization.CordaSerializable
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.Type
 
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
@@ -119,6 +121,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
             with(cw) {
                 visit(V1_8, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, schema.jvmName, null, "java/lang/Object", interfaces)
+                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
 
                 generateAbstractGetters(schema)
 
@@ -136,6 +139,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
             with(cw) {
                 visit(V1_8, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName, interfaces.toTypedArray())
+                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
 
                 generateFields(schema)
                 generateConstructor(schema)

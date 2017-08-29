@@ -1,10 +1,6 @@
 @file:JvmName("StateSumming")
 package net.corda.finance.utils
 
-import net.corda.contracts.Commodity
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.CommodityContract
-import net.corda.contracts.asset.Obligation
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Amount.Companion.sumOrNull
 import net.corda.core.contracts.Amount.Companion.sumOrThrow
@@ -13,6 +9,10 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.Issued
 import net.corda.core.identity.AbstractParty
+import net.corda.finance.contracts.Commodity
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.CommodityContract
+import net.corda.finance.contracts.asset.Obligation
 import java.util.*
 
 /** A collection of utilities for summing states */

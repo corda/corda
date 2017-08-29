@@ -128,10 +128,24 @@ infix fun <T : ContractState> T.`with notary`(newNotary: Party) = withNotary(new
 infix fun <T : ContractState> T.withNotary(newNotary: Party) = TransactionState(this, newNotary)
 
 /**
- * Definition for an issued product, which can be cash, a cash-like thing, assets, or generally anything else that's
- * quantifiable with integer quantities.
+ * The [Issued] data class holds the details of an on ledger digital asset.
+ * In particular it gives the public credentials of the entity that created these digital tokens
+ * and the particular product represented.
  *
- * @param P the type of product underlying the definition, for example [java.util.Currency].
+ * @param P the class type of product underlying the definition, for example [java.util.Currency].
+ * @property issuer The [AbstractParty] details of the entity which issued the asset
+ * and a reference blob, which can contain other details related to the token creation e.g. serial number,
+ * warehouse location, etc.
+ * The issuer is the gatekeeper for creating, or destroying the tokens on the digital ledger and
+ * only their [PrivateKey] signature can authorise transactions that do not conserve the total number
+ * of tokens on the ledger.
+ * Other identities may own the tokens, but they can only create transactions that conserve the total token count.
+ * Typically the issuer is also a well know organisation that can convert digital tokens to external assets
+ * and thus underwrites the digital tokens.
+ * Different issuer values may coexist for a particular product, but these cannot be merged.
+ * @property product The details of the specific product represented by these digital tokens. The value
+ * of product may differentiate different kinds of asset within the same logical class e.g the currency, or
+ * it may just be a type marker for a single custom asset.
  */
 @CordaSerializable
 data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
@@ -156,15 +170,15 @@ data class CommandAndState(val command: CommandData, val ownableState: OwnableSt
  * A contract state that can have a single owner.
  */
 interface OwnableState : ContractState {
-    /** There must be a MoveCommand signed by this key to claim the amount */
+    /** There must be a MoveCommand signed by this key to claim the amount. */
     val owner: AbstractParty
 
-    /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
+    /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone. */
     fun withNewOwner(newOwner: AbstractParty): CommandAndState
 }
 // DOCEND 3
 
-/** Something which is scheduled to happen at a point in time */
+/** Something which is scheduled to happen at a point in time. */
 interface Scheduled {
     val scheduledAt: Instant
 }
@@ -282,12 +296,6 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) 
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
     override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString()}"
-}
-
-/** A common issue command, to enforce that issue commands have a nonce value. */
-// TODO: Revisit use of nonce values - should this be part of the TX rather than the command perhaps?
-interface IssueCommand : CommandData {
-    val nonce: Long
 }
 
 /** A common move command for contract states which can change owner. */

@@ -24,12 +24,6 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.CordaPersistence
 
-/**
- * Session ID to use for services listening for the first message in a session (before a
- * specific session ID has been established).
- */
-val DEFAULT_SESSION_ID = 0L
-
 interface NetworkMapCacheInternal : NetworkMapCache {
     /**
      * Deregister from updates from the given map service.

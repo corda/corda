@@ -1,7 +1,6 @@
 package net.corda.traderdemo.flow
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.CommercialPaper
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
@@ -15,6 +14,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.finance.`issued by`
+import net.corda.finance.contracts.CommercialPaper
 import java.time.Instant
 import java.util.*
 

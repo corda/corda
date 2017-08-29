@@ -9,39 +9,36 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.javaGetter
 
 @CordaSerializable
-enum class BinaryLogicalOperator {
+interface Operator
+
+enum class BinaryLogicalOperator : Operator {
     AND,
     OR
 }
 
-@CordaSerializable
-enum class EqualityComparisonOperator {
+enum class EqualityComparisonOperator : Operator {
     EQUAL,
     NOT_EQUAL
 }
 
-@CordaSerializable
-enum class BinaryComparisonOperator {
+enum class BinaryComparisonOperator : Operator {
     LESS_THAN,
     LESS_THAN_OR_EQUAL,
     GREATER_THAN,
     GREATER_THAN_OR_EQUAL,
 }
 
-@CordaSerializable
-enum class NullOperator {
+enum class NullOperator : Operator {
     IS_NULL,
     NOT_NULL
 }
 
-@CordaSerializable
-enum class LikenessOperator {
+enum class LikenessOperator : Operator {
     LIKE,
     NOT_LIKE
 }
 
-@CordaSerializable
-enum class CollectionOperator {
+enum class CollectionOperator : Operator {
     IN,
     NOT_IN
 }

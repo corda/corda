@@ -8,18 +8,17 @@ class NonInvalidatingUnboundCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
 ): LoadingCache<K, V> by cache {
 
-    constructor(concurrencyLevel: Int, loadFunction: (K) -> V) :
-            this(buildCache(concurrencyLevel, loadFunction, RemovalListener<K, V> {
-                //no removal
-            }))
-
-    constructor(concurrencyLevel: Int, loadFunction: (K) -> V, removalListener: RemovalListener<K, V>) :
-            this(buildCache(concurrencyLevel, loadFunction, removalListener))
+    constructor(concurrencyLevel: Int, loadFunction: (K) -> V, removalListener: RemovalListener<K, V> = RemovalListener {},
+                keysToPreload: () -> Iterable<K> = { emptyList() } ) :
+            this(buildCache(concurrencyLevel, loadFunction, removalListener, keysToPreload))
 
     private companion object {
-        private fun <K, V> buildCache(concurrencyLevel: Int, loadFunction: (K) -> V, removalListener: RemovalListener<K, V>): LoadingCache<K, V> {
+        private fun <K, V> buildCache(concurrencyLevel: Int, loadFunction: (K) -> V, removalListener: RemovalListener<K, V>,
+                                      keysToPreload: () -> Iterable<K>): LoadingCache<K, V> {
             val builder = CacheBuilder.newBuilder().concurrencyLevel(concurrencyLevel).removalListener(removalListener)
-            return builder.build(NonInvalidatingCacheLoader(loadFunction))
+            return builder.build(NonInvalidatingCacheLoader(loadFunction)).apply {
+                getAll(keysToPreload())
+            }
         }
     }
 

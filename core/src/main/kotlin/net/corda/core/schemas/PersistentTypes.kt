@@ -1,6 +1,5 @@
 package net.corda.core.schemas
 
-import io.requery.Persistable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.serialization.CordaSerializable
@@ -69,4 +68,4 @@ data class PersistentStateRef(
 /**
  * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
  */
-interface StatePersistable : Persistable
+interface StatePersistable

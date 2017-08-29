@@ -28,6 +28,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     interface Commands {
         data class Cmd1(val id: Int) : CommandData, Commands
         data class Cmd2(val id: Int) : CommandData, Commands
+        data class Cmd3(val id: Int) : CommandData, Commands // Unused command, required for command not-present checks.
     }
 
 
@@ -187,7 +188,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
         val intCmd2 = ltx.commandsOfType<Commands.Cmd2>()
         assertEquals(5, intCmd2.size)
         assertEquals(listOf(0, 1, 2, 3, 4), intCmd2.map { it.value.id })
-        val notPresentQuery = ltx.commandsOfType(FungibleAsset.Commands.Exit::class.java)
+        val notPresentQuery = ltx.commandsOfType(Commands.Cmd3::class.java)
         assertEquals(emptyList(), notPresentQuery)
     }
 

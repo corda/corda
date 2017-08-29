@@ -1,11 +1,10 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.contracts.getCashBalance
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -20,6 +19,10 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
+import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.utils.sumCash
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
@@ -84,9 +87,9 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `states not local to instance`() {
         database.transaction {
-
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
-
+        }
+        database.transaction {
             val w1 = vaultQuery.queryBy<Cash.State>().states
             assertThat(w1).hasSize(3)
 
@@ -112,9 +115,9 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `states for refs`() {
         database.transaction {
-
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
-
+        }
+        database.transaction {
             val w1 = vaultQuery.queryBy<Cash.State>().states
             assertThat(w1).hasSize(3)
 
@@ -126,8 +129,9 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `states soft locking reserve and release`() {
         database.transaction {
-
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
+        }
+        database.transaction {
 
             val unconsumedStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(unconsumedStates).hasSize(3)
@@ -309,8 +313,9 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `unconsumedStatesForSpending exact amount`() {
         database.transaction {
-
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L))
+        }
+        database.transaction {
 
             val unconsumedStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(unconsumedStates).hasSize(1)
@@ -327,10 +332,10 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `unconsumedStatesForSpending from two issuer parties`() {
         database.transaction {
-
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)))
-
+        }
+        database.transaction {
             val spendableStatesUSD = vaultSvc.unconsumedCashStatesForSpending(200.DOLLARS,
                     onlyFromIssuerParties = setOf(DUMMY_CASH_ISSUER.party, BOC))
             spendableStatesUSD.forEach(::println)
@@ -344,12 +349,12 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `unconsumedStatesForSpending from specific issuer party and refs`() {
         database.transaction {
-
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), ref = OpaqueBytes.of(1))
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), ref = OpaqueBytes.of(2))
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), ref = OpaqueBytes.of(3))
-
+        }
+        database.transaction {
             val unconsumedStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(unconsumedStates).hasSize(4)
 
@@ -366,9 +371,9 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `unconsumedStatesForSpending insufficient amount`() {
         database.transaction {
-
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L))
-
+        }
+        database.transaction {
             val unconsumedStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(unconsumedStates).hasSize(1)
 
@@ -383,9 +388,9 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `unconsumedStatesForSpending small amount`() {
         database.transaction {
-
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L))
-
+        }
+        database.transaction {
             val unconsumedStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(unconsumedStates).hasSize(2)
 
@@ -401,11 +406,11 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `states soft locking query granularity`() {
         database.transaction {
-
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L))
             services.fillWithSomeTestCash(100.POUNDS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L))
-
+        }
+        database.transaction {
             var unlockedStates = 30
             val allStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(allStates).hasSize(unlockedStates)

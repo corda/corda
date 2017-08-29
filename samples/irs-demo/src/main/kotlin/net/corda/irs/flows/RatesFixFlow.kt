@@ -1,8 +1,6 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.Fix
-import net.corda.contracts.FixOf
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowLogic
@@ -13,6 +11,8 @@ import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
+import net.corda.finance.contracts.Fix
+import net.corda.finance.contracts.FixOf
 import net.corda.irs.flows.RatesFixFlow.FixOutOfRange
 import java.math.BigDecimal
 import java.util.*

@@ -42,7 +42,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Guava: Google utilities library.
-    compile "com.google.guava:guava:$guava_version"
+    testCompile "com.google.guava:guava:$guava_version"
 
     // RxJava: observable streams of events.
     compile "io.reactivex:rxjava:$rxjava_version"
@@ -63,9 +63,6 @@ dependencies {
 
     // JPA 2.1 annotations.
     compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
-
-    // Requery: SQL based query & persistence for Kotlin
-    compile "io.requery:requery-kotlin:$requery_version"
 }
 
 configurations {

@@ -1,10 +1,12 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.CordaSerializable
 import org.junit.Test
 import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 
+@CordaSerializable
 interface I {
     fun getName() : String
 }
@@ -26,7 +28,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase() {
     }
 
     val sf1 = testDefaultFactory()
-    val sf2 = testDefaultFactory()
+    val sf2 = testDefaultFactoryWithWhitelist() // Deserialize with whitelisting on to check that `CordaSerializable` annotation present.
 
     @Test
     fun verySimpleType() {
@@ -115,6 +117,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase() {
     fun arrayOfTypes() {
         val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf("a" to NonNullableField(Int::class.java))))
 
+        @CordaSerializable
         data class Outer (val a : Array<Any>)
 
         val outer = Outer (arrayOf (
@@ -185,6 +188,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase() {
         val nestedClass = cc.build (ClassSchema("nestedType",
                 mapOf("name" to NonNullableField(String::class.java))))
 
+        @CordaSerializable
         data class outer(val a: Any, val b: Any)
 
         val classInstance = outer (
@@ -204,6 +208,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase() {
                 "v1" to NonNullableField(Int::class.java),
                 "v2" to NonNullableField(Int::class.java))))
 
+        @CordaSerializable
         data class outer (val l : List<Any>)
         val toSerialise = outer (listOf (
                 unknownClass.constructors.first().newInstance(1, 2),
