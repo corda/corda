@@ -1,4 +1,4 @@
-package net.corda.node.services.database
+package net.corda.node.services.persistence
 
 import net.corda.core.internal.castIfPossible
 import net.corda.core.node.services.IdentityService
@@ -62,7 +62,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
-        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
+        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase","true") == "true") "update" else "validate")
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("hibernate.connection.isolation", transactionIsolationLevel.toString())

@@ -1,4 +1,4 @@
-package net.corda.node.services.database
+package net.corda.node.services.persistence
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
