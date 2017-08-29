@@ -6,7 +6,6 @@ import rx.subscriptions.Subscriptions
 import java.time.Clock
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.atomic.AtomicLong
-import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 
 /**
  * An abstract class with helper methods for a type of Clock that might have it's concept of "now"
