@@ -5,17 +5,22 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.converters.AbstractPartyToX500NameAsStringConverter
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.toHexString
 import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.parserTransactionIsolationLevel
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.model.naming.*
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
+import org.hibernate.type.AbstractSingleColumnStandardBasicType
+import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
+import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -83,7 +88,9 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
             })
             // register custom converters
             applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityScervice))
-
+            // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
+            // to avoid OOM when large blobs might get logged.
+            applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
             build()
         }
 
@@ -116,5 +123,27 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
         }
 
         override fun isUnwrappableAs(unwrapType: Class<*>?): Boolean = unwrapType == NodeDatabaseConnectionProvider::class.java
+    }
+
+    // A tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.  Also logs in hex.
+    private object CordaMaterializedBlobType : AbstractSingleColumnStandardBasicType<ByteArray>(BlobTypeDescriptor.DEFAULT, CordaPrimitiveByteArrayTypeDescriptor) {
+        override fun getName(): String {
+            return "materialized_blob"
+        }
+    }
+
+    // A tweaked version of `org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor` that truncates logged messages.
+    private object CordaPrimitiveByteArrayTypeDescriptor : PrimitiveByteArrayTypeDescriptor() {
+        private val LOG_SIZE_LIMIT = 1024
+
+        override fun extractLoggableRepresentation(value: ByteArray?): String {
+            return if (value == null) super.extractLoggableRepresentation(value) else {
+                if (value.size <= LOG_SIZE_LIMIT) {
+                    return "[size=${value.size}, value=${value.toHexString()}]"
+                } else {
+                    return "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
+                }
+            }
+        }
     }
 }
