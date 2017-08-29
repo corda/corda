@@ -108,7 +108,7 @@ An example of a custom query in Java is illustrated here:
     :start-after: DOCSTART VaultJavaQueryExample3
     :end-before: DOCEND VaultJavaQueryExample3
 
-.. note:: Queries by ``Party`` specify the ``AbstractParty`` which may be concrete or anonymous. In the later case, where an anonymous party does not have an associated X500Name, no query results will ever be produced. For performance reasons, queries do not use PublicKey as search criteria.
+.. note:: Queries by ``Party`` specify the ``AbstractParty`` which may be concrete or anonymous. In the later case, where an anonymous party does not resolve to an X500Name via the IdentityService, no query results will ever be produced. For performance reasons, queries do not use PublicKey as search criteria.
 
 Pagination
 ----------
