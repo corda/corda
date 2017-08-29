@@ -6,6 +6,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver
 import org.bouncycastle.asn1.x500.X500Name

@@ -11,7 +11,7 @@ import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.jackson.JacksonSupport
-import net.corda.node.services.startFlowPermission
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver
 import org.junit.Ignore

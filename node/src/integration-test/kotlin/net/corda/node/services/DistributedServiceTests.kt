@@ -22,6 +22,7 @@ import org.junit.Test
 import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 
 class DistributedServiceTests : DriverBasedTest() {
     lateinit var alice: NodeHandle
