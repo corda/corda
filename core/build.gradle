@@ -42,7 +42,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Guava: Google utilities library.
-    compile "com.google.guava:guava:$guava_version"
+    testCompile "com.google.guava:guava:$guava_version"
 
     // RxJava: observable streams of events.
     compile "io.reactivex:rxjava:$rxjava_version"

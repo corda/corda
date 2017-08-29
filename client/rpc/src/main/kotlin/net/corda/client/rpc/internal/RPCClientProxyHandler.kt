@@ -116,7 +116,8 @@ class RPCClientProxyHandler(
 
     private fun createRpcObservableMap(): RpcObservableMap {
         val onObservableRemove = RemovalListener<RPCApi.ObservableId, UnicastSubject<Notification<*>>> {
-            val rpcCallSite = callSiteMap?.remove(it.key.toLong)
+            val observableId = it.key!!
+            val rpcCallSite = callSiteMap?.remove(observableId.toLong)
             if (it.cause == RemovalCause.COLLECTED) {
                 log.warn(listOf(
                         "A hot observable returned from an RPC was never subscribed to.",
@@ -126,7 +127,7 @@ class RPCClientProxyHandler(
                         "will appear less frequently in future versions of the platform and you can ignore it",
                         "if you want to.").joinToString(" "), rpcCallSite)
             }
-            observablesToReap.locked { observables.add(it.key) }
+            observablesToReap.locked { observables.add(observableId) }
         }
         return CacheBuilder.newBuilder().
                 weakValues().
