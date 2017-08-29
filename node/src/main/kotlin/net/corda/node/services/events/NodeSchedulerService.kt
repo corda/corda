@@ -1,8 +1,9 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
+import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
@@ -67,9 +68,12 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
          *
          * @return true if the [Future] is complete, false if the deadline was reached.
          */
+        // We should try to make the Clock used in our code injectable (for tests etc) and to use the extension below
+        // to wait in our code, rather than <code>Thread.sleep()</code> or other time-based pauses.
         @Suspendable
         @VisibleForTesting
-        fun awaitWithDeadline(clock: Clock, deadline: Instant, future: Future<*> = SettableFuture.create<Any>()): Boolean {
+        // We specify full classpath on SettableFuture to differentiate it from the Quasar class of the same name
+        fun awaitWithDeadline(clock: Clock, deadline: Instant, future: Future<*> = GuavaSettableFuture.create<Any>()): Boolean {
             var nanos: Long
             do {
                 val originalFutureCompleted = makeStrandFriendlySettableFuture(future)
@@ -124,13 +128,13 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
          * or [Throwable] is available in the original.
          *
          * We need this so that we do not block the actual thread when calling get(), but instead allow a Quasar context
-         * switch.  There's no need to checkpoint our Fibers as there's no external effect of waiting.
+         * switch.  There's no need to checkpoint our [Fiber]s as there's no external effect of waiting.
          */
-        private fun <T : Any> makeStrandFriendlySettableFuture(future: Future<T>) = co.paralleluniverse.strands.SettableFuture<Boolean>().also { g ->
+        private fun <T : Any> makeStrandFriendlySettableFuture(future: Future<T>) = QuasarSettableFuture<Boolean>().also { g ->
             when (future) {
                 is ListenableFuture -> future.addListener(Runnable { g.set(true) }, Executor { it.run() })
                 is CompletionStage<*> -> future.whenComplete { _, _ -> g.set(true) }
-                else -> throw IllegalArgumentException("Cannot make future $future Fiber friendly.")
+                else -> throw IllegalArgumentException("Cannot make future $future Strand friendly.")
             }
         }
     }
@@ -150,7 +154,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
 
         var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue( { a, b -> a.scheduledAt.compareTo(b.scheduledAt) } )
 
-        var rescheduled: SettableFuture<Boolean>? = null
+        var rescheduled: GuavaSettableFuture<Boolean>? = null
     }
 
     private val mutex = ThreadBox(InnerState())
@@ -211,7 +215,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         // Note, we already have the mutex but we need the scope again here
         val (scheduledState, ourRescheduledFuture) = mutex.alreadyLocked {
             rescheduled?.cancel(false)
-            rescheduled = SettableFuture.create()
+            rescheduled = GuavaSettableFuture.create()
             Pair(scheduledStatesQueue.peek(), rescheduled!!)
         }
         if (scheduledState != null) {
