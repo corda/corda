@@ -22,6 +22,7 @@ import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.junit.Ignore
+import org.junit.Assert.assertSame
 import org.junit.Test
 import java.io.IOException
 import java.io.NotSerializableException
@@ -29,9 +30,7 @@ import java.math.BigDecimal
 import java.nio.ByteBuffer
 import java.time.*
 import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalUnit
 import java.util.*
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -140,13 +139,13 @@ class SerializationOutputTests {
 
     data class PolymorphicProperty(val foo: FooInterface?)
 
-    private fun serdes(obj: Any,
+    private inline fun<reified T : Any> serdes(obj: T,
                        factory: SerializerFactory = SerializerFactory (
                                AllWhitelist, ClassLoader.getSystemClassLoader()),
                        freshDeserializationFactory: SerializerFactory = SerializerFactory(
                                AllWhitelist, ClassLoader.getSystemClassLoader()),
                        expectedEqual: Boolean = true,
-                       expectDeserializedEqual: Boolean = true): Any {
+                       expectDeserializedEqual: Boolean = true): T {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
 
@@ -158,6 +157,7 @@ class SerializationOutputTests {
             this.register(CompositeType.DESCRIPTOR, CompositeType.Companion)
             this.register(Choice.DESCRIPTOR, Choice.Companion)
             this.register(RestrictedType.DESCRIPTOR, RestrictedType.Companion)
+            this.register(ReferencedObject.DESCRIPTOR, ReferencedObject.Companion)
         }
         EncoderImpl(decoder)
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.bytes, 8, bytes.size - 8))
@@ -436,7 +436,7 @@ class SerializationOutputTests {
                 throw IllegalStateException("Layer 2", t)
             }
         } catch(t: Throwable) {
-            val desThrowable = serdes(t, factory, factory2, false) as Throwable
+            val desThrowable = serdes(t, factory, factory2, false)
             assertSerializedThrowableEquivalent(t, desThrowable)
         }
     }
@@ -468,7 +468,7 @@ class SerializationOutputTests {
                 throw e
             }
         } catch(t: Throwable) {
-            val desThrowable = serdes(t, factory, factory2, false) as Throwable
+            val desThrowable = serdes(t, factory, factory2, false)
             assertSerializedThrowableEquivalent(t, desThrowable)
         }
     }
@@ -538,7 +538,6 @@ class SerializationOutputTests {
         AbstractAMQPSerializationScheme.registerCustomSerializers(factory2)
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
-        assertTrue(desState is TransactionState<*>)
         assertTrue((desState as TransactionState<*>).data is FooState)
         assertTrue(desState.notary == state.notary)
         assertTrue(desState.encumbrance == state.encumbrance)
@@ -762,5 +761,37 @@ class SerializationOutputTests {
 
         val obj = StateRef(SecureHash.randomSHA256(), 0)
         serdes(obj, factory, factory2)
+    }
+
+    interface Container
+
+    data class SimpleContainer(val one: String, val another: String) : Container
+
+    data class ParentContainer(val left: SimpleContainer, val right: Container)
+
+    @Test
+    fun `test object referenced multiple times`() {
+        val simple = SimpleContainer("Fred", "Ginger")
+        val parentContainer = ParentContainer(simple, simple)
+        assertSame(parentContainer.left, parentContainer.right)
+
+        val parentCopy = serdes(parentContainer)
+        assertSame(parentCopy.left, parentCopy.right)
+    }
+
+    data class TestNode(val content: String, val children: MutableCollection<TestNode> = ArrayList())
+
+    @Test
+    @Ignore("Ignored due to cyclic graphs not currently supported by AMQP serialization")
+    fun `test serialization of cyclic graph`() {
+        val nodeA = TestNode("A")
+        val nodeB = TestNode("B", ArrayList(Arrays.asList(nodeA)))
+        nodeA.children.add(nodeB)
+
+        // Also blows with StackOverflow error
+        assertTrue(nodeB.hashCode() > 0)
+
+        val bCopy = serdes(nodeB)
+        assertEquals("A", bCopy.children.single().content)
     }
 }
