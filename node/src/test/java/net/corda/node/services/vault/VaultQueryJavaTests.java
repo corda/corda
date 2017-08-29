@@ -191,12 +191,12 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
             QueryCriteria vaultCriteria = new VaultQueryCriteria(status, contractStateTypes);
 
-            List<UUID> linearIds = Collections.singletonList(ids.getSecond().getId());
-            QueryCriteria linearCriteriaAll = new LinearStateQueryCriteria(null, linearIds, null, status);
-            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(null, null, dealIds, status);
+            List<UniqueIdentifier> linearIds = Collections.singletonList(ids.getSecond());
+            QueryCriteria linearCriteriaAll = new LinearStateQueryCriteria(null, linearIds, Vault.StateStatus.UNCONSUMED, null);
+            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(null, null, dealIds);
 
             QueryCriteria compositeCriteria1 = dealCriteriaAll.or(linearCriteriaAll);
-            QueryCriteria compositeCriteria2 = vaultCriteria.and(compositeCriteria1);
+            QueryCriteria compositeCriteria2 = compositeCriteria1.and(vaultCriteria);
 
             PageSpecification pageSpec = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
@@ -307,10 +307,10 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Set<Class<ContractState>> contractStateTypes = new HashSet(Arrays.asList(DealState.class, LinearState.class));
             QueryCriteria vaultCriteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
 
-            List<UUID> linearIds = Collections.singletonList(uid.getId());
+            List<UniqueIdentifier> linearIds = Collections.singletonList(uid);
             List<AbstractParty> dealParty = Collections.singletonList(getMEGA_CORP());
             QueryCriteria dealCriteria = new LinearStateQueryCriteria(dealParty, null, dealIds);
-            QueryCriteria linearCriteria = new LinearStateQueryCriteria(dealParty, linearIds, null);
+            QueryCriteria linearCriteria = new LinearStateQueryCriteria(dealParty, linearIds, Vault.StateStatus.UNCONSUMED, null);
             QueryCriteria dealOrLinearIdCriteria = dealCriteria.or(linearCriteria);
             QueryCriteria compositeCriteria = dealOrLinearIdCriteria.and(vaultCriteria);
 
