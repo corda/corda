@@ -14,6 +14,7 @@ class AnotherDummyContract : Contract, DummyContractBackdoor {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID
         override val participants: List<AbstractParty>
             get() = emptyList()
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
     }
 
     interface Commands : CommandData {

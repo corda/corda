@@ -3,7 +3,6 @@ package net.corda.node.services.events
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
-import net.corda.core.crypto.containsAny
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -28,7 +27,6 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.security.PublicKey
 import java.time.Instant
 import kotlin.test.assertEquals
 
@@ -58,6 +56,7 @@ class ScheduledFlowTests {
         }
 
         override val participants: List<AbstractParty> = listOf(source, destination)
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
     }
 
     class InsertInitialStateFlow(val destination: Party) : FlowLogic<Unit>() {

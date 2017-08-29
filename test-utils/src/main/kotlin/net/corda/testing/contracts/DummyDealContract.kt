@@ -1,8 +1,6 @@
 package net.corda.testing.contracts
 
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.containsAny
+import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
@@ -12,7 +10,6 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.DealState
 import net.corda.testing.schemas.DummyDealStateSchemaV1
-import java.security.PublicKey
 
 class DummyDealContract : Contract {
     override fun verify(tx: LedgerTransaction) {}
@@ -25,6 +22,8 @@ class DummyDealContract : Contract {
         constructor(contract: Contract = DummyDealContract(),
                     participants: List<AbstractParty> = listOf(),
                     ref: String) : this(contract, participants, UniqueIdentifier(ref))
+
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
 
         override fun generateAgreement(notary: Party): TransactionBuilder {
             throw UnsupportedOperationException("not implemented")

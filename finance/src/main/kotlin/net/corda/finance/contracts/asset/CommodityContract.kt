@@ -47,6 +47,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         override val contract = COMMODITY_PROGRAM_ID
         override val exitKeys: Set<PublicKey> = Collections.singleton(owner.owningKey)
         override val participants = listOf(owner)
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
 
         override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Commodity>>, newOwner: AbstractParty): FungibleAsset<Commodity>
                 = copy(amount = amount.copy(newAmount.quantity), owner = newOwner)

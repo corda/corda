@@ -16,6 +16,7 @@ class UniversalContract : Contract {
     data class State(override val participants: List<AbstractParty>,
                      val details: Arrangement) : ContractState {
         override val contract = UNIVERSAL_PROGRAM_ID
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
     }
 
     interface Commands : CommandData {

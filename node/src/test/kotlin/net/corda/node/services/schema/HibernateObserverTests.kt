@@ -77,6 +77,8 @@ class HibernateObserverTests {
 
         override val participants: List<AbstractParty>
             get() = throw UnsupportedOperationException()
+
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
     }
 
     // This method does not use back quotes for a nice name since it seems to kill the kotlin compiler.

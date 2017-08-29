@@ -182,6 +182,7 @@ data class GeneratedState(
         override val participants: List<AbstractParty>
 ) : ContractState {
     override val contract = DummyContract()
+    override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
 }
 
 class GeneratedAttachment(

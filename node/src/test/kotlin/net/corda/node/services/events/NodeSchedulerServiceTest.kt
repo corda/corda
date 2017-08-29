@@ -134,6 +134,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         override val contract: Contract
             get() = throw UnsupportedOperationException()
+
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
     }
 
     class TestFlowLogic(val increment: Int = 1) : FlowLogic<Unit>() {

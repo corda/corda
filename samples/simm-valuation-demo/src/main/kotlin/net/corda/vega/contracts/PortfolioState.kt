@@ -29,6 +29,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
     data class Update(val portfolio: List<StateRef>? = null, val valuation: PortfolioValuation? = null)
 
     override val participants: List<AbstractParty> get() = _parties.toList()
+    override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
     val ref: String get() = linearId.toString()
     val valuer: AbstractParty get() = participants[0]
 

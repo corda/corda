@@ -2,7 +2,6 @@ package net.corda.irs.contract
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import net.corda.core.contracts.*
-import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -18,7 +17,6 @@ import org.apache.commons.jexl3.JexlBuilder
 import org.apache.commons.jexl3.MapContext
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.security.PublicKey
 import java.time.LocalDate
 import java.util.*
 
@@ -617,6 +615,8 @@ class InterestRateSwap : Contract {
 
         override val participants: List<AbstractParty>
             get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
+
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
 
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null

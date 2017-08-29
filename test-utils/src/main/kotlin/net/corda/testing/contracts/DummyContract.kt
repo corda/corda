@@ -19,6 +19,7 @@ data class DummyContract(val blank: Any? = null) : Contract {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<AbstractParty>
             get() = listOf(owner)
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
 
         override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
     }
@@ -29,9 +30,10 @@ data class DummyContract(val blank: Any? = null) : Contract {
      * in a different field, however this is a good example of a contract with multiple states.
      */
     data class MultiOwnerState(override val magicNumber: Int = 0,
-                               val owners: List<AbstractParty>) : ContractState, State {
+                               val owners: List<AbstractParty>) : State {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<AbstractParty> get() = owners
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
     }
 
     interface Commands : CommandData {

@@ -1,10 +1,7 @@
 package net.corda.notarydemo.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.Issued
+import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
@@ -23,6 +20,7 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
 
     data class State(override val participants: List<AbstractParty>, private val discriminator: Int) : ContractState {
         override val contract = DoNothingContract
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
     }
 
     @Suspendable

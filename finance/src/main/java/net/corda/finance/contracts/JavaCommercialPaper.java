@@ -97,6 +97,12 @@ public class JavaCommercialPaper implements Contract {
             return JCP_PROGRAM_ID;
         }
 
+        @NotNull
+        @Override
+        public ExecutableAttachmentsValidator getExecutableAttachmentsValidator() {
+            return AlwaysAcceptExecutableAttachmentsValidator.INSTANCE;
+        }
+
         @Override
         public boolean equals(Object that) {
             if (this == that) return true;

@@ -29,6 +29,7 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
             override val contract: Contract = TEST_PROGRAM_ID
             override val participants: List<AbstractParty>
                 get() = listOf(owner)
+            override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
 
             override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
         }

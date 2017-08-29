@@ -60,6 +60,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
             override val contract = ATTACHMENT_TEST_PROGRAM_ID
             override val participants: List<AbstractParty>
                 get() = listOf()
+            override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
         }
 
         interface Commands : CommandData {

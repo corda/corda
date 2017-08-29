@@ -20,6 +20,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
     data class State(val magicNumber: Int = 0, val owners: List<AbstractParty>) : ContractState {
         override val contract = DUMMY_V2_PROGRAM_ID
         override val participants: List<AbstractParty> = owners
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
     }
 
     interface Commands : CommandData {

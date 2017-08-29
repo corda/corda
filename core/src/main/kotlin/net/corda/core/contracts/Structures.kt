@@ -88,6 +88,11 @@ interface ContractState {
      * The participants list should normally be derived from the contents of the state.
      */
     val participants: List<AbstractParty>
+
+    /**
+     * A validator for the contract attachments on the transaction.
+     */
+    val executableAttachmentsValidator: ExecutableAttachmentsValidator
 }
 // DOCEND 1
 

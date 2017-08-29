@@ -137,6 +137,7 @@ class Obligation<P : Any> : Contract {
         override val exitKeys: Collection<PublicKey> = setOf(beneficiary.owningKey)
         val dueBefore: Instant = template.dueBefore
         override val participants: List<AbstractParty> = listOf(obligor, beneficiary)
+        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
         override val owner: AbstractParty = beneficiary
 
         override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Terms<P>>>, newOwner: AbstractParty): State<P>
