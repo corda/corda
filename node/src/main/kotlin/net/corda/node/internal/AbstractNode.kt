@@ -1,7 +1,6 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
-import net.corda.core.internal.VisibleForTesting
 import com.google.common.collect.Lists
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
@@ -13,8 +12,8 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.flatMap
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -34,7 +33,6 @@ import net.corda.node.services.TransactionKeyHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
-import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -597,7 +595,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val address: SingleMessageRecipient = networkMapAddress ?:
                 network.getAddressOfParty(PartyInfo.Node(info)) as SingleMessageRecipient
         // Register for updates, even if we're the one running the network map.
-        return sendNetworkMapRegistration(address).flatMap { (error) ->
+        return flatMap(sendNetworkMapRegistration(address)) { (error) ->
             check(error == null) { "Unable to register with the network map service: $error" }
             // The future returned addMapService will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
             services.networkMapCache.addMapService(network, address, true, null)

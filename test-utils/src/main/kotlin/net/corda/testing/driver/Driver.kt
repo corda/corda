@@ -16,7 +16,13 @@ import net.corda.core.crypto.commonName
 import net.corda.core.crypto.getX509Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.concurrent.CordaFutures.Companion.andForget
+import net.corda.core.internal.concurrent.CordaFutures.Companion.doneFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.flatMap
+import net.corda.core.internal.concurrent.CordaFutures.Companion.fork
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.internal.div
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
@@ -422,7 +428,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
     fun registerShutdown(shutdown: () -> Unit) = registerShutdown(doneFuture(shutdown))
 
     fun registerProcessShutdown(processFuture: CordaFuture<Process>) {
-        val processShutdown = processFuture.map { process ->
+        val processShutdown = map(processFuture) { process ->
             {
                 process.destroy()
                 /** Wait 5 seconds, then [Process.destroyForcibly] */
@@ -504,7 +510,7 @@ class DriverDSL(
     }
 
     override fun waitForAllNodesToFinish() = state.locked {
-        processes.transpose().get().forEach {
+        transpose(processes).get().forEach {
             it.waitFor()
         }
     }
@@ -642,9 +648,9 @@ class DriverDSL(
             startNode(it, advertisedServices, rpcUsers, verifierType, configOverride)
         }
 
-        return firstNotaryFuture.flatMap { firstNotary ->
+        return flatMap(firstNotaryFuture) { firstNotary ->
             val notaryParty = firstNotary.nodeInfo.notaryIdentity
-            restNotaryFutures.transpose().map { restNotaries ->
+            map(transpose(restNotaryFutures)) { restNotaries ->
                 Pair(notaryParty, listOf(firstNotary) + restNotaries)
             }
         }
@@ -671,7 +677,7 @@ class DriverDSL(
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val processFuture = DriverDSL.startWebserver(executorService, handle, debugPort)
         registerProcess(processFuture)
-        return processFuture.map { queryWebserver(handle, it) }
+        return map(processFuture) { queryWebserver(handle, it) }
     }
 
     override fun start() {
@@ -680,7 +686,7 @@ class DriverDSL(
         // We set this property so that in-process nodes find cordapps. Out-of-process nodes need this passed in when started.
         System.setProperty("net.corda.node.cordapp.scan.package", callerPackage)
         if (networkMapStartStrategy.startDedicated) {
-            startDedicatedNetworkMapService().andForget(log) // Allow it to start concurrently with other nodes.
+            andForget(startDedicatedNetworkMapService(), log) // Allow it to start concurrently with other nodes.
         }
     }
 
@@ -709,14 +715,14 @@ class DriverDSL(
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config)
             shutdownManager.registerShutdown(
-                    nodeAndThreadFuture.map { (node, thread) -> {
+                    map(nodeAndThreadFuture) { (node, thread) -> {
                         node.stop()
                         thread.interrupt()
                     } }
             )
-            return nodeAndThreadFuture.flatMap { (node, thread) ->
-                establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, openFuture()).flatMap { rpc ->
-                    rpc.waitUntilRegisteredWithNetworkMap().map {
+            return flatMap(nodeAndThreadFuture) { (node, thread) ->
+                flatMap(establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, openFuture())) { rpc ->
+                    map(rpc.waitUntilRegisteredWithNetworkMap()) {
                         NodeHandle.InProcess(rpc.nodeIdentity(), rpc, nodeConfiguration, webAddress, node, thread)
                     }
                 }
@@ -725,16 +731,16 @@ class DriverDSL(
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, callerPackage)
             registerProcess(processFuture)
-            return processFuture.flatMap { process ->
+            return flatMap(processFuture) { process ->
                 val processDeathFuture = poll(executorService, "process death") {
                     if (process.isAlive) null else process
                 }
                 // We continue to use SSL enabled port for RPC when its for node user.
-                establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, processDeathFuture).flatMap { rpc ->
+                flatMap(establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, processDeathFuture)) { rpc ->
                     // Call waitUntilRegisteredWithNetworkMap in background in case RPC is failing over:
-                    val networkMapFuture = executorService.fork {
+                    val networkMapFuture = flatMap(fork(executorService) {
                         rpc.waitUntilRegisteredWithNetworkMap()
-                    }.flatMap { it }
+                    }) { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
                             throw ListenProcessDeathException(nodeConfiguration.p2pAddress, process)
@@ -767,7 +773,7 @@ class DriverDSL(
                 nodeConf: FullNodeConfiguration,
                 config: Config
         ): CordaFuture<Pair<Node, Thread>> {
-            return executorService.fork {
+            return flatMap(fork(executorService) {
                 log.info("Starting in-process Node ${nodeConf.myLegalName.commonName}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
@@ -778,7 +784,7 @@ class DriverDSL(
                     node.run()
                 }
                 node to nodeThread
-            }.flatMap { nodeAndThread -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress).map { nodeAndThread } }
+            }) { nodeAndThread -> map(addressMustBeBoundFuture(executorService, nodeConf.p2pAddress)) { nodeAndThread } }
         }
 
         private fun startOutOfProcessNode(
@@ -790,7 +796,7 @@ class DriverDSL(
                 overriddenSystemProperties: Map<String, String>,
                 callerPackage: String
         ): CordaFuture<Process> {
-            val processFuture = executorService.fork {
+            val processFuture = fork(executorService) {
                 log.info("Starting out-of-process Node ${nodeConf.myLegalName.commonName}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
@@ -822,8 +828,8 @@ class DriverDSL(
                         workingDirectory = nodeConf.baseDirectory
                 )
             }
-            return processFuture.flatMap {
-                process -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process }
+            return flatMap(processFuture) {
+                process -> map(addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process)) { process }
             }
         }
 
@@ -832,19 +838,19 @@ class DriverDSL(
                 handle: NodeHandle,
                 debugPort: Int?
         ): CordaFuture<Process> {
-            return executorService.fork {
+            return flatMap(fork(executorService) {
                 val className = "net.corda.webserver.WebServer"
                 ProcessUtilities.startCordaProcess(
                         className = className, // cannot directly get class for this, so just use string
                         arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
                         jdwpPort = debugPort,
                         extraJvmArguments = listOf(
-                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
-                            "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
+                                "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                                "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                         ),
                         errorLogPath = Paths.get("error.$className.log")
                 )
-            }.flatMap { process -> addressMustBeBoundFuture(executorService, handle.webAddress, process).map { process } }
+            }) { process -> map(addressMustBeBoundFuture(executorService, handle.webAddress, process)) { process } }
         }
 
         private fun getCallerPackage(): String {

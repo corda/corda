@@ -3,7 +3,7 @@ package net.corda.loadtest.tests
 import net.corda.client.mock.Generator
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.FlowException
-import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.concurrent.CordaFutures.Companion.thenMatch
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -37,7 +37,7 @@ object StabilityTest {
                     is ExitRequest -> command.node.proxy.startFlow(::CashExitFlow, request).returnValue
                     else -> throw IllegalArgumentException("Unexpected request type: $request")
                 }
-                result.thenMatch({
+                thenMatch(result, {
                     log.info("Success[$command]: $result")
                 }, {
                     log.error("Failure[$command]", it)

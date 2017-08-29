@@ -5,7 +5,7 @@ import net.corda.client.mock.pickN
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.AbstractParty
-import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.concurrent.CordaFutures.Companion.thenMatch
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.utilities.OpaqueBytes
@@ -220,7 +220,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                 is ExitRequest -> command.node.proxy.startFlow(::CashExitFlow, request).returnValue
                 else -> throw IllegalArgumentException("Unexpected request type: $request")
             }
-            result.thenMatch({
+            thenMatch(result, {
                 log.info("Success[$command]: $result")
             }, {
                 log.error("Failure[$command]", it)

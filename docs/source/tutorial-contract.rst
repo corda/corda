@@ -469,34 +469,47 @@ logic.
 
    .. sourcecode:: java
 
-      Timestamp time = tx.getTimestamp();   // Can be null/missing.
-      for (InOutGroup<State> group : groups) {
-          List<State> inputs = group.getInputs();
-          List<State> outputs = group.getOutputs();
+      final TimeWindow timeWindow = tx.getTimeWindow();
+              for (final InOutGroup<State, State> group : groups) {
+                  final List<State> inputs = group.getInputs();
+                  final List<State> outputs = group.getOutputs();
 
-          // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
-          State input = single(filterIsInstance(inputs, State.class));
+                  if (command.getValue() instanceof Commands.Move) {
+                      final AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
 
-          checkState(cmd.getSigners().contains(input.getOwner()), "the transaction is signed by the owner of the CP");
+                      // There should be only a single input due to aggregation above
+                      final State input = Iterables.getOnlyElement(inputs);
+                      if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
+                          throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
-          if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Move) {
-              checkState(outputs.size() == 1, "the state is propagated");
-              // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
-              // the input ignoring the owner field due to the grouping.
-          } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
-              TimeWindow timeWindow = tx.getTimeWindow();
-              Instant time = null == timeWindow
-                       ? null
-                       : timeWindow.getUntilTime();
-              Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
+                      // Check the output CP state is the same as the input state, ignoring the owner field.
+                      if (outputs.size() != 1) {
+                          throw new IllegalStateException("the state is propagated");
+                      }
+                  } else if (command.getValue() instanceof Commands.Redeem) {
+                      final AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
-              checkState(received.equals(input.getFaceValue()), "received amount equals the face value");
-              checkState(time != null && !time.isBefore(input.getMaturityDate(), "the paper must have matured");
-              checkState(outputs.isEmpty(), "the paper must be destroyed");
-          } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Issue) {
-              // .. etc .. (see Kotlin for full definition)
-          }
-      }
+                      // There should be only a single input due to aggregation above
+                      final State input = Iterables.getOnlyElement(inputs);
+
+                      if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
+                          throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
+
+                      final Instant time = null == timeWindow ? null : timeWindow.getUntilTime();
+                      final Amount<Issued<Currency>> received = StateSumming.sumCashBy(tx.getOutputStates(), input.getOwner());
+
+                      requireThat(require -> {
+                          require.using("must be timestamped", timeWindow != null);
+                          require.using("received amount equals the face value: "
+                                  + received + " vs " + input.getFaceValue(), received.equals(input.getFaceValue()));
+                          require.using("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
+                          require.using("the received amount equals the face value", input.getFaceValue().equals(received));
+                          require.using("the paper must be destroyed", outputs.isEmpty());
+                          return Unit.INSTANCE;
+                      });
+                  } else if (command.getValue() instanceof Commands.Issue) {
+                      // .. etc .. (see Kotlin for full definition)
+                  }
 
 This loop is the core logic of the contract.
 

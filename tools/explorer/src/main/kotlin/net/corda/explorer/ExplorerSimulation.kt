@@ -8,7 +8,7 @@ import net.corda.client.mock.pickOne
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.concurrent.CordaFutures.Companion.thenMatch
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
@@ -138,7 +138,7 @@ class ExplorerSimulation(val options: OptionSet) {
         // Log to logger when flow finish.
         fun FlowHandle<AbstractCashFlow.Result>.log(seq: Int, name: String) {
             val out = "[$seq] $name $id :"
-            returnValue.thenMatch({ (stx) ->
+            thenMatch(returnValue, { (stx) ->
                 Main.log.info("$out ${stx.id} ${(stx.tx.outputs.first().data as Cash.State).amount}")
             }, {
                 Main.log.info("$out ${it.message}")

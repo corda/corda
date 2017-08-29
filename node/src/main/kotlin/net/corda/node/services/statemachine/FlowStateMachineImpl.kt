@@ -12,7 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.abbreviate
 import net.corda.core.internal.concurrent.OpenFuture
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
 import net.corda.core.internal.staticField
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
@@ -173,7 +173,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             receiveInternal<SessionData>(newSession, receiveType)
         } else {
             val sendData = createSessionData(session, payload)
-            sendAndReceiveInternal<SessionData>(session, sendData, receiveType)
+            sendAndReceiveInternal(session, sendData, receiveType)
         }
         logger.debug { "Received ${sessionData.message.payload.toString().abbreviate(300)}" }
         return sessionData.checkPayloadIs(receiveType)
@@ -242,7 +242,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     // TODO Dummy implementation of access to application specific audit logging
-    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>): Unit {
+    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
         val flowAuditEvent = FlowAppAuditEvent(
                 serviceHub.clock.instant(),
                 flowInitiator,

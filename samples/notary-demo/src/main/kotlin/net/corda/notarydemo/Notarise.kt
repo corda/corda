@@ -1,14 +1,13 @@
 package net.corda.notarydemo
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.toStringShort
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.notarydemo.flows.DummyIssueAndMove
@@ -53,9 +52,9 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      * as it consumes the original asset and creates a copy with the new owner as its output.
      */
     private fun buildTransactions(count: Int): List<SignedTransaction> {
-        return (1..count).map {
+        return transpose((1..count).map {
             rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity, it).returnValue
-        }.transpose().getOrThrow()
+        }).getOrThrow()
     }
 
     /**
@@ -66,7 +65,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      */
     private fun notariseTransactions(transactions: List<SignedTransaction>): List<CordaFuture<List<String>>> {
         return transactions.map {
-            rpc.startFlow(::RPCStartableNotaryFlowClient, it).returnValue.map { it.map { it.by.toStringShort() } }
+            map(rpc.startFlow(::RPCStartableNotaryFlowClient, it).returnValue) { it.map { it.by.toStringShort() } }
         }
     }
 }

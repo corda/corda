@@ -1,6 +1,6 @@
 package net.corda.irs
 
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A
@@ -16,11 +16,11 @@ import net.corda.testing.driver.driver
  */
 fun main(args: Array<String>) {
     driver(dsl = {
-        val (controller, nodeA, nodeB) = listOf(
+        val (controller, nodeA, nodeB) = transpose(listOf(
                 startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
                 startNode(DUMMY_BANK_A.name),
                 startNode(DUMMY_BANK_B.name)
-        ).transpose().getOrThrow()
+        )).getOrThrow()
 
         startWebserver(controller)
         startWebserver(nodeA)

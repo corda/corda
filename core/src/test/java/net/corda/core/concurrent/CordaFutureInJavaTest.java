@@ -10,8 +10,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static net.corda.core.internal.concurrent.CordaFutureImplKt.doneFuture;
-import static net.corda.core.internal.concurrent.CordaFutureImplKt.openFuture;
+import static net.corda.core.internal.concurrent.CordaFutures.doneFuture;
+import static net.corda.core.internal.concurrent.CordaFutures.openFuture;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

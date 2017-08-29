@@ -3,8 +3,8 @@ package net.corda.node.services.messaging
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.doneFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
@@ -41,23 +41,23 @@ import kotlin.test.assertNull
 class ArtemisMessagingTests : TestDependencyInjectionBase() {
     @Rule @JvmField val temporaryFolder = TemporaryFolder()
 
-    val serverPort = freePort()
-    val rpcPort = freePort()
-    val topic = "platform.self"
-    val identity = generateKeyPair()
+    private val serverPort = freePort()
+    private val rpcPort = freePort()
+    private val topic = "platform.self"
+    private val identity = generateKeyPair()
 
-    lateinit var config: NodeConfiguration
-    lateinit var database: CordaPersistence
-    lateinit var userService: RPCUserService
-    lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
+    private lateinit var config: NodeConfiguration
+    private lateinit var database: CordaPersistence
+    private lateinit var userService: RPCUserService
+    private lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
 
-    var messagingClient: NodeMessagingClient? = null
-    var messagingServer: ArtemisMessagingServer? = null
+    private var messagingClient: NodeMessagingClient? = null
+    private var messagingServer: ArtemisMessagingServer? = null
 
     // TODO: We should have a dummy service hub rather than change behaviour in tests
-    val networkMapCache = InMemoryNetworkMapCache(serviceHub = null)
+    private val networkMapCache = InMemoryNetworkMapCache(serviceHub = null)
 
-    val rpcOps = object : RPCOps {
+    private val rpcOps = object : RPCOps {
         override val protocolVersion: Int get() = throw UnsupportedOperationException()
     }
 

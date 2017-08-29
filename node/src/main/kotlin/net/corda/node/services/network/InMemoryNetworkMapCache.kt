@@ -5,8 +5,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -65,12 +65,13 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
         if (node != null) {
             return PartyInfo.Node(node)
         }
-        for ((_, value) in registeredNodes) {
-            for (service in value.advertisedServices) {
-                if (service.identity.party == party) {
-                    return PartyInfo.Service(service)
+        registeredNodes.forEach {
+            (_, value) ->
+                value.advertisedServices.forEach {
+                    if (it.identity.party == party) {
+                        return PartyInfo.Service(it)
+                    }
                 }
-            }
         }
         return null
     }
@@ -116,12 +117,12 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
 
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVer, network.myAddress)
-        val future = network.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, networkMapAddress).map { (nodes) ->
+        val future = map(network.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, networkMapAddress)) { (nodes) ->
             // We may not receive any nodes back, if the map hasn't changed since the version specified
             nodes?.forEach { processRegistration(it) }
             Unit
         }
-        _registrationFuture.captureLater(future.map { null })
+        _registrationFuture.captureLater(map(future) { null })
 
         return future
     }
@@ -153,14 +154,14 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
         val req = NetworkMapService.SubscribeRequest(false, network.myAddress)
         // `network.getAddressOfParty(partyInfo)` is a work-around for MockNetwork and InMemoryMessaging to get rid of SingleMessageRecipient in NodeInfo.
         val address = network.getAddressOfParty(PartyInfo.Node(service))
-        val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, address).map {
+        val future = map(network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, address)) {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }
-        _registrationFuture.captureLater(future.map { null })
+        _registrationFuture.captureLater(map(future) { null })
         return future
     }
 
-    fun processUpdatePush(req: NetworkMapService.Update) {
+    private fun processUpdatePush(req: NetworkMapService.Update) {
         try {
             val reg = req.wireReg.verified()
             processRegistration(reg)

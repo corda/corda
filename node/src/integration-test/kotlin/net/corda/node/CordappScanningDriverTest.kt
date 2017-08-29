@@ -6,7 +6,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
@@ -24,9 +24,9 @@ class CordappScanningDriverTest {
         val user = User("u", "p", setOf(startFlowPermission<ReceiveFlow>()))
         // The driver will automatically pick up the annotated flows below
         driver {
-            val (alice, bob) = listOf(
+            val (alice, bob) = transpose(listOf(
                     startNode(ALICE.name, rpcUsers = listOf(user)),
-                    startNode(BOB.name)).transpose().getOrThrow()
+                    startNode(BOB.name))).getOrThrow()
             val initiatedFlowClass = alice.rpcClientToNode()
                     .start(user.username, user.password)
                     .proxy

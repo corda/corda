@@ -12,7 +12,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
 import net.corda.core.internal.rootCause
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
@@ -534,7 +534,7 @@ class TwoPartyTradeFlowTests {
             serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, false)
         }.party.anonymise()
         val buyerFlows: Observable<BuyerAcceptor> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
-        val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
+        val firstBuyerFiber = map(buyerFlows.toFuture()) { it.stateMachine }
         val seller = SellerInitiator(buyerNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, anonymousSeller)
         val sellerResult = sellerNode.services.startFlow(seller).resultFuture
         return RunResult(firstBuyerFiber, sellerResult, seller.stateMachine.id)

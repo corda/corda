@@ -5,7 +5,7 @@ import com.jcraft.jsch.Session
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.CordaFutures.Companion.fork
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -88,7 +88,7 @@ class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Sessio
 
     private fun runShellCommand(command: String, stdout: OutputStream, stderr: OutputStream): CordaFuture<Int> {
         log.info("Running '$command' on ${remoteNode.hostname}")
-        return ForkJoinPool.commonPool().fork {
+        return fork(ForkJoinPool.commonPool()) {
             val (exitCode, _) = withChannelExec(command) { channel ->
                 channel.outputStream = stdout
                 channel.setErrStream(stderr)

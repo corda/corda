@@ -1,6 +1,6 @@
 package net.corda.docs
 
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
@@ -31,11 +31,11 @@ class IntegrationTestingTutorial {
             val bobUser = User("bobUser", "testPassword2", permissions = setOf(
                     startFlowPermission<CashPaymentFlow>()
             ))
-            val (alice, bob, notary) = listOf(
+            val (alice, bob, notary) = transpose(listOf(
                     startNode(ALICE.name, rpcUsers = listOf(aliceUser)),
                     startNode(BOB.name, rpcUsers = listOf(bobUser)),
                     startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
-            ).transpose().getOrThrow()
+            )).getOrThrow()
             // END 1
 
             // START 2
@@ -56,21 +56,21 @@ class IntegrationTestingTutorial {
 
             // START 4
             val issueRef = OpaqueBytes.of(0)
-            (1..10).map { i ->
+            transpose((1..10).map { i ->
                 aliceProxy.startFlow(::CashIssueFlow,
                         i.DOLLARS,
                         issueRef,
                         notary.nodeInfo.notaryIdentity
                 ).returnValue
-            }.transpose().getOrThrow()
+            }).getOrThrow()
             // We wait for all of the issuances to run before we start making payments
-            (1..10).map { i ->
+            transpose((1..10).map { i ->
                 aliceProxy.startFlow(::CashPaymentFlow,
                         i.DOLLARS,
                         bob.nodeInfo.legalIdentity,
                         true
                 ).returnValue
-            }.transpose().getOrThrow()
+            }).getOrThrow()
 
             bobVaultUpdates.expectEvents {
                 parallel(

@@ -10,8 +10,8 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.flatMap
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
@@ -421,7 +421,7 @@ class FlowFrameworkTests {
         val erroringFlowFuture = node2.registerFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { Exception("evil bug!") }
         }
-        val erroringFlowSteps = erroringFlowFuture.flatMap { it.progressSteps }
+        val erroringFlowSteps = flatMap(erroringFlowFuture) { it.progressSteps }
 
         val receiveFlow = ReceiveFlow(node2.info.legalIdentity)
         val receiveFlowSteps = receiveFlow.progressSteps
@@ -455,7 +455,7 @@ class FlowFrameworkTests {
         val erroringFlow = node2.registerFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { MyFlowException("Nothing useful") }
         }
-        val erroringFlowSteps = erroringFlow.flatMap { it.progressSteps }
+        val erroringFlowSteps = flatMap(erroringFlow) { it.progressSteps }
 
         val receivingFiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)) as FlowStateMachineImpl
 
@@ -506,9 +506,9 @@ class FlowFrameworkTests {
 
         // Node 2 will send its payload and then block waiting for the receive from node 1. Meanwhile node 1 will move
         // onto node 3 which will throw the exception
-        val node2Fiber = node2
-                .registerFlowFactory(ReceiveFlow::class) { SendAndReceiveFlow(it, "Hello") }
-                .map { it.stateMachine }
+        val node2Fiber = map(node2.registerFlowFactory(ReceiveFlow::class) {
+            SendAndReceiveFlow(it, "Hello")
+        }) { it.stateMachine }
         node3.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Nothing useful") } }
 
         val node1Fiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity, node3.info.legalIdentity)) as FlowStateMachineImpl
@@ -597,9 +597,9 @@ class FlowFrameworkTests {
                 .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
-        val committerFiber = node1.registerFlowFactory(WaitingFlows.Waiter::class) {
+        val committerFiber = map(node1.registerFlowFactory(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it)
-        }.map { it.stateMachine }
+        }) { it.stateMachine }
         val waiterStx = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.legalIdentity)).resultFuture
         mockNet.runNetwork()
         assertThat(waiterStx.getOrThrow()).isEqualTo(committerFiber.getOrThrow().resultFuture.getOrThrow())

@@ -3,8 +3,8 @@ package net.corda.client.rpc
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.concurrent.fork
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.fork
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.*
@@ -226,7 +226,7 @@ class RPCStabilityTests {
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
             startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
-            val pingFuture = ForkJoinPool.commonPool().fork(client::ping)
+            val pingFuture = fork(ForkJoinPool.commonPool(), client::ping)
             assertEquals("pong", pingFuture.getOrThrow(10.seconds))
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
@@ -260,9 +260,9 @@ class RPCStabilityTests {
             ).get()
 
             val numberOfClients = 4
-            val clients = (1 .. numberOfClients).map {
+            val clients = transpose((1 .. numberOfClients).map {
                 startRandomRpcClient<TrackSubscriberOps>(server.broker.hostAndPort!!)
-            }.transpose().get()
+            }).get()
 
             // Poll until all clients connect
             pollUntilClientNumber(server, numberOfClients)

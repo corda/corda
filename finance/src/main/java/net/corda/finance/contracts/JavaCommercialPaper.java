@@ -11,6 +11,7 @@ import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
 import net.corda.core.node.ServiceHub;
 import net.corda.core.transactions.LedgerTransaction;
+import net.corda.core.transactions.LedgerTransaction.InOutGroup;
 import net.corda.core.transactions.TransactionBuilder;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.utils.StateSumming;
@@ -168,7 +169,7 @@ public class JavaCommercialPaper implements Contract {
     public void verify(@NotNull LedgerTransaction tx) throws IllegalArgumentException {
 
         // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
-        final List<LedgerTransaction.InOutGroup<State, State>> groups = tx.groupStates(State.class, State::withoutOwner);
+        final List<InOutGroup<State, State>> groups = tx.groupStates(State.class, State::withoutOwner);
 
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
@@ -176,16 +177,17 @@ public class JavaCommercialPaper implements Contract {
                 it -> it.getValue() instanceof Commands
         ).collect(Collectors.toList());
         final AuthenticatedObject<CommandData> command = Iterables.getOnlyElement(commands);
-        final TimeWindow timeWindow = tx.getTimeWindow();
 
-        for (final LedgerTransaction.InOutGroup<State, State> group : groups) {
+        final TimeWindow timeWindow = tx.getTimeWindow();
+        for (final InOutGroup<State, State> group : groups) {
             final List<State> inputs = group.getInputs();
             final List<State> outputs = group.getOutputs();
+
             if (command.getValue() instanceof Commands.Move) {
                 final AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
+
                 // There should be only a single input due to aggregation above
                 final State input = Iterables.getOnlyElement(inputs);
-
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
@@ -202,9 +204,7 @@ public class JavaCommercialPaper implements Contract {
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
-                final Instant time = null == timeWindow
-                        ? null
-                        : timeWindow.getUntilTime();
+                final Instant time = null == timeWindow ? null : timeWindow.getUntilTime();
                 final Amount<Issued<Currency>> received = StateSumming.sumCashBy(tx.getOutputStates(), input.getOwner());
 
                 requireThat(require -> {
@@ -219,10 +219,7 @@ public class JavaCommercialPaper implements Contract {
             } else if (command.getValue() instanceof Commands.Issue) {
                 final AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 final State output = Iterables.getOnlyElement(outputs);
-                final Instant time = null == timeWindow
-                        ? null
-                        : timeWindow.getUntilTime();
-
+                final Instant time = null == timeWindow ? null : timeWindow.getUntilTime();
                 requireThat(require -> {
                     require.using("output values sum to more than the inputs", inputs.isEmpty());
                     require.using("output values sum to more than the inputs", output.faceValue.getQuantity() > 0);

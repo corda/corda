@@ -4,10 +4,10 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.getX509Name
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.fork
-import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.concurrent.CordaFutures.Companion.flatMap
+import net.corda.core.internal.concurrent.CordaFutures.Companion.fork
+import net.corda.core.internal.concurrent.CordaFutures.Companion.map
+import net.corda.core.internal.concurrent.CordaFutures.Companion.transpose
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
@@ -62,7 +62,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
     @After
     fun stopAllNodes() {
         val shutdownExecutor = Executors.newScheduledThreadPool(nodes.size)
-        nodes.map { shutdownExecutor.fork(it::stop) }.transpose().getOrThrow()
+        transpose(nodes.map { fork(shutdownExecutor, it::stop) }).getOrThrow()
         // Wait until ports are released
         val portNotBoundChecks = nodes.flatMap {
             listOf(
@@ -72,7 +72,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         }.filterNotNull()
         nodes.clear()
         _networkMapNode = null
-        portNotBoundChecks.transpose().getOrThrow()
+        transpose(portNotBoundChecks).getOrThrow()
     }
 
     /**
@@ -107,7 +107,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                         )
                 ) + configOverrides
         )
-        return node.networkMapRegistrationFuture.map { node }
+        return map(node.networkMapRegistrationFuture) { node }
     }
 
     fun startNotaryCluster(notaryName: X500Name,
@@ -137,8 +137,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                             "database" to mapOf("serverNameTablePrefix" to "${notaryName.commonName}$it".replace(Regex("[^0-9A-Za-z]+"), ""))))
         }
 
-        return remainingNodesFutures.transpose().flatMap { remainingNodes ->
-            masterNodeFuture.map { masterNode -> listOf(masterNode) + remainingNodes }
+        return flatMap(transpose(remainingNodesFutures)) { remainingNodes ->
+            map(masterNodeFuture) { masterNode -> listOf(masterNode) + remainingNodes }
         }
     }
 
