@@ -26,8 +26,8 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     applicationSource = files(
             project(':node').configurations.runtime,
             project(':node').jar,
-            '../build/classes/main/CordaCaplet.class',
-            '../build/classes/main/CordaCaplet$1.class',
+            project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
+            project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
             "$rootDir/config/dev/log4j2.xml"
     )
     from 'NOTICE' // Copy CDDL notice

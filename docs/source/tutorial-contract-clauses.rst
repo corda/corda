@@ -66,8 +66,6 @@ We start by defining the ``CommercialPaper`` class. As in the previous tutorial,
    .. sourcecode:: kotlin
 
         class CommercialPaper : Contract {
-            override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
-
             override fun verify(tx: LedgerTransaction) = verifyClause(tx, Clauses.Group(), tx.commands.select<Commands>())
 
             interface Commands : CommandData {
@@ -79,11 +77,6 @@ We start by defining the ``CommercialPaper`` class. As in the previous tutorial,
    .. sourcecode:: java
 
       public class CommercialPaper implements Contract {
-          @Override
-          public SecureHash getLegalContractReference() {
-              return SecureHash.Companion.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
-          }
-
           @Override
           public void verify(@NotNull LedgerTransaction tx) throws IllegalArgumentException {
               ClauseVerifier.verifyClause(tx, new Clauses.Group(), extractCommands(tx));

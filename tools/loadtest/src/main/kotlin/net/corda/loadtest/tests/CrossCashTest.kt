@@ -2,15 +2,22 @@ package net.corda.loadtest.tests
 
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickN
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.contracts.USD
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.flows.CashFlowCommand
+import net.corda.finance.USD
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.AbstractCashFlow.AbstractRequest
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
 import org.slf4j.LoggerFactory
@@ -25,20 +32,21 @@ private val log = LoggerFactory.getLogger("CrossCash")
  */
 
 data class CrossCashCommand(
-        val command: CashFlowCommand,
+        val request: AbstractRequest,
         val node: NodeConnection
 ) {
     override fun toString(): String {
-        return when (command) {
-            is CashFlowCommand.IssueCash -> {
-                "ISSUE ${node.info.legalIdentity} -> ${command.recipient} : ${command.amount}"
+        return when (request) {
+            is IssueAndPaymentRequest -> {
+                "ISSUE ${node.info.legalIdentity} -> ${request.recipient} : ${request.amount}"
             }
-            is CashFlowCommand.PayCash -> {
-                "MOVE ${node.info.legalIdentity} -> ${command.recipient} : ${command.amount}"
+            is PaymentRequest -> {
+                "MOVE ${node.info.legalIdentity} -> ${request.recipient} : ${request.amount}"
             }
-            is CashFlowCommand.ExitCash -> {
-                "EXIT ${node.info.legalIdentity} : ${command.amount}"
+            is ExitRequest -> {
+                "EXIT ${node.info.legalIdentity} : ${request.amount}"
             }
+            else -> throw IllegalArgumentException("Unexpected request type: $request")
         }
     }
 }
@@ -142,32 +150,31 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
         },
 
         interpret = { state, command ->
-            when (command.command) {
-                is CashFlowCommand.IssueCash -> {
+            when (command.request) {
+                is IssueAndPaymentRequest -> {
                     val newDiffQueues = state.copyQueues()
-                    val originators = newDiffQueues.getOrPut(command.command.recipient, { HashMap() })
+                    val originators = newDiffQueues.getOrPut(command.request.recipient, { HashMap() })
                     val issuer = command.node.info.legalIdentity
-                    val quantity = command.command.amount.quantity
-                    val originator = issuer
-                    val queue = originators.getOrPut(originator, { ArrayList() })
+                    val quantity = command.request.amount.quantity
+                    val queue = originators.getOrPut(issuer, { ArrayList() })
                     queue.add(Pair(issuer, quantity))
                     CrossCashState(state.nodeVaults, newDiffQueues)
                 }
-                is CashFlowCommand.PayCash -> {
+                is PaymentRequest -> {
                     val newNodeVaults = state.copyVaults()
                     val newDiffQueues = state.copyQueues()
-                    val recipientOriginators = newDiffQueues.getOrPut(command.command.recipient, { HashMap() })
+                    val recipientOriginators = newDiffQueues.getOrPut(command.request.recipient, { HashMap() })
                     val senderQuantities = newNodeVaults[command.node.info.legalIdentity]!!
-                    val amount = command.command.amount
-                    val issuer = command.command.issuerConstraint!!
+                    val amount = command.request.amount
+                    val issuer = command.request.issuerConstraint.single()
                     val originator = command.node.info.legalIdentity
                     val senderQuantity = senderQuantities[issuer] ?: throw Exception(
-                            "Generated payment of ${command.command.amount} from ${command.node.info.legalIdentity}, " +
+                            "Generated payment of ${command.request.amount} from ${command.node.info.legalIdentity}, " +
                                     "however there is no cash from $issuer!"
                     )
                     if (senderQuantity < amount.quantity) {
                         throw Exception(
-                                "Generated payment of ${command.command.amount} from ${command.node.info.legalIdentity}, " +
+                                "Generated payment of ${command.request.amount} from ${command.node.info.legalIdentity}, " +
                                         "however they only have $senderQuantity!"
                         )
                     }
@@ -180,17 +187,17 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                     recipientQueue.add(Pair(issuer, amount.quantity))
                     CrossCashState(newNodeVaults, newDiffQueues)
                 }
-                is CashFlowCommand.ExitCash -> {
+                is ExitRequest -> {
                     val newNodeVaults = state.copyVaults()
                     val issuer = command.node.info.legalIdentity
-                    val quantity = command.command.amount.quantity
+                    val quantity = command.request.amount.quantity
                     val issuerQuantities = newNodeVaults[issuer]!!
                     val issuerQuantity = issuerQuantities[issuer] ?: throw Exception(
-                            "Generated exit of ${command.command.amount} from $issuer, however there is no cash to exit!"
+                            "Generated exit of ${command.request.amount} from $issuer, however there is no cash to exit!"
                     )
                     if (issuerQuantity < quantity) {
                         throw Exception(
-                                "Generated payment of ${command.command.amount} from $issuer, " +
+                                "Generated payment of ${command.request.amount} from $issuer, " +
                                         "however they only have $issuerQuantity!"
                         )
                     }
@@ -201,11 +208,18 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                     }
                     CrossCashState(newNodeVaults, state.diffQueues)
                 }
+                else -> throw IllegalArgumentException("Unexpected request type: ${command.request}")
             }
         },
 
         execute = { command ->
-            val result = command.command.startFlow(command.node.proxy).returnValue
+            val request = command.request
+            val result = when (request) {
+                is IssueAndPaymentRequest -> command.node.proxy.startFlow(::CashIssueAndPaymentFlow, request).returnValue
+                is PaymentRequest -> command.node.proxy.startFlow(::CashPaymentFlow, request).returnValue
+                is ExitRequest -> command.node.proxy.startFlow(::CashExitFlow, request).returnValue
+                else -> throw IllegalArgumentException("Unexpected request type: $request")
+            }
             result.thenMatch({
                 log.info("Success[$command]: $result")
             }, {

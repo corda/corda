@@ -1,13 +1,11 @@
 package net.corda.verifier
 
-import com.esotericsoftware.kryo.pool.KryoPool
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -90,23 +88,18 @@ class Verifier {
 
         private fun initialiseSerialization() {
             SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                registerScheme(KryoVerifierSerializationScheme(this))
+                registerScheme(KryoVerifierSerializationScheme())
             }
             SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
         }
     }
 
-    class KryoVerifierSerializationScheme(serializationFactory: SerializationFactory) : AbstractKryoSerializationScheme(serializationFactory) {
+    class KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {
         override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
-            return byteSequence.equals(KryoHeaderV0_1) && target == SerializationContext.UseCase.P2P
+            return byteSequence == KryoHeaderV0_1 && target == SerializationContext.UseCase.P2P
         }
 
-        override fun rpcClientKryoPool(context: SerializationContext): KryoPool {
-            throw UnsupportedOperationException()
-        }
-
-        override fun rpcServerKryoPool(context: SerializationContext): KryoPool {
-            throw UnsupportedOperationException()
-        }
+        override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
+        override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
     }
 }

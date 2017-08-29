@@ -19,7 +19,7 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
                 val constructor = constructorForDeserialization(obj.javaClass)
                 val props = propertiesForSerialization(constructor, obj.javaClass, factory)
                 for (prop in props) {
-                    extraProperties[prop.name] = prop.readMethod.invoke(obj)
+                    extraProperties[prop.name] = prop.readMethod!!.invoke(obj)
                 }
             } catch(e: NotSerializableException) {
             }
@@ -71,8 +71,6 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
 }
 
 class StackTraceElementSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<StackTraceElement, StackTraceElementSerializer.StackTraceElementProxy>(StackTraceElement::class.java, StackTraceElementProxy::class.java, factory) {
-    override val additionalSerializers: Iterable<CustomSerializer<Any>> = emptyList()
-
     override fun toProxy(obj: StackTraceElement): StackTraceElementProxy = StackTraceElementProxy(obj.className, obj.methodName, obj.fileName, obj.lineNumber)
 
     override fun fromProxy(proxy: StackTraceElementProxy): StackTraceElement = StackTraceElement(proxy.declaringClass, proxy.methodName, proxy.fileName, proxy.lineNumber)

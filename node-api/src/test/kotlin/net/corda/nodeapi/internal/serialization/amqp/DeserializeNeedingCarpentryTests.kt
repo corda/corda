@@ -1,24 +1,25 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.CordaSerializable
 import org.junit.Test
 import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 
+@CordaSerializable
 interface I {
     fun getName() : String
 }
 
-/**
- * These tests work by having the class carpenter build the classes we serialise and then deserialise them
- * within the context of a second serialiser factory. The second factory is required as the first, having
- * been used to serialise the class, will have cached a copy of the class and will thus bypass the need
- * to pull it out of the class loader.
- *
- * However,  those classes don't exist within the system's Class Loader and thus the deserialiser will be forced
- * to carpent versions of them up using its own internal class carpenter (each carpenter houses it's own loader). This
- * replicates the situation where a receiver doesn't have some or all elements of a schema present on it's classpath
- */
-class DeserializeNeedingCarpentryTests {
+// These tests work by having the class carpenter build the classes we serialise and then deserialise them
+// within the context of a second serialiser factory. The second factory is required as the first, having
+// been used to serialise the class, will have cached a copy of the class and will thus bypass the need
+// to pull it out of the class loader.
+//
+// However, those classes don't exist within the system's Class Loader and thus the deserialiser will be forced
+// to carpent versions of them up using its own internal class carpenter (each carpenter houses it's own loader). This
+// replicates the situation where a receiver doesn't have some or all elements of a schema present on it's classpath
+class DeserializeNeedingCarpentryTests : AmqpCarpenterBase() {
     companion object {
         /**
          * If you want to see the schema encoded into the envelope after serialisation change this to true
@@ -26,13 +27,13 @@ class DeserializeNeedingCarpentryTests {
         private const val VERBOSE = false
     }
 
-    val sf1 = SerializerFactory()
-    val sf2 = SerializerFactory()
+    val sf1 = testDefaultFactory()
+    val sf2 = testDefaultFactoryWithWhitelist() // Deserialize with whitelisting on to check that `CordaSerializable` annotation present.
 
     @Test
     fun verySimpleType() {
         val testVal = 10
-        val clazz = ClassCarpenter().build(ClassSchema("oneType", mapOf("a" to NonNullableField(Int::class.java))))
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf("a" to NonNullableField(Int::class.java))))
         val classInstance = clazz.constructors[0].newInstance(testVal)
 
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
@@ -66,16 +67,20 @@ class DeserializeNeedingCarpentryTests {
         val testValA = 10
         val testValB = 20
         val testValC = 20
-        val clazz = ClassCarpenter().build(ClassSchema("oneType", mapOf("a" to NonNullableField(Int::class.java))))
+        val clazz = ClassCarpenter().build(ClassSchema("${testName()}_clazz",
+                mapOf("a" to NonNullableField(Int::class.java))))
+
         val concreteA = clazz.constructors[0].newInstance(testValA)
         val concreteB = clazz.constructors[0].newInstance(testValB)
         val concreteC = clazz.constructors[0].newInstance(testValC)
 
-        val deserialisedA = DeserializationInput(sf2).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(concreteA))
+        val deserialisedA = DeserializationInput(sf2).deserialize(
+                TestSerializationOutput(VERBOSE, sf1).serialize(concreteA))
 
         assertEquals (testValA, deserialisedA::class.java.getMethod("getA").invoke(deserialisedA))
 
-        val deserialisedB = DeserializationInput(sf2).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(concreteB))
+        val deserialisedB = DeserializationInput(sf2).deserialize(
+                TestSerializationOutput(VERBOSE, sf1).serialize(concreteB))
 
         assertEquals (testValB, deserialisedA::class.java.getMethod("getA").invoke(deserialisedB))
         assertEquals (deserialisedA::class.java, deserialisedB::class.java)
@@ -84,8 +89,10 @@ class DeserializeNeedingCarpentryTests {
         // won't already exist and it will be carpented a second time showing that when A and B are the
         // same underlying class that we didn't create a second instance of the class with the
         // second deserialisation
-        val lsf = SerializerFactory()
-        val deserialisedC = DeserializationInput(lsf).deserialize(TestSerializationOutput(VERBOSE, lsf).serialize(concreteC))
+        val lfactory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val deserialisedC = DeserializationInput(lfactory).deserialize(
+                TestSerializationOutput(VERBOSE, lfactory).serialize(concreteC))
+
         assertEquals (testValC, deserialisedC::class.java.getMethod("getA").invoke(deserialisedC))
         assertNotEquals (deserialisedA::class.java, deserialisedC::class.java)
         assertNotEquals (deserialisedB::class.java, deserialisedC::class.java)
@@ -94,7 +101,7 @@ class DeserializeNeedingCarpentryTests {
     @Test
     fun simpleTypeKnownInterface() {
         val clazz = ClassCarpenter().build (ClassSchema(
-                "oneType", mapOf("name" to NonNullableField(String::class.java)),
+                testName(), mapOf("name" to NonNullableField(String::class.java)),
                 interfaces = listOf (I::class.java)))
         val testVal = "Some Person"
         val classInstance = clazz.constructors[0].newInstance(testVal)
@@ -108,8 +115,9 @@ class DeserializeNeedingCarpentryTests {
 
     @Test
     fun arrayOfTypes() {
-        val clazz = ClassCarpenter().build(ClassSchema("oneType", mapOf("a" to NonNullableField(Int::class.java))))
+        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf("a" to NonNullableField(Int::class.java))))
 
+        @CordaSerializable
         data class Outer (val a : Array<Any>)
 
         val outer = Outer (arrayOf (
@@ -142,8 +150,8 @@ class DeserializeNeedingCarpentryTests {
     fun reusedClasses() {
         val cc = ClassCarpenter()
 
-        val innerType = cc.build(ClassSchema("inner", mapOf("a" to NonNullableField(Int::class.java))))
-        val outerType = cc.build(ClassSchema("outer", mapOf("a" to NonNullableField(innerType))))
+        val innerType = cc.build(ClassSchema("${testName()}.inner", mapOf("a" to NonNullableField(Int::class.java))))
+        val outerType = cc.build(ClassSchema("${testName()}.outer", mapOf("a" to NonNullableField(innerType))))
         val inner = innerType.constructors[0].newInstance(1)
         val outer = outerType.constructors[0].newInstance(innerType.constructors[0].newInstance(2))
 
@@ -180,6 +188,7 @@ class DeserializeNeedingCarpentryTests {
         val nestedClass = cc.build (ClassSchema("nestedType",
                 mapOf("name" to NonNullableField(String::class.java))))
 
+        @CordaSerializable
         data class outer(val a: Any, val b: Any)
 
         val classInstance = outer (
@@ -195,10 +204,11 @@ class DeserializeNeedingCarpentryTests {
 
     @Test
     fun listOfType() {
-        val unknownClass = ClassCarpenter().build (ClassSchema("unknownClass", mapOf(
+        val unknownClass = ClassCarpenter().build (ClassSchema(testName(), mapOf(
                 "v1" to NonNullableField(Int::class.java),
                 "v2" to NonNullableField(Int::class.java))))
 
+        @CordaSerializable
         data class outer (val l : List<Any>)
         val toSerialise = outer (listOf (
                 unknownClass.constructors.first().newInstance(1, 2),
@@ -223,7 +233,7 @@ class DeserializeNeedingCarpentryTests {
                 "gen.Interface",
                 mapOf("age" to NonNullableField (Int::class.java))))
 
-        val concreteClass = cc.build (ClassSchema ("gen.Class", mapOf(
+        val concreteClass = cc.build (ClassSchema (testName(), mapOf(
                 "age" to NonNullableField (Int::class.java),
                 "name" to NonNullableField(String::class.java)),
                 interfaces = listOf (I::class.java, interfaceClass)))

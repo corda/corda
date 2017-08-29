@@ -18,7 +18,7 @@ import net.corda.client.jfx.utils.isNotNull
 import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.unique
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.sumOrNull
+import net.corda.core.contracts.Amount.Companion.sumOrNull
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
@@ -26,8 +26,8 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CashTransaction
 import net.corda.explorer.model.IssuerModel
@@ -35,9 +35,13 @@ import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.views.bigDecimalFormatter
 import net.corda.explorer.views.byteFormatter
 import net.corda.explorer.views.stringConverter
-import net.corda.flows.AbstractCashFlow
-import net.corda.flows.CashFlowCommand
-import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.finance.flows.AbstractCashFlow
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
 import java.math.BigDecimal
@@ -84,8 +88,8 @@ class NewTransaction : Fragment() {
         }
     })
 
-    fun show(window: Window): Unit {
-        newTransactionDialog(window).showAndWait().ifPresent { command ->
+    fun show(window: Window) {
+        newTransactionDialog(window).showAndWait().ifPresent { request ->
             val dialog = Alert(Alert.AlertType.INFORMATION).apply {
                 headerText = null
                 contentText = "Transaction Started."
@@ -93,16 +97,11 @@ class NewTransaction : Fragment() {
                 initOwner(window)
                 show()
             }
-            val handle: FlowHandle<AbstractCashFlow.Result> = if (command is CashFlowCommand.IssueCash) {
-                rpcProxy.value!!.startFlow(::IssuanceRequester,
-                        command.amount,
-                        command.recipient,
-                        command.issueRef,
-                        myIdentity.value!!.legalIdentity,
-                        command.notary,
-                        command.anonymous)
-            } else {
-                command.startFlow(rpcProxy.value!!)
+            val handle: FlowHandle<AbstractCashFlow.Result> = when (request) {
+                is IssueAndPaymentRequest -> rpcProxy.value!!.startFlow(::CashIssueAndPaymentFlow, request)
+                is PaymentRequest -> rpcProxy.value!!.startFlow(::CashPaymentFlow, request)
+                is ExitRequest -> rpcProxy.value!!.startFlow(::CashExitFlow, request)
+                else -> throw IllegalArgumentException("Unexpected request type: $request")
             }
             runAsync {
                 try {
@@ -112,10 +111,11 @@ class NewTransaction : Fragment() {
                 }
             }.ui {
                 val stx: SignedTransaction = it.stx
-                val type = when (command) {
-                    is CashFlowCommand.IssueCash -> "Cash Issued"
-                    is CashFlowCommand.ExitCash -> "Cash Exited"
-                    is CashFlowCommand.PayCash -> "Cash Paid"
+                val type = when (request) {
+                    is IssueAndPaymentRequest -> "Cash Issued"
+                    is ExitRequest -> "Cash Exited"
+                    is PaymentRequest -> "Cash Paid"
+                    else -> throw IllegalArgumentException("Unexpected request type: $request")
                 }
                 dialog.alertType = Alert.AlertType.INFORMATION
                 dialog.dialogPane.content = gridpane {
@@ -145,7 +145,7 @@ class NewTransaction : Fragment() {
         }
     }
 
-    private fun newTransactionDialog(window: Window) = Dialog<CashFlowCommand>().apply {
+    private fun newTransactionDialog(window: Window) = Dialog<AbstractCashFlow.AbstractRequest>().apply {
         dialogPane = root
         initOwner(window)
         setResultConverter {
@@ -155,11 +155,9 @@ class NewTransaction : Fragment() {
             val issueRef = if (issueRef.value != null) OpaqueBytes.of(issueRef.value) else defaultRef
             when (it) {
                 executeButton -> when (transactionTypeCB.value) {
-                    CashTransaction.Issue -> {
-                        CashFlowCommand.IssueCash(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity, anonymous)
-                    }
-                    CashTransaction.Pay -> CashFlowCommand.PayCash(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.legalIdentity, anonymous = anonymous)
-                    CashTransaction.Exit -> CashFlowCommand.ExitCash(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef)
+                    CashTransaction.Issue -> IssueAndPaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity, anonymous)
+                    CashTransaction.Pay -> PaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.legalIdentity, anonymous = anonymous)
+                    CashTransaction.Exit -> ExitRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef)
                     else -> null
                 }
                 else -> null

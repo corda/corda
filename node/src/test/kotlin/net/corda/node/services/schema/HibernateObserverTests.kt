@@ -9,19 +9,14 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.testing.LogHelper
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.database.HibernateConfiguration
-import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.configureDatabase
-import net.corda.testing.DUMMY_CA
 import net.corda.testing.MEGA_CORP
-import net.corda.testing.MOCK_IDENTITIES
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
 import net.corda.testing.node.makeTestIdentityService
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -31,17 +26,14 @@ import kotlin.test.assertEquals
 
 
 class HibernateObserverTests {
-    lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(HibernateObserver::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
     }
 
     @After
     fun cleanUp() {
-        database.close()
         LogHelper.reset(HibernateObserver::class)
     }
 
@@ -104,21 +96,24 @@ class HibernateObserverTests {
                 return parent
             }
         }
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { schemaService }, createIdentityService = ::makeTestIdentityService)
 
         @Suppress("UNUSED_VARIABLE")
-        val observer = HibernateObserver(rawUpdatesPublisher, HibernateConfiguration(schemaService, makeTestDatabaseProperties(), ::makeTestIdentityService))
+        val observer = HibernateObserver(rawUpdatesPublisher, database.hibernateConfig)
         database.transaction {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
-            val parentRowCountResult = TransactionManager.current().connection.prepareStatement("select count(*) from Parents").executeQuery()
+            val parentRowCountResult = DatabaseTransactionManager.current().connection.prepareStatement("select count(*) from Parents").executeQuery()
             parentRowCountResult.next()
             val parentRows = parentRowCountResult.getInt(1)
             parentRowCountResult.close()
-            val childrenRowCountResult = TransactionManager.current().connection.prepareStatement("select count(*) from Children").executeQuery()
+            val childrenRowCountResult = DatabaseTransactionManager.current().connection.prepareStatement("select count(*) from Children").executeQuery()
             childrenRowCountResult.next()
             val childrenRows = childrenRowCountResult.getInt(1)
             childrenRowCountResult.close()
             assertEquals(1, parentRows, "Expected one parent")
             assertEquals(2, childrenRows, "Expected two children")
         }
+
+        database.close()
     }
 }

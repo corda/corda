@@ -4,10 +4,8 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
 import com.nhaarman.mockito_kotlin.mock
-import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.testing.TestDependencyInjectionBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -16,18 +14,13 @@ import java.io.ByteArrayOutputStream
 
 class SerializationTokenTest  : TestDependencyInjectionBase() {
 
-    lateinit var factory: SerializationFactory
-    lateinit var context: SerializationContext
+    private lateinit var factory: SerializationFactory
+    private lateinit var context: SerializationContext
 
     @Before
     fun setup() {
-        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
-        context = SerializationContextImpl(KryoHeaderV0_1,
-                javaClass.classLoader,
-                AllWhitelist,
-                emptyMap(),
-                true,
-                SerializationContext.UseCase.P2P)
+        factory = SerializationDefaults.SERIALIZATION_FACTORY
+        context = SerializationDefaults.CHECKPOINT_CONTEXT.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized
@@ -42,7 +35,7 @@ class SerializationTokenTest  : TestDependencyInjectionBase() {
         override fun equals(other: Any?) = other is LargeTokenizable && other.bytes.size == this.bytes.size
     }
 
-    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(toBeTokenized, factory, context, mock<ServiceHub>())
+    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(toBeTokenized, factory, context, mock())
 
     @Test
     fun `write token and read tokenizable`() {
@@ -97,7 +90,7 @@ class SerializationTokenTest  : TestDependencyInjectionBase() {
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)
 
-        val kryo: Kryo = DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(factory, this.context)))
+        val kryo: Kryo = DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(this.context)))
         val stream = ByteArrayOutputStream()
             Output(stream).use {
                 it.write(KryoHeaderV0_1.bytes)

@@ -10,7 +10,13 @@ class GraphProject {
         this.project = project
     }
     def getCompileDeps() {
-        project.configurations.compile.dependencies.matching { it in ProjectDependency }.collect { projects[it.dependencyProject] }
+        ['compile', 'cordaCompile'].collect {
+            try {
+                project.configurations[it].dependencies.matching { it in ProjectDependency }.collect { projects[it.dependencyProject] }
+            } catch (org.gradle.api.artifacts.UnknownConfigurationException e) {
+                [] // The project doesn't have a cordaCompile configuration, so there aren't any cordaCompile dependencies.
+            }
+        }.flatten()
     }
 }
 

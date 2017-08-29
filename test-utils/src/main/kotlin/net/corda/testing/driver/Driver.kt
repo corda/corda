@@ -26,12 +26,10 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
@@ -47,7 +45,6 @@ import java.io.File
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
@@ -633,13 +630,15 @@ class DriverDSL(
                 advertisedServices = advertisedServices,
                 rpcUsers = rpcUsers,
                 verifierType = verifierType,
-                customOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()),
+                customOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString(),
+                        "database.serverNameTablePrefix" to if (nodeNames.isNotEmpty()) nodeNames.first().toString().replace(Regex("[^0-9A-Za-z]+"),"") else ""),
                 startInSameProcess = startInSameProcess
         )
         // All other nodes will join the cluster
         val restNotaryFutures = nodeNames.drop(1).map {
             val nodeAddress = portAllocation.nextHostAndPort()
-            val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))
+            val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()),
+                    "database.serverNameTablePrefix" to it.toString().replace(Regex("[^0-9A-Za-z]+"), ""))
             startNode(it, advertisedServices, rpcUsers, verifierType, configOverride)
         }
 

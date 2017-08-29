@@ -61,6 +61,7 @@ val BOB: Party get() = Party(X500Name("CN=Bob Plc,O=Bob Plc,L=Rome,C=IT"), BOB_K
 
 val CHARLIE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(90)) }
 /** Dummy individual identity for tests and simulations */
+val CHARLIE_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CHARLIE)
 val CHARLIE: Party get() = Party(X500Name("CN=Charlie Ltd,O=Charlie Ltd,L=Athens,C=GR"), CHARLIE_KEY.public)
 
 val DUMMY_REGULATOR_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(100)) }
@@ -74,7 +75,9 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
     CertificateAndKeyPair(cert, DUMMY_CA_KEY)
 }
 
-fun dummyCommand(vararg signers: PublicKey) = Command<TypeOnlyCommandData>(object : TypeOnlyCommandData() {}, signers.toList())
+fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public) ) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
+
+object DummyCommandData : TypeOnlyCommandData()
 
 val DUMMY_IDENTITY_1: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_PARTY)
 val DUMMY_PARTY: Party get() = Party(X500Name("CN=Dummy,O=Dummy,L=Madrid,C=ES"), DUMMY_KEY_1.public)

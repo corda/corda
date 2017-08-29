@@ -14,7 +14,7 @@ buildscript {
     //
     // TODO: Sort this alphabetically.
     ext.kotlin_version = constants.getProperty("kotlinVersion")
-    ext.quasar_version = '0.7.6'    // TODO: Upgrade to 0.7.7+ when Quasar bug 238 is resolved.
+    ext.quasar_version = '0.7.9'
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1
     // TODO: Upgrade gradle-capsule-plugin to a version with capsule:1.0.3
@@ -42,7 +42,6 @@ buildscript {
     ext.hibernate_version = '5.2.6.Final'
     ext.h2_version = '1.4.194'
     ext.rxjava_version = '1.2.4'
-    ext.requery_version = '1.3.1'
     ext.dokka_version = '0.9.14'
     ext.eddsa_version = '0.2.0'
 
@@ -128,6 +127,13 @@ allprojects {
     tasks.withType(Test) {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperties['java.io.tmpdir'] = buildDir
+
+        // Ensures that "net.corda.testing.amqp.enable" is passed correctly from Gradle command line
+        // down to JVM executing unit test. It looks like we are running unit tests in the forked mode
+        // and all the "-D" parameters passed to Gradle not making it to unit test level
+        // TODO: Remove once we fully switched to AMQP
+        final AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
+        systemProperty(AMQP_ENABLE_PROP_NAME, System.getProperty(AMQP_ENABLE_PROP_NAME))
     }
 
     group 'com.r3.corda.enterprise'
@@ -250,7 +256,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver']
+    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -285,7 +291,7 @@ artifactory {
             password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
         }
         defaults {
-            publications('corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver')
+            publications('corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver')
         }
     }
 }

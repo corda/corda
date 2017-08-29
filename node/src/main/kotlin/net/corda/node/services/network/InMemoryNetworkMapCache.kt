@@ -1,10 +1,10 @@
 package net.corda.node.services.network
 
-import com.google.common.annotations.VisibleForTesting
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
@@ -17,7 +17,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.api.NetworkCacheError
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.messaging.MessagingService
@@ -99,11 +98,11 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
                                ifChangedSinceVer: Int?): CordaFuture<Unit> {
         if (subscribe && !registeredForPush) {
             // Add handler to the network, for updates received from the remote network map service.
-            network.addMessageHandler(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
+            network.addMessageHandler(NetworkMapService.PUSH_TOPIC) { message, _ ->
                 try {
                     val req = message.data.deserialize<NetworkMapService.Update>()
-                    val ackMessage = network.createMessage(NetworkMapService.PUSH_ACK_TOPIC, DEFAULT_SESSION_ID,
-                            NetworkMapService.UpdateAcknowledge(req.mapVersion, network.myAddress).serialize().bytes)
+                    val ackMessage = network.createMessage(NetworkMapService.PUSH_ACK_TOPIC,
+                            data = NetworkMapService.UpdateAcknowledge(req.mapVersion, network.myAddress).serialize().bytes)
                     network.send(ackMessage, req.replyTo)
                     processUpdatePush(req)
                 } catch(e: NodeMapError) {

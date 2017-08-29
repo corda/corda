@@ -7,6 +7,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Test
@@ -27,6 +28,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     interface Commands {
         data class Cmd1(val id: Int) : CommandData, Commands
         data class Cmd2(val id: Int) : CommandData, Commands
+        data class Cmd3(val id: Int) : CommandData, Commands // Unused command, required for command not-present checks.
     }
 
 
@@ -50,7 +52,11 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
 
     private fun makeDummyStateAndRef(data: Any): StateAndRef<*> {
         val dummyState = makeDummyState(data)
-        val fakeIssueTx = services.signInitialTransaction(TransactionBuilder(notary = DUMMY_NOTARY).addOutputState(dummyState))
+        val fakeIssueTx = services.signInitialTransaction(
+                TransactionBuilder(notary = DUMMY_NOTARY)
+                        .addOutputState(dummyState)
+                        .addCommand(dummyCommand())
+        )
         services.recordTransactions(fakeIssueTx)
         val dummyStateRef = StateRef(fakeIssueTx.id, 0)
         return StateAndRef(TransactionState(dummyState, DUMMY_NOTARY, null), dummyStateRef)
@@ -182,7 +188,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
         val intCmd2 = ltx.commandsOfType<Commands.Cmd2>()
         assertEquals(5, intCmd2.size)
         assertEquals(listOf(0, 1, 2, 3, 4), intCmd2.map { it.value.id })
-        val notPresentQuery = ltx.commandsOfType(FungibleAsset.Commands.Exit::class.java)
+        val notPresentQuery = ltx.commandsOfType(Commands.Cmd3::class.java)
         assertEquals(emptyList(), notPresentQuery)
     }
 

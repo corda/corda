@@ -4,12 +4,12 @@ package net.corda.core.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
-import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
 import javax.persistence.criteria.Predicate
@@ -40,6 +40,7 @@ sealed class QueryCriteria {
 
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
+        abstract val contractStateTypes: Set<Class<out ContractState>>?
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
         }
@@ -49,13 +50,14 @@ sealed class QueryCriteria {
      * VaultQueryCriteria: provides query by attributes defined in [VaultSchema.VaultStates]
      */
     data class VaultQueryCriteria @JvmOverloads constructor (override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                                                             val contractStateTypes: Set<Class<out ContractState>>? = null,
+                                                             override val contractStateTypes: Set<Class<out ContractState>>? = null,
                                                              val stateRefs: List<StateRef>? = null,
-                                                             val notaryName: List<X500Name>? = null,
+                                                             val notary: List<AbstractParty>? = null,
                                                              val softLockingCondition: SoftLockingCondition? = null,
                                                              val timeCondition: TimeCondition? = null) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))
+            super.visit(parser)
+            return parser.parseCriteria(this)
         }
     }
 
@@ -65,9 +67,16 @@ sealed class QueryCriteria {
     data class LinearStateQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
                                                                   val uuid: List<UUID>? = null,
                                                                   val externalId: List<String>? = null,
-                                                                  override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : CommonQueryCriteria() {
+                                                                  override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                                                                  override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
+            constructor(participants: List<AbstractParty>? = null,
+                        linearId: List<UniqueIdentifier>? = null,
+                        status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                        contractStateTypes: Set<Class<out ContractState>>? = null) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes)
+
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))
+            super.visit(parser)
+            return parser.parseCriteria(this)
         }
     }
 
@@ -81,11 +90,13 @@ sealed class QueryCriteria {
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
                                                                     val owner: List<AbstractParty>? = null,
                                                                     val quantity: ColumnPredicate<Long>? = null,
-                                                                    val issuerPartyName: List<AbstractParty>? = null,
+                                                                    val issuer: List<AbstractParty>? = null,
                                                                     val issuerRef: List<OpaqueBytes>? = null,
-                                                                    override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : CommonQueryCriteria() {
+                                                                    override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                                                                    override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-           return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))
+           super.visit(parser)
+           return parser.parseCriteria(this)
        }
    }
 
@@ -101,9 +112,11 @@ sealed class QueryCriteria {
      */
     data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor
                                     (val expression: CriteriaExpression<L, Boolean>,
-                                     override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : CommonQueryCriteria() {
+                                     override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                                     override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))
+            super.visit(parser)
+            return parser.parseCriteria(this)
         }
     }
 

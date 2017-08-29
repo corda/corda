@@ -14,19 +14,24 @@ import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.nodeapi.internal.serialization.amqp.custom.*
+import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.testing.BOB_IDENTITY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
+import org.junit.Ignore
 import org.junit.Test
 import java.io.IOException
 import java.io.NotSerializableException
 import java.math.BigDecimal
 import java.nio.ByteBuffer
-import java.time.Instant
+import java.time.*
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalUnit
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -94,35 +99,35 @@ class SerializationOutputTests {
 
     data class SortedSetWrapper(val set: SortedSet<Int>)
 
-    open class InheritedGeneric<X>(val foo: X)
+    open class InheritedGeneric<out X>(val foo: X)
 
     data class ExtendsGeneric(val bar: Int, val pub: String) : InheritedGeneric<String>(pub)
 
-    interface GenericInterface<X> {
+    interface GenericInterface<out X> {
         val pub: X
     }
 
     data class ImplementsGenericString(val bar: Int, override val pub: String) : GenericInterface<String>
 
-    data class ImplementsGenericX<Y>(val bar: Int, override val pub: Y) : GenericInterface<Y>
+    data class ImplementsGenericX<out Y>(val bar: Int, override val pub: Y) : GenericInterface<Y>
 
-    abstract class AbstractGenericX<Z> : GenericInterface<Z>
+    abstract class AbstractGenericX<out Z> : GenericInterface<Z>
 
-    data class InheritGenericX<A>(val duke: Double, override val pub: A) : AbstractGenericX<A>()
+    data class InheritGenericX<out A>(val duke: Double, override val pub: A) : AbstractGenericX<A>()
 
     data class CapturesGenericX(val foo: GenericInterface<String>)
 
     object KotlinObject
 
     class Mismatch(fred: Int) {
-        val ginger: Int = fred
+        private val ginger: Int = fred
 
         override fun equals(other: Any?): Boolean = (other as? Mismatch)?.ginger == ginger
         override fun hashCode(): Int = ginger
     }
 
     class MismatchType(fred: Long) {
-        val ginger: Int = fred.toInt()
+        private val ginger: Int = fred.toInt()
 
         override fun equals(other: Any?): Boolean = (other as? MismatchType)?.ginger == ginger
         override fun hashCode(): Int = ginger
@@ -136,8 +141,10 @@ class SerializationOutputTests {
     data class PolymorphicProperty(val foo: FooInterface?)
 
     private fun serdes(obj: Any,
-                       factory: SerializerFactory = SerializerFactory(),
-                       freshDeserializationFactory: SerializerFactory = SerializerFactory(),
+                       factory: SerializerFactory = SerializerFactory (
+                               AllWhitelist, ClassLoader.getSystemClassLoader()),
+                       freshDeserializationFactory: SerializerFactory = SerializerFactory(
+                               AllWhitelist, ClassLoader.getSystemClassLoader()),
                        expectedEqual: Boolean = true,
                        expectDeserializedEqual: Boolean = true): Any {
         val ser = SerializationOutput(factory)
@@ -242,7 +249,7 @@ class SerializationOutputTests {
 
     @Test(expected = IllegalArgumentException::class)
     fun `test dislike of HashMap`() {
-        val obj = WrapHashMap(HashMap<String, String>())
+        val obj = WrapHashMap(HashMap())
         serdes(obj)
     }
 
@@ -285,13 +292,13 @@ class SerializationOutputTests {
     @Test(expected = NotSerializableException::class)
     fun `test whitelist`() {
         val obj = Woo2(4)
-        serdes(obj, SerializerFactory(EmptyWhitelist))
+        serdes(obj, SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader()))
     }
 
     @Test
     fun `test annotation whitelisting`() {
         val obj = AnnotatedWoo(5)
-        serdes(obj, SerializerFactory(EmptyWhitelist))
+        serdes(obj, SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader()))
     }
 
     @Test(expected = NotSerializableException::class)
@@ -352,9 +359,9 @@ class SerializationOutputTests {
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test
     fun `test TreeMap property`() {
-        val obj = TreeMapWrapper(TreeMap<Int, Foo>())
+        val obj = TreeMapWrapper(TreeMap())
         obj.tree[456] = Foo("Fred", 123)
         serdes(obj)
     }
@@ -387,10 +394,10 @@ class SerializationOutputTests {
 
     @Test
     fun `test custom serializers on public key`() {
-        val factory = SerializerFactory()
-        factory.register(PublicKeySerializer)
-        val factory2 = SerializerFactory()
-        factory2.register(PublicKeySerializer)
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
         val obj = MEGA_CORP_PUBKEY
         serdes(obj, factory, factory2)
     }
@@ -398,16 +405,16 @@ class SerializationOutputTests {
     @Test
     fun `test annotation is inherited`() {
         val obj = InheritAnnotation("blah")
-        serdes(obj, SerializerFactory(EmptyWhitelist))
+        serdes(obj, SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader()))
     }
 
     @Test
     fun `test throwables serialize`() {
-        val factory = SerializerFactory()
-        factory.register(ThrowableSerializer(factory))
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactory()
-        factory2.register(ThrowableSerializer(factory2))
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory2))
 
         val t = IllegalAccessException("message").fillInStackTrace()
         val desThrowable = serdes(t, factory, factory2, false) as Throwable
@@ -416,11 +423,11 @@ class SerializationOutputTests {
 
     @Test
     fun `test complex throwables serialize`() {
-        val factory = SerializerFactory()
-        factory.register(ThrowableSerializer(factory))
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactory()
-        factory2.register(ThrowableSerializer(factory2))
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory2))
 
         try {
             try {
@@ -434,11 +441,10 @@ class SerializationOutputTests {
         }
     }
 
-    fun assertSerializedThrowableEquivalent(t: Throwable, desThrowable: Throwable) {
+    private fun assertSerializedThrowableEquivalent(t: Throwable, desThrowable: Throwable) {
         assertTrue(desThrowable is CordaRuntimeException) // Since we don't handle the other case(s) yet
         if (desThrowable is CordaRuntimeException) {
             assertEquals("${t.javaClass.name}: ${t.message}", desThrowable.message)
-            assertTrue(desThrowable is CordaRuntimeException)
             assertTrue(Objects.deepEquals(t.stackTrace, desThrowable.stackTrace))
             assertEquals(t.suppressed.size, desThrowable.suppressed.size)
             t.suppressed.zip(desThrowable.suppressed).forEach { (before, after) -> assertSerializedThrowableEquivalent(before, after) }
@@ -447,11 +453,11 @@ class SerializationOutputTests {
 
     @Test
     fun `test suppressed throwables serialize`() {
-        val factory = SerializerFactory()
-        factory.register(ThrowableSerializer(factory))
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactory()
-        factory2.register(ThrowableSerializer(factory2))
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory2))
 
         try {
             try {
@@ -469,11 +475,11 @@ class SerializationOutputTests {
 
     @Test
     fun `test flow corda exception subclasses serialize`() {
-        val factory = SerializerFactory()
-        factory.register(ThrowableSerializer(factory))
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactory()
-        factory2.register(ThrowableSerializer(factory2))
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory2))
 
         val obj = FlowException("message").fillInStackTrace()
         serdes(obj, factory, factory2)
@@ -481,11 +487,11 @@ class SerializationOutputTests {
 
     @Test
     fun `test RPC corda exception subclasses serialize`() {
-        val factory = SerializerFactory()
-        factory.register(ThrowableSerializer(factory))
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactory()
-        factory2.register(ThrowableSerializer(factory2))
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory2))
 
         val obj = RPCException("message").fillInStackTrace()
         serdes(obj, factory, factory2)
@@ -512,8 +518,6 @@ class SerializationOutputTests {
         override fun verify(tx: LedgerTransaction) {
 
         }
-
-        override val legalContractReference: SecureHash = SecureHash.Companion.sha256("FooContractLegal")
     }
 
     class FooState : ContractState {
@@ -525,12 +529,12 @@ class SerializationOutputTests {
 
     @Test
     fun `test transaction state`() {
-        val state = TransactionState<FooState>(FooState(), MEGA_CORP)
+        val state = TransactionState(FooState(), MEGA_CORP)
 
-        val factory = SerializerFactory()
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         AbstractAMQPSerializationScheme.registerCustomSerializers(factory)
 
-        val factory2 = SerializerFactory()
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         AbstractAMQPSerializationScheme.registerCustomSerializers(factory2)
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
@@ -542,11 +546,11 @@ class SerializationOutputTests {
 
     @Test
     fun `test currencies serialize`() {
-        val factory = SerializerFactory()
-        factory.register(CurrencySerializer)
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer)
 
-        val factory2 = SerializerFactory()
-        factory2.register(CurrencySerializer)
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer)
 
         val obj = Currency.getInstance("USD")
         serdes(obj, factory, factory2)
@@ -554,11 +558,11 @@ class SerializationOutputTests {
 
     @Test
     fun `test big decimals serialize`() {
-        val factory = SerializerFactory()
-        factory.register(BigDecimalSerializer)
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
 
-        val factory2 = SerializerFactory()
-        factory2.register(BigDecimalSerializer)
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
 
         val obj = BigDecimal("100000000000000000000000000000.00")
         serdes(obj, factory, factory2)
@@ -566,23 +570,195 @@ class SerializationOutputTests {
 
     @Test
     fun `test instants serialize`() {
-        val factory = SerializerFactory()
-        factory.register(InstantSerializer(factory))
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(factory))
 
-        val factory2 = SerializerFactory()
-        factory2.register(InstantSerializer(factory2))
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(factory2))
 
         val obj = Instant.now()
         serdes(obj, factory, factory2)
     }
 
     @Test
-    fun `test StateRef serialize`() {
-        val factory = SerializerFactory()
-        factory.register(InstantSerializer(factory))
+    fun `test durations serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.DurationSerializer(factory))
 
-        val factory2 = SerializerFactory()
-        factory2.register(InstantSerializer(factory2))
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.DurationSerializer(factory2))
+
+        val obj = Duration.of(1000000L, ChronoUnit.MILLIS)
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test local date serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateSerializer(factory2))
+
+        val obj = LocalDate.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test local time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalTimeSerializer(factory2))
+
+        val obj = LocalTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test local date time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateTimeSerializer(factory2))
+
+        val obj = LocalDateTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test zoned date time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ZonedDateTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ZonedDateTimeSerializer(factory2))
+
+        val obj = ZonedDateTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test offset time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetTimeSerializer(factory2))
+
+        val obj = OffsetTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test offset date time serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetDateTimeSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetDateTimeSerializer(factory2))
+
+        val obj = OffsetDateTime.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test year serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.YearSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.YearSerializer(factory2))
+
+        val obj = Year.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test year month serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.YearMonthSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.YearMonthSerializer(factory2))
+
+        val obj = YearMonth.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test month day serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.MonthDaySerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.MonthDaySerializer(factory2))
+
+        val obj = MonthDay.now()
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test period serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.PeriodSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.PeriodSerializer(factory2))
+
+        val obj = Period.of(99, 98, 97)
+        serdes(obj, factory, factory2)
+    }
+
+    // TODO: ignored due to Proton-J bug https://issues.apache.org/jira/browse/PROTON-1551
+    @Ignore
+    @Test
+    fun `test certificate holder serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+
+        val obj = BOB_IDENTITY.certificate
+        serdes(obj, factory, factory2)
+    }
+
+    // TODO: ignored due to Proton-J bug https://issues.apache.org/jira/browse/PROTON-1551
+    @Ignore
+    @Test
+    fun `test party and certificate serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory2))
+
+        val obj = BOB_IDENTITY
+        serdes(obj, factory, factory2)
+    }
+
+    class OtherGeneric<T : Any>
+
+    open class GenericSuperclass<T : Any>(val param: OtherGeneric<T>)
+
+    class GenericSubclass(param: OtherGeneric<String>) : GenericSuperclass<String>(param) {
+        override fun equals(other: Any?): Boolean = other is GenericSubclass // This is a bit lame but we just want to check it doesn't throw exceptions
+    }
+
+    @Test
+    fun `test generic in constructor serialize`() {
+        val obj = GenericSubclass(OtherGeneric<String>())
+        serdes(obj)
+    }
+
+    @Test
+    fun `test StateRef serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
 
         val obj = StateRef(SecureHash.randomSHA256(), 0)
         serdes(obj, factory, factory2)

@@ -3,7 +3,6 @@
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -17,12 +16,12 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -262,8 +261,8 @@ object FlowCookbook {
             //    fork the contract's verification logic.
             val typeOnlyCommandData: TypeOnlyCommandData = DummyContract.Commands.Create()
             // 2. Include additional data which can be used by the contract
-            //    during verification, alongside fulfilling the roles above
-            val commandDataWithData: CommandData = Cash.Commands.Issue(nonce = 12345678)
+            //    during verification, alongside fulfilling the roles above.
+            val commandDataWithData: CommandData = Cash.Commands.Issue()
 
             // Attachments are identified by their hash.
             // The attachment with the corresponding hash must have been
@@ -379,10 +378,13 @@ object FlowCookbook {
             ---------------------------**/
             progressTracker.currentStep = TX_VERIFICATION
 
-            // Verifying a transaction will also verify every transaction in the transaction's dependency chain, which will require
-            // transaction data access on counterparty's node. The ``SendTransactionFlow`` can be used to automate the sending
-            // and data vending process. The ``SendTransactionFlow`` will listen for data request until the transaction
-            // is resolved and verified on the other side:
+            // Verifying a transaction will also verify every transaction in
+            // the transaction's dependency chain, which will require
+            // transaction data access on counterparty's node. The
+            // ``SendTransactionFlow`` can be used to automate the sending and
+            // data vending process. The ``SendTransactionFlow`` will listen
+            // for data request until the transaction is resolved and verified
+            // on the other side:
             // DOCSTART 12
             subFlow(SendTransactionFlow(counterparty, twiceSignedTx))
 
@@ -401,7 +403,8 @@ object FlowCookbook {
             val verifiedTransaction = subFlow(ReceiveTransactionFlow(counterparty))
             // DOCEND 13
 
-            // We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies.
+            // We can also send and receive a `StateAndRef` dependency chain
+            // and automatically resolve its dependencies.
             // DOCSTART 14
             subFlow(SendStateAndRefFlow(counterparty, dummyStates))
 
@@ -409,24 +412,10 @@ object FlowCookbook {
             val resolvedStateAndRef = subFlow(ReceiveStateAndRefFlow<DummyState>(counterparty))
             // DOCEND 14
 
-            // A ``SignedTransaction`` is a pairing of a ``WireTransaction``
-            // with signatures over this ``WireTransaction``. We don't verify
-            // a signed transaction per se, but rather the ``WireTransaction``
-            // it contains.
-            // DOCSTART 31
-            val wireTx: WireTransaction = twiceSignedTx.tx
-            // DOCEND 31
-            // Before we can verify the transaction, we need the
-            // ``ServiceHub`` to use our node's local storage to resolve the
-            // transaction's inputs and attachments into actual objects,
-            // rather than just references. We do this by converting the
-            // ``WireTransaction`` into a ``LedgerTransaction``.
-            // DOCSTART 32
-            val ledgerTx: LedgerTransaction = wireTx.toLedgerTransaction(serviceHub)
-            // DOCEND 32
-            // We can now verify the transaction.
+            // We can now verify the transaction to ensure that it satisfies
+            // the contracts of all the transaction's input and output states.
             // DOCSTART 33
-            ledgerTx.verify()
+            twiceSignedTx.verify(serviceHub)
             // DOCEND 33
 
             // We'll often want to perform our own additional verification
@@ -434,8 +423,18 @@ object FlowCookbook {
             // rules and requires our signature doesn't mean we have to
             // sign it! We need to make sure the transaction represents an
             // agreement we actually want to enter into.
+
+            // To do this, we need to convert our ``SignedTransaction``
+            // into a ``LedgerTransaction``. This will use our ServiceHub
+            // to resolve the transaction's inputs and attachments into
+            // actual objects, rather than just references.
+            // DOCSTART 32
+            val ledgerTx: LedgerTransaction = twiceSignedTx.toLedgerTransaction(serviceHub)
+            // DOCEND 32
+
+            // We can now perform our additional verification.
             // DOCSTART 34
-            val outputState: DummyState = wireTx.outputsOfType<DummyState>().single()
+            val outputState: DummyState = ledgerTx.outputsOfType<DummyState>().single()
             if (outputState.magicNumber == 777) {
                 // ``FlowException`` is a special exception type. It will be
                 // propagated back to any counterparty flows waiting for a

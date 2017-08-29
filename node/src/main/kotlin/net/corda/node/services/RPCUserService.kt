@@ -9,6 +9,7 @@ import net.corda.nodeapi.User
  * to. These permissions are represented as [String]s to allow RPC implementations to add their own permissioning.
  */
 interface RPCUserService {
+
     fun getUser(username: String): User?
     val users: List<User>
 }
@@ -20,6 +21,35 @@ class RPCUserServiceImpl(override val users: List<User>) : RPCUserService {
     override fun getUser(username: String): User? = users.find { it.username == username }
 }
 
-fun startFlowPermission(className: String) = "StartFlow.$className"
-fun <P : FlowLogic<*>> startFlowPermission(clazz: Class<P>) = startFlowPermission(clazz.name)
-inline fun <reified P : FlowLogic<*>> startFlowPermission(): String = startFlowPermission(P::class.java)
+/**
+ * Helper class for creating flow class permissions.
+ */
+class FlowPermissions {
+    companion object {
+
+        /**
+         * Creates the flow permission string of the format "StartFlow.{ClassName}".
+         *
+         * @param className a flow class name for which permission is created.
+         */
+        @JvmStatic
+        fun startFlowPermission(className: String) = "StartFlow.$className"
+
+        /**
+         * An overload for the [startFlowPermission]
+         *
+         * @param clazz a class for which permission is created.
+         *
+         */
+        @JvmStatic
+        fun <P : FlowLogic<*>> startFlowPermission(clazz: Class<P>) = startFlowPermission(clazz.name)
+
+        /**
+         * An overload for the [startFlowPermission].
+         *
+         * @param P a class for which permission is created.
+         */
+        @JvmStatic
+        inline fun <reified P : FlowLogic<*>> startFlowPermission(): String = startFlowPermission(P::class.java)
+    }
+}

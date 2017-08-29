@@ -11,7 +11,7 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import java.util.concurrent.ConcurrentHashMap
 
-internal val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferedSerializationVersion == AmqpHeaderV1_0
+internal val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == AmqpHeaderV1_0
 
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     internal companion object {
@@ -22,7 +22,23 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.X500NameSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.OpaqueBytesSubSequenceSerializer(this))
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.DurationSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalDateTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.LocalTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.ZonedDateTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.ZoneIdSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.OffsetDateTimeSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.YearSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.YearMonthSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.MonthDaySerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.PeriodSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.ClassSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory))
             }
         }
     }
@@ -41,7 +57,7 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                     rpcClientSerializerFactory(context)
                 SerializationContext.UseCase.RPCServer ->
                     rpcServerSerializerFactory(context)
-                else -> SerializerFactory(context.whitelist) // TODO pass class loader also
+                else -> SerializerFactory(context.whitelist, context.deserializationClassLoader)
             }
         }.also { registerCustomSerializers(it) }
     }
@@ -99,9 +115,3 @@ val AMQP_P2P_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
         emptyMap(),
         true,
         SerializationContext.UseCase.P2P)
-val AMQP_STORAGE_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
-        SerializationDefaults.javaClass.classLoader,
-        AllButBlacklisted,
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.Storage)

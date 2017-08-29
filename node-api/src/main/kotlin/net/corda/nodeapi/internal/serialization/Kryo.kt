@@ -1,8 +1,11 @@
 package net.corda.nodeapi.internal.serialization
 
 import com.esotericsoftware.kryo.*
+import com.esotericsoftware.kryo.factories.ReflectionSerializerFactory
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
+import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
@@ -570,3 +573,45 @@ object X509CertificateSerializer : Serializer<X509CertificateHolder>() {
 }
 
 fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializationContextKey) as? SerializeAsTokenContext
+
+/**
+ * For serializing instances if [Throwable] honoring the fact that [java.lang.Throwable.suppressedExceptions]
+ * might be un-initialized/empty.
+ * In the absence of this class [CompatibleFieldSerializer] will be used which will assign a *new* instance of
+ * unmodifiable collection to [java.lang.Throwable.suppressedExceptions] which will fail some sentinel identity checks
+ * e.g. in [java.lang.Throwable.addSuppressed]
+ */
+@ThreadSafe
+class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>(false, true) {
+
+    private companion object {
+        private val suppressedField = Throwable::class.java.getDeclaredField("suppressedExceptions")
+
+        private val sentinelValue = let {
+            val sentinelField = Throwable::class.java.getDeclaredField("SUPPRESSED_SENTINEL")
+            sentinelField.isAccessible = true
+            sentinelField.get(null)
+        }
+
+        init {
+            suppressedField.isAccessible = true
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private val delegate: Serializer<Throwable> = ReflectionSerializerFactory.makeSerializer(kryo, FieldSerializer::class.java, type) as Serializer<Throwable>
+
+    override fun write(kryo: Kryo, output: Output, throwable: Throwable) {
+        delegate.write(kryo, output, throwable)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<Throwable>): Throwable {
+        val throwableRead = delegate.read(kryo, input, type)
+        if(throwableRead.suppressed.isEmpty()) {
+            throwableRead.setSuppressedToSentinel()
+        }
+        return throwableRead
+    }
+
+    private fun Throwable.setSuppressedToSentinel() = suppressedField.set(this, sentinelValue)
+}

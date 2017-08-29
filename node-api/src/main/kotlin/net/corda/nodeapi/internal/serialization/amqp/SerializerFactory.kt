@@ -4,11 +4,7 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.nodeapi.internal.serialization.AllWhitelist
-import net.corda.nodeapi.internal.serialization.carpenter.CarpenterSchemas
-import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
-import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
-import net.corda.nodeapi.internal.serialization.carpenter.carpenterSchema
+import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.GenericArrayType
@@ -19,6 +15,8 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
+
+data class schemaAndDescriptor (val schema: Schema, val typeDescriptor: Any)
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.
@@ -32,9 +30,6 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: profile for performance in general
 // TODO: use guava caches etc so not unbounded
 // TODO: do we need to support a transient annotation to exclude certain properties?
-// TODO: incorporate the class carpenter for classes not on the classpath.
-// TODO: apply class loader logic and an "app context" throughout this code.
-// TODO: schema evolution solution when the fingerprints do not line up.
 // TODO: allow definition of well known types that are left out of the schema.
 // TODO: generally map Object to '*' all over the place in the schema and make sure use of '*' amd '?' is consistent and documented in generics.
 // TODO: found a document that states textual descriptors are Symbols.  Adjust schema class appropriately.
@@ -44,11 +39,19 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @ThreadSafe
-class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
+class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
-    private val classCarpenter = ClassCarpenter()
+    private val classCarpenter = ClassCarpenter(cl)
+    val classloader : ClassLoader
+        get() = classCarpenter.classloader
+
+    fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: ObjectSerializer) : AMQPSerializer<Any> {
+        return serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+            EvolutionSerializer.make(typeNotation as CompositeType, newSerializer, this)
+        }
+    }
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -157,8 +160,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     @Throws(NotSerializableException::class)
     fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer<Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
-            processSchema(schema)
-            serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
+            processSchema(schemaAndDescriptor(schema, typeDescriptor))
+            serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException(
+                    "Could not find type matching descriptor $typeDescriptor.")
         }()
     }
 
@@ -176,15 +180,25 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun processSchema(schema: Schema, sentinal: Boolean = false) {
+    /**
+     * Iterate over an AMQP schema, for each type ascertain weather it's on ClassPath of [classloader] amd
+     * if not use the [ClassCarpenter] to generate a class to use in it's place
+     */
+    private fun processSchema(schema: schemaAndDescriptor, sentinel: Boolean = false) {
         val carpenterSchemas = CarpenterSchemas.newInstance()
-        for (typeNotation in schema.types) {
+        for (typeNotation in schema.schema.types) {
             try {
-                processSchemaEntry(typeNotation, classCarpenter.classloader)
+                val serialiser = processSchemaEntry(typeNotation)
+
+                // if we just successfully built a serialiser for the type but the type fingerprint
+                // doesn't match that of the serialised object then we are dealing with  different
+                // instance of the class, as such we need to build an EvolutionSerialiser
+                if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
+                    getEvolutionSerializer(typeNotation, serialiser as ObjectSerializer)
+                }
             } catch (e: ClassNotFoundException) {
-                if (sentinal || (typeNotation !is CompositeType)) throw e
-                typeNotation.carpenterSchema(
-                        classLoaders = listOf(classCarpenter.classloader), carpenterSchemas = carpenterSchemas)
+                if (sentinel || (typeNotation !is CompositeType)) throw e
+                typeNotation.carpenterSchema(classloader, carpenterSchemas = carpenterSchemas)
             }
         }
 
@@ -195,25 +209,21 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun processSchemaEntry(typeNotation: TypeNotation,
-                                   cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
-        when (typeNotation) {
-            is CompositeType -> processCompositeType(typeNotation, cl) // java.lang.Class (whether a class or interface)
+    private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
+            is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
             is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
         }
+
+    private fun processRestrictedType(typeNotation: RestrictedType): AMQPSerializer<Any> {
+        // TODO: class loader logic, and compare the schema.
+        val type = typeForName(typeNotation.name, classloader)
+        return get(null, type)
     }
 
-    private fun processRestrictedType(typeNotation: RestrictedType) {
+    private fun processCompositeType(typeNotation: CompositeType): AMQPSerializer<Any> {
         // TODO: class loader logic, and compare the schema.
-        val type = typeForName(typeNotation.name)
-        get(null, type)
-    }
-
-    private fun processCompositeType(typeNotation: CompositeType,
-                                     cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
-        // TODO: class loader logic, and compare the schema.
-        val type = typeForName(typeNotation.name, cl)
-        get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
+        val type = typeForName(typeNotation.name, classloader)
+        return get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
     }
 
     private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> = serializersByType.computeIfAbsent(type) {
@@ -222,7 +232,8 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         } else {
             findCustomSerializer(clazz, declaredType) ?: run {
                 if (type.isArray()) {
-                    whitelisted(type.componentType())
+                    // Allow Object[] since this can be quite common (i.e. an untyped array)
+                    if(type.componentType() != Object::class.java) whitelisted(type.componentType())
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
@@ -256,10 +267,14 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
     private fun whitelisted(type: Type) {
         val clazz = type.asClass()!!
-        if (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz)) {
+        if (isNotWhitelisted(clazz)) {
             throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
         }
     }
+
+    // Ignore SimpleFieldAccess as we add it to anything we build in the carpenter.
+    internal fun isNotWhitelisted(clazz: Class<*>): Boolean = clazz == SimpleFieldAccess::class.java ||
+            (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
 
     // Recursively check the class, interfaces and superclasses for our annotation.
     internal fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
@@ -270,7 +285,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
     private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<Any> {
         val rawType = declaredType.rawType as Class<*>
-        rawType.checkNotUnorderedHashMap()
+        rawType.checkNotUnsupportedHashMap()
         return MapSerializer(declaredType, this)
     }
 
@@ -319,14 +334,13 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
             }
             is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
             is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
+            is WildcardType -> "Any"
             else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 
-        private fun typeForName(
-                name: String,
-                cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader): Type {
+        private fun typeForName(name: String, classloader: ClassLoader): Type {
             return if (name.endsWith("[]")) {
-                val elementType = typeForName(name.substring(0, name.lastIndex - 1))
+                val elementType = typeForName(name.substring(0, name.lastIndex - 1), classloader)
                 if (elementType is ParameterizedType || elementType is GenericArrayType) {
                     DeserializedGenericArrayType(elementType)
                 } else if (elementType is Class<*>) {
@@ -349,7 +363,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                     else -> throw NotSerializableException("Not able to deserialize array type: $name")
                 }
             } else {
-                DeserializedParameterizedType.make(name, cl)
+                DeserializedParameterizedType.make(name, classloader)
             }
         }
     }

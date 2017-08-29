@@ -33,12 +33,28 @@ export class AppComponent {
     this.counterparty = this.httpWrapperService.setCounterparty(value.id);
   }
 
+  public renderX500Name(x500Name) {
+    var name = x500Name;
+    x500Name.split(',').forEach(function (element) {
+        var keyValue = element.split('=');
+        if (keyValue[0].toUpperCase() == 'CN') {
+            name = keyValue[1];
+        }
+    });
+    return name;
+  }
+
   private counterparty: any = null;
 
   ngOnInit() {
     this.httpWrapperService.getAbsolute("whoami").toPromise().then((data) => {
-      this.whoAmI = data.self.text;
-      this.counterParties = data.counterparties;
+      this.whoAmI = this.renderX500Name(data.self.text);
+      this.counterParties = data.counterparties.map(function (x) {
+          return {
+              id: x.id,
+              text: this.renderX500Name(x.text)
+          };
+      });
       if (this.counterParties.length == 0) {
         console.log("/whoami is returning no counterparties, the whole app won't run", data);
       }

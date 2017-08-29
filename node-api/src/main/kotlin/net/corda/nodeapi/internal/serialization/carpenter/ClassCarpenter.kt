@@ -1,8 +1,10 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.core.serialization.CordaSerializable
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.Type
 
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
@@ -18,7 +20,8 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
-class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
+class CarpenterClassLoader (parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
+        ClassLoader(parentClassLoader) {
     fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
 }
 
@@ -66,14 +69,14 @@ class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoad
  *
  * Equals/hashCode methods are not yet supported.
  */
-class ClassCarpenter {
+class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader) {
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.
     // TODO: Support annotations.
     // TODO: isFoo getter patterns for booleans (this is what Kotlin generates)
 
-    val classloader = CarpenterClassLoader()
+    val classloader = CarpenterClassLoader(cl)
 
     private val _loaded = HashMap<String, Class<*>>()
     private val String.jvm: String get() = replace(".", "/")
@@ -118,6 +121,7 @@ class ClassCarpenter {
 
             with(cw) {
                 visit(V1_8, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, schema.jvmName, null, "java/lang/Object", interfaces)
+                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
 
                 generateAbstractGetters(schema)
 
@@ -135,6 +139,7 @@ class ClassCarpenter {
 
             with(cw) {
                 visit(V1_8, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName, interfaces.toTypedArray())
+                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
 
                 generateFields(schema)
                 generateConstructor(schema)

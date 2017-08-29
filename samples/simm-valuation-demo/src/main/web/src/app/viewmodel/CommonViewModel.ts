@@ -30,5 +30,4 @@ export class CommonViewModel {
   exposure = {};
   localBusinessDay = [ "London" , "NewYork" ];
   dailyInterestAmount = "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360";
-  hashLegalDocs = "put hash here";
 }

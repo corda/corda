@@ -149,7 +149,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(): MessagingService {
+        override fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,

@@ -32,7 +32,7 @@ class DatabaseTransaction(isolation: Int, val threadLocal: ThreadLocal<DatabaseT
     val session: Session by sessionDelegate
     private lateinit var hibernateTransaction : Transaction
 
-    val outerTransaction: DatabaseTransaction? = threadLocal.get()
+    private val outerTransaction: DatabaseTransaction? = threadLocal.get()
 
     fun commit() {
         if (sessionDelegate.isInitialized()) {
@@ -51,6 +51,9 @@ class DatabaseTransaction(isolation: Int, val threadLocal: ThreadLocal<DatabaseT
     }
 
     fun close() {
+        if (sessionDelegate.isInitialized() && session.isOpen) {
+            session.close()
+        }
         connection.close()
         threadLocal.set(outerTransaction)
         if (outerTransaction == null) {

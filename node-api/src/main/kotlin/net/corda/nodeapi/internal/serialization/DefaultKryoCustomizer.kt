@@ -6,12 +6,13 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
-import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
@@ -59,6 +60,12 @@ object DefaultKryoCustomizer {
 
             instantiatorStrategy = CustomInstantiatorStrategy()
 
+            // Required for HashCheckingStream (de)serialization.
+            // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
+            addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
+            addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
+            addDefaultSerializer(Logger::class.java, LoggerSerializer)
+
             // WARNING: reordering the registrations here will cause a change in the serialized form, since classes
             // with custom serializers get written as registration ids. This will break backwards-compatibility.
             // Please add any new registrations to the end.
@@ -68,50 +75,31 @@ object DefaultKryoCustomizer {
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
             register(SerializedBytes::class.java, SerializedBytesSerializer)
-
             UnmodifiableCollectionsSerializer.registerSerializers(this)
             ImmutableListSerializer.registerSerializers(this)
             ImmutableSetSerializer.registerSerializers(this)
             ImmutableSortedSetSerializer.registerSerializers(this)
             ImmutableMapSerializer.registerSerializers(this)
             ImmutableMultimapSerializer.registerSerializers(this)
-
             // InputStream subclasses whitelisting, required for attachments.
             register(BufferedInputStream::class.java, InputStreamSerializer)
             register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
-
             noReferencesWithin<WireTransaction>()
-
             register(ECPublicKeyImpl::class.java, ECPublicKeyImplSerializer)
             register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
             register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
-
-            // Using a custom serializer for compactness
-            register(CompositeKey::class.java, CompositeKeySerializer)
-
+            register(CompositeKey::class.java, CompositeKeySerializer)  // Using a custom serializer for compactness
             // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
             register(Array<StackTraceElement>::class, read = { _, _ -> emptyArray() }, write = { _, _, _ -> })
-
             // This ensures a NonEmptySetSerializer is constructed with an initial value.
             register(NonEmptySet::class.java, NonEmptySetSerializer)
-
-            addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
-
             register(BitSet::class.java, BitSetSerializer())
             register(Class::class.java, ClassSerializer)
-
-            addDefaultSerializer(Logger::class.java, LoggerSerializer)
-
             register(FileInputStream::class.java, InputStreamSerializer)
-            // Required for HashCheckingStream (de)serialization.
-            // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
-            addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
-
             register(CertPath::class.java, CertPathSerializer)
             register(X509CertPath::class.java, CertPathSerializer)
             register(X500Name::class.java, X500NameSerializer)
             register(X509CertificateHolder::class.java, X509CertificateSerializer)
-
             register(BCECPrivateKey::class.java, PrivateKeySerializer)
             register(BCECPublicKey::class.java, PublicKeySerializer)
             register(BCRSAPrivateCrtKey::class.java, PrivateKeySerializer)
@@ -119,8 +107,11 @@ object DefaultKryoCustomizer {
             register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
             register(BCSphincs256PublicKey::class.java, PublicKeySerializer)
             register(sun.security.ec.ECPublicKeyImpl::class.java, PublicKeySerializer)
-
             register(NotaryChangeWireTransaction::class.java, NotaryChangeWireTransactionSerializer)
+            register(PartyAndCertificate::class.java, PartyAndCertificateSerializer)
+
+            // Don't deserialize PrivacySalt via its default constructor.
+            register(PrivacySalt::class.java, PrivacySaltSerializer)
 
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }
@@ -139,6 +130,15 @@ object DefaultKryoCustomizer {
         }
     }
 
+    private object PartyAndCertificateSerializer : Serializer<PartyAndCertificate>() {
+        override fun write(kryo: Kryo, output: Output, obj: PartyAndCertificate) {
+            kryo.writeClassAndObject(output, obj.certPath)
+        }
+        override fun read(kryo: Kryo, input: Input, type: Class<PartyAndCertificate>): PartyAndCertificate {
+            return PartyAndCertificate(kryo.readClassAndObject(input) as CertPath)
+        }
+    }
+
     private object NonEmptySetSerializer : Serializer<NonEmptySet<Any>>() {
         override fun write(kryo: Kryo, output: Output, obj: NonEmptySet<Any>) {
             // Write out the contents as normal
@@ -154,6 +154,20 @@ object DefaultKryoCustomizer {
                 list += kryo.readClassAndObject(input)
             }
             return list.toNonEmptySet()
+        }
+    }
+
+    /*
+     * Avoid deserialising PrivacySalt via its default constructor
+     * because the random number generator may not be available.
+     */
+    private object PrivacySaltSerializer : Serializer<PrivacySalt>() {
+        override fun write(kryo: Kryo, output: Output, obj: PrivacySalt) {
+            output.writeBytesWithLength(obj.bytes)
+        }
+
+        override fun read(kryo: Kryo, input: Input, type: Class<PrivacySalt>): PrivacySalt {
+            return PrivacySalt(input.readBytesWithLength())
         }
     }
 }

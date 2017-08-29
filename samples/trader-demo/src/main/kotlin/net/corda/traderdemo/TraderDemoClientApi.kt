@@ -1,13 +1,7 @@
 package net.corda.traderdemo
 
-import net.corda.contracts.CommercialPaper
-import net.corda.contracts.asset.Cash
-import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.USD
 import net.corda.core.internal.Emoji
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -15,8 +9,13 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
-import net.corda.flows.CashIssueFlow
+import net.corda.finance.DOLLARS
+import net.corda.finance.USD
+import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.getCashBalance
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.calculateRandomlySizedAmounts
@@ -29,10 +28,6 @@ import java.util.*
  * Interface for communicating with nodes running the trader demo.
  */
 class TraderDemoClientApi(val rpc: CordaRPCOps) {
-    private companion object {
-        val logger = loggerFor<TraderDemoClientApi>()
-    }
-
     val cashCount: Long get() {
         val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
         val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
@@ -47,7 +42,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
     }
 
-    fun runIssuer(amount: Amount<Currency> = 1100.0.DOLLARS, buyerName: X500Name, sellerName: X500Name, notaryName: X500Name) {
+    fun runIssuer(amount: Amount<Currency>, buyerName: X500Name, sellerName: X500Name) {
         val ref = OpaqueBytes.of(1)
         val buyer = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
         val seller = rpc.partyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
@@ -57,12 +52,12 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
                 ?: throw IllegalStateException("Unable to locate notary node in network map cache")
         val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
         val anonymous = false
-        // issue random amounts of currency up to the requested amount, in parallel
-        val resultFutures = amounts.map { pennies ->
-            rpc.startFlow(::CashIssueFlow, amount.copy(quantity = pennies), OpaqueBytes.of(1), buyer, notaryNode.notaryIdentity, anonymous).returnValue
+        rpc.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
+        // Pay random amounts of currency up to the requested amount
+        amounts.forEach { pennies ->
+            // TODO This can't be done in parallel, perhaps due to soft-locking issues?
+            rpc.startFlow(::CashPaymentFlow, amount.copy(quantity = pennies), buyer, anonymous).returnValue.getOrThrow()
         }
-
-        resultFutures.transpose().getOrThrow()
         println("Cash issued to buyer")
 
         // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -77,7 +72,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         }
 
         // The line below blocks and waits for the future to resolve.
-        val stx = rpc.startFlow(::CommercialPaperIssueFlow, amount, ref, seller, notaryNode.notaryIdentity).returnValue.getOrThrow()
+        rpc.startFlow(::CommercialPaperIssueFlow, amount, ref, seller, notaryNode.notaryIdentity).returnValue.getOrThrow()
         println("Commercial paper issued to seller")
     }
 

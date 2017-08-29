@@ -1,9 +1,7 @@
 package net.corda.irs.contract
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import net.corda.contracts.*
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
@@ -12,6 +10,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.finance.contracts.*
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
@@ -193,8 +192,6 @@ class FloatingRatePaymentEvent(date: LocalDate,
  * This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.
  */
 class InterestRateSwap : Contract {
-    override val legalContractReference = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
-
     /**
      * This Common area contains all the information that is not leg specific.
      */

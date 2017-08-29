@@ -11,8 +11,10 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.MockServiceHubInternal
+import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
@@ -71,7 +73,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+        val databaseProperties = makeTestDatabaseProperties()
+        database = configureDatabase(dataSourceProps, databaseProperties, createIdentityService = ::makeTestIdentityService)
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
@@ -88,7 +91,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
-                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
+                override val vaultService: VaultService = NodeVaultService(this)
                 override val testReference = this@NodeSchedulerServiceTest
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)

@@ -1,7 +1,6 @@
 package net.corda.vega.contracts
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.LedgerTransaction
 
 /**
@@ -9,7 +8,7 @@ import net.corda.core.transactions.LedgerTransaction
  * Implements an agree clause to agree to the portfolio and an update clause to change either the portfolio or valuation
  * of the portfolio arbitrarily.
  */
-data class PortfolioSwap(override val legalContractReference: SecureHash = SecureHash.sha256("swordfish")) : Contract {
+data class PortfolioSwap(private val blank: Void? = null) : Contract {
     override fun verify(tx: LedgerTransaction) {
         requireNotNull(tx.timeWindow) { "must have a time-window)" }
         val groups: List<LedgerTransaction.InOutGroup<PortfolioState, UniqueIdentifier>> = tx.groupStates { state -> state.linearId }

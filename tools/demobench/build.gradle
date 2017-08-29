@@ -93,28 +93,40 @@ distributions {
         contents {
             into('lib/linux') {
                 from 'libs/linux'
+                fileMode = 0555
             }
             into('lib/macosx') {
                 from 'libs/macosx'
+                fileMode = 0555
             }
             into('lib/win') {
                 from 'libs/win'
+                fileMode = 0555
             }
             from(project(':tools:explorer:capsule').tasks.buildExplorerJAR) {
                 rename 'node-explorer-(.*)', 'node-explorer.jar'
                 into 'explorer'
+                fileMode = 0444
             }
             from(project(':node:capsule').tasks.buildCordaJAR) {
                 rename 'corda-(.*)', 'corda.jar'
                 into 'corda'
+                fileMode = 0444
             }
             from(project(':webserver:webcapsule').tasks.buildWebserverJar) {
                 rename 'corda-webserver-(.*)', 'corda-webserver.jar'
                 into 'corda'
+                fileMode = 0444
+            }
+            from(project(':finance').tasks.jar) {
+                rename 'corda-finance-(.*)', 'corda-finance.jar'
+                into 'plugins'
+                fileMode = 0444
             }
             from(project(':samples:bank-of-corda-demo').jar) {
                 rename 'bank-of-corda-demo-(.*)', 'bank-of-corda.jar'
                 into 'plugins'
+                fileMode = 0444
             }
         }
     }

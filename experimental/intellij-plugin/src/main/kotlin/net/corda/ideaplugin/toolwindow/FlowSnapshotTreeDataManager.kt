@@ -80,7 +80,7 @@ class FlowSnapshotTreeDataManager(tree: JTree) {
     private fun insertNodeToSnapshotModel(snapshotFile: File, insertionIndex: Int = -1) {
         val fileNode = DefaultMutableTreeNode(Descriptor(snapshotFile, AllIcons.FileTypes.Custom, snapshotFile.name))
         val snapshot = mapper.readValue(snapshotFile, FlowStackSnapshot::class.java)
-        fileNode.add(DefaultMutableTreeNode(Descriptor(snapshot.timestamp, AllIcons.Debugger.Db_primitive, "timestamp")))
+        fileNode.add(DefaultMutableTreeNode(Descriptor(snapshot.time, AllIcons.Debugger.Db_primitive, "timestamp")))
         fileNode.add(DefaultMutableTreeNode(Descriptor(snapshot.flowClass, AllIcons.Debugger.Db_primitive, "flowClass")))
         val framesNode = DefaultMutableTreeNode(Descriptor(icon = AllIcons.Debugger.Db_array, label = "stackFrames"))
         fileNode.add(framesNode)

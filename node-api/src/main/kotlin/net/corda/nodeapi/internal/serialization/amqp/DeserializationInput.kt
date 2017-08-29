@@ -8,6 +8,7 @@ import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedByte
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
+import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.nio.ByteBuffer
 import java.util.*
@@ -20,7 +21,7 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
-class DeserializationInput(internal val serializerFactory: SerializerFactory = SerializerFactory()) {
+class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableList<Any> = ArrayList()
 
@@ -118,7 +119,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
         if (obj is DescribedType) {
             // Look up serializer in factory by descriptor
             val serializer = serializerFactory.get(obj.descriptor, schema)
-            if (serializer.type != type && !serializer.type.isSubClassOf(type))
+            if (serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) })
                 throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
                         "expected to be of type $type but was ${serializer.type}")
             return serializer.readObject(obj.described, schema, this)
@@ -128,4 +129,12 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
             return obj
         }
     }
+
+    /**
+     * TODO: Currently performs rather basic checks aimed in particular at [java.util.List<Command<?>>] and
+     * [java.lang.Class<? extends net.corda.core.contracts.Contract>]
+     * In the future tighter control might be needed
+     */
+    private fun Type.materiallyEquivalentTo(that: Type): Boolean =
+        asClass() == that.asClass() && that is ParameterizedType
 }

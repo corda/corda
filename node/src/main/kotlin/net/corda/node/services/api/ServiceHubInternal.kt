@@ -1,6 +1,6 @@
 package net.corda.node.services.api
 
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -23,12 +23,6 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.CordaPersistence
-
-/**
- * Session ID to use for services listening for the first message in a session (before a
- * specific session ID has been established).
- */
-val DEFAULT_SESSION_ID = 0L
 
 interface NetworkMapCacheInternal : NetworkMapCache {
     /**
@@ -89,8 +83,8 @@ interface ServiceHubInternal : PluginServiceHub {
     val database: CordaPersistence
     val configuration: NodeConfiguration
 
-    override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-        require (txs.any()) { "No transactions passed in for recording" }
+    override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+        require(txs.any()) { "No transactions passed in for recording" }
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
         if (stateMachineRunId != null) {
@@ -101,8 +95,10 @@ interface ServiceHubInternal : PluginServiceHub {
             log.warn("Transactions recorded from outside of a state machine")
         }
 
-        val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
-        vaultService.notifyAll(toNotify)
+        if (notifyVault) {
+            val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
+            vaultService.notifyAll(toNotify)
+        }
     }
 
     /**

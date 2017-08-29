@@ -13,7 +13,6 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.util.Duration
-import net.corda.contracts.getCashBalances
 import net.corda.core.concurrent.match
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.commonName
@@ -29,6 +28,7 @@ import net.corda.demobench.rpc.NodeRPC
 import net.corda.demobench.ui.PropertyLabel
 import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
+import net.corda.finance.contracts.getCashBalances
 import rx.Subscription
 import rx.schedulers.Schedulers
 import tornadofx.*

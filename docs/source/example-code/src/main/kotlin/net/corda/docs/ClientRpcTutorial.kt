@@ -1,9 +1,6 @@
 package net.corda.docs
 
-import net.corda.client.rpc.notUsed
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.USD
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -13,10 +10,12 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationCustomization
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.flows.CashExitFlow
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
-import net.corda.node.services.startFlowPermission
+import net.corda.finance.USD
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
@@ -128,7 +127,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
             proxy.startFlow(::CashPaymentFlow, Amount(quantity, USD), me)
         } else {
             val quantity = Math.abs(random.nextLong() % 1000)
-            proxy.startFlow(::CashIssueFlow, Amount(quantity, USD), issueRef, me, notary)
+            proxy.startFlow(::CashIssueFlow, Amount(quantity, USD), issueRef, notary)
             ownedQuantity += quantity
         }
     }

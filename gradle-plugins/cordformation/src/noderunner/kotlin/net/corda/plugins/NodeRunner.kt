@@ -3,10 +3,10 @@ package net.corda.plugins
 import java.awt.GraphicsEnvironment
 import java.io.File
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.*
 
 private val HEADLESS_FLAG = "--headless"
+private val CAPSULE_DEBUG_FLAG = "--capsule-debug"
 
 private val os by lazy {
     val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
@@ -24,13 +24,15 @@ private object debugPortAlloc {
 
 fun main(args: Array<String>) {
     val startedProcesses = mutableListOf<Process>()
-    val headless = GraphicsEnvironment.isHeadless() || (args.isNotEmpty() && args[0] == HEADLESS_FLAG)
+    val headless = GraphicsEnvironment.isHeadless() || args.contains(HEADLESS_FLAG)
+    val capsuleDebugMode = args.contains(CAPSULE_DEBUG_FLAG)
     val workingDir = File(System.getProperty("user.dir"))
-    val javaArgs = args.filter { it != HEADLESS_FLAG }
+    val javaArgs = args.filter { it != HEADLESS_FLAG && it != CAPSULE_DEBUG_FLAG }
+    val jvmArgs = if (capsuleDebugMode) listOf("-Dcapsule.log=verbose") else emptyList<String>()
     println("Starting nodes in $workingDir")
     workingDir.listFiles { file -> file.isDirectory }.forEach { dir ->
         listOf(NodeJarType, WebJarType).forEach { jarType ->
-            jarType.acceptDirAndStartProcess(dir, headless, javaArgs)?.let { startedProcesses += it }
+            jarType.acceptDirAndStartProcess(dir, headless, javaArgs, jvmArgs)?.let { startedProcesses += it }
         }
     }
     println("Started ${startedProcesses.size} processes")
@@ -39,7 +41,7 @@ fun main(args: Array<String>) {
 
 private abstract class JarType(private val jarName: String) {
     internal abstract fun acceptNodeConf(nodeConf: File): Boolean
-    internal fun acceptDirAndStartProcess(dir: File, headless: Boolean, javaArgs: List<String>): Process? {
+    internal fun acceptDirAndStartProcess(dir: File, headless: Boolean, javaArgs: List<String>, jvmArgs: List<String>): Process? {
         if (!File(dir, jarName).exists()) {
             return null
         }
@@ -48,7 +50,7 @@ private abstract class JarType(private val jarName: String) {
         }
         val debugPort = debugPortAlloc.next()
         println("Starting $jarName in $dir on debug port $debugPort")
-        val process = (if (headless) ::HeadlessJavaCommand else ::TerminalWindowJavaCommand)(jarName, dir, debugPort, javaArgs).start()
+        val process = (if (headless) ::HeadlessJavaCommand else ::TerminalWindowJavaCommand)(jarName, dir, debugPort, javaArgs, jvmArgs).start()
         if (os == OS.MACOS) Thread.sleep(1000)
         return process
     }
@@ -63,9 +65,17 @@ private object WebJarType : JarType("corda-webserver.jar") {
     override fun acceptNodeConf(nodeConf: File) = Files.lines(nodeConf.toPath()).anyMatch { "webAddress" in it }
 }
 
-private abstract class JavaCommand(jarName: String, internal val dir: File, debugPort: Int?, internal val nodeName: String, init: MutableList<String>.() -> Unit, args: List<String>) {
+private abstract class JavaCommand(
+        jarName: String,
+        internal val dir: File,
+        debugPort: Int?,
+        internal val nodeName: String,
+        init: MutableList<String>.() -> Unit, args: List<String>,
+        jvmArgs: List<String>
+) {
     internal val command: List<String> = mutableListOf<String>().apply {
         add(getJavaPath())
+        addAll(jvmArgs)
         add("-Dname=$nodeName")
         null != debugPort && add("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
         add("-jar")
@@ -79,12 +89,14 @@ private abstract class JavaCommand(jarName: String, internal val dir: File, debu
     internal abstract fun getJavaPath(): String
 }
 
-private class HeadlessJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>) : JavaCommand(jarName, dir, debugPort, dir.name, { add("--no-local-shell") }, args) {
+private class HeadlessJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>, jvmArgs: List<String>)
+    : JavaCommand(jarName, dir, debugPort, dir.name, { add("--no-local-shell") }, args, jvmArgs) {
     override fun processBuilder() = ProcessBuilder(command).redirectError(File("error.$nodeName.log")).inheritIO()
     override fun getJavaPath() = File(File(System.getProperty("java.home"), "bin"), "java").path
 }
 
-private class TerminalWindowJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>) : JavaCommand(jarName, dir, debugPort, "${dir.name}-$jarName", {}, args) {
+private class TerminalWindowJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>, jvmArgs: List<String>)
+    : JavaCommand(jarName, dir, debugPort, "${dir.name}-$jarName", {}, args, jvmArgs) {
     override fun processBuilder() = ProcessBuilder(when (os) {
         OS.MACOS -> {
             listOf("osascript", "-e", """tell app "Terminal"
@@ -113,7 +125,7 @@ end tell""")
         val path = File(File(System.getProperty("java.home"), "bin"), "java").path
         // Replace below is to fix an issue with spaces in paths on Windows.
         // Quoting the entire path does not work, only the space or directory within the path.
-        return if(os == OS.WINDOWS) path.replace(" ", "\" \"") else path
+        return if (os == OS.WINDOWS) path.replace(" ", "\" \"") else path
     }
 }
 

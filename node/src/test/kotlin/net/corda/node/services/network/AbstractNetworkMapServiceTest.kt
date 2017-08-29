@@ -6,8 +6,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send
 import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.AbstractNetworkMapServiceTest.Changed.Added
@@ -228,7 +228,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     private fun MockNode.subscribe(): Queue<Update> {
         val request = SubscribeRequest(true, network.myAddress)
         val updates = LinkedBlockingQueue<Update>()
-        services.networkService.addMessageHandler(PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
+        services.networkService.addMessageHandler(PUSH_TOPIC) { message, _ ->
             updates += message.data.deserialize<Update>()
         }
         val response = services.networkService.sendRequest<SubscribeResponse>(SUBSCRIPTION_TOPIC, request, mapServiceNode.network.myAddress)
@@ -246,7 +246,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
 
     private fun MockNode.ackUpdate(mapVersion: Int) {
         val request = UpdateAcknowledge(mapVersion, services.networkService.myAddress)
-        services.networkService.send(PUSH_ACK_TOPIC, DEFAULT_SESSION_ID, request, mapServiceNode.network.myAddress)
+        services.networkService.send(PUSH_ACK_TOPIC, MessagingService.DEFAULT_SESSION_ID, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
     }
 

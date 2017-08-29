@@ -17,8 +17,6 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset.UTC
 
 class DummyLinearContract : Contract {
-    override val legalContractReference: SecureHash = SecureHash.sha256("Test")
-
     override fun verify(tx: LedgerTransaction) {
         val inputs = tx.inputs.map { it.state.data }.filterIsInstance<State>()
         val outputs = tx.outputs.map { it.data }.filterIsInstance<State>()
@@ -50,6 +48,7 @@ class DummyLinearContract : Contract {
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is DummyLinearStateSchemaV1 -> DummyLinearStateSchemaV1.PersistentDummyLinearState(
+                        participants = participants.toMutableSet(),
                         externalId = linearId.externalId,
                         uuid = linearId.id,
                         linearString = linearString,
@@ -58,6 +57,7 @@ class DummyLinearContract : Contract {
                         linearBoolean = linearBoolean
                 )
                 is DummyLinearStateSchemaV2 -> DummyLinearStateSchemaV2.PersistentDummyLinearState(
+                        _participants = participants.toSet(),
                         uid = linearId,
                         linearString = linearString,
                         linearNumber = linearNumber,

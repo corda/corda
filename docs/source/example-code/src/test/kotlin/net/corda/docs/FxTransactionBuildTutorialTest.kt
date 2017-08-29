@@ -1,12 +1,12 @@
 package net.corda.docs
 
-import net.corda.contracts.getCashBalances
-import net.corda.core.contracts.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.flows.CashIssueFlow
+import net.corda.finance.*
+import net.corda.finance.contracts.getCashBalances
+import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
@@ -46,9 +46,7 @@ class FxTransactionBuildTutorialTest {
         // Use NodeA as issuer and create some dollars
         val flowHandle1 = nodeA.services.startFlow(CashIssueFlow(DOLLARS(1000),
                 OpaqueBytes.of(0x01),
-                nodeA.info.legalIdentity,
-                notaryNode.info.notaryIdentity,
-                false))
+                notaryNode.info.notaryIdentity))
         // Wait for the flow to stop and print
         flowHandle1.resultFuture.getOrThrow()
         printBalances()
@@ -56,9 +54,7 @@ class FxTransactionBuildTutorialTest {
         // Using NodeB as Issuer create some pounds.
         val flowHandle2 = nodeB.services.startFlow(CashIssueFlow(POUNDS(1000),
                 OpaqueBytes.of(0x01),
-                nodeB.info.legalIdentity,
-                notaryNode.info.notaryIdentity,
-                false))
+                notaryNode.info.notaryIdentity))
         // Wait for flow to come to an end and print
         flowHandle2.resultFuture.getOrThrow()
         printBalances()

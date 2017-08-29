@@ -31,7 +31,7 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').co
     applicationSource = files(
         project(':tools:explorer').configurations.runtime,
         project(':tools:explorer').jar,
-        '../build/classes/main/ExplorerCaplet.class'
+        project(':tools:explorer').sourceSets.main.java.outputDir.toString() + '/ExplorerCaplet.class'
     )
     classifier 'fat'
 

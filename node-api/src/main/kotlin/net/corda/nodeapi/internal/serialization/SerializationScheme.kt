@@ -8,7 +8,6 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
-import io.requery.util.CloseableIterator
 import net.corda.core.internal.LazyPool
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
@@ -28,7 +27,7 @@ object NotSupportedSeralizationScheme : SerializationScheme {
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> = doThrow()
 }
 
-data class SerializationContextImpl(override val preferedSerializationVersion: ByteSequence,
+data class SerializationContextImpl(override val preferredSerializationVersion: ByteSequence,
                                     override val deserializationClassLoader: ClassLoader,
                                     override val whitelist: ClassWhitelist,
                                     override val properties: Map<Any, Any>,
@@ -52,7 +51,7 @@ data class SerializationContextImpl(override val preferedSerializationVersion: B
         })
     }
 
-    override fun withPreferredSerializationVersion(versionHeader: ByteSequence) = copy(preferedSerializationVersion = versionHeader)
+    override fun withPreferredSerializationVersion(versionHeader: ByteSequence) = copy(preferredSerializationVersion = versionHeader)
 }
 
 private const val HEADER_SIZE: Int = 8
@@ -68,11 +67,9 @@ open class SerializationFactoryImpl : SerializationFactory {
     private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): SerializationScheme {
         // truncate sequence to 8 bytes, and make sure it's a copy to avoid holding onto large ByteArrays
         return schemes.computeIfAbsent(byteSequence.take(HEADER_SIZE).copy() to target) {
-            for (scheme in registeredSchemes) {
-                if (scheme.canDeserializeVersion(it.first, it.second)) {
-                    return@computeIfAbsent scheme
-                }
-            }
+            registeredSchemes
+                    .filter { scheme -> scheme.canDeserializeVersion(it.first, it.second) }
+                    .forEach { return@computeIfAbsent it }
             NotSupportedSeralizationScheme
         }
     }
@@ -81,7 +78,7 @@ open class SerializationFactoryImpl : SerializationFactory {
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T = schemeFor(byteSequence, context.useCase).deserialize(byteSequence, clazz, context)
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        return schemeFor(context.preferedSerializationVersion, context.useCase).serialize(obj, context)
+        return schemeFor(context.preferredSerializationVersion, context.useCase).serialize(obj, context)
     }
 
     fun registerScheme(scheme: SerializationScheme) {
@@ -105,21 +102,16 @@ open class SerializationFactoryImpl : SerializationFactory {
 
 private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
     override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
-        val message = if (closeable is CloseableIterator<*>) {
-            "A live Iterator pointing to the database has been detected during flow checkpointing. This may be due " +
-                    "to a Vault query - move it into a private method."
-        } else {
-            "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
+        val message = "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
                     "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
                     "confined to a private method or the reference is nulled out."
-        }
         throw UnsupportedOperationException(message)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
 }
 
-abstract class AbstractKryoSerializationScheme(val serializationFactory: SerializationFactory) : SerializationScheme {
+abstract class AbstractKryoSerializationScheme : SerializationScheme {
     private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, KryoPool>()
 
     protected abstract fun rpcClientKryoPool(context: SerializationContext): KryoPool
@@ -131,7 +123,7 @@ abstract class AbstractKryoSerializationScheme(val serializationFactory: Seriali
                 SerializationContext.UseCase.Checkpoint ->
                     KryoPool.Builder {
                         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-                        val classResolver = CordaClassResolver(serializationFactory, context).apply { setKryo(serializer.kryo) }
+                        val classResolver = CordaClassResolver(context).apply { setKryo(serializer.kryo) }
                         // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
                         val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                         serializer.kryo.apply {
@@ -147,7 +139,7 @@ abstract class AbstractKryoSerializationScheme(val serializationFactory: Seriali
                     rpcServerKryoPool(context)
                 else ->
                     KryoPool.Builder {
-                        DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(serializationFactory, context))).apply { classLoader = it.second }
+                        DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(context))).apply { classLoader = it.second }
                     }.build()
             }
         }
@@ -226,34 +218,6 @@ val KRYO_P2P_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         emptyMap(),
         true,
         SerializationContext.UseCase.P2P)
-val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.RPCServer)
-val KRYO_RPC_CLIENT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.RPCClient)
-val KRYO_STORAGE_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        AllButBlacklisted,
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.Storage)
-val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        QuasarWhitelist,
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.Checkpoint)
-
-object QuasarWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = true
-}
 
 interface SerializationScheme {
     // byteSequence expected to just be the 8 bytes necessary for versioning

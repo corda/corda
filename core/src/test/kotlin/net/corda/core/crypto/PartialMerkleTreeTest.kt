@@ -1,13 +1,15 @@
 package net.corda.core.crypto
 
 
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
+import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.*
 import org.junit.Test
 import java.security.PublicKey

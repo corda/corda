@@ -13,7 +13,7 @@ import java.security.Signature
  *  This builder will use bouncy castle's JcaContentSignerBuilder as fallback for unknown algorithm.
  */
 object ContentSignerBuilder {
-    fun build(signatureScheme: SignatureScheme, privateKey: PrivateKey, provider: Provider?, random: SecureRandom? = null): ContentSigner {
+    fun build(signatureScheme: SignatureScheme, privateKey: PrivateKey, provider: Provider, random: SecureRandom? = null): ContentSigner {
         val sigAlgId = signatureScheme.signatureOID
         val sig = Signature.getInstance(signatureScheme.signatureName, provider).apply {
             if (random != null) {

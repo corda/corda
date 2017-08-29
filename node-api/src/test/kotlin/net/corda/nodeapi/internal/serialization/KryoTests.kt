@@ -5,7 +5,9 @@ import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.google.common.primitives.Ints
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.*
+import net.corda.core.internal.FetchDataFlow
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
@@ -16,21 +18,27 @@ import net.corda.testing.TestDependencyInjectionBase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.ExpectedException
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class KryoTests : TestDependencyInjectionBase() {
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
 
+    @get:Rule
+    val expectedEx: ExpectedException = ExpectedException.none()
+
     @Before
     fun setup() {
-        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
+        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
         context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
                 AllWhitelist,
@@ -157,6 +165,26 @@ class KryoTests : TestDependencyInjectionBase() {
         override fun toString(): String = "Cyclic($value)"
     }
 
+    @Test
+    fun `serialize - deserialize PrivacySalt`() {
+        val expected = PrivacySalt(byteArrayOf(
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+            11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+            21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+            31, 32
+        ))
+        val serializedBytes = expected.serialize(factory, context)
+        val actual = serializedBytes.deserialize(factory, context)
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `all-zero PrivacySalt not allowed`() {
+        expectedEx.expect(IllegalArgumentException::class.java)
+        expectedEx.expectMessage("Privacy salt should not be all zeros.")
+        PrivacySalt(ByteArray(32))
+    }
+
     @CordaSerializable
     private object TestSingleton
 
@@ -200,7 +228,7 @@ class KryoTests : TestDependencyInjectionBase() {
             }
         }
         Tmp()
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme(this)) }
+        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
         val context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
                 AllWhitelist,
@@ -208,5 +236,43 @@ class KryoTests : TestDependencyInjectionBase() {
                 true,
                 SerializationContext.UseCase.P2P)
         pt.serialize(factory, context)
+    }
+
+    @Test
+    fun `serialize - deserialize Exception with suppressed`() {
+        val exception = IllegalArgumentException("fooBar")
+        val toBeSuppressedOnSenderSide = IllegalStateException("bazz1")
+        exception.addSuppressed(toBeSuppressedOnSenderSide)
+        val exception2 = exception.serialize(factory, context).deserialize(factory, context)
+        assertEquals(exception.message, exception2.message)
+
+        assertEquals(1, exception2.suppressed.size)
+        assertNotNull({ exception2.suppressed.find { it.message == toBeSuppressedOnSenderSide.message  }})
+
+        val toBeSuppressedOnReceiverSide = IllegalStateException("bazz2")
+        exception2.addSuppressed(toBeSuppressedOnReceiverSide)
+        assertTrue { exception2.suppressed.contains(toBeSuppressedOnReceiverSide) }
+        assertEquals(2, exception2.suppressed.size)
+    }
+
+    @Test
+    fun `serialize - deserialize Exception no suppressed`() {
+        val exception = IllegalArgumentException("fooBar")
+        val exception2 = exception.serialize(factory, context).deserialize(factory, context)
+        assertEquals(exception.message, exception2.message)
+        assertEquals(0, exception2.suppressed.size)
+
+        val toBeSuppressedOnReceiverSide = IllegalStateException("bazz2")
+        exception2.addSuppressed(toBeSuppressedOnReceiverSide)
+        assertEquals(1, exception2.suppressed.size)
+        assertTrue { exception2.suppressed.contains(toBeSuppressedOnReceiverSide) }
+    }
+
+    @Test
+    fun `serialize - deserialize HashNotFound`() {
+        val randomHash = SecureHash.randomSHA256()
+        val exception = FetchDataFlow.HashNotFound(randomHash)
+        val exception2 = exception.serialize(factory, context).deserialize(factory, context)
+        assertEquals(randomHash, exception2.requested)
     }
 }

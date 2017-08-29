@@ -1,12 +1,14 @@
 package net.corda.client.mock
 
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.GBP
-import net.corda.core.contracts.USD
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.flows.CashFlowCommand
+import net.corda.finance.GBP
+import net.corda.finance.USD
 import java.util.*
+import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
 
 /**
  * [Generator]s for incoming/outgoing cash flow events between parties. It doesn't necessarily generate correct events!
@@ -26,16 +28,16 @@ open class EventGenerator(val parties: List<Party>, val currencies: List<Currenc
 
     protected val issueCashGenerator = amountGenerator.combine(partyGenerator, issueRefGenerator, currencyGenerator) { amount, to, issueRef, ccy ->
         addToMap(ccy, amount)
-        CashFlowCommand.IssueCash(Amount(amount, ccy), issueRef, to, notary, anonymous = true)
+        IssueAndPaymentRequest(Amount(amount, ccy), issueRef, to, notary, anonymous = true)
     }
 
     protected val exitCashGenerator = amountGenerator.combine(issueRefGenerator, currencyGenerator) { amount, issueRef, ccy ->
         addToMap(ccy, -amount)
-        CashFlowCommand.ExitCash(Amount(amount, ccy), issueRef)
+        ExitRequest(Amount(amount, ccy), issueRef)
     }
 
     open val moveCashGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
-        CashFlowCommand.PayCash(Amount(amountIssued, currency), recipient, anonymous = true)
+        PaymentRequest(Amount(amountIssued, currency), recipient, anonymous = true)
     }
 
     open val issuerGenerator = Generator.frequency(listOf(
@@ -54,28 +56,28 @@ class ErrorFlowsEventGenerator(parties: List<Party>, currencies: List<Currency>,
         EXIT_ERROR
     }
 
-    val errorGenerator = Generator.pickOne(IssuerEvents.values().toList())
+    private val errorGenerator = Generator.pickOne(IssuerEvents.values().toList())
 
-    val errorExitCashGenerator = amountGenerator.combine(issueRefGenerator, currencyGenerator, errorGenerator) { amount, issueRef, ccy, errorType ->
+    private val errorExitCashGenerator = amountGenerator.combine(issueRefGenerator, currencyGenerator, errorGenerator) { amount, issueRef, ccy, errorType ->
         when (errorType) {
             IssuerEvents.NORMAL_EXIT -> {
                 println("Normal exit")
                 if (currencyMap[ccy]!! <=  amount) addToMap(ccy, -amount)
-                CashFlowCommand.ExitCash(Amount(amount, ccy), issueRef) // It may fail at the beginning, but we don't care.
+                ExitRequest(Amount(amount, ccy), issueRef) // It may fail at the beginning, but we don't care.
             }
             IssuerEvents.EXIT_ERROR -> {
                 println("Exit error")
-                CashFlowCommand.ExitCash(Amount(currencyMap[ccy]!! * 2, ccy), issueRef)
+                ExitRequest(Amount(currencyMap[ccy]!! * 2, ccy), issueRef)
             }
         }
     }
 
-    val normalMoveGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
-        CashFlowCommand.PayCash(Amount(amountIssued, currency), recipient, anonymous = true)
+    private val normalMoveGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
+        PaymentRequest(Amount(amountIssued, currency), recipient, anonymous = true)
     }
 
-    val errorMoveGenerator = partyGenerator.combine(currencyGenerator) { recipient, currency ->
-        CashFlowCommand.PayCash(Amount(currencyMap[currency]!! * 2, currency), recipient, anonymous = true)
+    private val errorMoveGenerator = partyGenerator.combine(currencyGenerator) { recipient, currency ->
+        PaymentRequest(Amount(currencyMap[currency]!! * 2, currency), recipient, anonymous = true)
     }
 
     override val moveCashGenerator = Generator.frequency(listOf(

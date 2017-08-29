@@ -24,16 +24,17 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
                     val legalIdentityAndCert: PartyAndCertificate, //TODO This field will be removed in future PR which gets rid of services.
                     val legalIdentitiesAndCerts: NonEmptySet<PartyAndCertificate>,
                     val platformVersion: Int,
-                    var advertisedServices: List<ServiceEntry> = emptyList(),
+                    val advertisedServices: List<ServiceEntry> = emptyList(),
                     val worldMapLocation: WorldMapLocation? = null) {
     init {
-        require(advertisedServices.none { it.identity == legalIdentityAndCert }) { "Service identities must be different from node legal identity" }
+        require(advertisedServices.none { it.identity == legalIdentityAndCert }) {
+            "Service identities must be different from node legal identity"
+        }
     }
-    val legalIdentity: Party
-        get() = legalIdentityAndCert.party
-    val notaryIdentity: Party
-        get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
+
+    val legalIdentity: Party get() = legalIdentityAndCert.party
+    val notaryIdentity: Party get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
     fun serviceIdentities(type: ServiceType): List<Party> {
-        return advertisedServices.filter { it.info.type.isSubTypeOf(type) }.map { it.identity.party }
+        return advertisedServices.mapNotNull { if (it.info.type.isSubTypeOf(type)) it.identity.party else null }
     }
 }
