@@ -1,7 +1,6 @@
 package net.corda.node.services.events
 
 import net.corda.core.contracts.*
-import net.corda.core.utilities.days
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
@@ -10,11 +9,10 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.days
 import net.corda.node.services.MockServiceHubInternal
-import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
@@ -22,10 +20,8 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.*
-import net.corda.testing.node.TestClock
+import net.corda.testing.node.InMemoryMessagingNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After

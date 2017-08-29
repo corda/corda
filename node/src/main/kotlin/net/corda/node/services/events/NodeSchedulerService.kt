@@ -1,26 +1,39 @@
 package net.corda.node.services.events
 
-import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.contracts.*
-import net.corda.core.internal.ThreadBox
+import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
+import net.corda.core.contracts.SchedulableState
+import net.corda.core.contracts.ScheduledActivity
+import net.corda.core.contracts.ScheduledStateRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.until
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.internal.MutableClock
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.node.utilities.PersistentMap
 import org.apache.activemq.artemis.utils.ReusableLatch
+import java.time.Clock
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.Executor
-import java.util.concurrent.Executors
+import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.EmbeddedId
+import javax.persistence.Entity
 
 /**
  * A first pass of a simple [SchedulerService] that works with [MutableClock]s for testing, demonstrations and simulations
@@ -48,6 +61,48 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     companion object {
         private val log = loggerFor<NodeSchedulerService>()
 
+        /**
+         * Wait until the given [Future] is complete or the deadline is reached, with support for [MutableClock] implementations
+         * used in demos or testing.  This will substitute a Fiber compatible Future so the current
+         * [co.paralleluniverse.strands.Strand] is not blocked.
+         *
+         * @return true if the [Future] is complete, false if the deadline was reached.
+         */
+        // We should try to make the Clock used in our code injectable (for tests etc) and to use the extension below
+        // to wait in our code, rather than <code>Thread.sleep()</code> or other time-based pauses.
+        @Suspendable
+        @VisibleForTesting
+        // We specify full classpath on SettableFuture to differentiate it from the Quasar class of the same name
+        fun awaitWithDeadline(clock: Clock, deadline: Instant, future: Future<*> = GuavaSettableFuture.create<Any>()): Boolean {
+            var nanos: Long
+            do {
+                val originalFutureCompleted = makeStrandFriendlySettableFuture(future)
+                val subscription = if (clock is MutableClock) {
+                    clock.mutations.first().subscribe {
+                        originalFutureCompleted.set(false)
+                    }
+                } else {
+                    null
+                }
+                nanos = (clock.instant() until deadline).toNanos()
+                if (nanos > 0) {
+                    try {
+                        // This will return when it times out, or when the clock mutates or when when the original future completes.
+                        originalFutureCompleted.get(nanos, TimeUnit.NANOSECONDS)
+                    } catch(e: ExecutionException) {
+                        // No need to take action as will fall out of the loop due to future.isDone
+                    } catch(e: CancellationException) {
+                        // No need to take action as will fall out of the loop due to future.isDone
+                    } catch(e: TimeoutException) {
+                        // No need to take action as will fall out of the loop due to future.isDone
+                    }
+                }
+                subscription?.unsubscribe()
+                originalFutureCompleted.cancel(false)
+            } while (nanos > 0 && !future.isDone)
+            return future.isDone
+        }
+
         fun createMap(): PersistentMap<StateRef, ScheduledStateRef, PersistentScheduledState, PersistentStateRef> {
             return PersistentMap(
                     toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
@@ -67,6 +122,21 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
                     persistentEntityClass = PersistentScheduledState::class.java
             )
         }
+
+        /**
+         * Convert a Guava [ListenableFuture] or JDK8 [CompletableFuture] to Quasar implementation and set to true when a result
+         * or [Throwable] is available in the original.
+         *
+         * We need this so that we do not block the actual thread when calling get(), but instead allow a Quasar context
+         * switch.  There's no need to checkpoint our [Fiber]s as there's no external effect of waiting.
+         */
+        private fun <T : Any> makeStrandFriendlySettableFuture(future: Future<T>) = QuasarSettableFuture<Boolean>().also { g ->
+            when (future) {
+                is ListenableFuture -> future.addListener(Runnable { g.set(true) }, Executor { it.run() })
+                is CompletionStage<*> -> future.whenComplete { _, _ -> g.set(true) }
+                else -> throw IllegalArgumentException("Cannot make future $future Strand friendly.")
+            }
+        }
     }
 
     @Entity
@@ -84,7 +154,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
 
         var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue( { a, b -> a.scheduledAt.compareTo(b.scheduledAt) } )
 
-        var rescheduled: SettableFuture<Boolean>? = null
+        var rescheduled: GuavaSettableFuture<Boolean>? = null
     }
 
     private val mutex = ThreadBox(InnerState())
@@ -145,7 +215,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         // Note, we already have the mutex but we need the scope again here
         val (scheduledState, ourRescheduledFuture) = mutex.alreadyLocked {
             rescheduled?.cancel(false)
-            rescheduled = SettableFuture.create()
+            rescheduled = GuavaSettableFuture.create()
             Pair(scheduledStatesQueue.peek(), rescheduled!!)
         }
         if (scheduledState != null) {
@@ -153,7 +223,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
                 log.trace { "Scheduling as next $scheduledState" }
                 // This will block the scheduler single thread until the scheduled time (returns false) OR
                 // the Future is cancelled due to rescheduling (returns true).
-                if (!services.clock.awaitWithDeadline(scheduledState.scheduledAt, ourRescheduledFuture)) {
+                if (!awaitWithDeadline(services.clock, scheduledState.scheduledAt, ourRescheduledFuture)) {
                     log.trace { "Invoking as next $scheduledState" }
                     onTimeReached(scheduledState)
                 } else {
