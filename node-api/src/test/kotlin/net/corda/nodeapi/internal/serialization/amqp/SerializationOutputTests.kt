@@ -771,7 +771,6 @@ class SerializationOutputTests {
 
     @Test
     fun `test object referenced multiple times`() {
-
         val simple = SimpleContainer("Fred", "Ginger")
         val parentContainer = ParentContainer(simple, simple)
         assertSame(parentContainer.left, parentContainer.right)
