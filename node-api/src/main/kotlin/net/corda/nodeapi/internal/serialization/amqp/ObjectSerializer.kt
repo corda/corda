@@ -68,7 +68,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
     fun construct(properties: List<Any?>): Any {
 
-        logger.debug {"Calling constructor: '$javaConstructor' with properties '$properties'"}
+        logger.debug { "Calling constructor: '$javaConstructor' with properties '$properties'" }
 
         return javaConstructor?.newInstance(*properties.toTypedArray()) ?:
                 throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")

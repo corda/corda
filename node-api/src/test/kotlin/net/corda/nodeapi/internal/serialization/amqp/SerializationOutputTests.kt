@@ -157,6 +157,7 @@ class SerializationOutputTests {
             this.register(CompositeType.DESCRIPTOR, CompositeType.Companion)
             this.register(Choice.DESCRIPTOR, Choice.Companion)
             this.register(RestrictedType.DESCRIPTOR, RestrictedType.Companion)
+            this.register(ReferencedObject.DESCRIPTOR, ReferencedObject.Companion)
         }
         EncoderImpl(decoder)
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.bytes, 8, bytes.size - 8))

@@ -137,7 +137,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
                 is Binary -> obj.array
                 else -> obj // this will be the case for primitive types like [boolean] et al.
             }
-            // Store the reference read hard way in case we need it later on.
+            // Store the reference in case we need it later on.
             objectHistory.add(objectRead)
             objectRead
         }
