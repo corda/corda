@@ -139,9 +139,9 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
         override fun extractLoggableRepresentation(value: ByteArray?): String {
             return if (value == null) super.extractLoggableRepresentation(value) else {
                 if (value.size <= LOG_SIZE_LIMIT) {
-                    return "[${value.toHexString()}]"
+                    return "[size=${value.size}, value=${value.toHexString()}]"
                 } else {
-                    return "[${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()} ...truncated...]"
+                    return "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
                 }
             }
         }
