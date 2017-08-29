@@ -28,7 +28,7 @@ data class BytesAndSchema<T : Any>(val obj: SerializedBytes<T>, val schema: Sche
 // Extension for the serialize routine that returns the scheme encoded into the
 // bytes as well as the bytes for simple testing
 @Throws(NotSerializableException::class)
-fun <T : Any> SerializationOutput.serializeRtnSchema(obj: T): BytesAndSchema<T> {
+fun <T : Any> SerializationOutput.serializeAndReturnSchema(obj: T): BytesAndSchema<T> {
     try {
         return BytesAndSchema(_serialize(obj), Schema(schemaHistory.toList()))
     } finally {

@@ -22,7 +22,7 @@ class SerializeAndReturnSchemaTest {
         val a = 1
         val b = 2
 
-        val sc = SerializationOutput(factory).serializeRtnSchema(C(a, b))
+        val sc = SerializationOutput(factory).serializeAndReturnSchema(C(a, b))
 
         assertEquals(1, sc.schema.types.size)
         assertEquals(classTestName("C"), sc.schema.types.first().name)
