@@ -6,6 +6,7 @@ import net.corda.core.crypto.toBase64
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import org.apache.qpid.proton.amqp.DescribedType
+import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
@@ -24,6 +25,21 @@ val DESCRIPTOR_DOMAIN: String = "net.corda"
 // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
 val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
 
+private enum class DescriptorRegistry(val id: Long) {
+
+    ENVELOPE(1),
+    SCHEMA(2),
+    OBJECT_DESCRIPTOR(3),
+    FIELD(4),
+    COMPOSITE_TYPE(5),
+    RESTRICTED_TYPE(6),
+    CHOICE(7),
+    REFERENCED_OBJECT(8),
+    ;
+
+    val amqpDescriptor = UnsignedLong(id or DESCRIPTOR_TOP_32BITS)
+}
+
 /**
  * This class wraps all serialized data, so that the schema can be carried along with it.  We will provide various internal utilities
  * to decompose and recompose with/without schema etc so that e.g. we can store objects with a (relationally) normalised out schema to
@@ -32,7 +48,7 @@ val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteAr
 // TODO: make the schema parsing lazy since mostly schemas will have been seen before and we only need it if we don't recognise a type descriptor.
 data class Envelope(val obj: Any?, val schema: Schema) : DescribedType {
     companion object : DescribedTypeConstructor<Envelope> {
-        val DESCRIPTOR = UnsignedLong(1L or DESCRIPTOR_TOP_32BITS)
+        val DESCRIPTOR = DescriptorRegistry.ENVELOPE.amqpDescriptor
         val DESCRIPTOR_OBJECT = Descriptor(null, DESCRIPTOR)
 
         fun get(data: Data): Envelope {
@@ -63,7 +79,7 @@ data class Envelope(val obj: Any?, val schema: Schema) : DescribedType {
  */
 data class Schema(val types: List<TypeNotation>) : DescribedType {
     companion object : DescribedTypeConstructor<Schema> {
-        val DESCRIPTOR = UnsignedLong(2L or DESCRIPTOR_TOP_32BITS)
+        val DESCRIPTOR = DescriptorRegistry.SCHEMA.amqpDescriptor
 
         fun get(obj: Any): Schema {
             val describedType = obj as DescribedType
@@ -92,7 +108,7 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
 
 data class Descriptor(val name: String?, val code: UnsignedLong? = null) : DescribedType {
     companion object : DescribedTypeConstructor<Descriptor> {
-        val DESCRIPTOR = UnsignedLong(3L or DESCRIPTOR_TOP_32BITS)
+        val DESCRIPTOR = DescriptorRegistry.OBJECT_DESCRIPTOR.amqpDescriptor
 
         fun get(obj: Any): Descriptor {
             val describedType = obj as DescribedType
@@ -130,7 +146,7 @@ data class Descriptor(val name: String?, val code: UnsignedLong? = null) : Descr
 
 data class Field(val name: String, val type: String, val requires: List<String>, val default: String?, val label: String?, val mandatory: Boolean, val multiple: Boolean) : DescribedType {
     companion object : DescribedTypeConstructor<Field> {
-        val DESCRIPTOR = UnsignedLong(4L or DESCRIPTOR_TOP_32BITS)
+        val DESCRIPTOR = DescriptorRegistry.FIELD.amqpDescriptor
 
         fun get(obj: Any): Field {
             val describedType = obj as DescribedType
@@ -193,7 +209,7 @@ sealed class TypeNotation : DescribedType {
 
 data class CompositeType(override val name: String, override val label: String?, override val provides: List<String>, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation() {
     companion object : DescribedTypeConstructor<CompositeType> {
-        val DESCRIPTOR = UnsignedLong(5L or DESCRIPTOR_TOP_32BITS)
+        val DESCRIPTOR = DescriptorRegistry.COMPOSITE_TYPE.amqpDescriptor
 
         fun get(describedType: DescribedType): CompositeType {
             if (describedType.descriptor != DESCRIPTOR) {
@@ -238,7 +254,7 @@ data class CompositeType(override val name: String, override val label: String?,
 
 data class RestrictedType(override val name: String, override val label: String?, override val provides: List<String>, val source: String, override val descriptor: Descriptor, val choices: List<Choice>) : TypeNotation() {
     companion object : DescribedTypeConstructor<RestrictedType> {
-        val DESCRIPTOR = UnsignedLong(6L or DESCRIPTOR_TOP_32BITS)
+        val DESCRIPTOR = DescriptorRegistry.RESTRICTED_TYPE.amqpDescriptor
 
         fun get(describedType: DescribedType): RestrictedType {
             if (describedType.descriptor != DESCRIPTOR) {
@@ -281,7 +297,7 @@ data class RestrictedType(override val name: String, override val label: String?
 
 data class Choice(val name: String, val value: String) : DescribedType {
     companion object : DescribedTypeConstructor<Choice> {
-        val DESCRIPTOR = UnsignedLong(7L or DESCRIPTOR_TOP_32BITS)
+        val DESCRIPTOR = DescriptorRegistry.CHOICE.amqpDescriptor
 
         fun get(obj: Any): Choice {
             val describedType = obj as DescribedType
@@ -306,6 +322,33 @@ data class Choice(val name: String, val value: String) : DescribedType {
     override fun toString(): String {
         return "<choice name=\"$name\" value=\"$value\"/>"
     }
+}
+
+data class ReferencedObject(private val refCounter: Int) : DescribedType {
+    companion object : DescribedTypeConstructor<ReferencedObject> {
+        val DESCRIPTOR = DescriptorRegistry.REFERENCED_OBJECT.amqpDescriptor
+
+        fun get(obj: Any): ReferencedObject {
+            val describedType = obj as DescribedType
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+            return newInstance(describedType.described)
+        }
+
+        override fun getTypeClass(): Class<*> = ReferencedObject::class.java
+
+        override fun newInstance(described: Any?): ReferencedObject {
+            val unInt = described as? UnsignedInteger ?: throw IllegalStateException("Was expecting an UnsignedInteger")
+            return ReferencedObject(unInt.toInt())
+        }
+    }
+
+    override fun getDescriptor(): Any = DESCRIPTOR
+
+    override fun getDescribed(): UnsignedInteger = UnsignedInteger(refCounter)
+
+    override fun toString(): String = "<refObject refCounter=$refCounter/>"
 }
 
 private val ARRAY_HASH: String = "Array = true"

@@ -1,7 +1,8 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
-import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.Type
@@ -14,6 +15,8 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     override val type: Type get() = clazz
     open val kotlinConstructor = constructorForDeserialization(clazz)
     val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
+
+    private val logger = loggerFor<ObjectSerializer>()
 
     open internal val propertySerializers: Collection<PropertySerializer> by lazy {
         propertiesForSerialization(kotlinConstructor, clazz, factory)
@@ -50,10 +53,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     }
 
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
-        if (obj is UnsignedInteger) {
-            // TODO: Object refs
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-        } else if (obj is List<*>) {
+        if (obj is List<*>) {
             if (obj.size > propertySerializers.size) throw NotSerializableException("Too many properties in described type $typeName")
             val params = obj.zip(propertySerializers).map { it.second.readProperty(it.first, schema, input) }
             return construct(params)
@@ -66,6 +66,12 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
     private fun generateProvides(): List<String> = interfaces.map { nameForType(it) }
 
-    fun construct(properties: List<Any?>) = javaConstructor?.newInstance(*properties.toTypedArray()) ?:
-            throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
+    fun construct(properties: List<Any?>): Any {
+
+        logger.debug {"Calling constructor: '$javaConstructor' with properties '$properties'"}
+
+        return javaConstructor?.newInstance(*properties.toTypedArray()) ?:
+                throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
+    }
+
 }
