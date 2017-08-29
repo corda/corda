@@ -8,7 +8,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.utilities.DatabaseTransactionManager
 import org.hibernate.FlushMode
 import rx.Observable
