@@ -179,12 +179,12 @@ class ExplorerSimulation(val options: OptionSet) {
                 currencies = listOf(GBP, USD)
         )
         val maxIterations = 100_000
+        val anonymous = true
         // Pre allocate some money to each party.
         eventGenerator.parties.forEach {
             for (ref in 0..1) {
                 for ((currency, issuer) in issuers) {
                     val amount = Amount(1_000_000, currency)
-                    val anonymous = true
                     issuer.startFlow(::CashIssueAndPaymentFlow, amount, OpaqueBytes(ByteArray(1, { ref.toByte() })), it, anonymous, notaryNode.nodeInfo.notaryIdentity).returnValue.getOrThrow()
                 }
             }
