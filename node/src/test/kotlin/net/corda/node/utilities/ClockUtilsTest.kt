@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.minutes
+import net.corda.node.services.events.NodeSchedulerService
 import net.corda.testing.node.TestClock
 import org.junit.After
 import org.junit.Before
@@ -41,24 +42,24 @@ class ClockUtilsTest {
 
     @Test
     fun `test waiting no time for a deadline`() {
-        assertFalse(stoppedClock.awaitWithDeadline(stoppedClock.instant()), "Should have reached deadline")
+        assertFalse(NodeSchedulerService.awaitWithDeadline(stoppedClock, stoppedClock.instant()), "Should have reached deadline")
     }
 
     @Test
     fun `test waiting negative time for a deadline`() {
-        assertFalse(stoppedClock.awaitWithDeadline(stoppedClock.instant().minus(1.hours)), "Should have reached deadline")
+        assertFalse(NodeSchedulerService.awaitWithDeadline(stoppedClock, stoppedClock.instant().minus(1.hours)), "Should have reached deadline")
     }
 
     @Test
     fun `test waiting no time for a deadline with incomplete future`() {
         val future = SettableFuture.create<Boolean>()
-        assertFalse(stoppedClock.awaitWithDeadline(stoppedClock.instant(), future), "Should have reached deadline")
+        assertFalse(NodeSchedulerService.awaitWithDeadline(stoppedClock, stoppedClock.instant(), future), "Should have reached deadline")
     }
 
     @Test
     fun `test waiting negative time for a deadline with incomplete future`() {
         val future = SettableFuture.create<Boolean>()
-        assertFalse(stoppedClock.awaitWithDeadline(stoppedClock.instant().minus(1.hours), future), "Should have reached deadline")
+        assertFalse(NodeSchedulerService.awaitWithDeadline(stoppedClock, stoppedClock.instant().minus(1.hours), future), "Should have reached deadline")
     }
 
 
@@ -67,7 +68,7 @@ class ClockUtilsTest {
         val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val future = SettableFuture.create<Boolean>()
         completeNow(future)
-        assertTrue(stoppedClock.awaitWithDeadline(advancedClock.instant(), future), "Should not have reached deadline")
+        assertTrue(NodeSchedulerService.awaitWithDeadline(stoppedClock, advancedClock.instant(), future), "Should not have reached deadline")
     }
 
     @Test
@@ -75,7 +76,7 @@ class ClockUtilsTest {
         val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val future = SettableFuture.create<Boolean>()
         completeAfterWaiting(future)
-        assertTrue(stoppedClock.awaitWithDeadline(advancedClock.instant(), future), "Should not have reached deadline")
+        assertTrue(NodeSchedulerService.awaitWithDeadline(stoppedClock, advancedClock.instant(), future), "Should not have reached deadline")
     }
 
     @Test
@@ -83,7 +84,7 @@ class ClockUtilsTest {
         val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
         advanceClockAfterWait(testClock, 1.hours)
-        assertFalse(testClock.awaitWithDeadline(advancedClock.instant()), "Should have reached deadline")
+        assertFalse(NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant()), "Should have reached deadline")
     }
 
     @Test
@@ -92,7 +93,7 @@ class ClockUtilsTest {
         val testClock = TestClock(stoppedClock)
         val future = SettableFuture.create<Boolean>()
         advanceClockAfterWait(testClock, 1.hours)
-        assertFalse(testClock.awaitWithDeadline(advancedClock.instant(), future), "Should have reached deadline")
+        assertFalse(NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant(), future), "Should have reached deadline")
     }
 
     @Test
@@ -102,7 +103,7 @@ class ClockUtilsTest {
         val future = SettableFuture.create<Boolean>()
         advanceClockAfterWait(testClock, 1.hours)
         completeAfterWaiting(future)
-        assertTrue(testClock.awaitWithDeadline(advancedClock.instant(), future), "Should not have reached deadline")
+        assertTrue(NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant(), future), "Should not have reached deadline")
     }
 
     @Test
@@ -113,7 +114,7 @@ class ClockUtilsTest {
         for (advance in 1..6) {
             advanceClockAfterWait(testClock, 10.minutes)
         }
-        assertFalse(testClock.awaitWithDeadline(advancedClock.instant(), future), "Should have reached deadline")
+        assertFalse(NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant(), future), "Should have reached deadline")
     }
 
     @Test
@@ -131,7 +132,7 @@ class ClockUtilsTest {
         val advancedClock = Clock.offset(stoppedClock, 10.hours)
 
         try {
-            testClock.awaitWithDeadline(advancedClock.instant(), SettableFuture.create<Boolean>())
+            NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant(), SettableFuture.create<Boolean>())
             fail("Expected InterruptedException")
         } catch (exception: InterruptedException) {
         }
@@ -145,7 +146,7 @@ class ClockUtilsTest {
         val future = CompletableFuture<Boolean>()
         val scheduler = FiberExecutorScheduler("test", executor)
         val fiber = scheduler.newFiber(@Suspendable {
-            future.complete(testClock.awaitWithDeadline(advancedClock.instant(), future))
+            future.complete(NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant(), future))
         }).start()
         for (advance in 1..6) {
             scheduler.newFiber(@Suspendable {
@@ -167,7 +168,7 @@ class ClockUtilsTest {
         val future = SettableFuture.create<Boolean>()
         val scheduler = FiberExecutorScheduler("test", executor)
         val fiber = scheduler.newFiber(@Suspendable {
-            future.set(testClock.awaitWithDeadline(advancedClock.instant(), future))
+            future.set(NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant(), future))
         }).start()
         for (advance in 1..6) {
             scheduler.newFiber(@Suspendable {

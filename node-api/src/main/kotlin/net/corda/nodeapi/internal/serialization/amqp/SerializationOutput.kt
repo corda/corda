@@ -8,6 +8,7 @@ import java.nio.ByteBuffer
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
+
 /**
  * Main entry point for serializing an object to AMQP.
  *
@@ -19,7 +20,8 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
 
     private val serializerHistory: MutableSet<AMQPSerializer<*>> = LinkedHashSet()
-    private val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()
+    internal val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()
+
 
     /**
      * Serialize the given object to AMQP, wrapped in our [Envelope] wrapper which carries an AMQP 1.0 schema, and prefixed
@@ -29,25 +31,33 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
     @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {
-            val data = Data.Factory.create()
-            data.withDescribed(Envelope.DESCRIPTOR_OBJECT) {
-                withList {
-                    // Our object
-                    writeObject(obj, this)
-                    // The schema
-                    writeSchema(Schema(schemaHistory.toList()), this)
-                }
-            }
-            val bytes = ByteArray(data.encodedSize().toInt() + 8)
-            val buf = ByteBuffer.wrap(bytes)
-            buf.put(AmqpHeaderV1_0.bytes)
-            data.encode(buf)
-            return SerializedBytes(bytes)
+            return _serialize(obj)
         } finally {
-            objectHistory.clear()
-            serializerHistory.clear()
-            schemaHistory.clear()
+            andFinally()
         }
+    }
+
+    internal fun andFinally() {
+        objectHistory.clear()
+        serializerHistory.clear()
+        schemaHistory.clear()
+    }
+
+    internal fun <T : Any> _serialize(obj: T): SerializedBytes<T> {
+        val data = Data.Factory.create()
+        data.withDescribed(Envelope.DESCRIPTOR_OBJECT) {
+            withList {
+                // Our object
+                writeObject(obj, this)
+                // The schema
+                writeSchema(Schema(schemaHistory.toList()), this)
+            }
+        }
+        val bytes = ByteArray(data.encodedSize().toInt() + 8)
+        val buf = ByteBuffer.wrap(bytes)
+        buf.put(AmqpHeaderV1_0.bytes)
+        data.encode(buf)
+        return SerializedBytes(bytes)
     }
 
     internal fun writeObject(obj: Any, data: Data) {
