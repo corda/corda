@@ -56,6 +56,85 @@ import java.util.jar.JarInputStream
  */
 open class MockServices(vararg val keys: KeyPair) : ServiceHub {
 
+    companion object {
+
+        @JvmStatic
+        val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
+
+        /**
+         * Make properties appropriate for creating a DataSource for unit tests.
+         *
+         * @param nodeName Reflects the "instance" of the in-memory database.  Defaults to a random string.
+         */
+        // TODO: Can we use an X509 principal generator here?
+        @JvmStatic
+        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+            val props = Properties()
+            props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
+            props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
+            props.setProperty("dataSource.user", "sa")
+            props.setProperty("dataSource.password", "")
+            return props
+        }
+
+        /**
+         * Make properties appropriate for creating a Database for unit tests.
+         *
+         * @param key (optional) key of a database property to be set.
+         * @param value (optional) value of a database property to be set.
+         */
+        @JvmStatic
+        fun makeTestDatabaseProperties(key: String? = null, value: String? = null): Properties {
+            val props = Properties()
+            props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
+            if (key != null) { props.setProperty(key, value) }
+            return props
+        }
+
+        /**
+         * Creates an instance of [InMemoryIdentityService] with [MOCK_IDENTITIES].
+         */
+        @JvmStatic
+        fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
+
+        /**
+         * Makes database and mock services appropriate for unit tests.
+         *
+         * @param customSchemas a set of schemas being used by [NodeSchemaService]
+         * @param keys a lis of [KeyPair] instances to be used by [MockServices]. Defualts to [MEGA_CORP_KEY]
+         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defauts to [InMemoryIdentityService].
+         *
+         * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
+         */
+        @JvmStatic
+        fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1),
+                                            keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
+                                            createIdentityService: () -> IdentityService = { makeTestIdentityService() }): Pair<CordaPersistence, MockServices> {
+            val dataSourceProps = makeTestDataSourceProperties()
+            val databaseProperties = makeTestDatabaseProperties()
+            val createSchemaService = { NodeSchemaService(customSchemas) }
+            val database = configureDatabase(dataSourceProps, databaseProperties, createSchemaService, createIdentityService)
+            val mockService = database.transaction {
+                object : MockServices(*(keys.toTypedArray())) {
+                    override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
+
+                    override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+                        for (stx in txs) {
+                            validatedTransactions.addTransaction(stx)
+                        }
+                        // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                        vaultService.notifyAll(txs.map { it.tx })
+                    }
+
+                    override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
+
+                    override fun jdbcSession(): Connection = database.createSession()
+                }
+            }
+            return Pair(database, mockService)
+        }
+    }
+
     constructor() : this(generateKeyPair())
 
     val key: KeyPair get() = keys.first()
@@ -193,56 +272,3 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
 
     override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]
 }
-
-/**
- * Make properties appropriate for creating a DataSource for unit tests.
- *
- * @param nodeName Reflects the "instance" of the in-memory database.  Defaults to a random string.
- */
-// TODO: Can we use an X509 principal generator here?
-fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
-    val props = Properties()
-    props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-    props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
-    props.setProperty("dataSource.user", "sa")
-    props.setProperty("dataSource.password", "")
-    return props
-}
-
-fun makeTestDatabaseProperties(key: String? = null, value: String? = null): Properties {
-    val props = Properties()
-    props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
-    if (key != null) { props.setProperty(key, value) }
-    return props
-}
-
-fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
-
-fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1),
-                                    keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
-                                    createIdentityService: () -> IdentityService = { makeTestIdentityService() }): Pair<CordaPersistence, MockServices> {
-    val dataSourceProps = makeTestDataSourceProperties()
-    val databaseProperties = makeTestDatabaseProperties()
-    val createSchemaService = { NodeSchemaService(customSchemas) }
-    val database = configureDatabase(dataSourceProps, databaseProperties, createSchemaService, createIdentityService)
-    val mockService = database.transaction {
-        object : MockServices(*(keys.toTypedArray())) {
-            override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
-
-            override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
-                for (stx in txs) {
-                    validatedTransactions.addTransaction(stx)
-                }
-                // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                vaultService.notifyAll(txs.map { it.tx })
-            }
-
-            override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
-
-            override fun jdbcSession(): Connection = database.createSession()
-        }
-    }
-    return Pair(database, mockService)
-}
-
-val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")

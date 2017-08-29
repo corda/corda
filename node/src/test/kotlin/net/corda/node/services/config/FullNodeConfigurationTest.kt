@@ -4,8 +4,8 @@ import net.corda.core.crypto.commonName
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.ALICE
 import net.corda.nodeapi.User
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.net.URL

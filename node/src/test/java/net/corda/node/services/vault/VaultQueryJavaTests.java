@@ -49,8 +49,8 @@ import static net.corda.finance.contracts.asset.CashUtilities.getDUMMY_CASH_ISSU
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
 import static net.corda.testing.TestConstants.getDUMMY_NOTARY_KEY;
-import static net.corda.testing.node.MockServicesKt.makeTestDatabaseAndMockServices;
-import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
+import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
+import static net.corda.testing.node.MockServices.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests extends TestDependencyInjectionBase {
