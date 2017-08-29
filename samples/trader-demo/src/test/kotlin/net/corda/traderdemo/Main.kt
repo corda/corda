@@ -3,7 +3,7 @@ package net.corda.traderdemo
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.services.startFlowPermission
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
