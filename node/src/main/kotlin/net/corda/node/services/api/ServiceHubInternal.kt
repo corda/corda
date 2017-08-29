@@ -22,6 +22,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache {
@@ -100,7 +101,7 @@ interface ServiceHubInternal : PluginServiceHub {
 
         if (notifyVault) {
             val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
-            vaultService.notifyAll(toNotify)
+            (vaultService as NodeVaultService).notifyAll(toNotify)
         }
     }
 

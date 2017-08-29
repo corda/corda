@@ -114,7 +114,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
      * indicate whether an update consists entirely of regular or notary change transactions, which may require
      * different processing logic.
      */
-    override fun notifyAll(txns: Iterable<CoreTransaction>) {
+    fun notifyAll(txns: Iterable<CoreTransaction>) {
         // It'd be easier to just group by type, but then we'd lose ordering.
         val regularTxns = mutableListOf<WireTransaction>()
         val notaryChangeTxns = mutableListOf<NotaryChangeWireTransaction>()
@@ -142,6 +142,9 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList())
     }
 
+    /** Same as notifyAll but with a single transaction. */
+    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
+    
     private fun notifyRegular(txns: Iterable<WireTransaction>) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
             val myKeys = services.keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
