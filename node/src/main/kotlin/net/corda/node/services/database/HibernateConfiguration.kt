@@ -127,11 +127,9 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
 
     // A tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.  Also logs in hex.
     private object CordaMaterializedBlobType : AbstractSingleColumnStandardBasicType<ByteArray>(BlobTypeDescriptor.DEFAULT, CordaPrimitiveByteArrayTypeDescriptor) {
-
         override fun getName(): String {
             return "materialized_blob"
         }
-
     }
 
     // A tweaked version of `org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor` that truncates logged messages.
