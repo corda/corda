@@ -4883,13 +4883,7 @@ GcClass* resolveSystemClass(Thread* t,
 
   ACQUIRE(t, t->m->classLock);
 
-  GcClass* class_ = cast<GcClass>(t,
-                                  hashMapFind(t,
-                                              cast<GcHashMap>(t, loader->map()),
-                                              spec,
-                                              byteArrayHash,
-                                              byteArrayEqual));
-
+  GcClass* class_ = findLoadedClass(t, loader, spec);
   if (class_ == 0) {
     PROTECT(t, class_);
 

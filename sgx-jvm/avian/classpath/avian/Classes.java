@@ -41,8 +41,6 @@ public class Classes {
 
   public static native boolean isAssignableFrom(VMClass a, VMClass b);
 
-  public static native VMClass getVMClass(Object o);
-
   public static native VMClass toVMClass(Class c);
 
   public static native VMMethod toVMMethod(Method m);

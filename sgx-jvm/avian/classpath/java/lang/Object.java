@@ -28,10 +28,10 @@ public class Object {
   protected void finalize() throws Throwable { }
 
   public final Class<? extends Object> getClass() {
-    return avian.SystemClassLoader.getClass(getVMClass(this));
+    return avian.SystemClassLoader.getClass(getVMClass());
   }
 
-  private static native avian.VMClass getVMClass(Object o);
+  native avian.VMClass getVMClass();
 
   public native int hashCode();
 

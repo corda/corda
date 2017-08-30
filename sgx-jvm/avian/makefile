@@ -807,7 +807,7 @@ ifeq ($(kernel),darwin)
 		platform-dir = $(developer-dir)/Platforms/$(target).platform
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
-		ios-version := $(shell for x in 10.0 9.3 9.2 9.1 9.0 8.3 8.2 8.1 8.0; \
+		ios-version := $(shell for x in 10.3 10.2 10.1 10.0 9.3 9.2 9.1 9.0 8.3 8.2 8.1 8.0; \
 			do if test -d $(sdk-dir)/$(target)$$x.sdk \
 				-o -L $(sdk-dir)/$(target)$$x.sdk; \
 			then echo $$x; break; fi; done)

@@ -564,7 +564,7 @@ public final class Class <T>
 
   public static boolean isInstance(VMClass c, Object o) {
     return o != null && Classes.isAssignableFrom
-      (c, Classes.getVMClass(o));
+      (c, o.getVMClass());
   }
 
   public boolean isInstance(Object o) {
