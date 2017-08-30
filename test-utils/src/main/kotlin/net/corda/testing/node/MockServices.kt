@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import net.corda.core.contracts.AbstractAttachment
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
@@ -35,7 +36,6 @@ import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
@@ -220,9 +220,8 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun openAttachment(id: SecureHash): Attachment? {
         val f = files[id] ?: return null
-        return object : Attachment {
-            override fun open(): InputStream = ByteArrayInputStream(f)
-            override val id: SecureHash = id
+        return object : AbstractAttachment({ f }) {
+            override val id = id
         }
     }
 

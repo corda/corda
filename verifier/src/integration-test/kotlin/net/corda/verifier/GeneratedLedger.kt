@@ -12,7 +12,6 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.getTestX509Name
-import java.io.ByteArrayInputStream
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
@@ -184,11 +183,8 @@ data class GeneratedState(
     override val contract = DummyContract()
 }
 
-class GeneratedAttachment(
-        val bytes: ByteArray
-) : Attachment {
+class GeneratedAttachment(bytes: ByteArray) : AbstractAttachment({ bytes }) {
     override val id = bytes.sha256()
-    override fun open() = ByteArrayInputStream(bytes)
 }
 
 class GeneratedCommandData(
