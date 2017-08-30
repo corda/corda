@@ -45,7 +45,7 @@ import javax.persistence.Lob
  * to the cluster leader to be actioned.
  */
 @ThreadSafe
-class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider, SingletonSerializeAsToken() {
+class RaftUniquenessProvider(private val services: ServiceHubInternal) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
 
@@ -95,20 +95,6 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
     private lateinit var _clientFuture: CompletableFuture<CopycatClient>
     private lateinit var server: CopycatServer
 
-
-    init {
-        services.monitoringService.metrics.register("RaftCluster.ThisServerStatus", Gauge<String> {
-            server.state().name
-        })
-
-        services.monitoringService.metrics.register("RaftCluster.MembersCount", Gauge<Int> {
-            server.cluster().members().size
-        })
-
-        services.monitoringService.metrics.register("RaftCluster.Members", Gauge<List<String>> {
-            server.cluster().members().map { it.address().toString() }
-        })
-    }
 
     /**
      * Copycat clients are responsible for connecting to the cluster and submitting commands and queries that operate
@@ -164,6 +150,8 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
             server.bootstrap()
         }
 
+        registerMonitoring()
+
         val client = CopycatClient.builder(address)
                 .withTransport(transport) // TODO: use local transport for client-server communications
                 .withConnectionStrategy(ConnectionStrategies.EXPONENTIAL_BACKOFF)
@@ -193,6 +181,21 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
                 .withTrustStorePassword(config.trustStorePassword)
                 .build()
     }
+
+    private fun registerMonitoring() {
+        services.monitoringService.metrics.register("RaftCluster.ThisServerStatus", Gauge<String> {
+            server.state().name
+        })
+
+        services.monitoringService.metrics.register("RaftCluster.MembersCount", Gauge<Int> {
+            server.cluster().members().size
+        })
+
+        services.monitoringService.metrics.register("RaftCluster.Members", Gauge<List<String>> {
+            server.cluster().members().map { it.address().toString() }
+        })
+    }
+
 
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
         val entries = states.mapIndexed { i, stateRef -> stateRef to UniquenessProvider.ConsumingTx(txId, i, callerIdentity) }
