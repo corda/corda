@@ -5,6 +5,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -120,13 +121,11 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         resetTestSerialization()
     }
 
-    class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {
+    class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant, private val myIdentity: Party) : LinearState, SchedulableState {
         override val participants: List<AbstractParty>
-            get() = throw UnsupportedOperationException()
+            get() = listOf(myIdentity)
 
         override val linearId = UniqueIdentifier()
-
-        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean = true
 
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             return ScheduledActivity(flowLogicRef, instant)
@@ -279,7 +278,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         database.transaction {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
-                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant)
+                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant, services.myInfo.legalIdentity)
                 val builder = TransactionBuilder(null).apply {
                     addOutputState(state, DUMMY_NOTARY)
                     addCommand(Command(), freshKey)

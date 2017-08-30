@@ -395,4 +395,4 @@ The Corda Tutorials provide examples satisfying these additional Use Cases:
  .. _JPQL: http://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#hql
  .. _JPA: https://docs.spring.io/spring-data/jpa/docs/current/reference/html
 
- 
+

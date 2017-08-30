@@ -22,10 +22,6 @@ data class IRSState(val swap: SwapData,
     val ref: String get() = linearId.externalId!! // Same as the constructor for UniqueIdentified
     override val participants: List<AbstractParty> get() = listOf(buyer, seller)
 
-    override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-        return participants.flatMap { it.owningKey.keys }.intersect(ourKeys).isNotEmpty()
-    }
-
     override fun generateAgreement(notary: Party): TransactionBuilder {
         val state = IRSState(swap, buyer, seller, OGTrade())
         return TransactionBuilder(notary).withItems(state, Command(OGTrade.Commands.Agree(), participants.map { it.owningKey }))

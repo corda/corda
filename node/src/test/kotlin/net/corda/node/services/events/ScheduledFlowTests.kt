@@ -58,10 +58,6 @@ class ScheduledFlowTests {
         }
 
         override val participants: List<AbstractParty> = listOf(source, destination)
-
-        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.owningKey.containsAny(ourKeys) }
-        }
     }
 
     class InsertInitialStateFlow(val destination: Party) : FlowLogic<Unit>() {

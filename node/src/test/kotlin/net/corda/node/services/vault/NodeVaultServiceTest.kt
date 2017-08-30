@@ -476,15 +476,18 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val service = (services.vaultService as NodeVaultService)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
         val wellKnownCash = Cash.State(amount, services.myInfo.legalIdentity)
-        assertTrue { service.isRelevant(wellKnownCash, services.keyManagementService.keys) }
+        val myKeys = services.keyManagementService.filterMyKeys(listOf(wellKnownCash.owner.owningKey))
+        assertTrue { service.isRelevant(wellKnownCash, myKeys.toSet()) }
 
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
         val anonymousCash = Cash.State(amount, anonymousIdentity.party)
-        assertTrue { service.isRelevant(anonymousCash, services.keyManagementService.keys) }
+        val anonymousKeys = services.keyManagementService.filterMyKeys(listOf(anonymousCash.owner.owningKey))
+        assertTrue { service.isRelevant(anonymousCash, anonymousKeys.toSet()) }
 
         val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
         val thirdPartyCash = Cash.State(amount, thirdPartyIdentity)
-        assertFalse { service.isRelevant(thirdPartyCash, services.keyManagementService.keys) }
+        val thirdPartyKeys = services.keyManagementService.filterMyKeys(listOf(thirdPartyCash.owner.owningKey))
+        assertFalse { service.isRelevant(thirdPartyCash, thirdPartyKeys.toSet()) }
     }
 
     // TODO: Unit test linear state relevancy checks

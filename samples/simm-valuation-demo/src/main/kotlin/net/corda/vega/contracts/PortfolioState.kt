@@ -37,10 +37,6 @@ data class PortfolioState(val portfolio: List<StateRef>,
         return ScheduledActivity(flow, LocalDate.now().plus(1, ChronoUnit.DAYS).atStartOfDay().toInstant(ZoneOffset.UTC))
     }
 
-    override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-        return participants.flatMap { it.owningKey.keys }.intersect(ourKeys).isNotEmpty()
-    }
-
     override fun generateAgreement(notary: Party): TransactionBuilder {
         return TransactionBuilder(notary).withItems(copy(), Command(PortfolioSwap.Commands.Agree(), participants.map { it.owningKey }))
     }
