@@ -33,6 +33,9 @@ import java.util.function.Predicate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 
 class NodeInterestRatesTest : TestDependencyInjectionBase() {
     val TEST_DATA = NodeInterestRates.parseFile("""

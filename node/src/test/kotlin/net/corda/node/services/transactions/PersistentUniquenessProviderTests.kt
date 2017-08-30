@@ -5,9 +5,9 @@ import net.corda.core.node.services.UniquenessException
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestDatabaseProperties
-import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

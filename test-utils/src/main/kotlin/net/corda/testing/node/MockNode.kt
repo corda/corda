@@ -41,6 +41,7 @@ import java.security.KeyPair
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.

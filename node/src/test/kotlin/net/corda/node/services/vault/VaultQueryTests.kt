@@ -26,9 +26,9 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestDatabaseAndMockServices
-import net.corda.testing.node.makeTestDatabaseProperties
-import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat

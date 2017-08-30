@@ -34,9 +34,9 @@ import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.contracts.fillWithSomeTestDeals
 import net.corda.testing.contracts.fillWithSomeTestLinearStates
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestDatabaseProperties
-import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import org.assertj.core.api.Assertions

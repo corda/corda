@@ -25,8 +25,8 @@ import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.internal.serialization.AMQP_ENABLED
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle

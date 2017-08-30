@@ -36,7 +36,7 @@ import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
-import net.corda.testing.node.MOCK_VERSION_INFO
+import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name

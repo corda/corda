@@ -24,6 +24,7 @@ import net.corda.testing.freeLocalHostAndPort
 import java.security.KeyPair
 import java.security.cert.X509Certificate
 import kotlin.concurrent.thread
+import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 
 /**
  * This is a bare-bones node which can only send and receive messages. It doesn't register with a network map service or

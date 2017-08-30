@@ -22,7 +22,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestDatabaseAndMockServices
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

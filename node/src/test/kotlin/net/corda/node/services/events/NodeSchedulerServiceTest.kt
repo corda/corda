@@ -20,8 +20,9 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
-import net.corda.testing.node.*
 import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MockKeyManagementService
+import net.corda.testing.node.TestClock
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
@@ -35,6 +36,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     val realClock: Clock = Clock.systemUTC()
