@@ -17,7 +17,7 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
     }
 
     private fun setup() {
-        put("KeyFactory.${CompositeKey.KEY_ALGORITHM}", "net.corda.core.crypto.composite.KeyFactory")
+        put("KeyFactory.${CompositeKey.KEY_ALGORITHM}", "net.corda.core.crypto.composite.CompositeKeyFactory")
         put("Signature.${CompositeSignature.SIGNATURE_ALGORITHM}", "net.corda.core.crypto.composite.CompositeSignature")
 
         val compositeKeyOID = CordaObjectIdentifier.COMPOSITE_KEY.id

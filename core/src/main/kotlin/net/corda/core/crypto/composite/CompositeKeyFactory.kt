@@ -5,7 +5,10 @@ import java.security.spec.InvalidKeySpecException
 import java.security.spec.KeySpec
 import java.security.spec.X509EncodedKeySpec
 
-class KeyFactory : KeyFactorySpi() {
+/**
+ * Factory for generating composite keys from ASN.1 format key specifications. This is used by [CordaSecurityProvider].
+ */
+class CompositeKeyFactory : KeyFactorySpi() {
 
     @Throws(InvalidKeySpecException::class)
     override fun engineGeneratePrivate(keySpec: KeySpec): PrivateKey {
