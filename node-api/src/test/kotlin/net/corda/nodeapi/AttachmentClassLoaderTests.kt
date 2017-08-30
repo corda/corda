@@ -15,14 +15,13 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.serialization.AMQP_ENABLED
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.WireTransactionSerializer
 import net.corda.nodeapi.internal.serialization.withTokenContext
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.kryoSpecific
 import net.corda.testing.node.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert
@@ -333,7 +332,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     // Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not
-    fun `test deserialize of WireTransaction where contract cannot be found`() = kryoSpecific {
+    fun `test deserialize of WireTransaction where contract cannot be found`() = kryoSpecific<AttachmentClassLoaderTests> {
         val child = ClassLoaderForTests()
         val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
@@ -361,11 +360,5 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
             }
         }
         assertEquals(attachmentRef, e.ids.single())
-    }
-
-    private fun kryoSpecific(function: () -> Unit) = if(!AMQP_ENABLED) {
-        function()
-    } else {
-        loggerFor<AttachmentClassLoaderTests>().info("Ignoring Kryo specific test")
     }
 }

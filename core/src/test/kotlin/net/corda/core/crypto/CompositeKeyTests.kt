@@ -10,6 +10,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.utilities.*
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.kryoSpecific
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Rule
 import org.junit.Test
@@ -216,7 +217,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     }
 
     @Test()
-    fun `composite key validation with graph cycle detection`() {
+    fun `composite key validation with graph cycle detection`() = kryoSpecific<CompositeKeyTests> {
         val key1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build() as CompositeKey
         val key2 = CompositeKey.Builder().addKeys(alicePublicKey, key1).build() as CompositeKey
         val key3 = CompositeKey.Builder().addKeys(alicePublicKey, key2).build() as CompositeKey

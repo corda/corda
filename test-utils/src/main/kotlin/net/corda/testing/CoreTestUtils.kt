@@ -14,6 +14,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.loggerFor
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
@@ -22,6 +23,7 @@ import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.serialization.AMQP_ENABLED
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
@@ -220,4 +222,10 @@ fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = 
  */
 fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
     return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
+}
+
+inline fun <reified T : Any> kryoSpecific(function: () -> Unit) = if(!AMQP_ENABLED) {
+    function()
+} else {
+    loggerFor<T>().info("Ignoring Kryo specific test")
 }
