@@ -3,7 +3,6 @@ package net.corda.core.crypto
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.composite.CompositeKey.NodeAndWeight
 import net.corda.core.crypto.composite.CompositeSignature
-import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
@@ -161,17 +160,17 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
         engine.initVerify(twoOfThree)
         engine.update(secureHash.bytes)
 
-        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature)).serialize().bytes) }
-        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(bobSignature)).serialize().bytes) }
-        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(charlieSignature)).serialize().bytes) }
-        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, bobSignature)).serialize().bytes) }
-        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, charlieSignature)).serialize().bytes) }
-        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(bobSignature, charlieSignature)).serialize().bytes) }
-        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, bobSignature, charlieSignature)).serialize().bytes) }
+        assertFalse { engine.verify(listOf(aliceSignature).serialize().bytes) }
+        assertFalse { engine.verify(listOf(bobSignature).serialize().bytes) }
+        assertFalse { engine.verify(listOf(charlieSignature).serialize().bytes) }
+        assertTrue { engine.verify(listOf(aliceSignature, bobSignature).serialize().bytes) }
+        assertTrue { engine.verify(listOf(aliceSignature, charlieSignature).serialize().bytes) }
+        assertTrue { engine.verify(listOf(bobSignature, charlieSignature).serialize().bytes) }
+        assertTrue { engine.verify(listOf(aliceSignature, bobSignature, charlieSignature).serialize().bytes) }
 
         // Check the underlying signature is validated
         val brokenBobSignature = TransactionSignature(aliceSignature.bytes, bobSignature.by, SignatureMetadata(1, Crypto.findSignatureScheme(bobSignature.by).schemeNumberID))
-        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, brokenBobSignature)).serialize().bytes) }
+        assertFalse { engine.verify(listOf(aliceSignature, brokenBobSignature).serialize().bytes) }
     }
 
     @Test()
