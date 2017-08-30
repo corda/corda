@@ -3,7 +3,7 @@ package net.corda.node.services
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow

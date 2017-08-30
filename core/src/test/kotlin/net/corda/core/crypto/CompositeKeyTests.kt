@@ -1,8 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.crypto.composite.CompositeKey.NodeAndWeight
-import net.corda.core.crypto.composite.CompositeSignature
+import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize

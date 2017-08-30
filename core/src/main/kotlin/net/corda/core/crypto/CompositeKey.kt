@@ -1,12 +1,8 @@
-package net.corda.core.crypto.composite
+package net.corda.core.crypto
 
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.composite.CompositeKey.NodeAndWeight
-import net.corda.core.crypto.keys
-import net.corda.core.crypto.provider.CordaObjectIdentifier
-import net.corda.core.crypto.toStringShort
-import net.corda.core.utilities.exactAdd
+import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.exactAdd
 import net.corda.core.utilities.sequence
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier

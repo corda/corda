@@ -1,13 +1,11 @@
-package net.corda.core.crypto.provider
+package net.corda.core.crypto
 
-import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.crypto.composite.CompositeSignature
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import java.security.AccessController
 import java.security.PrivilegedAction
 import java.security.Provider
 
-class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME security provider wrapper") {
+class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "${PROVIDER_NAME} security provider wrapper") {
     companion object {
         const val PROVIDER_NAME = "Corda"
     }
@@ -17,8 +15,8 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
     }
 
     private fun setup() {
-        put("KeyFactory.${CompositeKey.KEY_ALGORITHM}", "net.corda.core.crypto.composite.CompositeKeyFactory")
-        put("Signature.${CompositeSignature.SIGNATURE_ALGORITHM}", "net.corda.core.crypto.composite.CompositeSignature")
+        put("KeyFactory.${CompositeKey.KEY_ALGORITHM}", "net.corda.core.crypto.CompositeKeyFactory")
+        put("Signature.${CompositeSignature.SIGNATURE_ALGORITHM}", "net.corda.core.crypto.CompositeSignature")
 
         val compositeKeyOID = CordaObjectIdentifier.COMPOSITE_KEY.id
         put("Alg.Alias.KeyFactory.$compositeKeyOID", CompositeKey.KEY_ALGORITHM)
