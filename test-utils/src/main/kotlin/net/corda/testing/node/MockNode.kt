@@ -21,6 +21,7 @@ import net.corda.core.node.services.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -220,6 +221,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun start() {
             super.start()
+            registerInitiatedFlow(CashPaymentFlow.Receive::class.java)
             mockNet.identities.add(info.legalIdentityAndCert)
         }
 

@@ -46,7 +46,6 @@ class IdentitySyncFlowTests {
         aliceNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
         bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
         bobNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
-        aliceNode.registerInitiatedFlow(CashPaymentFlow.Receive::class.java)
         bobNode.registerInitiatedFlow(Receive::class.java)
 
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
