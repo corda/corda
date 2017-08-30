@@ -2,7 +2,7 @@ package net.corda.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
-import net.corda.core.crypto.composite.expandedCompositeKeys
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.testing.NULL_SIGNATURE
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -341,6 +341,14 @@ data class TestLedgerDSLInterpreter private constructor(
     val transactionsToVerify: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
     val transactionsUnverified: List<WireTransaction> get() = nonVerifiedTransactionWithLocations.values.map { it.transaction }
 }
+
+/**
+ * Expands all [CompositeKey]s present in PublicKey iterable to set of single [PublicKey]s.
+ * If an element of the set is a single PublicKey it gives just that key, if it is a [CompositeKey] it returns all leaf
+ * keys for that composite element.
+ */
+val Iterable<PublicKey>.expandedCompositeKeys: Set<PublicKey>
+    get() = flatMap { it.keys }.toSet()
 
 /**
  * Signs all transactions passed in.
