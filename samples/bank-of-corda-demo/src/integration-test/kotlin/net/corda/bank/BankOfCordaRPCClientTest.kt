@@ -1,16 +1,15 @@
 package net.corda.bank
 
-import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.DOLLARS
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
-import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
-import net.corda.flows.IssuerFlow.IssuanceRequester
-import net.corda.node.services.startFlowPermission
+import net.corda.finance.DOLLARS
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
@@ -21,7 +20,8 @@ class BankOfCordaRPCClientTest {
     @Test
     fun `issuer flow via RPC`() {
         driver(dsl = {
-            val bocManager = User("bocManager", "password1", permissions = setOf(startFlowPermission<IssuanceRequester>()))
+            val bocManager = User("bocManager", "password1", permissions = setOf(
+                    startFlowPermission<CashIssueAndPaymentFlow>()))
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
             val (nodeBankOfCorda, nodeBigCorporation) = listOf(
                     startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type)), listOf(bocManager)),
@@ -38,21 +38,18 @@ class BankOfCordaRPCClientTest {
 
             // Register for Bank of Corda Vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val vaultUpdatesBoc = bocProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria).updates
+            val vaultUpdatesBoc = bocProxy.vaultTrackByCriteria(Cash.State::class.java, criteria).updates
 
             // Register for Big Corporation Vault updates
-            val vaultUpdatesBigCorp = bigCorpProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria).updates
+            val vaultUpdatesBigCorp = bigCorpProxy.vaultTrackByCriteria(Cash.State::class.java, criteria).updates
 
             // Kick-off actual Issuer Flow
             val anonymous = true
-            bocProxy.startFlow(
-                    ::IssuanceRequester,
-                    1000.DOLLARS,
+            bocProxy.startFlow(::CashIssueAndPaymentFlow,
+                    1000.DOLLARS, BIG_CORP_PARTY_REF,
                     nodeBigCorporation.nodeInfo.legalIdentity,
-                    BIG_CORP_PARTY_REF,
-                    nodeBankOfCorda.nodeInfo.legalIdentity,
-                    nodeBankOfCorda.nodeInfo.notaryIdentity,
-                    anonymous).returnValue.getOrThrow()
+                    anonymous,
+                    nodeBankOfCorda.nodeInfo.notaryIdentity)
 
             // Check Bank of Corda Vault Updates
             vaultUpdatesBoc.expectEvents {
@@ -74,9 +71,9 @@ class BankOfCordaRPCClientTest {
             vaultUpdatesBigCorp.expectEvents {
                 sequence(
                         // MOVE
-                        expect { update ->
-                            require(update.consumed.isEmpty()) { update.consumed.size }
-                            require(update.produced.size == 1) { update.produced.size }
+                        expect { (consumed, produced) ->
+                            require(consumed.isEmpty()) { consumed.size }
+                            require(produced.size == 1) { produced.size }
                         }
                 )
             }

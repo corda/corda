@@ -1,13 +1,16 @@
 package net.corda.node.services.vault
 
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
-import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
+import org.hibernate.annotations.Generated
+import org.hibernate.annotations.GenerationTime
+import java.io.Serializable
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -22,17 +25,14 @@ object VaultSchema
  */
 @CordaSerializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
-                                    mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java,  CommonSchemaV1.Party::class.java)) {
+                                    mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
     @Entity
     @Table(name = "vault_states",
             indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status")))
     class VaultStates(
-            /** refers to the notary a state is attached to */
+            /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name")
-            var notaryName: String,
-
-            @Column(name = "notary_key", length = 65535) // TODO What is the upper limit on size of CompositeKey?
-            var notaryKey: String,
+            var notary: AbstractParty,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
             @Column(name = "contract_state_class_name")
@@ -53,16 +53,16 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** refers to timestamp recorded upon entering CONSUMED state */
             @Column(name = "consumed_timestamp", nullable = true)
-            var consumedTime: Instant?,
+            var consumedTime: Instant? = null,
 
             /** used to denote a state has been soft locked (to prevent double spend)
              *  will contain a temporary unique [UUID] obtained from a flow session */
             @Column(name = "lock_id", nullable = true)
-            var lockId: String,
+            var lockId: String? = null,
 
             /** refers to the last time a lock was taken (reserved) or updated (released, re-reserved) */
             @Column(name = "lock_timestamp", nullable = true)
-            var lockUpdateTime: Instant?
+            var lockUpdateTime: Instant? = null
     ) : PersistentState()
 
     @Entity
@@ -71,8 +71,13 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
                     Index(name = "uuid_index", columnList = "uuid")))
     class VaultLinearStates(
             /** [ContractState] attributes */
-            @OneToMany(cascade = arrayOf(CascadeType.ALL))
-            var participants: Set<CommonSchemaV1.Party>,
+
+            /** X500Name of participant parties **/
+            @ElementCollection
+            @Column(name = "participants")
+            var participants: MutableSet<AbstractParty>? = null,
+            // Reason for not using Set is described here:
+            // https://stackoverflow.com/questions/44213074/kotlin-collection-has-neither-generic-type-or-onetomany-targetentity
 
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
@@ -86,18 +91,23 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
         constructor(uid: UniqueIdentifier, _participants: List<AbstractParty>) :
                 this(externalId = uid.externalId,
                      uuid = uid.id,
-                     participants = _participants.map{ CommonSchemaV1.Party(it) }.toSet() )
+                     participants = _participants.toMutableSet())
     }
 
     @Entity
     @Table(name = "vault_fungible_states")
     class VaultFungibleStates(
             /** [ContractState] attributes */
-            @OneToMany(cascade = arrayOf(CascadeType.ALL))
-            var participants: Set<CommonSchemaV1.Party>,
+
+            /** X500Name of participant parties **/
+            @ElementCollection
+            @Column(name = "participants")
+            var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
-            @Column(name = "owner_id")
+
+            /** X500Name of owner party **/
+            @Column(name = "owner_name")
             var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
@@ -111,8 +121,10 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var quantity: Long,
 
             /** Issuer attributes */
-            @OneToOne(cascade = arrayOf(CascadeType.ALL))
-            var issuerParty: CommonSchemaV1.Party,
+
+            /** X500Name of issuer party **/
+            @Column(name = "issuer_name")
+            var issuer: AbstractParty,
 
             @Column(name = "issuer_reference")
             var issuerRef: ByteArray
@@ -120,8 +132,27 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
                 this(owner = _owner,
                      quantity = _quantity,
-                     issuerParty = CommonSchemaV1.Party(_issuerParty),
+                     issuer = _issuerParty,
                      issuerRef = _issuerRef.bytes,
-                     participants =  _participants.map { CommonSchemaV1.Party(it) }.toSet())
+                     participants = _participants.toMutableSet())
+    }
+
+    @Entity
+    @Table(name = "vault_transaction_notes",
+           indexes = arrayOf(Index(name = "seq_no_index", columnList = "seq_no"),
+                             Index(name = "transaction_id_index", columnList = "transaction_id")))
+    class VaultTxnNote(
+        @Id
+        @GeneratedValue
+        @Column(name = "seq_no")
+        var seqNo: Int,
+
+        @Column(name = "transaction_id", length = 64)
+        var txId: String,
+
+        @Column(name = "note")
+        var note: String
+    ) : Serializable {
+        constructor(txId: String, note: String) : this(0, txId, note)
     }
 }

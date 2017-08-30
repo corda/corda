@@ -64,7 +64,7 @@ applicationDistribution.into("bin") {
 }
 
 task integrationTest(type: Test) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
@@ -89,7 +89,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcUsers = [
                 ['username' : "user",
                  'password' : "password",
-                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+                 'permissions' : ["StartFlow.net.corda.finance.flows.CashFlow"]]
         ]
     }
 }

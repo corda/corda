@@ -1,21 +1,21 @@
 package net.corda.verifier
 
 import net.corda.client.mock.generateOrFail
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.messaging.startFlow
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
-import net.corda.testing.ALICE
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
-import net.corda.testing.driver.NetworkMapStartStrategy
+import net.corda.core.messaging.startFlow
+import net.corda.core.node.services.ServiceInfo
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.finance.DOLLARS
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.testing.ALICE
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.driver.NetworkMapStartStrategy
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -118,7 +118,7 @@ class VerifierTests {
             val alice = aliceFuture.get()
             val notary = notaryFuture.get()
             startVerifier(notary)
-            alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), alice.nodeInfo.legalIdentity, notaryFuture.get().nodeInfo.notaryIdentity).returnValue.get()
+            alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notaryFuture.get().nodeInfo.notaryIdentity).returnValue.get()
             notary.waitUntilNumberOfVerifiers(1)
             for (i in 1..10) {
                 alice.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.get()

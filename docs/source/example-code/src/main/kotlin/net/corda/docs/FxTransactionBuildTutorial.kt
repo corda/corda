@@ -1,17 +1,14 @@
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.vault.QueryCriteria
@@ -20,7 +17,8 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
-import net.corda.schemas.CashSchemaV1
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.schemas.CashSchemaV1
 import java.util.*
 
 @CordaSerializable
@@ -42,8 +40,8 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
     val ourParties = ourKeys.map { serviceHub.identityService.partyFromKey(it) ?: throw IllegalStateException("Unable to resolve party from key") }
     val fungibleCriteria = QueryCriteria.FungibleAssetQueryCriteria(owner = ourParties)
 
-    val notaryName = if (notary != null) notary.name else serviceHub.networkMapCache.getAnyNotary()!!.name
-    val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notaryName = listOf(notaryName))
+    val notaries = notary ?: serviceHub.networkMapCache.getAnyNotary()
+    val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = listOf(notaries as AbstractParty))
 
     val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal(amountRequired.token.product.currencyCode) }
     val cashCriteria = QueryCriteria.VaultCustomQueryCriteria(logicalExpression)

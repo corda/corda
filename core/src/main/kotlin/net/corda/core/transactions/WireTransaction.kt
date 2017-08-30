@@ -8,6 +8,7 @@ import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -17,6 +18,7 @@ import java.util.function.Predicate
  * by a [SignedTransaction] that carries the signatures over this payload.
  * The identity of the transaction is the Merkle tree root of its components (see [MerkleTree]).
  */
+@CordaSerializable
 data class WireTransaction(
         /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
         override val inputs: List<StateRef>,

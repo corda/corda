@@ -1,20 +1,20 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.utilities.millis
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
-import net.corda.flows.CashIssueFlow
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.flows.IssuerFlow
-import net.corda.node.services.startFlowPermission
+import net.corda.core.utilities.millis
+import net.corda.finance.DOLLARS
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.poll
 import net.corda.testing.node.NodeBasedTest
 import net.corda.traderdemo.flow.BuyerFlow
@@ -28,9 +28,11 @@ class TraderDemoTest : NodeBasedTest() {
     @Test
     fun `runs trader demo`() {
         val demoUser = User("demo", "demo", setOf(startFlowPermission<SellerFlow>()))
-        val bankUser = User("user1", "test", permissions = setOf(startFlowPermission<CashIssueFlow>(),
+        val bankUser = User("user1", "test", permissions = setOf(
+                startFlowPermission<CashIssueFlow>(),
+                startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
-        val (nodeA, nodeB, bankNode, notaryNode) = listOf(
+        val (nodeA, nodeB, bankNode) = listOf(
                 startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)),
                 startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)),
                 startNode(BOC.name, rpcUsers = listOf(bankUser)),
@@ -57,7 +59,7 @@ class TraderDemoTest : NodeBasedTest() {
         val expectedPaper = listOf(clientA.commercialPaperCount + 1, clientB.commercialPaperCount)
 
         // TODO: Enable anonymisation
-        clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.info.legalIdentity.name, sellerName = nodeB.info.legalIdentity.name, notaryName = notaryNode.info.legalIdentity.name)
+        clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.info.legalIdentity.name, sellerName = nodeB.info.legalIdentity.name)
         clientB.runSeller(buyerName = nodeA.info.legalIdentity.name, amount = 5.DOLLARS)
 
         assertThat(clientA.cashCount).isGreaterThan(originalACash)

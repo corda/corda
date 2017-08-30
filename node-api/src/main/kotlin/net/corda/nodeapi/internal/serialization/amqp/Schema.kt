@@ -4,15 +4,13 @@ import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
 import net.corda.core.crypto.toBase64
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.loggerFor
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
-import java.lang.reflect.GenericArrayType
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
-import java.lang.reflect.TypeVariable
+import java.lang.reflect.*
 import java.util.*
 
 import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterField
@@ -316,6 +314,9 @@ private val NULLABLE_HASH: String = "Nullable = true"
 private val NOT_NULLABLE_HASH: String = "Nullable = false"
 private val ANY_TYPE_HASH: String = "Any type = true"
 private val TYPE_VARIABLE_HASH: String = "Type variable = true"
+private val WILDCARD_TYPE_HASH: String = "Wild card = true"
+
+private val logger by lazy { loggerFor<Schema>() }
 
 /**
  * The method generates a fingerprint for a given JVM [Type] that should be unique to the schema representation.
@@ -338,6 +339,16 @@ internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String {
     return hasher.hash().asBytes().toBase64()
 }
 
+private fun Hasher.fingerprintWithCustomSerializerOrElse(factory: SerializerFactory, clazz: Class<*>, declaredType: Type, block: () -> Hasher) : Hasher {
+    // Need to check if a custom serializer is applicable
+    val customSerializer = factory.findCustomSerializer(clazz, declaredType)
+    return if (customSerializer != null) {
+        putUnencodedChars(customSerializer.typeDescriptor)
+    } else {
+        block()
+    }
+}
+
 // This method concatentates various elements of the types recursively as unencoded strings into the hasher, effectively
 // creating a unique string for a type which we then hash in the calling function above.
 private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: MutableSet<Type>, hasher: Hasher, factory: SerializerFactory): Hasher {
@@ -356,18 +367,14 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                 } else if (isCollectionOrMap(type)) {
                     hasher.putUnencodedChars(type.name)
                 } else {
-                    // Need to check if a custom serializer is applicable
-                    val customSerializer = factory.findCustomSerializer(type, type)
-                    if (customSerializer == null) {
+                    hasher.fingerprintWithCustomSerializerOrElse(factory, type, type) {
                         if (type.kotlin.objectInstance != null) {
                             // TODO: name collision is too likely for kotlin objects, we need to introduce some reference
                             // to the CorDapp but maybe reference to the JAR in the short term.
                             hasher.putUnencodedChars(type.name)
                         } else {
-                            fingerprintForObject(type, contextType, alreadySeen, hasher, factory)
+                            fingerprintForObject(type, type, alreadySeen, hasher, factory)
                         }
-                    } else {
-                        hasher.putUnencodedChars(customSerializer.typeDescriptor)
                     }
                 }
             } else if (type is ParameterizedType) {
@@ -376,7 +383,9 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                 val startingHash = if (isCollectionOrMap(clazz)) {
                     hasher.putUnencodedChars(clazz.name)
                 } else {
-                    fingerprintForObject(type, type, alreadySeen, hasher, factory)
+                    hasher.fingerprintWithCustomSerializerOrElse(factory, clazz, type) {
+                        fingerprintForObject(type, type, alreadySeen, hasher, factory)
+                    }
                 }
                 // ... and concatentate the type data for each parameter type.
                 type.actualTypeArguments.fold(startingHash) { orig, paramType -> fingerprintForType(paramType, type, alreadySeen, orig, factory) }
@@ -386,11 +395,16 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
             } else if (type is TypeVariable<*>) {
                 // TODO: include bounds
                 hasher.putUnencodedChars(type.name).putUnencodedChars(TYPE_VARIABLE_HASH)
-            } else {
+            } else if (type is WildcardType) {
+                hasher.putUnencodedChars(type.typeName).putUnencodedChars(WILDCARD_TYPE_HASH)
+            }
+            else {
                 throw NotSerializableException("Don't know how to hash")
             }
         } catch(e: NotSerializableException) {
-            throw NotSerializableException("${e.message} -> $type")
+            val msg = "${e.message} -> $type"
+            logger.error(msg, e)
+            throw NotSerializableException(msg)
         }
     }
 }
@@ -403,6 +417,6 @@ private fun fingerprintForObject(type: Type, contextType: Type?, alreadySeen: Mu
     propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory).fold(hasher.putUnencodedChars(name)) { orig, prop ->
         fingerprintForType(prop.resolvedType, type, alreadySeen, orig, factory).putUnencodedChars(prop.name).putUnencodedChars(if (prop.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
     }
-    interfacesForSerialization(type).map { fingerprintForType(it, type, alreadySeen, hasher, factory) }
+    interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, factory) }
     return hasher
 }

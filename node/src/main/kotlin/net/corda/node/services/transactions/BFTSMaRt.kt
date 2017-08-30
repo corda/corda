@@ -22,6 +22,7 @@ import net.corda.core.internal.declaredField
 import net.corda.core.internal.toTypedArray
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
@@ -33,7 +34,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
-import net.corda.node.utilities.JDBCHashMap
+import net.corda.node.utilities.AppendOnlyPersistentMap
 import java.nio.file.Path
 import java.util.*
 
@@ -172,7 +173,8 @@ object BFTSMaRt {
      */
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
-                           tableName: String,
+                           createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx,
+                                   BFTNonValidatingNotaryService.PersistedCommittedState, PersistentStateRef>,
                            protected val services: ServiceHubInternal,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
@@ -191,9 +193,8 @@ object BFTSMaRt {
         }
 
         override fun getStateManager() = stateManagerOverride
-        // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
-        private val commitLog = services.database.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
+        private val commitLog = services.database.transaction { createMap() }
         private val replica = run {
             config.waitUntilReplicaWillNotPrintStackTrace(replicaId)
             @Suppress("LeakingThis")
@@ -229,7 +230,7 @@ object BFTSMaRt {
                     log.debug { "No conflicts detected, committing input states: ${states.joinToString()}" }
                     states.forEachIndexed { i, stateRef ->
                         val txInfo = UniquenessProvider.ConsumingTx(txId, i, callerIdentity)
-                        commitLog.put(stateRef, txInfo)
+                        commitLog[stateRef] = txInfo
                     }
                 } else {
                     log.debug { "Conflict detected – the following inputs have already been committed: ${conflicts.keys.joinToString()}" }
@@ -261,7 +262,7 @@ object BFTSMaRt {
             // LinkedHashMap for deterministic serialisation
             val m = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
             services.database.transaction {
-                commitLog.forEach { m[it.key] = it.value }
+                commitLog.allPersisted().forEach { m[it.first] = it.second }
             }
             return m.serialize().bytes
         }

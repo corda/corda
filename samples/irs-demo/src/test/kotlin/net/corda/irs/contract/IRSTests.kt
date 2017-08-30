@@ -1,10 +1,13 @@
 package net.corda.irs.contract
 
-import net.corda.contracts.*
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
+import net.corda.finance.DOLLARS
+import net.corda.finance.EUR
+import net.corda.finance.contracts.*
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Test
@@ -78,8 +81,6 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     floatingLegPaymentSchedule = mutableMapOf(),
                     fixedLegPaymentSchedule = mutableMapOf()
             )
-
-            val EUR = currency("EUR")
 
             val common = InterestRateSwap.Common(
                     baseCurrency = EUR,
@@ -168,8 +169,6 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     floatingLegPaymentSchedule = mutableMapOf(),
                     fixedLegPaymentSchedule = mutableMapOf()
             )
-
-            val EUR = currency("EUR")
 
             val common = InterestRateSwap.Common(
                     baseCurrency = EUR,

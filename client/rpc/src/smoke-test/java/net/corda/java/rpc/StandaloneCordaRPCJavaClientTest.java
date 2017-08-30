@@ -3,13 +3,11 @@ package net.corda.java.rpc;
 import net.corda.client.rpc.CordaRPCConnection;
 import net.corda.core.contracts.Amount;
 import net.corda.core.messaging.CordaRPCOps;
-import net.corda.core.messaging.DataFeed;
 import net.corda.core.messaging.FlowHandle;
 import net.corda.core.node.NodeInfo;
-import net.corda.core.node.services.NetworkMapCache;
 import net.corda.core.utilities.OpaqueBytes;
-import net.corda.flows.AbstractCashFlow;
-import net.corda.flows.CashIssueFlow;
+import net.corda.finance.flows.AbstractCashFlow;
+import net.corda.finance.flows.CashIssueFlow;
 import net.corda.nodeapi.User;
 import net.corda.smoketesting.NodeConfig;
 import net.corda.smoketesting.NodeProcess;
@@ -18,12 +16,18 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static kotlin.test.AssertionsKt.assertEquals;
-import static net.corda.contracts.GetBalances.getCashBalance;
+import static kotlin.test.AssertionsKt.fail;
+import static net.corda.finance.contracts.GetBalances.getCashBalance;
 
 public class StandaloneCordaRPCJavaClientTest {
     private List<String> perms = Collections.singletonList("ALL");
@@ -32,6 +36,7 @@ public class StandaloneCordaRPCJavaClientTest {
 
     private AtomicInteger port = new AtomicInteger(15000);
 
+    private NodeProcess.Factory factory;
     private NodeProcess notary;
     private CordaRPCOps rpcProxy;
     private CordaRPCConnection connection;
@@ -49,7 +54,9 @@ public class StandaloneCordaRPCJavaClientTest {
 
     @Before
     public void setUp() {
-        notary = new NodeProcess.Factory().create(notaryConfig);
+        factory = new NodeProcess.Factory();
+        copyFinanceCordapp();
+        notary = factory.create(notaryConfig);
         connection = notary.connect();
         rpcProxy = connection.getProxy();
         notaryNode = fetchNotaryIdentity();
@@ -60,7 +67,31 @@ public class StandaloneCordaRPCJavaClientTest {
         try {
             connection.close();
         } finally {
-            notary.close();
+            if(notary != null) {
+                notary.close();
+            }
+        }
+    }
+
+    private void copyFinanceCordapp() {
+        Path pluginsDir = (factory.baseDirectory(notaryConfig).resolve("plugins"));
+        try {
+            Files.createDirectories(pluginsDir);
+        } catch (IOException ex) {
+            fail("Failed to create directories");
+        }
+        try (Stream<Path> paths = Files.walk(Paths.get("build", "resources", "smokeTest"))) {
+            paths.forEach(file -> {
+                if (file.toString().contains("corda-finance")) {
+                    try {
+                        Files.copy(file, pluginsDir.resolve(file.getFileName()));
+                    } catch (IOException ex) {
+                        fail("Failed to copy finance jar");
+                    }
+                }
+            });
+        } catch (IOException e) {
+            fail("Failed to walk files");
         }
     }
 
@@ -75,7 +106,7 @@ public class StandaloneCordaRPCJavaClientTest {
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
                 dollars123, OpaqueBytes.of("1".getBytes()),
-                notaryNode.getLegalIdentity(), notaryNode.getLegalIdentity());
+                notaryNode.getLegalIdentity());
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 

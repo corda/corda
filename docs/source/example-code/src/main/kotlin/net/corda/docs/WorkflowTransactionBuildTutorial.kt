@@ -2,7 +2,6 @@ package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FinalityFlow
@@ -11,8 +10,6 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.serialization.CordaSerializable
@@ -35,7 +32,7 @@ enum class WorkflowState {
  * Minimal contract to encode a simple workflow with one initial state and two possible eventual states.
  * It is assumed one party unilaterally submits and the other manually retrieves the deal and completes it.
  */
-data class TradeApprovalContract(override val legalContractReference: SecureHash = SecureHash.sha256("Example of workflow type transaction")) : Contract {
+data class TradeApprovalContract(private val blank: Void? = null) : Contract {
 
     interface Commands : CommandData {
         class Issue : TypeOnlyCommandData(), Commands  // Record receipt of deal details

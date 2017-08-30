@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -164,6 +165,9 @@ fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T 
             println("$label took $elapsed msec")
     }
 }
+
+fun java.security.cert.Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
+fun javax.security.cert.Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
 fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {

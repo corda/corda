@@ -1,7 +1,6 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.POUNDS
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
@@ -10,10 +9,9 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.ALICE
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
+import net.corda.finance.POUNDS
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
@@ -24,6 +22,7 @@ import org.junit.Test
 import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 
 class DistributedServiceTests : DriverBasedTest() {
     lateinit var alice: NodeHandle
@@ -134,14 +133,10 @@ class DistributedServiceTests : DriverBasedTest() {
     }
 
     private fun issueCash(amount: Amount<Currency>) {
-        val issueHandle = aliceProxy.startFlow(
-                ::CashIssueFlow,
-                amount, OpaqueBytes.of(0), alice.nodeInfo.legalIdentity, raftNotaryIdentity)
-        issueHandle.returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(0), raftNotaryIdentity).returnValue.getOrThrow()
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        val payHandle = aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity)
-        payHandle.returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
     }
 }

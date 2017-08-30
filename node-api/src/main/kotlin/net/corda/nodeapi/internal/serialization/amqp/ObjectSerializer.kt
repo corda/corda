@@ -4,30 +4,27 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
-import java.lang.reflect.Constructor
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaConstructor
 
 /**
  * Responsible for serializing and deserializing a regular object instance via a series of properties (matched with a constructor).
  */
-class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
+open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
-    private val javaConstructor: Constructor<Any>?
-    internal val propertySerializers: Collection<PropertySerializer>
+    open val kotlinConstructor = constructorForDeserialization(clazz)
+    val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
 
-    init {
-        val kotlinConstructor = constructorForDeserialization(clazz)
-        javaConstructor = kotlinConstructor?.javaConstructor
-        propertySerializers = propertiesForSerialization(kotlinConstructor, clazz, factory)
+    open internal val propertySerializers: Collection<PropertySerializer> by lazy {
+        propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
 
     private val typeName = nameForType(clazz)
 
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
-    private val interfaces = interfacesForSerialization(clazz) // TODO maybe this proves too much and we need annotations to restrict.
+    private val interfaces = interfacesForSerialization(clazz, factory) // We restrict to only those annotated or whitelisted
 
-    internal val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
+    open internal val typeNotation : TypeNotation by lazy {CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields()) }
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
@@ -67,15 +64,8 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
         return propertySerializers.map { Field(it.name, it.type, it.requires, it.default, null, it.mandatory, false) }
     }
 
-    private fun generateProvides(): List<String> {
-        return interfaces.map { nameForType(it) }
-    }
+    private fun generateProvides(): List<String> = interfaces.map { nameForType(it) }
 
-
-    fun construct(properties: List<Any?>): Any {
-        if (javaConstructor == null) {
+    fun construct(properties: List<Any?>) = javaConstructor?.newInstance(*properties.toTypedArray()) ?:
             throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
-        }
-        return javaConstructor.newInstance(*properties.toTypedArray())
-    }
 }

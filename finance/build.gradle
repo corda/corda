@@ -5,13 +5,17 @@ apply plugin: 'kotlin-jpa'
 apply plugin: CanonicalizerPlugin
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda finance modules'
 
 dependencies {
-    compile project(':core')
-    compile project(':node-schemas')
+    // Note the :finance module is a CorDapp in its own right
+    // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
+    cordaCompile project(':core')
+
+    compile "com.google.guava:guava:$guava_version"
 
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')

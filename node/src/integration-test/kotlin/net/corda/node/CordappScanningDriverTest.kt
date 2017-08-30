@@ -12,7 +12,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.core.utilities.unwrap
-import net.corda.node.services.startFlowPermission
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat

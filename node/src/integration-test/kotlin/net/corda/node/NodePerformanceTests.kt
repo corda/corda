@@ -2,22 +2,22 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.base.Stopwatch
-import net.corda.core.contracts.DOLLARS
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.minutes
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.testing.performance.div
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
-import net.corda.node.services.startFlowPermission
+import net.corda.core.utilities.minutes
+import net.corda.finance.DOLLARS
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.performance.div
 import net.corda.testing.performance.startPublishingFixedRateInjector
 import net.corda.testing.performance.startReporter
 import net.corda.testing.performance.startTightLoopInjector
@@ -111,7 +111,7 @@ class NodePerformanceTests {
             a.rpcClientToNode().use("A", "A") { connection ->
                 println("ISSUING")
                 val doneFutures = (1..100).toList().parallelStream().map {
-                    connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), a.nodeInfo.legalIdentity, a.nodeInfo.notaryIdentity).returnValue
+                    connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), a.nodeInfo.notaryIdentity).returnValue
                 }.toList()
                 doneFutures.transpose().get()
                 println("STARTING PAYMENT")

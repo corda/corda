@@ -42,7 +42,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
         fun getInstance(asn1: ASN1Primitive): PublicKey {
             val keyInfo = SubjectPublicKeyInfo.getInstance(asn1)
-            require(keyInfo.algorithm.algorithm == CordaObjectIdentifier.compositeKey)
+            require(keyInfo.algorithm.algorithm == CordaObjectIdentifier.COMPOSITE_KEY)
             val sequence = ASN1Sequence.getInstance(keyInfo.parsePublicKey())
             val threshold = ASN1Integer.getInstance(sequence.getObjectAt(0)).positiveValue.toInt()
             val sequenceOfChildren = ASN1Sequence.getInstance(sequence.getObjectAt(1))
@@ -177,7 +177,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
         }
         keyVector.add(ASN1Integer(threshold.toLong()))
         keyVector.add(DERSequence(childrenVector))
-        return SubjectPublicKeyInfo(AlgorithmIdentifier(CordaObjectIdentifier.compositeKey), DERSequence(keyVector)).encoded
+        return SubjectPublicKeyInfo(AlgorithmIdentifier(CordaObjectIdentifier.COMPOSITE_KEY), DERSequence(keyVector)).encoded
     }
 
     override fun getFormat() = ASN1Encoding.DER
@@ -262,7 +262,9 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             else if (n == 1) {
                 require(threshold == null || threshold == children.first().weight)
                 { "Trying to build invalid CompositeKey, threshold value different than weight of single child node." }
-                children.first().node // We can assume that this node is a correct CompositeKey.
+                // Returning the only child node which is [PublicKey] itself. We need to avoid single-key [CompositeKey] instances,
+                // as there are scenarios where developers expected the underlying key and its composite versions to be equivalent.
+                children.first().node
             } else throw IllegalArgumentException("Trying to build CompositeKey without child nodes.")
         }
     }

@@ -18,6 +18,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -52,7 +53,9 @@ class ValidatingNotaryServiceTests {
     fun `should report error for invalid transaction dependency`() {
         val stx = run {
             val inputState = issueInvalidState(clientNode, notaryNode.info.notaryIdentity)
-            val tx = TransactionBuilder(notaryNode.info.notaryIdentity).withItems(inputState)
+            val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
+                    .addInputState(inputState)
+                    .addCommand(dummyCommand(clientNode.services.legalIdentityKey))
             clientNode.services.signInitialTransaction(tx)
         }
 

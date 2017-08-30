@@ -24,11 +24,13 @@ configurations {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
+    // The trader demo CorDapp depends upon Cash CorDapp features
+    cordapp project(':finance')
+
     // Corda integration dependencies
     cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
-    cordaCompile project(':finance')
 
     // Corda Plugins: dependent flows and services
     cordapp project(':samples:bank-of-corda-demo')
@@ -40,7 +42,8 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
-            'StartFlow.net.corda.flows.CashIssueFlow',
+            'StartFlow.net.corda.finance.flows.CashIssueFlow',
+            'StartFlow.net.corda.finance.flows.CashPaymentFlow',
             'StartFlow.net.corda.traderdemo.flow.CommercialPaperIssueFlow',
             'StartFlow.net.corda.traderdemo.flow.SellerFlow'
     ]]]
@@ -53,14 +56,14 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
-        cordapps = []
+        cordapps = ["net.corda:finance:$corda_release_version"]
     }
     node {
         name "CN=Bank A,O=Bank A,L=London,C=GB"
         advertisedServices = []
         p2pPort 10005
         rpcPort 10006
-        cordapps = []
+        cordapps = ["net.corda:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
     }
     node {
@@ -68,7 +71,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         advertisedServices = []
         p2pPort 10008
         rpcPort 10009
-        cordapps = []
+        cordapps = ["net.corda:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
     }
     node {
@@ -76,13 +79,13 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         advertisedServices = []
         p2pPort 10011
         rpcPort 10012
-        cordapps = []
+        cordapps = ["net.corda:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
     }
 }
 
 task integrationTest(type: Test, dependsOn: []) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 

@@ -4,6 +4,7 @@ import com.google.common.html.HtmlEscapers.htmlEscaper
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
+import net.corda.jackson.JacksonSupport
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.webserver.WebServerConfig
 import net.corda.webserver.services.WebServerPluginRegistry
@@ -127,8 +128,13 @@ class NodeWebServer(val config: WebServerConfig) {
             addServlet(DataUploadServlet::class.java, "/upload/*")
             addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
 
+            val rpcObjectMapper = pluginRegistries.fold(JacksonSupport.createDefaultMapper(localRpc)) { om, plugin ->
+                plugin.customizeJSONSerialization(om)
+                om
+            }
+
             val resourceConfig = ResourceConfig()
-                .register(ObjectMapperConfig(localRpc))
+                .register(ObjectMapperConfig(rpcObjectMapper))
                 .register(ResponseFilter())
                 .register(APIServerImpl(localRpc))
 

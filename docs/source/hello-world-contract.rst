@@ -37,17 +37,11 @@ Just as every Corda state must implement the ``ContractState`` interface, every 
             // Implements the contract constraints in code.
             @Throws(IllegalArgumentException::class)
             fun verify(tx: LedgerTransaction)
-
-            // Expresses the contract constraints as legal prose.
-            val legalContractReference: SecureHash
         }
 
 You can read about function declarations in Kotlin `here <https://kotlinlang.org/docs/reference/functions.html>`_.
 
-We can see that ``Contract`` expresses its constraints in two ways:
-
-* In legal prose, through a hash referencing a legal contract that expresses the contract's constraints in legal prose
-* In code, through a ``verify`` function that takes a transaction as input, and:
+We can see that ``Contract`` expresses its constraints through a ``verify`` function that takes a transaction as input, and:
 
   * Throws an ``IllegalArgumentException`` if it rejects the transaction proposal
   * Returns silently if it accepts the transaction proposal
@@ -67,7 +61,7 @@ transfer them or redeem them for cash. One way to enforce this behaviour would b
 
   * Its value must be non-negative
   * The lender and the borrower cannot be the same entity
-  * The IOU's borrower must sign the transaction
+  * The IOU's lender must sign the transaction
 
 We can picture this transaction as follows:
 
@@ -79,18 +73,19 @@ Defining IOUContract
 --------------------
 
 Let's write a contract that enforces these constraints. We'll do this by modifying either ``TemplateContract.java`` or
-``TemplateContract.kt`` and updating ``TemplateContract`` to define an ``IOUContract``:
+``App.kt`` and updating ``TemplateContract`` to define an ``IOUContract``:
 
 .. container:: codeset
 
     .. code-block:: kotlin
 
-        package com.iou
+        ...
 
         import net.corda.core.contracts.*
-        import net.corda.core.crypto.SecureHash
 
-        open class IOUContract : Contract {
+        ...
+
+        class IOUContract : Contract {
             // Our Create command.
             class Create : CommandData
 
@@ -109,19 +104,16 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
                     // Constraints on the signers.
                     "There must only be one signer." using (command.signers.toSet().size == 1)
-                    "The signer must be the borrower." using (command.signers.contains(out.borrower.owningKey))
+                    "The signer must be the lender." using (command.signers.contains(out.lender.owningKey))
                 }
             }
-
-            // The legal contract reference - we'll leave this as a dummy hash for now.
-            override val legalContractReference = SecureHash.zeroHash
         }
 
     .. code-block:: java
 
-        package com.iou;
+        package com.template.contract;
 
-        import com.google.common.collect.ImmutableSet;
+        import com.template.state.IOUState;
         import net.corda.core.contracts.AuthenticatedObject;
         import net.corda.core.contracts.CommandData;
         import net.corda.core.contracts.Contract;
@@ -146,24 +138,22 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     check.using("There should be one output state of type IOUState.", tx.getOutputs().size() == 1);
 
                     // IOU-specific constraints.
-                    final IOUState out = (IOUState) tx.getOutputs().getData().get(0);
+                    final IOUState out = (IOUState) tx.getOutputs().get(0).getData();
                     final Party lender = out.getLender();
                     final Party borrower = out.getBorrower();
                     check.using("The IOU's value must be non-negative.",out.getValue() > 0);
                     check.using("The lender and the borrower cannot be the same entity.", lender != borrower);
 
                     // Constraints on the signers.
-                    check.using("There must only be one signer.", ImmutableSet.of(command.getSigners()).size() == 1);
-                    check.using("The signer must be the borrower.", command.getSigners().contains(borrower.getOwningKey()));
+                    check.using("There must only be one signer.", command.getSigners().size() == 1);
+                    check.using("The signer must be the lender.", command.getSigners().contains(lender.getOwningKey()));
 
                     return null;
                 });
             }
-
-            // The legal contract reference - we'll leave this as a dummy hash for now.
-            private final SecureHash legalContractReference = SecureHash.Companion.getZeroHash();
-            @Override public final SecureHash getLegalContractReference() { return legalContractReference; }
         }
+
+If you're following along in Java, you'll also need to rename ``TemplateContract.java`` to ``IOUContract.java``.
 
 Let's walk through this code step by step.
 
@@ -175,7 +165,7 @@ The first thing we add to our contract is a *command*. Commands serve two functi
   example, a transaction proposing the creation of an IOU could have to satisfy different constraints to one redeeming
   an IOU
 * They allow us to define the required signers for the transaction. For example, IOU creation might require signatures
-  from the borrower alone, whereas the transfer of an IOU might require signatures from both the IOU's borrower and lender
+  from the lender only, whereas the transfer of an IOU might require signatures from both the IOU's borrower and lender
 
 Our contract has one command, a ``Create`` command. All commands must implement the ``CommandData`` interface.
 
@@ -215,7 +205,7 @@ following are true:
 * The transaction has inputs
 * The transaction doesn't have exactly one output
 * The IOU itself is invalid
-* The transaction doesn't require the borrower's signature
+* The transaction doesn't require the lender's signature
 
 Command constraints
 ~~~~~~~~~~~~~~~~~~~
@@ -254,7 +244,7 @@ other statements - in this case, we're extracting the transaction's single ``IOU
 
 Signer constraints
 ~~~~~~~~~~~~~~~~~~
-Finally, we require the borrower's signature on the transaction. A transaction's required signers is equal to the union
+Finally, we require the lender's signature on the transaction. A transaction's required signers is equal to the union
 of all the signers listed on the commands. We therefore extract the signers from the ``Create`` command we
 retrieved earlier.
 
@@ -266,7 +256,7 @@ We've now written an ``IOUContract`` constraining the evolution of each ``IOUSta
 * Creating an ``IOUState`` requires an issuance transaction with no inputs, a single ``IOUState`` output, and a
   ``Create`` command
 * The ``IOUState`` created by the issuance transaction must have a non-negative value, and the lender and borrower
-  must be different entities.
+  must be different entities
 
 Before we move on, make sure you go back and modify ``IOUState`` to point to the new ``IOUContract`` class.
 

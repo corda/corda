@@ -21,7 +21,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
-import net.corda.node.services.startFlowPermission
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence

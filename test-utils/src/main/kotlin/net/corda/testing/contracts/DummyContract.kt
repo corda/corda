@@ -1,17 +1,16 @@
 package net.corda.testing.contracts
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 
-// The dummy contract doesn't do anything useful. It exists for testing purposes.
+// The dummy contract doesn't do anything useful. It exists for testing purposes, but has to be serializable
 
 val DUMMY_PROGRAM_ID = DummyContract()
 
-data class DummyContract(override val legalContractReference: SecureHash = SecureHash.sha256("")) : Contract {
+data class DummyContract(val blank: Any? = null) : Contract {
     interface State : ContractState {
         val magicNumber: Int
     }

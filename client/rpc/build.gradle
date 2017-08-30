@@ -50,6 +50,9 @@ processSmokeTestResources {
     from(project(':node:capsule').tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
     }
+    from(project(':finance').tasks['jar']) {
+        rename 'finance-(.*)', 'finance.jar'
+    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -78,12 +81,12 @@ dependencies {
 }
 
 task integrationTest(type: Test) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
 task smokeTest(type: Test) {
-    testClassesDir = sourceSets.smokeTest.output.classesDir
+    testClassesDirs = sourceSets.smokeTest.output.classesDirs
     classpath = sourceSets.smokeTest.runtimeClasspath
 }
 

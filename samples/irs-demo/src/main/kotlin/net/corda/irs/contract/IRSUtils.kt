@@ -1,10 +1,10 @@
 package net.corda.irs.contract
 
-import net.corda.contracts.Tenor
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import net.corda.core.contracts.Amount
 import net.corda.core.serialization.CordaSerializable
+import net.corda.finance.contracts.Tenor
 import java.math.BigDecimal
 import java.util.*
 

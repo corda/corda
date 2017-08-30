@@ -92,6 +92,8 @@ The ``WebServerPluginRegistry`` class defines the following:
   be distributed within the CorDapp jars. This static content will not be available if the bundled web server is not
   started
 
+* ``customizeJSONSerialization``, which can be overridden to register custom JSON serializers if required by the REST api.
+
   * The static web content itself should be placed inside the ``src/main/resources`` directory
 
 To learn about how to use gradle to build your cordapp against Corda and generate an artifact please read

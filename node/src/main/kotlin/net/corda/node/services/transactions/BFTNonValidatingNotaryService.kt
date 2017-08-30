@@ -2,15 +2,15 @@ package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SignableData
-import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.Party
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker
+import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
@@ -19,6 +19,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import org.bouncycastle.asn1.x500.X500Name
+import javax.persistence.Entity
 import kotlin.concurrent.thread
 
 /**
@@ -49,7 +53,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
             thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
                 configHandle.use {
                     val timeWindowChecker = TimeWindowChecker(services.clock)
-                    val replica = Replica(it, replicaId, "bft_smart_notary_committed_states", services, timeWindowChecker)
+                    val replica = Replica(it, replicaId, { createMap() }, services, timeWindowChecker)
                     replicaHolder.set(replica)
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
@@ -88,11 +92,43 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
         }
     }
 
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}bft_smart_notary_committed_states")
+    class PersistedCommittedState(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentUniquenessProvider.PersistentParty)
+        : PersistentUniquenessProvider.PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
+
+    fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef> =
+            AppendOnlyPersistentMap(
+                    toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
+                    fromPersistentEntity = {
+                        //TODO null check will become obsolete after making DB/JPA columns not nullable
+                        var txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
+                        var index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                        Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
+                            UniquenessProvider.ConsumingTx(
+                                    id = SecureHash.parse(it.consumingTxHash),
+                                    inputIndex = it.consumingIndex,
+                                    requestingParty = Party(
+                                            name = X500Name(it.party.name),
+                                            owningKey = parsePublicKeyBase58(it.party.owningKey))))
+                    },
+                    toPersistentEntity = { (txHash, index) : StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
+                        PersistedCommittedState(
+                                id = PersistentStateRef(txHash.toString(), index),
+                                consumingTxHash = id.toString(),
+                                consumingIndex = inputIndex,
+                                party = PersistentUniquenessProvider.PersistentParty(requestingParty.name.toString(),
+                                        requestingParty.owningKey.toBase58String())
+                        )
+                    },
+                    persistentEntityClass = PersistedCommittedState::class.java
+            )
+
     private class Replica(config: BFTSMaRtConfig,
                           replicaId: Int,
-                          tableName: String,
+                          createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef>,
                           services: ServiceHubInternal,
-                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, tableName, services, timeWindowChecker) {
+                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, createMap, services, timeWindowChecker) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()

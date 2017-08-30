@@ -1,13 +1,6 @@
 package net.corda.irs.api
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.BusinessCalendar
-import net.corda.contracts.Fix
-import net.corda.contracts.FixOf
-import net.corda.contracts.Tenor
-import net.corda.contracts.math.CubicSplineInterpolator
-import net.corda.contracts.math.Interpolator
-import net.corda.contracts.math.InterpolatorFactory
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
@@ -24,6 +17,13 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
+import net.corda.finance.contracts.BusinessCalendar
+import net.corda.finance.contracts.Fix
+import net.corda.finance.contracts.FixOf
+import net.corda.finance.contracts.Tenor
+import net.corda.finance.contracts.math.CubicSplineInterpolator
+import net.corda.finance.contracts.math.Interpolator
+import net.corda.finance.contracts.math.InterpolatorFactory
 import net.corda.irs.flows.RatesFixFlow
 import org.apache.commons.io.IOUtils
 import java.math.BigDecimal

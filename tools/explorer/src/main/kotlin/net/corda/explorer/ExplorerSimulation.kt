@@ -6,19 +6,26 @@ import net.corda.client.mock.EventGenerator
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickOne
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.GBP
-import net.corda.core.contracts.USD
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.flows.*
-import net.corda.node.services.startFlowPermission
+import net.corda.core.utilities.getOrThrow
+import net.corda.finance.GBP
+import net.corda.finance.USD
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.AbstractCashFlow
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
@@ -32,25 +39,24 @@ import java.time.Instant
 import java.util.*
 
 class ExplorerSimulation(val options: OptionSet) {
-    val user = User("user1", "test", permissions = setOf(
+    private val user = User("user1", "test", permissions = setOf(
             startFlowPermission<CashPaymentFlow>()
     ))
-    val manager = User("manager", "test", permissions = setOf(
-            startFlowPermission<CashIssueFlow>(),
+    private val manager = User("manager", "test", permissions = setOf(
+            startFlowPermission<CashIssueAndPaymentFlow>(),
             startFlowPermission<CashPaymentFlow>(),
-            startFlowPermission<CashExitFlow>(),
-            startFlowPermission<IssuerFlow.IssuanceRequester>())
+            startFlowPermission<CashExitFlow>())
     )
 
-    lateinit var notaryNode: NodeHandle
-    lateinit var aliceNode: NodeHandle
-    lateinit var bobNode: NodeHandle
-    lateinit var issuerNodeGBP: NodeHandle
-    lateinit var issuerNodeUSD: NodeHandle
+    private lateinit var notaryNode: NodeHandle
+    private lateinit var aliceNode: NodeHandle
+    private lateinit var bobNode: NodeHandle
+    private lateinit var issuerNodeGBP: NodeHandle
+    private lateinit var issuerNodeUSD: NodeHandle
 
-    val RPCConnections = ArrayList<CordaRPCConnection>()
-    val issuers = HashMap<Currency, CordaRPCOps>()
-    val parties = ArrayList<Pair<Party, CordaRPCOps>>()
+    private val RPCConnections = ArrayList<CordaRPCConnection>()
+    private val issuers = HashMap<Currency, CordaRPCOps>()
+    private val parties = ArrayList<Pair<Party, CordaRPCOps>>()
 
     init {
         startDemoNodes()
@@ -142,23 +148,23 @@ class ExplorerSimulation(val options: OptionSet) {
         for (i in 0..maxIterations) {
             Thread.sleep(300)
             // Issuer requests.
-            eventGenerator.issuerGenerator.map { command ->
-                when (command) {
-                    is CashFlowCommand.IssueCash -> issuers[command.amount.token]?.let {
-                        println("${Instant.now()} [$i] ISSUING ${command.amount} with ref ${command.issueRef} to ${command.recipient}")
-                        command.startFlow(it).log(i, "${command.amount.token}Issuer")
+            eventGenerator.issuerGenerator.map { request ->
+                when (request) {
+                    is IssueAndPaymentRequest -> issuers[request.amount.token]?.let {
+                        println("${Instant.now()} [$i] ISSUING ${request.amount} with ref ${request.issueRef} to ${request.recipient}")
+                        it.startFlow(::CashIssueAndPaymentFlow, request).log(i, "${request.amount.token}Issuer")
                     }
-                    is CashFlowCommand.ExitCash -> issuers[command.amount.token]?.let {
-                        println("${Instant.now()} [$i] EXITING ${command.amount} with ref ${command.issueRef}")
-                        command.startFlow(it).log(i, "${command.amount.token}Exit")
+                    is ExitRequest -> issuers[request.amount.token]?.let {
+                        println("${Instant.now()} [$i] EXITING ${request.amount} with ref ${request.issueRef}")
+                        it.startFlow(::CashExitFlow, request).log(i, "${request.amount.token}Exit")
                     }
-                    else -> throw IllegalArgumentException("Unsupported command: $command")
+                    else -> throw IllegalArgumentException("Unsupported command: $request")
                 }
             }.generate(SplittableRandom())
             // Party pay requests.
-            eventGenerator.moveCashGenerator.combine(Generator.pickOne(parties)) { command, (party, rpc) ->
-                println("${Instant.now()} [$i] SENDING ${command.amount} from $party to ${command.recipient}")
-                command.startFlow(rpc).log(i, party.name.toString())
+            eventGenerator.moveCashGenerator.combine(Generator.pickOne(parties)) { request, (party, rpc) ->
+                println("${Instant.now()} [$i] SENDING ${request.amount} from $party to ${request.recipient}")
+                rpc.startFlow(::CashPaymentFlow, request).log(i, party.name.toString())
             }.generate(SplittableRandom())
         }
         println("Simulation completed")
@@ -178,7 +184,8 @@ class ExplorerSimulation(val options: OptionSet) {
         eventGenerator.parties.forEach {
             for (ref in 0..1) {
                 for ((currency, issuer) in issuers) {
-                    CashFlowCommand.IssueCash(Amount(1_000_000, currency), OpaqueBytes(ByteArray(1, { ref.toByte() })), it, notaryNode.nodeInfo.notaryIdentity, anonymous).startFlow(issuer)
+                    val amount = Amount(1_000_000, currency)
+                    issuer.startFlow(::CashIssueAndPaymentFlow, amount, OpaqueBytes(ByteArray(1, { ref.toByte() })), it, anonymous, notaryNode.nodeInfo.notaryIdentity).returnValue.getOrThrow()
                 }
             }
         }

@@ -2,7 +2,7 @@ package net.corda.jackson
 
 import com.fasterxml.jackson.databind.SerializationFeature
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.USD
+import net.corda.finance.USD
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature

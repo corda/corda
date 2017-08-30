@@ -140,7 +140,7 @@ abstract class FlowLogic<out T> {
      * network's event horizon time.
      */
     @Suspendable
-    open fun send(otherParty: Party, payload: Any): Unit = stateMachine.send(otherParty, payload, flowUsedForSessions)
+    open fun send(otherParty: Party, payload: Any) = stateMachine.send(otherParty, payload, flowUsedForSessions)
 
     /**
      * Invokes the given subflow. This function returns once the subflow completes successfully with the result
@@ -239,7 +239,7 @@ abstract class FlowLogic<out T> {
      * Returns a shallow copy of the Quasar stack frames at the time of call to [flowStackSnapshot]. Use this to inspect
      * what objects would be serialised at the time of call to a suspending action (e.g. send/receive).
      * Note: This logic is only available during tests and is not meant to be used during the production deployment.
-     * Therefore the default implementationdoes nothing.
+     * Therefore the default implementation does nothing.
      */
     @Suspendable
     fun flowStackSnapshot(): FlowStackSnapshot? = stateMachine.flowStackSnapshot(this::class.java)
@@ -256,7 +256,7 @@ abstract class FlowLogic<out T> {
      * Therefore the default implementation does nothing.
      */
     @Suspendable
-    fun persistFlowStackSnapshot(): Unit = stateMachine.persistFlowStackSnapshot(this::class.java)
+    fun persistFlowStackSnapshot() = stateMachine.persistFlowStackSnapshot(this::class.java)
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

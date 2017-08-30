@@ -1,8 +1,6 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.Fix
-import net.corda.contracts.FixableDealState
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.toBase58String
@@ -20,7 +18,9 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.transient
-import net.corda.flows.TwoPartyDealFlow
+import net.corda.finance.contracts.Fix
+import net.corda.finance.contracts.FixableDealState
+import net.corda.finance.flows.TwoPartyDealFlow
 import java.math.BigDecimal
 import java.security.PublicKey
 

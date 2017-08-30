@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.reflect.TypeToken
 import org.apache.qpid.proton.codec.Data
+import java.beans.IndexedPropertyDescriptor
 import java.beans.Introspector
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -64,7 +65,7 @@ internal fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T
     return if (kotlinConstructor != null) propertiesForSerializationFromConstructor(kotlinConstructor, type, factory) else propertiesForSerializationFromAbstract(clazz, type, factory)
 }
 
-private fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
+fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
 
 private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructor: KFunction<T>, type: Type, factory: SerializerFactory): Collection<PropertySerializer> {
     val clazz = (kotlinConstructor.returnType.classifier as KClass<*>).javaObjectType
@@ -73,13 +74,14 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
     val rc: MutableList<PropertySerializer> = ArrayList(kotlinConstructor.parameters.size)
     for (param in kotlinConstructor.parameters) {
         val name = param.name ?: throw NotSerializableException("Constructor parameter of $clazz has no name.")
-        val matchingProperty = properties[name] ?: throw NotSerializableException("No property matching constructor parameter named $name of $clazz." +
+        val matchingProperty = properties[name] ?:
+                throw NotSerializableException("No property matching constructor parameter named $name of $clazz." +
                 " If using Java, check that you have the -parameters option specified in the Java compiler.")
         // Check that the method has a getter in java.
         val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz." +
                 " If using Java and the parameter name looks anonymous, check that you have the -parameters option specified in the Java compiler.")
         val returnType = resolveTypeVariables(getter.genericReturnType, type)
-        if (constructorParamTakesReturnTypeOfGetter(getter, param)) {
+        if (constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param)) {
             rc += PropertySerializer.make(name, getter, returnType, factory)
         } else {
             throw NotSerializableException("Property type $returnType for $name of $clazz differs from constructor parameter type ${param.type.javaType}")
@@ -88,11 +90,14 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
     return rc
 }
 
-private fun constructorParamTakesReturnTypeOfGetter(getter: Method, param: KParameter): Boolean = TypeToken.of(param.type.javaType).isSupertypeOf(getter.genericReturnType)
+private fun constructorParamTakesReturnTypeOfGetter(getterReturnType: Type, rawGetterReturnType: Type, param: KParameter): Boolean {
+    val typeToken = TypeToken.of(param.type.javaType)
+    return typeToken.isSupertypeOf(getterReturnType) || typeToken.isSupertypeOf(rawGetterReturnType)
+}
 
 private fun propertiesForSerializationFromAbstract(clazz: Class<*>, type: Type, factory: SerializerFactory): Collection<PropertySerializer> {
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
-    val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.sortedBy { it.name }
+    val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.sortedBy { it.name }.filterNot { it is IndexedPropertyDescriptor }
     val rc: MutableList<PropertySerializer> = ArrayList(properties.size)
     for (property in properties) {
         // Check that the method has a getter in java.
@@ -103,23 +108,26 @@ private fun propertiesForSerializationFromAbstract(clazz: Class<*>, type: Type, 
     return rc
 }
 
-internal fun interfacesForSerialization(type: Type): List<Type> {
+internal fun interfacesForSerialization(type: Type, serializerFactory: SerializerFactory): List<Type> {
     val interfaces = LinkedHashSet<Type>()
-    exploreType(type, interfaces)
+    exploreType(type, interfaces, serializerFactory)
     return interfaces.toList()
 }
 
-private fun exploreType(type: Type?, interfaces: MutableSet<Type>) {
+private fun exploreType(type: Type?, interfaces: MutableSet<Type>, serializerFactory: SerializerFactory) {
     val clazz = type?.asClass()
     if (clazz != null) {
-        if (clazz.isInterface) interfaces += type
+        if (clazz.isInterface) {
+            if(serializerFactory.isNotWhitelisted(clazz)) return // We stop exploring once we reach a branch that has no `CordaSerializable` annotation or whitelisting.
+            else interfaces += type
+        }
         for (newInterface in clazz.genericInterfaces) {
             if (newInterface !in interfaces) {
-                exploreType(resolveTypeVariables(newInterface, type), interfaces)
+                exploreType(resolveTypeVariables(newInterface, type), interfaces, serializerFactory)
             }
         }
         val superClass = clazz.genericSuperclass ?: return
-        exploreType(resolveTypeVariables(superClass, type), interfaces)
+        exploreType(resolveTypeVariables(superClass, type), interfaces, serializerFactory)
     }
 }
 
@@ -159,21 +167,20 @@ private fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
 }
 
 internal fun Type.asClass(): Class<*>? {
-    return if (this is Class<*>) {
-        this
-    } else if (this is ParameterizedType) {
-        this.rawType.asClass()
-    } else if (this is GenericArrayType) {
-        this.genericComponentType.asClass()?.arrayClass()
-    } else null
+    return when {
+        this is Class<*> -> this
+        this is ParameterizedType -> this.rawType.asClass()
+        this is GenericArrayType -> this.genericComponentType.asClass()?.arrayClass()
+        else -> null
+    }
 }
 
 internal fun Type.asArray(): Type? {
-    return if (this is Class<*>) {
-        this.arrayClass()
-    } else if (this is ParameterizedType) {
-        DeserializedGenericArrayType(this)
-    } else null
+    return when {
+        this is Class<*> -> this.arrayClass()
+        this is ParameterizedType -> DeserializedGenericArrayType(this)
+        else -> null
+    }
 }
 
 internal fun Class<*>.arrayClass(): Class<*> = java.lang.reflect.Array.newInstance(this, 0).javaClass

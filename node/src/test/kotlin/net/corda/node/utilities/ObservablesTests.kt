@@ -21,7 +21,7 @@ class ObservablesTests {
     val toBeClosed = mutableListOf<Closeable>()
 
     fun createDatabase(): CordaPersistence {
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), identitySvc = ::makeTestIdentityService)
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         toBeClosed += database
         return database
     }

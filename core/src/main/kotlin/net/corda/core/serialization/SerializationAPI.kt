@@ -39,7 +39,7 @@ interface SerializationContext {
     /**
      * When serializing, use the format this header sequence represents.
      */
-    val preferedSerializationVersion: ByteSequence
+    val preferredSerializationVersion: ByteSequence
     /**
      * The class loader to use for deserialization.
      */

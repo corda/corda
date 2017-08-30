@@ -11,9 +11,9 @@ import java.security.SignatureException
 //       should be renamed to match.
 /** A wrapper around a digital signature. */
 @CordaSerializable
-open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
+open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** A digital signature that identifies who the public key is owned by. */
-    open class WithKey(val by: PublicKey, bits: ByteArray) : DigitalSignature(bits) {
+    open class WithKey(val by: PublicKey, bytes: ByteArray) : DigitalSignature(bytes) {
         /**
          * Utility to simplify the act of verifying a signature.
          *

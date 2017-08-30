@@ -1,16 +1,17 @@
 package net.corda.node.services.vault
 
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.VaultQueryService
+import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
@@ -18,24 +19,46 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import net.corda.node.services.database.HibernateConfiguration
-import org.jetbrains.exposed.sql.transactions.TransactionManager
-import rx.subjects.PublishSubject
+import net.corda.node.utilities.DatabaseTransactionManager
+import org.hibernate.Session
 import rx.Observable
 import java.lang.Exception
 import java.util.*
-import javax.persistence.EntityManager
 import javax.persistence.Tuple
 
-
 class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
-                              val updatesPublisher: PublishSubject<Vault.Update<ContractState>>) : SingletonSerializeAsToken(), VaultQueryService {
+                              val vault: VaultService) : SingletonSerializeAsToken(), VaultQueryService {
     companion object {
         val log = loggerFor<HibernateVaultQueryImpl>()
     }
 
     private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
     private val criteriaBuilder = sessionFactory.criteriaBuilder
+
+    /**
+     * Maintain a list of contract state interfaces to concrete types stored in the vault
+     * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
+     */
+    private val contractTypeMappings = bootstrapContractStateTypes()
+
+    init {
+        vault.rawUpdates.subscribe { update ->
+            update.produced.forEach {
+                val concreteType = it.state.data.javaClass
+                log.trace { "State update of type: $concreteType" }
+                val seen = contractTypeMappings.any { it.value.contains(concreteType.name) }
+                if (!seen) {
+                    val contractInterfaces = deriveContractInterfaces(concreteType)
+                    contractInterfaces.map {
+                        val contractInterface = contractTypeMappings.getOrPut(it.name, { mutableSetOf() })
+                        contractInterface.add(concreteType.name)
+                    }
+                }
+            }
+        }
+    }
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): Vault.Page<T> {
@@ -50,15 +73,12 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
             totalStates = results.otherResults[0] as Long
         }
 
-        val session = sessionFactory.withOptions().
-                connection(TransactionManager.current().connection).
-                openSession()
+        val session = getSession()
 
         session.use {
             val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
             val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
 
-            val contractTypeMappings = resolveUniqueContractStateTypes(session)
             // TODO: revisit (use single instance of parser for all queries)
             val criteriaParser = HibernateQueryCriteriaParser(contractType, contractTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
 
@@ -98,7 +118,14 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                                 val vaultState = result[0] as VaultSchemaV1.VaultStates
                                 val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
                                 val state = vaultState.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
-                                statesMeta.add(Vault.StateMetadata(stateRef, vaultState.contractStateClassName, vaultState.recordedTime, vaultState.consumedTime, vaultState.stateStatus, vaultState.notaryName, vaultState.notaryKey, vaultState.lockId, vaultState.lockUpdateTime))
+                                statesMeta.add(Vault.StateMetadata(stateRef,
+                                                                   vaultState.contractStateClassName,
+                                                                   vaultState.recordedTime,
+                                                                   vaultState.consumedTime,
+                                                                   vaultState.stateStatus,
+                                                                   vaultState.notary,
+                                                                   vaultState.lockId,
+                                                                   vaultState.lockUpdateTime))
                                 statesAndRefs.add(StateAndRef(state, stateRef))
                             }
                             else {
@@ -116,41 +143,49 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
         }
     }
 
-    private val mutex = ThreadBox({ updatesPublisher })
+    private val mutex = ThreadBox({ vault.updatesPublisher })
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
             val snapshotResults = _queryBy(criteria, paging, sorting, contractType)
             @Suppress("UNCHECKED_CAST")
-            val updates = updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
+            val updates = vault.updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
             DataFeed(snapshotResults, updates)
         }
     }
 
+    private fun getSession(): Session {
+        return sessionFactory.withOptions().
+                connection(DatabaseTransactionManager.current().connection).
+                openSession()
+    }
+
     /**
-     * Maintain a list of contract state interfaces to concrete types stored in the vault
-     * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
+     * Derive list from existing vault states and then incrementally update using vault observables
      */
-    fun resolveUniqueContractStateTypes(session: EntityManager): Map<String, List<String>> {
+    fun bootstrapContractStateTypes(): MutableMap<String, MutableSet<String>> {
         val criteria = criteriaBuilder.createQuery(String::class.java)
         val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
         criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
-        val query = session.createQuery(criteria)
-        val results = query.resultList
-        val distinctTypes = results.map { it }
+        val session = getSession()
+        session.use {
+            val query = session.createQuery(criteria)
+            val results = query.resultList
+            val distinctTypes = results.map { it }
 
-        val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableList<String>>()
-        distinctTypes.forEach { it ->
-            @Suppress("UNCHECKED_CAST")
-            val concreteType = Class.forName(it) as Class<ContractState>
-            val contractInterfaces = deriveContractInterfaces(concreteType)
-            contractInterfaces.map {
-                val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableListOf() })
-                contractInterface.add(concreteType.name)
+            val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
+            distinctTypes.forEach { type ->
+                @Suppress("UNCHECKED_CAST")
+                val concreteType = Class.forName(type) as Class<ContractState>
+                val contractInterfaces = deriveContractInterfaces(concreteType)
+                contractInterfaces.map {
+                    val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
+                    contractInterface.add(concreteType.name)
+                }
             }
+            return contractInterfaceToConcreteTypes
         }
-        return contractInterfaceToConcreteTypes
     }
 
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {

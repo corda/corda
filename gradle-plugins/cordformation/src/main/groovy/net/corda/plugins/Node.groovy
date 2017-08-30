@@ -235,6 +235,8 @@ class Node extends CordformNode {
      * @return List of this node's cordapps.
      */
     private Collection<File> getCordappList() {
+        // Cordapps can sometimes contain a GString instance which fails the equality test with the Java string
+        List<String> cordapps = this.cordapps.collect { it.toString() }
         return project.configurations.cordapp.files {
             cordapps.contains(it.group + ":" + it.name + ":" + it.version)
         }

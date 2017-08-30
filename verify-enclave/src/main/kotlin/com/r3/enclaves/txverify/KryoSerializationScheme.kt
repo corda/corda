@@ -10,7 +10,7 @@ import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 
 @Suppress("UNUSED")
-private class KryoVerifierSerializationScheme(serializationFactory: SerializationFactory) : AbstractKryoSerializationScheme(serializationFactory) {
+private class KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {
     override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
         return byteSequence == KryoHeaderV0_1 && target == SerializationContext.UseCase.P2P
     }
@@ -24,7 +24,7 @@ private class KryoVerifierSerializationScheme(serializationFactory: Serializatio
     private companion object {
         init {
             SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                registerScheme(KryoVerifierSerializationScheme(this))
+                registerScheme(KryoVerifierSerializationScheme())
             }
             SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
         }

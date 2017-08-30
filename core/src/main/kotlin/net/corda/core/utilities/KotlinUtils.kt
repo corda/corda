@@ -43,31 +43,31 @@ inline fun Logger.debug(msg: () -> String) {
  * Extension method for easier construction of [Duration]s in terms of integer days: `val twoDays = 2.days`.
  * @see Duration.ofDays
  */
-inline val Int.days: Duration get() = Duration.ofDays(toLong())
+val Int.days: Duration get() = Duration.ofDays(toLong())
 
 /**
  * Extension method for easier construction of [Duration]s in terms of integer hours: `val twoHours = 2.hours`.
  * @see Duration.ofHours
  */
-inline val Int.hours: Duration get() = Duration.ofHours(toLong())
+val Int.hours: Duration get() = Duration.ofHours(toLong())
 
 /**
  * Extension method for easier construction of [Duration]s in terms of integer minutes: `val twoMinutes = 2.minutes`.
  * @see Duration.ofMinutes
  */
-inline val Int.minutes: Duration get() = Duration.ofMinutes(toLong())
+val Int.minutes: Duration get() = Duration.ofMinutes(toLong())
 
 /**
  * Extension method for easier construction of [Duration]s in terms of integer seconds: `val twoSeconds = 2.seconds`.
  * @see Duration.ofSeconds
  */
-inline val Int.seconds: Duration get() = Duration.ofSeconds(toLong())
+val Int.seconds: Duration get() = Duration.ofSeconds(toLong())
 
 /**
  * Extension method for easier construction of [Duration]s in terms of integer milliseconds: `val twoMillis = 2.millis`.
  * @see Duration.ofMillis
  */
-inline val Int.millis: Duration get() = Duration.ofMillis(toLong())
+val Int.millis: Duration get() = Duration.ofMillis(toLong())
 
 /**
  * A simple wrapper that enables the use of Kotlin's `val x by transient { ... }` syntax. Such a property

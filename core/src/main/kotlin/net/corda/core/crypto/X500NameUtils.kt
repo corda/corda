@@ -1,6 +1,7 @@
 @file:JvmName("X500NameUtils")
 package net.corda.core.crypto
 
+import net.corda.core.internal.toX509CertHolder
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
@@ -57,7 +58,7 @@ val X500Name.locationOrNull: String? get() = try {
 } catch (e: Exception) {
     null
 }
-val X509Certificate.subject: X500Name get() = X509CertificateHolder(encoded).subject
+val X509Certificate.subject: X500Name get() = toX509CertHolder().subject
 val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 /**

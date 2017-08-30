@@ -2,15 +2,13 @@ package net.corda.client.jfx
 
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.ProgressTrackingEvent
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.USD
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
@@ -22,11 +20,13 @@ import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.flows.CashExitFlow
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
+import net.corda.finance.DOLLARS
+import net.corda.finance.USD
+import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.startFlowPermission
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
@@ -108,13 +108,10 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue works end to end`() {
-        val anonymous = false
         rpc.startFlow(::CashIssueFlow,
                 Amount(100, USD),
                 OpaqueBytes(ByteArray(1, { 1 })),
-                aliceNode.legalIdentity,
-                notaryNode.notaryIdentity,
-                anonymous
+                notaryNode.notaryIdentity
         )
 
         vaultUpdates.expectEvents(isStrict = false) {
@@ -136,7 +133,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     @Test
     fun `cash issue and move`() {
         val anonymous = false
-        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNode.legalIdentity, notaryNode.notaryIdentity, anonymous).returnValue.getOrThrow()
+        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
         rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity, anonymous).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null

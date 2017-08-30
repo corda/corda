@@ -1,14 +1,15 @@
 package net.corda.irs
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
+import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.uploadFile
@@ -61,6 +62,7 @@ class IRSDemoTest : IntegrationTestCategory {
 
             val (_, nodeAApi, nodeBApi) = listOf(controller, nodeA, nodeB).zip(listOf(controllerAddr, nodeAAddr, nodeBAddr)).map {
                 val mapper = net.corda.jackson.JacksonSupport.createDefaultMapper(it.first.rpc)
+                registerFinanceJSONMappers(mapper)
                 HttpApi.fromHostAndPort(it.second, "api/irs", mapper = mapper)
             }
             val nextFixingDates = getFixingDateObservable(nodeA.configuration)

@@ -4,13 +4,15 @@ import de.danielbechler.diff.ObjectDifferFactory
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickOne
 import net.corda.client.mock.replicatePoisson
-import net.corda.contracts.asset.Cash
-import net.corda.core.contracts.USD
+import net.corda.finance.contracts.asset.Cash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
-import net.corda.core.utilities.getOrThrow
+import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
-import net.corda.flows.CashFlowCommand
+import net.corda.core.utilities.getOrThrow
+import net.corda.finance.USD
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
 import org.slf4j.LoggerFactory
@@ -20,7 +22,7 @@ private val log = LoggerFactory.getLogger("SelfIssue")
 
 // DOCS START 1
 data class SelfIssueCommand(
-        val command: CashFlowCommand.IssueCash,
+        val request: IssueAndPaymentRequest,
         val node: NodeConnection
 )
 
@@ -52,16 +54,16 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
             }
         },
 
-        interpret = { state, command ->
+        interpret = { state, (request, node) ->
             val vaults = state.copyVaults()
-            val issuer = command.node.info.legalIdentity
-            vaults.put(issuer, (vaults[issuer] ?: 0L) + command.command.amount.quantity)
+            val issuer = node.info.legalIdentity
+            vaults.put(issuer, (vaults[issuer] ?: 0L) + request.amount.quantity)
             SelfIssueState(vaults)
         },
 
-        execute = { command ->
+        execute = { (request, node) ->
             try {
-                val result = command.command.startFlow(command.node.proxy).returnValue.getOrThrow()
+                val result = node.proxy.startFlow(::CashIssueAndPaymentFlow, request).returnValue.getOrThrow()
                 log.info("Success: $result")
             } catch (e: FlowException) {
                 log.error("Failure", e)

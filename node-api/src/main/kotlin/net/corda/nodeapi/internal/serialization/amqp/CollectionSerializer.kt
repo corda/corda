@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.utilities.NonEmptySet
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -22,7 +23,8 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
                 List::class.java to { list -> Collections.unmodifiableList(list) },
                 Set::class.java to { list -> Collections.unmodifiableSet(LinkedHashSet(list)) },
                 SortedSet::class.java to { list -> Collections.unmodifiableSortedSet(TreeSet(list)) },
-                NavigableSet::class.java to { list -> Collections.unmodifiableNavigableSet(TreeSet(list)) }
+                NavigableSet::class.java to { list -> Collections.unmodifiableNavigableSet(TreeSet(list)) },
+                NonEmptySet::class.java to { list -> NonEmptySet.copyOf(list) }
         )
 
         private fun findConcreteType(clazz: Class<*>): (List<*>) -> Collection<*> {

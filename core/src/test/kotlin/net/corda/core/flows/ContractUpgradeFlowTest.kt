@@ -1,22 +1,23 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.Emoji
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.queryBy
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.internal.Emoji
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.flows.CashIssueFlow
+import net.corda.finance.USD
+import net.corda.finance.`issued by`
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl
-import net.corda.node.services.startFlowPermission
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.RPCDriverExposedDSLInterface
 import net.corda.testing.contracts.DummyContract
@@ -42,11 +43,14 @@ class ContractUpgradeFlowTest {
     @Before
     fun setup() {
         mockNet = MockNetwork()
-        val nodes = mockNet.createSomeNodes()
+        val nodes = mockNet.createSomeNodes(notaryKeyPair = null) // prevent generation of notary override
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
         notary = nodes.notaryNode.info.notaryIdentity
-        mockNet.runNetwork()
+
+        val nodeIdentity = nodes.notaryNode.info.legalIdentitiesAndCerts.single { it.party == nodes.notaryNode.info.notaryIdentity }
+        a.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
+        b.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
     }
 
     @After
@@ -173,8 +177,7 @@ class ContractUpgradeFlowTest {
     @Test
     fun `upgrade Cash to v2`() {
         // Create some cash.
-        val anonymous = false
-        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), a.info.legalIdentity, notary, anonymous)).resultFuture
+        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx
         val stateAndRef = stx.tx.outRef<Cash.State>(0)
@@ -200,7 +203,7 @@ class ContractUpgradeFlowTest {
             override val contract = CashV2()
             override val participants = owners
 
-            override fun move(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
+            override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
             override fun toString() = "${Emoji.bagOfCash}New Cash($amount at ${amount.token.issuer} owned by $owner)"
             override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Cash.Commands.Move(), copy(owners = listOf(newOwner)))
         }
@@ -208,9 +211,6 @@ class ContractUpgradeFlowTest {
         override fun upgrade(state: Cash.State) = CashV2.State(state.amount.times(1000), listOf(state.owner))
 
         override fun verify(tx: LedgerTransaction) {}
-
-        // Dummy Cash contract for testing.
-        override val legalContractReference = SecureHash.sha256("")
     }
 
     @StartableByRPC

@@ -10,7 +10,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.node.internal.NodeStartup
-import net.corda.node.services.startFlowPermission
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.ListenProcessDeathException
 import net.corda.testing.driver.NetworkMapStartStrategy

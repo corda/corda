@@ -17,8 +17,6 @@ class VaultUpdateTests {
 
         override fun verify(tx: LedgerTransaction) {
         }
-
-        override val legalContractReference: SecureHash = SecureHash.sha256("")
     }
 
     private class DummyState : ContractState {

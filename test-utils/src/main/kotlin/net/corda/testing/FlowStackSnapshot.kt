@@ -5,23 +5,25 @@ import co.paralleluniverse.fibers.Instrumented
 import co.paralleluniverse.fibers.Stack
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.FlowStackSnapshot.Frame
-import net.corda.core.flows.FlowStackSnapshotFactory
 import net.corda.core.flows.StackFrameDataToken
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.div
+import net.corda.core.internal.write
 import net.corda.core.serialization.SerializeAsToken
-import java.io.File
+import net.corda.jackson.JacksonSupport
+import net.corda.node.services.statemachine.FlowStackSnapshotFactory
 import java.nio.file.Path
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.time.Instant
+import java.time.LocalDate
 
 class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
     @Suspendable
-    override fun getFlowStackSnapshot(flowClass: Class<*>): FlowStackSnapshot? {
+    override fun getFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot {
         var snapshot: FlowStackSnapshot? = null
         val stackTrace = Fiber.currentFiber().stackTrace
         Fiber.parkAndSerialize { fiber, _ ->
@@ -35,19 +37,19 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
         return temporarySnapshot!!
     }
 
-    override fun persistAsJsonFile(flowClass: Class<*>, baseDir: Path, flowId: String) {
+    override fun persistAsJsonFile(flowClass: Class<out FlowLogic<*>>, baseDir: Path, flowId: StateMachineRunId) {
         val flowStackSnapshot = getFlowStackSnapshot(flowClass)
-        val mapper = ObjectMapper()
-        mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-        mapper.enable(SerializationFeature.INDENT_OUTPUT)
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
+        val mapper = JacksonSupport.createNonRpcMapper().apply {
+            disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+            setSerializationInclusion(JsonInclude.Include.NON_NULL)
+        }
         val file = createFile(baseDir, flowId)
-        file.bufferedWriter().use { out ->
-            mapper.writeValue(out, filterOutStackDump(flowStackSnapshot!!))
+        file.write(createDirs = true) {
+            mapper.writeValue(it, filterOutStackDump(flowStackSnapshot))
         }
     }
 
-    private fun extractStackSnapshotFromFiber(fiber: Fiber<*>, stackTrace: List<StackTraceElement>, flowClass: Class<*>): FlowStackSnapshot {
+    private fun extractStackSnapshotFromFiber(fiber: Fiber<*>, stackTrace: List<StackTraceElement>, flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot {
         val stack = getFiberStack(fiber)
         val objectStack = getObjectStack(stack).toList()
         val frameOffsets = getFrameOffsets(stack)
@@ -58,24 +60,25 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
         val relevantStackTrace = removeConstructorStackTraceElements(stackTrace).drop(1)
         val stackTraceToAnnotation = relevantStackTrace.map {
             val element = StackTraceElement(it.className, it.methodName, it.fileName, it.lineNumber)
-            element to getInstrumentedAnnotation(element)
+            element to element.instrumentedAnnotation
         }
         val frameObjectsIterator = frameObjects.listIterator()
         val frames = stackTraceToAnnotation.reversed().map { (element, annotation) ->
             // If annotation is null then the case indicates that this is an entry point - i.e.
             // the net.corda.node.services.statemachine.FlowStateMachineImpl.run method
-            if (frameObjectsIterator.hasNext() && (annotation == null || !annotation.methodOptimized)) {
-                Frame(element, frameObjectsIterator.next())
+            val stackObjects = if (frameObjectsIterator.hasNext() && (annotation == null || !annotation.methodOptimized)) {
+                frameObjectsIterator.next()
             } else {
-                Frame(element, listOf())
+                emptyList()
             }
+            Frame(element, stackObjects)
         }
-        return FlowStackSnapshot(flowClass = flowClass.name, stackFrames = frames)
+        return FlowStackSnapshot(Instant.now(), flowClass.name, frames)
     }
 
-    private fun getInstrumentedAnnotation(element: StackTraceElement): Instrumented? {
-        Class.forName(element.className).methods.forEach {
-            if (it.name == element.methodName && it.isAnnotationPresent(Instrumented::class.java)) {
+    private val StackTraceElement.instrumentedAnnotation: Instrumented? get() {
+        Class.forName(className).methods.forEach {
+            if (it.name == methodName && it.isAnnotationPresent(Instrumented::class.java)) {
                 return it.getAnnotation(Instrumented::class.java)
             }
         }
@@ -99,10 +102,10 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
 
     private fun filterOutStackDump(flowStackSnapshot: FlowStackSnapshot): FlowStackSnapshot {
         val framesFilteredByStackTraceElement = flowStackSnapshot.stackFrames.filter {
-            !FlowStateMachine::class.java.isAssignableFrom(Class.forName(it.stackTraceElement!!.className))
+            !FlowStateMachine::class.java.isAssignableFrom(Class.forName(it.stackTraceElement.className))
         }
         val framesFilteredByObjects = framesFilteredByStackTraceElement.map {
-            Frame(it.stackTraceElement, it.stackObjects.map {
+            it.copy(stackObjects = it.stackObjects.map {
                 if (it != null && (it is FlowLogic<*> || it is FlowStateMachine<*> || it is Fiber<*> || it is SerializeAsToken)) {
                     StackFrameDataToken(it::class.java.name)
                 } else {
@@ -110,25 +113,18 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
                 }
             })
         }
-        return FlowStackSnapshot(flowStackSnapshot.timestamp, flowStackSnapshot.flowClass, framesFilteredByObjects)
+        return flowStackSnapshot.copy(stackFrames = framesFilteredByObjects)
     }
 
-    private fun createFile(baseDir: Path, flowId: String): File {
-        val file: File
-        val dir = File(baseDir.toFile(), "flowStackSnapshots/${LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}/$flowId/")
+    private fun createFile(baseDir: Path, flowId: StateMachineRunId): Path {
+        val dir = baseDir / "flowStackSnapshots" / LocalDate.now().toString() / flowId.uuid.toString()
         val index = ThreadLocalIndex.currentIndex.get()
-        if (index == 0) {
-            dir.mkdirs()
-            file = File(dir, "flowStackSnapshot.json")
-        } else {
-            file = File(dir, "flowStackSnapshot-$index.json")
-        }
+        val file = if (index == 0) dir / "flowStackSnapshot.json" else dir / "flowStackSnapshot-$index.json"
         ThreadLocalIndex.currentIndex.set(index + 1)
         return file
     }
 
     private class ThreadLocalIndex private constructor() {
-
         companion object {
             val currentIndex = object : ThreadLocal<Int>() {
                 override fun initialValue() = 0

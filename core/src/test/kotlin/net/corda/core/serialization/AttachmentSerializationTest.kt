@@ -18,7 +18,7 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
+import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -53,13 +53,11 @@ private fun MockNetwork.MockNode.hackAttachment(attachmentId: SecureHash, conten
  * @see NodeAttachmentService.importAttachment
  */
 private fun NodeAttachmentService.updateAttachment(attachmentId: SecureHash, data: ByteArray) {
-    with(session) {
-        withTransaction {
-            update(AttachmentEntity().apply {
-                attId = attachmentId
-                content = data
-            })
-        }
+    val session = DatabaseTransactionManager.current().session
+    val attachment = session.get<NodeAttachmentService.DBAttachment>(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString())
+    attachment?.let {
+        attachment.content = data
+        session.save(attachment)
     }
 }
 

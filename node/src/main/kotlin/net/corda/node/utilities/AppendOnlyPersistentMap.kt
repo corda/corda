@@ -5,11 +5,11 @@ import java.util.*
 
 
 /**
- * Implements a caching layer on top of an *append-only* table accessed via Hibernate mapping. Note that if the same key is [put] twice the
+ * Implements a caching layer on top of an *append-only* table accessed via Hibernate mapping. Note that if the same key is [set] twice the
  * behaviour is unpredictable! There is a best-effort check for double inserts, but this should *not* be relied on, so
  * ONLY USE THIS IF YOUR TABLE IS APPEND-ONLY
  */
-class AppendOnlyPersistentMap<K, V, E, EK> (
+class AppendOnlyPersistentMap<K, V, E, out EK> (
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K,V>,
         val toPersistentEntity: (key: K, value: V) -> E,
@@ -33,6 +33,8 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
     operator fun get(key: K): V? {
         return cache.get(key).orElse(null)
     }
+
+    val size get() = allPersisted().toList().size
 
     /**
      * Returns all key/value pairs from the underlying storage.
@@ -79,35 +81,54 @@ class AppendOnlyPersistentMap<K, V, E, EK> (
     }
 
     /**
-     * Puts the value into the map and the underlying storage.
-     * Inserting the duplicated key may be unpredictable.
+     * Associates the specified value with the specified key in this map and persists it.
+     * If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw an error from the underlying storage.
      */
     operator fun set(key: K, value: V) =
             set(key, value, logWarning = false) {
-                key,value -> DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                k, v -> DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
                 null
             }
 
     /**
-     * Puts the value into the map and underlying storage.
-     * Duplicated key is not added into the map and underlying storage.
+     * Associates the specified value with the specified key in this map and persists it.
+     * If the map previously contained a mapping for the key, the old value is not replaced.
      * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
             set(key, value) {
-                key, value ->
-                val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+                k, v ->
+                val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(k))
                 if (existingEntry == null) {
-                    DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+                    DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
                     null
                 } else {
                     fromPersistentEntity(existingEntry).second
                 }
             }
 
+    fun putAll(entries: Map<K,V>) {
+        entries.forEach {
+            set(it.key, it.value)
+        }
+    }
+
     private fun loadValue(key: K): V? {
         val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
 
+    operator fun contains(key: K) = get(key) != null
+
+    /**
+     * Removes all of the mappings from this map and underlying storage. The map will be empty after this call returns.
+     * WARNING!! The method is not thread safe.
+     */
+    fun clear() {
+        val session = DatabaseTransactionManager.current().session
+        val deleteQuery = session.criteriaBuilder.createCriteriaDelete(persistentEntityClass)
+        deleteQuery.from(persistentEntityClass)
+        session.createQuery(deleteQuery).executeUpdate()
+        cache.invalidateAll()
+    }
 }

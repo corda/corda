@@ -31,7 +31,6 @@ processTestResources {
 
 dependencies {
     compile project(':core')
-    compile project(':finance')
     compile project(':client:rpc')
     compile project(':client:jackson')
 
@@ -63,7 +62,7 @@ dependencies {
 }
 
 task integrationTest(type: Test) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 

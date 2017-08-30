@@ -25,11 +25,11 @@ Open a terminal window in the directory where you want to download the CorDapp t
 .. code-block:: text
 
     # Clone the template from GitHub:
-    git clone https://github.com/corda/cordapp-template-java.git ; cd cordapp-template
+    git clone https://github.com/corda/cordapp-template-java.git ; cd cordapp-template-java
 
     *or*
 
-    git clone https://github.com/corda/cordapp-template-kotlin.git ; cd cordapp-template
+    git clone https://github.com/corda/cordapp-template-kotlin.git ; cd cordapp-template-kotlin
 
     # Retrieve a list of the stable Milestone branches using:
     git branch -a --list *release-M*
@@ -39,35 +39,26 @@ Open a terminal window in the directory where you want to download the CorDapp t
 
 Template structure
 ------------------
-We can write our CorDapp in either Java or Kotlin, and will be providing the code in both languages throughout. If
-you want to write the CorDapp in Java, you'll be modifying the files under ``java-source``. If you prefer to use
-Kotlin, you'll be modifying the files under ``kotlin-source``.
-
-To implement our IOU CorDapp, we'll only need to modify three files:
+We can write our CorDapp in either Java or Kotlin, and will be providing the code in both languages throughout. To
+implement our IOU CorDapp in Java, we'll need to modify three files. For Kotlin, we'll simply be modifying the
+``App.kt`` file:
 
 .. container:: codeset
 
     .. code-block:: java
 
         // 1. The state
-        java-source/src/main/java/com/template/state/TemplateState.java
+        src/main/java/com/template/state/TemplateState.java
 
         // 2. The contract
-        java-source/src/main/java/com/template/contract/TemplateContract.java
+        src/main/java/com/template/contract/TemplateContract.java
 
         // 3. The flow
-        java-source/src/main/java/com/template/flow/TemplateFlow.java
+        src/main/java/com/template/flow/TemplateFlow.java
 
     .. code-block:: kotlin
 
-        // 1. The state
-        kotlin-source/src/main/kotlin/com/template/state/TemplateState.kt
-
-        // 2. The contract
-        kotlin-source/src/main/kotlin/com/template/contract/TemplateContract.kt
-
-        // 3. The flow
-        kotlin-source/src/main/kotlin/com/template/flow/TemplateFlow.kt
+        src/main/kotlin/com/template/App.kt
 
 Progress so far
 ---------------

@@ -15,6 +15,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -168,7 +169,7 @@ fun issueState(node: AbstractNode, notaryNode: AbstractNode): StateAndRef<*> {
 fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: AbstractNode): StateAndRef<DummyContract.MultiOwnerState> {
     val state = TransactionState(DummyContract.MultiOwnerState(0,
             listOf(nodeA.info.legalIdentity, nodeB.info.legalIdentity)), notaryNode.info.notaryIdentity)
-    val tx = TransactionBuilder(notary = notaryNode.info.notaryIdentity).withItems(state)
+    val tx = TransactionBuilder(notary = notaryNode.info.notaryIdentity).withItems(state, dummyCommand())
     val signedByA = nodeA.services.signInitialTransaction(tx)
     val signedByAB = nodeB.services.addSignature(signedByA)
     val stx = notaryNode.services.addSignature(signedByAB, notaryNode.services.notaryIdentityKey)

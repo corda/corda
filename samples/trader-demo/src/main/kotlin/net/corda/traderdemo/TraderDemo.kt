@@ -2,12 +2,11 @@ package net.corda.traderdemo
 
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.contracts.DOLLARS
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.finance.DOLLARS
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
 import org.slf4j.Logger
 import kotlin.system.exitProcess
 
@@ -28,8 +27,6 @@ private class TraderDemo {
         val logger: Logger = loggerFor<TraderDemo>()
         val buyerName = DUMMY_BANK_A.name
         val sellerName = DUMMY_BANK_B.name
-        val notaryName = DUMMY_NOTARY.name
-        val buyerRpcPort = 10006
         val sellerRpcPort = 10009
         val bankRpcPort = 10012
     }
@@ -52,7 +49,7 @@ private class TraderDemo {
         if (role == Role.BANK) {
             val bankHost = NetworkHostAndPort("localhost", bankRpcPort)
             CordaRPCClient(bankHost).use("demo", "demo") {
-                TraderDemoClientApi(it.proxy).runIssuer(1100.DOLLARS, buyerName, sellerName, notaryName)
+                TraderDemoClientApi(it.proxy).runIssuer(1100.DOLLARS, buyerName, sellerName)
             }
         } else {
             val sellerHost = NetworkHostAndPort("localhost", sellerRpcPort)
