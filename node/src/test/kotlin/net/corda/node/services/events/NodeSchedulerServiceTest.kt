@@ -1,5 +1,6 @@
 package net.corda.node.services.events
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
@@ -133,6 +134,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     }
 
     class TestFlowLogic(val increment: Int = 1) : FlowLogic<Unit>() {
+        @Suspendable
         override fun call() {
             (serviceHub as TestReference).testReference.calls += increment
             (serviceHub as TestReference).testReference.countDown.countDown()

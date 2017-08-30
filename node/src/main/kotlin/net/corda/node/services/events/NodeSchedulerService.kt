@@ -235,14 +235,20 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
         serverThread.execute {
-            services.database.transaction {
-                val scheduledFlow = getScheduledFlow(scheduledState)
-                if (scheduledFlow != null) {
-                    val future = services.startFlow(scheduledFlow, FlowInitiator.Scheduled(scheduledState)).resultFuture
-                    future.then {
-                        unfinishedSchedules.countDown()
+            var flowName: String? = "(unknown)"
+            try {
+                services.database.transaction {
+                    val scheduledFlow = getScheduledFlow(scheduledState)
+                    if (scheduledFlow != null) {
+                        flowName = scheduledFlow.javaClass.name
+                        val future = services.startFlow(scheduledFlow, FlowInitiator.Scheduled(scheduledState)).resultFuture
+                        future.then {
+                            unfinishedSchedules.countDown()
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                log.error("Failed to start scheduled flow $flowName for $scheduledState due to an internal error", e)
             }
         }
     }

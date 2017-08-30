@@ -912,6 +912,7 @@ class FlowFrameworkTests {
         override val progressTracker: ProgressTracker = ProgressTracker(START_STEP)
         lateinit var exceptionThrown: E
 
+        @Suspendable
         override fun call(): Nothing {
             progressTracker.currentStep = START_STEP
             exceptionThrown = exception()

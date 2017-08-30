@@ -23,6 +23,7 @@ object UpdateBusinessDayFlow {
 
     @InitiatedBy(Broadcast::class)
     private class UpdateBusinessDayHandler(val otherParty: Party) : FlowLogic<Unit>() {
+        @Suspendable
         override fun call() {
             val message = receive<UpdateBusinessDayMessage>(otherParty).unwrap { it }
             (serviceHub.clock as TestClock).updateDate(message.date)
