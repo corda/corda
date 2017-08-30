@@ -142,7 +142,7 @@ class RollOutTests {
     @Test
     fun issue() {
         transaction {
-            output { stateStart }
+            output(UNIVERSAL_PROGRAM_ID) { stateStart }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -159,9 +159,9 @@ class RollOutTests {
     @Test
     fun `execute`() {
         transaction {
-            input { stateStart }
-            output { stateStep1a }
-            output { stateStep1b }
+            input(UNIVERSAL_PROGRAM_ID) { stateStart }
+            output(UNIVERSAL_PROGRAM_ID) { stateStep1a }
+            output(UNIVERSAL_PROGRAM_ID) { stateStep1b }
             timeWindow(TEST_TX_TIME_1)
 
             /*   tweak {

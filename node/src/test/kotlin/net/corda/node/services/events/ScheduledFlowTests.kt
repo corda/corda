@@ -21,6 +21,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
@@ -46,8 +47,7 @@ class ScheduledFlowTests {
                               val source: Party,
                               val destination: Party,
                               val processed: Boolean = false,
-                              override val linearId: UniqueIdentifier = UniqueIdentifier(),
-                              override val contract: Contract = DummyContract()) : SchedulableState, LinearState {
+                              override val linearId: UniqueIdentifier = UniqueIdentifier()) : SchedulableState, LinearState {
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             if (!processed) {
                 val logicRef = flowLogicRefFactory.create(ScheduledFlow::class.java, thisStateRef)
@@ -68,7 +68,7 @@ class ScheduledFlowTests {
 
             val notary = serviceHub.networkMapCache.getAnyNotary()
             val builder = TransactionBuilder(notary)
-                    .addOutputState(scheduledState)
+                    .addOutputState(scheduledState, DUMMY_PROGRAM_ID)
                     .addCommand(dummyCommand(serviceHub.legalIdentityKey))
             val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, setOf(serviceHub.myInfo.legalIdentity)))
@@ -90,7 +90,7 @@ class ScheduledFlowTests {
             val newStateOutput = scheduledState.copy(processed = true)
             val builder = TransactionBuilder(notary)
                     .addInputState(state)
-                    .addOutputState(newStateOutput)
+                    .addOutputState(newStateOutput, DUMMY_PROGRAM_ID)
                     .addCommand(dummyCommand(serviceHub.legalIdentityKey))
             val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, setOf(scheduledState.source, scheduledState.destination)))

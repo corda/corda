@@ -14,6 +14,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
 import net.corda.finance.`issued by`
+import net.corda.finance.contracts.asset.CASH_PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl
@@ -234,13 +235,14 @@ class ContractUpgradeFlowTest {
         assertEquals<Collection<AbstractParty>>(listOf(anonymisedRecipient), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
     }
 
+    val CASHV2_PROGRAM_ID = "net.corda.core.flows.ContractUpgradeFlowTest.CashV2"
+
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
-        override val legacyContract = Cash::class.java
+        override val legacyContract = CASH_PROGRAM_ID
 
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
             override val owner: AbstractParty = owners.first()
             override val exitKeys = (owners + amount.token.issuer.party).map { it.owningKey }.toSet()
-            override val contract = CashV2()
             override val participants = owners
 
             override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))

@@ -32,7 +32,7 @@ object IRSTradeFlow {
                     } else {
                         Pair(otherParty, myIdentity)
                     }
-            val offer = IRSState(swap, buyer, seller, OGTrade())
+            val offer = IRSState(swap, buyer, seller)
 
             logger.info("Handshake finished, sending IRS trade offer message")
             val otherPartyAgreeFlag = sendAndReceive<Boolean>(otherParty, OfferMessage(notary, offer)).unwrap { it }

@@ -41,7 +41,7 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
     val transactions: List<SignedTransaction> = dealIds.map {
         // Issue a deal state
         val dummyIssue = TransactionBuilder(notary = notary).apply {
-            addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)))
+            addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)), DUMMY_DEAL_PROGRAM_ID)
             addCommand(dummyCommand())
         }
         val stx = signInitialTransaction(dummyIssue)
@@ -80,7 +80,7 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
                     linearString = linearString,
                     linearNumber = linearNumber,
                     linearBoolean = linearBoolean,
-                    linearTimestamp = linearTimestamp))
+                    linearTimestamp = linearTimestamp), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
             addCommand(dummyCommand())
         }
 
@@ -221,7 +221,7 @@ fun <T : LinearState> ServiceHub.consumeAndProduce(stateAndRef: StateAndRef<T>, 
     // Create a txn consuming different contract types
     builder = TransactionBuilder(notary = notary).apply {
         addOutputState(DummyLinearContract.State(linearId = stateAndRef.state.data.linearId,
-                participants = stateAndRef.state.data.participants))
+                participants = stateAndRef.state.data.participants), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
         addCommand(dummyCommand(notary.owningKey))
     }
     val producedTx = signInitialTransaction(builder, notary.owningKey)

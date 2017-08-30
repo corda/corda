@@ -163,7 +163,7 @@ class CordaClassResolverTests {
         val storage = MockAttachmentStorage()
         val attachmentHash = importJar(storage)
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
-        val attachedClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, classLoader)
+        val attachedClass = Class.forName("net.corda.finance.contracts.isolated.AnotherDummyContract", true, classLoader)
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 

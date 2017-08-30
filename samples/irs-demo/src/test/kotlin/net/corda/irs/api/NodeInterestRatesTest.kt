@@ -3,7 +3,6 @@ package net.corda.irs.api
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
-import net.corda.core.contracts.`with notary`
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
@@ -15,10 +14,7 @@ import net.corda.core.utilities.getX500Name
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
-import net.corda.finance.contracts.asset.CASH
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.`issued by`
-import net.corda.finance.contracts.asset.`owned by`
+import net.corda.finance.contracts.asset.*
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -246,7 +242,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     }
 
     private fun makePartialTX() = TransactionBuilder(DUMMY_NOTARY).withItems(
-        1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE `with notary` DUMMY_NOTARY)
+        TransactionState(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE, CASH_PROGRAM_ID, DUMMY_NOTARY))
 
     private fun makeFullTx() = makePartialTX().withItems(dummyCommand())
 }
