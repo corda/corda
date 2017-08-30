@@ -11,8 +11,10 @@ import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.*
-import net.corda.core.flows.AbstractStateReplacementFlow.Proposal
+import net.corda.core.node.flows.AbstractStateReplacementFlow.Proposal
 import net.corda.core.identity.Party
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.node.flows.StateReplacementException
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria

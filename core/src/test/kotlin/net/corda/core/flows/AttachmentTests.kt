@@ -5,8 +5,8 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchAttachmentsFlow
-import net.corda.core.internal.FetchDataFlow
+import net.corda.core.node.flows.FetchAttachmentsFlow
+import net.corda.core.node.flows.FetchDataFlow
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow

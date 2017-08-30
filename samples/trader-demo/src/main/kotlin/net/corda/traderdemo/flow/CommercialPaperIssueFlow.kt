@@ -3,7 +3,7 @@ package net.corda.traderdemo.flow
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FinalityFlow
+import net.corda.core.node.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party

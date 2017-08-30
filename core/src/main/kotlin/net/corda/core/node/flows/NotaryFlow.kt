@@ -1,4 +1,4 @@
-package net.corda.core.flows
+package net.corda.core.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
@@ -7,16 +7,16 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.keys
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchDataFlow
-import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
-import java.security.SignatureException
 import java.util.function.Predicate
 
 object NotaryFlow {
@@ -33,7 +33,7 @@ object NotaryFlow {
     @InitiatingFlow
     open class Client(private val stx: SignedTransaction,
                       override val progressTracker: ProgressTracker) : FlowLogic<List<TransactionSignature>>() {
-        constructor(stx: SignedTransaction) : this(stx, tracker())
+        constructor(stx: SignedTransaction) : this(stx, NotaryFlow.Client.Companion.tracker())
 
         companion object {
             object REQUESTING : ProgressTracker.Step("Requesting signature by Notary service")
@@ -47,7 +47,7 @@ object NotaryFlow {
         @Suspendable
         @Throws(NotaryException::class)
         override fun call(): List<TransactionSignature> {
-            progressTracker.currentStep = REQUESTING
+            progressTracker.currentStep = NotaryFlow.Client.Companion.REQUESTING
 
             notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
             check(stx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) {
@@ -60,7 +60,7 @@ object NotaryFlow {
                 } else {
                     stx.verifySignaturesExcept(notaryParty.owningKey)
                 }
-            } catch (ex: SignatureException) {
+            } catch (ex: java.security.SignatureException) {
                 throw NotaryException(NotaryError.TransactionInvalid(ex))
             }
 

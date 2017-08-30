@@ -1,14 +1,15 @@
-package net.corda.core.flows
+package net.corda.core.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.toBase58String
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
@@ -63,8 +64,8 @@ import java.security.PublicKey
 // TODO: AbstractStateReplacementFlow needs updating to use this flow.
 class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: SignedTransaction,
                                                        val myOptionalKeys: Iterable<PublicKey>?,
-                                                       override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
-    @JvmOverloads constructor(partiallySignedTx: SignedTransaction, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, null, progressTracker)
+                                                       override val progressTracker: ProgressTracker = CollectSignaturesFlow.Companion.tracker()) : FlowLogic<SignedTransaction>() {
+    @JvmOverloads constructor(partiallySignedTx: SignedTransaction, progressTracker: ProgressTracker = CollectSignaturesFlow.Companion.tracker()) : this(partiallySignedTx, null, progressTracker)
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counter-parties.")
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")
@@ -91,7 +92,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         partiallySignedTx.tx.toLedgerTransaction(serviceHub).verify()
 
         // Determine who still needs to sign.
-        progressTracker.currentStep = COLLECTING
+        progressTracker.currentStep = CollectSignaturesFlow.Companion.COLLECTING
         val notaryKey = partiallySignedTx.tx.notary?.owningKey
         // If present, we need to exclude the notary's PublicKey as the notary signature is collected separately with
         // the FinalityFlow.
@@ -105,7 +106,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         val stx = partiallySignedTx + counterpartySignatures
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
-        progressTracker.currentStep = VERIFYING
+        progressTracker.currentStep = CollectSignaturesFlow.Companion.VERIFYING
         if (notaryKey != null) stx.verifySignaturesExcept(notaryKey) else stx.verifyRequiredSignatures()
 
         return stx
@@ -185,7 +186,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
  * @param otherParty The counter-party which is providing you a transaction to sign.
  */
 abstract class SignTransactionFlow(val otherParty: Party,
-                                   override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()) : FlowLogic<SignedTransaction>() {
+                                   override val progressTracker: ProgressTracker = SignTransactionFlow.Companion.tracker()) : FlowLogic<SignedTransaction>() {
 
     companion object {
         object RECEIVING : ProgressTracker.Step("Receiving transaction proposal for signing.")
@@ -196,7 +197,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
     }
 
     @Suspendable override fun call(): SignedTransaction {
-        progressTracker.currentStep = RECEIVING
+        progressTracker.currentStep = SignTransactionFlow.Companion.RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
         val stx = subFlow(ReceiveTransactionFlow(otherParty, checkSufficientSignatures = false))
         // Receive the signing key that the party requesting the signature expects us to sign with. Having this provided
@@ -206,7 +207,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
             // TODO: We should have a faster way of verifying we own a single key
             serviceHub.keyManagementService.filterMyKeys(listOf(it)).single()
         }
-        progressTracker.currentStep = VERIFYING
+        progressTracker.currentStep = SignTransactionFlow.Companion.VERIFYING
         // Check that the Responder actually needs to sign.
         checkMySignatureRequired(stx, signingKey)
         // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
@@ -222,7 +223,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
                 throw e
         }
         // Sign and send back our signature to the Initiator.
-        progressTracker.currentStep = SIGNING
+        progressTracker.currentStep = SignTransactionFlow.Companion.SIGNING
         val mySignature = serviceHub.createSignature(stx, signingKey)
         send(otherParty, mySignature)
 

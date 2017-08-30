@@ -7,6 +7,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.TestDataVendingFlow
 import net.corda.core.identity.Party
+import net.corda.core.node.flows.ResolveTransactionsFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence

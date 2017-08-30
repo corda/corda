@@ -1,4 +1,4 @@
-package net.corda.core.internal
+package net.corda.core.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash

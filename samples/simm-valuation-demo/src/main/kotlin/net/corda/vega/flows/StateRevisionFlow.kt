@@ -2,8 +2,8 @@ package net.corda.vega.flows
 
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.flows.AbstractStateReplacementFlow
-import net.corda.core.flows.StateReplacementException
+import net.corda.core.node.flows.AbstractStateReplacementFlow
+import net.corda.core.node.flows.StateReplacementException
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.seconds

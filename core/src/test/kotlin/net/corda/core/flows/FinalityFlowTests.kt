@@ -3,6 +3,7 @@ package net.corda.core.flows
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.identity.Party
+import net.corda.core.node.flows.FinalityFlow
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.GBP

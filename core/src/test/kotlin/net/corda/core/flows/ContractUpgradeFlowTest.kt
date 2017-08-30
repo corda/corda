@@ -7,6 +7,8 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.flows.ContractUpgradeFlow
+import net.corda.core.node.flows.FinalityFlow
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction

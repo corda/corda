@@ -1,7 +1,7 @@
 package net.corda.testing.contracts
 
 import net.corda.core.contracts.*
-import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.node.flows.ContractUpgradeFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder

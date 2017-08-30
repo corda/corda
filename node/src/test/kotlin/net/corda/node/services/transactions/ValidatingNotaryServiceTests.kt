@@ -5,9 +5,9 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
-import net.corda.core.flows.NotaryFlow
+import net.corda.core.node.flows.NotaryError
+import net.corda.core.node.flows.NotaryException
+import net.corda.core.node.flows.NotaryFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow

@@ -8,7 +8,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchDataFlow
+import net.corda.core.node.flows.FetchDataFlow
+import net.corda.core.node.flows.*
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
@@ -389,7 +390,7 @@ object FlowCookbook {
             subFlow(SendTransactionFlow(counterparty, twiceSignedTx))
 
             // Optional request verification to further restrict data access.
-            subFlow(object :SendTransactionFlow(counterparty, twiceSignedTx){
+            subFlow(object : SendTransactionFlow(counterparty, twiceSignedTx){
                 override fun verifyDataRequest(dataRequest: FetchDataFlow.Request.Data) {
                     // Extra request verification.
                 }

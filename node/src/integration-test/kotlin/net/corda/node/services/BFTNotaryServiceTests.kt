@@ -4,11 +4,11 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
-import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.div
+import net.corda.core.node.flows.NotaryError
+import net.corda.core.node.flows.NotaryException
+import net.corda.core.node.flows.NotaryFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder

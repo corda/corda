@@ -1,9 +1,10 @@
-package net.corda.core.flows
+package net.corda.core.node.flows
 
 import net.corda.core.contracts.*
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 
 /**
  * A flow to be used for upgrading state objects of an old contract to a new contract.
@@ -24,7 +25,7 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
         @JvmStatic
         fun verify(tx: LedgerTransaction) {
             // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
-            verify(
+            ContractUpgradeFlow.Companion.verify(
                     tx.inputStates.single(),
                     tx.outputStates.single(),
                     tx.commandsOfType<UpgradeCommand>().single())
@@ -33,8 +34,8 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
         @JvmStatic
         fun verify(input: ContractState, output: ContractState, commandData: Command<UpgradeCommand>) {
             val command = commandData.value
-            val participantKeys: Set<PublicKey> = input.participants.map { it.owningKey }.toSet()
-            val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
+            val participantKeys: Set<java.security.PublicKey> = input.participants.map { it.owningKey }.toSet()
+            val keysThatSigned: Set<java.security.PublicKey> = commandData.signers.toSet()
             @Suppress("UNCHECKED_CAST")
             val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
             requireThat {
@@ -62,7 +63,7 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
     }
 
     override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
-        val baseTx = assembleBareTx(originalState, modification, PrivacySalt())
+        val baseTx = ContractUpgradeFlow.Companion.assembleBareTx(originalState, modification, PrivacySalt())
         val participantKeys = originalState.state.data.participants.map { it.owningKey }.toSet()
         // TODO: We need a much faster way of finding our key in the transaction
         val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()

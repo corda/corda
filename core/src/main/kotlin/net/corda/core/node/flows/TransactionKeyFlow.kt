@@ -1,9 +1,8 @@
-package net.corda.core.flows
+package net.corda.core.node.flows
 
-import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -12,12 +11,12 @@ import net.corda.core.utilities.unwrap
  * Very basic flow which exchanges transaction key and certificate paths between two parties in a transaction.
  * This is intended for use as a subflow of another flow.
  */
-@StartableByRPC
-@InitiatingFlow
+@net.corda.core.flows.StartableByRPC
+@net.corda.core.flows.InitiatingFlow
 class TransactionKeyFlow(val otherSide: Party,
                          val revocationEnabled: Boolean,
-                         override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
-    constructor(otherSide: Party) : this(otherSide, false, tracker())
+                         override val progressTracker: ProgressTracker) : net.corda.core.flows.FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
+    constructor(otherSide: Party) : this(otherSide, false, TransactionKeyFlow.Companion.tracker())
 
     companion object {
         object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
@@ -32,9 +31,9 @@ class TransactionKeyFlow(val otherSide: Party,
         }
     }
 
-    @Suspendable
+    @co.paralleluniverse.fibers.Suspendable
     override fun call(): LinkedHashMap<Party, AnonymousParty> {
-        progressTracker.currentStep = AWAITING_KEY
+        progressTracker.currentStep = TransactionKeyFlow.Companion.AWAITING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
 
         // Special case that if we're both parties, a single identity is generated
@@ -43,7 +42,7 @@ class TransactionKeyFlow(val otherSide: Party,
             identities.put(otherSide, legalIdentityAnonymous.party.anonymise())
         } else {
             val anonymousOtherSide = sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->
-                validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
+                TransactionKeyFlow.Companion.validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
             }
             identities.put(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous.party.anonymise())
             identities.put(otherSide, anonymousOtherSide.party.anonymise())

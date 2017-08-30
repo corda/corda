@@ -7,8 +7,8 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.TestDataVendingFlow
 import net.corda.core.identity.Party
-import net.corda.core.internal.FetchAttachmentsFlow
-import net.corda.core.internal.FetchDataFlow
+import net.corda.core.node.flows.FetchAttachmentsFlow
+import net.corda.core.node.flows.FetchDataFlow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
