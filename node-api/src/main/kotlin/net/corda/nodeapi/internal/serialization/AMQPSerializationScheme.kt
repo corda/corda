@@ -11,7 +11,7 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import java.util.concurrent.ConcurrentHashMap
 
-internal val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == AmqpHeaderV1_0
+val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == AmqpHeaderV1_0
 
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     internal companion object {
