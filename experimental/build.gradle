@@ -29,6 +29,8 @@ dependencies {
     // ObjectWeb Asm: a library for synthesising and working with JVM bytecode.
     compile "org.ow2.asm:asm:5.0.4"
 
+    compile "com.google.guava:guava:$guava_version"
+
     testCompile "junit:junit:$junit_version"
     testCompile project(':test-utils')
 }
