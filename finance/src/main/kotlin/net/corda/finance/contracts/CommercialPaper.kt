@@ -2,7 +2,7 @@ package net.corda.finance.contracts
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.crypto.testing.NULL_PARTY
+import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party

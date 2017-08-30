@@ -3,7 +3,7 @@ package net.corda.finance.contracts;
 import co.paralleluniverse.fibers.Suspendable;
 import kotlin.Unit;
 import net.corda.core.contracts.*;
-import net.corda.core.crypto.testing.NullPublicKey;
+import net.corda.core.crypto.NullKeys.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
