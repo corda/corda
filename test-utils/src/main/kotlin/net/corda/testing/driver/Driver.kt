@@ -801,12 +801,10 @@ class DriverDSL(
                         "net.corda.node.cordapp.scan.package" to callerPackage,
                         "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
                 )
-                // TODO Add this once we upgrade to quasar 0.7.8, this causes startup time to halve.
-                // val excludePattern = x(rx**;io**;kotlin**;jdk**;reflectasm**;groovyjarjarasm**;groovy**;joptsimple**;groovyjarjarantlr**;javassist**;com.fasterxml**;com.typesafe**;com.google**;com.zaxxer**;com.jcabi**;com.codahale**;com.esotericsoftware**;de.javakaffee**;org.objectweb**;org.slf4j**;org.w3c**;org.codehaus**;org.h2**;org.crsh**;org.fusesource**;org.hibernate**;org.dom4j**;org.bouncycastle**;org.apache**;org.objenesis**;org.jboss**;org.xml**;org.jcp**;org.jetbrains**;org.yaml**;co.paralleluniverse**;net.i2p**)"
-                // val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
-                //        "-javaagent:$quasarJarPath=$excludePattern"
+                // See experimental/quasar-hook/README.md for how to generate.
+                val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
                 val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
-                        "-javaagent:$quasarJarPath"
+                        "-javaagent:$quasarJarPath=$excludePattern"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
                 ProcessUtilities.startCordaProcess(
