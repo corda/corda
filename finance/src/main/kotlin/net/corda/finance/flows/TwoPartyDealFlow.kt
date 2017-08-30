@@ -4,7 +4,11 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.*
+import net.corda.core.flows.CollectSignaturesFlow
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.SignTransactionFlow
+import net.corda.core.flows.TransactionKeyFlow
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party

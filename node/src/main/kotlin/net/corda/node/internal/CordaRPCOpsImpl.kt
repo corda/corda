@@ -6,8 +6,8 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.annotation.StartableByRPC
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.*
@@ -18,10 +18,10 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence

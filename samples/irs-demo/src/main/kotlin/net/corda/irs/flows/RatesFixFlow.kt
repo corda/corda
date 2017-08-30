@@ -3,8 +3,8 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.annotation.InitiatingFlow
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.FilteredTransaction

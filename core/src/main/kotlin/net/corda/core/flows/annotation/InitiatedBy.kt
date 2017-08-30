@@ -1,5 +1,6 @@
-package net.corda.core.flows
+package net.corda.core.flows.annotation
 
+import net.corda.core.flows.type.FlowLogic
 import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 

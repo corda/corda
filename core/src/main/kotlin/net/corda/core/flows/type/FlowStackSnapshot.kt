@@ -1,4 +1,4 @@
-package net.corda.core.flows
+package net.corda.core.flows.type
 
 import java.time.Instant
 

@@ -1,4 +1,4 @@
-package net.corda.core.flows
+package net.corda.core.flows.type
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
@@ -6,6 +6,10 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.ReceiveTransactionFlow
+import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction

@@ -5,9 +5,9 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.annotation.InitiatedBy
+import net.corda.core.flows.annotation.InitiatingFlow
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy

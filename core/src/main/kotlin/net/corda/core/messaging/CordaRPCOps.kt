@@ -6,8 +6,8 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.FlowLogic
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo

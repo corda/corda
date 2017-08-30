@@ -1,8 +1,8 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStackSnapshot
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.FlowLogic
+import net.corda.core.flows.type.FlowStackSnapshot
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.utilities.loggerFor
 import java.nio.file.Path
 import java.util.*

@@ -4,8 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.annotation.StartableByRPC
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder

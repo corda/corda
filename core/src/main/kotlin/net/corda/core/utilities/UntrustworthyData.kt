@@ -1,7 +1,7 @@
 package net.corda.core.utilities
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowException
+import net.corda.core.flows.type.FlowException
 import java.io.Serializable
 
 /**

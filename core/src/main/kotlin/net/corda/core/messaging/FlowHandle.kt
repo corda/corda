@@ -1,7 +1,7 @@
 package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 

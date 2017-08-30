@@ -3,7 +3,7 @@ package net.corda.finance.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.annotation.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM

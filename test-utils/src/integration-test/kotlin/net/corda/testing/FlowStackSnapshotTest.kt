@@ -2,9 +2,9 @@ package net.corda.testing
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStackSnapshot
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.FlowStackSnapshot
+import net.corda.core.flows.annotation.StartableByRPC
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.read

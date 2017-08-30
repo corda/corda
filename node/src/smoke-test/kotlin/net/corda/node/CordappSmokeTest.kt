@@ -1,14 +1,15 @@
 package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.*
+import net.corda.core.flows.annotation.InitiatingFlow
+import net.corda.core.flows.type.FlowContext
+import net.corda.core.flows.annotation.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess

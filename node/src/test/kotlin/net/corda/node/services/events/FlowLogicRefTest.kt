@@ -1,7 +1,7 @@
 package net.corda.node.services.events
 
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.IllegalFlowLogicException
+import net.corda.core.flows.type.IllegalFlowLogicException
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import org.junit.Test
 import java.time.Duration

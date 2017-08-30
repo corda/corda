@@ -6,11 +6,11 @@ import co.paralleluniverse.fibers.Stack
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.SerializationFeature
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStackSnapshot
-import net.corda.core.flows.FlowStackSnapshot.Frame
-import net.corda.core.flows.StackFrameDataToken
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.FlowLogic
+import net.corda.core.flows.type.FlowStackSnapshot
+import net.corda.core.flows.type.FlowStackSnapshot.Frame
+import net.corda.core.flows.type.StackFrameDataToken
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.div
 import net.corda.core.internal.write

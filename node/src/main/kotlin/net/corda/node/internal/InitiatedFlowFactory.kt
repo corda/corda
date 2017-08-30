@@ -1,6 +1,6 @@
 package net.corda.node.internal
 
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.Party
 
 sealed class InitiatedFlowFactory<out F : FlowLogic<*>> {

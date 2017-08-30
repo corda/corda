@@ -5,9 +5,14 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.UpgradeCommand
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.contracts.requireThat
-import net.corda.core.flows.*
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.flows.ReceiveTransactionFlow
+import net.corda.core.flows.TransactionKeyFlow
+import net.corda.core.flows.type.AbstractStateReplacementFlow
+import net.corda.core.flows.type.FlowLogic
+import net.corda.core.flows.type.StateReplacementException
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap

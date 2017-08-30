@@ -3,15 +3,14 @@ package net.corda.node
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.annotation.InitiatingFlow
+import net.corda.core.flows.annotation.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
-import net.corda.core.utilities.unwrap
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver

@@ -3,9 +3,9 @@ package net.corda.core.serialization
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.TestDataVendingFlow
+import net.corda.core.flows.annotation.InitiatingFlow
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow

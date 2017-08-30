@@ -3,7 +3,7 @@ package net.corda.irs.contract
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import net.corda.core.contracts.*
 import net.corda.core.crypto.containsAny
-import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.type.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType

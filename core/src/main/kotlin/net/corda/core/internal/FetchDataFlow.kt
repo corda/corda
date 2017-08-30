@@ -6,8 +6,8 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.type.FlowException
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound

@@ -2,8 +2,8 @@ package net.corda.node.services.events
 
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRef
-import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.type.FlowLogicRef
+import net.corda.core.flows.type.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService

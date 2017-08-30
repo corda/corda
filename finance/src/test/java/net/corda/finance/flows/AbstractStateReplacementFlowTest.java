@@ -1,6 +1,6 @@
 package net.corda.finance.flows;
 
-import net.corda.core.flows.AbstractStateReplacementFlow;
+import net.corda.core.flows.type.AbstractStateReplacementFlow;
 import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.utilities.ProgressTracker;

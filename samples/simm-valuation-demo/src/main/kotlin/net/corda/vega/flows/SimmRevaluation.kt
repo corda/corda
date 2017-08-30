@@ -2,9 +2,9 @@ package net.corda.vega.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.SchedulableFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.annotation.SchedulableFlow
+import net.corda.core.flows.annotation.StartableByRPC
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.vega.contracts.PortfolioState
