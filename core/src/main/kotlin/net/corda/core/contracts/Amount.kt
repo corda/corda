@@ -234,11 +234,6 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      */
     operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), displayTokenSize, token)
 
-    fun multiply(other: BigDecimal, roundingMode: RoundingMode): Amount<T> {
-        val newQuantity: BigDecimal = BigDecimal.valueOf(quantity).multiply(other).setScale(0, roundingMode)
-        return Amount(newQuantity.toLong(), token)
-    }
-
     /**
      * This method provides a token conserving divide mechanism.
      * @param partitions the number of amounts to divide the current quantity into.

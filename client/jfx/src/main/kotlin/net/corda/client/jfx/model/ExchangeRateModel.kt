@@ -11,8 +11,14 @@ import java.util.*
  * This model provides an exchange rate from arbitrary currency to arbitrary currency.
  */
 abstract class ExchangeRate {
-    fun exchangeAmount(amount: Amount<Currency>, to: Currency, roundingMode: RoundingMode = RoundingMode.HALF_UP) =
-            amount.multiply(rate(amount.token, to), roundingMode)
+    /**
+     * Convert the given amount of a currency into the target currency. Rounding/precision correction of the resulting
+     * quantity of the target currency is the responsibility of the calling code.
+     *
+     * @return the original amount converted to a quantity of the target currency.
+     */
+    fun exchangeAmount(amount: Amount<Currency>, to: Currency) = BigDecimal.valueOf(amount.quantity).multiply(rate(amount.token, to))
+
     abstract fun rate(from: Currency, to: Currency): BigDecimal
 }
 
