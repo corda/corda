@@ -3,7 +3,10 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
-import org.apache.qpid.proton.amqp.*
+import org.apache.qpid.proton.amqp.Binary
+import org.apache.qpid.proton.amqp.DescribedType
+import org.apache.qpid.proton.amqp.UnsignedByte
+import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -120,7 +123,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
                         "is outside of the bounds for the list of size: ${objectHistory.size}")
 
             val objectRetrieved = objectHistory[objectIndex]
-            if (!objectRetrieved::class.java.isSubClassOf(type))
+            if (!objectRetrieved::class.java.isSubClassOf(type.asClass()!!))
                 throw NotSerializableException("Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}'")
             objectRetrieved
         }
@@ -138,7 +141,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
                 else -> obj // this will be the case for primitive types like [boolean] et al.
             }
             // Store the reference in case we need it later on.
-            objectHistory.add(objectRead)
+            if (type.asClass()?.isPrimitive != true) objectHistory.add(objectRead)
             objectRead
         }
 

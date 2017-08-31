@@ -12,17 +12,17 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.testing.BOB_IDENTITY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
-import org.junit.Ignore
 import org.junit.Assert.assertSame
+import org.junit.Ignore
 import org.junit.Test
 import java.io.IOException
 import java.io.NotSerializableException
@@ -793,5 +793,51 @@ class SerializationOutputTests {
 
         val bCopy = serdes(nodeB)
         assertEquals("A", bCopy.children.single().content)
+    }
+
+    data class Bob(val byteArrays: List<ByteArray>)
+
+    @Ignore("Causes DeserializedParameterizedType.make() to fail")
+    @Test
+    fun `test list of byte arrays`() {
+        val a = ByteArray(1)
+        val b = ByteArray(2)
+        val obj = Bob(listOf(a, b, a))
+
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+
+        serdes(obj, factory, factory2)
+    }
+
+    data class Vic(val a: List<String>, val b: List<String>)
+
+    @Test
+    fun `test generics ignored from graph logic`() {
+        val a = listOf("a", "b")
+        val obj = Vic(a, a)
+
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+
+        val objCopy = serdes(obj, factory, factory2)
+        assertSame(objCopy.a, objCopy.b)
+    }
+
+    data class Spike private constructor(val a: String) {
+        constructor() : this("a")
+    }
+
+    @Test
+    fun `test private constructor`() {
+        val obj = Spike()
+
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+
+        serdes(obj, factory, factory2)
     }
 }
