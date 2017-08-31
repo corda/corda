@@ -24,7 +24,7 @@ Subflows
 Although our flow requirements look complex, we can delegate to existing flows to handle many of these tasks. A flow
 that is invoked within the context of a larger flow to handle a repeatable task is called a *subflow*.
 
-In our initiator flow, we can automate steps 5, 6 and 7 using ``FinalityFlow``.
+In our initiator flow, we can automate steps 4 and 5 using ``FinalityFlow``.
 
 All we need to do is write the steps to handle the creation and signing of the proposed transaction.
 
