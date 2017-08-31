@@ -209,6 +209,7 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
             it to BusinessCalendar::class.java.getResourceAsStream("${it}HolidayCalendar.txt").bufferedReader().readText()
         }.toMap()
 
+        @JvmStatic
         fun calculateDaysBetween(startDate: LocalDate,
                                  endDate: LocalDate,
                                  dcbYear: DayCountBasisYear,
@@ -223,9 +224,11 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
         }
 
         /** Parses a date of the form YYYY-MM-DD, like 2016-01-10 for 10th Jan. */
+        @JvmStatic
         fun parseDateFromString(it: String): LocalDate = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
 
         /** Returns a business calendar that combines all the named holiday calendars into one list of holiday dates. */
+        @JvmStatic
         fun getInstance(vararg calname: String) = BusinessCalendar(
                 calname.flatMap { (TEST_CALENDAR_DATA[it] ?: throw UnknownCalendar(it)).split(",") }.
                         toSet().
@@ -234,6 +237,7 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
         )
 
         /** Calculates an event schedule that moves events around to ensure they fall on working days. */
+        @JvmStatic
         fun createGenericSchedule(startDate: LocalDate,
                                   period: Frequency,
                                   calendar: BusinessCalendar = getInstance(),
@@ -257,9 +261,11 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
             return ret
         }
 
-        /** Calculates the date from @startDate moving forward @steps of time size @period. Does not apply calendar
+        /**
+         * Calculates the date from @startDate moving forward 'steps' of time size 'period'. Does not apply calendar
          * logic / roll conventions.
          */
+        @JvmStatic
         fun getOffsetDate(startDate: LocalDate, period: Frequency, steps: Int = 1): LocalDate {
             if (steps == 0) return startDate
             return period.offset(startDate, steps.toLong())
