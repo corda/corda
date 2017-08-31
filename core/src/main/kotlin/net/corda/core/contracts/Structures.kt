@@ -9,18 +9,11 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.MissingAttachmentsException
-import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
-import java.io.FileNotFoundException
-import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
 import java.security.PublicKey
 import java.time.Instant
-import java.util.jar.JarInputStream
 
 /** Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments). */
 interface NamedByHash {
