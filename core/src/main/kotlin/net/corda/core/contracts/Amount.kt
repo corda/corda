@@ -5,6 +5,8 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.exactAdd
 import java.math.BigDecimal
+import java.math.BigInteger
+import java.math.MathContext
 import java.math.RoundingMode
 import java.util.*
 
@@ -231,6 +233,11 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      * N.B. Division is not supported as fractional tokens are not representable by an Amount.
      */
     operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), displayTokenSize, token)
+
+    fun multiply(other: BigDecimal, roundingMode: RoundingMode): Amount<T> {
+        val newQuantity: BigDecimal = BigDecimal.valueOf(quantity).multiply(other).setScale(0, roundingMode)
+        return Amount(newQuantity.toLong(), token)
+    }
 
     /**
      * This method provides a token conserving divide mechanism.
