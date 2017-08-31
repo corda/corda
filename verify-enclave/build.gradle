@@ -57,13 +57,13 @@ jar {
 }
 
 task integrationTest(type: Test) {
-    testClassesDir = sourceSets.integrationTest.output.classesDir
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     jvmArgs '-Djava.library.path=../sgx-jvm/jvm-enclave/jni/build'
 }
 
 task generateNativeSgxHeaders(type: Exec) {
-    def classpath = sourceSets.main.output.classesDir
+    def classpath = sourceSets.main.output.classesDirs.asPath
     commandLine "javah", "-o", "build/native/include/jni_sgx_api.h", "-cp", classpath, "com.r3.enclaves.txverify.NativeSgxApi"
     dependsOn classes
 }
