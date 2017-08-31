@@ -236,7 +236,7 @@ object BFTSMaRt {
                     log.debug { "Conflict detected – the following inputs have already been committed: ${conflicts.keys.joinToString()}" }
                     val conflict = UniquenessProvider.Conflict(conflicts)
                     val conflictData = conflict.serialize()
-                    val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
+                    val signedConflict = SignedData(conflictData, signRawBytes(conflictData.bytes))
                     throw NotaryException(NotaryError.Conflict(txId, signedConflict))
                 }
             }
@@ -247,12 +247,12 @@ object BFTSMaRt {
                 throw NotaryException(NotaryError.TimeWindowInvalid)
         }
 
-        protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
-            return services.database.transaction { services.keyManagementService.sign(bytes, services.notaryIdentityKey) }
+        protected fun signRawBytes(bytes: ByteArray): DigitalSignature.WithKey {
+            return services.database.transaction { services.keyManagementService.signRawBytes(bytes, services.notaryIdentityKey) }
         }
 
-        protected fun sign(signableData: SignableData): TransactionSignature {
-            return services.database.transaction { services.keyManagementService.sign(signableData, services.notaryIdentityKey) }
+        protected fun signTransaction(secureHash: SecureHash): TransactionSignature {
+            return services.database.transaction { services.keyManagementService.signTransaction(secureHash, services.notaryIdentityKey) }
         }
 
         // TODO:

@@ -635,7 +635,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     protected open fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
-        return PersistentKeyManagementService(identityService, partyKeys)
+        return PersistentKeyManagementService(identityService, info.platformVersion, partyKeys)
     }
 
     open protected fun makeNetworkMapService() {

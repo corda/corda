@@ -11,7 +11,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
@@ -641,10 +640,10 @@ class TwoPartyTradeFlowTests {
         val signed = wtxToSign.map {
             val id = it.id
             val sigs = mutableListOf<TransactionSignature>()
-            sigs.add(node.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(node.services.legalIdentityKey).schemeNumberID)), node.services.legalIdentityKey))
-            sigs.add(notaryNode.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(notaryNode.services.notaryIdentityKey).schemeNumberID)), notaryNode.services.notaryIdentityKey))
+            sigs.add(node.services.keyManagementService.signTransaction(id, node.services.legalIdentityKey))
+            sigs.add(notaryNode.services.keyManagementService.signTransaction(id, notaryNode.services.notaryIdentityKey))
             extraSigningNodes.forEach { currentNode ->
-                sigs.add(currentNode.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(currentNode.info.legalIdentity.owningKey).schemeNumberID)), currentNode.info.legalIdentity.owningKey))
+                sigs.add(currentNode.services.keyManagementService.signTransaction(id, currentNode.info.legalIdentity.owningKey))
             }
             SignedTransaction(it, sigs)
         }

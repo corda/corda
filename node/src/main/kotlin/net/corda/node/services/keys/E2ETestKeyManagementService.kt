@@ -25,7 +25,7 @@ import javax.annotation.concurrent.ThreadSafe
  * etc.
  */
 @ThreadSafe
-class E2ETestKeyManagementService(val identityService: IdentityService,
+class E2ETestKeyManagementService(val identityService: IdentityService, override val platformVersion: Int,
                                   initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
     private class InnerState {
         val keys = HashMap<PublicKey, PrivateKey>()
@@ -69,15 +69,14 @@ class E2ETestKeyManagementService(val identityService: IdentityService,
         return mutex.locked { candidateKeys.filter { it in this.keys } }
     }
 
-    override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+    override fun signRawBytes(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(bytes)
     }
 
-    // TODO: A full KeyManagementService implementation needs to record activity to the Audit Service and to limit
-    //      signing to appropriately authorised contexts and initiating users.
-    override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
+    override fun signTransaction(txId: SecureHash, publicKey: PublicKey): TransactionSignature {
         val keyPair = getSigningKeyPair(publicKey)
+        val signableData = SignableData(txId, SignatureMetadata(platformVersion, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         return keyPair.sign(signableData)
     }
 }

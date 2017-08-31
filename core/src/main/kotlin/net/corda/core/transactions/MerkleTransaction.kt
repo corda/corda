@@ -139,13 +139,13 @@ class FilteredLeaves(
 
 /**
  * Class representing merkleized filtered transaction.
- * @param rootHash Merkle tree root hash.
+ * @param id Merkle tree root hash.
  * @param filteredLeaves Leaves included in a filtered transaction.
  * @param partialMerkleTree Merkle branch needed to verify filteredLeaves.
  */
 @CordaSerializable
 class FilteredTransaction private constructor(
-        val rootHash: SecureHash,
+        val id: SecureHash,
         val filteredLeaves: FilteredLeaves,
         val partialMerkleTree: PartialMerkleTree
 ) {
@@ -167,13 +167,13 @@ class FilteredTransaction private constructor(
     }
 
     /**
-     * Runs verification of Partial Merkle Branch against [rootHash].
+     * Runs verification of partial Merkle branch against [id].
      */
     @Throws(MerkleTreeException::class)
     fun verify(): Boolean {
         val hashes: List<SecureHash> = filteredLeaves.availableComponentHashes
         if (hashes.isEmpty())
             throw MerkleTreeException("Transaction without included leaves.")
-        return partialMerkleTree.verify(rootHash, hashes)
+        return partialMerkleTree.verify(id, hashes)
     }
 }

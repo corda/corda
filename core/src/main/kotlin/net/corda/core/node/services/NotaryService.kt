@@ -65,16 +65,13 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
 
     private fun notaryException(txId: SecureHash, e: UniquenessException): NotaryException {
         val conflictData = e.error.serialize()
-        val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
+        val signedConflict = SignedData(conflictData, signRawBytes(conflictData.bytes))
         return NotaryException(NotaryError.Conflict(txId, signedConflict))
     }
 
-    fun sign(bits: ByteArray): DigitalSignature.WithKey {
-        return services.keyManagementService.sign(bits, services.notaryIdentityKey)
+    fun signRawBytes(bits: ByteArray): DigitalSignature.WithKey {
+        return services.keyManagementService.signRawBytes(bits, services.notaryIdentityKey)
     }
 
-    fun sign(txId: SecureHash): TransactionSignature {
-        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(services.notaryIdentityKey).schemeNumberID))
-        return services.keyManagementService.sign(signableData, services.notaryIdentityKey)
-    }
+    fun signTransaction(txId: SecureHash): TransactionSignature = services.keyManagementService.signTransaction(txId, services.notaryIdentityKey)
 }
