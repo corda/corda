@@ -5,7 +5,7 @@ import java.security.AccessController
 import java.security.PrivilegedAction
 import java.security.Provider
 
-class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "${PROVIDER_NAME} security provider wrapper") {
+class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME security provider wrapper") {
     companion object {
         const val PROVIDER_NAME = "Corda"
     }
