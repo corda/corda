@@ -293,6 +293,10 @@ object InteractiveShell {
                     continue
                 }
                 val flow = ctor.newInstance(*args) as FlowLogic<*>
+                if (flow.progressTracker == null) {
+                    errors.add("You must override the flow's progress tracker to run it from the shell")
+                    continue
+                }
                 return invoke(flow)
             } catch(e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
                 errors.add("${getPrototype()}: missing parameter ${e.paramName}")
