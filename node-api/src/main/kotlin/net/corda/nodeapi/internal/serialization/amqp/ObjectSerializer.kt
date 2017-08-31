@@ -14,7 +14,7 @@ import kotlin.reflect.jvm.javaConstructor
 open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
     open val kotlinConstructor = constructorForDeserialization(clazz)
-    val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
+    val javaConstructor by lazy { kotlinConstructor?.javaConstructor?.apply { isAccessible = true } }
 
     private val logger = loggerFor<ObjectSerializer>()
 

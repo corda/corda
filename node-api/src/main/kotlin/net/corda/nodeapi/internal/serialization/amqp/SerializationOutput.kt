@@ -87,9 +87,7 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
             // Important to do it after serialization such that dependent object will have preceding reference numbers
             // assigned to them first as they will be first read from the stream on receiving end.
             // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content
-            if(type is Class<*> && !type.isPrimitive) {
-                objectHistory.put(obj, objectHistory.size)
-            }
+            if (type.asClass()?.isPrimitive != true) objectHistory.put(obj, objectHistory.size)
         }
         else {
             data.writeReferencedObject(ReferencedObject(retrievedRefCount))
