@@ -129,9 +129,11 @@ class PartialMerkleTree(val root: PartialTree) {
      */
     fun verify(merkleRootHash: SecureHash, hashesToCheck: List<SecureHash>): Boolean {
         val usedHashes = ArrayList<SecureHash>()
-        val verifyRoot = verify(root, usedHashes)
+        val verifyRoot = rootAndUsedHashes(root, usedHashes)
         // It means that we obtained more/fewer hashes than needed or different sets of hashes.
-        if (hashesToCheck.groupBy { it } != usedHashes.groupBy { it })
+        // We exclude the special oneHash from calculations, as it's only required for input state full visibility
+        // in non-validating notaries. For more info, see TODO in FilteredTransaction.buildMerkleTransaction.
+        if (hashesToCheck.groupBy { it } != usedHashes.filter { it != SecureHash.oneHash }.groupBy { it })
             return false
         return (verifyRoot == merkleRootHash)
     }
@@ -140,7 +142,7 @@ class PartialMerkleTree(val root: PartialTree) {
      * Recursive calculation of root of this partial tree.
      * Modifies usedHashes to later check for inclusion with hashes provided.
      */
-    private fun verify(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash {
+    fun rootAndUsedHashes(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash {
         return when (node) {
             is PartialTree.IncludedLeaf -> {
                 usedHashes.add(node.hash)
@@ -148,10 +150,22 @@ class PartialMerkleTree(val root: PartialTree) {
             }
             is PartialTree.Leaf -> node.hash
             is PartialTree.Node -> {
-                val leftHash = verify(node.left, usedHashes)
-                val rightHash = verify(node.right, usedHashes)
+                val leftHash = rootAndUsedHashes(node.left, usedHashes)
+                val rightHash = rootAndUsedHashes(node.right, usedHashes)
                 return leftHash.hashConcat(rightHash)
             }
+        }
+    }
+
+    /**
+     * Recursive method to get the leftmost leaf in the tree. This is currently required to check if the first leaf is
+     * [SecureHash.oneHash] in transactions where there are no input states.
+     */
+    fun leftMostLeaf(node: PartialTree): SecureHash {
+        return when (node) {
+            is PartialTree.IncludedLeaf -> node.hash
+            is PartialTree.Leaf -> node.hash
+            is PartialTree.Node -> leftMostLeaf(node.left)
         }
     }
 }

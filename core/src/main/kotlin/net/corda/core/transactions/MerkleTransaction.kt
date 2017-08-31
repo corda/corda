@@ -142,12 +142,14 @@ class FilteredLeaves(
  * @param rootHash Merkle tree root hash.
  * @param filteredLeaves Leaves included in a filtered transaction.
  * @param partialMerkleTree Merkle branch needed to verify filteredLeaves.
+ * @param partialInputsMerkleTree the sub Merkle branch needed to verify input-states filteredLeaves.
  */
 @CordaSerializable
 class FilteredTransaction private constructor(
         val rootHash: SecureHash,
         val filteredLeaves: FilteredLeaves,
-        val partialMerkleTree: PartialMerkleTree
+        val partialMerkleTree: PartialMerkleTree,
+        val partialInputsMerkleTree: PartialMerkleTree?
 ) {
     companion object {
         /**
@@ -161,8 +163,28 @@ class FilteredTransaction private constructor(
         ): FilteredTransaction {
             val filteredLeaves = filterWithFun(wtx, filtering)
             val merkleTree = wtx.merkleTree
-            val pmt = PartialMerkleTree.build(merkleTree, filteredLeaves.availableComponentHashes)
-            return FilteredTransaction(merkleTree.hash, filteredLeaves, pmt)
+            val inputsMerkleTree = wtx.inputsMerkleTree
+
+            val pmt = if (!filteredLeaves.inputs.isEmpty()) {
+                PartialMerkleTree.build(merkleTree, listOf(inputsMerkleTree!!.hash)
+                        + filteredLeaves.availableComponentHashes.subList(filteredLeaves.inputs.size, filteredLeaves.availableComponentHashes.size))
+            } else if (!wtx.inputs.isEmpty()) {
+                PartialMerkleTree.build(merkleTree, filteredLeaves.availableComponentHashes)
+            } else {
+                // TODO: Consider adding oneHash only when sending to non-validating notaries (but not to Oracles or
+                //      other entities that do not require full input state visibility).
+                //      To achieve the above, we might introduce a new boolean input to this function, to decide
+                //      if oneHash should be included in partial tree build.
+                PartialMerkleTree.build(merkleTree, listOf(SecureHash.oneHash) + filteredLeaves.availableComponentHashes)
+            }
+
+            val inputsPmt = if (!filteredLeaves.inputs.isEmpty()) {
+                PartialMerkleTree.build(inputsMerkleTree!!, filteredLeaves.availableComponentHashes.subList(0, filteredLeaves.inputs.size))
+            } else {
+                null
+            }
+
+            return FilteredTransaction(merkleTree.hash, filteredLeaves, pmt, inputsPmt)
         }
 
         /**
@@ -230,13 +252,40 @@ class FilteredTransaction private constructor(
     }
 
     /**
-     * Runs verification of Partial Merkle Branch against [rootHash].
+     * Runs verification of partial Merkle branch against [rootHash].
      */
     @Throws(MerkleTreeException::class)
-    fun verify(): Boolean {
+    fun verify(): Boolean = verify(allInputsVisible = false)
+
+    /**
+     * This method is invoked by non-validating notaries to run verification of partial Merkle branch against [rootHash]
+     * and on the same time ensure all input states are visible.
+     */
+    @Throws(MerkleTreeException::class)
+    fun verifyAndAllInputsVisible(): Boolean = verify(allInputsVisible = true)
+
+    private fun verify(allInputsVisible: Boolean): Boolean {
         val hashes: List<SecureHash> = filteredLeaves.availableComponentHashes
         if (hashes.isEmpty())
             throw MerkleTreeException("Transaction without included leaves.")
-        return partialMerkleTree.verify(rootHash, hashes)
+
+        return if (!filteredLeaves.inputs.isEmpty()) {
+            val inputsRootHash = if (!allInputsVisible) {
+                    // We use the input-states partial Merkle tree root as inputsRootHash.
+                    partialInputsMerkleTree!!.rootAndUsedHashes(partialInputsMerkleTree.root, ArrayList<SecureHash>())
+                } else {
+                    // We use the inputs list to create the input-states sub Merkle tree root, so as to ensure all of them are visible.
+                    MerkleTree.getMerkleTree(filteredLeaves.availableComponentHashes.subList(0, filteredLeaves.inputs.size)).hash
+                }
+            partialMerkleTree.verify(rootHash, listOf(inputsRootHash) + hashes.subList(filteredLeaves.inputs.size, hashes.size))
+        } else {
+            if (!allInputsVisible) {
+                partialMerkleTree.verify(rootHash, hashes)
+            } else {
+                // If the allInputsVisible flag is true, but we received no input leaves, then we should also check for
+                // the leftmost leaf to be equal to oneHash. See WireTransaction.fullMerkleTree() for more details.
+                partialMerkleTree.verify(rootHash, hashes) && partialMerkleTree.leftMostLeaf(partialMerkleTree.root) == SecureHash.oneHash
+            }
+        }
     }
 }

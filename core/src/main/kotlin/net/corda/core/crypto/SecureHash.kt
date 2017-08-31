@@ -40,6 +40,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
 
         @JvmStatic fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
         val zeroHash = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
+        val oneHash = SecureHash.SHA256(ByteArray(32, { 255.toByte() })) // Required for input state visibility purposes. See WireTransaction.fullMerkleTree().
     }
 
     // In future, maybe SHA3, truncated hashes etc.

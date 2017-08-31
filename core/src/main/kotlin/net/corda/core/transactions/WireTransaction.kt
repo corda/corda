@@ -102,9 +102,37 @@ data class WireTransaction(
     }
 
     /**
-     * Builds whole Merkle tree for a transaction.
+     * Builds whole Merkle tree for a transaction. If input states exist, the first leaf of this tree is
+     * the root hash of [inputsMerkleTree].
      */
-    val merkleTree: MerkleTree by lazy { MerkleTree.getMerkleTree(availableComponentHashes) }
+    val merkleTree: MerkleTree by lazy { fullMerkleTree() }
+
+    /**
+     * Builds the input states sub Merkle tree. This is required so non-validated notaries can see
+     * the number of all inputs in a transaction.
+     */
+    val inputsMerkleTree: MerkleTree? by lazy { inputStatesMerkleTree() }
+
+    private fun fullMerkleTree(): MerkleTree {
+        return if (!inputs.isEmpty()) {
+            // Use the root hash of the inputs sub Merkle Tree as first leaf in the whole Merkle tree.
+            MerkleTree.getMerkleTree(listOf(inputsMerkleTree!!.hash) + availableComponentHashes.subList(inputs.size, availableComponentHashes.size))
+        } else {
+            // If there are no input states, add the oneHash as the leftmost leaf to avoid a certain security issue,
+            // where one can trick the non-validating notary by hiding all input states.
+            // OneHash was used instead of zeroHash to avoid confusion
+            MerkleTree.getMerkleTree(listOf(SecureHash.oneHash) + availableComponentHashes)
+        }
+    }
+
+    // Compute the input states sub Merkle Tree.
+    private fun inputStatesMerkleTree(): MerkleTree? {
+        return if (!inputs.isEmpty()) {
+            MerkleTree.getMerkleTree(availableComponentHashes.subList(0, inputs.size))
+        } else {
+            null
+        }
+    }
 
     /**
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.

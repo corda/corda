@@ -2,6 +2,7 @@ package net.corda.core.crypto
 
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash.Companion.oneHash
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.deserialize
@@ -203,7 +204,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `verify Partial Merkle Tree - too little leaves failure`() {
+    fun `verify Partial Merkle Tree - less leaves failure`() {
         val inclHashes = arrayListOf(hashed[3], hashed[5], hashed[0])
         val pmt = PartialMerkleTree.build(merkleTree, inclHashes)
         inclHashes.remove(hashed[0])
@@ -240,6 +241,14 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         hm1.serialize()
     }
 
+    @Test
+    fun `verify all inputs are visible Partial Merkle Tree`() {
+        val inclHashes = listOf(hashed[3], hashed[5])
+        val pmt = PartialMerkleTree.build(merkleTree, inclHashes)
+        val wrongRoot = hashed[3].hashConcat(hashed[5])
+        assertFalse(pmt.verify(wrongRoot, inclHashes))
+    }
+
     private fun makeSimpleCashWtx(
             notary: Party,
             privacySalt: PrivacySalt = PrivacySalt(),
@@ -255,5 +264,129 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
                 timeWindow = timeWindow,
                 privacySalt = privacySalt
         )
+    }
+
+    @Test
+    fun `filtered transaction all inputs visible`() {
+        val input1 = StateRef(SecureHash.randomSHA256(), 0)
+        val input2 = StateRef(SecureHash.randomSHA256(), 0)
+        val input3 = StateRef(SecureHash.randomSHA256(), 0)
+
+        val wtx = WireTransaction(
+                // add 3 inputs
+                inputs = listOf(input1, input2, input3),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = DUMMY_NOTARY,
+                timeWindow = TimeWindow.fromOnly(TEST_TX_TIME)
+        )
+
+        fun nonValidatingNotaryFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> true
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        fun someInputsFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> elem == input1 || elem == input3 // Not including input2.
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        fun oneInputFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> elem == input1 // Not including input2 and input3.
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        fun noInputsFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        // Example filtering, i.e. for Oracles.
+        fun commandsOnlyFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is Command<*> -> true
+                else -> false
+            }
+        }
+
+        val nonValidatingFilteredTx = wtx.buildFilteredTransaction(Predicate(::nonValidatingNotaryFiltering))
+        val someInputsFilteredTx = wtx.buildFilteredTransaction(Predicate(::someInputsFiltering))
+        val oneInputFilteredTx = wtx.buildFilteredTransaction(Predicate(::oneInputFiltering))
+        val noInputsFilteredTx = wtx.buildFilteredTransaction(Predicate(::noInputsFiltering))
+        val commandsFilteredTx = wtx.buildFilteredTransaction(Predicate(::commandsOnlyFiltering))
+
+        // Partial tree verification should pass if we don't care about input state visibility.
+        assertTrue { nonValidatingFilteredTx.verify() }
+        assertTrue { someInputsFilteredTx.verify() }
+        assertTrue { oneInputFilteredTx.verify() }
+        assertTrue { noInputsFilteredTx.verify() }
+        assertTrue { commandsFilteredTx.verify() }
+
+        // VerifyAndAllInputsVisible tests should only pass if all input states are visible.
+        assertTrue { nonValidatingFilteredTx.verifyAndAllInputsVisible() }
+        assertFalse { someInputsFilteredTx.verifyAndAllInputsVisible() }
+        assertFalse { oneInputFilteredTx.verifyAndAllInputsVisible() }
+        assertFalse { noInputsFilteredTx.verifyAndAllInputsVisible() }
+        assertFalse { commandsFilteredTx.verifyAndAllInputsVisible() }
+
+        // Leftmost leaf is not oneHash, because there are inputs states in the initial WireTransaction.
+        assertNotEquals(nonValidatingFilteredTx.partialMerkleTree.leftMostLeaf(nonValidatingFilteredTx.partialMerkleTree.root), oneHash)
+    }
+
+    @Test
+    fun `filtered transaction where wtx has no inputs`() {
+        val wtx = WireTransaction(
+                inputs = emptyList(),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
+                notary = DUMMY_NOTARY,
+                timeWindow = TimeWindow.fromOnly(TEST_TX_TIME)
+        )
+
+        fun nonValidatingNotaryFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> true
+                is TimeWindow -> true
+                else -> false
+            }
+        }
+
+        // Example filtering, i.e. for Oracles.
+        fun commandsOnlyFiltering(elem: Any): Boolean {
+            return when (elem) {
+                is Command<*> -> true
+                else -> false
+            }
+        }
+
+        val nonValidatingFilteredTx = wtx.buildFilteredTransaction(Predicate(::nonValidatingNotaryFiltering))
+        val commandsFilteredTx = wtx.buildFilteredTransaction(Predicate(::commandsOnlyFiltering))
+
+        // Partial tree verification should pass if we don't care about input state visibility.
+        assertTrue { nonValidatingFilteredTx.verify() }
+        assertTrue { commandsFilteredTx.verify() }
+
+        // verifyAndAllInputsVisible tests should only pass if all input states are visible.
+        assertTrue { nonValidatingFilteredTx.verifyAndAllInputsVisible() }
+        // It's true that in this case where initial WireTransaction has no input states,
+        // anyone receiving a filteredTx (e.g. an Oracle) has knowledge on the fact there are not input states at all.
+        // For more info, see TODO in FilteredTransaction.buildMerkleTransaction.
+        assertTrue { commandsFilteredTx.verifyAndAllInputsVisible() }
+
+        // If there are no input states in the initial WireTransaction (as this in this case), check if the leftmost leaf is oneHash.
+        assertEquals(nonValidatingFilteredTx.partialMerkleTree.leftMostLeaf(nonValidatingFilteredTx.partialMerkleTree.root), oneHash)
     }
 }
