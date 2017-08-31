@@ -190,10 +190,6 @@ enum class Frequency(val annualCompoundCount: Int, val offset: LocalDate.(Long) 
     Daily(365, { plusDays(1 * it) });
 }
 
-
-@Suppress("unused") // This utility may be useful in future. TODO: Review before API stability guarantees in place.
-fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = accordingToCalendar.isWorkingDay(this)
-
 // TODO: Make Calendar data come from an oracle
 
 /**
