@@ -268,6 +268,15 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                 }
             })
         }
+
+        /**
+         * Makes sure that the [MockNode] is correctly registered on the [MockNetwork]
+         * Please note that [MockNetwork.runNetwork] should be invoked to ensure that all the pending registration requests
+         * were duly processed
+         */
+        fun ensureRegistered() {
+            _nodeReadyFuture.getOrThrow()
+        }
     }
 
     /**
