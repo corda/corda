@@ -5,8 +5,8 @@ import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.cert
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.cert
+import net.corda.core.utilities.commonName
 import net.corda.core.internal.exists
 import net.corda.core.internal.toTypedArray
 import net.corda.core.internal.toX509CertHolder

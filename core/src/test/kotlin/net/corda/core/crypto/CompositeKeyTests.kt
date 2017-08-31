@@ -5,6 +5,8 @@ import net.corda.core.internal.declaredField
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.cert
+import net.corda.core.utilities.toBase58String
 import net.corda.node.utilities.*
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.kryoSpecific
@@ -86,7 +88,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
         val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
 
         val encoded = aliceAndBobOrCharlie.toBase58String()
-        val decoded = parsePublicKeyBase58(encoded)
+        val decoded = net.corda.core.utilities.parsePublicKeyBase58(encoded)
 
         assertEquals(decoded, aliceAndBobOrCharlie)
     }

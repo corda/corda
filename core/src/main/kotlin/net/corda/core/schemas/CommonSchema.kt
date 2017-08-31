@@ -4,7 +4,6 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.OwnableState
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import java.util.*
 import javax.persistence.*
