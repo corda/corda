@@ -85,7 +85,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
             when (response) {
                 is BFTSMaRt.ClusterResponse.Error -> throw NotaryException(response.error)
                 is BFTSMaRt.ClusterResponse.Signatures -> {
-                    log.debug("All input states of transaction ${stx.rootHash} have been committed")
+                    log.debug("All input states of transaction ${stx.id} have been committed")
                     return response.txSignatures
                 }
             }
@@ -139,7 +139,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
 
         fun verifyAndCommitTx(ftx: FilteredTransaction, callerIdentity: Party): BFTSMaRt.ReplicaResponse {
             return try {
-                val id = ftx.rootHash
+                val id = ftx.id
                 val inputs = ftx.filteredLeaves.inputs
 
                 validateTimeWindow(ftx.filteredLeaves.timeWindow)

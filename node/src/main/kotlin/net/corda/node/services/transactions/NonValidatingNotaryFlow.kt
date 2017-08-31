@@ -24,7 +24,7 @@ class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryS
             when (it) {
                 is FilteredTransaction -> {
                     it.verify()
-                    TransactionParts(it.rootHash, it.filteredLeaves.inputs, it.filteredLeaves.timeWindow)
+                    TransactionParts(it.id, it.filteredLeaves.inputs, it.filteredLeaves.timeWindow)
                 }
                 is NotaryChangeWireTransaction -> TransactionParts(it.id, it.inputs, null)
                 else -> {
