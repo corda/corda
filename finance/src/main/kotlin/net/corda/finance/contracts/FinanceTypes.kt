@@ -83,7 +83,7 @@ data class Tenor(val name: String) {
         }
         // Move date to the closest business day when it falls on a weekend/holiday
         val adjustedMaturityDate = calendar.applyRollConvention(maturityDate, DateRollConvention.ModifiedFollowing)
-        val daysToMaturity = calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
+        val daysToMaturity = BusinessCalendar.calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
 
         return daysToMaturity
     }
@@ -209,6 +209,19 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
             it to BusinessCalendar::class.java.getResourceAsStream("${it}HolidayCalendar.txt").bufferedReader().readText()
         }.toMap()
 
+        fun calculateDaysBetween(startDate: LocalDate,
+                                 endDate: LocalDate,
+                                 dcbYear: DayCountBasisYear,
+                                 dcbDay: DayCountBasisDay): Int {
+            // Right now we are only considering Actual/360 and 30/360 .. We'll do the rest later.
+            // TODO: The rest.
+            return when {
+                dcbDay == DayCountBasisDay.DActual -> (endDate.toEpochDay() - startDate.toEpochDay()).toInt()
+                dcbDay == DayCountBasisDay.D30 && dcbYear == DayCountBasisYear.Y360 -> ((endDate.year - startDate.year) * 360.0 + (endDate.monthValue - startDate.monthValue) * 30.0 + endDate.dayOfMonth - startDate.dayOfMonth).toInt()
+                else -> TODO("Can't calculate days using convention $dcbDay / $dcbYear")
+            }
+        }
+
         /** Parses a date of the form YYYY-MM-DD, like 2016-01-10 for 10th Jan. */
         fun parseDateFromString(it: String): LocalDate = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
 
@@ -309,19 +322,6 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
             if (isWorkingDay(retDate)) ctr++
         }
         return retDate
-    }
-}
-
-fun calculateDaysBetween(startDate: LocalDate,
-                         endDate: LocalDate,
-                         dcbYear: DayCountBasisYear,
-                         dcbDay: DayCountBasisDay): Int {
-    // Right now we are only considering Actual/360 and 30/360 .. We'll do the rest later.
-    // TODO: The rest.
-    return when {
-        dcbDay == DayCountBasisDay.DActual -> (endDate.toEpochDay() - startDate.toEpochDay()).toInt()
-        dcbDay == DayCountBasisDay.D30 && dcbYear == DayCountBasisYear.Y360 -> ((endDate.year - startDate.year) * 360.0 + (endDate.monthValue - startDate.monthValue) * 30.0 + endDate.dayOfMonth - startDate.dayOfMonth).toInt()
-        else -> TODO("Can't calculate days using convention $dcbDay / $dcbYear")
     }
 }
 
