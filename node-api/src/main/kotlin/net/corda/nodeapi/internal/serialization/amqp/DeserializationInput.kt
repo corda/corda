@@ -141,6 +141,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
                 else -> obj // this will be the case for primitive types like [boolean] et al.
             }
             // Store the reference in case we need it later on.
+            // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content
             if (type.asClass()?.isPrimitive != true) objectHistory.add(objectRead)
             objectRead
         }

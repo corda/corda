@@ -805,9 +805,7 @@ class SerializationOutputTests {
         val obj = Bob(listOf(a, b, a))
 
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-
         serdes(obj, factory, factory2)
     }
 
@@ -819,9 +817,7 @@ class SerializationOutputTests {
         val obj = Vic(a, a)
 
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-
         val objCopy = serdes(obj, factory, factory2)
         assertSame(objCopy.a, objCopy.b)
     }
@@ -835,9 +831,7 @@ class SerializationOutputTests {
         val obj = Spike()
 
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-
         serdes(obj, factory, factory2)
     }
 }
