@@ -7,10 +7,12 @@ import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.days
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -31,7 +33,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
@@ -78,7 +79,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val databaseProperties = makeTestDatabaseProperties()
         database = configureDatabase(dataSourceProps, databaseProperties, createIdentityService = ::makeTestIdentityService)
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
-        val kms = MockKeyManagementService(identityService, ALICE_KEY)
+        val myInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), DUMMY_IDENTITY_1, NonEmptySet.of(DUMMY_IDENTITY_1), 1, serial = 1L) // Required to get a dummy platformVersion when required for tests.
+        val kms = MockKeyManagementService(identityService, myInfo.platformVersion, ALICE_KEY)
 
         database.transaction {
             val nullIdentity = X500Name("cn=None")

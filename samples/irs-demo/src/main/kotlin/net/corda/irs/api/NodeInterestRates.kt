@@ -175,9 +175,7 @@ object NodeInterestRates {
             // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
             // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
             // an invalid transaction the signature is worthless.
-            val signableData = SignableData(ftx.rootHash, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(signingKey).schemeNumberID))
-            val signature = services.keyManagementService.sign(signableData, signingKey)
-            return TransactionSignature(signature.bytes, signingKey, signableData.signatureMetadata)
+            return services.keyManagementService.signTransaction(ftx.id, signingKey)
         }
         // DOCEND 1
 

@@ -7,7 +7,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.KeyManagementService
-import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -153,10 +152,9 @@ open class TransactionBuilder(
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use
      * [ServiceHub.signInitialTransaction] instead.
      */
-    fun toSignedTransaction(keyManagementService: KeyManagementService, publicKey: PublicKey, signatureMetadata: SignatureMetadata): SignedTransaction {
+    fun toSignedTransaction(keyManagementService: KeyManagementService, publicKey: PublicKey): SignedTransaction {
         val wtx = toWireTransaction()
-        val signableData = SignableData(wtx.id, signatureMetadata)
-        val sig = keyManagementService.sign(signableData, publicKey)
+        val sig = keyManagementService.signTransaction(wtx.id, publicKey)
         return SignedTransaction(wtx, listOf(sig))
     }
 }

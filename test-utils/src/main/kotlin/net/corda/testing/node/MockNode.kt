@@ -174,7 +174,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
-            return E2ETestKeyManagementService(identityService, partyKeys + (overrideServices?.values ?: emptySet()))
+            return E2ETestKeyManagementService(identityService, info.platformVersion, partyKeys + (overrideServices?.values ?: emptySet()))
         }
 
         override fun startMessagingService(rpcOps: RPCOps) {

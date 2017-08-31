@@ -124,7 +124,7 @@ object NotaryFlow {
 
         @Suspendable
         private fun signAndSendResponse(txId: SecureHash) {
-            val signature = service.sign(txId)
+            val signature = service.signTransaction(txId)
             send(otherSide, listOf(signature))
         }
     }

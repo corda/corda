@@ -26,9 +26,8 @@ import javax.persistence.Lob
  *
  * This class needs database transactions to be in-flight during method calls and init.
  */
-class PersistentKeyManagementService(val identityService: IdentityService,
+class PersistentKeyManagementService(val identityService: IdentityService, override val platformVersion: Int,
                                      initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
-
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
@@ -47,7 +46,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toBase58String() },
                     fromPersistentEntity = { Pair(parsePublicKeyBase58(it.publicKey),
-                            it.privateKey.deserialize<PrivateKey>(context = SerializationDefaults.STORAGE_CONTEXT)) },
+                            it.privateKey.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)) },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey().apply {
                             publicKey = key.toBase58String()
@@ -59,7 +58,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
         }
     }
 
-    val keysMap = createKeyMap()
+    private val keysMap = createKeyMap()
 
     init {
         initialKeys.forEach({ it -> keysMap.addWithDuplicatesAllowed(it.public, it.private) })
@@ -87,15 +86,16 @@ class PersistentKeyManagementService(val identityService: IdentityService,
         return KeyPair(pk, keysMap[pk]!!)
     }
 
-    override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+    override fun signRawBytes(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(bytes)
     }
 
     // TODO: A full KeyManagementService implementation needs to record activity to the Audit Service and to limit
     //      signing to appropriately authorised contexts and initiating users.
-    override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
+    override fun signTransaction(txId: SecureHash, publicKey: PublicKey): TransactionSignature {
         val keyPair = getSigningKeyPair(publicKey)
+        val signableData = SignableData(txId, SignatureMetadata(platformVersion, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         return keyPair.sign(signableData)
     }
 }

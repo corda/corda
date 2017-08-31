@@ -153,17 +153,17 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage()
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
     override final val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
-    override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *keys)
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService = ContractUpgradeServiceImpl()
     override val vaultQueryService: VaultQueryService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
-    override val myInfo: NodeInfo get() {
+    override final val myInfo: NodeInfo get() {
         val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
         return NodeInfo(emptyList(), identity, NonEmptySet.of(identity), 1,  serial = 1L)
     }
+    override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, myInfo.platformVersion, *keys)
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
     lateinit var hibernatePersister: HibernateObserver
@@ -179,7 +179,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()
 }
 
-class MockKeyManagementService(val identityService: IdentityService,
+class MockKeyManagementService(val identityService: IdentityService, override val platformVersion: Int,
                                vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
     private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
 
@@ -206,13 +206,14 @@ class MockKeyManagementService(val identityService: IdentityService,
         return KeyPair(pk, keyStore[pk]!!)
     }
 
-    override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+    override fun signRawBytes(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(bytes)
     }
 
-    override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
+    override fun signTransaction(txId: SecureHash, publicKey: PublicKey): TransactionSignature {
         val keyPair = getSigningKeyPair(publicKey)
+        val signableData = SignableData(txId, SignatureMetadata(platformVersion, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         return keyPair.sign(signableData)
     }
 }

@@ -1,10 +1,11 @@
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SignableData
-import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.transactions.FilteredTransaction
+import net.corda.core.transactions.SignedTransaction
+import java.security.KeyPair
 import java.security.PublicKey
 
 /**
@@ -12,6 +13,10 @@ import java.security.PublicKey
  * call out to a hardware security module that enforces various auditing and frequency-of-use requirements.
  */
 interface KeyManagementService {
+
+    /** PlatformVersion is required for node-related metadata in transaction signatures, see [SignatureMetadata]. */
+    val platformVersion: Int
+
     /**
      * Returns a snapshot of the current signing [PublicKey]s.
      * For each of these keys a [PrivateKey] is available, that can be used later for signing.
@@ -43,7 +48,9 @@ interface KeyManagementService {
     fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey>
 
     /**
-     * Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
+     * There are cases where raw bytes of non-transaction related messages should be signed, such as information used
+     * in node registration and notary exceptions. This function should never be used to sign transactions,
+     * in which case [signTransaction] should be used instead.
      * @param bytes The data to sign over using the chosen key.
      * @param publicKey The [PublicKey] partner to an internally held [PrivateKey], either derived from the node's primary identity,
      * or previously generated via the [freshKey] method.
@@ -51,16 +58,18 @@ interface KeyManagementService {
      * @throws IllegalArgumentException if the input key is not a member of [keys].
      */
     @Suspendable
-    fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey
+    fun signRawBytes(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey
 
     /**
-     * Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the [SignableData].
-     * @param signableData a wrapper over transaction id (Merkle root) and signature metadata.
+     * This function should always be used when signing transactions, i.e. [FilteredTransaction] or [SignedTransaction].
+     * Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the
+     * transaction id (Merkle root), while adding the required signature metadata in the background.
+     * @param txId transaction's id.
      * @param publicKey The [PublicKey] partner to an internally held [PrivateKey], either derived from the node's primary identity,
      * or previously generated via the [freshKey] method.
      * If the [PublicKey] is actually a [CompositeKey] the first leaf signing key hosted by the node is used.
      * @throws IllegalArgumentException if the input key is not a member of [keys].
      */
     @Suspendable
-    fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature
+    fun signTransaction(txId: SecureHash, publicKey: PublicKey): TransactionSignature
 }

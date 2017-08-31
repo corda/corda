@@ -330,7 +330,7 @@ data class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddO
      */
     fun toWire(keyManager: KeyManagementService, publicKey: PublicKey): WireNodeRegistration {
         val regSerialized = this.serialize()
-        val regSig = keyManager.sign(regSerialized.bytes, publicKey)
+        val regSig = keyManager.signRawBytes(regSerialized.bytes, publicKey)
 
         return WireNodeRegistration(regSerialized, regSig)
     }
