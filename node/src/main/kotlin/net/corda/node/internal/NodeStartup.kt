@@ -117,7 +117,10 @@ open class NodeStartup(val args: Array<String>) {
                     logger.error("Shell failed to start", e)
                 }
             }
-        }, {})
+        },
+        {
+            th -> logger.error("Unexpected exception during registration", th)
+        })
         node.run()
     }
 

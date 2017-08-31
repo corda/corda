@@ -7,6 +7,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -18,11 +19,13 @@ public class FlowsInJavaTest {
     private MockNetwork.MockNode node2;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         MockNetwork.BasketOfNodes someNodes = mockNet.createSomeNodes(2);
         node1 = someNodes.getPartyNodes().get(0);
         node2 = someNodes.getPartyNodes().get(1);
         mockNet.runNetwork();
+        // Ensure registration was successful
+        node1.getNodeReadyFuture().get();
     }
 
     @After

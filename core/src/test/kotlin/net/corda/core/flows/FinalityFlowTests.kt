@@ -29,6 +29,7 @@ class FinalityFlowTests {
         nodeB = nodes.partyNodes[1]
         notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
+        nodeA.ensureRegistered()
     }
 
     @After

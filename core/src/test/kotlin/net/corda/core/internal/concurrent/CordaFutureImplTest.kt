@@ -112,6 +112,18 @@ class CordaFutureTest {
         }
         verify(log).error(any(), same(throwable))
     }
+
+    @Test
+    fun `captureLater works`() {
+        val failingFuture = CordaFutureImpl<Int>()
+        val anotherFailingFuture = CordaFutureImpl<Int>()
+        anotherFailingFuture.captureLater(failingFuture)
+
+        val exception = Exception()
+        failingFuture.setException(exception)
+
+        Assertions.assertThatThrownBy { anotherFailingFuture.getOrThrow() }.isSameAs(exception)
+    }
 }
 
 class TransposeTest {
