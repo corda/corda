@@ -1,12 +1,12 @@
 package net.corda.node.services.keys
 
-import net.corda.core.crypto.ContentSignerBuilder
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.cert
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.days
 import net.corda.node.utilities.CertificateType
+import net.corda.node.utilities.ContentSignerBuilder
 import net.corda.node.utilities.X509Utilities
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
