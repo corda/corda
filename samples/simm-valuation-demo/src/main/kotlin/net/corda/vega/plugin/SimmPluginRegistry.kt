@@ -26,18 +26,18 @@ class SimmPluginRegistry : CordaPluginRegistry() {
     override fun customizeSerialization(custom: SerializationCustomization): Boolean {
         custom.apply {
             // OpenGamma classes.
-            addToWhitelist(MultiCurrencyAmount::class.java)
-            addToWhitelist(Ordering.natural<Comparable<Any>>().javaClass)
-            addToWhitelist(CurrencyAmount::class.java)
-            addToWhitelist(Currency::class.java)
-            addToWhitelist(InitialMarginTriple::class.java)
-            addToWhitelist(CordaMarketData::class.java)
-            addToWhitelist(CurrencyParameterSensitivities::class.java)
-            addToWhitelist(CurrencyParameterSensitivity::class.java)
-            addToWhitelist(DoubleArray::class.java)
-            addToWhitelist(CurveName::class.java)
-            addToWhitelist(TenorDateParameterMetadata::class.java)
-            addToWhitelist(Tenor::class.java)
+            addToWhitelist(MultiCurrencyAmount::class.java,
+                    Ordering.natural<Comparable<Any>>().javaClass,
+                    CurrencyAmount::class.java,
+                    Currency::class.java,
+                    InitialMarginTriple::class.java,
+                    CordaMarketData::class.java,
+                    CurrencyParameterSensitivities::class.java,
+                    CurrencyParameterSensitivity::class.java,
+                    DoubleArray::class.java,
+                    CurveName::class.java,
+                    TenorDateParameterMetadata::class.java,
+                    Tenor::class.java)
         }
         return true
     }
