@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.deserialize
 import java.io.ByteArrayOutputStream
 import java.security.*
