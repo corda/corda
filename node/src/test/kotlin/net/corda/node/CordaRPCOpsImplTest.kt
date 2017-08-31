@@ -7,6 +7,7 @@ import net.corda.core.contracts.Issued
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
@@ -44,6 +45,7 @@ import rx.Observable
 import java.io.ByteArrayOutputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CordaRPCOpsImplTest {
@@ -248,4 +250,19 @@ class CordaRPCOpsImplTest {
         @Suspendable
         override fun call() = Unit
     }
+
+    @Test
+    fun `attempt to start RPC flow with void return`() {
+        CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
+                startFlowPermission<VoidRPCFlow>()
+        ))))
+        assertNull(rpc.startFlow(::VoidRPCFlow).returnValue.getOrThrow())
+    }
+
+    @StartableByRPC
+    class VoidRPCFlow : FlowLogic<Void?>() {
+        @Suspendable
+        override fun call() : Void? = null
+    }
+
 }
