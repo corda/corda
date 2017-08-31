@@ -12,9 +12,6 @@ repositories {
         url 'http://oss.sonatype.org/content/repositories/snapshots'
     }
     jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
 }
 
 // Force the Caplet to target Java 6. This ensures that running 'java -jar explorer.jar' on any Java 6 VM upwards
