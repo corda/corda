@@ -114,7 +114,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
      * indicate whether an update consists entirely of regular or notary change transactions, which may require
      * different processing logic.
      */
-    override fun notifyAll(txns: Iterable<CoreTransaction>) {
+    fun notifyAll(txns: Iterable<CoreTransaction>) {
         // It'd be easier to just group by type, but then we'd lose ordering.
         val regularTxns = mutableListOf<WireTransaction>()
         val notaryChangeTxns = mutableListOf<NotaryChangeWireTransaction>()
@@ -141,6 +141,9 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         if (regularTxns.isNotEmpty()) notifyRegular(regularTxns.toList())
         if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList())
     }
+
+    /** Same as notifyAll but with a single transaction. */
+    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
 
     private fun notifyRegular(txns: Iterable<WireTransaction>) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
@@ -369,22 +372,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         return claimedStates
     }
 
-    // TODO : Persists this in DB.
-    private val authorisedUpgrade = mutableMapOf<StateRef, Class<out UpgradedContract<*, *>>>()
 
-    override fun getAuthorisedContractUpgrade(ref: StateRef) = authorisedUpgrade[ref]
-
-    override fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) {
-        val upgrade = upgradedContractClass.newInstance()
-        if (upgrade.legacyContract != stateAndRef.state.data.contract.javaClass) {
-            throw IllegalArgumentException("The contract state cannot be upgraded using provided UpgradedContract.")
-        }
-        authorisedUpgrade.put(stateAndRef.ref, upgradedContractClass)
-    }
-
-    override fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>) {
-        authorisedUpgrade.remove(stateAndRef.ref)
-    }
 
     @VisibleForTesting
     internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {

@@ -79,7 +79,7 @@ class ContractUpgradeFlowTest {
         assertFailsWith(UnexpectedFlowEndException::class) { rejectedFuture.getOrThrow() }
 
         // Party B authorise the contract state upgrade.
-        b.services.vaultService.authoriseContractUpgrade(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)
+        b.services.contractUpgradeService.authoriseContractUpgrade(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
         val resultFuture = a.services.startFlow(ContractUpgradeFlow(atx.tx.outRef(0), DummyContractV2::class.java)).resultFuture
