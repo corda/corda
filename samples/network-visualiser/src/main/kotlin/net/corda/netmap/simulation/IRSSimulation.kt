@@ -3,14 +3,12 @@ package net.corda.netmap.simulation
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.concurrent.*
 import net.corda.core.node.services.queryBy
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -28,6 +26,8 @@ import rx.Observable
 import java.security.PublicKey
 import java.time.LocalDate
 import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletableFuture.allOf
 
 
 /**
@@ -42,46 +42,58 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
-    override fun startMainSimulation(): CordaFuture<Unit> {
+    override fun startMainSimulation(): CompletableFuture<Unit> {
         // TODO: Determine why this isn't happening via the network map
         mockNet.nodes.map { it.services.identityService }.forEach { service ->
-            mockNet.nodes.forEach { node -> service.registerIdentity(node.info.legalIdentityAndCert) }
+            mockNet.nodes.forEach { node -> service.verifyAndRegisterIdentity(node.info.legalIdentityAndCert) }
         }
 
-        val future = openFuture<Unit>()
         om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap).map { it.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
         registerFinanceJSONMappers(om)
 
-        startIRSDealBetween(0, 1).thenMatch({
+        return startIRSDealBetween(0, 1).thenCompose {
+            val future = CompletableFuture<Unit>()
             // Next iteration is a pause.
             executeOnNextIteration.add {}
             executeOnNextIteration.add {
                 // Keep fixing until there's no more left to do.
                 val initialFixFuture = doNextFixing(0, 1)
                 fun onFailure(t: Throwable) {
-                    future.setException(t)   // Propagate the error.
+                    future.completeExceptionally(t)
                 }
 
-                fun onSuccess(result: Unit?) {
+                fun onSuccess() {
                     // Pause for an iteration.
                     executeOnNextIteration.add {}
                     executeOnNextIteration.add {
                         val f = doNextFixing(0, 1)
                         if (f != null) {
-                            f.thenMatch(::onSuccess, ::onFailure)
+                            f.handle { _, throwable ->
+                                if (throwable == null) {
+                                    onSuccess()
+                                } else {
+                                    onFailure(throwable)
+                                }
+                            }
                         } else {
                             // All done!
-                            future.set(Unit)
+                            future.complete(Unit)
                         }
                     }
                 }
-                initialFixFuture!!.thenMatch(::onSuccess, ::onFailure)
+                initialFixFuture!!.handle { _, throwable ->
+                    if (throwable == null) {
+                        onSuccess()
+                    } else {
+                        onFailure(throwable)
+                    }
+                }
             }
-        }, {})
-        return future
+            future
+        }
     }
 
-    private fun doNextFixing(i: Int, j: Int): CordaFuture<Unit>? {
+    private fun doNextFixing(i: Int, j: Int): CompletableFuture<*>? {
         println("Doing a fixing between $i and $j")
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
@@ -107,10 +119,10 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         if (nextFixingDate > currentDateAndTime.toLocalDate())
             currentDateAndTime = nextFixingDate.atTime(15, 0)
 
-        return listOf(futA, futB).transpose().map { Unit }
+        return allOf(futA.toCompletableFuture(), futB.toCompletableFuture())
     }
 
-    private fun startIRSDealBetween(i: Int, j: Int): CordaFuture<SignedTransaction> {
+    private fun startIRSDealBetween(i: Int, j: Int): CompletableFuture<SignedTransaction> {
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
 
@@ -141,9 +153,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val acceptDealFlows: Observable<AcceptDealFlow> = node2.registerInitiatedFlow(AcceptDealFlow::class.java)
 
         @Suppress("UNCHECKED_CAST")
-       val acceptorTxFuture = acceptDealFlows.toFuture().flatMap {
-            (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture
-        }
+       val acceptorTxFuture = acceptDealFlows.toFuture().toCompletableFuture().thenCompose({
+            (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture.toCompletableFuture()
+        })
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))
@@ -154,7 +166,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
                 node1.services.legalIdentityKey)
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
-        return listOf(instigatorTxFuture, acceptorTxFuture).transpose().flatMap { instigatorTxFuture }
+        return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose({ instigatorTxFuture.toCompletableFuture() })
     }
 
     override fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {

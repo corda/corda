@@ -2,7 +2,6 @@ package net.corda.vega
 
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
@@ -20,6 +19,7 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.util.concurrent.CompletableFuture.allOf
 
 class SimmValuationTest : IntegrationTestCategory {
     private companion object {
@@ -34,10 +34,15 @@ class SimmValuationTest : IntegrationTestCategory {
     fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
             startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-            val (nodeA, nodeB) = listOf(startNode(providedName = nodeALegalName), startNode(providedName = nodeBLegalName)).transpose().getOrThrow()
-            val (nodeAApi, nodeBApi) = listOf(startWebserver(nodeA), startWebserver(nodeB)).transpose()
-                    .getOrThrow()
-                    .map { HttpApi.fromHostAndPort(it.listenAddress, "api/simmvaluationdemo") }
+            val nodeAFuture = startNode(providedName = nodeALegalName).toCompletableFuture()
+            val nodeBFuture = startNode(providedName = nodeBLegalName).toCompletableFuture()
+            allOf(nodeAFuture, nodeBFuture).getOrThrow()
+            val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
+            val nodeAApiFuture = startWebserver(nodeA).toCompletableFuture()
+            val nodeBApiFuture = startWebserver(nodeB).toCompletableFuture()
+            allOf(nodeAApiFuture, nodeBApiFuture).getOrThrow()
+            val (nodeAApi, nodeBApi) = listOf(nodeAApiFuture, nodeBApiFuture)
+                    .map { HttpApi.fromHostAndPort(it.getOrThrow().listenAddress, "api/simmvaluationdemo") }
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)
             val nodeAParty = getPartyWithName(nodeBApi, nodeALegalName)
 
@@ -55,7 +60,7 @@ class SimmValuationTest : IntegrationTestCategory {
     }
 
     private fun getAvailablePartiesFor(partyApi: HttpApi): PortfolioApi.AvailableParties {
-        return partyApi.getJson<PortfolioApi.AvailableParties>("whoami")
+        return partyApi.getJson("whoami")
     }
 
     private fun createTradeBetween(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String): Boolean {

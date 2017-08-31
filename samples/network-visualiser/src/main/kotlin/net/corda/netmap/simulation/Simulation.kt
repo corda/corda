@@ -1,6 +1,5 @@
 package net.corda.netmap.simulation
 
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.utilities.locationOrNull
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
@@ -8,9 +7,6 @@ import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.transpose
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
@@ -34,6 +30,9 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletableFuture.allOf
+import java.util.concurrent.Future
 
 /**
  * Base class for network simulations that are based on the unit test / mock environment.
@@ -261,21 +260,19 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val networkInitialisationFinished = mockNet.nodes.map { it.nodeReadyFuture }.transpose()
+    val networkInitialisationFinished = allOf(*mockNet.nodes.map { it.nodeReadyFuture.toCompletableFuture() }.toTypedArray())
 
-    fun start(): CordaFuture<Unit> {
+    fun start(): Future<Unit> {
         mockNet.startNodes()
         // Wait for all the nodes to have finished registering with the network map service.
-        return networkInitialisationFinished.flatMap { startMainSimulation() }
+        return networkInitialisationFinished.thenCompose({startMainSimulation()})
     }
 
     /**
      * Sub-classes should override this to trigger whatever they want to simulate. This method will be invoked once the
      * network bringup has been simulated.
      */
-    protected open fun startMainSimulation(): CordaFuture<Unit> {
-        return doneFuture(Unit)
-    }
+    protected abstract fun startMainSimulation(): CompletableFuture<Unit>
 
     fun stop() {
         mockNet.stopNodes()
