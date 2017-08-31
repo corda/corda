@@ -18,11 +18,11 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
     class DBTransaction(
             @Id
-            @Column(name = "tx_id", length = 64)
+            @Column(name = "id", length = 64)
             var txId: String = "",
 
             @Lob
-            @Column
+            @Column(name = "value")
             var transaction: ByteArray = ByteArray(0)
     )
 

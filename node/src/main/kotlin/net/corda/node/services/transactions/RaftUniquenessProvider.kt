@@ -70,7 +70,7 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal) : Uniquen
     @javax.persistence.Table(name = "notary_committed_states")
     class RaftState(
             @Id
-            @Column
+            @Column(name = "id")
             var key: String = "",
 
             @Lob

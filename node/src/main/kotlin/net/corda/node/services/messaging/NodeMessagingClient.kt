@@ -190,7 +190,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_retry")
     class RetryMessage(
             @Id
-            @Column(name = "message_id", length = 36)
+            @Column(name = "message_id")
             var key: Long = 0,
 
             @Lob

@@ -7,6 +7,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -22,15 +23,18 @@ import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class CashSelectionH2Impl : CashSelection {
+/**
+ * SQL Server 2012
+ */
+class CashSelectionSQLServerImpl : CashSelection {
 
     companion object {
-        val JDBC_DRIVER_NAME = "H2 JDBC Driver"
-        val log = loggerFor<CashSelectionH2Impl>()
+        val JDBC_DRIVER_NAME = "Microsoft JDBC Driver 6.2 for SQL Server"
+        val log = loggerFor<CashSelectionSQLServerImpl>()
     }
 
-    override fun isCompatible(metadata: DatabaseMetaData): Boolean {
-        return metadata.driverName == JDBC_DRIVER_NAME
+    override fun isCompatible(metaData: DatabaseMetaData): Boolean {
+        return metaData.driverName == JDBC_DRIVER_NAME
     }
 
     override fun toString() = "${this::class.java} for $JDBC_DRIVER_NAME"
@@ -56,11 +60,11 @@ class CashSelectionH2Impl : CashSelection {
      */
     @Suspendable
     override fun unconsumedCashStatesForSpending(services: ServiceHub,
-                                        amount: Amount<Currency>,
-                                        onlyFromIssuerParties: Set<AbstractParty>,
-                                        notary: Party?,
-                                        lockId: UUID,
-                                        withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
+                                                 amount: Amount<Currency>,
+                                                 onlyFromIssuerParties: Set<AbstractParty>,
+                                                 notary: Party?,
+                                                 lockId: UUID,
+                                                 withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
 
         val issuerKeysStr = onlyFromIssuerParties.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }.dropLast(1)
         val issuerRefsStr = withIssuerRefs.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }.dropLast(1)
@@ -79,29 +83,34 @@ class CashSelectionH2Impl : CashSelection {
             spendLock.withLock {
                 val statement = services.jdbcSession().createStatement()
                 try {
-                    statement.execute("CALL SET(@t, 0);")
 
                     // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
                     // the softLockReserve update will detect whether we try to lock states locked by others
-                    val selectJoin = """
-                    SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
-                    FROM vault_states AS vs, contract_cash_states AS ccs
+                    val selectJoin =
+                            """ WITH x(transaction_id, output_index, contract_state, pennies, total, lock_id) AS
+                            (
+                                    SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies,
+                    SUM(ccs.pennies) OVER (ORDER BY ccs.transaction_id RANGE UNBOUNDED PRECEDING), vs.lock_id
+                    FROM contract_cash_states AS ccs, vault_states AS vs
                     WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
-                    AND vs.state_status = 0
-                    AND ccs.ccy_code = '${amount.token}' and @t < ${amount.quantity}
-                    AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
-                    """ +
-                            (if (notary != null)
-                                " AND vs.notary_name = '${notary.name}'" else "") +
-                            (if (onlyFromIssuerParties.isNotEmpty())
-                                " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
-                            (if (withIssuerRefs.isNotEmpty())
-                                " AND ccs.issuer_ref IN ($issuerRefsStr)" else "")
-
+                            AND vs.state_status = 0
+                    AND ccs.ccy_code = '${amount.token}'
+                    AND (vs.lock_id = '$lockId' OR vs.lock_id is null)"""+
+                                    (if (notary != null)
+                                        " AND vs.notary_name = '${notary.name}'" else "") +
+                                    (if (onlyFromIssuerParties.isNotEmpty())
+                                        " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
+                                    (if (withIssuerRefs.isNotEmpty())
+                                        " AND ccs.issuer_ref IN ($issuerRefsStr)" else "") +
+                                    """
+                    )
+                    select x.transaction_id, x.output_index, x.contract_state, x.pennies, x.total, x.lock_id
+                    from x where x.total <= ${amount.quantity} + x.pennies"""
+                    log.info(selectJoin)
                     // Retrieve spendable state refs
                     val rs = statement.executeQuery(selectJoin)
                     stateAndRefs.clear()
-                    log.debug(selectJoin)
+
                     var totalPennies = 0L
                     while (rs.next()) {
                         val txHash = SecureHash.parse(rs.getString(1))
@@ -147,6 +156,6 @@ class CashSelectionH2Impl : CashSelection {
         }
 
         log.warn("Insufficient spendable states identified for $amount")
-        return stateAndRefs
+        return if(amount.quantity>0) stateAndRefs else if(amount.quantity<=0) stateAndRefs else stateAndRefs
     }
 }
