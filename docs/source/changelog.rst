@@ -70,6 +70,8 @@ UNRELEASED
 * Removed the concept of relevancy from ``LinearState``. The ``ContractState``'s relevancy to the vault can be determined
   by the flow context, the vault will process any transaction from a flow which is not derived from transaction resolution verification.
 
+* ``SerializationCustomization.addToWhitelist()` now accepts multiple classes via varargs.
+
 Milestone 14
 ------------
 

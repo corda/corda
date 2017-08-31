@@ -58,7 +58,7 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
         val ourSTX = serviceHub.validatedTransactions.getTransaction(proposal.stateRef.txhash)
         requireNotNull(ourSTX) { "We don't have a copy of the referenced state" }
         val oldStateAndRef = ourSTX!!.tx.outRef<ContractState>(proposal.stateRef.index)
-        val authorisedUpgrade = serviceHub.vaultService.getAuthorisedContractUpgrade(oldStateAndRef.ref) ?:
+        val authorisedUpgrade = serviceHub.contractUpgradeService.getAuthorisedContractUpgrade(oldStateAndRef.ref) ?:
                 throw IllegalStateException("Contract state upgrade is unauthorised. State hash : ${oldStateAndRef.ref}")
         val proposedTx = stx.tx
         val expectedTx = ContractUpgradeFlow.assembleBareTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt).toWireTransaction()

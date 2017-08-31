@@ -174,40 +174,11 @@ interface VaultService {
     val updatesPublisher: PublishSubject<Vault.Update<ContractState>>
 
     /**
-     * Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
-     * new states that they create. You should only insert transactions that have been successfully verified here!
-     *
-     * TODO: Consider if there's a good way to enforce the must-be-verified requirement in the type system.
-     */
-    fun notifyAll(txns: Iterable<CoreTransaction>)
-
-    /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
-
-    /**
      * Provide a [CordaFuture] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
     fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
         return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
-
-    /** Get contracts we would be willing to upgrade the suggested contract to. */
-    // TODO: We need a better place to put business logic functions
-    fun getAuthorisedContractUpgrade(ref: StateRef): Class<out UpgradedContract<*, *>>?
-
-    /**
-     * Authorise a contract state upgrade.
-     * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
-     * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
-     * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
-     */
-    fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>)
-
-    /**
-     * Authorise a contract state upgrade.
-     * This will remove the upgrade authorisation from the vault.
-     */
-    fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>)
 
     /**
      *  Add a note to an existing [LedgerTransaction] given by its unique [SecureHash] id

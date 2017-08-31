@@ -64,7 +64,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
                         validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultService.notifyAll(txs.map { it.tx })
+                    (vaultService as NodeVaultService).notifyAll(txs.map { it.tx })
                 }
             }
         }

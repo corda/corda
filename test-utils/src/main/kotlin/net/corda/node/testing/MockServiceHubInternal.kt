@@ -42,6 +42,7 @@ open class MockServiceHubInternal(
         val scheduler: SchedulerService? = null,
         val overrideClock: Clock? = NodeClock(),
         val schemas: SchemaService? = NodeSchemaService(),
+        val customContractUpgradeService: ContractUpgradeService? = null,
         val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2)
 ) : ServiceHubInternal {
     override val vaultQueryService: VaultQueryService
@@ -50,6 +51,8 @@ open class MockServiceHubInternal(
         get() = customTransactionVerifierService ?: throw UnsupportedOperationException()
     override val vaultService: VaultService
         get() = customVault ?: throw UnsupportedOperationException()
+    override val contractUpgradeService: ContractUpgradeService
+        get() = customContractUpgradeService ?: throw UnsupportedOperationException()
     override val keyManagementService: KeyManagementService
         get() = keyManagement ?: throw UnsupportedOperationException()
     override val identityService: IdentityService
