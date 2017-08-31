@@ -3,6 +3,7 @@ package net.corda.node.utilities
 import net.corda.core.crypto.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
+import net.corda.node.services.keys.ContentSignerBuilder
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.DERSequence

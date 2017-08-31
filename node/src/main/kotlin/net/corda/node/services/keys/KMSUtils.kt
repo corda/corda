@@ -1,17 +1,18 @@
+@file:JvmName("KMSUtils")
 package net.corda.node.services.keys
 
-import net.corda.core.crypto.ContentSignerBuilder
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.cert
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.days
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.operator.ContentSigner
-import java.security.KeyPair
-import java.security.PublicKey
-import java.security.Security
+import java.io.OutputStream
+import java.security.*
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -46,5 +47,21 @@ fun freshCertificate(identityService: IdentityService,
 fun getSigner(issuerKeyPair: KeyPair): ContentSigner {
     val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
     val provider = Security.getProvider(signatureScheme.providerName)
-    return ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
+    val sigAlgId = signatureScheme.signatureOID
+    val sig = Signature.getInstance(signatureScheme.signatureName, provider).apply {
+        initSign(issuerKeyPair.private)
+    }
+    return object : ContentSigner {
+        private val stream = SignatureOutputStream(sig)
+        override fun getAlgorithmIdentifier(): AlgorithmIdentifier = sigAlgId
+        override fun getOutputStream(): OutputStream = stream
+        override fun getSignature(): ByteArray = stream.signature
+    }
+}
+
+private class SignatureOutputStream(private val sig: Signature) : OutputStream() {
+    internal val signature: ByteArray get() = sig.sign()
+    override fun write(bytes: ByteArray, off: Int, len: Int) = sig.update(bytes, off, len)
+    override fun write(bytes: ByteArray) = sig.update(bytes)
+    override fun write(b: Int) = sig.update(b.toByte())
 }
