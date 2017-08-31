@@ -43,6 +43,7 @@ class P2PMessagingTest : NodeBasedTest() {
         val startUpDuration = elapsedTime { startNodes().getOrThrow() }
         // Start the network map a second time - this will restore message queues from the journal.
         // This will hang and fail prior the fix. https://github.com/corda/corda/issues/37
+        clearAllNodeInfoDb() // Clear network map data from nodes databases.
         stopAllNodes()
         startNodes().getOrThrow(timeout = startUpDuration * 3)
     }
@@ -149,7 +150,6 @@ class P2PMessagingTest : NodeBasedTest() {
         // Restart the node and expect a response
         val aliceRestarted = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
         val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
-
         assertThat(requestsReceived.get()).isGreaterThanOrEqualTo(2)
         assertThat(response).isEqualTo(responseMessage)
     }

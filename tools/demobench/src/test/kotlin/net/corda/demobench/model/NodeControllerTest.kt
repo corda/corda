@@ -170,7 +170,7 @@ class NodeControllerTest {
             rpcPort: Int = -1,
             webPort: Int = -1,
             h2Port: Int = -1,
-            services: List<String> = listOf("extra.service"),
+            services: MutableList<String> = mutableListOf("extra.service"),
             users: List<User> = listOf(user("guest"))
     ) = NodeConfig(
             baseDir,

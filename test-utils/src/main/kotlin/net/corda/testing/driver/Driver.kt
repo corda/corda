@@ -223,7 +223,8 @@ sealed class PortAllocation {
  *   }
  *
  * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously, but rather returns a [CordaFuture]
- * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service.
+ * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service or
+ * loaded node data from database.
  *
  * The driver implicitly bootstraps a [NetworkMapService].
  *
@@ -698,7 +699,8 @@ class DriverDSL(
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to webAddress.toString(),
                         "p2pAddress" to dedicatedNetworkMapAddress.toString(),
-                        "useTestClock" to useTestClock
+                        "useTestClock" to useTestClock,
+                        "extraAdvertisedServiceIds" to listOf(ServiceInfo(NetworkMapService.type).toString())
                 )
         )
         return startNodeInternal(config, webAddress, startInProcess)
@@ -716,7 +718,7 @@ class DriverDSL(
             )
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, openFuture()).flatMap { rpc ->
-                    rpc.waitUntilRegisteredWithNetworkMap().map {
+                    rpc.waitUntilNetworkReady().map {
                         NodeHandle.InProcess(rpc.nodeIdentity(), rpc, nodeConfiguration, webAddress, node, thread)
                     }
                 }
@@ -731,9 +733,9 @@ class DriverDSL(
                 }
                 // We continue to use SSL enabled port for RPC when its for node user.
                 establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, processDeathFuture).flatMap { rpc ->
-                    // Call waitUntilRegisteredWithNetworkMap in background in case RPC is failing over:
+                    // Call waitUntilNetworkReady in background in case RPC is failing over:
                     val networkMapFuture = executorService.fork {
-                        rpc.waitUntilRegisteredWithNetworkMap()
+                        rpc.waitUntilNetworkReady()
                     }.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {

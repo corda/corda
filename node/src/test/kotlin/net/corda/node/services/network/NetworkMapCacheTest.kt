@@ -6,13 +6,14 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.node.MockNetwork
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
 
-class InMemoryNetworkMapCacheTest {
+class NetworkMapCacheTest {
     lateinit var mockNet: MockNetwork
 
     @Before
@@ -47,9 +48,7 @@ class InMemoryNetworkMapCacheTest {
         // Node A currently knows only about itself, so this returns node A
         assertEquals(nodeA.services.networkMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeA.info)
 
-        nodeA.database.transaction {
-            nodeA.services.networkMapCache.addNode(nodeB.info)
-        }
+        nodeA.services.networkMapCache.addNode(nodeB.info)
         // The details of node B write over those for node A
         assertEquals(nodeA.services.networkMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeB.info)
     }
@@ -67,5 +66,21 @@ class InMemoryNetworkMapCacheTest {
         assertEquals(expected, actual)
 
         // TODO: Should have a test case with anonymous lookup
+    }
+
+    @Test
+    fun `remove node from cache`() {
+        val nodes = mockNet.createSomeNodes(1)
+        val n0 = nodes.mapNode
+        val n1 = nodes.partyNodes[0]
+        val node0Cache = n0.services.networkMapCache as PersistentNetworkMapCache
+        mockNet.runNetwork()
+        n0.database.transaction {
+            assertThat(node0Cache.getNodeByLegalIdentity(n1.info.legalIdentity) != null)
+            node0Cache.removeNode(n1.info)
+            assertThat(node0Cache.getNodeByLegalIdentity(n1.info.legalIdentity) == null)
+            assertThat(node0Cache.getNodeByLegalIdentity(n0.info.legalIdentity) != null)
+            assertThat(node0Cache.getNodeByLegalName(n1.info.legalIdentity.name) == null)
+        }
     }
 }

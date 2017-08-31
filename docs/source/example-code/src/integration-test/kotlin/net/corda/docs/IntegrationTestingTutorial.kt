@@ -45,8 +45,8 @@ class IntegrationTestingTutorial {
             val bobClient = bob.rpcClientToNode()
             val bobProxy = bobClient.start("bobUser", "testPassword2").proxy
 
-            aliceProxy.waitUntilRegisteredWithNetworkMap().getOrThrow()
-            bobProxy.waitUntilRegisteredWithNetworkMap().getOrThrow()
+            aliceProxy.waitUntilNetworkReady().getOrThrow()
+            bobProxy.waitUntilNetworkReady().getOrThrow()
             // END 2
 
             // START 3

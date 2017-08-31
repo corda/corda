@@ -185,7 +185,7 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
                 "    ${it.legalIdentity.name}: ${it.legalIdentity.owningKey.toBase58String()}"
             }.joinToString("\n")
             log.info("${connection.remoteNode.hostname} waiting for network map")
-            connection.proxy.waitUntilRegisteredWithNetworkMap().get()
+            connection.proxy.waitUntilNetworkReady().get()
             log.info("${connection.remoteNode.hostname} sees\n$pubKeysString")
             hostNodeMap.put(connection.remoteNode.hostname, connection)
         }

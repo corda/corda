@@ -220,6 +220,7 @@ class FlowFrameworkTests {
         node2.stop()
         node2.database.transaction {
             assertEquals(1, node2.checkpointStorage.checkpoints().size) // confirm checkpoint
+            node2.services.networkMapCache.clearNetworkMapCache()
         }
         val node2b = mockNet.createNode(node1.network.myAddress, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
         node2.manuallyCloseDB()

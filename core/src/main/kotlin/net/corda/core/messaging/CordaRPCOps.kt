@@ -257,7 +257,7 @@ interface CordaRPCOps : RPCOps {
      * complete with an exception if it is unable to.
      */
     @RPCReturnsObservables
-    fun waitUntilRegisteredWithNetworkMap(): CordaFuture<Void?>
+    fun waitUntilNetworkReady(): CordaFuture<Void?>
 
     // TODO These need rethinking. Instead of these direct calls we should have a way of replicating a subset of
     // the node's state locally and query that directly.
@@ -299,6 +299,11 @@ interface CordaRPCOps : RPCOps {
      * @return the node info if available.
      */
     fun nodeIdentityFromParty(party: AbstractParty): NodeInfo?
+
+    /**
+     * Clear all network map data from local node cache.
+     */
+    fun clearNetworkMapCache()
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),

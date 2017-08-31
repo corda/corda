@@ -16,7 +16,7 @@ class NodeConfig(
         val rpcPort: Int,
         val webPort: Int,
         val h2Port: Int,
-        val extraServices: List<String>,
+        val extraServices: MutableList<String> = mutableListOf(),
         val users: List<User> = listOf(defaultUser),
         var networkMap: NetworkMapConfig? = null
 ) : NetworkMapConfig(legalName, p2pPort), HasPlugins {

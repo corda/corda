@@ -173,7 +173,7 @@ class CordaRPCOpsImpl(
     override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) = services.vaultService.authoriseContractUpgrade(state, upgradedContractClass)
     override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.vaultService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
-    override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
+    override fun waitUntilNetworkReady() = services.networkMapCache.nodeReady
     override fun partyFromAnonymous(party: AbstractParty): Party? = services.identityService.partyFromAnonymous(party)
     override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
     override fun partyFromX500Name(x500Name: X500Name) = services.identityService.partyFromX500Name(x500Name)
@@ -181,6 +181,10 @@ class CordaRPCOpsImpl(
     override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? = services.networkMapCache.getNodeByLegalIdentity(party)
 
     override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
+
+    override fun clearNetworkMapCache() {
+        services.networkMapCache.clearNetworkMapCache()
+    }
 
     companion object {
         private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {

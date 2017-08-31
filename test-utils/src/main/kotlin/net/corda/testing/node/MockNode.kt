@@ -212,7 +212,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun noNetworkMapConfigured() = doneFuture(Unit)
 
         // There is no need to slow down the unit tests by initialising CityDatabase
-        override fun findMyLocation(): WorldMapLocation? = null
+        open fun findMyLocation(): WorldMapLocation? = null // It's left only for NetworkVisualiserSimulation
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
@@ -302,7 +302,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot).apply {
             if (start) {
                 start()
-                if (threadPerNode && networkMapAddress != null) networkMapRegistrationFuture.getOrThrow() // XXX: What about manually-started nodes?
+                if (threadPerNode && networkMapAddress != null) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
             }
             _nodes.add(this)
         }

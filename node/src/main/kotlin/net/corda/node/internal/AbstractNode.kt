@@ -12,6 +12,7 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
@@ -39,7 +40,7 @@ import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.sendRequest
-import net.corda.node.services.network.InMemoryNetworkMapCache
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
@@ -138,10 +139,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     var isPreviousCheckpointsPresent = false
         private set
 
-    protected val _networkMapRegistrationFuture = openFuture<Unit>()
-    /** Completes once the node has successfully registered with the network map service */
-    val networkMapRegistrationFuture: CordaFuture<Unit>
-        get() = _networkMapRegistrationFuture
+    protected val _nodeReadyFuture = openFuture<Unit>()
+    /** Completes once the node has successfully registered with the network map service
+     * or has loaded network map data from local database */
+    val nodeReadyFuture: CordaFuture<Unit>
+        get() = _nodeReadyFuture
 
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
     open val pluginRegistries: List<CordaPluginRegistry> by lazy {
@@ -154,10 +156,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open val rpcOps: CordaRPCOps by lazy { CordaRPCOpsImpl(services, smm, database) }   // Lazy to avoid init ordering issue with the SMM.
-
-    open fun findMyLocation(): WorldMapLocation? {
-        return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
-    }
 
     open fun start() {
         require(!started) { "Node has already been started" }
@@ -208,7 +206,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
 
             runOnStop += network::stop
-            _networkMapRegistrationFuture.captureLater(registerWithNetworkMapIfConfigured())
+        }
+        // If we successfully  loaded network data from database, we set this future to Unit.
+        _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
+        database.transaction {
             smm.start()
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
@@ -483,9 +484,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeInfo(legalIdentity: PartyAndCertificate): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
-        val allIdentities = (advertisedServiceEntries.map { it.identity } + legalIdentity).toNonEmptySet()
+        val allIdentities = advertisedServiceEntries.map { it.identity }.toSet() // TODO Add node's legalIdentity (after services removal).
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, findMyLocation())
+        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, platformClock.instant().toEpochMilli())
     }
 
     /**
@@ -580,7 +581,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             services.networkMapCache.runWithoutMapService()
             noNetworkMapConfigured()  // TODO This method isn't needed as runWithoutMapService sets the Future in the cache
         } else {
-            registerWithNetworkMap()
+            val netMapRegistration = registerWithNetworkMap()
+            // We may want to start node immediately with database data and not wait for network map registration (but send it either way).
+            // So we are ready to go.
+            if (services.networkMapCache.loadDBSuccess) {
+                log.info("Node successfully loaded network map data from the database.")
+                doneFuture(Unit)
+            } else {
+                netMapRegistration
+            }
         }
     }
 
@@ -606,7 +615,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // Register this node against the network
         val instant = platformClock.instant()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
-        val reg = NodeRegistration(info, instant.toEpochMilli(), ADD, expires)
+        val reg = NodeRegistration(info, info.serial, ADD, expires)
         val request = RegistrationRequest(reg.toWire(services.keyManagementService, info.legalIdentityAndCert.owningKey), network.myAddress)
         return network.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
     }
@@ -616,9 +625,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */
     protected open fun noNetworkMapConfigured(): CordaFuture<Unit> {
-        // TODO: There should be a consistent approach to configuration error exceptions.
-        throw IllegalStateException("Configuration error: this node isn't being asked to act as the network map, nor " +
-                "has any other map node been configured.")
+        if (services.networkMapCache.loadDBSuccess) {
+            return doneFuture(Unit)
+        } else {
+            // TODO: There should be a consistent approach to configuration error exceptions.
+            throw IllegalStateException("Configuration error: this node isn't being asked to act as the network map, nor " +
+                    "has any other map node been configured.")
+        }
     }
 
     protected open fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
@@ -754,7 +767,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val monitoringService = MonitoringService(MetricRegistry())
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
+        override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
+        override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(this) }
         override val vaultQueryService by lazy {
             HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
@@ -776,7 +790,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val networkService: MessagingService get() = network
         override val clock: Clock get() = platformClock
         override val myInfo: NodeInfo get() = info
-        override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
 

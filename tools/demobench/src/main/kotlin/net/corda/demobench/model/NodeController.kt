@@ -1,6 +1,8 @@
 package net.corda.demobench.model
 
 import net.corda.core.crypto.getX509Name
+import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
 import tornadofx.*
@@ -54,15 +56,15 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 baseDir,
                 getX509Name(
                     myLegalName = nodeData.legalName.value.trim(),
-                    email = "corda@city.${location.countryCode.toLowerCase()}.example",
-                    nearestCity = location.description,
+                    email = "corda@city.${location.countryCode!!.toLowerCase()}.example",
+                    nearestCity = location.description!!,
                     country = location.countryCode
                 ),
                 nodeData.p2pPort.value,
                 nodeData.rpcPort.value,
                 nodeData.webPort.value,
                 nodeData.h2Port.value,
-                nodeData.extraServices.value
+                nodeData.extraServices.toMutableList()
         )
 
         if (nodes.putIfAbsent(config.key, config) != null) {
@@ -98,6 +100,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         if (hasNetworkMap()) {
             config.networkMap = networkMapConfig
         } else {
+            config.extraServices.add(ServiceInfo(ServiceType.networkMap).toString())
             networkMapConfig = config
             log.info("Network map provided by: ${config.legalName}")
         }

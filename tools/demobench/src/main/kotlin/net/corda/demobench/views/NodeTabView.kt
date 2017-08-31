@@ -220,7 +220,7 @@ class NodeTabView : Fragment() {
                     imageview {
                         image = flags.get()[it.countryCode]
                     }
-                    label(it.description)
+                    label(it.description!!)
                     alignment = Pos.CENTER_LEFT
                 }
             }
