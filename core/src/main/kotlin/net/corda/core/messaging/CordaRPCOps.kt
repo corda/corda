@@ -240,20 +240,6 @@ interface CordaRPCOps : RPCOps {
     fun uploadAttachment(jar: InputStream): SecureHash
 
     /**
-     * Authorise a contract state upgrade.
-     * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
-     * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
-     * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
-     */
-    fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>)
-
-    /**
-     * Authorise a contract state upgrade.
-     * This will remove the upgrade authorisation from the vault.
-     */
-    fun deauthoriseContractUpgrade(state: StateAndRef<*>)
-
-    /**
      * Returns the node's current time.
      */
     fun currentNodeTime(): Instant
@@ -338,7 +324,7 @@ inline fun <T, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         flowConstructor: () -> R
 ): FlowHandle<T> = startFlowDynamic(R::class.java)
 
-inline fun <T, A, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
+inline fun <T , A, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: (A) -> R,
         arg0: A
