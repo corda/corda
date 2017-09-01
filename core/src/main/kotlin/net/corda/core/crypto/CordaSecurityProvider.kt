@@ -29,7 +29,7 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
 }
 
 object CordaObjectIdentifier {
-    // UUID-based OID.
+    // UUID-based OID
     // TODO: Register for an OID space and issue our own shorter OID.
     @JvmField val COMPOSITE_KEY = ASN1ObjectIdentifier("2.25.30086077608615255153862931087626791002")
     @JvmField val COMPOSITE_SIGNATURE = ASN1ObjectIdentifier("2.25.30086077608615255153862931087626791003")

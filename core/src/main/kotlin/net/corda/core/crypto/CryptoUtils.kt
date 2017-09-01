@@ -91,7 +91,7 @@ fun PublicKey.containsAny(otherKeys: Iterable<PublicKey>): Boolean {
 /** Returns the set of all [PublicKey]s of the signatures. */
 fun Iterable<TransactionSignature>.byKeys() = map { it.by }.toSet()
 
-// Allow Kotlin destructuring:    val (private, public) = keyPair.
+// Allow Kotlin destructuring:    val (private, public) = keyPair
 operator fun KeyPair.component1(): PrivateKey = this.private
 
 operator fun KeyPair.component2(): PublicKey = this.public

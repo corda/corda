@@ -3,7 +3,7 @@ package net.corda.core.crypto
 import java.util.*
 
 /**
- * Creation and verification of a Merkle Tree for a [WireTransaction].
+ * Creation and verification of a Merkle tree for a [WireTransaction].
  *
  * See: https://en.wikipedia.org/wiki/Merkle_tree
  *
