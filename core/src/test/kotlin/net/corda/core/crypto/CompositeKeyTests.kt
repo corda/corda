@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.CompositeKey.NodeAndWeight
+import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
@@ -160,17 +161,17 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
         engine.initVerify(twoOfThree)
         engine.update(secureHash.bytes)
 
-        assertFalse { engine.verify(listOf(aliceSignature).serialize().bytes) }
-        assertFalse { engine.verify(listOf(bobSignature).serialize().bytes) }
-        assertFalse { engine.verify(listOf(charlieSignature).serialize().bytes) }
-        assertTrue { engine.verify(listOf(aliceSignature, bobSignature).serialize().bytes) }
-        assertTrue { engine.verify(listOf(aliceSignature, charlieSignature).serialize().bytes) }
-        assertTrue { engine.verify(listOf(bobSignature, charlieSignature).serialize().bytes) }
-        assertTrue { engine.verify(listOf(aliceSignature, bobSignature, charlieSignature).serialize().bytes) }
+        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature)).serialize().bytes) }
+        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(bobSignature)).serialize().bytes) }
+        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(charlieSignature)).serialize().bytes) }
+        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, bobSignature)).serialize().bytes) }
+        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, charlieSignature)).serialize().bytes) }
+        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(bobSignature, charlieSignature)).serialize().bytes) }
+        assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, bobSignature, charlieSignature)).serialize().bytes) }
 
         // Check the underlying signature is validated
         val brokenBobSignature = TransactionSignature(aliceSignature.bytes, bobSignature.by, SignatureMetadata(1, Crypto.findSignatureScheme(bobSignature.by).schemeNumberID))
-        assertFalse { engine.verify(listOf(aliceSignature, brokenBobSignature).serialize().bytes) }
+        assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, brokenBobSignature)).serialize().bytes) }
     }
 
     @Test()
@@ -216,7 +217,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     }
 
     @Test()
-    fun `composite key validation with graph cycle detection`() = kryoSpecific<CompositeKeyTests> {
+    fun `composite key validation with graph cycle detection`() = kryoSpecific<CompositeKeyTests>("Cycle exists in the object graph which is not currently supported in AMQP mode") {
         val key1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build() as CompositeKey
         val key2 = CompositeKey.Builder().addKeys(alicePublicKey, key1).build() as CompositeKey
         val key3 = CompositeKey.Builder().addKeys(alicePublicKey, key2).build() as CompositeKey
