@@ -104,7 +104,7 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
             @Id @Column
             var id: String = "",
 
-            @Lob @Column
+            @Lob @Column(name = "subscriber_key")
             var key: ByteArray = ByteArray(0),
 
             @Lob @Column
