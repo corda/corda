@@ -14,7 +14,7 @@ import java.util.function.Predicate
  * - Downloading and locally storing all the dependencies of the transaction.
  * - Resolving the input states and loading them into memory.
  * - Doing some basic key lookups on the [Command]s to see if any keys are from a recognised party, thus converting the
- *   [Command] objects into [AuthenticatedObject].
+ *   [Command] objects into [CommandWithParties].
  * - Deserialising the output states.
  *
  * All the above refer to inputs using a (txhash, output index) pair.
@@ -28,7 +28,7 @@ data class LedgerTransaction(
         override val inputs: List<StateAndRef<ContractState>>,
         override val outputs: List<TransactionState<ContractState>>,
         /** Arbitrary data passed to the program of each input state. */
-        val commands: List<AuthenticatedObject<CommandData>>,
+        val commands: List<CommandWithParties<CommandData>>,
         /** A list of [Attachment] objects identified by the transaction that are needed for this transaction to verify. */
         val attachments: List<Attachment>,
         /** The hash of the original serialised WireTransaction. */

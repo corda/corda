@@ -283,7 +283,7 @@ class Obligation<P : Any> : Contract {
     private fun verifyIssueCommand(tx: LedgerTransaction,
                                    inputs: List<FungibleAsset<Terms<P>>>,
                                    outputs: List<FungibleAsset<Terms<P>>>,
-                                   issueCommand: AuthenticatedObject<Commands.Issue>,
+                                   issueCommand: CommandWithParties<Commands.Issue>,
                                    key: Issued<Terms<P>>) {
         // If we have an issue command, perform special processing: the group is allowed to have no inputs,
         // and the output states must have a deposit reference owned by the signer.
@@ -311,7 +311,7 @@ class Obligation<P : Any> : Contract {
     private fun verifySettleCommand(tx: LedgerTransaction,
                                     inputs: List<FungibleAsset<Terms<P>>>,
                                     outputs: List<FungibleAsset<Terms<P>>>,
-                                    command: AuthenticatedObject<Commands.Settle<P>>,
+                                    command: CommandWithParties<Commands.Settle<P>>,
                                     groupingKey: Issued<Terms<P>>) {
         val obligor = groupingKey.issuer.party
         val template = groupingKey.product
@@ -394,7 +394,7 @@ class Obligation<P : Any> : Contract {
         }
     }
 
-    private fun verifyNetCommand(tx: LedgerTransaction, command: AuthenticatedObject<NetCommand>) {
+    private fun verifyNetCommand(tx: LedgerTransaction, command: CommandWithParties<NetCommand>) {
         val groups = when (command.value.type) {
             NetType.CLOSE_OUT -> tx.groupStates { it: Obligation.State<P> -> it.bilateralNetState }
             NetType.PAYMENT -> tx.groupStates { it: Obligation.State<P> -> it.multilateralNetState }
@@ -434,7 +434,7 @@ class Obligation<P : Any> : Contract {
     private fun verifySetLifecycleCommand(inputs: List<FungibleAsset<Terms<P>>>,
                                           outputs: List<FungibleAsset<Terms<P>>>,
                                           tx: LedgerTransaction,
-                                          setLifecycleCommand: AuthenticatedObject<Commands.SetLifecycle>) {
+                                          setLifecycleCommand: CommandWithParties<Commands.SetLifecycle>) {
         // Default must not change anything except lifecycle, so number of inputs and outputs must match
         // exactly.
         require(inputs.size == outputs.size) { "Number of inputs and outputs must match" }

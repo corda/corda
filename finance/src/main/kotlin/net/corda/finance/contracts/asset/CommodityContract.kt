@@ -123,7 +123,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     private fun verifyIssueCommand(inputs: List<State>,
                                    outputs: List<State>,
                                    tx: LedgerTransaction,
-                                   issueCommand: AuthenticatedObject<Commands.Issue>,
+                                   issueCommand: CommandWithParties<Commands.Issue>,
                                    commodity: Commodity,
                                    issuer: PartyAndReference) {
         // If we have an issue command, perform special processing: the group is allowed to have no inputs,
@@ -147,7 +147,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         }
     }
 
-    override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Commands>>
+    override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<Commands>>
             = commands.select<CommodityContract.Commands>()
 
     /**

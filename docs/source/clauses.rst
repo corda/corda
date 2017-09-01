@@ -21,7 +21,7 @@ Let's take a look at a simplified structure of the ``Clause`` class:
             abstract fun verify(tx: LedgerTransaction,
                         inputs: List<S>,
                         outputs: List<S>,
-                        commands: List<AuthenticatedObject<C>>,
+                        commands: List<CommandWithParties<C>>,
                         groupingKey: K?): Set<C>
             ...
         }
@@ -235,7 +235,7 @@ Example from ``CommercialPaper.kt``:
             override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: List<AuthenticatedObject<Commands>>,
+                                commands: List<CommandWithParties<Commands>>,
                                 groupingKey: Issued<Terms>?): Set<Commands> {
                 val consumedCommands = super.verify(tx, inputs, outputs, commands, groupingKey)
                 ...
