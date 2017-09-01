@@ -73,12 +73,6 @@ class CordaRPCOpsImplTest {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>()
         ))))
-
-        aliceNode.database.transaction {
-            stateMachineUpdates = rpc.stateMachinesFeed().updates
-            transactions = rpc.verifiedTransactionsFeed().updates
-            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
-        }
     }
 
     @After
@@ -88,6 +82,11 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `cash issue accepted`() {
+        aliceNode.database.transaction {
+            stateMachineUpdates = rpc.stateMachinesFeed().updates
+            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
+        }
+
         val quantity = 1000L
         val ref = OpaqueBytes(ByteArray(1) { 1 })
 
@@ -133,6 +132,12 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `issue and move`() {
+        aliceNode.database.transaction {
+            stateMachineUpdates = rpc.stateMachinesFeed().updates
+            transactions = rpc.verifiedTransactionsFeed().updates
+            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
+        }
+
         val anonymous = false
         val result = rpc.startFlow(::CashIssueFlow,
                 100.DOLLARS,
@@ -256,7 +261,9 @@ class CordaRPCOpsImplTest {
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<VoidRPCFlow>()
         ))))
-        assertNull(rpc.startFlow(::VoidRPCFlow).returnValue.getOrThrow())
+        val result = rpc.startFlow(::VoidRPCFlow)
+        mockNet.runNetwork()
+        assertNull(result.returnValue.getOrThrow())
     }
 
     @StartableByRPC
@@ -264,5 +271,4 @@ class CordaRPCOpsImplTest {
         @Suspendable
         override fun call() : Void? = null
     }
-
 }
