@@ -15,12 +15,12 @@ class ClassCarpenterTest {
         val b: Int
     }
 
-    val cc = ClassCarpenter()
+    private val cc = ClassCarpenter()
 
     // We have to ignore synthetic fields even though ClassCarpenter doesn't create any because the JaCoCo
     // coverage framework auto-magically injects one method and one field into every class loaded into the JVM.
-    val Class<*>.nonSyntheticFields: List<Field> get() = declaredFields.filterNot { it.isSynthetic }
-    val Class<*>.nonSyntheticMethods: List<Method> get() = declaredMethods.filterNot { it.isSynthetic }
+    private val Class<*>.nonSyntheticFields: List<Field> get() = declaredFields.filterNot { it.isSynthetic }
+    private val Class<*>.nonSyntheticMethods: List<Method> get() = declaredMethods.filterNot { it.isSynthetic }
 
     @Test
     fun empty() {
