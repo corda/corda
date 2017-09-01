@@ -1,7 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.contracts.ContractState
-import net.corda.core.flows.FlowException
+import net.corda.core.flows.type.FlowException
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria

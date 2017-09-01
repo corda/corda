@@ -1,4 +1,4 @@
-package net.corda.core.flows
+package net.corda.core.flows.annotation
 
 import java.lang.annotation.Inherited
 import kotlin.annotation.AnnotationTarget.CLASS

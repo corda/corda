@@ -7,14 +7,13 @@ import net.corda.core.contracts.Issued
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.GBP
 import net.corda.finance.USD

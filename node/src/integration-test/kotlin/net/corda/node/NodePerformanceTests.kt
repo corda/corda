@@ -3,8 +3,7 @@ package net.corda.node
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.base.Stopwatch
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.internal.concurrent.transpose
+import net.corda.core.flows.annotation.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes
@@ -27,7 +26,6 @@ import org.junit.Test
 import java.lang.management.ManagementFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.streams.toList
 
 
 private fun checkQuasarAgent() {

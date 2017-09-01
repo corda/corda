@@ -1,7 +1,7 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.UnexpectedFlowEndException
+import net.corda.core.flows.type.FlowException
+import net.corda.core.flows.type.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.castIfPossible
 import net.corda.core.serialization.CordaSerializable

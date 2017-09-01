@@ -1,12 +1,10 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.OwnableState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.withoutIssuer
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
+import net.corda.core.flows.type.FlowException
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo

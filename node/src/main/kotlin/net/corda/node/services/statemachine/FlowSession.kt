@@ -1,7 +1,7 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.flows.FlowContext
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.type.FlowContext
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.node.services.statemachine.FlowSessionState.Initiated
 import net.corda.node.services.statemachine.FlowSessionState.Initiating

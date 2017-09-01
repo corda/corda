@@ -1,12 +1,12 @@
 package net.corda.node.services.api
 
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.FlowLogic
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping

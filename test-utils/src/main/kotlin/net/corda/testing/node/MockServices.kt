@@ -2,7 +2,7 @@ package net.corda.testing.node
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo

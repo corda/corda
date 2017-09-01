@@ -3,7 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage

@@ -1,16 +1,14 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.until
@@ -34,6 +32,8 @@ import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.EmbeddedId
 import javax.persistence.Entity
+import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
+import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 
 /**
  * A first pass of a simple [SchedulerService] that works with [MutableClock]s for testing, demonstrations and simulations

@@ -10,8 +10,12 @@ import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.flows.*
-import net.corda.core.flows.AbstractStateReplacementFlow.Proposal
+import net.corda.core.flows.annotation.InitiatedBy
+import net.corda.core.flows.annotation.InitiatingFlow
+import net.corda.core.flows.annotation.StartableByRPC
+import net.corda.core.flows.type.AbstractStateReplacementFlow.Proposal
+import net.corda.core.flows.type.FlowLogic
+import net.corda.core.flows.type.StateReplacementException
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria

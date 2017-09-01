@@ -1,10 +1,10 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.annotation.InitiatedBy
+import net.corda.core.flows.annotation.InitiatingFlow
+import net.corda.core.flows.annotation.StartableByRPC
+import net.corda.core.flows.type.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction

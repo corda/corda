@@ -1,7 +1,8 @@
-package net.corda.core.flows
+package net.corda.core.flows.type
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.annotation.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.abbreviate

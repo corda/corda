@@ -1,7 +1,7 @@
 package net.corda.node.services.api
 
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.FlowLogic
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ProgressTracker
 import java.security.Principal

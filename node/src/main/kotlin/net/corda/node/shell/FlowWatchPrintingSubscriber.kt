@@ -2,7 +2,7 @@ package net.corda.node.shell
 
 import net.corda.core.crypto.commonName
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.StateMachineUpdate.Added

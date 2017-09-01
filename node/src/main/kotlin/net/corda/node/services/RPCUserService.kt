@@ -1,6 +1,6 @@
 package net.corda.node.services
 
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.type.FlowLogic
 import net.corda.nodeapi.User
 
 /**

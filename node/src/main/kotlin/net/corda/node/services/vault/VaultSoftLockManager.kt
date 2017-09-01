@@ -1,8 +1,8 @@
 package net.corda.node.services.vault
 
 import net.corda.core.contracts.StateRef
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.type.FlowLogic
+import net.corda.core.flows.type.StateMachineRunId
 import net.corda.core.node.services.VaultService
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.loggerFor

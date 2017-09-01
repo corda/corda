@@ -1,6 +1,6 @@
 package net.corda.core.contracts
 
-import net.corda.core.flows.FlowException
+import net.corda.core.flows.type.FlowException
 import net.corda.core.identity.AbstractParty
 import java.security.PublicKey
 
