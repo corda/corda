@@ -229,6 +229,8 @@ sealed class PortAllocation {
  *
  * The driver implicitly bootstraps a [NetworkMapService].
  *
+ * @param defaultParameters The default parameters for the driver. Allows the driver to be configured in builder style
+ *   when called from Java code.
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
  * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
@@ -244,9 +246,9 @@ sealed class PortAllocation {
  * @return The value returned in the [dsl] closure.
  */
 fun <A> driver(
+        defaultParameters: DriverParameters = DriverParameters(),
         isDebug: Boolean = defaultParameters.isDebug,
-        // The directory must be different for each call to `driver`.
-        driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
+        driverDirectory: Path = defaultParameters.driverDirectory,
         portAllocation: PortAllocation = defaultParameters.portAllocation,
         debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
@@ -273,24 +275,23 @@ fun <A> driver(
     )
 }
 
+/**
+ * Helper function for starting a [driver] with custom parameters from Java.
+ *
+ * @param defaultParameters The default parameters for the driver.
+ * @param dsl The dsl itself.
+ * @return The value returned in the [dsl] closure.
+ */
 fun <A> driver(
         parameters: DriverParameters,
         dsl: DriverDSLExposedInterface.() -> A
 ): A {
-    return driver(
-            isDebug = parameters.isDebug,
-            driverDirectory = parameters.driverDirectory,
-            portAllocation = parameters.portAllocation,
-            debugPortAllocation = parameters.debugPortAllocation,
-            systemProperties = parameters.systemProperties,
-            useTestClock = parameters.useTestClock,
-            initialiseSerialization = parameters.initialiseSerialization,
-            networkMapStartStrategy = parameters.networkMapStartStrategy,
-            startNodesInProcess = parameters.startNodesInProcess,
-            dsl = dsl
-    )
+    return driver(defaultParameters = parameters, dsl = dsl)
 }
 
+/**
+ * Helper builder for configuring a [driver] from Java.
+ */
 data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
@@ -312,8 +313,6 @@ data class DriverParameters(
     fun setNetworkMapStartStrategy(networkMapStartStrategy: NetworkMapStartStrategy) = copy(networkMapStartStrategy = networkMapStartStrategy)
     fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
 }
-
-private val defaultParameters = DriverParameters()
 
 /**
  * This is a helper method to allow extending of the DSL, along the lines of
