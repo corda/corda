@@ -5,7 +5,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.CommonSchemaV1

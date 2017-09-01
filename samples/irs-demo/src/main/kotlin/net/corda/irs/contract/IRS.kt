@@ -74,7 +74,7 @@ abstract class RatePaymentEvent(date: LocalDate,
 
     abstract val flow: Amount<Currency>
 
-    val days: Int get() = calculateDaysBetween(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
+    val days: Int get() = BusinessCalendar.calculateDaysBetween(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
 
     // TODO : Fix below (use daycount convention for division, not hardcoded 360 etc)
     val dayCountFactor: BigDecimal get() = (BigDecimal(days).divide(BigDecimal(360.0), 8, RoundingMode.HALF_UP)).setScale(4, RoundingMode.HALF_UP)

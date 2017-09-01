@@ -29,7 +29,7 @@ object AmountBindings {
         return EasyBind.combine(observableCurrency, observableExchangeRate) { currency, exchangeRate ->
             Pair<Currency, (Amount<Currency>) -> Long>(
                     currency,
-                    { (quantity, _, token) -> (exchangeRate.rate(token, currency) * quantity).toLong() }
+                    { amount -> exchangeRate.exchangeAmount(amount, currency).quantity }
             )
         }
     }

@@ -251,8 +251,8 @@ object BFTSMaRt {
             return services.database.transaction { services.keyManagementService.sign(bytes, services.notaryIdentityKey) }
         }
 
-        protected fun sign(signableData: SignableData): TransactionSignature {
-            return services.database.transaction { services.keyManagementService.sign(signableData, services.notaryIdentityKey) }
+        protected fun sign(filteredTransaction: FilteredTransaction): TransactionSignature {
+            return services.database.transaction { services.createSignature(filteredTransaction, services.notaryIdentityKey) }
         }
 
         // TODO:

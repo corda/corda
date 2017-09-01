@@ -1,7 +1,6 @@
 package net.corda.node.services.network
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
@@ -10,6 +9,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.testing.ALICE

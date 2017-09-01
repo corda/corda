@@ -5,10 +5,10 @@ import com.opengamma.strata.product.swap.IborRateCalculation
 import com.opengamma.strata.product.swap.RateCalculationSwapLeg
 import com.opengamma.strata.product.swap.SwapLegType
 import net.corda.core.contracts.hash
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.commonName
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState

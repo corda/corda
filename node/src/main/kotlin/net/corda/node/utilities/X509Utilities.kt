@@ -1,6 +1,7 @@
 package net.corda.node.utilities
 
 import net.corda.core.crypto.*
+import net.corda.core.utilities.cert
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.ASN1EncodableVector

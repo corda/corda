@@ -4,7 +4,7 @@ package net.corda.testing
 
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TypeOnlyCommandData
-import net.corda.core.crypto.CertificateAndKeyPair
+import net.corda.core.utilities.CertificateAndKeyPair
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party

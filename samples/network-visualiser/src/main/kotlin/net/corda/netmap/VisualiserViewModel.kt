@@ -7,7 +7,7 @@ import javafx.scene.layout.StackPane
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.commonName
 import net.corda.core.node.ScreenCoordinate
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.simulation.IRSSimulation

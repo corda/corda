@@ -11,7 +11,7 @@ import javafx.scene.input.KeyCodeCombination
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import javafx.util.Duration
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.commonName
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style

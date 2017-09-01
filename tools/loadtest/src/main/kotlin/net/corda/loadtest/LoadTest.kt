@@ -2,7 +2,7 @@ package net.corda.loadtest
 
 import com.google.common.util.concurrent.RateLimiter
 import net.corda.client.mock.Generator
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.driver.PortAllocation
 import org.slf4j.LoggerFactory

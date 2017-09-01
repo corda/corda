@@ -1,5 +1,6 @@
-package net.corda.core.crypto
+package net.corda.node.utilities
 
+import net.corda.core.crypto.SignatureScheme
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.operator.ContentSigner
 import java.io.OutputStream

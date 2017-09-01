@@ -3,8 +3,8 @@ package net.corda.testing.node
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.crypto.CertificateAndKeyPair
-import net.corda.core.crypto.cert
+import net.corda.core.utilities.CertificateAndKeyPair
+import net.corda.core.utilities.cert
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate
@@ -267,6 +267,15 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     }
                 }
             })
+        }
+
+        /**
+         * Makes sure that the [MockNode] is correctly registered on the [MockNetwork]
+         * Please note that [MockNetwork.runNetwork] should be invoked to ensure that all the pending registration requests
+         * were duly processed
+         */
+        fun ensureRegistered() {
+            _nodeReadyFuture.getOrThrow()
         }
     }
 

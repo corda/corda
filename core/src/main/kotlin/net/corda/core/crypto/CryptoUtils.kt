@@ -2,8 +2,9 @@
 
 package net.corda.core.crypto
 
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.toBase58
+import net.corda.core.utilities.toSHA256Bytes
 import java.math.BigInteger
 import java.security.*
 

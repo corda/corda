@@ -2,8 +2,8 @@ package net.corda.finance.contracts
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.crypto.testing.NULL_PARTY
-import net.corda.core.crypto.toBase58String
+import net.corda.core.crypto.NullKeys.NULL_PARTY
+import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
@@ -40,10 +40,11 @@ import java.util.*
  *    which may need to be tracked. That, in turn, requires validation logic (there is a bean validator that knows how
  *    to do this in the Apache BVal project).
  */
-val CP_PROGRAM_ID = CommercialPaper()
-
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 class CommercialPaper : Contract {
+    companion object {
+        val CP_PROGRAM_ID = CommercialPaper()
+    }
     data class State(
             val issuance: PartyAndReference,
             override val owner: AbstractParty,

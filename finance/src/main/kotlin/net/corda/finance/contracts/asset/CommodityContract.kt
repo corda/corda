@@ -19,9 +19,6 @@ import java.util.*
 // Commodity
 //
 
-// Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
-val COMMODITY_PROGRAM_ID = CommodityContract()
-
 /**
  * A commodity contract represents an amount of some commodity, tracked on a distributed ledger. The design of this
  * contract is intentionally similar to the [Cash] contract, and the same commands (issue, move, exit) apply, the
@@ -34,6 +31,11 @@ val COMMODITY_PROGRAM_ID = CommodityContract()
  */
 // TODO: Need to think about expiry of commodities, how to require payment of storage costs, etc.
 class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, CommodityContract.State>() {
+    companion object {
+        // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
+        val COMMODITY_PROGRAM_ID = CommodityContract()
+    }
+
     /** A state representing a commodity claim against some party */
     data class State(
             override val amount: Amount<Issued<Commodity>>,
