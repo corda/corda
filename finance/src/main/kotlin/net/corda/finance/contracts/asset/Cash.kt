@@ -106,7 +106,7 @@ interface CashSelection {
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
 class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
-    override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Cash.Commands>>
+    override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<Cash.Commands>>
             = commands.select<Cash.Commands>()
 
     // DOCSTART 1
@@ -239,7 +239,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     private fun verifyIssueCommand(inputs: List<State>,
                                    outputs: List<State>,
                                    tx: LedgerTransaction,
-                                   issueCommand: AuthenticatedObject<Commands.Issue>,
+                                   issueCommand: CommandWithParties<Commands.Issue>,
                                    currency: Currency,
                                    issuer: PartyAndReference) {
         // If we have an issue command, perform special processing: the group is allowed to have no inputs,

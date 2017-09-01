@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -160,11 +159,11 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
                         descriptor, emptyList())))
 
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput) {
-            data.putObject(unmaker(obj))
+            data.putString(unmaker(obj))
         }
 
         override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): T {
-            val proxy = input.readObject(obj, schema, String::class.java) as String
+            val proxy = obj as String
             return maker(proxy)
         }
     }

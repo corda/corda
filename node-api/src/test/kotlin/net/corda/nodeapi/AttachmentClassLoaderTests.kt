@@ -332,8 +332,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    // Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not
-    fun `test deserialize of WireTransaction where contract cannot be found`() = kryoSpecific<AttachmentClassLoaderTests> {
+    fun `test deserialize of WireTransaction where contract cannot be found`() = kryoSpecific<AttachmentClassLoaderTests>("Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not") {
         val child = ClassLoaderForTests()
         val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor

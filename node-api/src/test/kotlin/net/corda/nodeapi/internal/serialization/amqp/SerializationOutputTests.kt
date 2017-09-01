@@ -18,6 +18,7 @@ import net.corda.testing.MEGA_CORP_PUBKEY
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Ignore
 import org.junit.Test
@@ -831,5 +832,36 @@ class SerializationOutputTests {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         serdes(obj, factory, factory2)
+    }
+
+    data class BigDecimals(val a: BigDecimal, val b: BigDecimal)
+
+    @Test
+    fun `test toString custom serializer`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+
+        val obj = BigDecimals(BigDecimal.TEN, BigDecimal.TEN)
+        val objCopy = serdes(obj, factory, factory2)
+        assertEquals(objCopy.a, objCopy.b)
+    }
+
+    data class ByteArrays(val a: ByteArray, val b: ByteArray)
+
+    @Test
+    fun `test byte arrays not reference counted`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+
+        val bytes = ByteArray(1)
+        val obj = ByteArrays(bytes, bytes)
+        val objCopy = serdes(obj, factory, factory2, false, false)
+        assertNotSame(objCopy.a, objCopy.b)
     }
 }

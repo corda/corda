@@ -127,7 +127,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
+    override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
         val stateMachine = startFlow(logicType, args)
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
@@ -136,12 +136,12 @@ class CordaRPCOpsImpl(
         )
     }
 
-    override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+    override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
         val stateMachine = startFlow(logicType, args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    private fun <T : Any> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
+    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
         val rpcContext = getRpcContext()
         rpcContext.requirePermission(startFlowPermission(logicType))
