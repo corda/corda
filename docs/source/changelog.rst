@@ -110,7 +110,7 @@ UNRELEASED
 
 * ``SerializationCustomization.addToWhitelist()` now accepts multiple classes via varargs.
 
-* Two functions to easily sign a ``FilteredTransaction`` have been added to ``ServiceHub``.
+* Two functions to easily sign a ``FilteredTransaction`` have been added to ``ServiceHub``:
   ``createSignature(filteredTransaction: FilteredTransaction, publicKey: PublicKey)`` and
   ``createSignature(filteredTransaction: FilteredTransaction)`` to sign with the legal identity key.
 

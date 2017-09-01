@@ -146,7 +146,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
                 commitInputStates(inputs, id, callerIdentity)
 
                 log.debug { "Inputs committed successfully, signing $id" }
-                BFTSMaRt.ReplicaResponse.Signature(services.createSignature(ftx))
+                BFTSMaRt.ReplicaResponse.Signature(services.createSignature(ftx, services.notaryIdentityKey))
             } catch (e: NotaryException) {
                 log.debug { "Error processing transaction: ${e.error}" }
                 BFTSMaRt.ReplicaResponse.Error(e.error)
