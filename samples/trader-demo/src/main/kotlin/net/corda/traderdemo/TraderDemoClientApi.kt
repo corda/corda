@@ -11,7 +11,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.USD
-import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.CommercialPaper
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.flows.CashIssueFlow

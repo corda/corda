@@ -1,4 +1,4 @@
-package net.corda.finance.contracts
+package net.corda.finance.contracts.asset
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
@@ -13,7 +13,7 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.ICommercialPaperState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.finance.utils.sumCashBy
 import java.time.Instant
@@ -105,7 +105,7 @@ class CommercialPaper : Contract {
 
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
-        val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
+        val command = tx.commands.requireSingleCommand<Commands>()
         val timeWindow: TimeWindow? = tx.timeWindow
 
         // Suppress compiler warning as 'key' is an unused variable when destructuring 'groups'.

@@ -14,7 +14,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.finance.`issued by`
-import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.CommercialPaper
 import java.time.Instant
 import java.util.*
 

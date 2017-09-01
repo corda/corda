@@ -11,7 +11,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
@@ -32,7 +31,7 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
-import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.CommercialPaper
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.`issued by`

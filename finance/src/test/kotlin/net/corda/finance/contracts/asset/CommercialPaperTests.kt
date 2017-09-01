@@ -1,4 +1,4 @@
-package net.corda.finance.contracts
+package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.AnonymousParty
@@ -11,7 +11,8 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
-import net.corda.finance.contracts.asset.*
+import net.corda.finance.contracts.ICommercialPaperState
+import net.corda.finance.contracts.JavaCommercialPaper
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
