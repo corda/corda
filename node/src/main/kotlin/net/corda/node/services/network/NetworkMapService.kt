@@ -35,6 +35,7 @@ import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
+import java.io.IOException
 import java.security.PublicKey
 import java.security.SignatureException
 import java.time.Instant
@@ -243,6 +244,10 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
             request.wireReg.verified()
         } catch (e: SignatureException) {
             return RegistrationResponse("Invalid signature on request")
+        } catch (e: IOException) {
+            val msg = "Unexpected IO exception: ${e.message}"
+            logger.error(msg, e)
+            return RegistrationResponse(msg)
         }
 
         val node = change.node

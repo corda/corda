@@ -4,7 +4,7 @@ import com.jediterm.terminal.ui.JediTermWidget
 import com.jediterm.terminal.ui.UIUtil
 import com.jediterm.terminal.ui.settings.SettingsProvider
 import com.pty4j.PtyProcess
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.commonName
 import net.corda.core.utilities.loggerFor
 import org.bouncycastle.asn1.x500.X500Name
 import java.awt.Dimension

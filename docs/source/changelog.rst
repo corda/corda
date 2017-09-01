@@ -70,7 +70,49 @@ UNRELEASED
 * Removed the concept of relevancy from ``LinearState``. The ``ContractState``'s relevancy to the vault can be determined
   by the flow context, the vault will process any transaction from a flow which is not derived from transaction resolution verification.
 
+* Removed the tolerance attribute from ``TimeWindowChecker`` and thus, there is no extra tolerance on the notary side anymore.
+
+* The ``FungibleAsset`` interface has been made simpler. The ``Commands`` grouping interface
+  that included the ``Move``, ``Issue`` and ``Exit`` interfaces have all been removed, while the ``move`` function has
+  been renamed to ``withNewOwnerAndAmount`` to be consistent with the ``withNewOwner`` function of the ``OwnableState``.
+
+* The ``IssueCommand`` interface has been removed from ``Structures``, because, due to the introduction of nonces per
+  transaction component, the issue command does not need a nonce anymore and it does not require any other attributes.
+
+* As a consequence of the above and the simpler ``FungibleAsset`` format, fungible assets like ``Cash`` now use
+  ``class Issue : TypeOnlyCommandData()``, because it's only its presence (``Issue``) that matters.
+
+* A new `PrivacySalt` transaction component is introduced, which is now an attribute in ``TraversableTransaction`` and
+  inherently in ``WireTransaction``.
+
+* A new ``nonces: List<SecureHash>`` feature has been added to ``FilteredLeaves``.
+
+* Due to the ``nonces`` and ``PrivacySalt`` introduction, new functions have been added to ``MerkleTransaction``:
+  ``fun <T : Any> serializedHash(x: T, privacySalt: PrivacySalt?, index: Int): SecureHash``
+  ``fun <T : Any> serializedHash(x: T, nonce: SecureHash): SecureHash``
+  ``fun computeNonce(privacySalt: PrivacySalt, index: Int)``.
+
+* A new ``SignatureMetadata`` data class is introduced with two attributes, ``platformVersion: Int`` and
+  ``schemeNumberID: Int`` (the signature scheme used).
+
+* As part of the metadata support in signatures, a new ``data class SignableData(val txId: SecureHash, val signatureMetadata: SignatureMetadata)``
+  is introduced, which represents the object actually signed.
+
+* The unused ``MetaData`` and ``SignatureType`` in ``crypto`` package have been removed.
+
+* The ``class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata): DigitalSignature(bytes)``
+  class is now utilised Vs the old ``DigitalSignature.WithKey`` for Corda transaction signatures. Practically, it takes
+  the ``signatureMetadata`` as an extra input, in order to support signing both the transaction and the extra metadata.
+
+* To reflect changes in the signing process, the ``Crypto`` object is now equipped with the:
+  ``fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature`` and
+  ``fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean`` functions.
+
 * ``SerializationCustomization.addToWhitelist()` now accepts multiple classes via varargs.
+
+* Two functions to easily sign a ``FilteredTransaction`` have been added to ``ServiceHub``:
+  ``createSignature(filteredTransaction: FilteredTransaction, publicKey: PublicKey)`` and
+  ``createSignature(filteredTransaction: FilteredTransaction)`` to sign with the legal identity key.
 
 Milestone 14
 ------------

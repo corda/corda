@@ -1,6 +1,6 @@
 package net.corda.node.services.config
 
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.commonName
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.ALICE
 import net.corda.nodeapi.User

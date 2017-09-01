@@ -46,13 +46,13 @@ private fun MockNetwork.MockNode.saveAttachment(content: String) = database.tran
     attachments.importAttachment(createAttachmentData(content).inputStream())
 }
 private fun MockNetwork.MockNode.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
-    attachments.updateAttachment(attachmentId, createAttachmentData(content))
+    updateAttachment(attachmentId, createAttachmentData(content))
 }
 
 /**
  * @see NodeAttachmentService.importAttachment
  */
-private fun NodeAttachmentService.updateAttachment(attachmentId: SecureHash, data: ByteArray) {
+private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
     val session = DatabaseTransactionManager.current().session
     val attachment = session.get<NodeAttachmentService.DBAttachment>(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString())
     attachment?.let {
@@ -73,6 +73,7 @@ class AttachmentSerializationTest {
         client = mockNet.createNode(server.network.myAddress)
         client.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
         mockNet.runNetwork()
+        server.ensureRegistered()
     }
 
     @After

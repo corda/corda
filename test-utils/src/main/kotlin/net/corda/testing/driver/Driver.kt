@@ -11,9 +11,9 @@ import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.crypto.appendToCommonName
-import net.corda.core.crypto.commonName
-import net.corda.core.crypto.getX509Name
+import net.corda.core.utilities.appendToCommonName
+import net.corda.core.utilities.commonName
+import net.corda.core.utilities.getX509Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.*

@@ -1,8 +1,8 @@
 package net.corda.node.utilities
 
-import net.corda.core.crypto.CertificateAndKeyPair
+import net.corda.core.utilities.CertificateAndKeyPair
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.cert
+import net.corda.core.utilities.cert
 import net.corda.core.internal.exists
 import net.corda.core.internal.read
 import net.corda.core.internal.toX509CertHolder

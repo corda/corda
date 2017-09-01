@@ -1,5 +1,5 @@
 @file:JvmName("X500NameUtils")
-package net.corda.core.crypto
+package net.corda.core.utilities
 
 import net.corda.core.internal.toX509CertHolder
 import org.bouncycastle.asn1.ASN1Encodable

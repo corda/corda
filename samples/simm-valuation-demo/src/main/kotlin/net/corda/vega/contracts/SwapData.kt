@@ -10,7 +10,7 @@ import com.opengamma.strata.product.swap.SwapTrade
 import com.opengamma.strata.product.swap.type.FixedIborSwapConvention
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
 import net.corda.core.identity.AbstractParty
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
 import java.security.PublicKey

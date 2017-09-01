@@ -1,6 +1,6 @@
 package net.corda.finance.contracts.universal
 
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.commonName
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import java.math.BigDecimal

@@ -1,16 +1,12 @@
 package net.corda.core.node
 
-import net.corda.core.crypto.locationOrNull
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.serialization.serialize
+import net.corda.core.utilities.locationOrNull
 
 /**
  * Information for an advertised service including the service specific identity information.

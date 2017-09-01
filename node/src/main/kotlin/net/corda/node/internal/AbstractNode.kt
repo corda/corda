@@ -24,9 +24,7 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.toNonEmptySet
+import net.corda.core.utilities.*
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
@@ -605,8 +603,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val address: SingleMessageRecipient = networkMapAddress ?:
                 network.getAddressOfParty(PartyInfo.Node(info)) as SingleMessageRecipient
         // Register for updates, even if we're the one running the network map.
-        return sendNetworkMapRegistration(address).flatMap { (error) ->
-            check(error == null) { "Unable to register with the network map service: $error" }
+        return sendNetworkMapRegistration(address).flatMap { response: RegistrationResponse ->
+            check(response.error == null) { "Unable to register with the network map service: ${response.error}" }
             // The future returned addMapService will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
             services.networkMapCache.addMapService(network, address, true, null)
         }

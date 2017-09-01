@@ -11,7 +11,7 @@ import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.SerializeAsToken

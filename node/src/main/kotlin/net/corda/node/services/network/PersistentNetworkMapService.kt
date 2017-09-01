@@ -1,6 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.SingleMessageRecipient

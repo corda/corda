@@ -36,6 +36,7 @@ class CollectSignaturesFlowTests {
         c = nodes.partyNodes[2]
         notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
+        a.ensureRegistered()
     }
 
     @After
