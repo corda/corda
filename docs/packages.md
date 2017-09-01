@@ -41,10 +41,6 @@ which transformations of state are valid.
 
 Cryptography data and utility classes used for signing, verifying, key management and data integrity checks.
 
-# Package net.corda.core.crypto.composite
-
-Composite key and signature classes, which are used to represent the signing requirements for multisignature scenarios such as RAFT notary services.
-
 # Package net.corda.core.flows
 
 Base data types and abstract classes for implementing Corda flows. To implement a new flow start with [FlowLogic], or
