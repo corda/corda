@@ -224,8 +224,8 @@ fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: 
     return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
 }
 
-inline fun <reified T : Any> kryoSpecific(function: () -> Unit) = if(!AMQP_ENABLED) {
+inline fun <reified T : Any> kryoSpecific(reason: String, function: () -> Unit) = if(!AMQP_ENABLED) {
     function()
 } else {
-    loggerFor<T>().info("Ignoring Kryo specific test")
+    loggerFor<T>().info("Ignoring Kryo specific test, reason: $reason" )
 }
