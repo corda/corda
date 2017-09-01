@@ -32,9 +32,9 @@ class IntegrationTestingTutorial {
                     startFlowPermission<CashPaymentFlow>()
             ))
             val (alice, bob, notary) = listOf(
-                    startNode(ALICE.name, rpcUsers = listOf(aliceUser)),
-                    startNode(BOB.name, rpcUsers = listOf(bobUser)),
-                    startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+                    startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),
+                    startNode(providedName = BOB.name, rpcUsers = listOf(bobUser)),
+                    startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
             ).transpose().getOrThrow()
             // END 1
 

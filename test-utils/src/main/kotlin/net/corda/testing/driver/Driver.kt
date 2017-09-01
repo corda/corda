@@ -78,6 +78,8 @@ interface DriverDSLExposedInterface : CordformContext {
     /**
      * Starts a [net.corda.node.internal.Node] in a separate process.
      *
+     * @param defaultParameters The default parameters for the node. Allows the node to be configured in builder style
+     *   when called from Java code.
      * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
      *     random. Note that this must be unique as the driver uses it as a primary key!
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
@@ -87,12 +89,25 @@ interface DriverDSLExposedInterface : CordformContext {
      *     in. If null the Driver-level value will be used.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
-    fun startNode(providedName: X500Name? = null,
-                  advertisedServices: Set<ServiceInfo> = emptySet(),
-                  rpcUsers: List<User> = emptyList(),
-                  verifierType: VerifierType = VerifierType.InMemory,
-                  customOverrides: Map<String, Any?> = emptyMap(),
-                  startInSameProcess: Boolean? = null): CordaFuture<NodeHandle>
+    fun startNode(
+            defaultParameters: NodeParameters = NodeParameters(),
+            providedName: X500Name? = defaultParameters.providedName,
+            advertisedServices: Set<ServiceInfo> = defaultParameters.advertisedServices,
+            rpcUsers: List<User> = defaultParameters.rpcUsers,
+            verifierType: VerifierType = defaultParameters.verifierType,
+            customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
+            startInSameProcess: Boolean? = defaultParameters.startInSameProcess): CordaFuture<NodeHandle>
+
+    /**
+     * Helper function for starting a [node] with custom parameters from Java.
+     *
+     * @param defaultParameters The default parameters for the driver.
+     * @param dsl The dsl itself.
+     * @return The value returned in the [dsl] closure.
+     */
+    fun <A> startNode(parameters: NodeParameters): CordaFuture<NodeHandle> {
+        return startNode(defaultParameters = parameters)
+    }
 
     fun startNodes(
             nodes: List<CordformNode>,
@@ -215,10 +230,29 @@ sealed class PortAllocation {
 }
 
 /**
+ * Helper builder for configuring a [node] from Java.
+ */
+data class NodeParameters(
+        val providedName: X500Name? = null,
+        val advertisedServices: Set<ServiceInfo> = emptySet(),
+        val rpcUsers: List<User> = emptyList(),
+        val verifierType: VerifierType = VerifierType.InMemory,
+        val customOverrides: Map<String, Any?> = emptyMap(),
+        val startInSameProcess: Boolean? = null
+) {
+    fun setProvidedName(providedName: X500Name?) = copy(providedName = providedName)
+    fun setAdvertisedServices(advertisedServices: Set<ServiceInfo>) = copy(advertisedServices = advertisedServices)
+    fun setRpcUsers(rpcUsers: List<User>) = copy(rpcUsers = rpcUsers)
+    fun setVerifierType(verifierType: VerifierType) = copy(verifierType = verifierType)
+    fun setCustomerOverrides(customOverrides: Map<String, Any?>) = copy(customOverrides = customOverrides)
+    fun setStartInSameProcess(startInSameProcess: Boolean?) = copy(startInSameProcess = startInSameProcess)
+}
+
+/**
  * [driver] allows one to start up nodes like this:
  *   driver {
- *     val noService = startNode(DUMMY_BANK_A.name)
- *     val notary = startNode(DUMMY_NOTARY.name)
+ *     val noService = startNode(providedName = DUMMY_BANK_A.name)
+ *     val notary = startNode(providedName = DUMMY_NOTARY.name)
  *
  *     (...)
  *   }
@@ -603,6 +637,7 @@ class DriverDSL(
     }
 
     override fun startNode(
+            defaultParameters: NodeParameters,
             providedName: X500Name?,
             advertisedServices: Set<ServiceInfo>,
             rpcUsers: List<User>,
@@ -687,7 +722,7 @@ class DriverDSL(
             val nodeAddress = portAllocation.nextHostAndPort()
             val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()),
                     "database.serverNameTablePrefix" to it.toString().replace(Regex("[^0-9A-Za-z]+"), ""))
-            startNode(it, advertisedServices, rpcUsers, verifierType, configOverride)
+            startNode(providedName = it, advertisedServices = advertisedServices, rpcUsers = rpcUsers, verifierType = verifierType, customOverrides = configOverride)
         }
 
         return firstNotaryFuture.flatMap { firstNotary ->

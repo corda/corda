@@ -24,8 +24,10 @@ class BankOfCordaRPCClientTest {
                     startFlowPermission<CashIssueAndPaymentFlow>()))
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
             val (nodeBankOfCorda, nodeBigCorporation) = listOf(
-                    startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type)), listOf(bocManager)),
-                    startNode(BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
+                    startNode(providedName = BOC.name,
+                            advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
+                            rpcUsers = listOf(bocManager)),
+                    startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
             ).transpose().getOrThrow()
 
             // Bank of Corda RPC Client

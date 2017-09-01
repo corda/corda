@@ -16,8 +16,8 @@ class BankOfCordaHttpAPITest {
     fun `issuer flow via Http`() {
         driver(dsl = {
             val (nodeBankOfCorda) = listOf(
-                    startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type))),
-                    startNode(BIGCORP_LEGAL_NAME)
+                    startNode(providedName = BOC.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))),
+                    startNode(providedName = BIGCORP_LEGAL_NAME)
             ).transpose().getOrThrow()
             val anonymous = false
             val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow().listenAddress
