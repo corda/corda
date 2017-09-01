@@ -8,7 +8,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.toBase58String
 import java.io.Serializable
-import java.security.cert.CertPath
 import javax.persistence.*
 
 object NodeInfoSchema
@@ -107,13 +106,9 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "party_name", nullable = false)
             val name: String,
 
-            @Column(name = "certificate")
+            @Column(name = "party_cert_binary")
             @Lob
-            val certificate: ByteArray,
-
-            @Column(name = "certificate_path")
-            @Lob
-            val certPath: ByteArray,
+            val partyCertBinary: ByteArray,
 
             val isMain: Boolean,
 
@@ -121,9 +116,10 @@ object NodeInfoSchemaV1 : MappedSchema(
             private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
     ) {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
-                : this(partyAndCert.party.owningKey.toBase58String(), partyAndCert.party.name.toString(), partyAndCert.certificate.serialize().bytes, partyAndCert.certPath.serialize().bytes, isMain)
+                : this(partyAndCert.party.owningKey.toBase58String(), partyAndCert.party.name.toString(), partyAndCert.serialize().bytes, isMain)
+
         fun toLegalIdentityAndCert(): PartyAndCertificate {
-            return PartyAndCertificate(certPath.deserialize<CertPath>())
+            return partyCertBinary.deserialize<PartyAndCertificate>()
         }
     }
 }
