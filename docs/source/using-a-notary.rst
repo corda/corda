@@ -33,7 +33,7 @@ The first step is to obtain the notary identity -- ``Party``:
 
 .. sourcecode:: kotlin
 
-    val ourNotary: Party = serviceHub.networkMapCache.getNotary("Central Bank Notary")
+    val ourNotary: Party = serviceHub.networkMapCache.getNotary("Notary A")
 
 Then we initialise the transaction builder:
 
@@ -86,7 +86,7 @@ we just use a helper that handles it for us. We also assume that we already have
 
 .. sourcecode:: kotlin
 
-    val inputState = StateAndRef(sate, stateRef)
+    val inputState = StateAndRef(state, stateRef)
     val moveTransactionBuilder = DummyContract.withNewOwnerAndAmount(inputState, newOwner = aliceParty.owningKey)
 
 The ``DummyContract.withNewOwnerAndAmount()`` method will a new transaction builder with our old state as the input, a new state
