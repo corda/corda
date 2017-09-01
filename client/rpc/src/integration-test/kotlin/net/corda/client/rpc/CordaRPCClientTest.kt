@@ -8,8 +8,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.USD
-import net.corda.finance.contracts.getCashBalance
-import net.corda.finance.contracts.getCashBalances
+import net.corda.finance.utils.getCashBalance
+import net.corda.finance.utils.getCashBalances
 import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow

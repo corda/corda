@@ -28,7 +28,7 @@ import static java.util.Objects.requireNonNull;
 import static kotlin.test.AssertionsKt.assertEquals;
 import static net.corda.client.rpc.CordaRPCClientConfiguration.getDefault;
 import static net.corda.finance.CurrencyUtils.DOLLARS;
-import static net.corda.finance.contracts.GetBalances.getCashBalance;
+import static net.corda.finance.utils.GetBalances.getCashBalance;
 import static net.corda.node.services.FlowPermissions.startFlowPermission;
 import static net.corda.testing.TestConstants.getALICE;
 
