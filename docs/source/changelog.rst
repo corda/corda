@@ -114,6 +114,10 @@ UNRELEASED
   ``createSignature(filteredTransaction: FilteredTransaction, publicKey: PublicKey)`` and
   ``createSignature(filteredTransaction: FilteredTransaction)`` to sign with the legal identity key.
 
+* A new helper method ``buildFilteredTransaction(filtering: Predicate<Any>)`` is added to ``SignedTransaction`` to
+  directly build a ``FilteredTransaction`` using provided filtering functions, without first accessing the
+  ``tx: WireTransaction``.
+
 Milestone 14
 ------------
 
