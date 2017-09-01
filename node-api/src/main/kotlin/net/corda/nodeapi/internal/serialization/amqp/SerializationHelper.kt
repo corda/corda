@@ -220,3 +220,6 @@ internal fun Type.asParameterizedType(): ParameterizedType {
 internal fun Type.isSubClassOf(type: Type): Boolean {
     return TypeToken.of(this).isSubtypeOf(type)
 }
+
+internal fun suitableForObjectReference(type: Type) =
+        type != ByteArray::class.java && type.asClass()?.isPrimitive != true
