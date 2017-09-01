@@ -41,10 +41,17 @@ open class RPCException(message: String?, cause: Throwable?) : CordaRuntimeExcep
     constructor(msg: String) : this(msg, null)
 }
 
+/**
+ * Thrown to indicate that the calling user does not have permission for something they have requested (for example
+ * calling a method).
+ */
 @CordaSerializable
 class PermissionException(msg: String) : RuntimeException(msg)
 
-// The Kryo used for the RPC wire protocol. Every type in the wire protocol is listed here explicitly.
+/**
+ * The Kryo used for the RPC wire protocol.
+ */
+// Every type in the wire protocol is listed here explicitly.
 // This is annoying to write out, but will make it easier to formalise the wire protocol when the time comes,
 // because we can see everything we're using in one place.
 class RPCKryo(observableSerializer: Serializer<Observable<*>>, serializationContext: SerializationContext) : CordaKryo(CordaClassResolver(serializationContext)) {
