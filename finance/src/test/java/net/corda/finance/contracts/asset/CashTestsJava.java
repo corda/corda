@@ -6,8 +6,8 @@ import net.corda.core.utilities.OpaqueBytes;
 import net.corda.testing.DummyCommandData;
 import org.junit.Test;
 
-import static net.corda.finance.CurrencyUtils.DOLLARS;
-import static net.corda.finance.CurrencyUtils.issuedBy;
+import static net.corda.finance.Currencies.DOLLARS;
+import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.testing.CoreTestUtils.*;
 
 /**

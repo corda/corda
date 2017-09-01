@@ -1,4 +1,4 @@
-@file:JvmName("CurrencyUtils")
+@file:JvmName("Currencies")
 
 package net.corda.finance
 
