@@ -17,13 +17,9 @@ import java.security.*
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
 @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature {
-    return DigitalSignature(Crypto.doSign(this, bytesToSign))
-}
+fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature = DigitalSignature(Crypto.doSign(this, bytesToSign))
 
-fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
-    return DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
-}
+fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey) = DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
 
 /**
  * Helper function to sign with a key pair.
@@ -81,32 +77,26 @@ fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature) : Boolean
 /** Render a public key to its hash (in Base58) of its serialised form using the DL prefix. */
 fun PublicKey.toStringShort(): String  = "DL" + this.toSHA256Bytes().toBase58()
 
-val PublicKey.keys: Set<PublicKey> get() {
-    return if (this is CompositeKey) this.leafKeys
-    else setOf(this)
-}
+val PublicKey.keys: Set<PublicKey> get() = (this as? CompositeKey)?.leafKeys ?: setOf(this)
 
 fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean  = isFulfilledBy(setOf(otherKey))
-fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean {
-    return if (this is CompositeKey) this.isFulfilledBy(otherKeys)
-    else this in otherKeys
-}
+fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys) ?: (this in otherKeys)
 
-/** Checks whether any of the given [keys] matches a leaf on the CompositeKey tree or a single PublicKey */
+/** Checks whether any of the given [keys] matches a leaf on the [CompositeKey] tree or a single [PublicKey]. */
 fun PublicKey.containsAny(otherKeys: Iterable<PublicKey>): Boolean {
     return if (this is CompositeKey) keys.intersect(otherKeys).isNotEmpty()
     else this in otherKeys
 }
 
-/** Returns the set of all [PublicKey]s of the signatures */
+/** Returns the set of all [PublicKey]s of the signatures. */
 fun Iterable<TransactionSignature>.byKeys() = map { it.by }.toSet()
 
-// Allow Kotlin destructuring:    val (private, public) = keyPair
+// Allow Kotlin destructuring:    val (private, public) = keyPair.
 operator fun KeyPair.component1(): PrivateKey = this.private
 
 operator fun KeyPair.component2(): PublicKey = this.public
 
-/** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
+/** A simple wrapper that will make it easier to swap out the EC algorithm we use in future. */
 fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
 
 /**
@@ -147,13 +137,11 @@ fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Cr
  * @param numOfBytes how many random bytes to output.
  * @return a random [ByteArray].
  * @throws NoSuchAlgorithmException thrown if "NativePRNGNonBlocking" is not supported on the JVM
- * or if no strong SecureRandom implementations are available or if Security.getProperty("securerandom.strongAlgorithms") is null or empty,
+ * or if no strong [SecureRandom] implementations are available or if Security.getProperty("securerandom.strongAlgorithms") is null or empty,
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun secureRandomBytes(numOfBytes: Int): ByteArray {
-    return newSecureRandom().generateSeed(numOfBytes)
-}
+fun secureRandomBytes(numOfBytes: Int): ByteArray = newSecureRandom().generateSeed(numOfBytes)
 
 /**
  * Get an instance of [SecureRandom] to avoid blocking, due to waiting for additional entropy, when possible.
