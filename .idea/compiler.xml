@@ -28,6 +28,9 @@
       <module name="docs_source_example-code_main" target="1.8" />
       <module name="docs_source_example-code_test" target="1.8" />
       <module name="docs_test" target="1.8" />
+      <module name="driver_integrationTest" target="1.8" />
+      <module name="driver_main" target="1.8" />
+      <module name="driver_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
       <module name="experimental_test" target="1.8" />
       <module name="explorer-capsule_main" target="1.6" />
@@ -83,7 +86,6 @@
       <module name="smoke-test-utils_test" target="1.8" />
       <module name="test-common_main" target="1.8" />
       <module name="test-common_test" target="1.8" />
-      <module name="test-utils_integrationTest" target="1.8" />
       <module name="test-utils_main" target="1.8" />
       <module name="test-utils_test" target="1.8" />
       <module name="tools_main" target="1.8" />

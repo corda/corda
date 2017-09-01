@@ -34,7 +34,7 @@ dependencies {
     cordaCompile project(':client:jfx')
     cordaCompile project(':client:rpc')
     cordaCompile project(':webserver')
-    cordaCompile project(':test-utils')
+    cordaCompile project(':driver')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"

@@ -67,7 +67,7 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
-    testCompile project(':test-utils')
+    testCompile project(':driver')
     testCompile project(':client:mock')
 
     // Smoke tests do NOT have any Node code on the classpath!

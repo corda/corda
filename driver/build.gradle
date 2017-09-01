@@ -1,9 +1,8 @@
 apply plugin: 'kotlin'
+apply plugin: 'kotlin-jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
-
-description 'Corda client JavaFX modules'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
@@ -21,36 +20,19 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
         }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
     }
 }
 
-// To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
-// build/reports/project/dependencies/index.html for green highlighted parts of the tree.
-
 dependencies {
-    compile project(':core')
-    compile project(':finance')
-    compile project(':client:rpc')
-
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-    compile "com.google.guava:guava:$guava_version"
-
-    // ReactFX: Functional reactive UI programming.
-    compile 'org.reactfx:reactfx:2.0-M5'
-    compile 'org.fxmisc.easybind:easybind:1.0.3'
-
-    // Artemis Client: ability to connect to an Artemis broker and control it.
-    compile "org.apache.activemq:artemis-core-client:${artemis_version}"
-
-    // Unit testing helpers.
-    testCompile "junit:junit:$junit_version"
-    testCompile "org.assertj:assertj-core:${assertj_version}"
-
-    testCompile project(':test-utils')
+    compile project(':test-utils')
+    compile project(':cordform-common')
 
     // Integration test helpers
+    integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
     integrationTestCompile "junit:junit:$junit_version"
-    integrationTestCompile project(':driver')
 }
 
 task integrationTest(type: Test) {
@@ -59,7 +41,7 @@ task integrationTest(type: Test) {
 }
 
 jar {
-    baseName 'corda-jfx'
+    baseName 'corda-driver'
 }
 
 publish {

@@ -32,7 +32,7 @@ compileTestJava.dependsOn tasks.getByPath(':node:capsule:buildCordaJAR')
 dependencies {
     cordaCompile project(':core')
     cordaCompile project(':client:jfx')
-    cordaCompile project(':test-utils')
+    cordaCompile project(':driver')
     testCompile project(':verifier')
 
     compile "org.graphstream:gs-core:1.3"
