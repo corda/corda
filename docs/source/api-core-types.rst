@@ -42,7 +42,7 @@ fleshed out.
 
 CommandWithParties
 ------------------
-A ``CommandWithParties`` represents a command and the list of associated signers.
+A ``CommandWithParties`` represents a command and the list of associated signers' identities.
 
 Multi-signature support
 -----------------------
