@@ -155,11 +155,11 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @NotNull
-    private List<AuthenticatedObject<Commands>> extractCommands(@NotNull LedgerTransaction tx) {
+    private List<CommandWithParties<Commands>> extractCommands(@NotNull LedgerTransaction tx) {
         return tx.getCommands()
                 .stream()
-                .filter((AuthenticatedObject<CommandData> command) -> command.getValue() instanceof Commands)
-                .map((AuthenticatedObject<CommandData> command) -> new AuthenticatedObject<>(command.getSigners(), command.getSigningParties(), (Commands) command.getValue()))
+                .filter((CommandWithParties<CommandData> command) -> command.getValue() instanceof Commands)
+                .map((CommandWithParties<CommandData> command) -> new CommandWithParties<>(command.getSigners(), command.getSigningParties(), (Commands) command.getValue()))
                 .collect(Collectors.toList());
     }
 
@@ -171,17 +171,17 @@ public class JavaCommercialPaper implements Contract {
 
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
-        final List<AuthenticatedObject<CommandData>> commands = tx.getCommands().stream().filter(
+        final List<CommandWithParties<CommandData>> commands = tx.getCommands().stream().filter(
                 it -> it.getValue() instanceof Commands
         ).collect(Collectors.toList());
-        final AuthenticatedObject<CommandData> command = onlyElementOf(commands);
+        final CommandWithParties<CommandData> command = onlyElementOf(commands);
         final TimeWindow timeWindow = tx.getTimeWindow();
 
         for (final LedgerTransaction.InOutGroup<State, State> group : groups) {
             final List<State> inputs = group.getInputs();
             final List<State> outputs = group.getOutputs();
             if (command.getValue() instanceof Commands.Move) {
-                final AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
+                final CommandWithParties<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
                 final State input = onlyElementOf(inputs);
 
@@ -193,7 +193,7 @@ public class JavaCommercialPaper implements Contract {
                     throw new IllegalStateException("the state is propagated");
                 }
             } else if (command.getValue() instanceof Commands.Redeem) {
-                final AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
+                final CommandWithParties<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
                 // There should be only a single input due to aggregation above
                 final State input = onlyElementOf(inputs);
@@ -216,7 +216,7 @@ public class JavaCommercialPaper implements Contract {
                     return Unit.INSTANCE;
                 });
             } else if (command.getValue() instanceof Commands.Issue) {
-                final AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
+                final CommandWithParties<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 final State output = onlyElementOf(outputs);
                 final Instant time = null == timeWindow
                         ? null

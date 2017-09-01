@@ -84,7 +84,7 @@ data class WireTransaction(
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
             val parties = it.signers.mapNotNull { pk -> resolveIdentity(pk) }
-            AuthenticatedObject(it.signers, parties, it.value)
+            CommandWithParties(it.signers, parties, it.value)
         }
         // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
         val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }

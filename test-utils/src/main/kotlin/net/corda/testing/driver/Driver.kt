@@ -146,6 +146,7 @@ interface DriverDSLExposedInterface : CordformContext {
      * @return A future that completes with the non-null value [check] has returned.
      */
     fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> A?): CordaFuture<A>
+
     /**
      * Polls the given function until it returns true.
      * @see pollUntilNonNull
@@ -228,6 +229,8 @@ sealed class PortAllocation {
  *
  * The driver implicitly bootstraps a [NetworkMapService].
  *
+ * @param defaultParameters The default parameters for the driver. Allows the driver to be configured in builder style
+ *   when called from Java code.
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
  * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
@@ -242,33 +245,74 @@ sealed class PortAllocation {
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
-@JvmOverloads
 fun <A> driver(
-        isDebug: Boolean = false,
-        driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        systemProperties: Map<String, String> = emptyMap(),
-        useTestClock: Boolean = false,
-        initialiseSerialization: Boolean = true,
-        networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
-        startNodesInProcess: Boolean = false,
+        defaultParameters: DriverParameters = DriverParameters(),
+        isDebug: Boolean = defaultParameters.isDebug,
+        driverDirectory: Path = defaultParameters.driverDirectory,
+        portAllocation: PortAllocation = defaultParameters.portAllocation,
+        debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
+        systemProperties: Map<String, String> = defaultParameters.systemProperties,
+        useTestClock: Boolean = defaultParameters.useTestClock,
+        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+        networkMapStartStrategy: NetworkMapStartStrategy = defaultParameters.networkMapStartStrategy,
+        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         dsl: DriverDSLExposedInterface.() -> A
-) = genericDriver(
-        driverDsl = DriverDSL(
-                portAllocation = portAllocation,
-                debugPortAllocation = debugPortAllocation,
-                systemProperties = systemProperties,
-                driverDirectory = driverDirectory.toAbsolutePath(),
-                useTestClock = useTestClock,
-                networkMapStartStrategy = networkMapStartStrategy,
-                startNodesInProcess = startNodesInProcess,
-                isDebug = isDebug
-        ),
-        coerce = { it },
-        dsl = dsl,
-        initialiseSerialization = initialiseSerialization
-)
+): A {
+    return genericDriver(
+            driverDsl = DriverDSL(
+                    portAllocation = portAllocation,
+                    debugPortAllocation = debugPortAllocation,
+                    systemProperties = systemProperties,
+                    driverDirectory = driverDirectory.toAbsolutePath(),
+                    useTestClock = useTestClock,
+                    networkMapStartStrategy = networkMapStartStrategy,
+                    startNodesInProcess = startNodesInProcess,
+                    isDebug = isDebug
+            ),
+            coerce = { it },
+            dsl = dsl,
+            initialiseSerialization = initialiseSerialization
+    )
+}
+
+/**
+ * Helper function for starting a [driver] with custom parameters from Java.
+ *
+ * @param defaultParameters The default parameters for the driver.
+ * @param dsl The dsl itself.
+ * @return The value returned in the [dsl] closure.
+ */
+fun <A> driver(
+        parameters: DriverParameters,
+        dsl: DriverDSLExposedInterface.() -> A
+): A {
+    return driver(defaultParameters = parameters, dsl = dsl)
+}
+
+/**
+ * Helper builder for configuring a [driver] from Java.
+ */
+data class DriverParameters(
+        val isDebug: Boolean = false,
+        val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
+        val portAllocation: PortAllocation = PortAllocation.Incremental(10000),
+        val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        val systemProperties: Map<String, String> = emptyMap(),
+        val useTestClock: Boolean = false,
+        val initialiseSerialization: Boolean = true,
+        val networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
+        val startNodesInProcess: Boolean = false
+) {
+    fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
+    fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
+    fun setPortAllocation(portAllocation: PortAllocation) = copy(portAllocation = portAllocation)
+    fun setDebugPortAllocation(debugPortAllocation: PortAllocation) = copy(debugPortAllocation = debugPortAllocation)
+    fun setSystemProperties(systemProperties: Map<String, String>) = copy(systemProperties = systemProperties)
+    fun setUseTestClock(useTestClock: Boolean) = copy(useTestClock = useTestClock)
+    fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
+    fun setNetworkMapStartStrategy(networkMapStartStrategy: NetworkMapStartStrategy) = copy(networkMapStartStrategy = networkMapStartStrategy)
+    fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
+}
 
 /**
  * This is a helper method to allow extending of the DSL, along the lines of
@@ -403,15 +447,17 @@ class ShutdownManager(private val executorService: ExecutorService) {
             }
         }
         val shutdowns = shutdownActionFutures.map { Try.on { it.getOrThrow(1.seconds) } }
-        shutdowns.reversed().forEach { when (it) {
-            is Try.Success ->
-                try {
-                    it.value()
-                } catch (t: Throwable) {
-                    log.warn("Exception while shutting down", t)
-                }
-            is Try.Failure -> log.warn("Exception while getting shutdown method, disregarding", it.exception)
-        } }
+        shutdowns.reversed().forEach {
+            when (it) {
+                is Try.Success ->
+                    try {
+                        it.value()
+                    } catch (t: Throwable) {
+                        log.warn("Exception while shutting down", t)
+                    }
+                is Try.Failure -> log.warn("Exception while getting shutdown method, disregarding", it.exception)
+            }
+        }
     }
 
     fun registerShutdown(shutdown: CordaFuture<() -> Unit>) {
@@ -420,6 +466,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
             registeredShutdowns.add(shutdown)
         }
     }
+
     fun registerShutdown(shutdown: () -> Unit) = registerShutdown(doneFuture(shutdown))
 
     fun registerProcessShutdown(processFuture: CordaFuture<Process>) {
@@ -632,7 +679,7 @@ class DriverDSL(
                 rpcUsers = rpcUsers,
                 verifierType = verifierType,
                 customOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString(),
-                        "database.serverNameTablePrefix" to if (nodeNames.isNotEmpty()) nodeNames.first().toString().replace(Regex("[^0-9A-Za-z]+"),"") else ""),
+                        "database.serverNameTablePrefix" to if (nodeNames.isNotEmpty()) nodeNames.first().toString().replace(Regex("[^0-9A-Za-z]+"), "") else ""),
                 startInSameProcess = startInSameProcess
         )
         // All other nodes will join the cluster
@@ -661,7 +708,7 @@ class DriverDSL(
             if (response.isSuccessful && (response.body().string() == "started")) {
                 return WebserverHandle(handle.webAddress, process)
             }
-        } catch(e: ConnectException) {
+        } catch (e: ConnectException) {
             log.debug("Retrying webserver info at ${handle.webAddress}")
         }
 
@@ -711,10 +758,12 @@ class DriverDSL(
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config)
             shutdownManager.registerShutdown(
-                    nodeAndThreadFuture.map { (node, thread) -> {
-                        node.stop()
-                        thread.interrupt()
-                    } }
+                    nodeAndThreadFuture.map { (node, thread) ->
+                        {
+                            node.stop()
+                            thread.interrupt()
+                        }
+                    }
             )
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, openFuture()).flatMap { rpc ->
@@ -822,8 +871,8 @@ class DriverDSL(
                         workingDirectory = nodeConf.baseDirectory
                 )
             }
-            return processFuture.flatMap {
-                process -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process }
+            return processFuture.flatMap { process ->
+                addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process }
             }
         }
 
@@ -839,8 +888,8 @@ class DriverDSL(
                         arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
                         jdwpPort = debugPort,
                         extraJvmArguments = listOf(
-                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
-                            "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
+                                "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                                "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                         ),
                         errorLogPath = Paths.get("error.$className.log")
                 )
