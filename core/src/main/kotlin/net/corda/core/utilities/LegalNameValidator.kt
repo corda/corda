@@ -2,7 +2,6 @@
 
 package net.corda.core.utilities
 
-import net.corda.core.crypto.commonName
 import org.bouncycastle.asn1.x500.X500Name
 import java.lang.Character.UnicodeScript.*
 import java.text.Normalizer

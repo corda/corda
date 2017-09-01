@@ -3,7 +3,7 @@ package net.corda.testing.node
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.crypto.getX509Name
+import net.corda.core.utilities.getX509Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.core.messaging.MessageRecipientGroup

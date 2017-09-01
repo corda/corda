@@ -5,7 +5,7 @@ import io.netty.handler.ssl.SslHandler
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.AddressFormatException
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.crypto.parsePublicKeyBase58
+import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.openFuture

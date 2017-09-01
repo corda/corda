@@ -2,7 +2,7 @@ package net.corda.core.identity
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.utilities.OpaqueBytes
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder

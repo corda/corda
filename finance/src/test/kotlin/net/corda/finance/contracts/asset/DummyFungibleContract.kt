@@ -1,7 +1,7 @@
 package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.Emoji
 import net.corda.core.schemas.MappedSchema

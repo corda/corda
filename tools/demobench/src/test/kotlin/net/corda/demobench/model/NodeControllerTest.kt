@@ -1,6 +1,6 @@
 package net.corda.demobench.model
 
-import net.corda.core.crypto.getX509Name
+import net.corda.core.utilities.getX509Name
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
 import org.junit.Test
@@ -175,10 +175,10 @@ class NodeControllerTest {
     ) = NodeConfig(
             baseDir,
             legalName = getX509Name(
-                myLegalName = commonName,
-                nearestCity = "New York",
-                country = "US",
-                email = "corda@city.us.example"
+                    myLegalName = commonName,
+                    nearestCity = "New York",
+                    country = "US",
+                    email = "corda@city.us.example"
             ),
             p2pPort = p2pPort,
             rpcPort = rpcPort,

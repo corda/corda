@@ -1,28 +1,15 @@
 package net.corda.core.schemas
 
-import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceEntry
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.toBase58String
 import java.io.Serializable
 import java.security.cert.CertPath
-import javax.persistence.CascadeType
-import javax.persistence.Column
-import javax.persistence.ElementCollection
-import javax.persistence.Embeddable
-import javax.persistence.EmbeddedId
-import javax.persistence.Entity
-import javax.persistence.GeneratedValue
-import javax.persistence.Id
-import javax.persistence.JoinColumn
-import javax.persistence.JoinTable
-import javax.persistence.Lob
-import javax.persistence.ManyToMany
-import javax.persistence.OneToMany
-import javax.persistence.Table
+import javax.persistence.*
 
 object NodeInfoSchema
 
