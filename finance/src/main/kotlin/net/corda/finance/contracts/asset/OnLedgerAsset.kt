@@ -282,7 +282,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
         }
     }
 
-    abstract fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): Collection<AuthenticatedObject<C>>
+    abstract fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): Collection<CommandWithParties<C>>
 
     /**
      * Generate an transaction exiting assets from the ledger.

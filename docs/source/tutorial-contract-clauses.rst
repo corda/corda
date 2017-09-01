@@ -124,7 +124,7 @@ and is included in the ``CommercialPaper.kt`` code.
                 override fun verify(tx: LedgerTransaction,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: List<AuthenticatedObject<Commands>>,
+                                commands: List<CommandWithParties<Commands>>,
                                 groupingKey: Issued<Terms>?): Set<Commands> {
                     val command = commands.requireSingleCommand<Commands.Move>()
                     val input = inputs.single()
@@ -154,9 +154,9 @@ and is included in the ``CommercialPaper.kt`` code.
                 public Set<Commands> verify(@NotNull LedgerTransaction tx,
                                                @NotNull List<? extends State> inputs,
                                                @NotNull List<? extends State> outputs,
-                                               @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                               @NotNull List<? extends CommandWithParties<? extends Commands>> commands,
                                                @NotNull State groupingKey) {
-                    AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
+                    CommandWithParties<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                     // There should be only a single input due to aggregation above
                     State input = single(inputs);
 

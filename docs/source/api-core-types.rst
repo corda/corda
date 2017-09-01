@@ -40,9 +40,9 @@ anonymous parties to full parties.
 .. note:: These types are provisional and will change significantly in future as the identity framework becomes more
 fleshed out.
 
-AuthenticatedObject
--------------------
-An ``AuthenticatedObject`` represents an object (like a command) and the list of associated signers.
+CommandWithParties
+------------------
+A ``CommandWithParties`` represents a command and the list of associated signers.
 
 Multi-signature support
 -----------------------

@@ -114,7 +114,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
         package com.template.contract;
 
         import com.template.state.IOUState;
-        import net.corda.core.contracts.AuthenticatedObject;
+        import net.corda.core.contracts.CommandWithParties;
         import net.corda.core.contracts.CommandData;
         import net.corda.core.contracts.Contract;
         import net.corda.core.transactions.LedgerTransaction;
@@ -130,7 +130,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
             @Override
             public void verify(LedgerTransaction tx) {
-                final AuthenticatedObject<Create> command = requireSingleCommand(tx.getCommands(), Create.class);
+                final CommandWithParties<Create> command = requireSingleCommand(tx.getCommands(), Create.class);
 
                 requireThat(check -> {
                     // Constraints on the shape of the transaction.
