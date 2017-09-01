@@ -1,6 +1,6 @@
 package net.corda.demobench.model
 
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.commonName
 import net.corda.core.utilities.WHITESPACE
 import org.bouncycastle.asn1.x500.X500Name
 

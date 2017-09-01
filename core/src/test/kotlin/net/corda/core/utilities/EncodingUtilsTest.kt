@@ -1,5 +1,6 @@
-package net.corda.core.crypto
+package net.corda.core.utilities
 
+import net.corda.core.crypto.AddressFormatException
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail

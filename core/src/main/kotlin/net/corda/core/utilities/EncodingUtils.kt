@@ -1,7 +1,9 @@
 @file:JvmName("EncodingUtils")
 
-package net.corda.core.crypto
+package net.corda.core.utilities
 
+import net.corda.core.crypto.Base58
+import net.corda.core.crypto.sha256
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import java.nio.charset.Charset

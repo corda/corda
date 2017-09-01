@@ -1,8 +1,8 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.CertificateAndKeyPair
+import net.corda.core.utilities.CertificateAndKeyPair
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.cert
+import net.corda.core.utilities.cert
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
