@@ -118,7 +118,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
                             "is outside of the bounds for the list of size: ${objectHistory.size}")
 
                 val objectRetrieved = objectHistory[objectIndex]
-                if (!objectRetrieved::class.java.isSubClassOf(type))
+                if (!objectRetrieved::class.java.isSubClassOf(type.asClass()!!))
                     throw NotSerializableException("Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}'")
                 objectRetrieved
             } else {

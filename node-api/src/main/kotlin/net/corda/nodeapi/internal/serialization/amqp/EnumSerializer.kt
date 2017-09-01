@@ -4,6 +4,10 @@ import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.io.NotSerializableException
 
+/**
+ * Our definition of an enum with the AMQP spec is a list (of two items, a string and an int) that is
+ * a restricted type with a number of choices associated with it
+ */
 class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
@@ -12,7 +16,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
     init {
         typeNotation = RestrictedType(
                 SerializerFactory.nameForType(declaredType),
-                null, emptyList(), "enum", Descriptor(typeDescriptor, null),
+                null, emptyList(), "list", Descriptor(typeDescriptor, null),
                 declaredClass.enumConstants.zip(IntRange(0, declaredClass.enumConstants.size)).map {
                     Choice(it.first.toString(), it.second.toString())
                 })
