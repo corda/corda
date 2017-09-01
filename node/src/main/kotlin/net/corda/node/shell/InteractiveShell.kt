@@ -294,7 +294,7 @@ object InteractiveShell {
                 }
                 val flow = ctor.newInstance(*args) as FlowLogic<*>
                 if (flow.progressTracker == null) {
-                    errors.add("You must override the flow's progress tracker to run it from the shell")
+                    errors.add("A flow must override the progress tracker in order to be run from the shell")
                     continue
                 }
                 return invoke(flow)
