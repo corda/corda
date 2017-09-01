@@ -93,6 +93,11 @@ actual states rather than state references).
 
 Corda utility classes, providing a broad range of functionality to help implement both Corda nodes and CorDapps.
 
+# Package net.corda.finance
+
+The finance module is a CorDapp containing sample cash and obligation contracts, as well as providing several
+useful data types such as [Amount].
+
 # Package net.corda.finance.utils
 
 A collection of utilities for summing financial states, for example, summing obligations to get total debts.
