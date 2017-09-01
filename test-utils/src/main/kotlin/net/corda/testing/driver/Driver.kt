@@ -327,7 +327,7 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
 }
 
 fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort) {
-    addressMustNotBeBoundFuture(executorService, hostAndPort).getOrThrow()
+    addressMustNotBeBoundFuture(executorService, hostAndPort).getOrThrow(10.seconds)
 }
 
 fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort): CordaFuture<Unit> {
