@@ -244,31 +244,66 @@ sealed class PortAllocation {
  */
 @JvmOverloads
 fun <A> driver(
-        isDebug: Boolean = false,
-        driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        systemProperties: Map<String, String> = emptyMap(),
-        useTestClock: Boolean = false,
-        initialiseSerialization: Boolean = true,
-        networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
-        startNodesInProcess: Boolean = false,
+        defaultParameters: DriverParameters = DriverParameters(),
+        isDebug: Boolean = defaultParameters.isDebug,
+        driverDirectory: Path = defaultParameters.driverDirectory,
+        portAllocation: PortAllocation = defaultParameters.portAllocation,
+        debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
+        systemProperties: Map<String, String> = defaultParameters.systemProperties,
+        useTestClock: Boolean = defaultParameters.useTestClock,
+        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+        networkMapStartStrategy: NetworkMapStartStrategy = defaultParameters.networkMapStartStrategy,
+        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         dsl: DriverDSLExposedInterface.() -> A
-) = genericDriver(
-        driverDsl = DriverDSL(
-                portAllocation = portAllocation,
-                debugPortAllocation = debugPortAllocation,
-                systemProperties = systemProperties,
-                driverDirectory = driverDirectory.toAbsolutePath(),
-                useTestClock = useTestClock,
-                networkMapStartStrategy = networkMapStartStrategy,
-                startNodesInProcess = startNodesInProcess,
-                isDebug = isDebug
-        ),
-        coerce = { it },
-        dsl = dsl,
-        initialiseSerialization = initialiseSerialization
+): A {
+    return genericDriver(
+            driverDsl = DriverDSL(
+                    portAllocation = portAllocation,
+                    debugPortAllocation = debugPortAllocation,
+                    systemProperties = systemProperties,
+                    driverDirectory = driverDirectory.toAbsolutePath(),
+                    useTestClock = useTestClock,
+                    networkMapStartStrategy = networkMapStartStrategy,
+                    startNodesInProcess = startNodesInProcess,
+                    isDebug = isDebug
+            ),
+            coerce = { it },
+            dsl = dsl,
+            initialiseSerialization = initialiseSerialization
+    )
+}
+
+fun <A> driver(
+        builder: DriverBuilder,
+        dsl: DriverDSLExposedInterface.() -> A
+): A {
+    return driver(defaultParameters = builder.parameters, dsl = dsl)
+}
+
+data class DriverParameters(
+        val isDebug: Boolean = false,
+        val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
+        val portAllocation: PortAllocation = PortAllocation.Incremental(10000),
+        val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        val systemProperties: Map<String, String> = emptyMap(),
+        val useTestClock: Boolean = false,
+        val initialiseSerialization: Boolean = true,
+        val networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
+        val startNodesInProcess: Boolean = false
 )
+
+class DriverBuilder(val parameters: DriverParameters) {
+    constructor() : this(DriverParameters())
+    fun setIsDebug(newValue: Boolean) = DriverBuilder(parameters.copy(isDebug = newValue))
+    fun setDriverDirectory(newValue: Path) = DriverBuilder(parameters.copy(driverDirectory = newValue))
+    fun setPortAllocation(newValue: PortAllocation) = DriverBuilder(parameters.copy(portAllocation = newValue))
+    fun setDebugPortAllocation(newValue: PortAllocation) = DriverBuilder(parameters.copy(debugPortAllocation = newValue))
+    fun setSystemProperties(newValue: Map<String, String>) = DriverBuilder(parameters.copy(systemProperties = newValue))
+    fun setUseTestClock(newValue: Boolean) = DriverBuilder(parameters.copy(useTestClock = newValue))
+    fun setInitialiseSerialization(newValue: Boolean) = DriverBuilder(parameters.copy(initialiseSerialization = newValue))
+    fun setNetworkMapStartStrategy(newValue: NetworkMapStartStrategy) = DriverBuilder(parameters.copy(networkMapStartStrategy = newValue))
+    fun setStartNodesInProcess(newValue: Boolean) = DriverBuilder(parameters.copy(startNodesInProcess = newValue))
+}
 
 /**
  * This is a helper method to allow extending of the DSL, along the lines of
