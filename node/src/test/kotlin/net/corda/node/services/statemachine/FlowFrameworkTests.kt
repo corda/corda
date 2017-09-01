@@ -88,8 +88,10 @@ class FlowFrameworkTests {
         // We don't create a network map, so manually handle registrations
         val nodes = listOf(node1, node2, notary1, notary2)
         nodes.forEach { node ->
-            nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
-                node.services.identityService.verifyAndRegisterIdentity(identity)
+            node.database.transaction {
+                nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
+                    node.services.identityService.verifyAndRegisterIdentity(identity)
+                }
             }
         }
     }

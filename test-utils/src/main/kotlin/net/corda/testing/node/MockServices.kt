@@ -113,9 +113,11 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
             val dataSourceProps = makeTestDataSourceProperties()
             val databaseProperties = makeTestDatabaseProperties()
             val createSchemaService = { NodeSchemaService(customSchemas) }
-            val database = configureDatabase(dataSourceProps, databaseProperties, createSchemaService, createIdentityService)
+            val identityServiceRef: IdentityService by lazy { createIdentityService() }
+            val database = configureDatabase(dataSourceProps, databaseProperties, createSchemaService, { identityServiceRef })
             val mockService = database.transaction {
                 object : MockServices(*(keys.toTypedArray())) {
+                    override val identityService: IdentityService = database.transaction { identityServiceRef }
                     override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
 
                     override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
@@ -151,8 +153,8 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val attachments: AttachmentStorage = MockAttachmentStorage()
     override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage()
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
-    override final val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
-    override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *keys)
+    override val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
+    override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val vaultQueryService: VaultQueryService get() = throw UnsupportedOperationException()
