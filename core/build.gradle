@@ -68,6 +68,14 @@ dependencies {
     compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
 }
 
+task copyQuasarJar(type: Copy) {
+    from configurations.quasar
+    into "$projectDir/../lib"
+    rename { filename -> "quasar.jar"}
+}
+
+build.finalizedBy(copyQuasarJar)
+
 configurations {
     testArtifacts.extendsFrom testRuntime
 }
