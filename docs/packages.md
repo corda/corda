@@ -20,6 +20,10 @@ Tools used by the client to produce mock data for testing purposes.
 
 RPC client interface to Corda, for use both by user-facing client and integration with external systems.
 
+# Package net.corda.client.rpc.internal
+
+Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
+
 # Package net.corda.core.concurrent
 
 Provides a simplified [java.util.concurrent.Future] class that allows registration of a callback to execute when the future
@@ -27,7 +31,11 @@ is complete.
 
 # Package net.corda.core.contracts
 
-Base data types for smarts contracts implemented in Corda. To implement a new contract start with [Contract], or see the examples in [net.corda.finance.contracts].
+This package contains the base data types for smarts contracts implemented in Corda. To implement a new contract start
+with [Contract], or see the examples in [net.corda.finance.contracts].
+
+Corda smart contracts are a combination of state held on the distributed ledger, and verification logic which defines
+which transformations of state are valid.
 
 # Package net.corda.core.crypto
 
@@ -39,9 +47,12 @@ Composite key and signature classes, which are used to represent the signing req
 
 # Package net.corda.core.flows
 
-Corda flows are a tool for modelling the interactions between two or more nodes as they negotiate a workflow. This can range from a simple case of completing a trade which has been agreed upon externally, to more complex processes such as handling fixing of interest rate swaps.
+Base data types and abstract classes for implementing Corda flows. To implement a new flow start with [FlowLogic], or
+see [CollectSignaturesFlow] for a simple example flow. Flows are started via a node's [ServiceHub].
 
-See [FlowLogic] for the basic class all flows extend, or [CollectSignaturesFlow] for a simple example flow. Flows are started via a node's service hub.
+Corda flows are a tool for modelling the interactions between two or more nodes as they negotiate a workflow.
+This can range from a simple case of completing a trade which has been agreed upon externally, to more complex
+processes such as handling fixing of interest rate swaps.
 
 # Package net.corda.core.identity
 
@@ -51,6 +62,10 @@ Data classes which model different forms of identity (potentially with supportin
 
 Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
 
+# Package net.corda.core.messaging
+
+Data types used by the Corda messaging layer to manage state of messaging and sessions between nodes.
+
 # Package net.corda.core.node.services
 
 Services which run within a Corda node and provide various pieces of functionality such as identity management, transaction storage, etc.
@@ -58,6 +73,16 @@ Services which run within a Corda node and provide various pieces of functionali
 # Package net.corda.core.node.services.vault
 
 Supporting data types for the vault services.
+
+# Package net.corda.core.schemas
+
+Data types representing database schemas for storing Corda data via an object mapper such as Hibernate. Modifying Corda
+state in the database directly is not a supported approach, however these can be used to read state for integrations with
+external systems.
+
+# Package net.corda.core.serialization
+
+Supporting data types and classes for serialization of Corda data types.
 
 # Package net.corda.core.transactions
 
@@ -68,23 +93,11 @@ in [SignedTransaction] which encapsulates [WireTransaction]. Finally there is a 
 validating transactions, and is built from the wire transaction by resolving all references into their underlying data (i.e. inputs are
 actual states rather than state references).
 
+# Package net.corda.core.utilities
+
+Corda utility classes, providing a broad range of functionality to help implement both Corda nodes and CorDapps.
+
 # Package net.corda.finance.utils
 
 A collection of utilities for summing financial states, for example, summing obligations to get total debts.
-
-# Package net.corda.jackson
-
-Support classes for integrating the Jackson JSON serializer/deserializer with Corda.
-
-# Package net.corda.node.internal
-
-Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
-
-# Package net.corda.node.services
-
-Implementations of services used by Corda nodes.
-
-# Package net.corda.node.services.api
-
-Non-core node service APIs; typically these are not used outside of the node itself.
 
