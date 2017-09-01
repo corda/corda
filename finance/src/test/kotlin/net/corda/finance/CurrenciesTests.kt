@@ -4,7 +4,7 @@ import net.corda.core.contracts.Amount
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class CurrencyUtilsTest {
+class CurrenciesTests {
     @Test
     fun `basic currency`() {
         val expected = 1000L
