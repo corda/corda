@@ -4,14 +4,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
-import net.corda.nodeapi.RPCApi.ClientToServer
-import net.corda.nodeapi.RPCApi.ObservableId
-import net.corda.nodeapi.RPCApi.RPC_CLIENT_BINDING_REMOVALS
-import net.corda.nodeapi.RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION
-import net.corda.nodeapi.RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX
-import net.corda.nodeapi.RPCApi.RPC_SERVER_QUEUE_NAME
-import net.corda.nodeapi.RPCApi.RpcRequestId
-import net.corda.nodeapi.RPCApi.ServerToClient
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
@@ -65,24 +57,18 @@ object RPCApi {
     private val METHOD_NAME_FIELD_NAME = "method-name"
 
     /** Name of the Artemis queue on which the node receives RPC requests (as [ClientToServer.RpcRequest]). */
-    @JvmStatic
-    val RPC_SERVER_QUEUE_NAME = "rpc.server"
+    const val RPC_SERVER_QUEUE_NAME = "rpc.server"
     /**
      * Prefix to Artemis queue names used by clients to receive communication back a node. The full queue name
      * should be of the form "rpc.client.&lt;username&gt;.&lt;nonce&gt;".
      */
-    @JvmStatic
-    val RPC_CLIENT_QUEUE_NAME_PREFIX = "rpc.client"
-    @JvmStatic
-    val RPC_CLIENT_BINDING_REMOVALS = "rpc.clientqueueremovals"
-    @JvmStatic
-    val RPC_CLIENT_BINDING_ADDITIONS = "rpc.clientqueueadditions"
+    const val RPC_CLIENT_QUEUE_NAME_PREFIX = "rpc.client"
+    const val RPC_CLIENT_BINDING_REMOVALS = "rpc.clientqueueremovals"
+    const val RPC_CLIENT_BINDING_ADDITIONS = "rpc.clientqueueadditions"
 
-    @JvmStatic
     val RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_REMOVED.name}' AND " +
             "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
-    @JvmStatic
     val RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_ADDED.name}' AND " +
                     "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
