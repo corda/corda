@@ -511,7 +511,7 @@ class InterestRateSwap : Contract {
         checkLegDates(listOf(irs.fixedLeg, irs.floatingLeg))
     }
 
-    private fun verifyFixCommand(inputs: List<State>, outputs: List<State>, command: AuthenticatedObject<Commands.Refix>) {
+    private fun verifyFixCommand(inputs: List<State>, outputs: List<State>, command: CommandWithParties<Commands.Refix>) {
         val irs = outputs.filterIsInstance<State>().single()
         val prevIrs = inputs.filterIsInstance<State>().single()
         val paymentDifferences = getFloatingLegPaymentsDifferences(prevIrs.calculation.floatingLegPaymentSchedule, irs.calculation.floatingLegPaymentSchedule)

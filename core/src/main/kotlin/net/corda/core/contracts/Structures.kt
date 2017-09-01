@@ -307,9 +307,9 @@ interface MoveCommand : CommandData {
 data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<*, *>>) : CommandData
 
 // DOCSTART 6
-/** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
+/** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key. */
 @CordaSerializable
-data class AuthenticatedObject<out T : Any>(
+data class CommandWithParties<out T : CommandData>(
         val signers: List<PublicKey>,
         /** If any public keys were recognised, the looked up institutions are available here */
         val signingParties: List<Party>,

@@ -96,7 +96,7 @@ class TransactionTests : TestDependencyInjectionBase() {
         val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
         val inputs = emptyList<StateAndRef<*>>()
         val outputs = listOf(baseOutState, baseOutState.copy(notary = ALICE), baseOutState.copy(notary = BOB))
-        val commands = emptyList<AuthenticatedObject<CommandData>>()
+        val commands = emptyList<CommandWithParties<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
@@ -137,7 +137,7 @@ class TransactionTests : TestDependencyInjectionBase() {
         val outState = inState.copy(notary = ALICE)
         val inputs = listOf(StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)))
         val outputs = listOf(outState)
-        val commands = emptyList<AuthenticatedObject<CommandData>>()
+        val commands = emptyList<CommandWithParties<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null

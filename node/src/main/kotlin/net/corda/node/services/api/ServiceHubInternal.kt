@@ -126,7 +126,7 @@ interface ServiceHubInternal : PluginServiceHub {
      * @throws net.corda.core.flows.IllegalFlowLogicException or IllegalArgumentException if there are problems with the
      * [logicType] or [args].
      */
-    fun <T : Any> invokeFlowAsync(
+    fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
             vararg args: Any?): FlowStateMachineImpl<T> {

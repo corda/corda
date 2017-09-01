@@ -7,6 +7,7 @@ import net.corda.core.contracts.Issued
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
@@ -44,6 +45,7 @@ import rx.Observable
 import java.io.ByteArrayOutputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CordaRPCOpsImplTest {
@@ -71,12 +73,6 @@ class CordaRPCOpsImplTest {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>()
         ))))
-
-        aliceNode.database.transaction {
-            stateMachineUpdates = rpc.stateMachinesFeed().updates
-            transactions = rpc.verifiedTransactionsFeed().updates
-            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
-        }
     }
 
     @After
@@ -86,6 +82,11 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `cash issue accepted`() {
+        aliceNode.database.transaction {
+            stateMachineUpdates = rpc.stateMachinesFeed().updates
+            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
+        }
+
         val quantity = 1000L
         val ref = OpaqueBytes(ByteArray(1) { 1 })
 
@@ -131,6 +132,12 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `issue and move`() {
+        aliceNode.database.transaction {
+            stateMachineUpdates = rpc.stateMachinesFeed().updates
+            transactions = rpc.verifiedTransactionsFeed().updates
+            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
+        }
+
         val anonymous = false
         val result = rpc.startFlow(::CashIssueFlow,
                 100.DOLLARS,
@@ -247,5 +254,21 @@ class CordaRPCOpsImplTest {
     class NonRPCFlow : FlowLogic<Unit>() {
         @Suspendable
         override fun call() = Unit
+    }
+
+    @Test
+    fun `attempt to start RPC flow with void return`() {
+        CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
+                startFlowPermission<VoidRPCFlow>()
+        ))))
+        val result = rpc.startFlow(::VoidRPCFlow)
+        mockNet.runNetwork()
+        assertNull(result.returnValue.getOrThrow())
+    }
+
+    @StartableByRPC
+    class VoidRPCFlow : FlowLogic<Void?>() {
+        @Suspendable
+        override fun call() : Void? = null
     }
 }
