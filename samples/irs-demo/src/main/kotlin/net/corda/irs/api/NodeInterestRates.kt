@@ -21,9 +21,9 @@ import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Tenor
-import net.corda.finance.contracts.math.CubicSplineInterpolator
-import net.corda.finance.contracts.math.Interpolator
-import net.corda.finance.contracts.math.InterpolatorFactory
+import net.corda.finance.utils.CubicSplineInterpolator
+import net.corda.finance.utils.Interpolator
+import net.corda.finance.utils.InterpolatorFactory
 import net.corda.irs.flows.RatesFixFlow
 import org.apache.commons.io.IOUtils
 import java.math.BigDecimal

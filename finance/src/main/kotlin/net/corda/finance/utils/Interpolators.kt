@@ -1,4 +1,4 @@
-package net.corda.finance.contracts.math
+package net.corda.finance.utils
 
 import java.util.*
 
