@@ -146,6 +146,7 @@ interface DriverDSLExposedInterface : CordformContext {
      * @return A future that completes with the non-null value [check] has returned.
      */
     fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> A?): CordaFuture<A>
+
     /**
      * Polls the given function until it returns true.
      * @see pollUntilNonNull
@@ -242,11 +243,10 @@ sealed class PortAllocation {
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
-@JvmOverloads
 fun <A> driver(
-        defaultParameters: DriverParameters = DriverParameters(),
         isDebug: Boolean = defaultParameters.isDebug,
-        driverDirectory: Path = defaultParameters.driverDirectory,
+        // The directory must be different for each call to `driver`.
+        driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = defaultParameters.portAllocation,
         debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
@@ -274,10 +274,21 @@ fun <A> driver(
 }
 
 fun <A> driver(
-        builder: DriverBuilder,
+        parameters: DriverParameters,
         dsl: DriverDSLExposedInterface.() -> A
 ): A {
-    return driver(defaultParameters = builder.parameters, dsl = dsl)
+    return driver(
+            isDebug = parameters.isDebug,
+            driverDirectory = parameters.driverDirectory,
+            portAllocation = parameters.portAllocation,
+            debugPortAllocation = parameters.debugPortAllocation,
+            systemProperties = parameters.systemProperties,
+            useTestClock = parameters.useTestClock,
+            initialiseSerialization = parameters.initialiseSerialization,
+            networkMapStartStrategy = parameters.networkMapStartStrategy,
+            startNodesInProcess = parameters.startNodesInProcess,
+            dsl = dsl
+    )
 }
 
 data class DriverParameters(
@@ -290,20 +301,19 @@ data class DriverParameters(
         val initialiseSerialization: Boolean = true,
         val networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
         val startNodesInProcess: Boolean = false
-)
-
-class DriverBuilder(val parameters: DriverParameters) {
-    constructor() : this(DriverParameters())
-    fun setIsDebug(newValue: Boolean) = DriverBuilder(parameters.copy(isDebug = newValue))
-    fun setDriverDirectory(newValue: Path) = DriverBuilder(parameters.copy(driverDirectory = newValue))
-    fun setPortAllocation(newValue: PortAllocation) = DriverBuilder(parameters.copy(portAllocation = newValue))
-    fun setDebugPortAllocation(newValue: PortAllocation) = DriverBuilder(parameters.copy(debugPortAllocation = newValue))
-    fun setSystemProperties(newValue: Map<String, String>) = DriverBuilder(parameters.copy(systemProperties = newValue))
-    fun setUseTestClock(newValue: Boolean) = DriverBuilder(parameters.copy(useTestClock = newValue))
-    fun setInitialiseSerialization(newValue: Boolean) = DriverBuilder(parameters.copy(initialiseSerialization = newValue))
-    fun setNetworkMapStartStrategy(newValue: NetworkMapStartStrategy) = DriverBuilder(parameters.copy(networkMapStartStrategy = newValue))
-    fun setStartNodesInProcess(newValue: Boolean) = DriverBuilder(parameters.copy(startNodesInProcess = newValue))
+) {
+    fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
+    fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
+    fun setPortAllocation(portAllocation: PortAllocation) = copy(portAllocation = portAllocation)
+    fun setDebugPortAllocation(debugPortAllocation: PortAllocation) = copy(debugPortAllocation = debugPortAllocation)
+    fun setSystemProperties(systemProperties: Map<String, String>) = copy(systemProperties = systemProperties)
+    fun setUseTestClock(useTestClock: Boolean) = copy(useTestClock = useTestClock)
+    fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
+    fun setNetworkMapStartStrategy(networkMapStartStrategy: NetworkMapStartStrategy) = copy(networkMapStartStrategy = networkMapStartStrategy)
+    fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
 }
+
+private val defaultParameters = DriverParameters()
 
 /**
  * This is a helper method to allow extending of the DSL, along the lines of
@@ -438,15 +448,17 @@ class ShutdownManager(private val executorService: ExecutorService) {
             }
         }
         val shutdowns = shutdownActionFutures.map { Try.on { it.getOrThrow(1.seconds) } }
-        shutdowns.reversed().forEach { when (it) {
-            is Try.Success ->
-                try {
-                    it.value()
-                } catch (t: Throwable) {
-                    log.warn("Exception while shutting down", t)
-                }
-            is Try.Failure -> log.warn("Exception while getting shutdown method, disregarding", it.exception)
-        } }
+        shutdowns.reversed().forEach {
+            when (it) {
+                is Try.Success ->
+                    try {
+                        it.value()
+                    } catch (t: Throwable) {
+                        log.warn("Exception while shutting down", t)
+                    }
+                is Try.Failure -> log.warn("Exception while getting shutdown method, disregarding", it.exception)
+            }
+        }
     }
 
     fun registerShutdown(shutdown: CordaFuture<() -> Unit>) {
@@ -455,6 +467,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
             registeredShutdowns.add(shutdown)
         }
     }
+
     fun registerShutdown(shutdown: () -> Unit) = registerShutdown(doneFuture(shutdown))
 
     fun registerProcessShutdown(processFuture: CordaFuture<Process>) {
@@ -667,7 +680,7 @@ class DriverDSL(
                 rpcUsers = rpcUsers,
                 verifierType = verifierType,
                 customOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString(),
-                        "database.serverNameTablePrefix" to if (nodeNames.isNotEmpty()) nodeNames.first().toString().replace(Regex("[^0-9A-Za-z]+"),"") else ""),
+                        "database.serverNameTablePrefix" to if (nodeNames.isNotEmpty()) nodeNames.first().toString().replace(Regex("[^0-9A-Za-z]+"), "") else ""),
                 startInSameProcess = startInSameProcess
         )
         // All other nodes will join the cluster
@@ -696,7 +709,7 @@ class DriverDSL(
             if (response.isSuccessful && (response.body().string() == "started")) {
                 return WebserverHandle(handle.webAddress, process)
             }
-        } catch(e: ConnectException) {
+        } catch (e: ConnectException) {
             log.debug("Retrying webserver info at ${handle.webAddress}")
         }
 
@@ -746,10 +759,12 @@ class DriverDSL(
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config)
             shutdownManager.registerShutdown(
-                    nodeAndThreadFuture.map { (node, thread) -> {
-                        node.stop()
-                        thread.interrupt()
-                    } }
+                    nodeAndThreadFuture.map { (node, thread) ->
+                        {
+                            node.stop()
+                            thread.interrupt()
+                        }
+                    }
             )
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, openFuture()).flatMap { rpc ->
@@ -857,8 +872,8 @@ class DriverDSL(
                         workingDirectory = nodeConf.baseDirectory
                 )
             }
-            return processFuture.flatMap {
-                process -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process }
+            return processFuture.flatMap { process ->
+                addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process }
             }
         }
 
@@ -874,8 +889,8 @@ class DriverDSL(
                         arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
                         jdwpPort = debugPort,
                         extraJvmArguments = listOf(
-                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
-                            "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
+                                "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                                "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                         ),
                         errorLogPath = Paths.get("error.$className.log")
                 )
