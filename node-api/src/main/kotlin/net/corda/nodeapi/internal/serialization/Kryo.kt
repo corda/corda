@@ -11,7 +11,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.AttachmentsClassLoader

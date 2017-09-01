@@ -14,7 +14,7 @@ import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.commonName
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.node.CityDatabase

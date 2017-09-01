@@ -22,8 +22,8 @@ import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.sequence
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.commonName
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.commonName
+import net.corda.core.utilities.toBase58String
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party

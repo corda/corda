@@ -1,9 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.crypto.composite.CompositeSignature
-import net.corda.core.crypto.provider.CordaObjectIdentifier
-import net.corda.core.crypto.provider.CordaSecurityProvider
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey

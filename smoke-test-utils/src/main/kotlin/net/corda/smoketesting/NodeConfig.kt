@@ -5,7 +5,7 @@ import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.commonName
 import net.corda.nodeapi.User
 import org.bouncycastle.asn1.x500.X500Name
 

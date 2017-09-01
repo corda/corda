@@ -1,7 +1,7 @@
 package net.corda.netmap.simulation
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.crypto.locationOrNull
+import net.corda.core.utilities.locationOrNull
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CityDatabase

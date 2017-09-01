@@ -1,6 +1,6 @@
-package net.corda.core.crypto.composite
+package net.corda.core.crypto
 
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
 import net.corda.core.serialization.deserialize
 import java.io.ByteArrayOutputStream
 import java.security.*
@@ -27,6 +27,7 @@ class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
         return signatureState!!
     }
 
+    @Deprecated("Deprecated in inherited API")
     @Throws(InvalidAlgorithmParameterException::class)
     override fun engineGetParameter(param: String?): Any {
         throw InvalidAlgorithmParameterException("Composite signatures do not support any parameters")
@@ -46,6 +47,7 @@ class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
         }
     }
 
+    @Deprecated("Deprecated in inherited API")
     @Throws(InvalidAlgorithmParameterException::class)
     override fun engineSetParameter(param: String?, value: Any?) {
         throw InvalidAlgorithmParameterException("Composite signatures do not support any parameters")

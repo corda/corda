@@ -83,7 +83,7 @@ data class Tenor(val name: String) {
         }
         // Move date to the closest business day when it falls on a weekend/holiday
         val adjustedMaturityDate = calendar.applyRollConvention(maturityDate, DateRollConvention.ModifiedFollowing)
-        val daysToMaturity = calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
+        val daysToMaturity = BusinessCalendar.calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
 
         return daysToMaturity
     }
@@ -190,10 +190,6 @@ enum class Frequency(val annualCompoundCount: Int, val offset: LocalDate.(Long) 
     Daily(365, { plusDays(1 * it) });
 }
 
-
-@Suppress("unused") // This utility may be useful in future. TODO: Review before API stability guarantees in place.
-fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = accordingToCalendar.isWorkingDay(this)
-
 // TODO: Make Calendar data come from an oracle
 
 /**
@@ -213,10 +209,26 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
             it to BusinessCalendar::class.java.getResourceAsStream("${it}HolidayCalendar.txt").bufferedReader().readText()
         }.toMap()
 
+        @JvmStatic
+        fun calculateDaysBetween(startDate: LocalDate,
+                                 endDate: LocalDate,
+                                 dcbYear: DayCountBasisYear,
+                                 dcbDay: DayCountBasisDay): Int {
+            // Right now we are only considering Actual/360 and 30/360 .. We'll do the rest later.
+            // TODO: The rest.
+            return when {
+                dcbDay == DayCountBasisDay.DActual -> (endDate.toEpochDay() - startDate.toEpochDay()).toInt()
+                dcbDay == DayCountBasisDay.D30 && dcbYear == DayCountBasisYear.Y360 -> ((endDate.year - startDate.year) * 360.0 + (endDate.monthValue - startDate.monthValue) * 30.0 + endDate.dayOfMonth - startDate.dayOfMonth).toInt()
+                else -> TODO("Can't calculate days using convention $dcbDay / $dcbYear")
+            }
+        }
+
         /** Parses a date of the form YYYY-MM-DD, like 2016-01-10 for 10th Jan. */
+        @JvmStatic
         fun parseDateFromString(it: String): LocalDate = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
 
         /** Returns a business calendar that combines all the named holiday calendars into one list of holiday dates. */
+        @JvmStatic
         fun getInstance(vararg calname: String) = BusinessCalendar(
                 calname.flatMap { (TEST_CALENDAR_DATA[it] ?: throw UnknownCalendar(it)).split(",") }.
                         toSet().
@@ -225,6 +237,7 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
         )
 
         /** Calculates an event schedule that moves events around to ensure they fall on working days. */
+        @JvmStatic
         fun createGenericSchedule(startDate: LocalDate,
                                   period: Frequency,
                                   calendar: BusinessCalendar = getInstance(),
@@ -248,9 +261,11 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
             return ret
         }
 
-        /** Calculates the date from @startDate moving forward @steps of time size @period. Does not apply calendar
+        /**
+         * Calculates the date from @startDate moving forward 'steps' of time size 'period'. Does not apply calendar
          * logic / roll conventions.
          */
+        @JvmStatic
         fun getOffsetDate(startDate: LocalDate, period: Frequency, steps: Int = 1): LocalDate {
             if (steps == 0) return startDate
             return period.offset(startDate, steps.toLong())
@@ -313,19 +328,6 @@ open class BusinessCalendar (val holidayDates: List<LocalDate>) {
             if (isWorkingDay(retDate)) ctr++
         }
         return retDate
-    }
-}
-
-fun calculateDaysBetween(startDate: LocalDate,
-                         endDate: LocalDate,
-                         dcbYear: DayCountBasisYear,
-                         dcbDay: DayCountBasisDay): Int {
-    // Right now we are only considering Actual/360 and 30/360 .. We'll do the rest later.
-    // TODO: The rest.
-    return when {
-        dcbDay == DayCountBasisDay.DActual -> (endDate.toEpochDay() - startDate.toEpochDay()).toInt()
-        dcbDay == DayCountBasisDay.D30 && dcbYear == DayCountBasisYear.Y360 -> ((endDate.year - startDate.year) * 360.0 + (endDate.monthValue - startDate.monthValue) * 30.0 + endDate.dayOfMonth - startDate.dayOfMonth).toInt()
-        else -> TODO("Can't calculate days using convention $dcbDay / $dcbYear")
     }
 }
 

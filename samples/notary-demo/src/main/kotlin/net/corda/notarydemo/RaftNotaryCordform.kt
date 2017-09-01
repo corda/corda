@@ -1,6 +1,6 @@
 package net.corda.notarydemo
 
-import net.corda.core.crypto.appendToCommonName
+import net.corda.core.utilities.appendToCommonName
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.testing.ALICE

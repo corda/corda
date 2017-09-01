@@ -2,7 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
-import net.corda.core.crypto.toBase64
+import net.corda.core.utilities.toBase64
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import org.apache.qpid.proton.amqp.DescribedType
