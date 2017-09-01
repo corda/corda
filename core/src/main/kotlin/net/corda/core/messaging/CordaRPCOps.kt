@@ -123,11 +123,11 @@ interface CordaRPCOps : RPCOps {
      *
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
      * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
-     * and returns a [Vault.PageAndUpdates] object containing
-     * 1) a snapshot as a [Vault.Page] (described previously in [queryBy])
+     * and returns a [DataFeed] object containing
+     * 1) a snapshot as a [Vault.Page] (described previously in [CordaRPCOps.vaultQueryBy])
      * 2) an [Observable] of [Vault.Update]
      *
-     * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
+     * Notes: the snapshot part of the query adheres to the same behaviour as the [CordaRPCOps.vaultQueryBy] function.
      *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
      */
     // DOCSTART VaultTrackByAPI

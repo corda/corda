@@ -21,20 +21,21 @@ object ContractUpgradeFlow {
     /**
      * Authorise a contract state upgrade.
      * This will store the upgrade authorisation in persistent store, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
-     * Invoking this flow indicates the node is willing to upgrade the [state] using the [upgradedContractClass].
-     * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
+     * Invoking this flow indicates the node is willing to upgrade the [StateAndRef] using the [UpgradedContract] class.
+     * This method will NOT initiate the upgrade process. To start the upgrade process, see [Initiator].
      */
+    @StartableByRPC
     class Authorise(
             val stateAndRef: StateAndRef<*>,
             private val upgradedContractClass: Class<out UpgradedContract<*, *>>
-        ) : FlowLogic<Boolean>() {
-        override fun call(): Boolean {
+        ) : FlowLogic<Void?>() {
+        override fun call(): Void? {
             val upgrade = upgradedContractClass.newInstance()
             if (upgrade.legacyContract != stateAndRef.state.data.contract.javaClass) {
                 throw FlowException("The contract state cannot be upgraded using provided UpgradedContract.")
             }
             serviceHub.contractUpgradeService.storeAuthorisedContractUpgrade(stateAndRef.ref, upgradedContractClass)
-            return true
+            return null
         }
 
     }
@@ -43,12 +44,13 @@ object ContractUpgradeFlow {
      * Deauthorise a contract state upgrade.
      * This will remove the upgrade authorisation from persistent store (and prevent any further upgrade)
      */
+    @StartableByRPC
     class Deauthorise(
             val stateRef: StateRef
-    ) : FlowLogic<Boolean>() {
-        override fun call(): Boolean {
+    ) : FlowLogic< Void?>() {
+        override fun call(): Void? {
             serviceHub.contractUpgradeService.removeAuthorisedContractUpgrade(stateRef)
-            return true
+            return null
         }
     }
 
