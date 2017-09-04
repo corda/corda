@@ -188,6 +188,6 @@ class AttachmentContract : Contract {
     data class State(val hash: SecureHash.SHA256) : ContractState {
         override val contract: Contract = AttachmentContract()
         override val participants: List<AbstractParty> = emptyList()
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 }

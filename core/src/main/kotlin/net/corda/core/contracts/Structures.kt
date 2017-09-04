@@ -92,7 +92,7 @@ interface ContractState {
     /**
      * A validator for the contract attachments on the transaction.
      */
-    val executableAttachmentsValidator: ExecutableAttachmentsValidator
+    val constraint: AttachmentConstraint
 }
 // DOCEND 1
 

@@ -56,7 +56,7 @@ class ScheduledFlowTests {
         }
 
         override val participants: List<AbstractParty> = listOf(source, destination)
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 
     class InsertInitialStateFlow(val destination: Party) : FlowLogic<Unit>() {

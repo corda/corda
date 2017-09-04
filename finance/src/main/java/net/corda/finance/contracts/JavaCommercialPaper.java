@@ -98,8 +98,8 @@ public class JavaCommercialPaper implements Contract {
 
         @NotNull
         @Override
-        public ExecutableAttachmentsValidator getExecutableAttachmentsValidator() {
-            return AlwaysAcceptExecutableAttachmentsValidator.INSTANCE;
+        public AttachmentConstraint getConstraint() {
+            return AlwaysAcceptAttachmentConstraint.INSTANCE;
         }
 
         @Override

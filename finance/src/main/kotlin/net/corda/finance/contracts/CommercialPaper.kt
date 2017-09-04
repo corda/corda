@@ -53,7 +53,7 @@ class CommercialPaper : Contract {
     ) : OwnableState, QueryableState, ICommercialPaperState {
         override val contract = CP_PROGRAM_ID
         override val participants = listOf(owner)
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
 
         override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
         fun withoutOwner() = copy(owner = NULL_PARTY)

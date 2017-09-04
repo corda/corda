@@ -31,7 +31,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
@@ -135,7 +134,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         override val contract: Contract
             get() = throw UnsupportedOperationException()
 
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 
     class TestFlowLogic(val increment: Int = 1) : FlowLogic<Unit>() {

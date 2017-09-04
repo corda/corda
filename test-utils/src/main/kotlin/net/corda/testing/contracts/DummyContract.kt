@@ -19,7 +19,7 @@ data class DummyContract(val blank: Any? = null) : Contract {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<AbstractParty>
             get() = listOf(owner)
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
 
         override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
     }
@@ -33,7 +33,7 @@ data class DummyContract(val blank: Any? = null) : Contract {
                                val owners: List<AbstractParty>) : State {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<AbstractParty> get() = owners
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 
     interface Commands : CommandData {

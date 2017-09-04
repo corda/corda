@@ -32,7 +32,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
         override val exitKeys = setOf(owner.owningKey, amount.token.issuer.party.owningKey)
         override val contract = CASH_PROGRAM_ID
         override val participants = listOf(owner)
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
 
         override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty): FungibleAsset<Currency>
                 = copy(amount = amount.copy(newAmount.quantity), owner = newOwner)

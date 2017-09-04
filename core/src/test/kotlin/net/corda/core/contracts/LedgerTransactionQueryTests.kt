@@ -35,13 +35,13 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
     private class StringTypeDummyState(val data: String) : ContractState {
         override val contract: Contract = DummyContract()
         override val participants: List<AbstractParty> = emptyList()
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 
     private class IntTypeDummyState(val data: Int) : ContractState {
         override val contract: Contract = DummyContract()
         override val participants: List<AbstractParty> = emptyList()
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 
     private fun makeDummyState(data: Any): ContractState {

@@ -523,7 +523,7 @@ class SerializationOutputTests {
             get() = FooContract
         override val participants: List<AbstractParty>
             get() = emptyList()
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 
     @Test

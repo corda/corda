@@ -23,7 +23,7 @@ class VaultUpdateTests {
         override val participants: List<AbstractParty>
             get() = emptyList()
         override val contract = VaultUpdateTests.DummyContract
-        override val executableAttachmentsValidator get() = AlwaysAcceptExecutableAttachmentsValidator
+        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 
     private val stateRef0 = StateRef(SecureHash.randomSHA256(), 0)
