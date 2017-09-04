@@ -1,6 +1,6 @@
 package net.corda.testing.node
 
-import net.corda.core.contracts.AbstractAttachment
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId

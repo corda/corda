@@ -1,15 +1,10 @@
 package net.corda.core.contracts
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.internal.toX509CertHolder
-import net.corda.core.serialization.MissingAttachmentsException
-import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.internal.extractFile
 import java.io.FileNotFoundException
-import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.security.CodeSigner
 import java.util.jar.JarInputStream
 
 /**
@@ -39,61 +34,9 @@ interface Attachment : NamedByHash {
      */
     fun extractFile(path: String, outputTo: OutputStream) = openAsJAR().use { it.extractFile(path, outputTo) }
 
-    /** The parties that have correctly signed the whole attachment, may be empty. */
+    /**
+     * The parties that have correctly signed the whole attachment.
+     * Can be empty, for example non-contract attachments won't be necessarily be signed.
+     */
     val signers: List<Party>
-}
-
-abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
-    companion object {
-        fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
-            return {
-                val a = serviceHub.attachments.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
-                (a as? AbstractAttachment)?.attachmentData ?: a.open().use { it.readBytes() }
-            }
-        }
-
-        /** @see <https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Signed_JAR_File> */
-        private val unsignableEntryName = "META-INF/(?:.*[.](?:SF|DSA|RSA)|SIG-.*)".toRegex()
-        private val shredder = ByteArray(1024)
-    }
-
-    protected val attachmentData: ByteArray by lazy(dataLoader)
-    override fun open(): InputStream = attachmentData.inputStream()
-    override val signers by lazy {
-        var attachmentSigners: MutableSet<CodeSigner>? = null
-        openAsJAR().use { jar ->
-            while (true) {
-                val entry = jar.nextJarEntry ?: break
-                if (entry.isDirectory || unsignableEntryName.matches(entry.name)) continue
-                while (jar.read(shredder) != -1) { // Must read entry fully for codeSigners to be valid.
-                    // Do nothing.
-                }
-                val entrySigners = entry.codeSigners ?: emptyArray()
-                attachmentSigners?.retainAll(entrySigners) ?: run { attachmentSigners = entrySigners.toMutableSet() }
-                if (attachmentSigners!!.isEmpty()) break // Performance short-circuit.
-            }
-        }
-        (attachmentSigners ?: emptySet<CodeSigner>()).map {
-            Party(it.signerCertPath.certificates[0].toX509CertHolder())
-        }.sortedBy { it.name.toString() } // Determinism.
-    }
-
-    override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id
-    override fun hashCode() = id.hashCode()
-    override fun toString() = "${javaClass.simpleName}(id=$id)"
-}
-
-@Throws(IOException::class)
-fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
-    fun String.norm() = toLowerCase().split('\\', '/') // XXX: Should this really be locale-sensitive?
-    val p = path.norm()
-    while (true) {
-        val e = nextJarEntry ?: break
-        if (!e.isDirectory && e.name.norm() == p) {
-            copyTo(outputTo)
-            return
-        }
-        closeEntry()
-    }
-    throw FileNotFoundException(path)
 }

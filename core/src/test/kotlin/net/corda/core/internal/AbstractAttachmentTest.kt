@@ -1,9 +1,5 @@
-package net.corda.core.contracts
+package net.corda.core.internal
 
-import net.corda.core.internal.createDirectory
-import net.corda.core.internal.div
-import net.corda.core.internal.readAll
-import net.corda.core.internal.writeLines
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -15,9 +11,9 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 
-class AttachmentTests {
+class AbstractAttachmentTest {
     companion object {
-        private val dir = Files.createTempDirectory(AttachmentTests::class.simpleName)
+        private val dir = Files.createTempDirectory(AbstractAttachmentTest::class.simpleName)
         private val bin = Paths.get(System.getProperty("java.home")).let { if (it.endsWith("jre")) it.parent else it } / "bin"
         fun execute(vararg command: String) {
             assertEquals(0, ProcessBuilder().inheritIO().directory(dir.toFile()).command((bin / command[0]).toString(), *command.sliceArray(1 until command.size)).start().waitFor())
