@@ -56,10 +56,10 @@ object RPCApi {
     private val OBSERVABLE_ID_FIELD_NAME = "observable-id"
     private val METHOD_NAME_FIELD_NAME = "method-name"
 
-    /** Name of the Artemis queue on which the node receives RPC requests (as [ClientToServer.RpcRequest]). */
+    /** Name of the Artemis queue on which the server receives RPC requests (as [ClientToServer.RpcRequest]). */
     const val RPC_SERVER_QUEUE_NAME = "rpc.server"
     /**
-     * Prefix to Artemis queue names used by clients to receive communication back a node. The full queue name
+     * Prefix to Artemis queue names used by clients to receive communication back from a server. The full queue name
      * should be of the form "rpc.client.&lt;username&gt;.&lt;nonce&gt;".
      */
     const val RPC_CLIENT_QUEUE_NAME_PREFIX = "rpc.client"
@@ -83,7 +83,7 @@ object RPCApi {
     }
 
     /**
-     * Message content types which can be sent from a Corda client to a node.
+     * Message content types which can be sent from a Corda client to a server.
      */
     sealed class ClientToServer {
         private enum class Tag {
@@ -92,10 +92,10 @@ object RPCApi {
         }
 
         /**
-         * Request to a node to trigger the specified method with the provided arguments.
+         * Request to a server to trigger the specified method with the provided arguments.
          *
          * @param clientAddress return address to contact the client at.
-         * @param id a unique ID for the request, which the node will used to identify its response with.
+         * @param id a unique ID for the request, which the server will used to identify its response with.
          * @param methodName name of the method (procedure) to be called.
          * @param arguments arguments to pass to the method, if any.
          */
@@ -152,7 +152,7 @@ object RPCApi {
     }
 
     /**
-     * Message content types which can be sent from a Corda node back to a client.
+     * Message content types which can be sent from a Corda server back to a client.
      */
     sealed class ServerToClient {
         private enum class Tag {
