@@ -86,7 +86,7 @@ we just use a helper that handles it for us. We also assume that we already have
 
 .. sourcecode:: kotlin
 
-    val inputState = StateAndRef(sate, stateRef)
+    val inputState = StateAndRef(state, stateRef)
     val moveTransactionBuilder = DummyContract.withNewOwnerAndAmount(inputState, newOwner = aliceParty.owningKey)
 
 The ``DummyContract.withNewOwnerAndAmount()`` method will a new transaction builder with our old state as the input, a new state
