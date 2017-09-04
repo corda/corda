@@ -1,7 +1,6 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.AbstractAttachment
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.SecureHash
