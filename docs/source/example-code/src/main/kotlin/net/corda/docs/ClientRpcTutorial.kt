@@ -63,7 +63,7 @@ fun main(args: Array<String>) {
         // END 2
 
         // START 3
-        val (transactions: List<SignedTransaction>, futureTransactions: Observable<SignedTransaction>) = proxy.verifiedTransactionsFeed()
+        val (transactions: List<SignedTransaction>, futureTransactions: Observable<SignedTransaction>) = proxy.internalVerifiedTransactionsFeed()
         // END 3
 
         // START 4
