@@ -17,19 +17,37 @@ import java.util.concurrent.Callable
  *
  * @param transactions map of transaction id to [SignedTransaction].
  * @param startPoints transactions to use as starting points for the search.
+ * @param query query to test transactions within the graph for matching.
  */
-class TransactionGraphSearch(val transactions: TransactionStorage,
-                             val startPoints: List<WireTransaction>) : Callable<List<WireTransaction>> {
-    class Query(
+class TransactionGraphSearch(private val transactions: TransactionStorage,
+                             private val startPoints: List<WireTransaction>,
+                             private val query: Query) : Callable<List<WireTransaction>> {
+    /**
+     * Query criteria to match transactions against.
+     */
+    data class Query(
+            /**
+             * Contract command class to restrict matches to, or null for no filtering by command. Matches the class or
+             * any subclass.
+             */
             val withCommandOfType: Class<out CommandData>? = null,
+            /** Contract output state class to follow the corresponding inputs to. Matches this exact class only. */
             val followInputsOfType: Class<out ContractState>? = null
-    )
-
-    var query: Query = Query()
+    ) {
+        /**
+         * Test if the given transaction matches this query. Currently only supports checking if the transaction that
+         * contains a command of the given type.
+         */
+        fun matches(tx: WireTransaction): Boolean {
+            if (withCommandOfType != null) {
+                if (tx.commands.any { it.value.javaClass.isAssignableFrom(withCommandOfType) })
+                    return true
+            }
+            return false
+        }
+    }
 
     override fun call(): List<WireTransaction> {
-        val q = query
-
         val alreadyVisited = HashSet<SecureHash>()
         val next = ArrayList<WireTransaction>(startPoints)
 
@@ -38,24 +56,17 @@ class TransactionGraphSearch(val transactions: TransactionStorage,
         while (next.isNotEmpty()) {
             val tx = next.removeAt(next.lastIndex)
 
-            if (q.matches(tx))
+            if (query.matches(tx))
                 results += tx
 
             val inputsLeadingToUnvisitedTx: Iterable<StateRef> = tx.inputs.filter { it.txhash !in alreadyVisited }
             val unvisitedInputTxs: Map<SecureHash, SignedTransaction> = inputsLeadingToUnvisitedTx.map { it.txhash }.toHashSet().map { transactions.getTransaction(it) }.filterNotNull().associateBy { it.id }
             val unvisitedInputTxsWithInputIndex: Iterable<Pair<SignedTransaction, Int>> = inputsLeadingToUnvisitedTx.filter { it.txhash in unvisitedInputTxs.keys }.map { Pair(unvisitedInputTxs[it.txhash]!!, it.index) }
-            next += (unvisitedInputTxsWithInputIndex.filter { q.followInputsOfType == null || it.first.tx.outputs[it.second].data.javaClass == q.followInputsOfType }
-                    .map { it.first }.filter { alreadyVisited.add(it.id) }.map { it.tx })
+            next += (unvisitedInputTxsWithInputIndex.filter { (stx, idx) ->
+                query.followInputsOfType == null || stx.tx.outputs[idx].data.javaClass == query.followInputsOfType
+            }.map { it.first }.filter { stx -> alreadyVisited.add(stx.id) }.map { it.tx })
         }
 
         return results
-    }
-
-    private fun Query.matches(tx: WireTransaction): Boolean {
-        if (withCommandOfType != null) {
-            if (tx.commands.any { it.value.javaClass.isAssignableFrom(withCommandOfType) })
-                return true
-        }
-        return false
     }
 }

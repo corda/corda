@@ -53,9 +53,9 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
 
     private fun logIssuanceAttachment(tradeTX: SignedTransaction) {
         // Find the original CP issuance.
-        val search = TransactionGraphSearch(serviceHub.validatedTransactions, listOf(tradeTX.tx))
-        search.query = TransactionGraphSearch.Query(withCommandOfType = CommercialPaper.Commands.Issue::class.java,
-                followInputsOfType = CommercialPaper.State::class.java)
+        val search = TransactionGraphSearch(serviceHub.validatedTransactions, listOf(tradeTX.tx),
+                TransactionGraphSearch.Query(withCommandOfType = CommercialPaper.Commands.Issue::class.java,
+                    followInputsOfType = CommercialPaper.State::class.java))
         val cpIssuance = search.call().single()
 
         // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
