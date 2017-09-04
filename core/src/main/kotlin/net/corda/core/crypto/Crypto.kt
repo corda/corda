@@ -197,7 +197,7 @@ object Crypto {
     private val providerMap: Map<String, Provider> = mapOf(
             BouncyCastleProvider.PROVIDER_NAME to getBouncyCastleProvider(),
             CordaSecurityProvider.PROVIDER_NAME to CordaSecurityProvider(),
-            "BCPQC" to BouncyCastlePQCProvider()) // unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
+            "BCPQC" to BouncyCastlePQCProvider()) // Unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
 
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
         putAll(EdDSASecurityProvider())

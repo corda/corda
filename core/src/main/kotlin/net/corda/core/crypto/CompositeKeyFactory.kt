@@ -26,7 +26,7 @@ class CompositeKeyFactory : KeyFactorySpi() {
 
     @Throws(InvalidKeySpecException::class)
     override fun <T : KeySpec> engineGetKeySpec(key: Key, keySpec: Class<T>): T {
-        // Only support [X509EncodedKeySpec].
+        // Only support X509EncodedKeySpec.
         throw InvalidKeySpecException("Not implemented yet $key $keySpec")
     }
 

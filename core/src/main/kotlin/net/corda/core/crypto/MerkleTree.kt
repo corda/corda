@@ -3,7 +3,7 @@ package net.corda.core.crypto
 import java.util.*
 
 /**
- * Creation and verification of a Merkle Tree for a Wire Transaction.
+ * Creation and verification of a Merkle tree for a [WireTransaction].
  *
  * See: https://en.wikipedia.org/wiki/Merkle_tree
  *
@@ -49,7 +49,7 @@ sealed class MerkleTree {
          */
         private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
             if (lastNodesList.size == 1) {
-                return lastNodesList[0] //Root reached.
+                return lastNodesList[0] // Root reached.
             } else {
                 val newLevelHashes: MutableList<MerkleTree> = ArrayList()
                 val n = lastNodesList.size

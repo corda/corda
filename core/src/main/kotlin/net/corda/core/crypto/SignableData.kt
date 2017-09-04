@@ -11,4 +11,3 @@ import net.corda.core.serialization.CordaSerializable
  */
 @CordaSerializable
 data class SignableData(val txId: SecureHash, val signatureMetadata: SignatureMetadata)
-

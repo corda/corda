@@ -29,4 +29,5 @@ data class SignatureScheme(
         val signatureName: String,
         val algSpec: AlgorithmParameterSpec?,
         val keySize: Int?,
-        val desc: String)
+        val desc: String
+)
