@@ -11,13 +11,17 @@ import net.corda.core.utilities.unwrap
 /**
  * Very basic flow which exchanges transaction key and certificate paths between two parties in a transaction.
  * This is intended for use as a subflow of another flow.
+ *
+ * @property counterparties a list of the well known identities of the counterparties in a transaction.
+ * @param revocationEnabled whether generated certificates should have revocation enabled. Currently this is unsupported
+ * by the validation logic and and must be false.
  */
 @StartableByRPC
 @InitiatingFlow
-class TransactionKeyFlow(val otherSide: Party,
-                         val revocationEnabled: Boolean,
+class TransactionKeyFlow(val counterparties: List<Party>,
+                         private val revocationEnabled: Boolean,
                          override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
-    constructor(otherSide: Party) : this(otherSide, false, tracker())
+    constructor(otherSide: Party) : this(listOf(otherSide), false, tracker())
 
     companion object {
         object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
@@ -39,13 +43,11 @@ class TransactionKeyFlow(val otherSide: Party,
 
         // Special case that if we're both parties, a single identity is generated
         val identities = LinkedHashMap<Party, AnonymousParty>()
-        if (otherSide == serviceHub.myInfo.legalIdentity) {
-            identities.put(otherSide, legalIdentityAnonymous.party.anonymise())
-        } else {
+        identities.put(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous.party.anonymise())
+        counterparties.filter { it != serviceHub.myInfo.legalIdentity }.forEach { otherSide ->
             val anonymousOtherSide = sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->
                 validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
             }
-            identities.put(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous.party.anonymise())
             identities.put(otherSide, anonymousOtherSide.party.anonymise())
         }
         return identities
