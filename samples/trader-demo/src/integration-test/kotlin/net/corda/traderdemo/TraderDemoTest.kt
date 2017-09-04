@@ -31,10 +31,11 @@ class TraderDemoTest : NodeBasedTest() {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
-        startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-        val nodeA = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)).getOrThrow()
-        val nodeB = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)).getOrThrow()
-        val bankNode = startNode(BOC.name, rpcUsers = listOf(bankUser)).getOrThrow()
+        val notaryFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        val nodeAFuture = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser))
+        val nodeBFuture = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser))
+        val bankNodeFuture = startNode(BOC.name, rpcUsers = listOf(bankUser))
+        val (nodeA, nodeB, bankNode) = listOf(nodeAFuture, nodeBFuture, bankNodeFuture, notaryFuture).map { it.getOrThrow() }
 
         nodeA.registerInitiatedFlow(BuyerFlow::class.java)
 

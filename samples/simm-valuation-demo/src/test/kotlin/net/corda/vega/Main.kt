@@ -16,10 +16,11 @@ import net.corda.testing.driver.driver
  */
 fun main(args: Array<String>) {
     driver(dsl = {
-        startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        val nodeA = startNode(providedName = DUMMY_BANK_A.name).getOrThrow()
-        val nodeB = startNode(providedName = DUMMY_BANK_B.name).getOrThrow()
-        val nodeC = startNode(providedName = DUMMY_BANK_C.name).getOrThrow()
+        val notaryFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name)
+        val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name)
+        val nodeCFuture = startNode(providedName = DUMMY_BANK_C.name)
+        val (nodeA, nodeB, nodeC) = listOf(nodeAFuture, nodeBFuture, nodeCFuture, notaryFuture).map { it.getOrThrow() }
 
         startWebserver(nodeA)
         startWebserver(nodeB)

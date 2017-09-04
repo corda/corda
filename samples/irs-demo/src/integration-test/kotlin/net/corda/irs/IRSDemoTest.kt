@@ -43,17 +43,20 @@ class IRSDemoTest : IntegrationTestCategory {
     @Test
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
-            val controller = startNode(
+            val controllerFuture = startNode(
                     providedName = DUMMY_NOTARY.name,
-                    advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))).getOrThrow()
-            val nodeA = startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)).getOrThrow()
-            val nodeB = startNode(providedName = DUMMY_BANK_B.name).getOrThrow()
+                    advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type)))
+            val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser))
+            val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name)
+            val (controller, nodeA, nodeB) = listOf(controllerFuture, nodeAFuture, nodeBFuture).map { it.getOrThrow() }
 
             log.info("All nodes started")
 
-            val controllerAddr = startWebserver(controller).getOrThrow().listenAddress
-            val nodeAAddr = startWebserver(nodeA).getOrThrow().listenAddress
-            val nodeBAddr = startWebserver(nodeB).getOrThrow().listenAddress
+            val controllerAddrFuture = startWebserver(controller)
+            val nodeAAddrFuture = startWebserver(nodeA)
+            val nodeBAddrFuture = startWebserver(nodeB)
+            val (controllerAddr, nodeAAddr, nodeBAddr) =
+                    listOf(controllerAddrFuture, nodeAAddrFuture, nodeBAddrFuture).map { it.getOrThrow().listenAddress }
 
             log.info("All webservers started")
 

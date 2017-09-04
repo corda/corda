@@ -33,10 +33,13 @@ class SimmValuationTest : IntegrationTestCategory {
     fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
             startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-            val nodeA = startNode(providedName = nodeALegalName).getOrThrow()
-            val nodeB = startNode(providedName = nodeBLegalName).getOrThrow()
-            val nodeAApi = HttpApi.fromHostAndPort(startWebserver(nodeA).getOrThrow().listenAddress, "api/simmvaluationdemo")
-            val nodeBApi = HttpApi.fromHostAndPort(startWebserver(nodeB).getOrThrow().listenAddress, "api/simmvaluationdemo")
+            val nodeAFuture = startNode(providedName = nodeALegalName)
+            val nodeBFuture = startNode(providedName = nodeBLegalName)
+            val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
+            val nodeAWebServerFuture = startWebserver(nodeA)
+            val nodeBWebServerFuture = startWebserver(nodeB)
+            val nodeAApi = HttpApi.fromHostAndPort(nodeAWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
+            val nodeBApi = HttpApi.fromHostAndPort(nodeBWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)
             val nodeAParty = getPartyWithName(nodeBApi, nodeALegalName)
 

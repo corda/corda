@@ -18,9 +18,10 @@ class AttachmentDemoTest {
         val numOfExpectedBytes = 10_000_000
         driver(dsl = {
             val demoUser = listOf(User("demo", "demo", setOf(startFlowPermission<AttachmentDemoFlow>())))
-            startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-            val nodeA = startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser).getOrThrow()
-            val nodeB = startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser).getOrThrow()
+            val notaryFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+            val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser)
+            val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser)
+            val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture, notaryFuture).map { it.getOrThrow() }
 
             val senderThread = supplyAsync {
                 nodeA.rpcClientToNode().start(demoUser[0].username, demoUser[0].password).use {
