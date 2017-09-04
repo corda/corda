@@ -38,7 +38,7 @@ class DistributedServiceTests : DriverBasedTest() {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>())
         )
-        val aliceFuture = startNode(ALICE.name, rpcUsers = listOf(testUser))
+        val aliceFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser))
         val notariesFuture = startNotaryCluster(
                 DUMMY_NOTARY.name,
                 rpcUsers = listOf(testUser),

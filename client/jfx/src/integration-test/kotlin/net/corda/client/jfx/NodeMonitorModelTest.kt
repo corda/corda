@@ -58,13 +58,13 @@ class NodeMonitorModelTest : DriverBasedTest() {
                 startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CashExitFlow>())
         )
-        val aliceNodeFuture = startNode(ALICE.name, rpcUsers = listOf(cashUser))
-        val notaryNodeFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        val aliceNodeFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser))
+        val notaryNodeFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         val aliceNodeHandle = aliceNodeFuture.getOrThrow()
         val notaryNodeHandle = notaryNodeFuture.getOrThrow()
         aliceNode = aliceNodeHandle.nodeInfo
         notaryNode = notaryNodeHandle.nodeInfo
-        newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
+        newNode = { nodeName -> startNode(providedName = nodeName).getOrThrow().nodeInfo }
         val monitor = NodeMonitorModel()
         stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
         stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
@@ -76,7 +76,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
         monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password, initialiseSerialization = false)
         rpc = monitor.proxyObservable.value!!
 
-        val bobNodeHandle = startNode(BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
+        val bobNodeHandle = startNode(providedName = BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
         bobNode = bobNodeHandle.nodeInfo
         val monitorBob = NodeMonitorModel()
         stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
