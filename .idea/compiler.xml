@@ -88,6 +88,9 @@
       <module name="test-common_test" target="1.8" />
       <module name="test-utils_main" target="1.8" />
       <module name="test-utils_test" target="1.8" />
+      <module name="testing-node-driver_integrationTest" target="1.8" />
+      <module name="testing-node-driver_main" target="1.8" />
+      <module name="testing-node-driver_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />

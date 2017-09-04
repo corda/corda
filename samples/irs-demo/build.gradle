@@ -43,7 +43,7 @@ dependencies {
     // Specify your cordapp's dependencies below, including dependent cordapps
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 
-    testCompile project(':driver')
+    testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }

@@ -29,5 +29,5 @@ dependencies {
     compile "com.google.guava:guava:$guava_version"
 
     testCompile "junit:junit:$junit_version"
-    testCompile project(':driver')
+    testCompile project(':node-driver')
 }

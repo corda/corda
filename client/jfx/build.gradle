@@ -50,7 +50,7 @@ dependencies {
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
-    integrationTestCompile project(':driver')
+    integrationTestCompile project(':node-driver')
 }
 
 task integrationTest(type: Test) {

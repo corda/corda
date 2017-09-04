@@ -30,7 +30,7 @@ dependencies {
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':webserver')
-    cordaCompile project(':driver')
+    cordaCompile project(':node-driver')
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {

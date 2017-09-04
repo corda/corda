@@ -56,7 +56,7 @@ dependencies {
     compile "com.opengamma.strata:strata-math:${strata_version}"
 
     // Test dependencies
-    testCompile project(':driver')
+    testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }

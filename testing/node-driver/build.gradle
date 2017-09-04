@@ -41,7 +41,7 @@ task integrationTest(type: Test) {
 }
 
 jar {
-    baseName 'corda-driver'
+    baseName 'corda-node-driver'
 }
 
 publish {

@@ -23,7 +23,7 @@ dependencies {
     cordaCompile project(':core')
     cordaCompile project(':client:jfx')
     cordaCompile project(':client:rpc')
-    cordaCompile project(':driver')
+    cordaCompile project(':node-driver')
 }
 
 idea {
