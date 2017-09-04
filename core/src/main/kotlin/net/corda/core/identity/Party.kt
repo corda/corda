@@ -30,6 +30,11 @@ import java.security.PublicKey
 class Party(val name: X500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
     constructor(certificate: X509CertificateHolder) : this(certificate.subject, Crypto.toSupportedPublicKey(certificate.subjectPublicKeyInfo))
     override fun nameOrNull(): X500Name = name
+    /**
+     * Convert the party to an [AnonymousParty] by removing the name. Note that this <b>does not</b> change the key,
+     * so if the identity is well known, the anonymous version can be resolved back to the full identity via the
+     * network map.
+     */
     fun anonymise(): AnonymousParty = AnonymousParty(owningKey)
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toString() = name.toString()
