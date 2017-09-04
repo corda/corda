@@ -11,9 +11,6 @@ import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.utilities.appendToCommonName
-import net.corda.core.utilities.commonName
-import net.corda.core.utilities.getX509Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.*
@@ -654,7 +651,7 @@ class DriverDSL(
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?: getX509Name("${oneOf(names).commonName}-${p2pAddress.port}", "London", "demo@r3.com", null)
+        val name = providedName ?: getX500Name(O = "${oneOf(names).organisation}-${p2pAddress.port}", L = "London", C = "GB")
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(listOf(object : NodeDefinition {
             override fun getName() = name.toString()
             override fun getConfig() = configOf("p2pAddress" to p2pAddress.toString())
@@ -706,7 +703,7 @@ class DriverDSL(
             rpcUsers: List<User>,
             startInSameProcess: Boolean?
     ): CordaFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
+        val nodeNames = (0 until clusterSize).map { getX500Name(O = "Notary Service $it", OU = "corda", L = "Zurich", C = "CH") }
         val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))
@@ -772,7 +769,7 @@ class DriverDSL(
         }
     }
 
-    override fun baseDirectory(nodeName: X500Name): Path = driverDirectory / nodeName.commonName.replace(WHITESPACE, "")
+    override fun baseDirectory(nodeName: X500Name): Path = driverDirectory / nodeName.organisation!!.replace(WHITESPACE, "")
 
     override fun startDedicatedNetworkMapService(startInProcess: Boolean?): CordaFuture<NodeHandle> {
         val webAddress = portAllocation.nextHostAndPort()
@@ -859,13 +856,13 @@ class DriverDSL(
                 config: Config
         ): CordaFuture<Pair<Node, Thread>> {
             return executorService.fork {
-                log.info("Starting in-process Node ${nodeConf.myLegalName.commonName}")
+                log.info("Starting in-process Node ${nodeConf.myLegalName.organisation}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
                 // TODO pass the version in?
                 val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, initialiseSerialization = false)
                 node.start()
-                val nodeThread = thread(name = nodeConf.myLegalName.commonName) {
+                val nodeThread = thread(name = nodeConf.myLegalName.organisation) {
                     node.run()
                 }
                 node to nodeThread
@@ -882,7 +879,7 @@ class DriverDSL(
                 callerPackage: String
         ): CordaFuture<Process> {
             val processFuture = executorService.fork {
-                log.info("Starting out-of-process Node ${nodeConf.myLegalName.commonName}")
+                log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
 

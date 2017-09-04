@@ -3,7 +3,6 @@ package net.corda.nodeapi.config
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigUtil
 import net.corda.core.internal.noneOrSingle
-import net.corda.core.utilities.validateX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseNetworkHostAndPort
 import org.bouncycastle.asn1.x500.X500Name

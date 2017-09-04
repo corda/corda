@@ -3,21 +3,25 @@ package net.corda.node.utilities
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.generateKeyPair
-import net.corda.core.utilities.cert
-import net.corda.core.utilities.commonName
-import net.corda.core.utilities.getX509Name
 import net.corda.core.internal.div
 import net.corda.core.internal.toTypedArray
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.cert
+import net.corda.core.utilities.commonName
+import net.corda.core.utilities.getX500Name
+import net.corda.core.utilities.organisation
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.config.createKeystoreForCordaNode
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.testing.*
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.BOB_PUBKEY
+import net.corda.testing.MEGA_CORP
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
@@ -54,7 +58,7 @@ class X509UtilitiesTest {
     @Test
     fun `create valid self-signed CA certificate`() {
         val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val caCert = X509Utilities.createSelfSignedCACertificate(getTestX509Name("Test Cert"), caKey)
+        val caCert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test Cert", O = "R3 Ltd", L = "London", C = "GB"), caKey)
         assertTrue { caCert.subject.commonName == "Test Cert" } // using our subject common name
         assertEquals(caCert.issuer, caCert.subject) //self-signed
         caCert.isValidOn(Date()) // throws on verification problems
@@ -69,7 +73,7 @@ class X509UtilitiesTest {
     fun `load and save a PEM file certificate`() {
         val tmpCertificateFile = tempFile("cacert.pem")
         val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val caCert = X509Utilities.createSelfSignedCACertificate(getTestX509Name("Test Cert"), caKey)
+        val caCert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test Cert", O = "R3 Ltd", L = "London", C = "GB"), caKey)
         X509Utilities.saveCertificateAsPEMFile(caCert, tmpCertificateFile)
         val readCertificate = X509Utilities.loadCertificateFromPEMFile(tmpCertificateFile)
         assertEquals(caCert, readCertificate)
@@ -78,8 +82,8 @@ class X509UtilitiesTest {
     @Test
     fun `create valid server certificate chain`() {
         val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val caCert = X509Utilities.createSelfSignedCACertificate(getTestX509Name("Test CA Cert"), caKey)
-        val subject = getTestX509Name("Server Cert")
+        val caCert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test CA Cert", O = "R3 Ltd", L = "London", C = "GB"), caKey)
+        val subject = getX500Name(CN = "Server Cert", O = "R3 Ltd", L = "London", C = "GB")
         val keyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val serverCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, caKey, subject, keyPair.public)
         assertTrue { serverCert.subject.toString().contains("CN=Server Cert") } // using our subject common name
@@ -208,7 +212,7 @@ class X509UtilitiesTest {
         serverCertAndKey.certificate.isValidOn(Date())
         serverCertAndKey.certificate.isSignatureValid(JcaContentVerifierProviderBuilder().build(caCertAndKey.certificate.subjectPublicKeyInfo))
 
-        assertTrue { serverCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.commonName) }
+        assertTrue { serverCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.organisation!!) }
 
         // Load back server certificate
         val sslKeyStore = loadKeyStore(tmpSSLKeyStore, "serverstorepass")
@@ -217,7 +221,7 @@ class X509UtilitiesTest {
         sslCertAndKey.certificate.isValidOn(Date())
         sslCertAndKey.certificate.isSignatureValid(JcaContentVerifierProviderBuilder().build(serverCertAndKey.certificate.subjectPublicKeyInfo))
 
-        assertTrue { sslCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.commonName) }
+        assertTrue { sslCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.organisation!!) }
         // Now sign something with private key and verify against certificate public key
         val testData = "123456".toByteArray()
         val signature = Crypto.doSign(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, serverCertAndKey.keyPair.private, testData)
@@ -355,10 +359,10 @@ class X509UtilitiesTest {
                                               trustStorePassword: String
     ): KeyStore {
         val rootCAKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(getX509Name("Corda Node Root CA", "London", "demo@r3.com", null), rootCAKey)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Corda Node Root CA", O = "R3CEV", L = "London", C = "GB"), rootCAKey)
 
         val intermediateCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, getX509Name("Corda Node Intermediate CA", "London", "demo@r3.com", null), intermediateCAKeyPair.public)
+        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, getX500Name(CN = "Corda Node Intermediate CA", O = "R3CEV", L = "London", C = "GB"), intermediateCAKeyPair.public)
 
         val keyPass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)

@@ -1,6 +1,6 @@
 package net.corda.node.shell
 
-import net.corda.core.utilities.commonName
+import net.corda.core.utilities.organisation
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.openFuture
@@ -110,7 +110,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
         return when (flowInitiator) {
             is FlowInitiator.Scheduled ->  flowInitiator.scheduledState.ref.toString()
             is FlowInitiator.Shell -> "Shell" // TODO Change when we will have more information on shell user.
-            is FlowInitiator.Peer -> flowInitiator.party.name.commonName
+            is FlowInitiator.Peer -> flowInitiator.party.name.organisation!!
             is FlowInitiator.RPC -> "RPC: " + flowInitiator.username
         }
     }

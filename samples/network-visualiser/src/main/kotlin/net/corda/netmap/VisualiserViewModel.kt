@@ -9,7 +9,7 @@ import javafx.scene.shape.Line
 import javafx.util.Duration
 import net.corda.core.node.ScreenCoordinate
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.commonName
+import net.corda.core.utilities.organisation
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
@@ -157,7 +157,7 @@ class VisualiserViewModel {
         view.root.children += longPulseOuterDot
         view.root.children += innerDot
 
-        val nameLabel = Label(label.commonName)
+        val nameLabel = Label(label.organisation)
         val nameLabelRect = StackPane(nameLabel).apply {
             styleClass += "node-label"
             alignment = Pos.CENTER_RIGHT

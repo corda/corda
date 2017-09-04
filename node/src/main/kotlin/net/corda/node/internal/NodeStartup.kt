@@ -3,14 +3,11 @@ package net.corda.node.internal
 import com.jcabi.manifests.Manifests
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
-import net.corda.core.utilities.commonName
-import net.corda.core.utilities.orgName
-import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.organisation
 import net.corda.node.*
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
@@ -77,7 +74,7 @@ open class NodeStartup(val args: Array<String>) {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
         } catch (e: Exception) {
-            if (e.message?.startsWith("Unknown named curve:") ?: false) {
+            if (e.message?.startsWith("Unknown named curve:") == true) {
                 logger.error("Exception during node startup - ${e.message}. " +
                         "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             } else
@@ -102,8 +99,7 @@ open class NodeStartup(val args: Array<String>) {
 
         node.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            // TODO: Replace this with a standard function to get an unambiguous rendering of the X.500 name.
-            val name = node.info.legalIdentity.name.orgName ?: node.info.legalIdentity.name.commonName
+            val name = node.info.legalIdentity.name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.

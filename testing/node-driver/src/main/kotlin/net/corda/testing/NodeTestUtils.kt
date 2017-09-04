@@ -7,6 +7,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.commonName
+import net.corda.core.utilities.organisation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.testing.node.MockServices
@@ -60,7 +61,7 @@ fun testNodeConfiguration(
     whenever(nc.keyStorePassword).thenReturn("cordacadevpass")
     whenever(nc.trustStorePassword).thenReturn("trustpass")
     whenever(nc.rpcUsers).thenReturn(emptyList())
-    whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.commonName))
+    whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.organisation!!))
     whenever(nc.database).thenReturn(makeTestDatabaseProperties())
     whenever(nc.emailAddress).thenReturn("")
     whenever(nc.exportJMXto).thenReturn("")

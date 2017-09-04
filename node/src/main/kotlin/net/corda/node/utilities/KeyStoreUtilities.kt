@@ -183,10 +183,11 @@ class KeyStoreWrapper(private val storePath: Path, private val storePassword: St
         val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, pubKey)
         val certPath = CertificateFactory.getInstance("X509").generateCertPath(listOf(cert.cert) + clientCertPath)
         require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
+        // TODO: X509Utilities.validateCertificateChain()
         return certPath
     }
 
-    fun saveNewKeyPair(serviceName: X500Name, privateKeyAlias: String, keyPair: KeyPair) {
+    fun signAndSaveNewKeyPair(serviceName: X500Name, privateKeyAlias: String, keyPair: KeyPair) {
         val certPath = createCertificate(serviceName, keyPair.public)
         // Assume key password = store password.
         keyStore.addOrReplaceKey(privateKeyAlias, keyPair.private, storePassword.toCharArray(), certPath.certificates.toTypedArray())

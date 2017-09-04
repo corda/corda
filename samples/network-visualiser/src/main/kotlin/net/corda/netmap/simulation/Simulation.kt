@@ -1,27 +1,27 @@
 package net.corda.netmap.simulation
 
-import net.corda.core.utilities.locationOrNull
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
-import net.corda.testing.DUMMY_MAP
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_REGULATOR
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.getX500Name
+import net.corda.core.utilities.locality
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.testing.DUMMY_MAP
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.setTo
 import net.corda.testing.testNodeConfiguration
-import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.math.BigInteger
@@ -57,7 +57,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                              entropyRoot: BigInteger)
         : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, overrideServices, entropyRoot) {
         override fun findMyLocation(): WorldMapLocation? {
-            return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
+            return configuration.myLegalName.locality?.let { CityDatabase[it] }
         }
     }
 
@@ -72,7 +72,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = X500Name("CN=Bank $letter,O=Bank $letter,L=$city,C=$country"))
+                    myLegalName = getX500Name(O = "Bank $letter", L = city, C = country))
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
         }
 
@@ -112,7 +112,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object RatesOracleFactory : MockNetwork.Factory<SimulatedNode> {
         // TODO: Make a more realistic legal name
-        val RATES_SERVICE_NAME = X500Name("CN=Rates Service Provider,O=R3,OU=corda,L=Madrid,C=ES")
+        val RATES_SERVICE_NAME = getX500Name(O = "Rates Service Provider", OU = "corda", L = "Madrid", C = "ES")
 
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,

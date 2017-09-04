@@ -2,6 +2,7 @@ package net.corda.core.crypto
 
 import net.corda.core.internal.toTypedArray
 import net.corda.core.utilities.cert
+import net.corda.core.utilities.getX500Name
 import net.corda.node.utilities.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
@@ -19,13 +20,13 @@ class X509NameConstraintsTest {
 
     private fun makeKeyStores(subjectName: X500Name, nameConstraints: NameConstraints): Pair<KeyStore, KeyStore> {
         val rootKeys = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(net.corda.core.utilities.getX509Name("Corda Root CA", "London", "demo@r3.com", null), rootKeys)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Corda Root CA", O = "R3CEV", L = "London", C = "GB"), rootKeys)
 
         val intermediateCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootKeys, net.corda.core.utilities.getX509Name("Corda Intermediate CA", "London", "demo@r3.com", null), intermediateCAKeyPair.public)
+        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootKeys, getX500Name(CN = "Corda Intermediate CA", O = "R3CEV", L = "London", C = "GB"), intermediateCAKeyPair.public)
 
         val clientCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCACert, intermediateCAKeyPair, net.corda.core.utilities.getX509Name("Corda Client CA", "London", "demo@r3.com", null), clientCAKeyPair.public, nameConstraints = nameConstraints)
+        val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCACert, intermediateCAKeyPair, getX500Name(CN = "Corda Client CA", O = "R3CEV", L = "London", C = "GB"), clientCAKeyPair.public, nameConstraints = nameConstraints)
 
         val keyPass = "password"
         val trustStore = KeyStore.getInstance(KEYSTORE_TYPE)
