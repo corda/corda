@@ -370,8 +370,13 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
     }
 }
 
-fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort) {
-    addressMustNotBeBoundFuture(executorService, hostAndPort).getOrThrow()
+/*
+ * The default timeout value of 40 seconds have been chosen based on previous node shutdown time estimate.
+ * It's been observed that nodes can take up to 30 seconds to shut down, so just to stay on the safe side the 40 seconds
+ * timeout has been chosen.
+ */
+fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort, timeout: Duration = 40.seconds) {
+    addressMustNotBeBoundFuture(executorService, hostAndPort).getOrThrow(timeout)
 }
 
 fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort): CordaFuture<Unit> {
