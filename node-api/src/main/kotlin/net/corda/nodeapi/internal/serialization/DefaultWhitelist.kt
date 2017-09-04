@@ -64,7 +64,8 @@ class DefaultWhitelist : CordaPluginRegistry() {
                     LocalDate::class.java,
                     Period::class.java,
                     BitSet::class.java,
-                    OnErrorNotImplementedException::class.java)
+                    OnErrorNotImplementedException::class.java,
+                    StackTraceElement::class.java)
         }
         return true
     }
