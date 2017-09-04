@@ -1,0 +1,75 @@
+buildscript {
+	ext {
+		springBootVersion = '1.5.6.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}")
+		classpath("org.jetbrains.kotlin:kotlin-allopen:${kotlin_version}")
+	}
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'kotlin-spring'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'project-report'
+apply plugin: 'application'
+
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = 1.8
+compileKotlin {
+	kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+	kotlinOptions.jvmTarget = "1.8"
+}
+
+repositories {
+	mavenCentral()
+}
+
+// Spring declares dependency on old Artemis Client 1.5.5 which is incompatible with Corda
+// it's fixed in Spring boot starter 2.0 but it's not released officially at the time of writing this.
+ext['artemis.version'] = "2.1.0"
+ext['hibernate.version'] = '5.2.6.Final'
+
+
+dependencies {
+	compile('org.springframework.boot:spring-boot-starter-web') {
+		exclude module: "spring-boot-starter-logging"
+		exclude module: "logback-classic"
+	}
+	compile("org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlin_version}")
+	compile("org.jetbrains.kotlin:kotlin-reflect:${kotlin_version}")
+	compile("com.fasterxml.jackson.module:jackson-module-kotlin:2.8.9")
+	compile project(":client:rpc")
+	compile project(":client:jackson")
+	compile project(":test-utils")
+	compile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
+	testCompile('org.springframework.boot:spring-boot-starter-test') {
+		exclude module: "spring-boot-starter-logging"
+		exclude module: "logback-classic"
+	}
+}
+
+jar {
+	from sourceSets.test.output
+}
+
+task deployWebapps(type: Copy, dependsOn: ['jar', 'bootRepackage']) {
+
+	ext.webappDir = file("build/webapps")
+
+	from(jar.outputs)
+	from("src/test/resources/scripts/") {
+		filter { it
+				.replace('#JAR_PATH#', jar.archiveName)
+				.replace('#DIR#', ext.webappDir.getAbsolutePath())
+		}
+	}
+	into ext.webappDir
+}

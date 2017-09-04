@@ -13,29 +13,27 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.Party
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.toFuture
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
-import net.corda.irs.utilities.uploadFile
+import net.corda.irs.web.IrsDemoWebApplication
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.test.spring.springDriver
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.IntegrationTestCategory
 import net.corda.testing.chooseIdentity
-import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import rx.Observable
-import java.net.URL
 import java.time.Duration
 import java.time.LocalDate
 
@@ -45,32 +43,39 @@ class IRSDemoTest : IntegrationTestCategory {
         val log = loggerFor<IRSDemoTest>()
     }
 
-    private val rpcUser = User("user", "password", emptySet())
-    private val currentDate: LocalDate = LocalDate.now()
-    private val futureDate: LocalDate = currentDate.plusMonths(6)
-    private val maxWaitTime: Duration = 60.seconds
+    val rpcUsers = listOf(User("user", "password",
+            setOf("StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
+                    "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
+                    "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow")))
+
+    val currentDate: LocalDate = LocalDate.now()
+    val futureDate: LocalDate = currentDate.plusMonths(6)
+    val maxWaitTime: Duration = 60.seconds
 
     @Test
     fun `runs IRS demo`() {
-        driver(useTestClock = true, isDebug = true) {
+        springDriver(useTestClock = true, isDebug = true, extraCordappPackagesToScan = listOf("net.corda.irs")) {
             val (controller, nodeA, nodeB) = listOf(
                     startNode(
                             providedName = DUMMY_NOTARY.name,
-                            advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))),
-                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
-                    startNode(providedName = DUMMY_BANK_B.name)).map { it.getOrThrow() }
+                            advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)/*, ServiceInfo(NodeInterestRates.Oracle.type)*/),
+                            rpcUsers = rpcUsers
+
+                    ),
+                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = rpcUsers),
+                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = rpcUsers)).map { it.getOrThrow() }
 
             log.info("All nodes started")
 
-            val controllerAddrFuture = startWebserver(controller)
-            val nodeAAddrFuture = startWebserver(nodeA)
-            val nodeBAddrFuture = startWebserver(nodeB)
+            val controllerAddrFuture = startSpringBootWebapp(IrsDemoWebApplication::class.java, controller, "/api/irs/demodate")
+            val nodeAAddrFuture = startSpringBootWebapp(IrsDemoWebApplication::class.java, nodeA, "/api/irs/demodate")
+            val nodeBAddrFuture = startSpringBootWebapp(IrsDemoWebApplication::class.java, nodeB, "/api/irs/demodate")
             val (controllerAddr, nodeAAddr, nodeBAddr) =
                     listOf(controllerAddrFuture, nodeAAddrFuture, nodeBAddrFuture).map { it.getOrThrow().listenAddress }
 
             log.info("All webservers started")
 
-            val (_, nodeAApi, nodeBApi) = listOf(controller, nodeA, nodeB).zip(listOf(controllerAddr, nodeAAddr, nodeBAddr)).map {
+            val (controllerApi, nodeAApi, nodeBApi) = listOf(controller, nodeA, nodeB).zip(listOf(controllerAddr, nodeAAddr, nodeBAddr)).map {
                 val mapper = net.corda.client.jackson.JacksonSupport.createDefaultMapper(it.first.rpc)
                 registerFinanceJSONMappers(mapper)
                 registerIRSModule(mapper)
@@ -80,7 +85,7 @@ class IRSDemoTest : IntegrationTestCategory {
             val numADeals = getTradeCount(nodeAApi)
             val numBDeals = getTradeCount(nodeBApi)
 
-            runUploadRates(controllerAddr)
+            runUploadRates(controllerApi)
             runTrade(nodeAApi, controller.nodeInfo.chooseIdentity())
 
             assertThat(getTradeCount(nodeAApi)).isEqualTo(numADeals + 1)
@@ -96,9 +101,7 @@ class IRSDemoTest : IntegrationTestCategory {
         }
     }
 
-    private fun getFloatingLegFixCount(nodeApi: HttpApi): Int {
-        return getTrades(nodeApi)[0].calculation.floatingLegPaymentSchedule.count { it.value.rate.ratioUnit != null }
-    }
+    fun getFloatingLegFixCount(nodeApi: HttpApi) = getTrades(nodeApi)[0].calculation.floatingLegPaymentSchedule.count { it.value.rate.ratioUnit != null }
 
     private fun getFixingDateObservable(config: FullNodeConfiguration): Observable<LocalDate?> {
         val client = CordaRPCClient(config.rpcAddress!!, initialiseSerialization = false)
@@ -118,16 +121,15 @@ class IRSDemoTest : IntegrationTestCategory {
 
     private fun runTrade(nodeApi: HttpApi, oracle: Party) {
         log.info("Running trade against ${nodeApi.root}")
-        val fileContents = loadResourceFile("net/corda/irs/simulation/example-irs-trade.json")
+        val fileContents = loadResourceFile("net/corda/irs/web/simulation/example-irs-trade.json")
         val tradeFile = fileContents.replace("tradeXXX", "trade1").replace("oracleXXX", oracle.name.toString())
         assertThat(nodeApi.postJson("deals", tradeFile)).isTrue()
     }
 
-    private fun runUploadRates(host: NetworkHostAndPort) {
-        log.info("Running upload rates against $host")
+    private fun runUploadRates(nodeApi: HttpApi) {
+        log.info("Running upload rates against ${nodeApi.root}")
         val fileContents = loadResourceFile("net/corda/irs/simulation/example.rates.txt")
-        val url = URL("http://$host/api/irs/fixes")
-        assertThat(uploadFile(url, fileContents)).isTrue()
+        assertThat(nodeApi.postPlain("fixes", fileContents)).isTrue()
     }
 
     private fun loadResourceFile(filename: String): String {

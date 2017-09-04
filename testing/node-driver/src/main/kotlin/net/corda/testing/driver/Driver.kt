@@ -401,6 +401,58 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     }
 }
 
+/**
+ * This is a helper method to allow extending of the DSL, along the lines of
+ *   interface SomeOtherExposedDSLInterface : DriverDSLExposedInterface
+ *   interface SomeOtherInternalDSLInterface : DriverDSLInternalInterface, SomeOtherExposedDSLInterface
+ *   class SomeOtherDSL(val driverDSL : DriverDSL) : DriverDSLInternalInterface by driverDSL, SomeOtherInternalDSLInterface
+ *
+ * @param coerce We need this explicit coercion witness because we can't put an extra DI : D bound in a `where` clause.
+ */
+fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericDriver(
+        defaultParameters: DriverParameters = DriverParameters(),
+        isDebug: Boolean = defaultParameters.isDebug,
+        driverDirectory: Path = defaultParameters.driverDirectory,
+        portAllocation: PortAllocation = defaultParameters.portAllocation,
+        debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
+        systemProperties: Map<String, String> = defaultParameters.systemProperties,
+        useTestClock: Boolean = defaultParameters.useTestClock,
+        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+        networkMapStartStrategy: NetworkMapStartStrategy = defaultParameters.networkMapStartStrategy,
+        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
+        scanPackage: String? = defaultParameters.scanPackage,
+        driverDslWrapper: (DriverDSL) -> D,
+        coerce: (D) -> DI,
+        dsl: DI.() -> A
+): A {
+    if (initialiseSerialization) initialiseTestSerialization()
+    val driverDsl = driverDslWrapper(
+            DriverDSL(
+                    portAllocation = portAllocation,
+                    debugPortAllocation = debugPortAllocation,
+                    systemProperties = systemProperties,
+                    driverDirectory = driverDirectory.toAbsolutePath(),
+                    useTestClock = useTestClock,
+                    networkMapStartStrategy = networkMapStartStrategy,
+                    isDebug = isDebug,
+                    startNodesInProcess = startNodesInProcess,
+                    scanPackage = scanPackage
+            )
+    )
+    val shutdownHook = addShutdownHook(driverDsl::shutdown)
+    try {
+        driverDsl.start()
+        return dsl(coerce(driverDsl))
+    } catch (exception: Throwable) {
+        log.error("Driver shutting down because of exception", exception)
+        throw exception
+    } finally {
+        driverDsl.shutdown()
+        shutdownHook.cancel()
+        if (initialiseSerialization) resetTestSerialization()
+    }
+}
+
 fun getTimestampAsDirectoryName(): String {
     return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(UTC).format(Instant.now())
 }

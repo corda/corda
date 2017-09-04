@@ -47,8 +47,11 @@ object ProcessUtilities {
             addAll(arguments)
         }
         return ProcessBuilder(command).apply {
-            if (errorLogPath != null) redirectError(errorLogPath.toFile()) // FIXME: Undone by inheritIO.
             inheritIO()
+            if (workingDirectory != null) {
+                redirectError((workingDirectory / "$className.stderr.log").toFile())
+                redirectOutput((workingDirectory / "$className.stdout.log").toFile())
+            }
             if (workingDirectory != null) directory(workingDirectory.toFile())
         }.start()
     }

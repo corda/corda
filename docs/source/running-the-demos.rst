@@ -54,29 +54,48 @@ IRS demo
 This demo brings up three nodes: Bank A, Bank B and a node that simultaneously runs a notary, a network map and an interest rates
 oracle. The two banks agree on an interest rate swap, and then do regular fixings of the deal as the time
 on a simulated clock passes.
+Instead of using Corda built-in webserver it showcases usage of standalone Spring Boot Web application
+to server as a frontend.
+
+To run the demo, CordApp has to be started first, as the webapplications connect to nodes.
 
 To run from the command line in Unix:
 
-1. Run ``./gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/build``
-2. Run ``./gradlew samples:irs-demo:installDist``
-3. Move to the ``samples/irs-demo/build`` directory
+1. Run ``./gradlew samples:irs-demo:cordapp:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/cordapp/build``
+2. Run ``./gradlew samples:irs-demo:cordapp:installDist``
+3. Move to the ``samples/irs-demo/cordapp/build`` directory
 4. Run ``./nodes/runnodes`` to open up three new terminals with the three nodes (you may have to install xterm).
 
 To run from the command line in Windows:
 
-1. Run ``gradlew.bat samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples\irs-demo\build``
-2. Run ``gradlew.bat samples:irs-demo:installDist``
-3. Run ``cd samples\irs-demo\build`` to change current working directory
-4. Run ``nodes\runnodes`` to open up several 6 terminals, 2 for each node. First terminal is a web-server associated with every node and second one is Corda interactive shell for the node.
+1. Run ``gradlew samples:irs-demo:cordapp:deployNodes`` to install configs and a command line tool under ``samples\irs-demo\cordapp\build``
+2. Run ``gradlew samples:irs-demo:cordapp:installDist``
+3. Move to the ``samples\irs-demo\cordapp\build`` directory
+4. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
 
-This demo also has a web app. To use this, run nodes and then navigate to
-http://localhost:10007/web/irsdemo and http://localhost:10010/web/irsdemo to see each node's view of the ledger.
+Wait for the all the nodes to start, then proceed to run Spring Boot frontend
+
+To run from the command line in Unix:
+
+1. Run ``./gradlew :samples:irs-demo:web:deployWebapps`` to install configs and artifacts in  ``samples/irs-demo/web/build/webapps``
+2. Move to the ``samples/irs-demo/web/build/`` directory
+3a. Run ``./webapps/runwebapps.sh`` to open up three new terminals with the three applications (you may have to install tmux or xterm).
+3b. On Mac OS ``osascript webapps/runwebapps.scpt`` can be used instead - Terminal.app will be utilized
+
+To run from the command line in Windows:
+
+1. Run ``gradlew samples:irs-demo:web:deployWebapps`` to install configs and artifacts ``samples\irs-demo\web\build\webapps``
+2. Move to the ``samples\irs-demo\web\build`` directory
+3. Run ``webapps\runwebapps`` to open up three new terminals with the three nodes.
+
+Navigate to http://localhost:10007/ and http://localhost:10010/ to see each node's view of the ledger.
 
 To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then
 use the time controls at the top left of the home page to run the fixings. Click any individual trade in the blotter to view it.
 
 .. note:: The IRS web UI currently has a bug when changing the clock time where it may show no numbers or apply fixings inconsistently.
-          The issues will be addressed in a future milestone release. Meanwhile, you can take a look at a simpler oracle example https://github.com/corda/oracle-example
+The issues will be addressed in a future milestone release. Meanwhile, you can take a look at a simpler oracle example https://github.com/corda/oracle-example
+
 
 Attachment demo
 ---------------
