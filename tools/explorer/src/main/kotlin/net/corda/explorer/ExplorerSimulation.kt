@@ -71,20 +71,20 @@ class ExplorerSimulation(val options: OptionSet) {
         val portAllocation = PortAllocation.Incremental(20000)
         driver(portAllocation = portAllocation) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
-            val notary = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
+            val notary = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
                     customOverrides = mapOf("nearestCity" to "Zurich"))
-            val alice = startNode(ALICE.name, rpcUsers = arrayListOf(user),
+            val alice = startNode(providedName = ALICE.name, rpcUsers = arrayListOf(user),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                     customOverrides = mapOf("nearestCity" to "Milan"))
-            val bob = startNode(BOB.name, rpcUsers = arrayListOf(user),
+            val bob = startNode(providedName = BOB.name, rpcUsers = arrayListOf(user),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                     customOverrides = mapOf("nearestCity" to "Madrid"))
             val ukBankName = X500Name("CN=UK Bank Plc,O=UK Bank Plc,L=London,C=GB")
             val usaBankName = X500Name("CN=USA Bank Corp,O=USA Bank Corp,L=New York,C=USA")
-            val issuerGBP = startNode(ukBankName, rpcUsers = arrayListOf(manager),
+            val issuerGBP = startNode(providedName = ukBankName, rpcUsers = arrayListOf(manager),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
                     customOverrides = mapOf("nearestCity" to "London"))
-            val issuerUSD = startNode(usaBankName, rpcUsers = arrayListOf(manager),
+            val issuerUSD = startNode(providedName = usaBankName, rpcUsers = arrayListOf(manager),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))),
                     customOverrides = mapOf("nearestCity" to "New York"))
 

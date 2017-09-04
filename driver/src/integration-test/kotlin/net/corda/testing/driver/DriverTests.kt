@@ -41,8 +41,8 @@ class DriverTests {
     @Test
     fun `simple node startup and shutdown`() {
         val handles = driver {
-            val notary = startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
-            val regulator = startNode(DUMMY_REGULATOR.name, setOf(ServiceInfo(RegulatorService.type)))
+            val notary = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+            val regulator = startNode(providedName = DUMMY_REGULATOR.name, advertisedServices = setOf(ServiceInfo(RegulatorService.type)))
             listOf(nodeMustBeUp(notary), nodeMustBeUp(regulator))
         }
         handles.map { nodeMustBeDown(it) }
@@ -51,7 +51,7 @@ class DriverTests {
     @Test
     fun `starting node with no services`() {
         val noService = driver {
-            val noService = startNode(DUMMY_BANK_A.name)
+            val noService = startNode(providedName = DUMMY_BANK_A.name)
             nodeMustBeUp(noService)
         }
         nodeMustBeDown(noService)
@@ -60,7 +60,7 @@ class DriverTests {
     @Test
     fun `random free port allocation`() {
         val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
-            val nodeInfo = startNode(DUMMY_BANK_A.name)
+            val nodeInfo = startNode(providedName = DUMMY_BANK_A.name)
             nodeMustBeUp(nodeInfo)
         }
         nodeMustBeDown(nodeHandle)
@@ -72,7 +72,7 @@ class DriverTests {
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
-            val baseDirectory = startNode(DUMMY_BANK_A.name).getOrThrow().configuration.baseDirectory
+            val baseDirectory = startNode(providedName = DUMMY_BANK_A.name).getOrThrow().configuration.baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()

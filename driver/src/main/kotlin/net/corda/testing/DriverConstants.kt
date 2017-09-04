@@ -21,7 +21,7 @@ import net.corda.testing.driver.DriverDSLExposedInterface
  */
 class PredefinedTestNode internal constructor(party: Party, driver: DriverDSLExposedInterface, services: Set<ServiceInfo>) {
     val rpcUsers = listOf(User("admin", "admin", setOf("ALL")))  // TODO: Randomize?
-    val nodeFuture by lazy { driver.startNode(party.name, rpcUsers = rpcUsers, advertisedServices = services) }
+    val nodeFuture by lazy { driver.startNode(providedName = party.name, rpcUsers = rpcUsers, advertisedServices = services) }
     val node by lazy { nodeFuture.get()!! }
     val rpc by lazy { node.rpcClientToNode() }
 

@@ -11,6 +11,16 @@ dokka {
     processConfigurations = ['compile']
     sourceDirs = files('../core/src/main/kotlin', '../client/jfx/src/main/kotlin', '../client/mock/src/main/kotlin', '../client/rpc/src/main/kotlin', '../node-api/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin')
     jdkVersion = 8
+
+    externalDocumentationLink {
+        url = new URL("http://fasterxml.github.io/jackson-core/javadoc/2.8/")
+    }
+    externalDocumentationLink {
+        url = new URL("https://docs.oracle.com/javafx/2/api/")
+    }
+    externalDocumentationLink {
+        url = new URL("http://www.bouncycastle.org/docs/docs1.5on/")
+    }
 }
 
 task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
@@ -21,6 +31,16 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
     sourceDirs = files('../core/src/main/kotlin', '../client/jfx/src/main/kotlin', '../client/mock/src/main/kotlin', '../client/rpc/src/main/kotlin', '../node-api/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin')
     includes = ['packages.md']
     jdkVersion = 8
+
+    externalDocumentationLink {
+        url = new URL("http://fasterxml.github.io/jackson-core/javadoc/2.8/")
+    }
+    externalDocumentationLink {
+        url = new URL("https://docs.oracle.com/javafx/2/api/")
+    }
+    externalDocumentationLink {
+        url = new URL("http://www.bouncycastle.org/docs/docs1.5on/")
+    }
 }
 
 task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
