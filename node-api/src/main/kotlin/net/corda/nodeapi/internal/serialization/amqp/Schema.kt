@@ -191,12 +191,10 @@ sealed class TypeNotation : DescribedType {
     companion object {
         fun get(obj: Any): TypeNotation {
             val describedType = obj as DescribedType
-            if (describedType.descriptor == CompositeType.DESCRIPTOR) {
-                return CompositeType.get(describedType)
-            } else if (describedType.descriptor == RestrictedType.DESCRIPTOR) {
-                return RestrictedType.get(describedType)
-            } else {
-                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            return when (describedType.descriptor) {
+                CompositeType.DESCRIPTOR -> CompositeType.get(describedType)
+                RestrictedType.DESCRIPTOR -> RestrictedType.get(describedType)
+                else -> throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
             }
         }
     }
@@ -252,7 +250,12 @@ data class CompositeType(override val name: String, override val label: String?,
     }
 }
 
-data class RestrictedType(override val name: String, override val label: String?, override val provides: List<String>, val source: String, override val descriptor: Descriptor, val choices: List<Choice>) : TypeNotation() {
+data class RestrictedType(override val name: String,
+                          override val label: String?,
+                          override val provides: List<String>,
+                          val source: String,
+                          override val descriptor: Descriptor,
+                          val choices: List<Choice>) : TypeNotation() {
     companion object : DescribedTypeConstructor<RestrictedType> {
         val DESCRIPTOR = DescriptorRegistry.RESTRICTED_TYPE.amqpDescriptor
 
@@ -290,6 +293,9 @@ data class RestrictedType(override val name: String, override val label: String?
         }
         sb.append(">\n")
         sb.append("  $descriptor\n")
+        choices.forEach {
+            sb.append("  $it\n")
+        }
         sb.append("</type>")
         return sb.toString()
     }
@@ -352,6 +358,7 @@ data class ReferencedObject(private val refCounter: Int) : DescribedType {
 }
 
 private val ARRAY_HASH: String = "Array = true"
+private val ENUM_HASH: String = "Enum = true"
 private val ALREADY_SEEN_HASH: String = "Already seen = true"
 private val NULLABLE_HASH: String = "Nullable = true"
 private val NOT_NULLABLE_HASH: String = "Nullable = false"
@@ -382,7 +389,7 @@ internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String {
     return hasher.hash().asBytes().toBase64()
 }
 
-private fun Hasher.fingerprintWithCustomSerializerOrElse(factory: SerializerFactory, clazz: Class<*>, declaredType: Type, block: () -> Hasher) : Hasher {
+private fun Hasher.fingerprintWithCustomSerializerOrElse(factory: SerializerFactory, clazz: Class<*>, declaredType: Type, block: () -> Hasher): Hasher {
     // Need to check if a custom serializer is applicable
     val customSerializer = factory.findCustomSerializer(clazz, declaredType)
     return if (customSerializer != null) {
@@ -400,51 +407,58 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
     } else {
         alreadySeen += type
         try {
-            if (type is SerializerFactory.AnyType) {
-                hasher.putUnencodedChars(ANY_TYPE_HASH)
-            } else if (type is Class<*>) {
-                if (type.isArray) {
-                    fingerprintForType(type.componentType, contextType, alreadySeen, hasher, factory).putUnencodedChars(ARRAY_HASH)
-                } else if (SerializerFactory.isPrimitive(type)) {
-                    hasher.putUnencodedChars(type.name)
-                } else if (isCollectionOrMap(type)) {
-                    hasher.putUnencodedChars(type.name)
-                } else {
-                    hasher.fingerprintWithCustomSerializerOrElse(factory, type, type) {
-                        if (type.kotlin.objectInstance != null) {
-                            // TODO: name collision is too likely for kotlin objects, we need to introduce some reference
-                            // to the CorDapp but maybe reference to the JAR in the short term.
-                            hasher.putUnencodedChars(type.name)
-                        } else {
-                            fingerprintForObject(type, type, alreadySeen, hasher, factory)
+            when (type) {
+                is SerializerFactory.AnyType -> hasher.putUnencodedChars(ANY_TYPE_HASH)
+                is Class<*> -> {
+                    if (type.isArray) {
+                        fingerprintForType(type.componentType, contextType, alreadySeen, hasher, factory).putUnencodedChars(ARRAY_HASH)
+                    } else if (SerializerFactory.isPrimitive(type)) {
+                        hasher.putUnencodedChars(type.name)
+                    } else if (isCollectionOrMap(type)) {
+                        hasher.putUnencodedChars(type.name)
+                    } else if (type.isEnum) {
+                        // ensures any change to the enum (adding constants) will trigger the need for evolution
+                        hasher.apply {
+                            type.enumConstants.forEach {
+                                putUnencodedChars(it.toString())
+                            }
+                        }.putUnencodedChars(type.name).putUnencodedChars(ENUM_HASH)
+                    } else {
+                        hasher.fingerprintWithCustomSerializerOrElse(factory, type, type) {
+                            if (type.kotlin.objectInstance != null) {
+                                // TODO: name collision is too likely for kotlin objects, we need to introduce some reference
+                                // to the CorDapp but maybe reference to the JAR in the short term.
+                                hasher.putUnencodedChars(type.name)
+                            } else {
+                                fingerprintForObject(type, type, alreadySeen, hasher, factory)
+                            }
                         }
                     }
                 }
-            } else if (type is ParameterizedType) {
-                // Hash the rawType + params
-                val clazz = type.rawType as Class<*>
-                val startingHash = if (isCollectionOrMap(clazz)) {
-                    hasher.putUnencodedChars(clazz.name)
-                } else {
-                    hasher.fingerprintWithCustomSerializerOrElse(factory, clazz, type) {
-                        fingerprintForObject(type, type, alreadySeen, hasher, factory)
+                is ParameterizedType -> {
+                    // Hash the rawType + params
+                    val clazz = type.rawType as Class<*>
+                    val startingHash = if (isCollectionOrMap(clazz)) {
+                        hasher.putUnencodedChars(clazz.name)
+                    } else {
+                        hasher.fingerprintWithCustomSerializerOrElse(factory, clazz, type) {
+                            fingerprintForObject(type, type, alreadySeen, hasher, factory)
+                        }
+                    }
+                    // ... and concatentate the type data for each parameter type.
+                    type.actualTypeArguments.fold(startingHash) { orig, paramType ->
+                        fingerprintForType(paramType, type, alreadySeen, orig, factory)
                     }
                 }
-                // ... and concatentate the type data for each parameter type.
-                type.actualTypeArguments.fold(startingHash) { orig, paramType -> fingerprintForType(paramType, type, alreadySeen, orig, factory) }
-            } else if (type is GenericArrayType) {
-                // Hash the element type + some array hash
-                fingerprintForType(type.genericComponentType, contextType, alreadySeen, hasher, factory).putUnencodedChars(ARRAY_HASH)
-            } else if (type is TypeVariable<*>) {
-                // TODO: include bounds
-                hasher.putUnencodedChars(type.name).putUnencodedChars(TYPE_VARIABLE_HASH)
-            } else if (type is WildcardType) {
-                hasher.putUnencodedChars(type.typeName).putUnencodedChars(WILDCARD_TYPE_HASH)
+            // Hash the element type + some array hash
+                is GenericArrayType -> fingerprintForType(type.genericComponentType, contextType, alreadySeen,
+                        hasher, factory).putUnencodedChars(ARRAY_HASH)
+            // TODO: include bounds
+                is TypeVariable<*> -> hasher.putUnencodedChars(type.name).putUnencodedChars(TYPE_VARIABLE_HASH)
+                is WildcardType -> hasher.putUnencodedChars(type.typeName).putUnencodedChars(WILDCARD_TYPE_HASH)
+                else -> throw NotSerializableException("Don't know how to hash")
             }
-            else {
-                throw NotSerializableException("Don't know how to hash")
-            }
-        } catch(e: NotSerializableException) {
+        } catch (e: NotSerializableException) {
             val msg = "${e.message} -> $type"
             logger.error(msg, e)
             throw NotSerializableException(msg)

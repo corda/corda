@@ -53,6 +53,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             var typeStart = 0
             var needAType = true
             var skippingWhitespace = false
+
             while (pos < params.length) {
                 if (params[pos] == '<') {
                     val typeEnd = pos++
@@ -102,7 +103,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                         } else if (!skippingWhitespace && (params[pos] == '.' || params[pos].isJavaIdentifierPart())) {
                             pos++
                         } else {
-                            throw NotSerializableException("Invalid character in middle of type: ${params[pos]}")
+                            throw NotSerializableException("Invalid character ${params[pos]} in middle of type $params at idx $pos")
                         }
                     }
                 }
