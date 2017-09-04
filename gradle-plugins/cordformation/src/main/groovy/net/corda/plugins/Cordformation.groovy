@@ -71,12 +71,12 @@ class Cordformation implements Plugin<Project> {
             def filteredDeps = directDeps.findAll { excludes.collect { exclude -> (exclude.group == it.group) && (exclude.name == it.name) }.findAll { it }.isEmpty() }
             filteredDeps.each {
                 // net.corda may be a core dependency which shouldn't be included in this cordapp so give a warning
-                if(it.group.contains('net.corda')) {
+                if(it.group && it.group.contains('net.corda.')) {
                     logger.warn("You appear to have included a Corda platform component ($it) using a 'compile' or 'runtime' dependency." +
                                 "This can cause node stability problems. Please use 'corda' instead." +
                                 "See http://docs.corda.net/cordapp-build-systems.html")
                 } else {
-                    logger.trace("Including dependency: $it")
+                    logger.info("Including dependency in CorDapp JAR: $it")
                 }
             }
             return filteredDeps.collect { configurations.runtime.files it }.flatten().toSet()
