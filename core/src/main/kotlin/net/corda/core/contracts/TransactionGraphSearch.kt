@@ -15,23 +15,22 @@ import java.util.concurrent.Callable
  *
  * In future, this should support restricting the search by time, and other types of useful query.
  *
- * @param transactions map of transaction id to [SignedTransaction].
- * @param startPoints transactions to use as starting points for the search.
- * @param query query to test transactions within the graph for matching.
+ * @property transactions map of transaction id to [SignedTransaction].
+ * @property startPoints transactions to use as starting points for the search.
+ * @property query query to test transactions within the graph for matching.
  */
 class TransactionGraphSearch(private val transactions: TransactionStorage,
                              private val startPoints: List<WireTransaction>,
                              private val query: Query) : Callable<List<WireTransaction>> {
     /**
      * Query criteria to match transactions against.
+     *
+     * @property withCommandOfType contract command class to restrict matches to, or null for no filtering by command. Matches the class or
+     * any subclass.
+     * @property followInputsOfType contract output state class to follow the corresponding inputs to. Matches this exact class only.
      */
     data class Query(
-            /**
-             * Contract command class to restrict matches to, or null for no filtering by command. Matches the class or
-             * any subclass.
-             */
             val withCommandOfType: Class<out CommandData>? = null,
-            /** Contract output state class to follow the corresponding inputs to. Matches this exact class only. */
             val followInputsOfType: Class<out ContractState>? = null
     ) {
         /**
