@@ -187,11 +187,13 @@ class Node extends CordformNode {
         } else if (config.hasPath("additionalConfigFile")) {
             additionalConfig = new File(config.getString("additionalConfigFile"))
         }
-        if (additionalConfig != null && !additionalConfig.exists()) {
-            println "File additionalConfigFile '" + additionalConfig + "' not exist"
-        } else {
-            additionalConfig.eachLine {
-                line -> configFileText << line
+        if (additionalConfig != null ) {
+            if (!additionalConfig.exists()) {
+                println "File additionalConfigFile '" + additionalConfig + "' not exist"
+            } else {
+                additionalConfig.eachLine {
+                    line -> configFileText << line
+                }
             }
         }
 
