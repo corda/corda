@@ -105,6 +105,9 @@ class ScheduledFlowTests {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
         nodeA = mockNet.createNode(notaryNode.network.myAddress, start = false)
         nodeB = mockNet.createNode(notaryNode.network.myAddress, start = false)
+
+        notaryNode.ensureRegistered()
+
         mockNet.startNodes()
     }
 

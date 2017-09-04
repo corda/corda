@@ -73,6 +73,10 @@ class FlowFrameworkTests {
     fun start() {
         node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         node2 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
+
+        mockNet.runNetwork()
+        node1.ensureRegistered()
+
         // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
         val notaryService = ServiceInfo(ValidatingNotaryService.type, getTestX509Name("notary-service-2000"))

@@ -334,6 +334,9 @@ class TwoPartyTradeFlowTests {
         val bankNode = makeNodeWithTracking(notaryNode.network.myAddress, BOC.name)
         val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
+        mockNet.runNetwork()
+        notaryNode.ensureRegistered()
+
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
         allNodes.forEach { node ->
             allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.verifyAndRegisterIdentity(identity) }
@@ -439,6 +442,9 @@ class TwoPartyTradeFlowTests {
         val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
         val bankNode = makeNodeWithTracking(notaryNode.network.myAddress, BOC.name)
         val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
+
+        mockNet.runNetwork()
+        notaryNode.ensureRegistered()
 
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
         allNodes.forEach { node ->
@@ -594,6 +600,9 @@ class TwoPartyTradeFlowTests {
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         val bankNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
         val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
+
+        mockNet.runNetwork()
+        notaryNode.ensureRegistered()
 
         // Let the nodes know about each other - normally the network map would handle this
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
