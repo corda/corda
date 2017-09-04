@@ -22,7 +22,6 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
-import net.corda.node.internal.NodeStartup
 import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -354,7 +353,8 @@ data class DriverParameters(
         val useTestClock: Boolean = false,
         val initialiseSerialization: Boolean = true,
         val networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
-        val startNodesInProcess: Boolean = false
+        val startNodesInProcess: Boolean = false,
+        val scanPackage: String? = null
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -365,6 +365,7 @@ data class DriverParameters(
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setNetworkMapStartStrategy(networkMapStartStrategy: NetworkMapStartStrategy) = copy(networkMapStartStrategy = networkMapStartStrategy)
     fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
+    fun setScanPackage(scanPackage: String) = copy(scanPackage = scanPackage)
 }
 
 /**
@@ -382,6 +383,58 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         dsl: DI.() -> A
 ): A {
     if (initialiseSerialization) initialiseTestSerialization()
+    val shutdownHook = addShutdownHook(driverDsl::shutdown)
+    try {
+        driverDsl.start()
+        return dsl(coerce(driverDsl))
+    } catch (exception: Throwable) {
+        log.error("Driver shutting down because of exception", exception)
+        throw exception
+    } finally {
+        driverDsl.shutdown()
+        shutdownHook.cancel()
+        if (initialiseSerialization) resetTestSerialization()
+    }
+}
+
+/**
+ * This is a helper method to allow extending of the DSL, along the lines of
+ *   interface SomeOtherExposedDSLInterface : DriverDSLExposedInterface
+ *   interface SomeOtherInternalDSLInterface : DriverDSLInternalInterface, SomeOtherExposedDSLInterface
+ *   class SomeOtherDSL(val driverDSL : DriverDSL) : DriverDSLInternalInterface by driverDSL, SomeOtherInternalDSLInterface
+ *
+ * @param coerce We need this explicit coercion witness because we can't put an extra DI : D bound in a `where` clause.
+ */
+fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericDriver(
+        defaultParameters: DriverParameters = DriverParameters(),
+        isDebug: Boolean = defaultParameters.isDebug,
+        driverDirectory: Path = defaultParameters.driverDirectory,
+        portAllocation: PortAllocation = defaultParameters.portAllocation,
+        debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
+        systemProperties: Map<String, String> = defaultParameters.systemProperties,
+        useTestClock: Boolean = defaultParameters.useTestClock,
+        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+        networkMapStartStrategy: NetworkMapStartStrategy = defaultParameters.networkMapStartStrategy,
+        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
+        scanPackage: String? = defaultParameters.scanPackage,
+        driverDslWrapper: (DriverDSL) -> D,
+        coerce: (D) -> DI,
+        dsl: DI.() -> A
+): A {
+    if (initialiseSerialization) initialiseTestSerialization()
+    val driverDsl = driverDslWrapper(
+            DriverDSL(
+                    portAllocation = portAllocation,
+                    debugPortAllocation = debugPortAllocation,
+                    systemProperties = systemProperties,
+                    driverDirectory = driverDirectory.toAbsolutePath(),
+                    useTestClock = useTestClock,
+                    networkMapStartStrategy = networkMapStartStrategy,
+                    isDebug = isDebug,
+                    startNodesInProcess = startNodesInProcess,
+                    scanPackage = scanPackage
+            )
+    )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
@@ -578,14 +631,15 @@ class DriverDSL(
         val useTestClock: Boolean,
         val isDebug: Boolean,
         val networkMapStartStrategy: NetworkMapStartStrategy,
-        val startNodesInProcess: Boolean
+        val startNodesInProcess: Boolean,
+        val scanPackage: String? = null
 ) : DriverDSLInternalInterface {
     private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
-    private val callerPackage = getCallerPackage()
+    private val callerPackage = scanPackage ?: getCallerPackage()
 
     class State {
         val processes = ArrayList<CordaFuture<Process>>()
@@ -926,7 +980,7 @@ class DriverDSL(
                         ),
                         jdwpPort = debugPort,
                         extraJvmArguments = extraJvmArguments,
-                        errorLogPath = nodeConf.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "error.log",
+                        errorLogPath = nodeConf.baseDirectory /  "error.log",
                         workingDirectory = nodeConf.baseDirectory
                 )
             }

@@ -1,0 +1,227 @@
+<div class="ui container">
+    <div class="ui hidden divider"></div>
+    <div class="ui negative message" id="http-error" ng-show="httpError">{{httpError}}</div>
+    <div class="ui grid">
+        <div class="sixteen wide column" id="common">
+            <table class="ui striped table">
+                <thead>
+                <tr class="center aligned">
+                    <th colspan="2">Common Information</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="center aligned">
+                    <td>Parties</td>
+                    <td>
+                        <span ng-repeat="party in deal.parties">
+                            {{party}}<span ng-show="!$last">,</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Trade ID</td>
+                    <td>{{deal.ref}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Valuation Date</td>
+                    <td>{{deal.common.valuationDateDescription}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Legal Document Hash</td>
+                    <td>{{deal.common.hashLegalDocs}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Interest Rates</td>
+                    <td>
+                        {{deal.common.interestRate.name}} with tenor
+                        {{deal.common.interestRate.tenor.name}} via oracle
+                        {{deal.common.interestRate.oracle}}
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="eight wide column" id="fixedleg">
+            <table class="ui striped table">
+                <thead>
+                <tr class="center aligned">
+                    <th colspan="2">Fixed Leg</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="center aligned">
+                    <td>Payer</td>
+                    <td>{{deal.fixedLeg.fixedRatePayer}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Notional</td>
+                    <td>{{deal.fixedLeg.notional.quantity | number}} {{deal.fixedLeg.notional.token}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Payment Frequency</td>
+                    <td>{{deal.fixedLeg.paymentFrequency}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Effective From</td>
+                    <td>{{deal.fixedLeg.effectiveDate}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Fixed Rate</td>
+                    <td>
+                        <span ng-show="!deal.fixedLeg.fixedRate.positive">-</span>
+                        {{deal.fixedLeg.fixedRate.value}}%
+                    </td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Terminates</td>
+                    <td>{{deal.fixedLeg.terminationDate}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Payment Rule</td>
+                    <td>{{deal.fixedLeg.paymentRule}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Payment Calendars</td>
+                    <td>
+                        <span ng-repeat="calendar in deal.fixedLeg.paymentCalendar.calendars">
+                            <span>{{calendar}}</span><span ng-show="!$last">,</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr class="center aligned">
+                    <td colspan="2">
+                        <div class="ui accordion">
+                            <div class="title">
+                                <i class="dropdown icon"></i>
+                                Holiday Dates
+                            </div>
+                            <div class="content">
+                                <table class="ui celled small table">
+                                    <tbody>
+                                    <tr class="center aligned" ng-repeat="date in deal.fixedLeg.paymentCalendar.holidayDates">
+                                        <td>{{date}}</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="eight wide column" id="floatingleg">
+            <table class="ui striped table">
+                <thead>
+                <tr class="center aligned">
+                    <th colspan="2">Floating Leg</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="center aligned">
+                    <td>Payer</td>
+                    <td>{{deal.floatingLeg.floatingRatePayer}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Notional</td>
+                    <td>{{deal.floatingLeg.notional.quantity | number}} {{deal.floatingLeg.notional.token}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Payment Frequency</td>
+                    <td>{{deal.floatingLeg.paymentFrequency}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Effective From</td>
+                    <td>{{deal.floatingLeg.effectiveDate}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Index</td>
+                    <td>{{deal.floatingLeg.index}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Terminates</td>
+                    <td>{{deal.floatingLeg.terminationDate}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Payment Rule</td>
+                    <td>{{deal.floatingLeg.paymentRule}}</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Payment Calendars</td>
+                    <td>
+                        <span ng-repeat="calendar in deal.floatingLeg.paymentCalendar.calendars">
+                            <span>{{calendar}}</span><span ng-show="!$last">,</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr class="center aligned">
+                    <td colspan="2">
+                        <div class="ui accordion">
+                            <div class="title">
+                                <i class="dropdown icon"></i>
+                                Holiday Dates
+                            </div>
+                            <div class="content">
+                                <table class="ui celled small table">
+                                    <tbody>
+                                    <tr class="center aligned" ng-repeat="date in deal.floatingLeg.paymentCalendar.holidayDates">
+                                        <td>{{date}}</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Fixing Calendars</td>
+                    <td>
+                        <span ng-repeat="calendar in deal.floatingLeg.fixingCalendar.calendars">
+                            <span>{{calendar}}</span><span ng-show="!$last">,</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr class="center aligned">
+                    <td colspan="2">
+                        <div class="ui accordion">
+                            <div class="title">
+                                <i class="dropdown icon"></i>
+                                Holiday Dates
+                            </div>
+                            <div class="content">
+                                <table class="ui celled small table">
+                                    <tbody>
+                                    <tr class="center aligned" ng-repeat="date in deal.floatingLeg.fixingCalendar.holidayDates">
+                                        <td>{{date}}</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="center aligned">
+                    <td colspan="2">
+                        <div class="ui accordion">
+                            <div class="title">
+                                <i class="dropdown icon"></i>
+                                Fixings
+                            </div>
+                            <div class="content">
+                                <table class="ui celled small table">
+                                    <tbody>
+                                    <tr class="center aligned" ng-repeat="fixing in deal.calculation.floatingLegPaymentSchedule">
+                                        <td>{{fixing.fixingDate[0]}}-{{fixing.fixingDate[1]}}-{{fixing.fixingDate[2]}}</td>
+                                        <td>{{fixing.ratePercent}}</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
