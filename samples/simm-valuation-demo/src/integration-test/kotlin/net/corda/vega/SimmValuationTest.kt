@@ -19,7 +19,6 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
-import java.util.concurrent.CompletableFuture.allOf
 
 class SimmValuationTest : IntegrationTestCategory {
     private companion object {
@@ -34,15 +33,10 @@ class SimmValuationTest : IntegrationTestCategory {
     fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
             startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-            val nodeAFuture = startNode(providedName = nodeALegalName).toCompletableFuture()
-            val nodeBFuture = startNode(providedName = nodeBLegalName).toCompletableFuture()
-            allOf(nodeAFuture, nodeBFuture).getOrThrow()
-            val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
-            val nodeAApiFuture = startWebserver(nodeA).toCompletableFuture()
-            val nodeBApiFuture = startWebserver(nodeB).toCompletableFuture()
-            allOf(nodeAApiFuture, nodeBApiFuture).getOrThrow()
-            val (nodeAApi, nodeBApi) = listOf(nodeAApiFuture, nodeBApiFuture)
-                    .map { HttpApi.fromHostAndPort(it.getOrThrow().listenAddress, "api/simmvaluationdemo") }
+            val nodeA = startNode(providedName = nodeALegalName).getOrThrow()
+            val nodeB = startNode(providedName = nodeBLegalName).getOrThrow()
+            val nodeAApi = HttpApi.fromHostAndPort(startWebserver(nodeA).getOrThrow().listenAddress, "api/simmvaluationdemo")
+            val nodeBApi = HttpApi.fromHostAndPort(startWebserver(nodeB).getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)
             val nodeAParty = getPartyWithName(nodeBApi, nodeALegalName)
 

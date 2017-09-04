@@ -28,7 +28,6 @@ import rx.Observable
 import java.net.URL
 import java.time.Duration
 import java.time.LocalDate
-import java.util.concurrent.CompletableFuture.allOf
 
 class IRSDemoTest : IntegrationTestCategory {
 
@@ -44,22 +43,17 @@ class IRSDemoTest : IntegrationTestCategory {
     @Test
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
-            val notaryFuture = startNode(
+            val controller = startNode(
                     providedName = DUMMY_NOTARY.name,
-                    advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type),ServiceInfo(NodeInterestRates.Oracle.type))).toCompletableFuture()
-            val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)).toCompletableFuture()
-            val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name).toCompletableFuture()
-            allOf(notaryFuture, nodeAFuture, nodeBFuture).getOrThrow()
-            val (controller, nodeA, nodeB) = listOf(notaryFuture, nodeAFuture, nodeBFuture).map { it.getOrThrow() }
+                    advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))).getOrThrow()
+            val nodeA = startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)).getOrThrow()
+            val nodeB = startNode(providedName = DUMMY_BANK_B.name).getOrThrow()
 
             log.info("All nodes started")
 
-            val controllerAddrFuture = startWebserver(controller).toCompletableFuture()
-            val nodeAAddrFuture = startWebserver(nodeA).toCompletableFuture()
-            val nodeBAddrFuture = startWebserver(nodeB).toCompletableFuture()
-            allOf(controllerAddrFuture, nodeAAddrFuture, nodeBAddrFuture).getOrThrow()
-            val (controllerAddr, nodeAAddr, nodeBAddr) = listOf(controllerAddrFuture, nodeAAddrFuture, nodeBAddrFuture)
-                    .map { it.getOrThrow().listenAddress }
+            val controllerAddr = startWebserver(controller).getOrThrow().listenAddress
+            val nodeAAddr = startWebserver(nodeA).getOrThrow().listenAddress
+            val nodeBAddr = startWebserver(nodeB).getOrThrow().listenAddress
 
             log.info("All webservers started")
 

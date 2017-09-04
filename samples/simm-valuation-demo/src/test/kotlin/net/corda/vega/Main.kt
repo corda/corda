@@ -8,7 +8,6 @@ import net.corda.testing.DUMMY_BANK_C
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.driver.driver
-import java.util.concurrent.CompletableFuture.allOf
 
 /**
  * Sample main used for running within an IDE. Starts 4 nodes (A, B, C and Notary/Controller) as an alternative to running via gradle
@@ -18,11 +17,9 @@ import java.util.concurrent.CompletableFuture.allOf
 fun main(args: Array<String>) {
     driver(dsl = {
         startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name).toCompletableFuture()
-        val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name).toCompletableFuture()
-        val nodeCFuture = startNode(providedName = DUMMY_BANK_C.name).toCompletableFuture()
-        allOf(nodeAFuture, nodeBFuture, nodeCFuture).getOrThrow()
-        val (nodeA, nodeB, nodeC) = listOf(nodeAFuture, nodeBFuture, nodeCFuture).map { it.getOrThrow() }
+        val nodeA = startNode(providedName = DUMMY_BANK_A.name).getOrThrow()
+        val nodeB = startNode(providedName = DUMMY_BANK_B.name).getOrThrow()
+        val nodeC = startNode(providedName = DUMMY_BANK_C.name).getOrThrow()
 
         startWebserver(nodeA)
         startWebserver(nodeB)

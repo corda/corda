@@ -21,7 +21,6 @@ import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.util.concurrent.CompletableFuture.allOf
 import java.util.concurrent.Executors
 
 class TraderDemoTest : NodeBasedTest() {
@@ -32,12 +31,10 @@ class TraderDemoTest : NodeBasedTest() {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
-        val nodeAFuture = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)).toCompletableFuture()
-        val nodeBFuture = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)).toCompletableFuture()
-        val bankNodeFuture = startNode(BOC.name, rpcUsers = listOf(bankUser)).toCompletableFuture()
-        val notaryFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).toCompletableFuture()
-        allOf(nodeAFuture, nodeBFuture, bankNodeFuture, notaryFuture).getOrThrow()
-        val (nodeA, nodeB, bankNode) = listOf(nodeAFuture, nodeBFuture, bankNodeFuture).map { it.getOrThrow() }
+        startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+        val nodeA = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)).getOrThrow()
+        val nodeB = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)).getOrThrow()
+        val bankNode = startNode(BOC.name, rpcUsers = listOf(bankUser)).getOrThrow()
 
         nodeA.registerInitiatedFlow(BuyerFlow::class.java)
 

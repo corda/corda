@@ -10,7 +10,6 @@ import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
 import org.junit.Test
-import java.util.concurrent.CompletableFuture.allOf
 import java.util.concurrent.CompletableFuture.supplyAsync
 
 class AttachmentDemoTest {
@@ -19,11 +18,9 @@ class AttachmentDemoTest {
         val numOfExpectedBytes = 10_000_000
         driver(dsl = {
             val demoUser = listOf(User("demo", "demo", setOf(startFlowPermission<AttachmentDemoFlow>())))
-            val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser).toCompletableFuture()
-            val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser).toCompletableFuture()
-            val notaryFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).toCompletableFuture()
-            allOf(nodeAFuture, nodeBFuture, notaryFuture).getOrThrow()
-            val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture, notaryFuture).map { it.getOrThrow() }
+            startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+            val nodeA = startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser).getOrThrow()
+            val nodeB = startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser).getOrThrow()
 
             val senderThread = supplyAsync {
                 nodeA.rpcClientToNode().start(demoUser[0].username, demoUser[0].password).use {

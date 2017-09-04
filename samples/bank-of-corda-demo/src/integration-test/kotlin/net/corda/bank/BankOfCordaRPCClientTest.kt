@@ -14,7 +14,6 @@ import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
 import org.junit.Test
-import java.util.concurrent.CompletableFuture.allOf
 
 class BankOfCordaRPCClientTest {
     @Test
@@ -23,10 +22,8 @@ class BankOfCordaRPCClientTest {
             val bocManager = User("bocManager", "password1", permissions = setOf(
                     startFlowPermission<CashIssueAndPaymentFlow>()))
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
-            val nodeBankFuture = startNode(providedName = BOC.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)), rpcUsers = listOf(bocManager)).toCompletableFuture()
-            val nodeBigCorpFuture = startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO)).toCompletableFuture()
-            allOf(nodeBankFuture, nodeBigCorpFuture).getOrThrow()
-            val (nodeBankOfCorda, nodeBigCorporation) = listOf(nodeBankFuture, nodeBigCorpFuture).map { it.getOrThrow() }
+            val nodeBankOfCorda = startNode(providedName = BOC.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)), rpcUsers = listOf(bocManager)).getOrThrow()
+            val nodeBigCorporation = startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO)).getOrThrow()
 
             // Bank of Corda RPC Client
             val bocClient = nodeBankOfCorda.rpcClientToNode()

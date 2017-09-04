@@ -8,17 +8,14 @@ import net.corda.testing.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.BOC
 import org.junit.Test
-import java.util.concurrent.CompletableFuture.allOf
 import kotlin.test.assertTrue
 
 class BankOfCordaHttpAPITest {
     @Test
     fun `issuer flow via Http`() {
         driver(dsl = {
-            val nodeBOCFuture = startNode(providedName = BOC.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).toCompletableFuture()
-            val nodeBigCorpFuture = startNode(providedName = BIGCORP_LEGAL_NAME).toCompletableFuture()
-            allOf(nodeBOCFuture, nodeBigCorpFuture).getOrThrow()
-            val (nodeBankOfCorda) = listOf(nodeBOCFuture, nodeBigCorpFuture).map { it.getOrThrow() }
+            startNode(providedName = BIGCORP_LEGAL_NAME).getOrThrow()
+            val nodeBankOfCorda = startNode(providedName = BOC.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
             val anonymous = false
             val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow().listenAddress
             assertTrue(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", BOC.name, BOC.name, anonymous)))

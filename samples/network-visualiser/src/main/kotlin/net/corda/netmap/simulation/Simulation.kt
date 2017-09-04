@@ -265,7 +265,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     fun start(): Future<Unit> {
         mockNet.startNodes()
         // Wait for all the nodes to have finished registering with the network map service.
-        return networkInitialisationFinished.thenCompose({startMainSimulation()})
+        return networkInitialisationFinished.thenCompose { startMainSimulation() }
     }
 
     /**

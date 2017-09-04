@@ -93,7 +93,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         }
     }
 
-    private fun doNextFixing(i: Int, j: Int): CompletableFuture<*>? {
+    private fun doNextFixing(i: Int, j: Int): CompletableFuture<Void>? {
         println("Doing a fixing between $i and $j")
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
@@ -153,9 +153,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val acceptDealFlows: Observable<AcceptDealFlow> = node2.registerInitiatedFlow(AcceptDealFlow::class.java)
 
         @Suppress("UNCHECKED_CAST")
-       val acceptorTxFuture = acceptDealFlows.toFuture().toCompletableFuture().thenCompose({
+        val acceptorTxFuture = acceptDealFlows.toFuture().toCompletableFuture().thenCompose {
             (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture.toCompletableFuture()
-        })
+        }
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))
@@ -166,7 +166,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
                 node1.services.legalIdentityKey)
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
-        return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose({ instigatorTxFuture.toCompletableFuture() })
+        return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose { instigatorTxFuture.toCompletableFuture() }
     }
 
     override fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {

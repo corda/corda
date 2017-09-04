@@ -8,7 +8,6 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.driver.driver
-import java.util.concurrent.CompletableFuture.allOf
 
 /**
  * This file is exclusively for being able to run your nodes through an IDE (as opposed to running deployNodes)
@@ -16,13 +15,10 @@ import java.util.concurrent.CompletableFuture.allOf
  */
 fun main(args: Array<String>) {
     driver(dsl = {
-        val controllerFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type)))
-                .toCompletableFuture()
-        val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name).toCompletableFuture()
-        val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name).toCompletableFuture()
-        allOf(controllerFuture, nodeAFuture, nodeBFuture).getOrThrow()
-
-        val (controller, nodeA, nodeB) = listOf(controllerFuture, nodeAFuture, nodeBFuture).map { it.getOrThrow() }
+        val controller = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type)))
+                .getOrThrow()
+        val nodeA = startNode(providedName = DUMMY_BANK_A.name).getOrThrow()
+        val nodeB = startNode(providedName = DUMMY_BANK_B.name).getOrThrow()
 
         startWebserver(controller)
         startWebserver(nodeA)
