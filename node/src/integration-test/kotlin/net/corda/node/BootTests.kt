@@ -41,12 +41,12 @@ class BootTests {
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
-            val alice = startNode(ALICE.name).get()
+            val alice = startNode(providedName = ALICE.name).get()
             val logFolder = alice.configuration.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.toFile().listFiles { _, name -> name.endsWith(".log") }.single()
             // Start second Alice, should fail
             assertThatThrownBy {
-                startNode(ALICE.name).getOrThrow()
+                startNode(providedName = ALICE.name).getOrThrow()
             }
             // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
             val numberOfNodesThatLogged = Files.lines(logFile.toPath()).filter { NodeStartup.LOGS_CAN_BE_FOUND_IN_STRING in it }.count()
@@ -58,7 +58,7 @@ class BootTests {
     fun `node quits on failure to register with network map`() {
         val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.regulator.getSubType("$it")) }.toSet()
         driver(networkMapStartStrategy = NetworkMapStartStrategy.Nominated(ALICE.name)) {
-            val future = startNode(ALICE.name, advertisedServices = tooManyAdvertisedServices)
+            val future = startNode(providedName = ALICE.name, advertisedServices = tooManyAdvertisedServices)
             assertFailsWith(ListenProcessDeathException::class) { future.getOrThrow() }
         }
     }

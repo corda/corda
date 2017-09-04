@@ -71,12 +71,13 @@ private class BankOfCordaDriver {
                         val bigCorpUser = User(BIGCORP_USERNAME, "test",
                                 permissions = setOf(
                                         startFlowPermission<CashPaymentFlow>()))
-                        startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
+                        startNode(providedName = DUMMY_NOTARY.name,
+                                advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
                         val bankOfCorda = startNode(
-                                BOC.name,
+                                providedName = BOC.name,
                                 rpcUsers = listOf(bankUser),
                                 advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
-                        startNode(BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
+                        startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                         waitForAllNodesToFinish()
                     }, isDebug = true)

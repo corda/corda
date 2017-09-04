@@ -27,10 +27,10 @@ fun main(args: Array<String>) {
         val user = User("user1", "test", permissions = setOf(startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>(),
                 startFlowPermission<SellerFlow>()))
-        startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
-        startNode(DUMMY_BANK_A.name, rpcUsers = demoUser)
-        startNode(DUMMY_BANK_B.name, rpcUsers = demoUser)
-        startNode(BOC.name, rpcUsers = listOf(user))
+        startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser)
+        startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser)
+        startNode(providedName = BOC.name, rpcUsers = listOf(user))
         waitForAllNodesToFinish()
     }
 }

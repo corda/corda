@@ -45,9 +45,9 @@ class IRSDemoTest : IntegrationTestCategory {
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
             val (controller, nodeA, nodeB) = listOf(
-                    startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
-                    startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
-                    startNode(DUMMY_BANK_B.name)
+                    startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
+                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
+                    startNode(providedName = DUMMY_BANK_B.name)
             ).transpose().getOrThrow()
 
             log.info("All nodes started")

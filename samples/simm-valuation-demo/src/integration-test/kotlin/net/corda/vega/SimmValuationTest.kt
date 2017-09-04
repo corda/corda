@@ -33,8 +33,8 @@ class SimmValuationTest : IntegrationTestCategory {
     @Test
     fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
-            startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-            val (nodeA, nodeB) = listOf(startNode(nodeALegalName), startNode(nodeBLegalName)).transpose().getOrThrow()
+            startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+            val (nodeA, nodeB) = listOf(startNode(providedName = nodeALegalName), startNode(providedName = nodeBLegalName)).transpose().getOrThrow()
             val (nodeAApi, nodeBApi) = listOf(startWebserver(nodeA), startWebserver(nodeB)).transpose()
                     .getOrThrow()
                     .map { HttpApi.fromHostAndPort(it.listenAddress, "api/simmvaluationdemo") }
