@@ -113,8 +113,8 @@ class VerifierTests {
     @Test
     fun `single verifier works with a node`() {
         verifierDriver(networkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true)) {
-            val aliceFuture = startNode(ALICE.name)
-            val notaryFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)), verifierType = VerifierType.OutOfProcess)
+            val aliceFuture = startNode(providedName = ALICE.name)
+            val notaryFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)), verifierType = VerifierType.OutOfProcess)
             val alice = aliceFuture.get()
             val notary = notaryFuture.get()
             startVerifier(notary)

@@ -25,8 +25,8 @@ class CordappScanningDriverTest {
         // The driver will automatically pick up the annotated flows below
         driver {
             val (alice, bob) = listOf(
-                    startNode(ALICE.name, rpcUsers = listOf(user)),
-                    startNode(BOB.name)).transpose().getOrThrow()
+                    startNode(providedName = ALICE.name, rpcUsers = listOf(user)),
+                    startNode(providedName = BOB.name)).transpose().getOrThrow()
             val initiatedFlowClass = alice.rpcClientToNode()
                     .start(user.username, user.password)
                     .proxy
