@@ -1,5 +1,6 @@
-package net.corda.core.contracts
+package net.corda.traderdemo
 
+import net.corda.core.contracts.CommandData
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder

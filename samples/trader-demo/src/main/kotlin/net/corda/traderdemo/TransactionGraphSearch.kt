@@ -1,5 +1,8 @@
-package net.corda.core.contracts
+package net.corda.traderdemo
 
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction

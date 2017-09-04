@@ -2,7 +2,6 @@ package net.corda.traderdemo.flow
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.TransactionGraphSearch
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.Party
@@ -14,6 +13,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.TwoPartyTradeFlow
+import net.corda.traderdemo.TransactionGraphSearch
 import java.util.*
 
 @InitiatedBy(SellerFlow::class)
@@ -53,6 +53,9 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
 
     private fun logIssuanceAttachment(tradeTX: SignedTransaction) {
         // Find the original CP issuance.
+        // TODO: This is potentially very expensive, and requires transaction details we may no longer have once
+        //       SGX is enabled. Should be replaced with including the attachment on all transactions involving
+        //       the state.
         val search = TransactionGraphSearch(serviceHub.validatedTransactions, listOf(tradeTX.tx),
                 TransactionGraphSearch.Query(withCommandOfType = CommercialPaper.Commands.Issue::class.java,
                     followInputsOfType = CommercialPaper.State::class.java))
