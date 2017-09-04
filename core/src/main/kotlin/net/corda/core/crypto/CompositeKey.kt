@@ -12,7 +12,7 @@ import java.util.*
 
 /**
  * A tree data structure that enables the representation of composite public keys.
- * Notice that with that implementation CompositeKey extends PublicKey. Leaves are represented by single public keys.
+ * Notice that with that implementation CompositeKey extends [PublicKey]. Leaves are represented by single public keys.
  *
  * For complex scenarios, such as *"Both Alice and Bob need to sign to consume a state S"*, we can represent
  * the requirement by creating a tree with a root [CompositeKey], and Alice and Bob as children.
@@ -159,7 +159,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
     }
 
     /**
-     * Takes single PublicKey and checks if CompositeKey requirements hold for that key.
+     * Takes single [PublicKey] and checks if [CompositeKey] requirements hold for that key.
      */
     fun isFulfilledBy(key: PublicKey) = isFulfilledBy(setOf(key))
 
@@ -205,7 +205,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
     }
 
     /**
-     * Set of all leaf keys of that CompositeKey.
+     * Set of all leaf keys of that [CompositeKey].
      */
     val leafKeys: Set<PublicKey>
         get() = children.flatMap { it.node.keys }.toSet() // Uses PublicKey.keys extension.
