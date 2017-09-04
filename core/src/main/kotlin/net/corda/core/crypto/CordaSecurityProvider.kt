@@ -21,14 +21,16 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
         val compositeKeyOID = CordaObjectIdentifier.COMPOSITE_KEY.id
         put("Alg.Alias.KeyFactory.$compositeKeyOID", CompositeKey.KEY_ALGORITHM)
         put("Alg.Alias.KeyFactory.OID.$compositeKeyOID", CompositeKey.KEY_ALGORITHM)
-        put("Alg.Alias.Signature.$compositeKeyOID", CompositeSignature.SIGNATURE_ALGORITHM)
-        put("Alg.Alias.Signature.OID.$compositeKeyOID", CompositeSignature.SIGNATURE_ALGORITHM)
+
+        val compositeSignatureOID = CordaObjectIdentifier.COMPOSITE_SIGNATURE.id
+        put("Alg.Alias.Signature.$compositeSignatureOID", CompositeSignature.SIGNATURE_ALGORITHM)
+        put("Alg.Alias.Signature.OID.$compositeSignatureOID", CompositeSignature.SIGNATURE_ALGORITHM)
     }
 }
 
 object CordaObjectIdentifier {
     // UUID-based OID
-    // TODO: Register for an OID space and issue our own shorter OID
+    // TODO: Register for an OID space and issue our own shorter OID.
     @JvmField val COMPOSITE_KEY = ASN1ObjectIdentifier("2.25.30086077608615255153862931087626791002")
     @JvmField val COMPOSITE_SIGNATURE = ASN1ObjectIdentifier("2.25.30086077608615255153862931087626791003")
 }

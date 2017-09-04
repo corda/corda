@@ -230,7 +230,7 @@ class FilteredTransaction private constructor(
     }
 
     /**
-     * Runs verification of Partial Merkle Branch against [id].
+     * Runs verification of partial Merkle branch against [id].
      */
     @Throws(MerkleTreeException::class)
     fun verify(): Boolean {

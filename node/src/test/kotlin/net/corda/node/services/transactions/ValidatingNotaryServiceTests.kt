@@ -42,6 +42,7 @@ class ValidatingNotaryServiceTests {
         )
         clientNode = mockNet.createNode(notaryNode.network.myAddress)
         mockNet.runNetwork() // Clear network map registration messages
+        notaryNode.ensureRegistered()
     }
 
     @After

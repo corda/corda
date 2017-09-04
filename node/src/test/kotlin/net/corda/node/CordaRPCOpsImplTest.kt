@@ -73,6 +73,9 @@ class CordaRPCOpsImplTest {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>()
         ))))
+
+        mockNet.runNetwork()
+        networkMap.ensureRegistered()
     }
 
     @After
