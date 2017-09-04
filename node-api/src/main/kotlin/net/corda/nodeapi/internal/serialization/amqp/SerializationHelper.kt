@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
 import org.apache.qpid.proton.codec.Data
 import java.beans.IndexedPropertyDescriptor
@@ -221,5 +222,8 @@ internal fun Type.isSubClassOf(type: Type): Boolean {
     return TypeToken.of(this).isSubtypeOf(type)
 }
 
-internal fun suitableForObjectReference(type: Type) =
-        type != ByteArray::class.java && type.asClass()?.isPrimitive != true
+// ByteArrays, primtives and boxed primitives are not stored in the object history
+internal fun suitableForObjectReference(type: Type): Boolean {
+    val clazz = type.asClass()
+    return type != ByteArray::class.java && (clazz != null && !clazz.isPrimitive && !Primitives.unwrap(clazz).isPrimitive)
+}
