@@ -44,7 +44,7 @@ dependencies {
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // Corda Plugins: dependent flows and services
-    cordapp project(':samples:bank-of-corda-demo')
+    cordapp project(':finance')
 }
 
 mainClassName = "net.corda.docs.ClientRpcTutorialKt"
