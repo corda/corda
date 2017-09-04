@@ -11,8 +11,10 @@ import java.security.PublicKey
 import java.util.*
 
 /**
- * A tree data structure that enables the representation of composite public keys.
- * Notice that with that implementation CompositeKey extends [PublicKey]. Leaves are represented by single public keys.
+ * A tree data structure that enables the representation of composite public keys, which are used to represent
+ * the signing requirements for multisignature scenarios such as RAFT notary services. A composite key is a list
+ * of leaf keys and their contributing weight, and each leaf can be a conventional single key or a composite key.
+ * Keys contribute their weight to the total if they are matched by the signature.
  *
  * For complex scenarios, such as *"Both Alice and Bob need to sign to consume a state S"*, we can represent
  * the requirement by creating a tree with a root [CompositeKey], and Alice and Bob as children.
@@ -22,9 +24,7 @@ import java.util.*
  * Using these constructs we can express e.g. 1 of N (OR) or N of N (AND) signature requirements. By nesting we can
  * create multi-level requirements such as *"either the CEO or 3 of 5 of his assistants need to sign"*.
  *
- * [CompositeKey] maintains a list of [NodeAndWeight]s which holds child subtree with associated weight carried by child node signatures.
- *
- * The [threshold] specifies the minimum total weight required (in the simple case – the minimum number of child
+ * @property threshold specifies the minimum total weight required (in the simple case – the minimum number of child
  * signatures required) to satisfy the sub-tree rooted at this node.
  */
 @CordaSerializable
@@ -249,9 +249,14 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
          * the total (aggregated) weight of the children, effectively generating an "N of N" requirement.
          * During process removes single keys wrapped in [CompositeKey] and enforces ordering on child nodes.
          *
-         * @throws IllegalArgumentException
+         * @param threshold specifies the minimum total weight required (in the simple case – the minimum number of child
+         * signatures required) to satisfy the sub-tree rooted at this node.
+         * @throws IllegalArgumentException if the threshold value is invalid.
+         * @throws IllegalStateException if the composite key that would be generated from the current state of the builder
+         * is invalid (for example it would contain no keys).
          */
         fun build(threshold: Int? = null): PublicKey {
+            require(threshold == null || threshold > 0)
             val n = children.size
             return if (n > 1)
                 CompositeKey(threshold ?: children.map { (_, weight) -> weight }.sum(), children)
@@ -261,7 +266,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
                 // Returning the only child node which is [PublicKey] itself. We need to avoid single-key [CompositeKey] instances,
                 // as there are scenarios where developers expected the underlying key and its composite versions to be equivalent.
                 children.first().node
-            } else throw IllegalArgumentException("Trying to build CompositeKey without child nodes.")
+            } else throw IllegalStateException("Trying to build CompositeKey without child nodes.")
         }
     }
 }
