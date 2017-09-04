@@ -72,7 +72,7 @@ object NotaryFlow {
                     val tx: Any = if (stx.isNotaryChangeTransaction()) {
                         stx.notaryChangeTx
                     } else {
-                        stx.tx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
+                        stx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
                     }
                     sendAndReceiveWithRetry(notaryParty, tx)
                 }
