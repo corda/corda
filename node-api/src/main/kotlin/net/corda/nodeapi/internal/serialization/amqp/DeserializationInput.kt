@@ -142,7 +142,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
             }
             // Store the reference in case we need it later on.
             // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content
-            if (suitableForObjectReference(type)) objectHistory.add(objectRead)
+            if (suitableForObjectReference(objectRead.javaClass)) objectHistory.add(objectRead)
             objectRead
         }
 
