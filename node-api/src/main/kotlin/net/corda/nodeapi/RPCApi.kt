@@ -95,7 +95,7 @@ object RPCApi {
          * Request to a server to trigger the specified method with the provided arguments.
          *
          * @param clientAddress return address to contact the client at.
-         * @param id a unique ID for the request, which the server will used to identify its response with.
+         * @param id a unique ID for the request, which the server will use to identify its response with.
          * @param methodName name of the method (procedure) to be called.
          * @param arguments arguments to pass to the method, if any.
          */
