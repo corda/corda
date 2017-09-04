@@ -30,6 +30,7 @@ class AttachmentTest {
         val attachment = object : Attachment {
             override val id get() = throw UnsupportedOperationException()
             override fun open() = inputStream
+            override val signers get() = throw UnsupportedOperationException()
         }
         try {
             attachment.openAsJAR()
