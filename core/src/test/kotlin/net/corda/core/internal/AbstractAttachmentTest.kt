@@ -15,8 +15,15 @@ class AbstractAttachmentTest {
     companion object {
         private val dir = Files.createTempDirectory(AbstractAttachmentTest::class.simpleName)
         private val bin = Paths.get(System.getProperty("java.home")).let { if (it.endsWith("jre")) it.parent else it } / "bin"
+        private val shredder = (dir / "_shredder").toFile() // No need to delete after each test.
         fun execute(vararg command: String) {
-            assertEquals(0, ProcessBuilder().inheritIO().directory(dir.toFile()).command((bin / command[0]).toString(), *command.sliceArray(1 until command.size)).start().waitFor())
+            assertEquals(0, ProcessBuilder()
+                    .inheritIO()
+                    .redirectOutput(shredder)
+                    .directory(dir.toFile())
+                    .command((bin / command[0]).toString(), *command.sliceArray(1 until command.size))
+                    .start()
+                    .waitFor())
         }
 
         @BeforeClass
@@ -45,7 +52,7 @@ class AbstractAttachmentTest {
         dir.toFile().listFiles().forEach {
             if (!it.name.startsWith("_")) it.deleteRecursively()
         }
-        assertEquals(4, dir.toFile().listFiles().size)
+        assertEquals(5, dir.toFile().listFiles().size)
     }
 
     @Test
