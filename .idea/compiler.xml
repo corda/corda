@@ -14,9 +14,6 @@
       <module name="client_test" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
-      <module name="corda-webserver_integrationTest" target="1.8" />
-      <module name="corda-webserver_main" target="1.8" />
-      <module name="corda-webserver_test" target="1.8" />
       <module name="cordform-common_main" target="1.8" />
       <module name="cordform-common_test" target="1.8" />
       <module name="core_main" target="1.8" />
@@ -28,9 +25,6 @@
       <module name="docs_source_example-code_main" target="1.8" />
       <module name="docs_source_example-code_test" target="1.8" />
       <module name="docs_test" target="1.8" />
-      <module name="driver_integrationTest" target="1.8" />
-      <module name="driver_main" target="1.8" />
-      <module name="driver_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
       <module name="experimental_test" target="1.8" />
       <module name="explorer-capsule_main" target="1.6" />
@@ -61,8 +55,6 @@
       <module name="node-api_test" target="1.8" />
       <module name="node-capsule_main" target="1.6" />
       <module name="node-capsule_test" target="1.6" />
-      <module name="node-schemas_main" target="1.8" />
-      <module name="node-schemas_test" target="1.8" />
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
@@ -82,15 +74,15 @@
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
-      <module name="smoke-test-utils_main" target="1.8" />
-      <module name="smoke-test-utils_test" target="1.8" />
-      <module name="test-common_main" target="1.8" />
-      <module name="test-common_test" target="1.8" />
-      <module name="test-utils_main" target="1.8" />
-      <module name="test-utils_test" target="1.8" />
       <module name="testing-node-driver_integrationTest" target="1.8" />
       <module name="testing-node-driver_main" target="1.8" />
       <module name="testing-node-driver_test" target="1.8" />
+      <module name="testing-smoke-test-utils_main" target="1.8" />
+      <module name="testing-smoke-test-utils_test" target="1.8" />
+      <module name="testing-test-common_main" target="1.8" />
+      <module name="testing-test-common_test" target="1.8" />
+      <module name="testing-test-utils_main" target="1.8" />
+      <module name="testing-test-utils_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />
@@ -101,8 +93,6 @@
       <module name="verifier_test" target="1.8" />
       <module name="webcapsule_main" target="1.6" />
       <module name="webcapsule_test" target="1.6" />
-      <module name="webserver-webcapsule_main" target="1.6" />
-      <module name="webserver-webcapsule_test" target="1.6" />
       <module name="webserver_integrationTest" target="1.8" />
       <module name="webserver_main" target="1.8" />
       <module name="webserver_test" target="1.8" />

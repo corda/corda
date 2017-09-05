@@ -22,7 +22,9 @@ include 'test-common'
 include 'test-utils'
 include 'smoke-test-utils'
 include 'node-driver'
-project(':node-driver').projectDir = new File("$settingsDir/testing/node-driver")
+['test-common', 'test-utils', 'smoke-test-utils', 'node-driver'].each {
+    project(":$it").projectDir = new File("$settingsDir/testing/$it")
+}
 include 'tools:explorer'
 include 'tools:explorer:capsule'
 include 'tools:demobench'
