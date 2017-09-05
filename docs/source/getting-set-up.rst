@@ -33,17 +33,25 @@ others to provide support. However, if you do use other tools, we'd be intereste
 
 Set-up instructions
 -------------------
-The instructions below will allow you to set up a Corda development environment and run a basic CorDapp on a Windows
-or Mac machine. If you have any issues, please consult the :doc:`troubleshooting` page, or reach out on
-`Slack <http://slack.corda.net/>`_ or the `forums <https://discourse.corda.net/>`_.
+The instructions below will allow you to set up a Corda development environment and run a basic CorDapp. If you have
+any issues, please consult the :doc:`troubleshooting` page, or reach out on `Slack <http://slack.corda.net/>`_,
+`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or the `forums <https://discourse.corda.net/>`_.
 
-.. note:: The set-up instructions are also available in video form for both `Windows <https://vimeo.com/217462250>`_ and `Mac <https://vimeo.com/217462230>`_.
+The set-up instructions are available for the following platforms:
+
+* :ref:`windows-label` (or `in video form <https://vimeo.com/217462250>`_)
+
+* :ref:`mac-label` (or `in video form <https://vimeo.com/217462230>`_)
+
+.. _windows-label:
 
 Windows
-^^^^^^^
+-------
+
+.. warning:: If you are using a Mac machine, please follow the :ref:`mac-label` instructions instead.
 
 Java
-~~~~
+^^^^
 1. Visit http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
 2. Scroll down to "Java SE Development Kit 8uXXX" (where "XXX" is the latest minor version number)
 3. Toggle "Accept License Agreement"
@@ -52,34 +60,34 @@ Java
 6. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
 
 Git
-~~~
+^^^
 1. Visit https://git-scm.com/download/win
 2. Click the "64-bit Git for Windows Setup" download link.
 3. Download and run the executable to install Git (use the default settings)
 4. Open a new command prompt and type ``git --version`` to test that git is installed correctly
 
 IntelliJ
-~~~~~~~~
+^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
 
 Download a sample project
-~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^
 1. Open a command prompt
 2. Clone the CorDapp tutorial repo by running ``git clone https://github.com/corda/cordapp-tutorial``
 3. Move into the cordapp-tutorial folder by running ``cd cordapp-tutorial``
-4. Retrieve a list of all the milestone (i.e. stable) releases by running ``git branch -a --list *release-M*``
+4. Retrieve a list of all the releases by running ``git branch -a --list``
 5. Check out the latest milestone release by running ``git checkout release-MX`` (where "X" is the latest milestone)
 
 Run from the command prompt
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 1. From the cordapp-tutorial folder, deploy the nodes by running ``gradlew deployNodes``
 2. Start the nodes by running ``call kotlin-source/build/nodes/runnodes.bat``
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
 4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
 
 Run from IntelliJ
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^
 1. Open IntelliJ Community Edition
 2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-tutorial folder
 
@@ -92,11 +100,15 @@ Run from IntelliJ
 7. Wait until the run windows displays the message "Webserver started up in XX.X sec"
 8. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
 
+.. _mac-label:
+
 Mac
-^^^
+---
+
+.. warning:: If you are using a Windows machine, please follow the :ref:`windows-label` instructions instead.
 
 Java
-~~~~
+^^^^
 1. Open "System Preferences > Java"
 2. In the Java Control Panel, if an update is available, click "Update Now"
 3. In the "Software Update" window, click "Install Update". If required, enter your password and click "Install Helper" when prompted
@@ -104,27 +116,27 @@ Java
 5. Open a new terminal and type ``java -version`` to test that Java is installed correctly
 
 IntelliJ
-~~~~~~~~
+^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=mac&code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
 
 Download a sample project
-~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^
 1. Open a terminal
 2. Clone the CorDapp tutorial repo by running ``git clone https://github.com/corda/cordapp-tutorial``
 3. Move into the cordapp-tutorial folder by running ``cd cordapp-tutorial``
-4. Retrieve a list of all the milestone (i.e. stable) releases by running ``git branch -a --list *release-M*``
+4. Retrieve a list of all the releases by running ``git branch -a --list``
 5. Check out the latest milestone release by running ``git checkout release-MX`` (where "X" is the latest milestone)
 
 Run from the terminal
-~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^
 1. From the cordapp-tutorial folder, deploy the nodes by running ``./gradlew deployNodes``
 2. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 8 additional terminal windows start up.
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
 4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
 
 Run from IntelliJ
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^
 1. Open IntelliJ Community Edition
 2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-tutorial folder
 3. Once the project is open, click "File > Project Structure". Under "Project SDK:", set the project SDK by clicking "New...", clicking "JDK", and navigating to /Library/Java/JavaVirtualMachines/jdk1.8.0_XXX (where "XXX" is the latest minor version number). Click "OK".

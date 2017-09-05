@@ -21,23 +21,21 @@ Here's the workflow for contract upgrades:
 
 1. Two banks, A and B negotiate a trade, off-platform
 
-2. Banks A and B execute a protocol to construct a state object representing the trade, using contract X, and include it in a transaction (which is then signed and sent to the Uniqueness Service).
+2. Banks A and B execute a protocol to construct a state object representing the trade, using contract X, and include it in a transaction (which is then signed and sent to the consensus service).
 
 3. Time passes.
 
-4. The developer of contract X discovers a bug in the contract code, and releases a new version, contract Y. 
-And notify the users (e.g. via a mailing list or CorDapp store).
-At this point of time all nodes should stop issuing states of contract X.
+4. The developer of contract X discovers a bug in the contract code, and releases a new version, contract Y. The developer will then notify all existing users (e.g. via a mailing list or CorDapp store) to stop their nodes from issuing further states with contract X.
 
-5. Banks A and B review the new contract via standard change control processes and identify the contract states they agreed to upgrade, they can decide not to upgrade some contract states as they might be needed for other obligation contract.
+5. Banks A and B review the new contract via standard change control processes and identify the contract states they agree to upgrade (they may decide not to upgrade some contract states as these might be needed for some other obligation contract).
 
 6. Banks A and B instruct their Corda nodes (via RPC) to be willing to upgrade state objects of contract X, to state objects for contract Y using agreed upgrade path.
 
-7. One of the parties ``Instigator`` initiates an upgrade of state objects referring to contract X, to a new state object referring to contract Y.
+7. One of the parties initiates (``Initiator``) an upgrade of state objects referring to contract X, to a new state object referring to contract Y.
 
 8. A proposed transaction ``Proposal``, taking in the old state and outputting the reissued version, is created and signed with the node's private key.
 
-9. The node ``Instigator`` sends the proposed transaction, along with details of the new contract upgrade path it's proposing, to all participants of the state object.
+9. The ``Initiator`` node sends the proposed transaction, along with details of the new contract upgrade path its proposing, to all participants of the state object.
 
 10. Each counterparty ``Acceptor`` verifies the proposal, signs or rejects the state reissuance accordingly, and sends a signature or rejection notification back to the initiating node.
 
@@ -48,32 +46,38 @@ Authorising upgrade
 -------------------
 
 Each of the participants in the upgrading contract will have to instruct their node that they are willing to upgrade the state object before the upgrade.
-Currently the vault service is used to manage the authorisation records. The administrator can use RPC to perform such instructions.
+The ``ContractUpgradeFlow`` is used to manage the authorisation records. The administrator can use RPC to trigger either an ``Authorise`` or  ``Deauthorise`` flow.
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
-   
-      /**
-       * Authorise a contract state upgrade.
-       * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow] during contract upgrade process.
-       * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
-       * This method will NOT initiate the upgrade process.
-       */
-      fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)   
-      /**
-       * Authorise a contract state upgrade.
-       * This will remove the upgrade authorisation from the vault.
-       */
-      fun deauthoriseContractUpgrade(state: StateAndRef<*>)
 
+    /**
+     * Authorise a contract state upgrade.
+     * This will store the upgrade authorisation in persistent store, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
+     * Invoking this flow indicates the node is willing to upgrade the [StateAndRef] using the [UpgradedContract] class.
+     * This method will NOT initiate the upgrade process. To start the upgrade process, see [Initiator].
+     */
+    @StartableByRPC
+    class Authorise(
+            val stateAndRef: StateAndRef<*>,
+            private val upgradedContractClass: Class<out UpgradedContract<*, *>>
+        ) : FlowLogic<Void?>()
 
+    /**
+     * Deauthorise a contract state upgrade.
+     * This will remove the upgrade authorisation from persistent store (and prevent any further upgrade)
+     */
+    @StartableByRPC
+    class Deauthorise(
+            val stateRef: StateRef
+    ) : FlowLogic< Void?>()
 
 Proposing an upgrade
 --------------------
 
-After all parties have registered the intention of upgrading the contract state, one of the contract participant can initiate the upgrade process by running the contract upgrade flow.
-The Instigator will create a new state and sent to each participant for signatures, each of the participants (Acceptor) will verify and sign the proposal and returns to the instigator.
+After all parties have registered the intention of upgrading the contract state, one of the contract participants can initiate the upgrade process by triggering the ``Initiator`` contract upgrade flow.
+The ``Initiator`` will create a new state and sent to each participant for signatures, each of the participants (Acceptor) will verify, sign the proposal and return to the initiator.
 The transaction will be notarised and persisted once every participant verified and signed the upgrade proposal.
 
 Examples
@@ -81,7 +85,7 @@ Examples
 
 Lets assume Bank A has entered into an agreement with Bank B, and the contract is translated into contract code ``DummyContract`` with state object ``DummyContractState``.
 
-Few days after the exchange of contracts, the developer of the contract code discovered a bug/misrepresentation in the contract code. 
+A few days after the exchange of contracts, the developer of the contract code discovered a bug/misrepresentation in the contract code.
 Bank A and Bank B decided to upgrade the contract to ``DummyContractV2``
 
 1. Developer will create a new contract extending the ``UpgradedContract`` class, and a new state object ``DummyContractV2.State`` referencing the new contract.
@@ -99,7 +103,7 @@ Bank A and Bank B decided to upgrade the contract to ``DummyContractV2``
    
       val rpcClient : CordaRPCClient = << Bank A's Corda RPC Client >>
       val rpcA = rpcClient.proxy()
-      rpcA.authoriseContractUpgrade(<<StateAndRef of the contract state>>, DummyContractV2::class.java)
+      rpcA.startFlow(ContractUpgradeFlow.Authorise(<<StateAndRef of the contract state>>, DummyContractV2::class.java))
 
 3. Bank B now initiate the upgrade Flow, this will send a upgrade proposal to all contract participants.
 Each of the participants of the contract state will sign and return the contract state upgrade proposal once they have validated and agreed with the upgrade.
@@ -115,7 +119,7 @@ The upgraded transaction state will be recorded in every participant's node at t
           <<StateAndRef of the contract state>>,
           DummyContractV2::class.java)
           
-.. note:: See ``ContractUpgradeFlowTest.2 parties contract upgrade using RPC`` for more detailed code example.
+.. note:: See ``ContractUpgradeFlowTest`` for more detailed code examples.
 
 
 

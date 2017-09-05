@@ -9,6 +9,7 @@ import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.*
 import net.corda.core.flows.*
+import net.corda.core.flows.ContractUpgradeFlow.Acceptor
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
@@ -18,14 +19,16 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.*
+import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
-import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.node.services.TransactionKeyHandler
@@ -34,15 +37,15 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
-import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.sendRequest
-import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
 import net.corda.node.services.network.NodeRegistration
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
@@ -378,7 +381,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filter { it.isUserInvokable() } +
                     // Add any core flows here
                     listOf(
-                            ContractUpgradeFlow::class.java)
+                            ContractUpgradeFlow.Initiator::class.java)
     }
 
     /**
@@ -399,7 +402,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun installCoreFlows() {
         installCoreFlow(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
         installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
-        installCoreFlow(ContractUpgradeFlow::class, ::ContractUpgradeHandler)
+        installCoreFlow(ContractUpgradeFlow.Initiator::class, ::Acceptor)
         installCoreFlow(TransactionKeyFlow::class, ::TransactionKeyHandler)
     }
 
@@ -658,7 +661,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
                 .filterNotNull()
                 .toTypedArray()
-        val service = InMemoryIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
+        val service = PersistentIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
         services.networkMapCache.partyNodes.forEach { service.verifyAndRegisterIdentity(it.legalIdentityAndCert) }
         services.networkMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal

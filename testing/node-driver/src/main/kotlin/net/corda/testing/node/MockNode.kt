@@ -3,8 +3,6 @@ package net.corda.testing.node
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.utilities.CertificateAndKeyPair
-import net.corda.core.utilities.cert
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate
@@ -18,12 +16,10 @@ import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.*
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.*
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
@@ -32,6 +28,7 @@ import net.corda.node.services.transactions.*
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.testing.*
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
@@ -41,7 +38,6 @@ import java.security.KeyPair
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -69,7 +65,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
-    private val identities = mutableListOf<PartyAndCertificate>()
     private val _nodes = mutableListOf<MockNode>()
     /** A read only view of the current set of executing nodes. */
     val nodes: List<MockNode> get() = _nodes
@@ -169,8 +164,17 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
                     .filterNotNull()
                     .toTypedArray()
-            return InMemoryIdentityService((mockNet.identities + info.legalIdentityAndCert).toSet(),
+            val identityService = PersistentIdentityService(setOf(info.legalIdentityAndCert),
                     trustRoot = trustRoot, caCertificates = *caCertificates)
+            services.networkMapCache.partyNodes.forEach { identityService.verifyAndRegisterIdentity(it.legalIdentityAndCert) }
+            services.networkMapCache.changed.subscribe { mapChange ->
+                // TODO how should we handle network map removal
+                if (mapChange is NetworkMapCache.MapChange.Added) {
+                    identityService.verifyAndRegisterIdentity(mapChange.node.legalIdentityAndCert)
+                }
+            }
+
+            return identityService
         }
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
@@ -217,11 +221,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
         override fun myAddresses() = emptyList<NetworkHostAndPort>()
-
-        override fun start() {
-            super.start()
-            mockNet.identities.add(info.legalIdentityAndCert)
-        }
 
         // Allow unit tests to modify the plugin list before the node start,
         // so they don't have to ServiceLoad test plugins into all unit tests.
@@ -364,9 +363,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val nodes = ArrayList<MockNode>()
         repeat(numPartyNodes) {
             nodes += createPartyNode(mapAddress)
-        }
-        nodes.forEach { itNode ->
-            nodes.map { it.info.legalIdentityAndCert }.map(itNode.services.identityService::verifyAndRegisterIdentity)
         }
         return BasketOfNodes(nodes, notaryNode, mapNode)
     }

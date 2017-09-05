@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import net.corda.client.rpc.notUsed
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
@@ -18,10 +19,10 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
@@ -170,20 +171,50 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) = services.contractUpgradeService.authoriseContractUpgrade(state, upgradedContractClass)
-    override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.contractUpgradeService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
-    override fun waitUntilNetworkReady() = services.networkMapCache.nodeReady
-    override fun partyFromAnonymous(party: AbstractParty): Party? = services.identityService.partyFromAnonymous(party)
-    override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
-    override fun partyFromX500Name(x500Name: X500Name) = services.identityService.partyFromX500Name(x500Name)
-    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = services.identityService.partiesFromName(query, exactMatch)
-    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? = services.networkMapCache.getNodeByLegalIdentity(party)
+
+    override fun waitUntilNetworkReady(): CordaFuture<Void?> {
+        return database.transaction {
+            services.networkMapCache.nodeReady
+        }
+    }
+
+    override fun partyFromAnonymous(party: AbstractParty): Party? {
+        return database.transaction {
+            services.identityService.partyFromAnonymous(party)
+        }
+    }
+
+    override fun partyFromKey(key: PublicKey): Party? {
+        return database.transaction {
+            services.identityService.partyFromKey(key)
+        }
+    }
+
+    override fun partyFromX500Name(x500Name: X500Name): Party? {
+        return database.transaction {
+            services.identityService.partyFromX500Name(x500Name)
+        }
+    }
+
+    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
+        return database.transaction {
+            services.identityService.partiesFromName(query, exactMatch)
+        }
+    }
+
+    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? {
+        return database.transaction {
+            services.networkMapCache.getNodeByLegalIdentity(party)
+        }
+    }
 
     override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
 
     override fun clearNetworkMapCache() {
-        services.networkMapCache.clearNetworkMapCache()
+        database.transaction {
+            services.networkMapCache.clearNetworkMapCache()
+        }
     }
 
     companion object {
