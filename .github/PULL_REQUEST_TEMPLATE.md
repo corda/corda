@@ -1,5 +1,4 @@
-Thank you for choosing to contribute to Corda. As a contributor please read [CONTRIBUTING](../contributing.md) before
-contributing.
+Thank you for choosing to contribute to Corda. 
 
 ## PR Process
 
@@ -11,6 +10,7 @@ Once you have submitted a PR you are responsible for keeping it up to date until
 ## PR Checklist
 
 1. Ensure you have done any relevant automated and manual testing.
-2. Add your changes to the changelog.
-3. Update any documentation relating to your changes.
-
+2. Add your changes to `docs/src/changelog.rst`
+3. Update any documentation in `docs/src` relating to your changes.
+4. If you are contributing for the first time please read the agreement in [CONTRIBUTING](../contributing.md) now
+   and add to this Pull Request that you have read, and agreed to, the agreement.
