@@ -10,8 +10,8 @@ Once you have submitted a PR you are responsible for keeping it up to date until
 ## PR Checklist
 
 1. Ensure any new code is tested as described [here](https://docs.corda.net/testing.html)
-1. Ensure you have done any relevant automated testing and manual testing
-2. Add your changes to `docs/source/changelog.rst`
-3. Update any documentation in `docs/source` relating to your changes and learn how to build them [here](https://docs.corda.net/building-the-docs.html)
-4. If you are contributing for the first time please read the agreement in [CONTRIBUTING](../contributing.md) now
+2. Ensure you have done any relevant automated testing and manual testing
+3. Add your changes to `docs/source/changelog.rst`
+4. Update any documentation in `docs/source` relating to your changes and learn how to build them [here](https://docs.corda.net/building-the-docs.html)
+5. If you are contributing for the first time please read the agreement in [CONTRIBUTING](../contributing.md) now
    and add to this Pull Request that you have read, and agreed to, the agreement.

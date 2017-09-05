@@ -16,8 +16,8 @@ There are several distinct test suites each with a different purpose;
 
 **Other**: These include tests such as performance tests, stress tests, etc, and may be in an external repo.
 
-These tests are mostly written with JUnit and can be run via ``gradle`` with ``gradlew test integrationTest smokeTest``
-or any combination of these three.
+These tests are mostly written with JUnit and can be run via ``gradle``. On windows run ``gradlew test integrationTest
+smokeTest`` and on unix run ``./gradlw test integrationTest smokeTest`` or any combination of these three arguments.
 
 Before creating a pull request please make sure these pass.
 
