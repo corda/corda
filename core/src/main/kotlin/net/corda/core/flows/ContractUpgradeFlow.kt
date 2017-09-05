@@ -134,7 +134,7 @@ object ContractUpgradeFlow {
             val expectedTx = ContractUpgradeFlow.Initiator.assembleBareTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt).toWireTransaction()
             requireThat {
                 "The instigator is one of the participants" using (otherSide in oldStateAndRef.state.data.participants)
-                "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" using (proposal.modification == authorisedUpgrade)
+                "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" using (proposal.modification.name == authorisedUpgrade)
                 "The proposed tx matches the expected tx for this upgrade" using (proposedTx == expectedTx)
             }
             ContractUpgradeFlow.Acceptor.verify(

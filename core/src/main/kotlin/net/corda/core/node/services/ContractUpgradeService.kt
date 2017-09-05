@@ -12,7 +12,7 @@ import net.corda.core.flows.ContractUpgradeFlow
 interface ContractUpgradeService {
 
     /** Get contracts we would be willing to upgrade the suggested contract to. */
-    fun getAuthorisedContractUpgrade(ref: StateRef): Class<out UpgradedContract<*, *>>?
+    fun getAuthorisedContractUpgrade(ref: StateRef): String?
 
     /** Store authorised state ref and associated UpgradeContract class */
     fun storeAuthorisedContractUpgrade(ref: StateRef, upgradedContractClass: Class<out UpgradedContract<*, *>>)
