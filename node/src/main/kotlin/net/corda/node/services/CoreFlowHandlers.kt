@@ -6,11 +6,8 @@ import net.corda.core.contracts.UpgradeCommand
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.unwrap
 
 // TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
 //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
@@ -71,24 +68,5 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
                 oldStateAndRef.state.data,
                 expectedTx.outRef<ContractState>(0).state.data,
                 expectedTx.toLedgerTransaction(serviceHub).commandsOfType<UpgradeCommand>().single())
-    }
-}
-
-class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean) : FlowLogic<Unit>() {
-    constructor(otherSide: Party) : this(otherSide, false)
-    companion object {
-        object SENDING_KEY : ProgressTracker.Step("Sending key")
-    }
-
-    override val progressTracker: ProgressTracker = ProgressTracker(SENDING_KEY)
-
-    @Suspendable
-    override fun call(): Unit {
-        val revocationEnabled = false
-        progressTracker.currentStep = SENDING_KEY
-        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
-        sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->
-            TransactionKeyFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
-        }
     }
 }
