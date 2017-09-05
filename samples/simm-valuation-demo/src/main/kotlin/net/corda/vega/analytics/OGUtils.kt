@@ -1,13 +1,7 @@
 package net.corda.vega.analytics
 
 fun compareIMTriples(a: InitialMarginTriple, b: InitialMarginTriple): Boolean {
-    if (a.first is Double && a.second is Double && a.third is Double &&
-            b.first is Double && b.second is Double && b.third is Double) {
-        if (withinTolerance(a.first, b.first) && withinTolerance(a.second, b.second) && withinTolerance(a.third, b.third)) {
-            return true
-        }
-    }
-    return false
+    return withinTolerance(a.first, b.first) && withinTolerance(a.second, b.second) && withinTolerance(a.third, b.third)
 }
 
 // TODO: Do this correctly

@@ -1,19 +1,16 @@
 package net.corda.notarydemo
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.notUsed
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.toStringShort
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.testing.BOB
+import java.util.concurrent.Future
 import kotlin.streams.asSequence
 
 fun main(args: Array<String>) {
@@ -53,9 +50,10 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      * as it consumes the original asset and creates a copy with the new owner as its output.
      */
     private fun buildTransactions(count: Int): List<SignedTransaction> {
-        return (1..count).map {
+        val flowFutures = (1..count).map {
             rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity, it).returnValue
-        }.transpose().getOrThrow()
+        }
+        return flowFutures.map { it.getOrThrow() }
     }
 
     /**
@@ -64,9 +62,9 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      *
      * @return a list of encoded signer public keys - one for every transaction
      */
-    private fun notariseTransactions(transactions: List<SignedTransaction>): List<CordaFuture<List<String>>> {
+    private fun notariseTransactions(transactions: List<SignedTransaction>): List<Future<List<String>>> {
         return transactions.map {
-            rpc.startFlow(::RPCStartableNotaryFlowClient, it).returnValue.map { it.map { it.by.toStringShort() } }
+            rpc.startFlow(::RPCStartableNotaryFlowClient, it).returnValue.toCompletableFuture().thenApply { it.map { it.by.toStringShort() } }
         }
     }
 }

@@ -171,7 +171,7 @@ class NetworkMapVisualiser : Application() {
                 onNextInvoked()
             }
         }
-        viewModel.simulation.networkInitialisationFinished.then {
+        viewModel.simulation.networkInitialisationFinished.thenAccept {
             view.simulateInitialisationCheckbox.isVisible = false
         }
         view.runPauseButton.setOnAction {

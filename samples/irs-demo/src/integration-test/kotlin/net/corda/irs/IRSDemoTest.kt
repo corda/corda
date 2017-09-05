@@ -1,7 +1,6 @@
 package net.corda.irs
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
@@ -44,19 +43,20 @@ class IRSDemoTest : IntegrationTestCategory {
     @Test
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
-            val (controller, nodeA, nodeB) = listOf(
-                    startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
-                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
-                    startNode(providedName = DUMMY_BANK_B.name)
-            ).transpose().getOrThrow()
+            val controllerFuture = startNode(
+                    providedName = DUMMY_NOTARY.name,
+                    advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type)))
+            val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser))
+            val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name)
+            val (controller, nodeA, nodeB) = listOf(controllerFuture, nodeAFuture, nodeBFuture).map { it.getOrThrow() }
 
             log.info("All nodes started")
 
-            val (controllerAddr, nodeAAddr, nodeBAddr) = listOf(
-                    startWebserver(controller),
-                    startWebserver(nodeA),
-                    startWebserver(nodeB)
-            ).transpose().getOrThrow().map { it.listenAddress }
+            val controllerAddrFuture = startWebserver(controller)
+            val nodeAAddrFuture = startWebserver(nodeA)
+            val nodeBAddrFuture = startWebserver(nodeB)
+            val (controllerAddr, nodeAAddr, nodeBAddr) =
+                    listOf(controllerAddrFuture, nodeAAddrFuture, nodeBAddrFuture).map { it.getOrThrow().listenAddress }
 
             log.info("All webservers started")
 

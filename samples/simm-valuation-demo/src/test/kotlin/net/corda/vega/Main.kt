@@ -1,6 +1,5 @@
 package net.corda.vega
 
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A
@@ -17,12 +16,11 @@ import net.corda.testing.driver.driver
  */
 fun main(args: Array<String>) {
     driver(dsl = {
-        startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        val (nodeA, nodeB, nodeC) = listOf(
-                startNode(providedName = DUMMY_BANK_A.name),
-                startNode(providedName = DUMMY_BANK_B.name),
-                startNode(providedName = DUMMY_BANK_C.name)
-        ).transpose().getOrThrow()
+        val notaryFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name)
+        val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name)
+        val nodeCFuture = startNode(providedName = DUMMY_BANK_C.name)
+        val (nodeA, nodeB, nodeC) = listOf(nodeAFuture, nodeBFuture, nodeCFuture, notaryFuture).map { it.getOrThrow() }
 
         startWebserver(nodeA)
         startWebserver(nodeB)
