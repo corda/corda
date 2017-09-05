@@ -11,7 +11,6 @@ PR Checklist:
 2. Ensure you have done any relevant automated testing and manual testing
 3. Add your changes to docs/source/changelog.rst
 4. Update any documentation in docs/source relating to your changes and learn how to build them in https://docs.corda.net/building-the-docs.html
-5. If you are contributing for the first time please read the agreement in CONTRIBUTING.md now and add to this 
-   Pull Request that you have read, and agreed to, the agreement.
+5. If you are contributing for the first time please read the agreement in CONTRIBUTING.md now and add to this Pull Request that you have read, and agreed to, the agreement.
    
 Please remove this message when you have read it.
