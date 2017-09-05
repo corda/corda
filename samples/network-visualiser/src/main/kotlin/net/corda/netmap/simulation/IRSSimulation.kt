@@ -43,11 +43,6 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): CompletableFuture<Unit> {
-        // TODO: Determine why this isn't happening via the network map
-        mockNet.nodes.map { it.services.identityService }.forEach { service ->
-            mockNet.nodes.forEach { node -> service.verifyAndRegisterIdentity(node.info.legalIdentityAndCert) }
-        }
-
         om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap).map { it.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
         registerFinanceJSONMappers(om)
 

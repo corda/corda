@@ -24,7 +24,7 @@ Subflows
 Although our flow requirements look complex, we can delegate to existing flows to handle many of these tasks. A flow
 that is invoked within the context of a larger flow to handle a repeatable task is called a *subflow*.
 
-In our initiator flow, we can automate steps 5, 6 and 7 using ``FinalityFlow``.
+In our initiator flow, we can automate steps 4 and 5 using ``FinalityFlow``.
 
 All we need to do is write the steps to handle the creation and signing of the proposed transaction.
 
@@ -162,7 +162,7 @@ We now have our own ``FlowLogic`` subclass that overrides ``FlowLogic.call``. Th
 * There are also a few more annotations, on the ``FlowLogic`` subclass itself:
 
   * ``@InitiatingFlow`` means that this flow can be started directly by the node
-  * ``StartableByRPC`` allows the node owner to start this flow via an RPC call
+  * ``@StartableByRPC`` allows the node owner to start this flow via an RPC call
 
 * We override the progress tracker, even though we are not providing any progress tracker steps yet. The progress
   tracker is required for the node shell to establish when the flow has ended
@@ -204,7 +204,7 @@ the following transaction:
 So we'll need the following:
 
 * The output ``IOUState``
-* A ``Create`` command listing the IOU's borrower as a signer
+* A ``Create`` command listing the IOU's lender as a signer
 
 The command we use pairs the ``IOUContract.Create`` command defined earlier with our public key. Including this command
 in the transaction makes us one of the transaction's required signers.

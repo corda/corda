@@ -33,7 +33,7 @@ The first step is to obtain the notary identity -- ``Party``:
 
 .. sourcecode:: kotlin
 
-    val ourNotary: Party = serviceHub.networkMapCache.getNotary("Central Bank Notary")
+    val ourNotary: Party = serviceHub.networkMapCache.getNotary("Notary A")
 
 Then we initialise the transaction builder:
 
