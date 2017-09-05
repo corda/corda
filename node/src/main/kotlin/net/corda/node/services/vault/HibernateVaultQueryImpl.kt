@@ -96,7 +96,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                     if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
                 }
 
-                query.firstResult = (paging.pageNumber - 1) * paging.pageSize
+                query.firstResult = if (paging.pageNumber > 0) (paging.pageNumber - 1) * paging.pageSize else 0
                 query.maxResults = paging.pageSize + 1  // detection too many results
 
                 // execution

@@ -54,10 +54,11 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     NodeAttachmentService.DBAttachment::class.java,
                     RaftUniquenessProvider.RaftState::class.java,
                     BFTNonValidatingNotaryService.PersistedCommittedState::class.java,
+                    NodeInfoSchemaV1.PersistentNodeInfo::class.java,
                     PersistentIdentityService.PersistentIdentity::class.java,
-                    PersistentIdentityService.PersistentIdentityNames::class.java,
-                    ContractUpgradeServiceImpl.DBContractUpgrade::class.java
-                    ))
+                    ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
+                    PersistentIdentityService.PersistentIdentityNames::class.java
+            ))
 
     // Required schemas are those used by internal Corda services
     // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)
