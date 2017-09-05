@@ -137,7 +137,7 @@ class CordaRPCOpsImplTest {
     fun `issue and move`() {
         aliceNode.database.transaction {
             stateMachineUpdates = rpc.stateMachinesFeed().updates
-            transactions = rpc.verifiedTransactionsFeed().updates
+            transactions = rpc.internalVerifiedTransactionsFeed().updates
             vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
         }
 

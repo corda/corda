@@ -71,13 +71,13 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun verifiedTransactionsSnapshot(): List<SignedTransaction> {
-        val (snapshot, updates) = verifiedTransactionsFeed()
+    override fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction> {
+        val (snapshot, updates) = internalVerifiedTransactionsFeed()
         updates.notUsed()
         return snapshot
     }
 
-    override fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
+    override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
             services.validatedTransactions.track()
         }
