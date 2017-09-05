@@ -11,6 +11,8 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -33,17 +35,23 @@ class SwapIdentitiesFlow(private val otherParty: Party,
         val NONCE_SIZE_BYTES = 16
 
         fun tracker() = ProgressTracker(AWAITING_KEY)
-        fun buildDataToSign(identity: PartyAndCertificate, nonce: ByteArray): ByteArray {
+        fun buildDataToSign(identity: SerializedBytes<PartyAndCertificate>, nonce: ByteArray): ByteArray {
             val buffer = ByteArrayOutputStream(1024)
-            buffer.write(identity.serialize().bytes)
+            buffer.write(identity.bytes)
             buffer.write(nonce)
             return buffer.toByteArray()
         }
 
-        fun validateAndRegisterIdentity(identityService: IdentityService, otherSide: Party, anonymousOtherSide: PartyAndCertificate, nonce: ByteArray, signature: DigitalSignature): PartyAndCertificate {
+        fun validateAndRegisterIdentity(identityService: IdentityService,
+                                        otherSide: Party,
+                                        anonymousOtherSideBytes: SerializedBytes<PartyAndCertificate>,
+                                        nonce: ByteArray,
+                                        sigBytes: ByteArray): PartyAndCertificate {
+            val anonymousOtherSide: PartyAndCertificate = anonymousOtherSideBytes.deserialize()
             require(anonymousOtherSide.name == otherSide.name)
+            val signature = DigitalSignature.WithKey(anonymousOtherSide.owningKey, sigBytes)
             val sigWithKey = DigitalSignature.WithKey(anonymousOtherSide.owningKey, signature.bytes)
-            require(sigWithKey.verify(buildDataToSign(anonymousOtherSide, nonce)))
+            require(sigWithKey.verify(buildDataToSign(anonymousOtherSideBytes, nonce)))
             // Validate then store their identity so that we can prove the key in the transaction is owned by the
             // counterparty.
             identityService.verifyAndRegisterIdentity(anonymousOtherSide)
@@ -55,6 +63,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
     override fun call(): LinkedHashMap<Party, AnonymousParty> {
         progressTracker.currentStep = AWAITING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, revocationEnabled)
+        val serializedIdentity = SerializedBytes<PartyAndCertificate>(legalIdentityAnonymous.serialize().bytes)
 
         // Special case that if we're both parties, a single identity is generated
         val identities = LinkedHashMap<Party, AnonymousParty>()
@@ -67,18 +76,17 @@ class SwapIdentitiesFlow(private val otherParty: Party,
                 require(nonce.size == NONCE_SIZE_BYTES)
                 nonce
             }
-            val data = buildDataToSign(legalIdentityAnonymous, theirNonce)
+            val data = buildDataToSign(serializedIdentity, theirNonce)
             val ourSig: DigitalSignature = serviceHub.keyManagementService.sign(data, legalIdentityAnonymous.owningKey)
-            val anonymousOtherSide = otherSession.sendAndReceive<IdentityWithSignature>(IdentityWithSignature(legalIdentityAnonymous, ourSig.bytes)).unwrap { (confidentialIdentity, theirSigBytes) ->
-                val theirSig = DigitalSignature.WithKey(confidentialIdentity.owningKey, theirSigBytes)
-                validateAndRegisterIdentity(serviceHub.identityService, otherParty, confidentialIdentity, ourNonce, theirSig)
+            val anonymousOtherSide = otherSession.sendAndReceive<IdentityWithSignature>(IdentityWithSignature(serializedIdentity, ourSig.bytes)).unwrap { (confidentialIdentityBytes, theirSigBytes) ->
+                validateAndRegisterIdentity(serviceHub.identityService, otherParty, confidentialIdentityBytes, ourNonce, theirSigBytes)
             }
             identities.put(ourIdentity, legalIdentityAnonymous.party.anonymise())
-            identities.put(otherSession.counterparty, anonymousOtherSide.party.anonymise())
+            identities.put(otherParty, anonymousOtherSide.party.anonymise())
         }
         return identities
     }
 
     @CordaSerializable
-    data class IdentityWithSignature(val identity: PartyAndCertificate, val signature: ByteArray)
+    data class IdentityWithSignature(val identity: SerializedBytes<PartyAndCertificate>, val signature: ByteArray)
 }
