@@ -3,6 +3,9 @@ package net.corda.confidential
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
@@ -10,10 +13,7 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class SwapIdentitiesFlowTests {
     @Test
@@ -51,5 +51,69 @@ class SwapIdentitiesFlowTests {
         assertFalse { bobAnonymousIdentity.owningKey in aliceNode.services.keyManagementService.keys }
 
         mockNet.stopNodes()
+    }
+
+    /**
+     * Check that flow is actually validating the name on the certificate presented by the counterparty.
+     */
+    @Test
+    fun `verifies identity name`() {
+        // We run this in parallel threads to help catch any race conditions that may exist.
+        val mockNet = MockNetwork(false, true)
+
+        // Set up values we'll need
+        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+        val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+        val bob: Party = bobNode.services.myInfo.legalIdentity
+        val nonce = ByteArray(1) { 0 }
+        val notBob = notaryNode.database.transaction {
+            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.legalIdentityAndCert, false)
+        }
+        val notBobBytes = SerializedBytes<PartyAndCertificate>(notBob.serialize().bytes)
+        val sigData = TransactionKeyFlow.buildDataToSign(notBobBytes, nonce)
+        val signature = notaryNode.services.keyManagementService.sign(sigData, notBob.owningKey)
+        assertFailsWith<IllegalArgumentException>("Certificate subject must match counterparty's well known identity") {
+            TransactionKeyFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBobBytes, nonce, signature.bytes)
+        }
+    }
+
+    /**
+     * Check that flow is actually validating its the signature presented by the counterparty.
+     */
+    @Test
+    fun `verifies signature`() {
+        // We run this in parallel threads to help catch any race conditions that may exist.
+        val mockNet = MockNetwork(false, true)
+
+        // Set up values we'll need
+        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+        val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+        val bob: Party = bobNode.services.myInfo.legalIdentity
+        val nonce = ByteArray(1) { 0 }
+        val wrongNonce = ByteArray(1) { Byte.MAX_VALUE }
+        // Check that the right signing key but the wrong nonce is rejected
+        bobNode.database.transaction {
+            bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.legalIdentityAndCert, false)
+        }.let { anonymousBob ->
+            val anonymousBobBytes = SerializedBytes<PartyAndCertificate>(anonymousBob.serialize().bytes)
+            val sigData = TransactionKeyFlow.buildDataToSign(anonymousBobBytes, wrongNonce)
+            val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
+            assertFailsWith<IllegalArgumentException>("Signature does not match the given identity and nonce") {
+                TransactionKeyFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.bytes)
+            }
+        }
+        // Check that the wrong signature with the correct nonce is rejected
+        notaryNode.database.transaction {
+            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.legalIdentityAndCert, false)
+        }.let { anonymousNotary ->
+            val anonymousNotaryBytes = SerializedBytes<PartyAndCertificate>(anonymousNotary.serialize().bytes)
+            val sigData = TransactionKeyFlow.buildDataToSign(anonymousNotaryBytes, nonce)
+            val signature = notaryNode.services.keyManagementService.sign(sigData, anonymousNotary.owningKey)
+            assertFailsWith<IllegalArgumentException>("Signature does not match the given identity and nonce") {
+                TransactionKeyFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotaryBytes, nonce, signature.bytes)
+            }
+        }
     }
 }

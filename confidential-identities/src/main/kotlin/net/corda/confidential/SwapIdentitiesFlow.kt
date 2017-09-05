@@ -17,6 +17,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import java.io.ByteArrayOutputStream
+import java.security.SignatureException
 
 /**
  * Very basic flow which generates new confidential identities for parties in a transaction and exchanges the transaction
@@ -48,10 +49,14 @@ class SwapIdentitiesFlow(private val otherParty: Party,
                                         nonce: ByteArray,
                                         sigBytes: ByteArray): PartyAndCertificate {
             val anonymousOtherSide: PartyAndCertificate = anonymousOtherSideBytes.deserialize()
-            require(anonymousOtherSide.name == otherSide.name)
+            require(anonymousOtherSide.name == otherSide.name) { "Certificate subject must match counterparty's well known identity" }
             val signature = DigitalSignature.WithKey(anonymousOtherSide.owningKey, sigBytes)
             val sigWithKey = DigitalSignature.WithKey(anonymousOtherSide.owningKey, signature.bytes)
-            require(sigWithKey.verify(buildDataToSign(anonymousOtherSideBytes, nonce)))
+            try {
+                sigWithKey.verify(buildDataToSign(anonymousOtherSideBytes, nonce))
+            } catch(ex: SignatureException) {
+                throw IllegalArgumentException("Signature does not match the given identity and nonce")
+            }
             // Validate then store their identity so that we can prove the key in the transaction is owned by the
             // counterparty.
             identityService.verifyAndRegisterIdentity(anonymousOtherSide)
