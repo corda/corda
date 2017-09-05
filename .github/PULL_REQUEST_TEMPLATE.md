@@ -1,15 +1,11 @@
-Thank you for choosing to contribute to Corda. 
-
-PR Process
-----------
+Thank you for choosing to contribute to Corda.
 
 Your PR must be approved by one or more reviewers and all tests must be passed on TeamCity (https://ci.corda.r3cev.com) 
 in order to be merged. 
 
 Once you have submitted a PR you are responsible for keeping it up to date until the time it is merged.
 
-PR Checklist
-------------
+PR Checklist:
 
 1. Ensure any new code is tested as described in https://docs.corda.net/testing.html
 2. Ensure you have done any relevant automated testing and manual testing
