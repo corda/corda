@@ -52,8 +52,7 @@ class KotlinUtilsTest : TestDependencyInjectionBase() {
     }
 
     @CordaSerializable
-    private class CapturingTransientProperty(prefix: String) {
-        private val seed = random63BitValue()
+    private class CapturingTransientProperty(val prefix: String, val seed: Long = random63BitValue()) {
         val transientVal by transient { prefix + seed + random63BitValue() }
     }
 }
