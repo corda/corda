@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Contract Upgrades: deprecated RPC authorisation / deauthorisation API calls in favour of equivalent flows in ContractUpgradeFlow.
+  Implemented contract upgrade persistence using JDBC backed persistent map.
+
 * Vault query common attributes (state status and contract state types) are now handled correctly when using composite
   criteria specifications. State status is overridable. Contract states types are aggregatable.
 

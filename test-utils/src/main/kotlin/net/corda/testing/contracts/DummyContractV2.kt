@@ -32,7 +32,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
     }
 
     override fun verify(tx: LedgerTransaction) {
-        if (tx.commands.any { it.value is UpgradeCommand }) ContractUpgradeFlow.verify(tx)
+        if (tx.commands.any { it.value is UpgradeCommand }) ContractUpgradeFlow.Acceptor.verify(tx)
         // Other verifications.
     }
     // DOCEND 1
