@@ -17,16 +17,16 @@ class ContractUpgradeServiceImpl : ContractUpgradeService {
             var stateRef: String = "",
 
             /** refers to the UpgradedContract class name*/
-            @Column(name = "contract_class_name", nullable = true)
-            var upgradedContractClassName: String? = null
+            @Column(name = "contract_class_name")
+            var upgradedContractClassName: String = ""
     )
 
     private companion object {
-        fun createContractUpgradesMap(): PersistentMap<String, String?, DBContractUpgrade, String> {
+        fun createContractUpgradesMap(): PersistentMap<String, String, DBContractUpgrade, String> {
             return PersistentMap(
                     toPersistentEntityKey = { it },
                     fromPersistentEntity = { Pair(it.stateRef, it.upgradedContractClassName) },
-                    toPersistentEntity = { key: String, value: String? ->
+                    toPersistentEntity = { key: String, value: String ->
                         DBContractUpgrade().apply {
                             stateRef = key
                             upgradedContractClassName = value
