@@ -30,6 +30,7 @@ import java.util.function.Predicate
  * sign.
  */
 // DOCSTART 1
+@CordaSerializable
 data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                              override val sigs: List<TransactionSignature>
 ) : TransactionWithSignatures {
