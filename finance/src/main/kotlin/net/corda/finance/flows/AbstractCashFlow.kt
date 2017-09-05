@@ -18,6 +18,7 @@ import java.util.*
  */
 abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTracker) : FlowLogic<T>() {
     companion object {
+        object PROPOSING_TX : ProgressTracker.Step("Proposing transaction")
         object GENERATING_ID : ProgressTracker.Step("Generating anonymous identities")
         object GENERATING_TX : ProgressTracker.Step("Generating transaction")
         object SIGNING_TX : ProgressTracker.Step("Signing transaction")
@@ -50,4 +51,6 @@ abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTra
     abstract class AbstractRequest(val amount: Amount<Currency>)
 }
 
-class CashException(message: String, cause: Throwable) : FlowException(message, cause)
+class CashException(message: String, cause: Throwable?) : FlowException(message, cause) {
+    constructor(message: String) : this(message, null)
+}

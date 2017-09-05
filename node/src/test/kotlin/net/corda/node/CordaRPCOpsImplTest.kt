@@ -71,7 +71,7 @@ class CordaRPCOpsImplTest {
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
-                startFlowPermission<CashPaymentFlow>()
+                startFlowPermission<CashPaymentFlow.Initiate>()
         ))))
 
         mockNet.runNetwork()
@@ -150,12 +150,13 @@ class CordaRPCOpsImplTest {
 
         mockNet.runNetwork()
 
-        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.info.legalIdentity, anonymous)
+        rpc.startFlow(CashPaymentFlow::Initiate, 100.DOLLARS, aliceNode.info.legalIdentity, anonymous)
 
         mockNet.runNetwork()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
+        var receiveSmId: StateMachineRunId? = null
         stateMachineUpdates.expectEvents {
             sequence(
                     // ISSUE
@@ -168,6 +169,12 @@ class CordaRPCOpsImplTest {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
+                    },
+                    expect { add: StateMachineUpdate.Added ->
+                        receiveSmId = add.id
+                    },
+                    expect { remove: StateMachineUpdate.Removed ->
+                        require(remove.id == receiveSmId)
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == moveSmId)

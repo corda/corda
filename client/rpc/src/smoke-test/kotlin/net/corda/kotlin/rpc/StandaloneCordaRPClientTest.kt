@@ -195,7 +195,7 @@ class StandaloneCordaRPClientTest {
         assertEquals(1, queryResults.totalStatesAvailable)
         assertEquals(queryResults.states.first().state.data.amount.quantity, 629.POUNDS.quantity)
 
-        rpcProxy.startFlow(::CashPaymentFlow, 100.POUNDS, notaryNode.legalIdentity).returnValue.getOrThrow()
+        rpcProxy.startFlow(CashPaymentFlow::Initiate, 100.POUNDS, notaryNode.legalIdentity).returnValue.getOrThrow()
 
         val moreResults = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting)
         assertEquals(3, moreResults.totalStatesAvailable)   // 629 - 100 + 100

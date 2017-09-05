@@ -59,7 +59,7 @@ class CashPaymentFlowTests {
             val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
             val (_, vaultUpdatesBankClient) = notaryNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
 
-            val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
+            val future = bankOfCordaNode.services.startFlow(CashPaymentFlow.Initiate(expectedPayment,
                     payTo)).resultFuture
             mockNet.runNetwork()
             future.getOrThrow()
@@ -91,7 +91,7 @@ class CashPaymentFlowTests {
     fun `pay more than we have`() {
         val payTo = notaryNode.info.legalIdentity
         val expected = 4000.DOLLARS
-        val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
+        val future = bankOfCordaNode.services.startFlow(CashPaymentFlow.Initiate(expected,
                 payTo)).resultFuture
         mockNet.runNetwork()
         assertFailsWith<CashException> {
@@ -103,7 +103,7 @@ class CashPaymentFlowTests {
     fun `pay zero cash`() {
         val payTo = notaryNode.info.legalIdentity
         val expected = 0.DOLLARS
-        val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
+        val future = bankOfCordaNode.services.startFlow(CashPaymentFlow.Initiate(expected,
                 payTo)).resultFuture
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {

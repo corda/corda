@@ -31,7 +31,7 @@ import kotlin.test.assertTrue
 class CordaRPCClientTest : NodeBasedTest() {
     private val rpcUser = User("user1", "test", permissions = setOf(
             startFlowPermission<CashIssueFlow>(),
-            startFlowPermission<CashPaymentFlow>()
+            startFlowPermission<CashPaymentFlow.Initiate>()
     ))
     private lateinit var node: Node
     private lateinit var client: CordaRPCClient
@@ -90,7 +90,7 @@ class CordaRPCClientTest : NodeBasedTest() {
     @Test
     fun `sub-type of FlowException thrown by flow`() {
         login(rpcUser.username, rpcUser.password)
-        val handle = connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.legalIdentity)
+        val handle = connection!!.proxy.startFlow(CashPaymentFlow::Initiate, 100.DOLLARS, node.info.legalIdentity)
         assertThatExceptionOfType(CashException::class.java).isThrownBy {
             handle.returnValue.getOrThrow()
         }
@@ -99,7 +99,7 @@ class CordaRPCClientTest : NodeBasedTest() {
     @Test
     fun `check basic flow has no progress`() {
         login(rpcUser.username, rpcUser.password)
-        connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.legalIdentity).use {
+        connection!!.proxy.startFlow(CashPaymentFlow::Initiate, 100.DOLLARS, node.info.legalIdentity).use {
             assertFalse(it is FlowProgressHandle<*>)
             assertTrue(it is FlowHandle<*>)
         }

@@ -70,7 +70,7 @@ private class BankOfCordaDriver {
                                         startFlowPermission<CashExitFlow>()))
                         val bigCorpUser = User(BIGCORP_USERNAME, "test",
                                 permissions = setOf(
-                                        startFlowPermission<CashPaymentFlow>()))
+                                        startFlowPermission<CashPaymentFlow.Initiate>()))
                         startNode(providedName = DUMMY_NOTARY.name,
                                 advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
                         val bankOfCorda = startNode(

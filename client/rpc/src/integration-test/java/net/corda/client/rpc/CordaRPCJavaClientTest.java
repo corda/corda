@@ -33,7 +33,7 @@ import static net.corda.node.services.FlowPermissions.startFlowPermission;
 import static net.corda.testing.TestConstants.getALICE;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
-    private List<String> perms = Arrays.asList(startFlowPermission(CashPaymentFlow.class), startFlowPermission(CashIssueFlow.class));
+    private List<String> perms = Arrays.asList(startFlowPermission(CashPaymentFlow.Initiate.class), startFlowPermission(CashIssueFlow.class));
     private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
 

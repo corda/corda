@@ -143,7 +143,7 @@ object TopupIssuerFlow {
                 return issueTx
             // now invoke Cash subflow to Move issued assetType to issue requester
             progressTracker.currentStep = TRANSFERRING
-            val moveCashFlow = CashPaymentFlow(amount, issueTo, anonymous = false)
+            val moveCashFlow = CashPaymentFlow.Initiate(amount, issueTo, anonymous = false)
             val moveTx = subFlow(moveCashFlow)
             // NOTE: CashFlow PayCash calls FinalityFlow which performs a Broadcast (which stores a local copy of the txn to the ledger)
             return moveTx

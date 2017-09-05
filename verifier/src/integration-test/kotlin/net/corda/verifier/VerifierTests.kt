@@ -121,7 +121,7 @@ class VerifierTests {
             alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notaryFuture.get().nodeInfo.notaryIdentity).returnValue.get()
             notary.waitUntilNumberOfVerifiers(1)
             for (i in 1..10) {
-                alice.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.get()
+                alice.rpc.startFlow(CashPaymentFlow::Initiate, 10.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.get()
             }
         }
     }
