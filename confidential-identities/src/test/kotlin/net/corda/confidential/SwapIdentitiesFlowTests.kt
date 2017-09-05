@@ -71,10 +71,10 @@ class SwapIdentitiesFlowTests {
             notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.legalIdentityAndCert, false)
         }
         val notBobBytes = SerializedBytes<PartyAndCertificate>(notBob.serialize().bytes)
-        val sigData = TransactionKeyFlow.buildDataToSign(notBobBytes, nonce)
+        val sigData = SwapIdentitiesFlow.buildDataToSign(notBobBytes, nonce)
         val signature = notaryNode.services.keyManagementService.sign(sigData, notBob.owningKey)
         assertFailsWith<IllegalArgumentException>("Certificate subject must match counterparty's well known identity") {
-            TransactionKeyFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBobBytes, nonce, signature.bytes)
+            SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBobBytes, nonce, signature.bytes)
         }
     }
 
@@ -98,10 +98,10 @@ class SwapIdentitiesFlowTests {
             bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.legalIdentityAndCert, false)
         }.let { anonymousBob ->
             val anonymousBobBytes = SerializedBytes<PartyAndCertificate>(anonymousBob.serialize().bytes)
-            val sigData = TransactionKeyFlow.buildDataToSign(anonymousBobBytes, wrongNonce)
+            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousBobBytes, wrongNonce)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
             assertFailsWith<IllegalArgumentException>("Signature does not match the given identity and nonce") {
-                TransactionKeyFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.bytes)
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.bytes)
             }
         }
         // Check that the wrong signature with the correct nonce is rejected
@@ -109,10 +109,25 @@ class SwapIdentitiesFlowTests {
             notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.legalIdentityAndCert, false)
         }.let { anonymousNotary ->
             val anonymousNotaryBytes = SerializedBytes<PartyAndCertificate>(anonymousNotary.serialize().bytes)
-            val sigData = TransactionKeyFlow.buildDataToSign(anonymousNotaryBytes, nonce)
+            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotaryBytes, nonce)
             val signature = notaryNode.services.keyManagementService.sign(sigData, anonymousNotary.owningKey)
             assertFailsWith<IllegalArgumentException>("Signature does not match the given identity and nonce") {
-                TransactionKeyFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotaryBytes, nonce, signature.bytes)
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotaryBytes, nonce, signature.bytes)
+            }
+        }
+        // Check that the right signing key, right nonce but wrong identity is rejected
+        val anonymousAlice = aliceNode.database.transaction {
+            aliceNode.services.keyManagementService.freshKeyAndCert(aliceNode.services.myInfo.legalIdentityAndCert, false)
+        }
+        bobNode.database.transaction {
+            bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.legalIdentityAndCert, false)
+        }.let { anonymousBob ->
+            val anonymousAliceBytes = SerializedBytes<PartyAndCertificate>(anonymousAlice.serialize().bytes)
+            val anonymousBobBytes = SerializedBytes<PartyAndCertificate>(anonymousBob.serialize().bytes)
+            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAliceBytes, nonce)
+            val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
+            assertFailsWith<IllegalArgumentException>("Signature does not match the given identity and nonce") {
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.bytes)
             }
         }
     }
