@@ -1,7 +1,5 @@
 package net.corda.testing.node
 
-import net.corda.core.internal.AbstractAttachment
-import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.PartyAndCertificate
@@ -37,16 +35,12 @@ import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
 import java.util.*
-import java.util.jar.JarInputStream
 
 // TODO: We need a single, rationalised unit testing environment that is usable for everything. Fix this!
 // That means it probably shouldn't be in the 'core' module, which lacks enough code to create a realistic test env.
@@ -214,34 +208,6 @@ class MockKeyManagementService(val identityService: IdentityService,
     override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(signableData)
-    }
-}
-
-class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
-    val files = HashMap<SecureHash, ByteArray>()
-
-    override fun openAttachment(id: SecureHash): Attachment? {
-        val f = files[id] ?: return null
-        return object : AbstractAttachment({ f }) {
-            override val id = id
-        }
-    }
-
-    override fun importAttachment(jar: InputStream): SecureHash {
-        // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
-        require(jar !is JarInputStream)
-
-        val bytes = run {
-            val s = ByteArrayOutputStream()
-            jar.copyTo(s)
-            s.close()
-            s.toByteArray()
-        }
-        val sha256 = bytes.sha256()
-        if (files.containsKey(sha256))
-            throw FileAlreadyExistsException(File("!! MOCK FILE NAME"))
-        files[sha256] = bytes
-        return sha256
     }
 }
 
