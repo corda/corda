@@ -187,7 +187,7 @@ class NodeTerminalView : Fragment() {
 
     private fun initialise(config: NodeConfig, ops: CordaRPCOps) {
         try {
-            val (txInit, txNext) = ops.verifiedTransactionsFeed()
+            val (txInit, txNext) = ops.internalVerifiedTransactionsFeed()
             val (stateInit, stateNext) = ops.vaultTrackBy<ContractState>(paging = pageSpecification)
 
             txCount = txInit.size
