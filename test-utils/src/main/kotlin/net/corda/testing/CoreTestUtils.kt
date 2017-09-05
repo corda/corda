@@ -163,3 +163,9 @@ inline fun <reified T : Any> kryoSpecific(reason: String, function: () -> Unit) 
 } else {
     loggerFor<T>().info("Ignoring Kryo specific test, reason: $reason" )
 }
+
+inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) = if(AMQP_ENABLED) {
+    function()
+} else {
+    loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason" )
+}
