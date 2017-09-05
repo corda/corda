@@ -15,7 +15,7 @@ local.properties
 # General build files
 **/build/*
 
-lib/*
+lib/dokka.jar
 
 **/logs/*
 
