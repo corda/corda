@@ -41,7 +41,6 @@ class TransactionEncumbranceTests {
         ) : ContractState {
             override val participants: List<AbstractParty> = emptyList()
             override val contract: Contract = TEST_TIMELOCK_ID
-            override val constraint get() = AlwaysAcceptAttachmentConstraint
         }
     }
 

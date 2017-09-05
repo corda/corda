@@ -1,6 +1,5 @@
 package net.corda.testing.contracts
 
-import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
 
@@ -10,5 +9,4 @@ import net.corda.core.identity.AbstractParty
 data class DummyState(val magicNumber: Int = 0) : ContractState {
     override val contract = DUMMY_PROGRAM_ID
     override val participants: List<AbstractParty> get() = emptyList()
-    override val constraint get() = AlwaysAcceptAttachmentConstraint
 }

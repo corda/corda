@@ -241,7 +241,6 @@ class ContractUpgradeFlowTest {
             override val exitKeys = (owners + amount.token.issuer.party).map { it.owningKey }.toSet()
             override val contract = CashV2()
             override val participants = owners
-            override val constraint get() = AlwaysAcceptAttachmentConstraint
 
             override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
             override fun toString() = "${Emoji.bagOfCash}New Cash($amount at ${amount.token.issuer} owned by $owner)"

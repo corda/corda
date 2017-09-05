@@ -81,11 +81,6 @@ interface ContractState {
      * The participants list should normally be derived from the contents of the state.
      */
     val participants: List<AbstractParty>
-
-    /**
-     * A validator for the contract attachments on the transaction.
-     */
-    val constraint: AttachmentConstraint
 }
 // DOCEND 1
 
@@ -117,7 +112,11 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          * Note that an encumbered state that is being consumed must have its encumbrance consumed in the same transaction,
          * otherwise the transaction is not valid.
          */
-        val encumbrance: Int? = null)
+        val encumbrance: Int? = null,
+        /**
+         * A validator for the contract attachments on the transaction.
+         */
+        val constraint: AttachmentConstraint = AlwaysAcceptAttachmentConstraint)
 // DOCEND 4
 
 /** Wraps the [ContractState] in a [TransactionState] object */

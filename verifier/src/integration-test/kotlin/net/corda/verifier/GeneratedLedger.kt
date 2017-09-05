@@ -182,7 +182,6 @@ data class GeneratedState(
         override val participants: List<AbstractParty>
 ) : ContractState {
     override val contract = DummyContract()
-    override val constraint get() = AlwaysAcceptAttachmentConstraint
 }
 
 class GeneratedAttachment(bytes: ByteArray) : AbstractAttachment({ bytes }) {

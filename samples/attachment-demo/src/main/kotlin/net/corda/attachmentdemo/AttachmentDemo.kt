@@ -4,7 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -188,6 +190,5 @@ class AttachmentContract : Contract {
     data class State(val hash: SecureHash.SHA256) : ContractState {
         override val contract: Contract = AttachmentContract()
         override val participants: List<AbstractParty> = emptyList()
-        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 }

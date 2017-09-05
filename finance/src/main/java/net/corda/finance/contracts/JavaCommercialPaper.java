@@ -96,12 +96,6 @@ public class JavaCommercialPaper implements Contract {
             return JCP_PROGRAM_ID;
         }
 
-        @NotNull
-        @Override
-        public AttachmentConstraint getConstraint() {
-            return AlwaysAcceptAttachmentConstraint.INSTANCE;
-        }
-
         @Override
         public boolean equals(Object that) {
             if (this == that) return true;

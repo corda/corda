@@ -1,7 +1,10 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
@@ -523,7 +526,6 @@ class SerializationOutputTests {
             get() = FooContract
         override val participants: List<AbstractParty>
             get() = emptyList()
-        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 
     @Test

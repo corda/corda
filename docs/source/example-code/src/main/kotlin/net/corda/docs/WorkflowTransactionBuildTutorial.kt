@@ -49,7 +49,6 @@ data class TradeApprovalContract(private val blank: Void? = null) : Contract {
 
         val parties: List<Party> get() = listOf(source, counterparty)
         override val participants: List<AbstractParty> get() = parties
-        override val constraint get() = AlwaysAcceptAttachmentConstraint
     }
 
     /**

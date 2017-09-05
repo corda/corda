@@ -1,10 +1,10 @@
 package net.corda.finance.contracts.asset
 
+import net.corda.core.contracts.*
 import net.corda.finance.contracts.NetCommand
 import net.corda.finance.contracts.NetType
 import net.corda.finance.contracts.NettableState
 import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
-import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AbstractParty
@@ -131,13 +131,12 @@ class Obligation<P : Any> : Contract {
             val quantity: Long,
             /** The public key of the entity the contract pays to */
             val beneficiary: AbstractParty
-    ) : FungibleAsset<Obligation.Terms<P>>, NettableState<State<P>, MultilateralNetState<P>> {
+    ) : FungibleAsset<Terms<P>>, NettableState<State<P>, MultilateralNetState<P>> {
         override val amount: Amount<Issued<Terms<P>>> = Amount(quantity, Issued(obligor.ref(0), template))
         override val contract = OBLIGATION_PROGRAM_ID
         override val exitKeys: Collection<PublicKey> = setOf(beneficiary.owningKey)
         val dueBefore: Instant = template.dueBefore
         override val participants: List<AbstractParty> = listOf(obligor, beneficiary)
-        override val constraint get() = AlwaysAcceptAttachmentConstraint
         override val owner: AbstractParty = beneficiary
 
         override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Terms<P>>>, newOwner: AbstractParty): State<P>

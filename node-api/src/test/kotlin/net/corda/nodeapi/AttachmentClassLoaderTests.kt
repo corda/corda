@@ -60,7 +60,6 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
             override val contract = ATTACHMENT_TEST_PROGRAM_ID
             override val participants: List<AbstractParty>
                 get() = listOf()
-            override val constraint get() = AlwaysAcceptAttachmentConstraint
         }
 
         interface Commands : CommandData {
