@@ -152,7 +152,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
-    override val contractUpgradeService: ContractUpgradeService = ContractUpgradeServiceImpl()
+    override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
     override val vaultQueryService: VaultQueryService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()

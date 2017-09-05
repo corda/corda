@@ -22,6 +22,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
+import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.VaultSchemaV1
 
 /**
@@ -54,7 +55,8 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     RaftUniquenessProvider.RaftState::class.java,
                     BFTNonValidatingNotaryService.PersistedCommittedState::class.java,
                     PersistentIdentityService.PersistentIdentity::class.java,
-                    PersistentIdentityService.PersistentIdentityNames::class.java
+                    PersistentIdentityService.PersistentIdentityNames::class.java,
+                    ContractUpgradeServiceImpl.DBContractUpgrade::class.java
                     ))
 
     // Required schemas are those used by internal Corda services

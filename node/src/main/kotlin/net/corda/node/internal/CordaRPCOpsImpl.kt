@@ -171,8 +171,6 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) = services.contractUpgradeService.authoriseContractUpgrade(state, upgradedContractClass)
-    override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.contractUpgradeService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
 
     override fun waitUntilNetworkReady(): CordaFuture<Void?> {
