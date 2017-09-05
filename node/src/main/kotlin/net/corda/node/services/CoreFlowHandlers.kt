@@ -1,13 +1,10 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.UpgradeCommand
-import net.corda.core.contracts.UpgradedContract
-import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
