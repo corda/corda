@@ -52,7 +52,7 @@ data class PartiallyResolvedTransaction(
  * This model provides an observable list of transactions and what state machines/flows recorded them
  */
 class TransactionDataModel {
-    private val transactions by observable(NodeMonitorModel::transactions)
+    private val transactions by Models.observable(NodeMonitorModel::transactions)
     private val collectedTransactions = transactions.recordInSequence()
     private val transactionMap = collectedTransactions.associateBy(SignedTransaction::id)
 
