@@ -126,7 +126,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
                     is DescribedType -> {
                         // Look up serializer in factory by descriptor
                         val serializer = serializerFactory.get(obj.descriptor, schema)
-                        if (serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) })
+                        if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) })
                             throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
                                     "expected to be of type $type but was ${serializer.type}")
                         serializer.readObject(obj.described, schema, this)
