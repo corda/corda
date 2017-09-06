@@ -6,7 +6,7 @@ public class Threads implements Runnable {
   }
 
   public static void main(String[] args) throws Exception {
-    ((Thread.UncaughtExceptionHandler) Thread.currentThread().getThreadGroup())
+    Thread.currentThread().getThreadGroup()
       .uncaughtException(Thread.currentThread(), new Exception());
 
     { Threads test = new Threads();

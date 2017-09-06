@@ -571,6 +571,7 @@ int printInstruction(uint8_t* code, unsigned& ip, const char* prefix)
       return fprintf(stderr, "wide astore %4d", read16(code, ip));
     case iinc:
       fprintf(stderr, "wide iinc %4d %4d", read16(code, ip), read16(code, ip));
+      /* fallthrough */
     case iload:
       return fprintf(stderr, "wide iload %4d", read16(code, ip));
     case istore:
@@ -582,10 +583,10 @@ int printInstruction(uint8_t* code, unsigned& ip, const char* prefix)
     case ret:
       return fprintf(stderr, "wide ret %4d", read16(code, ip));
 
-    default: {
+    default:
       fprintf(
           stderr, "unknown wide instruction %2d %4d", instr, read16(code, ip));
-    }
+      break;
     }
   }
 

@@ -296,6 +296,10 @@ object makeJconstructor(Thread* t, GcMethod* vmMethod, int index = -1);
 
 object makeJfield(Thread* t, GcField* vmField, int index = -1);
 
+void uncaughtException(Thread *t, GcThrowable *e);
+
+void disposeThread(Thread *t);
+
 #ifdef AVIAN_OPENJDK_SRC
 void interceptFileOperations(Thread*, bool);
 #endif
@@ -588,22 +592,15 @@ class MyClasspath : public Classpath {
     objectMonitor(t, t->javaThread, true);
 
     THREAD_RESOURCE0(t, {
-      vm::acquire(t, t->javaThread);
-      t->clearFlag(Thread::ActiveFlag);
-      vm::notifyAll(t, t->javaThread);
-      vm::release(t, t->javaThread);
-
       GcThrowable* e = t->exception;
-      PROTECT(t, e);
+      if (e != NULL) {
+        PROTECT(t, e);
 
-      t->exception = 0;
+        t->exception = NULL;
+        uncaughtException(t, e);
+      }
 
-      t->m->processor->invoke(t,
-                              cast<GcMethod>(t, roots(t)->threadTerminated()),
-                              t->javaThread->group(),
-                              t->javaThread);
-
-      t->exception = e;
+      disposeThread(t);
     });
 
     GcMethod* method = resolveMethod(
@@ -971,6 +968,43 @@ class EmbeddedFile {
   unsigned jarLength;
   unsigned pathLength;
 };
+
+void uncaughtException(Thread *t, GcThrowable *e)
+{
+  GcMethod* dispatch = resolveMethod(t,
+                                     roots(t)->bootLoader(),
+                                     "java/lang/Thread",
+                                     "dispatchUncaughtException",
+                                     "(Ljava/lang/Throwable;)V");
+  if (dispatch != NULL) {
+    THREAD_RESOURCE0(t, {
+      if (t->exception != NULL) {
+        // We ignore any exceptions from the uncaught
+        // exception handler itself.
+        t->exception = NULL;
+
+        // The stack will be unwound when this resource is
+        // released, which means that uncaughtException()
+        // will not return. So repeat the thread clean-up here.
+        disposeThread(t);
+      }
+    });
+
+    t->m->processor->invoke(t, dispatch, t->javaThread, e);
+  }
+}
+
+void disposeThread(Thread *t) {
+  vm::acquire(t, t->javaThread);
+  t->clearFlag(Thread::ActiveFlag);
+  vm::notifyAll(t, t->javaThread);
+  vm::release(t, t->javaThread);
+
+  t->m->processor->invoke(t,
+                          cast<GcMethod>(t, roots(t)->threadTerminated()),
+                          t->javaThread->group(),
+                          t->javaThread);
+}
 
 #ifdef AVIAN_OPENJDK_SRC
 int64_t JNICALL

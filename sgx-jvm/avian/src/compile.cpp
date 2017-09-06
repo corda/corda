@@ -4029,13 +4029,13 @@ bool isLambda(Thread* t,
               GcCharArray* bootstrapArray,
               GcInvocation* invocation)
 {
-  GcMethod* bootstrap = cast<GcMethod>(t,
+  GcMethod* bootstrap = cast<GcMethodHandle>(t,
                                        resolve(t,
                                                loader,
                                                invocation->pool(),
                                                bootstrapArray->body()[0],
                                                findMethodInClass,
-                                               GcNoSuchMethodError::Type));
+                                               GcNoSuchMethodError::Type))->method();
   PROTECT(t, bootstrap);
 
   return vm::strcmp(reinterpret_cast<const int8_t*>(
@@ -5191,20 +5191,18 @@ loop:
                                                  "I"
                                                  ")[B");
 
-              GcReference* reference = cast<GcReference>(
-                  t,
-                  singletonObject(
-                      t, invocation->pool(), bootstrapArray->body()[2]));
-              int kind = reference->kind();
-
-              GcMethod* method
-                  = cast<GcMethod>(t,
+              GcMethodHandle* handle
+                  = cast<GcMethodHandle>(t,
                                    resolve(t,
                                            c->loader(),
                                            invocation->pool(),
                                            bootstrapArray->body()[2],
                                            findMethodInClass,
                                            GcNoSuchMethodError::Type));
+
+              int kind = handle->kind();
+
+              GcMethod* method = handle->method();
 
               jarray lambda = e->vtable->CallStaticObjectMethod(
                   e,
