@@ -14,15 +14,15 @@ import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
-import net.corda.core.utilities.commonName
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.core.internal.readAllLines
+import net.corda.core.internal.writeLines
 import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
-import net.corda.core.internal.readAllLines
+import net.corda.core.utilities.commonName
 import net.corda.core.utilities.normaliseLegalName
 import net.corda.core.utilities.validateLegalName
-import net.corda.core.internal.writeLines
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
 import org.controlsfx.control.CheckListView
@@ -220,7 +220,7 @@ class NodeTabView : Fragment() {
                     imageview {
                         image = flags.get()[it.countryCode]
                     }
-                    label(it.description!!)
+                    label(it.description)
                     alignment = Pos.CENTER_LEFT
                 }
             }

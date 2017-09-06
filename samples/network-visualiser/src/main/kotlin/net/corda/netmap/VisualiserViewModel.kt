@@ -7,9 +7,9 @@ import javafx.scene.layout.StackPane
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
-import net.corda.core.utilities.commonName
 import net.corda.core.node.ScreenCoordinate
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.commonName
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
@@ -85,7 +85,7 @@ class VisualiserViewModel {
         // bottom left: -23.2031,29.8406
         // top right: 33.0469,64.3209
         try {
-            return node.place.coordinate!!.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
+            return node.place.coordinate.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
         } catch(e: Exception) {
             throw Exception("Cannot project ${node.info.legalIdentity}", e)
         }
