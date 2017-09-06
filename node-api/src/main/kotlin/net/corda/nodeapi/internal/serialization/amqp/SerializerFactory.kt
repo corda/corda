@@ -4,7 +4,6 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.nodeapi.internal.serialization.amqp.CollectionSerializer.Companion.deriveParameterizedType
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
@@ -71,19 +70,22 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
 
         val serializer = when {
             (Collection::class.java.isAssignableFrom(declaredClass) ||
-                    // declared class may not be set to Collection, but actual class could be a collection.
-                    // In this case use of CollectionSerializer is perfectly appropriate.
-                    (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) -> {
-
-                val declaredTypeAmended= deriveParameterizedType(declaredType, declaredClass, actualClass)
-
+                // declared class may not be set to Collection, but actual class could be a collection.
+                // In this case use of CollectionSerializer is perfectly appropriate.
+                (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) -> {
+                val declaredTypeAmended= CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
                 serializersByType.computeIfAbsent(declaredTypeAmended) {
                     CollectionSerializer(declaredTypeAmended, this)
                 }
             }
-            Map::class.java.isAssignableFrom(declaredClass) -> serializersByType.computeIfAbsent(declaredClass) {
-                makeMapSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
-                        declaredClass, arrayOf(AnyType, AnyType), null))
+            (Map::class.java.isAssignableFrom(declaredClass) ||
+                // declared class may not be set to Map, but actual class could be a map.
+                // In this case use of MapSerializer is perfectly appropriate.
+                (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
+                val declaredTypeAmended= MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                serializersByType.computeIfAbsent(declaredClass) {
+                    makeMapSerializer(declaredTypeAmended)
+                }
             }
             Enum::class.java.isAssignableFrom(declaredClass) -> serializersByType.computeIfAbsent(declaredClass) {
                 EnumSerializer(actualType, actualClass ?: declaredClass, this)
