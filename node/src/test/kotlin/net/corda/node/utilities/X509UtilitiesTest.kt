@@ -212,7 +212,7 @@ class X509UtilitiesTest {
         serverCertAndKey.certificate.isValidOn(Date())
         serverCertAndKey.certificate.isSignatureValid(JcaContentVerifierProviderBuilder().build(caCertAndKey.certificate.subjectPublicKeyInfo))
 
-        assertTrue { serverCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.organisation!!) }
+        assertTrue { serverCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.organisation) }
 
         // Load back server certificate
         val sslKeyStore = loadKeyStore(tmpSSLKeyStore, "serverstorepass")
@@ -221,7 +221,7 @@ class X509UtilitiesTest {
         sslCertAndKey.certificate.isValidOn(Date())
         sslCertAndKey.certificate.isSignatureValid(JcaContentVerifierProviderBuilder().build(serverCertAndKey.certificate.subjectPublicKeyInfo))
 
-        assertTrue { sslCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.organisation!!) }
+        assertTrue { sslCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.organisation) }
         // Now sign something with private key and verify against certificate public key
         val testData = "123456".toByteArray()
         val signature = Crypto.doSign(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, serverCertAndKey.keyPair.private, testData)

@@ -233,7 +233,7 @@ class NetworkMapVisualiser : Application() {
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New flow started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
-                    val label = if (extraLabel != null) "${node.info.legalIdentity.name.organisation}: $extraLabel" else node.info.legalIdentity.name.organisation!!
+                    val label = if (extraLabel != null) "${node.info.legalIdentity.name.organisation}: $extraLabel" else node.info.legalIdentity.name.organisation
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     println("Added: $tracker, $widget")
                     viewModel.trackerBoxes[tracker] = widget

@@ -40,7 +40,7 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
     val identityService: IdentityService = InMemoryIdentityService(trustRoot = trustRoot)
     val database: CordaPersistence = configureDatabase(config.dataSourceProperties, config.database, { NodeSchemaService() }, { InMemoryIdentityService(trustRoot = trustRoot) })
     val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
-    val executor = ServiceAffinityExecutor(config.myLegalName.organisation!!, 1)
+    val executor = ServiceAffinityExecutor(config.myLegalName.organisation, 1)
     // TODO: We should have a dummy service hub rather than change behaviour in tests
     val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port,
             MockNetworkMapCache(serviceHub = object : MockServiceHubInternal(database = database, configuration = config) {}), userService)

@@ -22,7 +22,7 @@ class NodeConfig(
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
     }
 
-    val commonName: String get() = legalName.organisation!!
+    val commonName: String get() = legalName.organisation
 
     /*
      * The configuration object depends upon the networkMap,

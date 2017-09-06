@@ -130,7 +130,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                            clusterSize: Int,
                            serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { baseDirectory(getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality!!, C = notaryName.country!!)) },
+                (0 until clusterSize).map { baseDirectory(getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country)) },
                 serviceType.id,
                 notaryName)
 
@@ -138,14 +138,14 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
         val masterNodeFuture = startNode(
-                getX500Name(O = "${notaryName.organisation}-0", L = notaryName.locality!!, C = notaryName.country!!),
+                getX500Name(O = "${notaryName.organisation}-0", L = notaryName.locality, C = notaryName.country),
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
                         "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else "")))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
-                    getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality!!, C = notaryName.country!!),
+                    getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
@@ -158,7 +158,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         }
     }
 
-    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.organisation!!.replace(WHITESPACE, "")
+    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.organisation.replace(WHITESPACE, "")
 
     private fun startNodeInternal(legalName: X500Name,
                                   platformVersion: Int,

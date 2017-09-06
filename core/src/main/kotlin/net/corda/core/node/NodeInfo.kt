@@ -45,6 +45,6 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
      */
     fun getWorldMapLocation(): WorldMapLocation? {
         val nodeOwnerLocation = legalIdentity.name.locality
-        return nodeOwnerLocation?.let { CityDatabase[it] }
+        return nodeOwnerLocation.let { CityDatabase[it] }
     }
 }

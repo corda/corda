@@ -34,7 +34,7 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
         val process = PtyProcess.exec(command, environment, workingDir)
 
         try {
-            return PtyProcessTtyConnector(name.organisation!!, process, UTF_8)
+            return PtyProcessTtyConnector(name.organisation, process, UTF_8)
         } catch (e: Exception) {
             process.destroyForcibly()
             process.waitFor(30, SECONDS)

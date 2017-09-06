@@ -181,7 +181,7 @@ data class VerifierDriverDSL(
     }
 
     private fun startVerificationRequestorInternal(name: X500Name, hostAndPort: NetworkHostAndPort): VerificationRequestorHandle {
-        val baseDir = driverDSL.driverDirectory / name.organisation!!
+        val baseDir = driverDSL.driverDirectory / name.organisation
         val sslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = baseDir
             override val keyStorePassword: String get() = "cordacadevpass"
@@ -249,8 +249,8 @@ data class VerifierDriverDSL(
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val processFuture = driverDSL.executorService.fork {
-            val verifierName = getX500Name(O = "verifier$id", L = "London", C = "GB")
-            val baseDirectory = driverDSL.driverDirectory / verifierName.organisation!!
+            val verifierName = getX500Name(O = "Verifier$id", L = "London", C = "GB")
+            val baseDirectory = driverDSL.driverDirectory / verifierName.organisation
             val config = createConfiguration(baseDirectory, address)
             val configFilename = "verifier.conf"
             writeConfig(baseDirectory, configFilename, config)

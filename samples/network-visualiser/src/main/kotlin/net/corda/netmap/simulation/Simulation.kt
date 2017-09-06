@@ -57,7 +57,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                              entropyRoot: BigInteger)
         : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, overrideServices, entropyRoot) {
         override fun findMyLocation(): WorldMapLocation? {
-            return configuration.myLegalName.locality?.let { CityDatabase[it] }
+            return configuration.myLegalName.locality.let { CityDatabase[it] }
         }
     }
 

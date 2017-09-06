@@ -1,4 +1,5 @@
 @file:JvmName("X500NameUtils")
+
 package net.corda.core.utilities
 
 import net.corda.core.internal.toX509CertHolder
@@ -12,11 +13,11 @@ import java.security.KeyPair
 import java.security.cert.X509Certificate
 
 val X500Name.commonName: String? get() = getRDNValueString(BCStyle.CN)
-val X500Name.organisation: String? get() = getRDNValueString(BCStyle.O)
 val X500Name.organisationUnit: String? get() = getRDNValueString(BCStyle.OU)
 val X500Name.state: String? get() = getRDNValueString(BCStyle.ST)
-val X500Name.locality: String? get() = getRDNValueString(BCStyle.L)
-val X500Name.country: String? get() = getRDNValueString(BCStyle.C)
+val X500Name.organisation: String get() = getRDNValueString(BCStyle.O) ?: throw IllegalArgumentException("Malformed X500 name, organisation attribute (O) cannot be empty.")
+val X500Name.locality: String get() = getRDNValueString(BCStyle.L) ?: throw IllegalArgumentException("Malformed X500 name, locality attribute (L) cannot be empty.")
+val X500Name.country: String get() = getRDNValueString(BCStyle.C) ?: throw IllegalArgumentException("Malformed X500 name, country attribute (C) cannot be empty.")
 
 private fun X500Name.getRDNValueString(identifier: ASN1ObjectIdentifier): String? = getRDNs(identifier).firstOrNull()?.first?.value?.toString()
 
@@ -24,7 +25,14 @@ val X509Certificate.subject: X500Name get() = toX509CertHolder().subject
 val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 /**
- * Generate a distinguished name from the provided values.
+ * Generate a distinguished name from the provided X500 .
+ *
+ * @param O organisation name.
+ * @param L locality
+ * @param C county
+ * @param CN common name
+ * @param OU organisation unit
+ * @param ST state
  */
 fun getX500Name(O: String, L: String, C: String, CN: String? = null, OU: String? = null, ST: String? = null): X500Name {
     return X500NameBuilder(BCStyle.INSTANCE).apply {
@@ -38,14 +46,12 @@ fun getX500Name(O: String, L: String, C: String, CN: String? = null, OU: String?
 }
 
 fun X500Name.withCommonName(commonName: String?): X500Name {
-    return getX500Name(organisation!!, locality!!, country!!, commonName, organisationUnit, state)
+    return getX500Name(organisation, locality, country, commonName, organisationUnit, state)
 }
 
 fun X500Name.toWellFormattedName(): X500Name {
-    require(organisation != null) { "Organisation (O) attribute is mandatory." }
-    require(locality != null) { "Locality (L) attribute is mandatory." }
-    require(country != null) { "country (C) attribute is mandatory." }
-    return getX500Name(organisation!!, locality!!, country!!, commonName, organisationUnit, state)
+    validateX500Name(this)
+    return getX500Name(organisation, locality, country, commonName, organisationUnit, state)
 }
 
 data class CertificateAndKeyPair(val certificate: X509CertificateHolder, val keyPair: KeyPair)

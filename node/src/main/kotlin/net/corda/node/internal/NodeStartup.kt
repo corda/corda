@@ -74,7 +74,7 @@ open class NodeStartup(val args: Array<String>) {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
         } catch (e: Exception) {
-            if (e.message?.startsWith("Unknown named curve:") == true) {
+            if (e.message?.startsWith("Unknown named curve:") ?: false) {
                 logger.error("Exception during node startup - ${e.message}. " +
                         "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             } else

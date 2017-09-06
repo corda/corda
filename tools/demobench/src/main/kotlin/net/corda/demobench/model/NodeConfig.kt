@@ -26,7 +26,7 @@ class NodeConfig(
         val defaultUser = user("guest")
     }
 
-    val nearestCity: String = legalName.locality ?: "Unknown location"
+    val nearestCity: String = legalName.locality
     val nodeDir: Path = baseDir.resolve(key)
     override val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")

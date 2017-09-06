@@ -61,7 +61,7 @@ fun testNodeConfiguration(
     whenever(nc.keyStorePassword).thenReturn("cordacadevpass")
     whenever(nc.trustStorePassword).thenReturn("trustpass")
     whenever(nc.rpcUsers).thenReturn(emptyList())
-    whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.organisation!!))
+    whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.organisation))
     whenever(nc.database).thenReturn(makeTestDatabaseProperties())
     whenever(nc.emailAddress).thenReturn("")
     whenever(nc.exportJMXto).thenReturn("")

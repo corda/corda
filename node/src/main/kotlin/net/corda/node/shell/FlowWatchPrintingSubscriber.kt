@@ -110,7 +110,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
         return when (flowInitiator) {
             is FlowInitiator.Scheduled ->  flowInitiator.scheduledState.ref.toString()
             is FlowInitiator.Shell -> "Shell" // TODO Change when we will have more information on shell user.
-            is FlowInitiator.Peer -> flowInitiator.party.name.organisation!!
+            is FlowInitiator.Peer -> flowInitiator.party.name.organisation
             is FlowInitiator.RPC -> "RPC: " + flowInitiator.username
         }
     }

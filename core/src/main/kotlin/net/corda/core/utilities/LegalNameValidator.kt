@@ -72,12 +72,12 @@ fun validateX500Name(x500Name: X500Name) {
         "The following attribute${if (unsupportedAttributes.size > 1) "s are" else " is"} not supported in Corda :$unsupportedAttributes"
     }
     // Legal name checks.
-    validateLegalName(x500Name.organisation!!)
+    validateLegalName(x500Name.organisation)
 
     // Attribute data width checks.
-    require(x500Name.country!!.length == 2) { "Invalid country '${x500Name.country}' Country code must be 2 letters ISO code " }
-    require(x500Name.organisation!!.length < 127) { "Organisation attribute (O) must contain less then 127 characters." }
-    require(x500Name.locality!!.length < 64) { "Locality attribute (L) must contain less then 64 characters." }
+    require(x500Name.country.length == 2) { "Invalid country '${x500Name.country}' Country code must be 2 letters ISO code " }
+    require(x500Name.organisation.length < 127) { "Organisation attribute (O) must contain less then 127 characters." }
+    require(x500Name.locality.length < 64) { "Locality attribute (L) must contain less then 64 characters." }
 
     x500Name.state?.let { require(it.length < 64) { "State attribute (ST) must contain less then 64 characters." } }
     x500Name.organisationUnit?.let { require(x500Name.organisationUnit!!.length < 64) { "Organisation Unit attribute (OU) must contain less then 64 characters." } }
