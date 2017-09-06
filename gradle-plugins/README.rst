@@ -10,6 +10,11 @@ the rest of the Corda libraries.
      currently known solution (such as publishing from buildSrc or setting up a separate project/repo) would
      introduce a two step build which is less convenient.
 
+Version number
+--------------
+
+TO modify the version number edit constants.properties in root dir
+
 Installing
 ----------
 
