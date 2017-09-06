@@ -19,12 +19,6 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import java.util.*
 
-fun Kryo.addToWhitelist(vararg types: Class<*>) {
-    for (type in types) {
-        ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassWhitelist)?.add(type)
-    }
-}
-
 /**
  * Corda specific class resolver which enables extra customisation for the purposes of serialization using Kryo
  */
