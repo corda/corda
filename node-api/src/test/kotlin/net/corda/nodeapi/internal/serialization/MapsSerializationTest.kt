@@ -7,6 +7,7 @@ import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
 import org.assertj.core.api.Assertions
 import org.junit.Test
+import org.bouncycastle.asn1.x500.X500Name
 import java.io.NotSerializableException
 
 class MapsSerializationTest : TestDependencyInjectionBase() {
@@ -38,5 +39,19 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
         val wrongPayloadType = WrongPayloadType(payload)
         Assertions.assertThatThrownBy { wrongPayloadType.serialize() }
                 .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive map type for declaredType")
+    }
+
+    @CordaSerializable
+    data class MyKey(val keyContent: Double)
+
+    @CordaSerializable
+    data class MyValue(val valueContent: X500Name)
+
+    @Test
+    fun `check map serialization works with custom types`() {
+        val myMap = mapOf(
+                MyKey(1.0) to MyValue(X500Name("CN=one")),
+                MyKey(10.0) to MyValue(X500Name("CN=ten")))
+        assertEqualAfterRoundTripSerialization(myMap)
     }
 }

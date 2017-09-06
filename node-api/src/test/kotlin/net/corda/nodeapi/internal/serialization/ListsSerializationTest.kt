@@ -16,6 +16,7 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
 
     @Test
     fun `check list can be serialized as root of serialization graph`() {
+        assertEqualAfterRoundTripSerialization(emptyList<Int>())
         assertEqualAfterRoundTripSerialization(listOf(1))
         assertEqualAfterRoundTripSerialization(listOf(1, 2))
     }
