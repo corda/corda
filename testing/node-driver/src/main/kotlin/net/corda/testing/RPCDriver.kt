@@ -1,9 +1,6 @@
 package net.corda.testing
 
 import net.corda.client.mock.Generator
-import net.corda.client.mock.generateOrFail
-import net.corda.client.mock.int
-import net.corda.client.mock.string
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
