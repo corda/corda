@@ -15,7 +15,7 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
     private val smallMap = mapOf("foo" to "bar", "buzz" to "bull")
 
     @Test
-    fun `check EmptyMap serialization`() {
+    fun `check EmptyMap serialization`() = amqpSpecific<MapsSerializationTest>("kotlin.collections.EmptyMap is not enabled for Kryo serialization") {
         assertEqualAfterRoundTripSerialization(emptyMap<Any, Any>())
     }
 
