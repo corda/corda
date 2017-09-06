@@ -170,7 +170,7 @@ object RPCApi {
             override fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REPLY.ordinal)
                 message.putLongProperty(RPC_ID_FIELD_NAME, id.toLong)
-                message.bodyBuffer.writeBytes(result.serialize(context = context).bytes)
+                message.bodyBuffer.writeBytes(result.safeSerialize(context) { Try.Failure(it) }.bytes)
             }
         }
 
@@ -181,11 +181,17 @@ object RPCApi {
             override fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.OBSERVATION.ordinal)
                 message.putLongProperty(OBSERVABLE_ID_FIELD_NAME, id.toLong)
-                message.bodyBuffer.writeBytes(content.serialize(context = context).bytes)
+                message.bodyBuffer.writeBytes(content.safeSerialize(context) { Notification.createOnError<Void?>(it) }.bytes)
             }
         }
 
         companion object {
+            private fun Any.safeSerialize(context: SerializationContext, wrap: (Throwable) -> Any) = try {
+                serialize(context = context)
+            } catch (t: Throwable) {
+                wrap(t).serialize(context = context)
+            }
+
             fun fromClientMessage(context: SerializationContext, message: ClientMessage): ServerToClient {
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
