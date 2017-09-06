@@ -50,8 +50,6 @@ object TwoPartyDealFlow {
         abstract val payload: Any
         abstract val notaryNode: NodeInfo
         abstract val otherParty: Party
-        // TODO: This is never read from, and should be removed
-        abstract val myKey: PublicKey
 
         @Suspendable override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
@@ -169,7 +167,6 @@ object TwoPartyDealFlow {
      */
     open class Instigator(override val otherParty: Party,
                           override val payload: AutoOffer,
-                          override val myKey: PublicKey,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
         override val notaryNode: NodeInfo get() =
         serviceHub.networkMapCache.notaryNodes.filter { it.notaryIdentity == payload.notary }.single()
