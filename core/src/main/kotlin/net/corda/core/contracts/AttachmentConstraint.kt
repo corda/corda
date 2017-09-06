@@ -1,5 +1,7 @@
 package net.corda.core.contracts
 
+import net.corda.core.serialization.CordaSerializable
+
 /** Constrain which contract-code-containing attachments can be used with a [ContractState]. */
 interface AttachmentConstraint {
     /** Returns whether the given contract attachments can be used with the [ContractState] associated with this constraint object. */
@@ -7,6 +9,7 @@ interface AttachmentConstraint {
 }
 
 /** An [AttachmentConstraint] where [isSatisfiedBy] always returns true. */
+@CordaSerializable
 object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachments: List<Attachment>) = true
 }
