@@ -57,8 +57,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         cordapps = ["net.corda:finance:$corda_release_version"]
-        databaseSchema "TRADER_DEMO_NOTARY"
-        //databaseTablePrefix "TRADER_DEMO_NOTARY"
+        // path to file with database properties for connecting to other database than embedded H2
+        additionalConfigFile "path_to_file"
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -67,8 +67,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcPort 10006
         cordapps = ["net.corda:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
-        databaseSchema "TRADER_DEMO_BANKA"
-        //databaseTablePrefix "TRADER_DEMO_BANKA"
+        // path to file with database properties for connecting to other database than embedded H2
+        additionalConfigFile "path_to_file"
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -77,8 +77,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcPort 10009
         cordapps = ["net.corda:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
-        databaseSchema "TRADER_DEMO_BANKB"
-        //databaseTablePrefix "TRADER_DEMO_BANKB"
+        // path to file with database properties for connecting to other database than embedded H2
+        additionalConfigFile "path_to_file"
     }
     node {
         name "O=BankOfCorda,L=New York,C=US"
@@ -87,8 +87,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcPort 10012
         cordapps = ["net.corda:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
-        databaseSchema "TRADER_DEMO_BANKC"
-        //databaseTablePrefix "TRADER_DEMO_BANKC"
+        // path to file with database properties for connecting to other database than embedded H2
+        additionalConfigFile "path_to_file"
     }
 }
 
