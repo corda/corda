@@ -89,7 +89,7 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
          * chosen generator.
          *
          * @param generators a list of probabilities of a generator being chosen, and generators. Probabilities must be
-         * non-negative, and should total to 1.0.
+         * non-negative.
          */
         fun <A> frequency(generators: List<Pair<Double, Generator<A>>>): Generator<A> {
             require(generators.all { it.first >= 0.0 }) { "Probabilities must not be negative" }
