@@ -46,12 +46,12 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
         Assertions.assertThatThrownBy { wrongPayloadType.serialize() }
                 .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive collection type for declaredType")
     }
+}
 
-    private inline fun<reified T : Any> assertEqualAfterRoundTripSerialization(obj: T) {
+internal inline fun<reified T : Any> assertEqualAfterRoundTripSerialization(obj: T) {
 
-        val serializedForm: SerializedBytes<T> = obj.serialize()
-        val deserializedInstance = serializedForm.deserialize()
+    val serializedForm: SerializedBytes<T> = obj.serialize()
+    val deserializedInstance = serializedForm.deserialize()
 
-        assertEquals(obj, deserializedInstance)
-    }
+    assertEquals(obj, deserializedInstance)
 }
