@@ -90,14 +90,11 @@ public class CordformNode implements NodeDefinition {
         config = config.withValue("bftSMaRt", ConfigValueFactory.fromMap(Collections.singletonMap("replicaId", id)));
     }
 
-    public void databaseSchema(String databaseSchema) {
-        config = config.withValue("database", ConfigValueFactory.fromMap(Collections.singletonMap("schema", databaseSchema)));
-    }
-
-    public void databaseTablePrefix(String databaseTablePrefix) {
-        config = config.withValue("database", ConfigValueFactory.fromMap(Collections.singletonMap("serverNameTablePrefix", databaseTablePrefix)));
-    }
-
+    /**
+     * Set the optional path to file wit properties file, which is appended to the generated node.conf file.
+     *
+     * @param additionalConfigFile The file path.
+     */
     public void additionalConfigFile(String additionalConfigFile) {
         config = config.withValue("additionalConfigFile", ConfigValueFactory.fromAnyRef(additionalConfigFile));
     }
