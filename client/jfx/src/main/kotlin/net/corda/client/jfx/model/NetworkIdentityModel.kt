@@ -14,7 +14,7 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import java.security.PublicKey
 
 class NetworkIdentityModel {
-    private val networkIdentityObservable by Models.observable(NodeMonitorModel::networkMap)
+    private val networkIdentityObservable by observable(NodeMonitorModel::networkMap)
 
     val networkIdentities: ObservableList<NodeInfo> =
             networkIdentityObservable.fold(FXCollections.observableArrayList()) { list, update ->
@@ -28,7 +28,7 @@ class NetworkIdentityModel {
                 list.addAll(update.node)
             }
 
-    private val rpcProxy by Models.observableValue(NodeMonitorModel::proxyObservable)
+    private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
 
     private val identityCache = CacheBuilder.newBuilder()
             .build<PublicKey, ObservableValue<NodeInfo?>>(CacheLoader.from {

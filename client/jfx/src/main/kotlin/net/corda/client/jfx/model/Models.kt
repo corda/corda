@@ -82,37 +82,5 @@ object Models {
         @Suppress("UNCHECKED_CAST")
         return model as M
     }
-
-    inline fun <reified M : Any> get(origin: KClass<*>): M = get(M::class, origin)
-
-    inline fun <reified M : Any, T> observable(noinline observableProperty: (M) -> Observable<T>) =
-            TrackedDelegate.ObservableDelegate(M::class, observableProperty)
-
-    inline fun <reified M : Any, T> observer(noinline observerProperty: (M) -> Observer<T>) =
-            TrackedDelegate.ObserverDelegate(M::class, observerProperty)
-
-    inline fun <reified M : Any, T> subject(noinline subjectProperty: (M) -> Subject<T, T>) =
-            TrackedDelegate.SubjectDelegate(M::class, subjectProperty)
-
-    inline fun <reified M : Any, T> eventStream(noinline streamProperty: (M) -> EventStream<T>) =
-            TrackedDelegate.EventStreamDelegate(M::class, streamProperty)
-
-    inline fun <reified M : Any, T> eventSink(noinline sinkProperty: (M) -> EventSink<T>) =
-            TrackedDelegate.EventSinkDelegate(M::class, sinkProperty)
-
-    inline fun <reified M : Any, T> observableValue(noinline observableValueProperty: (M) -> ObservableValue<T>) =
-            TrackedDelegate.ObservableValueDelegate(M::class, observableValueProperty)
-
-    inline fun <reified M : Any, T> writableValue(noinline writableValueProperty: (M) -> WritableValue<T>) =
-            TrackedDelegate.WritableValueDelegate(M::class, writableValueProperty)
-
-    inline fun <reified M : Any, T> objectProperty(noinline objectProperty: (M) -> ObjectProperty<T>) =
-            TrackedDelegate.ObjectPropertyDelegate(M::class, objectProperty)
-
-    inline fun <reified M : Any, T> observableList(noinline observableListProperty: (M) -> ObservableList<T>) =
-            TrackedDelegate.ObservableListDelegate(M::class, observableListProperty)
-
-    inline fun <reified M : Any, T> observableListReadOnly(noinline observableListProperty: (M) -> ObservableList<out T>) =
-            TrackedDelegate.ObservableListReadOnlyDelegate(M::class, observableListProperty)
 }
 
