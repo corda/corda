@@ -2,7 +2,6 @@ package com.r3.enclaves.txverify
 
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT

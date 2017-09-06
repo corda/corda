@@ -1,5 +1,4 @@
 apply plugin: 'kotlin'
-apply plugin: 'net.corda.plugins.quasar-utils'
 
 repositories {
     mavenLocal()
@@ -54,6 +53,11 @@ jar {
         configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
     }
     archiveName "corda-enclavelet.jar"
+    manifest {
+        attributes(
+            'Main-Class': 'com.r3.enclaves.txverify.Enclavelet',
+        )
+    }
 }
 
 task integrationTest(type: Test) {

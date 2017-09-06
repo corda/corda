@@ -44,6 +44,7 @@ fun verifyInEnclave(reqBytes: ByteArray) {
 // Note: This is only here for debugging purposes
 fun main(args: Array<String>) {
     Log.TRACE()
+    Class.forName("com.r3.enclaves.txverify.KryoVerifierSerializationScheme")
     val reqBytes = File(args[0]).readBytes()
     verifyInEnclave(reqBytes)
 }
