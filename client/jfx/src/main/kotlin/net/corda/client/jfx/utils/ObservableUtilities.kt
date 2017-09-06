@@ -1,3 +1,4 @@
+@file:JvmName("ObservableUtilities")
 package net.corda.client.jfx.utils
 
 import javafx.application.Platform

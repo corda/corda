@@ -1,3 +1,4 @@
+@file:JvmName("ObservableFold")
 package net.corda.client.jfx.utils
 
 import javafx.application.Platform
