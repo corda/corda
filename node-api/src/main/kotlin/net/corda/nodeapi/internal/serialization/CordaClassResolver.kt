@@ -139,7 +139,11 @@ object EmptyWhitelist : ClassWhitelist {
 }
 
 class BuiltInExceptionsWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = Throwable::class.java.isAssignableFrom(type) && type.`package`.name.startsWith("java.")
+    companion object {
+        private val packageName = "^(?:java|kotlin)[.]".toRegex()
+    }
+
+    override fun hasListed(type: Class<*>) = Throwable::class.java.isAssignableFrom(type) && packageName.containsMatchIn(type.`package`.name)
 }
 
 object AllWhitelist : ClassWhitelist {
