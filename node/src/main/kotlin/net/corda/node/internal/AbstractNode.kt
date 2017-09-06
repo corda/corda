@@ -76,6 +76,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
+import java.security.cert.CertPathValidatorException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.sql.Connection
@@ -662,9 +663,18 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filterNotNull()
                 .toTypedArray()
         val service = PersistentIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
-        services.networkMapCache.partyNodes.forEach {
-            service.verifyAndRegisterIdentity(it.legalIdentityAndCert)
-            it.advertisedServices.forEach { service.verifyAndRegisterIdentity(it.identity) }
+        services.networkMapCache.partyNodes.forEach { node ->
+            service.verifyAndRegisterIdentity(node.legalIdentityAndCert)
+            node.advertisedServices.forEach { advertisedService ->
+                // Distributed services currently have invalid certificates (they do not follow the name constraints
+                // of their signing certificate), so we can't register them.
+                // TODO: Fix distributed service identity generation then remove this try-catch
+                try {
+                    service.verifyAndRegisterIdentity(advertisedService.identity)
+                } catch(ex: CertPathValidatorException) {
+                    log.warn("Could not register service identity ${advertisedService.identity.name} with network map cache", ex)
+                }
+            }
         }
         services.networkMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
