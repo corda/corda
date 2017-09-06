@@ -10,7 +10,11 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.utilities.CertificateAndKeyPair
 import net.corda.core.utilities.getX500Name
+import net.corda.node.internal.AbstractNode
 import net.corda.node.utilities.X509Utilities
+import net.corda.node.utilities.getCertificateAndKeyPair
+import net.corda.node.utilities.loadKeyStore
+import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
@@ -62,11 +66,10 @@ val DUMMY_REGULATOR_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(1
 /** Dummy regulator for tests and simulations */
 val DUMMY_REGULATOR: Party get() = Party(getX500Name(O = "Regulator A", OU = "Corda", L = "Paris", C = "FR"), DUMMY_REGULATOR_KEY.public)
 
-val DUMMY_CA_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(110)) }
+val DUMMY_CA_KEY: KeyPair by lazy { DUMMY_CA.keyPair }
 val DUMMY_CA: CertificateAndKeyPair by lazy {
-    // TODO: Should be identity scheme
-    val cert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Dummy CA", OU = "Corda", O = "R3 Ltd", L = "London", C = "GB"), DUMMY_CA_KEY)
-    CertificateAndKeyPair(cert, DUMMY_CA_KEY)
+    val caKeyStore = loadKeyStore(AbstractNode::class.java.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+    caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA,"cordacadevkeypass")
 }
 
 fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public) ) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())

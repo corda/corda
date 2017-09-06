@@ -658,11 +658,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .filterNotNull()
                 .toTypedArray()
         val service = PersistentIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
-        services.networkMapCache.partyNodes.forEach { service.verifyAndRegisterIdentity(it.legalIdentityAndCert) }
+        val allIdAndCerts = services.networkMapCache.partyNodes.flatMap { it.legalIdentitiesAndCerts + it.legalIdentityAndCert }
+        allIdAndCerts.forEach { idAndCert -> service.verifyAndRegisterIdentity(idAndCert) }
         services.networkMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
-                service.verifyAndRegisterIdentity(mapChange.node.legalIdentityAndCert)
+                val idAndCerts = mapChange.node.legalIdentitiesAndCerts + mapChange.node.legalIdentityAndCert
+                idAndCerts.forEach { idAndCert -> service.verifyAndRegisterIdentity(idAndCert) }
             }
         }
         return service

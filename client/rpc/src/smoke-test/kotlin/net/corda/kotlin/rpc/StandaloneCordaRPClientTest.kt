@@ -53,13 +53,17 @@ class StandaloneCordaRPClientTest {
     private lateinit var connection: CordaRPCConnection
     private lateinit var notaryNode: NodeInfo
 
+    private val notaryLegalName = "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
+    private val notaryService = "corda.notary.validating"
+    private val notaryServiceName = "$notaryLegalName,OU=$notaryService"
+
     private val notaryConfig = NodeConfig(
-            legalName = getX500Name(O = "Notary Service", OU = "corda", L = "Zurich", C = "CH"),
-            p2pPort = port.andIncrement,
-            rpcPort = port.andIncrement,
-            webPort = port.andIncrement,
-            extraServices = listOf("corda.notary.validating"),
-            users = listOf(user)
+        legalName = getX500Name(notaryLegalName),
+        p2pPort = port.andIncrement,
+        rpcPort = port.andIncrement,
+        webPort = port.andIncrement,
+        extraServices = listOf(notaryService),
+        users = listOf(user)
     )
 
     @Before
@@ -69,7 +73,7 @@ class StandaloneCordaRPClientTest {
         notary = factory.create(notaryConfig)
         connection = notary.connect()
         rpcProxy = connection.proxy
-        notaryNode = fetchNotaryIdentity()
+        notaryNode = rpcProxy.networkMapSnapshot().single()
     }
 
     @After
@@ -129,7 +133,7 @@ class StandaloneCordaRPClientTest {
 
     @Test
     fun `test network map`() {
-        assertEquals(notaryConfig.legalName, notaryNode.legalIdentity.name)
+        assertEquals(X500Name(notaryServiceName), notaryNode.notaryIdentity.name)
     }
 
     @Test
@@ -209,7 +213,7 @@ class StandaloneCordaRPClientTest {
         println(startCash)
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
-        val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 629.DOLLARS, OpaqueBytes.of(0), notaryNode.legalIdentity)
+        val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 629.DOLLARS, OpaqueBytes.of(0), notaryNode.notaryIdentity)
         println("Started issuing cash, waiting on result")
         flowHandle.returnValue.get()
 
@@ -218,10 +222,14 @@ class StandaloneCordaRPClientTest {
         assertEquals(629.DOLLARS, balance)
     }
 
-    private fun fetchNotaryIdentity(): NodeInfo {
-        val nodeInfo = rpcProxy.networkMapSnapshot()
-        assertEquals(1, nodeInfo.size)
-        return nodeInfo[0]
+    @Test
+    fun `test party retrieval by X500 name`() {
+        rpcProxy.partyFromX500Name(X500Name(notaryLegalName))!!
+    }
+
+    @Test
+    fun `test party retrieval by X500 service name`() {
+        rpcProxy.partyFromX500Name(X500Name(notaryServiceName))!!
     }
 
     // This InputStream cannot have been whitelisted.
