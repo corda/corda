@@ -1,9 +1,9 @@
 package net.corda.node.services.config
 
-import net.corda.core.utilities.commonName
+import net.corda.core.utilities.organisation
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.ALICE
 import net.corda.nodeapi.User
+import net.corda.testing.ALICE
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -21,7 +21,7 @@ class FullNodeConfigurationTest {
                 emailAddress = "",
                 keyStorePassword = "cordacadevpass",
                 trustStorePassword = "trustpass",
-                dataSourceProperties = makeTestDataSourceProperties(ALICE.name.commonName),
+                dataSourceProperties = makeTestDataSourceProperties(ALICE.name.organisation),
                 database = makeTestDatabaseProperties(),
                 certificateSigningService = URL("http://localhost"),
                 rpcUsers = emptyList(),

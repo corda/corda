@@ -17,9 +17,9 @@ notary/network map node:
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
-        networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+        networkMap "O=Controller,OU=corda,L=London,C=UK"
         node {
-            name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+            name "O=Controller,OU=corda,L=London,C=UK"
             advertisedServices = ["corda.notary.validating"]
             p2pPort 10002
             rpcPort 10003

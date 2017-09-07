@@ -10,19 +10,19 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
 import net.corda.node.internal.AbstractNode
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.NodeBasedTest
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class RaftNotaryServiceTests : NodeBasedTest() {
-    private val notaryName = X500Name("CN=RAFT Notary Service,O=R3,OU=corda,L=London,C=GB")
+    private val notaryName = getX500Name(O = "RAFT Notary Service", OU = "corda", L = "London", C = "GB")
 
     @Test
     fun `detect double spend`() {

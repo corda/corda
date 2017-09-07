@@ -152,7 +152,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     id,
                     serverThread,
                     makeServiceEntries(),
-                    configuration.myLegalName,
+                    myLegalName,
                     database)
                     .start()
                     .getOrThrow()
@@ -303,7 +303,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val id = forcedID ?: nextNodeId++
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(id).createDirectories(),
-                myLegalName = legalName ?: getTestX509Name("Mock Company $id")).also {
+                myLegalName = legalName ?: getX500Name(O = "Mock Company $id", L = "London", C = "GB")).also {
             whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
             configOverrides(it)
         }

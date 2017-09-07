@@ -279,11 +279,11 @@ and adds an RPC user for all but the "Controller" node (which serves as the nota
         // No permissions required as we are not invoking flows.
         val user = User("user1", "test", permissions = setOf())
         driver(isDebug = true) {
-            startNode(X500Name("CN=Controller,O=R3,OU=corda,L=London,C=UK"), setOf(ServiceInfo(ValidatingNotaryService.type)))
+            startNode(getX500Name(O="Controller",OU="corda",L="London",C='UK"), setOf(ServiceInfo(ValidatingNotaryService.type)))
             val (nodeA, nodeB, nodeC) = Futures.allAsList(
-                    startNode(X500Name("CN=NodeA,O=NodeA,L=London,C=UK"), rpcUsers = listOf(user)),
-                    startNode(X500Name("CN=NodeB,O=NodeB,L=New York,C=US"), rpcUsers = listOf(user)),
-                    startNode(X500Name("CN=NodeC,O=NodeC,L=Paris,C=FR"), rpcUsers = listOf(user))).getOrThrow()
+                    startNode(getX500Name(O="NodeA",L="London",C="UK"), rpcUsers = listOf(user)),
+                    startNode(getX500Name(O="NodeB",L="New York",C="US"), rpcUsers = listOf(user)),
+                    startNode(getX500Name(O="NodeC",L="Paris",C="FR"), rpcUsers = listOf(user))).getOrThrow()
 
             startWebserver(nodeA)
             startWebserver(nodeB)
@@ -454,7 +454,7 @@ We can see a list of the states in our node's vault using ``run vaultAndUpdates`
           participants:
           - "CN=NodeB,O=NodeB,L=New York,C=US"
           - "CN=NodeA,O=NodeA,L=London,C=UK"
-        notary: "CN=Controller,O=R3,OU=corda,L=London,C=UK,OU=corda.notary.validating"
+        notary: "O=Controller,OU=corda,L=London,C=UK,OU=corda.notary.validating"
         encumbrance: null
       ref:
         txhash: "52A1B18E6ABD535EF36B2075469B01D2EF888034F721C4BECD26F40355C8C9DC"
@@ -488,14 +488,14 @@ abbreviated the output below):
             participants:
             - "CN=NodeB,O=NodeB,L=New York,C=US"
             - "CN=NodeA,O=NodeA,L=London,C=UK"
-          notary: "CN=Controller,O=R3,OU=corda,L=London,C=UK,OU=corda.notary.validating"
+          notary: "O=Controller,OU=corda,L=London,C=UK,OU=corda.notary.validating"
           encumbrance: null
         commands:
         - value: {}
           signers:
           - "8Kqd4oWdx4KQAVc3u5qvHZTGJxMtrShFudAzLUTdZUzbF9aPQcCZD5KXViC"
           - "8Kqd4oWdx4KQAVcBx98LBHwXwC3a7hNptQomrg9mq2ScY7t1Qqsyk5dCNAr"
-        notary: "CN=Controller,O=R3,OU=corda,L=London,C=UK,OU=corda.notary.validating"
+        notary: "O=Controller,OU=corda,L=London,C=UK,OU=corda.notary.validating"
         type: {}
         timeWindow: null
         mustSign:
@@ -578,11 +578,11 @@ Debugging is done via IntelliJ as follows:
         // No permissions required as we are not invoking flows.
         val user = User("user1", "test", permissions = setOf())
         driver(isDebug = true) {
-            startNode(X500Name("CN=Controller,O=R3,OU=corda,L=London,C=UK"), setOf(ServiceInfo(ValidatingNotaryService.type)))
+            startNode(getX500Name(O="Controller",OU="corda",L="London",C="UK"), setOf(ServiceInfo(ValidatingNotaryService.type)))
             val (nodeA, nodeB, nodeC) = Futures.allAsList(
-                    startNode(X500Name("CN=NodeA,O=NodeA,L=London,C=UK"), rpcUsers = listOf(user)),
-                    startNode(X500Name("CN=NodeB,O=NodeB,L=New York,C=US"), rpcUsers = listOf(user)),
-                    startNode(X500Name("CN=NodeC,O=NodeC,L=Paris,C=FR"), rpcUsers = listOf(user))).getOrThrow()
+                    startNode(getX500Name(O="NodeA",L=London,C=UK"), rpcUsers = listOf(user)),
+                    startNode(getX500Name(O="NodeB",L=New York,C=US"), rpcUsers = listOf(user)),
+                    startNode(getX500Name(O="NodeC",L=Paris,C=FR"), rpcUsers = listOf(user))).getOrThrow()
 
             startWebserver(nodeA)
             startWebserver(nodeB)
