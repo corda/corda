@@ -10,7 +10,7 @@ UNRELEASED
 
 * The ``Cordformation`` gradle plugin has been split into ``cordformation`` and ``cordapp``. The former builds and
   deploys nodes for development and testing, the latter turns a project into a cordapp project that generates JARs in
-  the standard CorDapp format.   
+  the standard CorDapp format.
 
 * ``Cordform`` and node identity generation
   * Cordform may not specify a value for ``NetworkMap``, when that happens, during the task execution the following happens:
@@ -29,6 +29,9 @@ UNRELEASED
   services. The remaining use of this config was for notaries, the configuring of which has been cleaned up and simplified.
   ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` have also been removed and replaced by a single
   ``notary`` config object. See :doc:`corda-configuration-file` for more details.
+
+* Gradle task ``deployNodes`` can have an additional parameter `configFile` with the path to a properties file
+  to be appended to node.conf.
 
 .. _changelog_v1:
 
