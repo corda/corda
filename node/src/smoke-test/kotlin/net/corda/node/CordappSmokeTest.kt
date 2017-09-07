@@ -9,11 +9,11 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
@@ -28,7 +28,7 @@ class CordappSmokeTest {
     private val factory = NodeProcess.Factory()
 
     private val aliceConfig = NodeConfig(
-            legalName = X500Name("CN=Alice Corp,O=Alice Corp,L=Madrid,C=ES"),
+            legalName = getX500Name(O = "Alice Corp", L = "Madrid", C = "ES"),
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             webPort = port.andIncrement,

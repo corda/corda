@@ -25,9 +25,9 @@ Let's take a look at the nodes we're going to deploy. Open the project's ``build
 
         task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             directory "./build/nodes"
-            networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+            networkMap "O=Controller,OU=corda,L=London,C=UK"
             node {
-                name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+                name "O=Controller,OU=corda,L=London,C=UK"
                 advertisedServices = ["corda.notary.validating"]
                 p2pPort 10002
                 rpcPort 10003
@@ -156,7 +156,7 @@ The vaults of Node A and Node B should both display the following output:
           participants:
           - "CN=NodeA,O=NodeA,L=London,C=GB"
           - "CN=NodeB,O=NodeB,L=New York,C=US"
-        notary: "CN=Controller,O=R3,OU=corda,L=London,C=GB,OU=corda.notary.validating"
+        notary: "O=Controller,OU=corda,L=London,C=GB,OU=corda.notary.validating"
         encumbrance: null
       ref:
         txhash: "656A1BF64D5AEEC6F6C944E287F34EF133336F5FC2C5BFB9A0BFAE25E826125F"

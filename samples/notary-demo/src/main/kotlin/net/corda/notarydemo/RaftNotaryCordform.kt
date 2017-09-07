@@ -3,17 +3,16 @@ package net.corda.notarydemo
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
-import net.corda.core.utilities.getX500Name
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getX500Name
 import net.corda.demorun.runNodes
 import net.corda.demorun.util.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
-import org.bouncycastle.asn1.x500.X500Name
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
 
@@ -22,7 +21,7 @@ internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { g
 private val notaryNames = createNotaryNames(3)
 
 object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0]) {
-    private val clusterName = X500Name("CN=Raft,O=R3,OU=corda,L=Zurich,C=CH")
+    private val clusterName = getX500Name(O = "Raft", OU = "corda", L = "Zurich", C = "CH")
     private val advertisedService = ServiceInfo(RaftValidatingNotaryService.type, clusterName)
 
     init {

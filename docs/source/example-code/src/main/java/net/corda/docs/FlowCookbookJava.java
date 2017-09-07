@@ -16,19 +16,17 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
-import net.corda.core.transactions.WireTransaction;
 import net.corda.core.utilities.ProgressTracker;
 import net.corda.core.utilities.ProgressTracker.Step;
 import net.corda.core.utilities.UntrustworthyData;
+import net.corda.core.utilities.X500NameUtils;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.testing.contracts.DummyContract;
 import net.corda.testing.contracts.DummyState;
-import org.bouncycastle.asn1.x500.X500Name;
 import org.jetbrains.annotations.NotNull;
 
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
-import java.security.SignatureException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -124,7 +122,7 @@ public class FlowCookbookJava {
             //   - To serve as a timestamping authority if the transaction has a time-window
             // We retrieve a notary from the network map.
             // DOCSTART 1
-            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(new X500Name("CN=Notary Service,O=R3,OU=corda,L=London,C=UK"));
+            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(X500NameUtils.getX500Name("Notary Service", "London", "UK"));
             Party anyNotary = getServiceHub().getNetworkMapCache().getAnyNotary(null);
             // Unlike the first two methods, ``getNotaryNodes`` returns a
             // ``List<NodeInfo>``. We have to extract the notary identity of
@@ -135,7 +133,7 @@ public class FlowCookbookJava {
             // We may also need to identify a specific counterparty.
             // Again, we do so using the network map.
             // DOCSTART 2
-            Party namedCounterparty = getServiceHub().getNetworkMapCache().getNodeByLegalName(new X500Name("CN=NodeA,O=NodeA,L=London,C=UK")).getLegalIdentity();
+            Party namedCounterparty = getServiceHub().getNetworkMapCache().getNodeByLegalName(X500NameUtils.getX500Name("NodeA", "London", "UK")).getLegalIdentity();
             Party keyedCounterparty = getServiceHub().getNetworkMapCache().getNodeByLegalIdentityKey(dummyPubKey).getLegalIdentity();
             Party firstCounterparty = getServiceHub().getNetworkMapCache().getPartyNodes().get(0).getLegalIdentity();
             // DOCEND 2

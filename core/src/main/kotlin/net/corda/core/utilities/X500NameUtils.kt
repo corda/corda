@@ -28,12 +28,13 @@ val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConver
  * Generate a distinguished name from the provided X500 .
  *
  * @param O organisation name.
- * @param L locality
- * @param C county
- * @param CN common name
- * @param OU organisation unit
- * @param ST state
+ * @param L locality.
+ * @param C county.
+ * @param CN common name.
+ * @param OU organisation unit.
+ * @param ST state.
  */
+@JvmOverloads
 fun getX500Name(O: String, L: String, C: String, CN: String? = null, OU: String? = null, ST: String? = null): X500Name {
     return X500NameBuilder(BCStyle.INSTANCE).apply {
         addRDN(BCStyle.C, C)
