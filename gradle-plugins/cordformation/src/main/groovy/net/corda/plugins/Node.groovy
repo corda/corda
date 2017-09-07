@@ -180,6 +180,24 @@ class Node extends CordformNode {
     private void installConfig() {
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
 
+        // Appending properties from an optional file
+        final configFileProperty = "configFile"
+        File additionalConfig
+        if (project.findProperty(configFileProperty)) { //provided by -PconfigFile command line property when running Gradle task
+            additionalConfig = new File(project.findProperty(configFileProperty))
+        } else if (config.hasPath(configFileProperty)) {
+            additionalConfig = new File(config.getString(configFileProperty))
+        }
+        if (additionalConfig) {
+            if (!additionalConfig.exists()) {
+                println "File additionalConfigFile '" + additionalConfig + "' not exist"
+            } else {
+                additionalConfig.eachLine {
+                    line -> configFileText << line
+                }
+            }
+        }
+
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
         def tmpDir = new File(project.buildDir, "tmp")
         def tmpConfFile = new File(tmpDir, 'node.conf')
