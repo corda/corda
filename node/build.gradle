@@ -211,3 +211,7 @@ jar {
 publish {
     name jar.baseName
 }
+
+test {
+    systemProperty "net.corda.node.cordapp.scan.package", "net.corda.testing.schemas"
+}

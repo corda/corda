@@ -55,6 +55,12 @@ integration points and not necessarily with every upgrade to the contract code. 
 ``MappedSchema`` offered by a ``QueryableState``, automatically upgrade to a later version of a schema or even
 provide a ``MappedSchema`` not originally offered by the ``QueryableState``.
 
+.. note:: custom contract schemas should be registered in an associated `CordaPluginRegistry` configuration for the 
+   respective CorDapp using the ``requiredSchemas`` configuration field (which specifies a set of `MappedSchema`).
+   Alternatively you may pass the package location of the custom schemas to the ``net.corda.node.cordapp.scan.package` 
+   system property (for example -Dnet.corda.node.cordapp.scan.package="net.corda.testing.schemas"). This approach is
+   recommended for Unit tests using the ``MockNetwork`` test framework.
+
 It is expected that multiple different contract state implementations might provide mappings to some common schema.
 For example an Interest Rate Swap contract and an Equity OTC Option contract might both provide a mapping to a common
 Derivative schema. The schemas should typically not be part of the contract itself and should exist independently of it

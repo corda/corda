@@ -83,6 +83,8 @@ class HibernateObserverTests {
         val testSchema = object : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {}
         val rawUpdatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()
         val schemaService = object : SchemaService {
+            override fun registerCustomSchemas(customSchemas: Set<MappedSchema>) {}
+
             override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = emptyMap()
 
             override fun selectSchemas(state: ContractState): Iterable<MappedSchema> = setOf(testSchema)

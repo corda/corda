@@ -24,6 +24,7 @@ import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
@@ -214,6 +215,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             installCordaServices()
             registerCordappFlows()
             _services.rpcFlows += cordappLoader.findRPCFlows()
+            _services.schemaService.registerCustomSchemas(findCustomSchemas(scanResult))
 
             runOnStop += network::stop
         }
