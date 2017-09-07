@@ -13,8 +13,8 @@ import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.cert
 import net.corda.core.utilities.loggerFor
+import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
-import net.corda.node.utilities.PersistentMap
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
@@ -40,8 +40,8 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         private val log = loggerFor<PersistentIdentityService>()
         private val certFactory: CertificateFactory = CertificateFactory.getInstance("X.509")
 
-        fun createPKMap(): PersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
-            return PersistentMap(
+        fun createPKMap(): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
+            return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
                         Pair(SecureHash.parse(it.publicKeyHash),
@@ -56,8 +56,8 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             )
         }
 
-        fun createX500Map(): PersistentMap<X500Name, SecureHash, PersistentIdentityNames, String> {
-            return PersistentMap(
+        fun createX500Map(): AppendOnlyPersistentMap<X500Name, SecureHash, PersistentIdentityNames, String> {
+            return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(X500Name(it.name), SecureHash.parse(it.publicKeyHash)) },
                     toPersistentEntity = { key: X500Name, value: SecureHash ->
@@ -104,10 +104,13 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     init {
         val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
         caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
-        keyToParties.putAll(identities.associateBy { mapToKey(it) })
-        principalToParties.putAll(identities.associateBy({ it.name }, { mapToKey(it) }))
-        confidentialIdentities.forEach { identity ->
-            principalToParties.computeIfAbsent(identity.name) { mapToKey(identity) }
+        identities.forEach {
+            val key = mapToKey(it)
+            keyToParties.addWithDuplicatesAllowed(key, it)
+            principalToParties.addWithDuplicatesAllowed(it.name, key)
+        }
+        confidentialIdentities.forEach {
+            principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it))
         }
     }
 
@@ -122,9 +125,10 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         identity.verify(trustAnchor)
 
         log.info("Registering identity $identity")
-        keyToParties[mapToKey(identity)] = identity
+        val key = mapToKey(identity)
+        keyToParties.addWithDuplicatesAllowed(key, identity)
         // Always keep the first party we registered, as that's the well known identity
-        principalToParties.computeIfAbsent(identity.name) { mapToKey(identity) }
+        principalToParties.addWithDuplicatesAllowed(identity.name, key)
         val parentId = mapToKey(identity.certPath.certificates[1].publicKey)
         return keyToParties[parentId]
     }
@@ -140,7 +144,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     override fun certificateFromParty(party: Party): PartyAndCertificate = certificateFromX500Name(party.name) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
 
     // We give the caller a copy of the data set to avoid any locking problems
-    override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
+    override fun getAllIdentities(): Iterable<PartyAndCertificate> = keyToParties.allPersisted().map { it.second }.asIterable()
 
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
     override fun partyFromX500Name(principal: X500Name): Party? = certificateFromX500Name(principal)?.party
@@ -166,7 +170,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
-        for ((x500name, partyId) in principalToParties) {
+        for ((x500name, partyId) in principalToParties.allPersisted()) {
             val party = keyToParties[partyId]!!.party
             for (rdn in x500name.rdNs) {
                 val component = rdn.first.value.toString()
