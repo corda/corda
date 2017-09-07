@@ -152,7 +152,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected val myLegalName: CordaX500Name by lazy {
         val cert = loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_CA)
-        CordaX500Name.build(cert.subject).copy(CN = null)
+        CordaX500Name.build(cert.subject).copy(commonName = null)
     }
 
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
@@ -696,9 +696,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         val (id, name) = if (serviceInfo == null) {
             // Create node identity if service info = null
-            Pair("identity", myLegalName.copy(CN = null))
+            Pair("identity", myLegalName.copy(commonName = null))
         } else {
-            val name = serviceInfo.name ?: myLegalName.copy(CN =serviceInfo.type.id)
+            val name = serviceInfo.name ?: myLegalName.copy(commonName = serviceInfo.type.id)
             Pair(serviceInfo.type.id, name)
         }
 

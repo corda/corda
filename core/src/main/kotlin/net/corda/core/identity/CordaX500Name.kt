@@ -11,21 +11,26 @@ import org.bouncycastle.asn1.x500.style.BCStyle
  * X.500 distinguished name data type customised to how Corda uses names. This restricts the attributes to those Corda
  * supports, and requires that O, L and C attributes are specified.
  *
- * @property O name of the organisation.
- * @property L locality of the organisation, typically nearest major city.
- * @property C country the organisation is in, as an ISO 3166-1 2-letter country code.
+ * @property organisation name of the organisation.
+ * @property locality locality of the organisation, typically nearest major city.
+ * @property country country the organisation is in, as an ISO 3166-1 2-letter country code.
  */
 @CordaSerializable
-data class CordaX500Name(val CN: String?,
-                         val OU: String?,
-                         val O: String,
-                         val L: String,
-                         val ST: String?,
-                         val C: String) {
+data class CordaX500Name(val commonName: String?,
+                         val organisationalUnit: String?,
+                         val organisation: String,
+                         val locality: String,
+                         val state: String?,
+                         val country: String) {
     init {
         // TODO: validateX500Name(config.myLegalName)
     }
     constructor(CN: String, O: String, L: String, C: String) : this(null, CN, O, L, null, C)
+    /**
+     * @param O name of the organisation.
+     * @param L locality of the organisation, typically nearest major city.
+     * @param C country the organisation is in, as an ISO 3166-1 2-letter country code.
+     */
     constructor(O: String, L: String, C: String) : this(null, null, O, L, null, C)
 
     companion object {
@@ -70,19 +75,6 @@ data class CordaX500Name(val CN: String?,
         }
     }
 
-    val commonName: String?
-        get() = CN
-    val organisationalUnit: String?
-        get() = OU
-    val organisation: String
-        get() = O
-    val locality: String
-        get() = L
-    val state: String?
-        get() = ST
-    val country: String
-        get() = C
-
     @Transient
     private var x500Cache: X500Name? = null
 
@@ -96,12 +88,12 @@ data class CordaX500Name(val CN: String?,
         get() {
             if (x500Cache == null) {
                 x500Cache = X500NameBuilder(BCStyle.INSTANCE).apply {
-                    addRDN(BCStyle.C, C)
-                    ST?.let { addRDN(BCStyle.ST, it) }
-                    addRDN(BCStyle.L, L)
-                    addRDN(BCStyle.O, O)
-                    OU?.let { addRDN(BCStyle.OU, it) }
-                    CN?.let { addRDN(BCStyle.CN, it) }
+                    addRDN(BCStyle.C, country)
+                    state?.let { addRDN(BCStyle.ST, it) }
+                    addRDN(BCStyle.L, locality)
+                    addRDN(BCStyle.O, organisation)
+                    organisationalUnit?.let { addRDN(BCStyle.OU, it) }
+                    commonName?.let { addRDN(BCStyle.CN, it) }
                 }.build()
             }
             return x500Cache!!
