@@ -124,6 +124,8 @@ UNRELEASED
   directly build a ``FilteredTransaction`` using provided filtering functions, without first accessing the
   ``tx: WireTransaction``.
 
+* Test type ``NodeHandle`` now has method ``stop(): CordaFuture<Unit>`` that terminates the referenced node.
+
 Milestone 14
 ------------
 

@@ -221,6 +221,9 @@ sealed class NodeHandle {
 
     fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!, initialiseSerialization = false)
 
+    /**
+     * Stops the referenced node.
+     */
     abstract fun stop(): CordaFuture<Unit>
 }
 
