@@ -42,7 +42,7 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
 
     private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = CacheBuilder.newBuilder().weakValues().maximumSize(1024).build()
 
-    // we need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context
+    // We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
         properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean ?: false || return this
         val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContextImpl ?: return this // Some tests don't set one.
