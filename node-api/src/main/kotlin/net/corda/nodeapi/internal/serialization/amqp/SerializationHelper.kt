@@ -37,7 +37,7 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
         val kotlinConstructors = clazz.kotlin.constructors
         val hasDefault = kotlinConstructors.any { it.parameters.isEmpty() }
         for (kotlinConstructor in kotlinConstructors) {
-            if (preferredCandidate == null && kotlinConstructors.size == 1 && !hasDefault) {
+            if (preferredCandidate == null && kotlinConstructors.size == 1) {
                 preferredCandidate = kotlinConstructor
             } else if (preferredCandidate == null && kotlinConstructors.size == 2 && hasDefault && kotlinConstructor.parameters.isNotEmpty()) {
                 preferredCandidate = kotlinConstructor
