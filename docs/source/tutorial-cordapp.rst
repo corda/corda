@@ -531,7 +531,7 @@ Green Arrow to run the client. You can edit the run configuration to connect on 
 
 Run the following gradle task:
 
-``./gradlew runExampleClientRPC localhost:10007``
+``./gradlew runExampleClientRPCKotlin localhost:10007``
 
 You can close the application using ``ctrl+C``.
 
