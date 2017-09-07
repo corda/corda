@@ -76,6 +76,9 @@ fun validateX500Name(x500Name: X500Name) {
 
     // Attribute data width checks.
     require(x500Name.country.length == 2) { "Invalid country '${x500Name.country}' Country code must be 2 letters ISO code " }
+    require(x500Name.country.toUpperCase() == x500Name.country) { "Country code should be in upper case." }
+    require(countryCodes.contains(x500Name.country)) { "Invalid country code '${x500Name.country}'" }
+
     require(x500Name.organisation.length < 127) { "Organisation attribute (O) must contain less then 127 characters." }
     require(x500Name.locality.length < 64) { "Locality attribute (L) must contain less then 64 characters." }
 
