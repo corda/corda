@@ -726,7 +726,7 @@ class DriverDSL(
             rpcUsers: List<User>,
             startInSameProcess: Boolean?
     ): CordaFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (0 until clusterSize).map { CordaX500Name(O = "Notary Service $it", OU = "corda", L = "Zurich", C = "CH") }
+        val nodeNames = (0 until clusterSize).map { CordaX500Name(O = "Notary Service $it", L = "Zurich", C = "CH") }
         val paths = nodeNames.map { baseDirectory(it.x500Name) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))

@@ -26,11 +26,11 @@ val DUMMY_KEY_2: KeyPair by lazy { generateKeyPair() }
 val DUMMY_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
 /** Dummy notary identity for tests and simulations */
 val DUMMY_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_NOTARY)
-val DUMMY_NOTARY: Party get() = Party(CordaX500Name(O = "Notary Service", OU = "corda", L = "Zurich", C = "CH"), DUMMY_NOTARY_KEY.public)
+val DUMMY_NOTARY: Party get() = Party(CordaX500Name(O = "Notary Service", L = "Zurich", C = "CH"), DUMMY_NOTARY_KEY.public)
 
 val DUMMY_MAP_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(30)) }
 /** Dummy network map service identity for tests and simulations */
-val DUMMY_MAP: Party get() = Party(CordaX500Name(O = "Network Map Service", OU = "corda", L = "Amsterdam", C = "NL"), DUMMY_MAP_KEY.public)
+val DUMMY_MAP: Party get() = Party(CordaX500Name(O = "Network Map Service", L = "Amsterdam", C = "NL"), DUMMY_MAP_KEY.public)
 
 val DUMMY_BANK_A_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(40)) }
 /** Dummy bank identity for tests and simulations */
@@ -61,7 +61,7 @@ val CHARLIE: Party get() = Party(CordaX500Name(O = "Charlie Ltd", L = "Athens", 
 
 val DUMMY_REGULATOR_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(100)) }
 /** Dummy regulator for tests and simulations */
-val DUMMY_REGULATOR: Party get() = Party(CordaX500Name(O = "Regulator A", OU = "Corda", L = "Paris", C = "FR"), DUMMY_REGULATOR_KEY.public)
+val DUMMY_REGULATOR: Party get() = Party(CordaX500Name(O = "Regulator A", L = "Paris", C = "FR"), DUMMY_REGULATOR_KEY.public)
 
 val DUMMY_CA_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(110)) }
 val DUMMY_CA: CertificateAndKeyPair by lazy {

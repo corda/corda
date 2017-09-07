@@ -16,15 +16,16 @@ import org.bouncycastle.asn1.x500.style.BCStyle
  * @property C country the organisation is in, as an ISO 3166-1 2-letter country code.
  */
 @CordaSerializable
-data class CordaX500Name(val CN: String? = null,
-                         val OU: String? = null,
+data class CordaX500Name(val CN: String?,
+                         val OU: String?,
                          val O: String,
                          val L: String,
-                         val ST: String? = null,
+                         val ST: String?,
                          val C: String) {
     init {
         // TODO: validateX500Name(config.myLegalName)
     }
+    constructor(CN: String, O: String, L: String, C: String) : this(null, CN, O, L, null, C)
     constructor(O: String, L: String, C: String) : this(null, null, O, L, null, C)
 
     companion object {

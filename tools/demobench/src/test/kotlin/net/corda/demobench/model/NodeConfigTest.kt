@@ -168,14 +168,14 @@ class NodeConfigTest {
                 services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name.x500Name, 12345)
 
         assertEquals(prettyPrint("{"
                 + "\"detectPublicIp\":false,"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
                 + "\"myLegalName\":\"C=US,L=New York,O=My Name,OU=Corda QA Department\","
-                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"C=CH,L=Zurich,O=Notary Service,OU=corda\"},"
+                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"C=CH,L=Zurich,O=Notary Service\"},"
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["
@@ -197,7 +197,7 @@ class NodeConfigTest {
                 services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name.x500Name, 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
@@ -205,7 +205,7 @@ class NodeConfigTest {
                 .resolve()
         val fullConfig = nodeConfig.parseAs<FullNodeConfiguration>()
 
-        assertEquals(myLegalName, fullConfig.myLegalName)
+        assertEquals(myLegalName, fullConfig.myLegalName.x500Name)
         assertEquals(localPort(40002), fullConfig.rpcAddress)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf("my.service"), fullConfig.extraAdvertisedServiceIds)
@@ -227,7 +227,7 @@ class NodeConfigTest {
                 services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name.x500Name, 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
