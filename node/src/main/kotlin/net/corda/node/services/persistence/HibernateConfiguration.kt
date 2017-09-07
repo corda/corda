@@ -67,7 +67,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("hibernate.connection.isolation", transactionIsolationLevel.toString())
 
-        if(databaseProperties.getProperty("schema") != null) {
+        if (databaseProperties.getProperty("schema") != null) {
             config.setProperty("hibernate.default_schema",databaseProperties.getProperty("schema"))
         }
 
