@@ -1,8 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
-
+import net.corda.core.serialization.SerializedBytes
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException

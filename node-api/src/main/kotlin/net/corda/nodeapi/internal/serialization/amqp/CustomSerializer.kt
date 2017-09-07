@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
+import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
@@ -49,8 +50,8 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
 
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
         override val type: Type get() = clazz
-        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${fingerprintForDescriptors(superClassSerializer.typeDescriptor, nameForType(clazz))}"
-        private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(clazz), null, emptyList(), SerializerFactory.nameForType(superClassSerializer.type), Descriptor(typeDescriptor, null), emptyList())
+        override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForDescriptors(superClassSerializer.typeDescriptor.toString(), nameForType(clazz))}")
+        private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(clazz), null, emptyList(), SerializerFactory.nameForType(superClassSerializer.type), Descriptor(typeDescriptor), emptyList())
         override fun writeClassInfo(output: SerializationOutput) {
             output.writeTypeNotations(typeNotation)
         }
@@ -72,7 +73,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      */
     abstract class CustomSerializerImp<T>(protected val clazz: Class<T>, protected val withInheritance: Boolean) : CustomSerializer<T>() {
         override val type: Type get() = clazz
-        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${nameForType(clazz)}"
+        override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${nameForType(clazz)}")
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz

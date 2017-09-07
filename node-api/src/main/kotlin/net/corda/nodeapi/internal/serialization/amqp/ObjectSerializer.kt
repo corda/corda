@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
+import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.Type
@@ -24,10 +25,10 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
     private val typeName = nameForType(clazz)
 
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
+    override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
     private val interfaces = interfacesForSerialization(clazz, factory) // We restrict to only those annotated or whitelisted
 
-    open internal val typeNotation : TypeNotation by lazy {CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields()) }
+    open internal val typeNotation: TypeNotation by lazy { CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor), generateFields()) }
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {

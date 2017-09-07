@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -17,7 +18,7 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
  */
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
+    override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
 
     companion object {
         // NB: Order matters in this map, the most specific classes should be listed at the end
@@ -60,7 +61,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
 
     private val concreteBuilder: MapCreationFunction = findConcreteType(declaredType.rawType as Class<*>)
 
-    private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor), emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
