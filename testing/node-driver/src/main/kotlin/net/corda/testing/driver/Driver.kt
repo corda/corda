@@ -192,9 +192,7 @@ sealed class NodeHandle {
             val debugPort: Int?,
             val process: Process
     ) : NodeHandle() {
-
         override fun stop(): CordaFuture<Unit> {
-
             process.destroy()
             process.waitFor()
             return doneFuture(Unit)
@@ -209,9 +207,7 @@ sealed class NodeHandle {
             val node: Node,
             val nodeThread: Thread
     ) : NodeHandle() {
-
         override fun stop(): CordaFuture<Unit> {
-
             node.stop()
             nodeThread.interrupt()
             nodeThread.join()

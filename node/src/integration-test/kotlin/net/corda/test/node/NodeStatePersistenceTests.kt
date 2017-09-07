@@ -40,7 +40,6 @@ class NodeStatePersistenceTests {
 
     @Test
     fun `persistent state survives node restart`() {
-
         val user = User("mark", "dadada", setOf(FlowPermissions.startFlowPermission<SendMessageFlow>()))
         val message = Message("Hello world!")
         driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
@@ -64,7 +63,6 @@ class NodeStatePersistenceTests {
 }
 
 fun isQuasarAgentSpecified(): Boolean {
-
     val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
     return jvmArgs.any { it.startsWith("-javaagent:") && it.endsWith("quasar.jar") }
 }
@@ -73,12 +71,10 @@ fun isQuasarAgentSpecified(): Boolean {
 data class Message(val value: String)
 
 data class MessageState(val message: Message, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
-
     override val contract = MessageContract()
     override val participants: List<AbstractParty> = listOf(by)
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
-
         return when (schema) {
             is MessageSchemaV1 -> MessageSchemaV1.PersistentMessage(
                     by = by.name.toString(),
@@ -109,9 +105,7 @@ object MessageSchemaV1 : MappedSchema(
 }
 
 open class MessageContract : Contract {
-
     override fun verify(tx: LedgerTransaction) {
-
         val command = tx.commands.requireSingleCommand<Commands.Send>()
         requireThat {
             // Generic constraints around the IOU transaction.
@@ -125,16 +119,13 @@ open class MessageContract : Contract {
     }
 
     interface Commands : CommandData {
-
         class Send : Commands
     }
 }
 
 @StartableByRPC
 class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransaction>() {
-
     companion object {
-
         object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
         object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
         object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
@@ -149,7 +140,6 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
     @Suspendable
     override fun call(): SignedTransaction {
-
         val notary = serviceHub.networkMapCache.getAnyNotary()
 
         progressTracker.currentStep = GENERATING_TRANSACTION
