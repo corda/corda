@@ -190,7 +190,7 @@ class Node extends CordformNode {
         }
         if (additionalConfig) {
             if (!additionalConfig.exists()) {
-                println "File additionalConfigFile '" + additionalConfig + "' not exist"
+               println "$configFileProperty '$additionalConfig' not found"
             } else {
                 additionalConfig.eachLine {
                     line -> configFileText << line
