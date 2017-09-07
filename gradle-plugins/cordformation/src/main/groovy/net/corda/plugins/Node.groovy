@@ -181,21 +181,6 @@ class Node extends CordformNode {
             config = config.withValue('notaryClusterAddresses', ConfigValueFactory.fromIterable(notaryClusterAddresses*.toString()))
         }
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
-        File additionalConfig
-        if (project.findProperty("additionalConfigFile")) {
-            additionalConfig = new File(project.findProperty("additionalConfigFile"))
-        } else if (config.hasPath("additionalConfigFile")) {
-            additionalConfig = new File(config.getString("additionalConfigFile"))
-        }
-        if (additionalConfig) {
-            if (!additionalConfig.exists()) {
-                println "File additionalConfigFile '" + additionalConfig + "' not exist"
-            } else {
-                additionalConfig.eachLine {
-                    line -> configFileText << line
-                }
-            }
-        }
 
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
         def tmpDir = new File(project.buildDir, "tmp")
