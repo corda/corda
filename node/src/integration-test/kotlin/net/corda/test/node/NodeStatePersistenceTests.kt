@@ -41,7 +41,6 @@ class NodeStatePersistenceTests {
     @Test
     fun `persistent state survives node restart`() {
 
-        isQuasarAgentSpecified()
         val user = User("mark", "dadada", setOf(FlowPermissions.startFlowPermission<SendMessageFlow>()))
         val message = Message("Hello world!")
         driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
