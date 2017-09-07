@@ -41,7 +41,7 @@ abstract class SerializationFactory {
      */
     val defaultContext: SerializationContext get() = currentContext ?: SerializationDefaults.P2P_CONTEXT
 
-    private val _currentContext = ThreadLocal<SerializationContext>()
+    private val _currentContext = ThreadLocal<SerializationContext?>()
 
     /**
      * Change the current context inside the block to that supplied.
@@ -71,7 +71,7 @@ abstract class SerializationFactory {
     }
 
     companion object {
-        private val _currentFactory = ThreadLocal<SerializationFactory>()
+        private val _currentFactory = ThreadLocal<SerializationFactory?>()
 
         /**
          * A default factory for serialization/deserialization, taking into account the [currentFactory] if set.
