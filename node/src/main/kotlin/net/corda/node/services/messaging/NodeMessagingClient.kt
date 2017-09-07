@@ -244,7 +244,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 }
             }, {})
 
-            rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, config.myLegalName)
+            val myLegalName = loadKeyStore(config.sslKeystore, config.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject
+            rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, myLegalName)
 
             fun checkVerifierCount() {
                 if (session.queueQuery(SimpleString(VERIFICATION_REQUESTS_QUEUE_NAME)).consumerCount == 0) {

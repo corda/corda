@@ -6,6 +6,7 @@ import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getX500Name
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -15,7 +16,6 @@ import net.corda.nodeapi.User
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
-import org.bouncycastle.asn1.x500.X500Name
 import kotlin.system.exitProcess
 
 /**
@@ -28,7 +28,7 @@ fun main(args: Array<String>) {
 val BANK_USERNAME = "bankUser"
 val BIGCORP_USERNAME = "bigCorpUser"
 
-val BIGCORP_LEGAL_NAME = X500Name("CN=BigCorporation,O=R3,OU=corda,L=London,C=GB")
+val BIGCORP_LEGAL_NAME = getX500Name(O = "BigCorporation", OU = "corda", L = "London", C = "GB")
 
 private class BankOfCordaDriver {
     enum class Role {

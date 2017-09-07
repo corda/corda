@@ -15,6 +15,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.network.NetworkMapService
@@ -25,7 +26,6 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Test
 import java.nio.file.Files
@@ -34,7 +34,7 @@ import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
     companion object {
-        private val clusterName = X500Name("CN=BFT,O=R3,OU=corda,L=Zurich,C=CH")
+        private val clusterName = getX500Name(O = "BFT", OU = "corda", L = "Zurich", C = "CH")
         private val serviceType = BFTNonValidatingNotaryService.type
     }
 

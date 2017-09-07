@@ -12,6 +12,7 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
+import net.corda.core.utilities.getX500Name
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
@@ -24,6 +25,9 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.node.TestClock
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
@@ -37,9 +41,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     val realClock: Clock = Clock.systemUTC()
@@ -88,7 +89,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     database)
             services = object : MockServiceHubInternal(
                     database,
-                    testNodeConfiguration(Paths.get("."), getTestX509Name("Alice")),
+                    testNodeConfiguration(Paths.get("."), getX500Name(O = "Alice", L = "London", C = "GB")),
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {

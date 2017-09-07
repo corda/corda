@@ -22,7 +22,7 @@ import kotlin.system.exitProcess
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
  * needed.
  */
-class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: NetworkRegistrationService) {
+class NetworkRegistrationHelper(private val config: NodeConfiguration, private val certService: NetworkRegistrationService) {
     companion object {
         val pollInterval = 10.seconds
         val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
@@ -100,7 +100,6 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
         }
     }
 
-
     /**
      * Poll Certificate Signing Server for approved certificate,
      * enter a slow polling loop if server return null.
@@ -127,7 +126,7 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
     private fun submitOrResumeCertificateSigningRequest(keyPair: KeyPair): String {
         // Retrieve request id from file if exists, else post a request to server.
         return if (!requestIdStore.exists()) {
-            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, keyPair)
+            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, config.emailAddress, keyPair)
             val writer = StringWriter()
             JcaPEMWriter(writer).use {
                 it.writeObject(PemObject("CERTIFICATE REQUEST", request.encoded))

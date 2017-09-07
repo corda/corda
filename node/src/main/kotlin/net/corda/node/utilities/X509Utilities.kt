@@ -1,13 +1,17 @@
 package net.corda.node.utilities
 
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.utilities.cert
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.DERSequence
+import org.bouncycastle.asn1.DERUTF8String
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.cert.X509CertificateHolder
@@ -43,6 +47,8 @@ object X509Utilities {
     val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
     val CORDA_CLIENT_TLS = "cordaclienttls"
     val CORDA_CLIENT_CA = "cordaclientca"
+
+    val CORDA_CLIENT_CA_CN = "Corda Client CA Certificate"
 
     private val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
     /**
@@ -107,6 +113,7 @@ object X509Utilities {
         return createCertificate(certificateType, issuerCertificate.subject, issuerKeyPair, subject, subjectPublicKey, window, nameConstraints)
     }
 
+    @Throws(CertPathValidatorException::class)
     fun validateCertificateChain(trustedRoot: X509CertificateHolder, vararg certificates: Certificate) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         val certFactory = CertificateFactory.getInstance("X509")
@@ -225,12 +232,12 @@ object X509Utilities {
     /**
      * Create certificate signing request using provided information.
      */
-    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
+    fun createCertificateSigningRequest(subject: X500Name, email: String, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
         val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.findProvider(signatureScheme.providerName))
-        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).build(signer)
+        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).addAttribute(BCStyle.E, DERUTF8String(email)).build(signer)
     }
 
-    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair) = createCertificateSigningRequest(subject, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
+    fun createCertificateSigningRequest(subject: X500Name, email: String, keyPair: KeyPair) = createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
 }
 
 

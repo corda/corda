@@ -16,12 +16,12 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.seconds
 import net.corda.finance.utils.sumFungibleOrNull
 import net.corda.finance.utils.sumObligations
 import net.corda.finance.utils.sumObligationsOrNull
 import net.corda.finance.utils.sumObligationsOrZero
-import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
 import java.time.Duration
@@ -793,4 +793,4 @@ infix fun <T : Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_OBLIGATION_ISSUER by lazy { Party(X500Name("CN=Snake Oil Issuer,O=R3,OU=corda,L=London,C=GB"), DUMMY_OBLIGATION_ISSUER_KEY.public) }
+val DUMMY_OBLIGATION_ISSUER by lazy { Party(getX500Name(O = "Snake Oil Issuer", OU = "corda", L = "London", C = "GB"), DUMMY_OBLIGATION_ISSUER_KEY.public) }

@@ -34,7 +34,7 @@ fun convertToStackSnapshotFrames(snapshot: FlowStackSnapshot): List<StackSnapsho
         val dataTypes = it.stackObjects.map {
             if (it == null) null else it::class.qualifiedName
         }
-        val stackTraceElement = it.stackTraceElement!!
+        val stackTraceElement = it.stackTraceElement
         StackSnapshotFrame(stackTraceElement.methodName, stackTraceElement.className, dataTypes)
     }
 }

@@ -16,6 +16,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
@@ -34,7 +35,6 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
-import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
 
@@ -79,8 +79,8 @@ class ExplorerSimulation(val options: OptionSet) {
             val bob = startNode(providedName = BOB.name, rpcUsers = arrayListOf(user),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                     customOverrides = mapOf("nearestCity" to "Madrid"))
-            val ukBankName = X500Name("CN=UK Bank Plc,O=UK Bank Plc,L=London,C=GB")
-            val usaBankName = X500Name("CN=USA Bank Corp,O=USA Bank Corp,L=New York,C=USA")
+            val ukBankName = getX500Name(O = "UK Bank Plc", L = "London", C = "GB")
+            val usaBankName = getX500Name(O = "USA Bank Corp", L = "New York", C = "USA")
             val issuerGBP = startNode(providedName = ukBankName, rpcUsers = arrayListOf(manager),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
                     customOverrides = mapOf("nearestCity" to "London"))

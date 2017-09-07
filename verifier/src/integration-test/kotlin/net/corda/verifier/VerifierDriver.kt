@@ -3,13 +3,14 @@ package net.corda.verifier
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.utilities.commonName
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.div
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.organisation
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisTcpTransport
@@ -18,7 +19,6 @@ import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.driver.*
-import net.corda.testing.getTestX509Name
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -181,7 +181,7 @@ data class VerifierDriverDSL(
     }
 
     private fun startVerificationRequestorInternal(name: X500Name, hostAndPort: NetworkHostAndPort): VerificationRequestorHandle {
-        val baseDir = driverDSL.driverDirectory / name.commonName
+        val baseDir = driverDSL.driverDirectory / name.organisation
         val sslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = baseDir
             override val keyStorePassword: String get() = "cordacadevpass"
@@ -249,8 +249,8 @@ data class VerifierDriverDSL(
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val processFuture = driverDSL.executorService.fork {
-            val verifierName = getTestX509Name("verifier$id")
-            val baseDirectory = driverDSL.driverDirectory / verifierName.commonName
+            val verifierName = getX500Name(O = "Verifier$id", L = "London", C = "GB")
+            val baseDirectory = driverDSL.driverDirectory / verifierName.organisation
             val config = createConfiguration(baseDirectory, address)
             val configFilename = "verifier.conf"
             writeConfig(baseDirectory, configFilename, config)

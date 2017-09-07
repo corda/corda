@@ -22,12 +22,12 @@ import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.sequence
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.commonName
-import net.corda.core.utilities.toBase58String
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.utilities.organisation
+import net.corda.core.utilities.toBase58String
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.formatters.Formatter
@@ -136,8 +136,8 @@ class TransactionViewer : CordaView("Transactions") {
                 "Transaction ID" to { tx, s -> "${tx.id}".contains(s, true) },
                 "Input" to { tx, s -> tx.inputs.resolved.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
                 "Output" to { tx, s -> tx.outputs.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
-                "Input Party" to { tx, s -> tx.inputParties.any { it.any { it.value?.name?.commonName?.contains(s, true) ?: false } } },
-                "Output Party" to { tx, s -> tx.outputParties.any { it.any { it.value?.name?.commonName?.contains(s, true) ?: false } } },
+                "Input Party" to { tx, s -> tx.inputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) ?: false } } },
+                "Output Party" to { tx, s -> tx.outputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) ?: false } } },
                 "Command Type" to { tx, s -> tx.commandTypes.any { it.simpleName.contains(s, true) } }
         )
         root.top = searchField.root
