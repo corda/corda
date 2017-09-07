@@ -7,10 +7,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
-import java.lang.reflect.GenericArrayType
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
-import java.lang.reflect.WildcardType
+import java.lang.reflect.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -346,6 +343,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
             is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
             is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
             is WildcardType -> "Any"
+            is TypeVariable<*> -> "?"
             else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 

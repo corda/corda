@@ -30,7 +30,7 @@ enum class WorkflowState {
  * Minimal contract to encode a simple workflow with one initial state and two possible eventual states.
  * It is assumed one party unilaterally submits and the other manually retrieves the deal and completes it.
  */
-data class TradeApprovalContract(private val blank: Void? = null) : Contract {
+data class TradeApprovalContract(val blank: Unit? = null) : Contract {
 
     interface Commands : CommandData {
         class Issue : TypeOnlyCommandData(), Commands  // Record receipt of deal details
