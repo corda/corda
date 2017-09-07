@@ -7,10 +7,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
-import java.lang.reflect.GenericArrayType
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
-import java.lang.reflect.WildcardType
+import java.lang.reflect.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -30,7 +27,6 @@ data class schemaAndDescriptor(val schema: Schema, val typeDescriptor: Any)
 // TODO: use guava caches etc so not unbounded
 // TODO: do we need to support a transient annotation to exclude certain properties?
 // TODO: allow definition of well known types that are left out of the schema.
-// TODO: generally map Object to '*' all over the place in the schema and make sure use of '*' amd '?' is consistent and documented in generics.
 // TODO: found a document that states textual descriptors are Symbols.  Adjust schema class appropriately.
 // TODO: document and alert to the fact that classes cannot default superclass/interface properties otherwise they are "erased" due to matching with constructor.
 // TODO: type name prefixes for interfaces and abstract classes?  Or use label?
@@ -345,7 +341,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
             }
             is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
             is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
-            is WildcardType -> "Any"
+            is WildcardType -> "?"
+            is TypeVariable<*> -> "?"
             else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 

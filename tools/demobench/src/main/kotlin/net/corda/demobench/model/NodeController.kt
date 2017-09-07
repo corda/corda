@@ -56,8 +56,8 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 baseDir,
                 getX509Name(
                     myLegalName = nodeData.legalName.value.trim(),
-                    email = "corda@city.${location.countryCode!!.toLowerCase()}.example",
-                    nearestCity = location.description!!,
+                    email = "corda@city.${location.countryCode.toLowerCase()}.example",
+                    nearestCity = location.description,
                     country = location.countryCode
                 ),
                 nodeData.p2pPort.value,
