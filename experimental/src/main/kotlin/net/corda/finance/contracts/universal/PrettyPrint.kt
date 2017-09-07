@@ -48,7 +48,7 @@ private class PrettyPrint(arr : Arrangement) {
 
     fun createPartyName(party : Party) : String
     {
-        val parts = party.name.organisation!!.toLowerCase().split(' ')
+        val parts = party.name.organisation.toLowerCase().split(' ')
 
         var camelName = parts.drop(1).fold(parts.first()) {
             s, i -> s + i.first().toUpperCase() + i.drop(1)
