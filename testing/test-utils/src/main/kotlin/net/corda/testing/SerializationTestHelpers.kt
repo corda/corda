@@ -1,6 +1,7 @@
 package net.corda.testing
 
 import net.corda.client.rpc.serialization.KryoClientSerializationScheme
+import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.node.serialization.KryoServerSerializationScheme
@@ -89,7 +90,7 @@ fun resetTestSerialization() {
     (SerializationDefaults.CHECKPOINT_CONTEXT as TestSerializationContext).delegate = null
 }
 
-class TestSerializationFactory : SerializationFactory {
+class TestSerializationFactory : SerializationFactory() {
     var delegate: SerializationFactory? = null
         set(value) {
             field = value
@@ -149,5 +150,9 @@ class TestSerializationContext : SerializationContext {
 
     override fun withPreferredSerializationVersion(versionHeader: ByteSequence): SerializationContext {
         return TestSerializationContext().apply { delegate = this@TestSerializationContext.delegate!!.withPreferredSerializationVersion(versionHeader) }
+    }
+
+    override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
+        return TestSerializationContext().apply { delegate = this@TestSerializationContext.delegate!!.withAttachmentsClassLoader(attachmentHashes) }
     }
 }
