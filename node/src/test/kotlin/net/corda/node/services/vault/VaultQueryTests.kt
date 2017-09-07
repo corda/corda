@@ -3,7 +3,6 @@ package net.corda.node.services.vault
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.*
@@ -1060,7 +1059,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             @Suppress("EXPECTED_CONDITION")
-            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE + 1)  // overflow = -2147483648
+            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, @Suppress("INTEGER_OVERFLOW")MAX_PAGE_SIZE + 1)  // overflow = -2147483648
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
         }

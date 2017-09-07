@@ -7,7 +7,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -30,8 +29,8 @@ class CashSelectionH2Impl : CashSelection {
         val log = loggerFor<CashSelectionH2Impl>()
     }
 
-    override fun isCompatible(metaData: DatabaseMetaData): Boolean {
-        return metaData.driverName == JDBC_DRIVER_NAME
+    override fun isCompatible(metadata: DatabaseMetaData): Boolean {
+        return metadata.driverName == JDBC_DRIVER_NAME
     }
 
     // coin selection retry loop counter, sleep (msecs) and lock for selecting states
