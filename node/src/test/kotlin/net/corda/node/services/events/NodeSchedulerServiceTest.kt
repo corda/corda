@@ -31,7 +31,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
@@ -122,7 +121,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         resetTestSerialization()
     }
 
-    class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant, private val myIdentity: Party) : LinearState, SchedulableState {
+    class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant, val myIdentity: Party) : LinearState, SchedulableState {
         override val participants: List<AbstractParty>
             get() = listOf(myIdentity)
 
