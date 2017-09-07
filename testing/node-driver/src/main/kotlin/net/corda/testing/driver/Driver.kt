@@ -674,7 +674,7 @@ class DriverDSL(
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?: CordaX500Name(O = "${oneOf(names).organisation}-${p2pAddress.port}", L = "London", C = "GB")
+        val name = providedName ?: CordaX500Name(organisation = "${oneOf(names).organisation}-${p2pAddress.port}", locality = "London", country = "GB")
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(listOf(object : NodeDefinition {
             override fun getName() = name.toString()
             override fun getConfig() = configOf("p2pAddress" to p2pAddress.toString())
@@ -726,7 +726,7 @@ class DriverDSL(
             rpcUsers: List<User>,
             startInSameProcess: Boolean?
     ): CordaFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (0 until clusterSize).map { CordaX500Name(O = "Notary Service $it", L = "Zurich", C = "CH") }
+        val nodeNames = (0 until clusterSize).map { CordaX500Name(organisation = "Notary Service $it", locality = "Zurich", country = "CH") }
         val paths = nodeNames.map { baseDirectory(it.x500Name) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))

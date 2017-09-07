@@ -30,8 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(O = "DistributedService", L = "London", C = "GB")
-        val SERVICE_2_NAME = CordaX500Name(O = "Service 2", L = "London", C = "GB")
+        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(organisation = "DistributedService", locality = "London", country = "GB")
+        val SERVICE_2_NAME = CordaX500Name(organisation = "Service 2", locality = "London", country = "GB")
     }
 
     @Test

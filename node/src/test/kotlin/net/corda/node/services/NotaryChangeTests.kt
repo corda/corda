@@ -87,7 +87,7 @@ class NotaryChangeTests {
     @Test
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
-        val newEvilNotary = getTestPartyAndCertificate(CordaX500Name(O = "Evil R3", L = "London", C = "GB"), generateKeyPair().public)
+        val newEvilNotary = getTestPartyAndCertificate(CordaX500Name(organisation = "Evil R3", locality = "London", country = "GB"), generateKeyPair().public)
         val flow = NotaryChangeFlow(state, newEvilNotary.party)
         val future = clientNodeA.services.startFlow(flow)
 

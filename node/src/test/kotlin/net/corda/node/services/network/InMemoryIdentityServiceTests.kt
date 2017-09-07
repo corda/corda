@@ -62,7 +62,7 @@ class InMemoryIdentityServiceTests {
         val service = InMemoryIdentityService(trustRoot = trustRoot.certificate)
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)
         service.verifyAndRegisterIdentity(BOB_IDENTITY)
-        val alicente = getTestPartyAndCertificate(CordaX500Name(O = "Alicente Worldwide", L = "London", C = "GB"), generateKeyPair().public)
+        val alicente = getTestPartyAndCertificate(CordaX500Name(organisation = "Alicente Worldwide", locality = "London", country = "GB"), generateKeyPair().public)
         service.verifyAndRegisterIdentity(alicente)
         assertEquals(setOf(ALICE, alicente.party), service.partiesFromName("Alice", false))
         assertEquals(setOf(ALICE), service.partiesFromName("Alice Corp", true))
@@ -73,7 +73,7 @@ class InMemoryIdentityServiceTests {
     fun `get identity by name`() {
         val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val identities = listOf("Node A", "Node B", "Node C")
-                .map { getTestPartyAndCertificate(CordaX500Name(O = it, L = "London", C = "GB"), generateKeyPair().public) }
+                .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
         assertNull(service.partyFromX500Name(identities.first().name))
         identities.forEach { service.verifyAndRegisterIdentity(it) }
         identities.forEach { assertEquals(it.party, service.partyFromX500Name(it.name)) }

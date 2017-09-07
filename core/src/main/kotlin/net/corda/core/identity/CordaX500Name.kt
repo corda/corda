@@ -25,13 +25,13 @@ data class CordaX500Name(val commonName: String?,
     init {
         // TODO: validateX500Name(config.myLegalName)
     }
-    constructor(CN: String, O: String, L: String, C: String) : this(null, CN, O, L, null, C)
+    constructor(commonName: String, organisation: String, locality: String, country: String) : this(null, commonName, organisation, locality, null, country)
     /**
-     * @param O name of the organisation.
-     * @param L locality of the organisation, typically nearest major city.
-     * @param C country the organisation is in, as an ISO 3166-1 2-letter country code.
+     * @param organisation name of the organisation.
+     * @param locality locality of the organisation, typically nearest major city.
+     * @param country country the organisation is in, as an ISO 3166-1 2-letter country code.
      */
-    constructor(O: String, L: String, C: String) : this(null, null, O, L, null, C)
+    constructor(organisation: String, locality: String, country: String) : this(null, null, organisation, locality, null, country)
 
     companion object {
         @JvmStatic

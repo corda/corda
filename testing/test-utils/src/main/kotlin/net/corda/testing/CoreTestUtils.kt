@@ -59,20 +59,20 @@ val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
 val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
 
-val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(O = "MegaCorp", L = "London", C = "GB"), MEGA_CORP_PUBKEY)
+val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MegaCorp", locality = "London", country = "GB"), MEGA_CORP_PUBKEY)
 val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
-val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(O = "MiniCorp", L = "London", C = "GB"), MINI_CORP_PUBKEY)
+val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MiniCorp", locality = "London", country = "GB"), MINI_CORP_PUBKEY)
 val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(O = "BankOfCorda", L = "London", C = "GB"), BOC_PUBKEY)
+val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB"), BOC_PUBKEY)
 val BOC: Party get() = BOC_IDENTITY.party
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(O = "BigCorporation", L = "London", C = "GB"), BIG_CORP_PUBKEY)
+val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BigCorporation", locality = "London", country = "GB"), BIG_CORP_PUBKEY)
 val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 

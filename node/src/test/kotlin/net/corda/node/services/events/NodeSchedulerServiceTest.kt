@@ -81,7 +81,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
         database.transaction {
-            val nullIdentity = CordaX500Name(O = "None", L = "None", C = "GB")
+            val nullIdentity = CordaX500Name(organisation = "None", locality = "None", country = "GB")
             val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(
                     false,
                     InMemoryMessagingNetwork.PeerHandle(0, nullIdentity),
@@ -89,7 +89,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     database)
             services = object : MockServiceHubInternal(
                     database,
-                    testNodeConfiguration(Paths.get("."), CordaX500Name(O = "Alice", L = "London", C = "GB")),
+                    testNodeConfiguration(Paths.get("."), CordaX500Name(organisation = "Alice", locality = "London", country = "GB")),
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {

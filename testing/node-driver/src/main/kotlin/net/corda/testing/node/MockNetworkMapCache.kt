@@ -20,8 +20,8 @@ import java.math.BigInteger
  */
 class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMapCache(serviceHub) {
     private companion object {
-        val BANK_C = getTestPartyAndCertificate(CordaX500Name(O = "Bank C", L = "London", C = "GB"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
-        val BANK_D = getTestPartyAndCertificate(CordaX500Name(O = "Bank D", L = "London", C = "GB"), entropyToKeyPair(BigInteger.valueOf(2000)).public)
+        val BANK_C = getTestPartyAndCertificate(CordaX500Name(organisation = "Bank C", locality = "London", country = "GB"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
+        val BANK_D = getTestPartyAndCertificate(CordaX500Name(organisation = "Bank D", locality = "London", country = "GB"), entropyToKeyPair(BigInteger.valueOf(2000)).public)
         val BANK_C_ADDR = NetworkHostAndPort("bankC", 8080)
         val BANK_D_ADDR = NetworkHostAndPort("bankD", 8080)
     }

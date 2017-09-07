@@ -247,7 +247,7 @@ data class VerifierDriverDSL(
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val processFuture = driverDSL.executorService.fork {
-            val verifierName = CordaX500Name(O = "Verifier$id", L = "London", C = "GB")
+            val verifierName = CordaX500Name(organisation = "Verifier$id", locality = "London", country = "GB")
             val baseDirectory = driverDSL.driverDirectory / verifierName.organisation
             val config = createConfiguration(baseDirectory, address)
             val configFilename = "verifier.conf"

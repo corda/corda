@@ -96,7 +96,7 @@ class PersistentIdentityServiceTests {
             identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
             identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
         }
-        val alicente = getTestPartyAndCertificate(CordaX500Name(O = "Alicente Worldwide", L = "London", C = "GB"), generateKeyPair().public)
+        val alicente = getTestPartyAndCertificate(CordaX500Name(organisation = "Alicente Worldwide", locality = "London", country = "GB"), generateKeyPair().public)
         database.transaction {
             identityService.verifyAndRegisterIdentity(alicente)
             assertEquals(setOf(ALICE, alicente.party), identityService.partiesFromName("Alice", false))
@@ -108,7 +108,7 @@ class PersistentIdentityServiceTests {
     @Test
     fun `get identity by name`() {
         val identities = listOf("Node A", "Node B", "Node C")
-                .map { getTestPartyAndCertificate(CordaX500Name(O = it, L = "London", C = "GB"), generateKeyPair().public) }
+                .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
         database.transaction {
             assertNull(identityService.partyFromX500Name(identities.first().name))
         }

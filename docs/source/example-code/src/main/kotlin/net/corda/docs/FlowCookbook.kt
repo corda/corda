@@ -104,7 +104,7 @@ object FlowCookbook {
             //   - To serve as a timestamping authority if the transaction has a time-window
             // We retrieve the notary from the network map.
             // DOCSTART 1
-            val specificNotary: Party? = serviceHub.networkMapCache.getNotary(CordaX500Name(O = "Notary Service", L = "London", C = "UK"))
+            val specificNotary: Party? = serviceHub.networkMapCache.getNotary(CordaX500Name(organisation = "Notary Service", locality = "London", country = "UK"))
             val anyNotary: Party? = serviceHub.networkMapCache.getAnyNotary()
             // Unlike the first two methods, ``getNotaryNodes`` returns a
             // ``List<NodeInfo>``. We have to extract the notary identity of
@@ -115,7 +115,7 @@ object FlowCookbook {
             // We may also need to identify a specific counterparty. Again, we
             // do so using the network map.
             // DOCSTART 2
-            val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(CordaX500Name(O = "NodeA", L = "London", C = "UK"))?.legalIdentity
+            val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(CordaX500Name(organisation = "NodeA", locality = "London", country = "UK"))?.legalIdentity
             val keyedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalIdentityKey(dummyPubKey)?.legalIdentity
             val firstCounterparty: Party = serviceHub.networkMapCache.partyNodes[0].legalIdentity
             // DOCEND 2

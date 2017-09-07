@@ -43,7 +43,6 @@ import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
-import org.bouncycastle.asn1.x500.X500Name
 import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -212,7 +211,7 @@ data class RpcServerHandle(
 )
 
 val rpcTestUser = User("user1", "test", permissions = emptySet())
-val fakeNodeLegalName = CordaX500Name(O = "not:a:valid:name", L = "Nowhere", C = "GB")
+val fakeNodeLegalName = CordaX500Name(organisation = "not:a:valid:name", locality = "Nowhere", country = "GB")
 
 // Use a global pool so that we can run RPC tests in parallel
 private val globalPortAllocation = PortAllocation.Incremental(10000)

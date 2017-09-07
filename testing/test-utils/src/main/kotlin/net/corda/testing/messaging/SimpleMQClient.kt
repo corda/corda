@@ -2,7 +2,6 @@ package net.corda.testing.messaging
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getX500Name
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
@@ -16,7 +15,7 @@ import org.apache.activemq.artemis.api.core.client.*
 class SimpleMQClient(val target: NetworkHostAndPort,
                      override val config: SSLConfiguration? = configureTestSSL(DEFAULT_MQ_LEGAL_NAME)) : ArtemisMessagingComponent() {
     companion object {
-        val DEFAULT_MQ_LEGAL_NAME = CordaX500Name(O = "SimpleMQClient", L = "London", C = "GB")
+        val DEFAULT_MQ_LEGAL_NAME = CordaX500Name(organisation = "SimpleMQClient", locality = "London", country = "GB")
     }
 
     lateinit var sessionFactory: ClientSessionFactory

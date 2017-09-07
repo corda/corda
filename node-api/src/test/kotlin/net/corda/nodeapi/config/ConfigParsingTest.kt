@@ -7,9 +7,7 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getX500Name
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
@@ -113,7 +111,7 @@ class ConfigParsingTest {
 
     @Test
     fun x500Name() {
-        testPropertyType<X500NameData, X500NameListData, CordaX500Name>(CordaX500Name(O = "Mock Party", L = "London", C = "GB"), CordaX500Name(O = "Mock Party 2", L = "London", C = "GB"), valuesToString = true)
+        testPropertyType<X500NameData, X500NameListData, CordaX500Name>(CordaX500Name(organisation = "Mock Party", locality = "London", country = "GB"), CordaX500Name(organisation = "Mock Party 2", locality = "London", country = "GB"), valuesToString = true)
     }
 
     @Test

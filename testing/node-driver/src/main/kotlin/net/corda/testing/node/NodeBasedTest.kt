@@ -142,14 +142,14 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
         val masterNodeFuture = startNode(
-                CordaX500Name(O = "${notaryName.organisation}-0", L = notaryName.locality, C = notaryName.country),
+                CordaX500Name(organisation = "${notaryName.organisation}-0", locality = notaryName.locality, country = notaryName.country),
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
                         "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else "")))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
-                    CordaX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country),
+                    CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
