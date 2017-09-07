@@ -1,12 +1,16 @@
 package net.corda.testing.node
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.*
+import net.corda.core.utilities.WHITESPACE
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
+import net.corda.core.utilities.organisation
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
@@ -81,7 +85,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
      * You can use this method to start the network map node in a more customised manner. Otherwise it
      * will automatically be started with the default parameters.
      */
-    fun startNetworkMapNode(legalName: X500Name = DUMMY_MAP.name,
+    fun startNetworkMapNode(legalName: CordaX500Name = DUMMY_MAP.name,
                             platformVersion: Int = 1,
                             advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
@@ -93,7 +97,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
     }
 
     @JvmOverloads
-    fun startNode(legalName: X500Name,
+    fun startNode(legalName: CordaX500Name,
                   platformVersion: Int = 1,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
@@ -126,7 +130,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         return if (waitForConnection) node.nodeReadyFuture.map { node } else doneFuture(node)
     }
 
-    fun startNotaryCluster(notaryName: X500Name,
+    fun startNotaryCluster(notaryName: CordaX500Name,
                            clusterSize: Int,
                            serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
@@ -138,14 +142,14 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
         val masterNodeFuture = startNode(
-                getX500Name(O = "${notaryName.organisation}-0", L = notaryName.locality, C = notaryName.country),
+                CordaX500Name(O = "${notaryName.organisation}-0", L = notaryName.locality, C = notaryName.country),
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
                         "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else "")))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
-                    getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country),
+                    CordaX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
@@ -160,13 +164,13 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
 
     protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.organisation.replace(WHITESPACE, "")
 
-    private fun startNodeInternal(legalName: X500Name,
+    private fun startNodeInternal(legalName: CordaX500Name,
                                   platformVersion: Int,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>,
                                   noNetworkMap: Boolean = false): Node {
-        val baseDirectory = baseDirectory(legalName).createDirectories()
+        val baseDirectory = baseDirectory(legalName.x500Name).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
         val config = ConfigHelper.loadConfig(

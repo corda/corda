@@ -2,13 +2,12 @@ package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -21,7 +20,6 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
-import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -270,7 +268,7 @@ interface CordaRPCOps : RPCOps {
     /**
      * Returns the [Party] with the X.500 principal as it's [Party.name]
      */
-    fun partyFromX500Name(x500Name: X500Name): Party?
+    fun partyFromX500Name(x500Name: CordaX500Name): Party?
 
     /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may

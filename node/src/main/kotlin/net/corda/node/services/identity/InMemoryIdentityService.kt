@@ -2,10 +2,7 @@ package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.*
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
@@ -14,7 +11,6 @@ import net.corda.core.utilities.cert
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.subject
 import net.corda.core.utilities.trace
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -46,7 +42,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     override val trustRootHolder = trustRoot.toX509CertHolder()
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
-    private val principalToParties = ConcurrentHashMap<X500Name, PartyAndCertificate>()
+    private val principalToParties = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
 
     init {
         val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
@@ -91,7 +87,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
 
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
-    override fun partyFromX500Name(principal: X500Name): Party? = principalToParties[principal]?.party
+    override fun partyFromX500Name(principal: CordaX500Name): Party? = principalToParties[principal]?.party
     override fun partyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: keyToParties[party.owningKey]?.party
@@ -114,7 +110,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         val results = LinkedHashSet<Party>()
         for ((x500name, partyAndCertificate) in principalToParties) {
             val party = partyAndCertificate.party
-            for (rdn in x500name.rdNs) {
+            for (rdn in x500name.x500Name.rdNs) {
                 val component = rdn.first.value.toString()
                 if (exactMatch && component == query) {
                     results += party

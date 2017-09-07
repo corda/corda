@@ -4,12 +4,12 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.StateReplacementException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
@@ -21,7 +21,6 @@ import net.corda.testing.dummyCommand
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -88,7 +87,7 @@ class NotaryChangeTests {
     @Test
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
-        val newEvilNotary = getTestPartyAndCertificate(getX500Name(OU="Evil Notary",O="Evil R3",L="London",C="GB"), generateKeyPair().public)
+        val newEvilNotary = getTestPartyAndCertificate(CordaX500Name(OU="Evil Notary",O="Evil R3",L="London",C="GB"), generateKeyPair().public)
         val flow = NotaryChangeFlow(state, newEvilNotary.party)
         val future = clientNodeA.services.startFlow(flow)
 

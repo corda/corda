@@ -4,6 +4,7 @@ package net.corda.testing
 
 import com.nhaarman.mockito_kotlin.spy
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.commonName
@@ -52,7 +53,7 @@ import java.nio.file.Path
 
 fun testNodeConfiguration(
         baseDirectory: Path,
-        myLegalName: X500Name): NodeConfiguration {
+        myLegalName: CordaX500Name): NodeConfiguration {
     abstract class MockableNodeConfiguration : NodeConfiguration // Otherwise Mockito is defeated by val getters.
     val nc = spy<MockableNodeConfiguration>()
     whenever(nc.baseDirectory).thenReturn(baseDirectory)

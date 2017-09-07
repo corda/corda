@@ -2,8 +2,7 @@ package net.corda.node.services.transactions
 
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.parsePublicKeyBase58
-import net.corda.core.utilities.toBase58String
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.UniquenessException
@@ -11,8 +10,10 @@ import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
-import net.corda.node.utilities.*
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.core.utilities.parsePublicKeyBase58
+import net.corda.core.utilities.toBase58String
+import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import java.io.Serializable
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -73,7 +74,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                                             id = SecureHash.parse(it.consumingTxHash),
                                             inputIndex = it.consumingIndex,
                                             requestingParty = Party(
-                                                    name = X500Name(it.party.name),
+                                                    name = CordaX500Name.parse(it.party.name),
                                                     owningKey = parsePublicKeyBase58(it.party.owningKey))))
                         },
                         toPersistentEntity = { (txHash, index) : StateRef, (id, inputIndex, requestingParty) : UniquenessProvider.ConsumingTx ->

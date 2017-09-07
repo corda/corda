@@ -2,6 +2,7 @@ package net.corda.java.rpc;
 
 import net.corda.client.rpc.CordaRPCConnection;
 import net.corda.core.contracts.Amount;
+import net.corda.core.identity.CordaX500Name;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.FlowHandle;
 import net.corda.core.node.NodeInfo;
@@ -43,7 +44,7 @@ public class StandaloneCordaRPCJavaClientTest {
     private NodeInfo notaryNode;
 
     private NodeConfig notaryConfig = new NodeConfig(
-            X500NameUtils.getX500Name("Notary Service", "Zurich", "CH"),
+            new CordaX500Name("Notary Service", "Zurich", "CH"),
             port.getAndIncrement(),
             port.getAndIncrement(),
             port.getAndIncrement(),

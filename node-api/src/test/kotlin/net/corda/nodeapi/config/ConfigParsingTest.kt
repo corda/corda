@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getX500Name
@@ -112,7 +113,7 @@ class ConfigParsingTest {
 
     @Test
     fun x500Name() {
-        testPropertyType<X500NameData, X500NameListData, X500Name>(getX500Name(O = "Mock Party", L = "London", C = "GB"), getX500Name(O = "Mock Party 2", L = "London", C = "GB"), valuesToString = true)
+        testPropertyType<X500NameData, X500NameListData, CordaX500Name>(CordaX500Name(O = "Mock Party", L = "London", C = "GB"), CordaX500Name(O = "Mock Party 2", L = "London", C = "GB"), valuesToString = true)
     }
 
     @Test
@@ -229,8 +230,8 @@ class ConfigParsingTest {
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>
     data class URLListData(override val values: List<URL>) : ListData<URL>
-    data class X500NameData(override val value: X500Name) : SingleData<X500Name>
-    data class X500NameListData(override val values: List<X500Name>) : ListData<X500Name>
+    data class X500NameData(override val value: CordaX500Name) : SingleData<CordaX500Name>
+    data class X500NameListData(override val values: List<CordaX500Name>) : ListData<CordaX500Name>
     data class PropertiesData(override val value: Properties) : SingleData<Properties>
     data class PropertiesListData(override val values: List<Properties>) : ListData<Properties>
     data class MultiPropertyData(val i: Int, val b: Boolean, val l: List<String>)

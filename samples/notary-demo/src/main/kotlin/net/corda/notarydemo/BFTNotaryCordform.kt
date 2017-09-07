@@ -3,6 +3,7 @@ package net.corda.notarydemo
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.internal.stream
 import net.corda.core.internal.toTypedArray
@@ -23,7 +24,7 @@ private val clusterSize = 4 // Minimum size that tolerates a faulty replica.
 private val notaryNames = createNotaryNames(clusterSize)
 
 object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0]) {
-    private val clusterName = getX500Name(O = "BFT", OU = "corda", L = "Zurich", C = "CH")
+    private val clusterName = CordaX500Name(O = "BFT", OU = "corda", L = "Zurich", C = "CH")
     private val advertisedService = ServiceInfo(BFTNonValidatingNotaryService.type, clusterName)
 
     init {

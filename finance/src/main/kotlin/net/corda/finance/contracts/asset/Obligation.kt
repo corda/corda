@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.VisibleForTesting
@@ -16,7 +17,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.seconds
 import net.corda.finance.utils.sumFungibleOrNull
 import net.corda.finance.utils.sumObligations
@@ -792,4 +792,4 @@ infix fun <T : Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_OBLIGATION_ISSUER by lazy { Party(getX500Name(O = "Snake Oil Issuer", OU = "corda", L = "London", C = "GB"), DUMMY_OBLIGATION_ISSUER_KEY.public) }
+val DUMMY_OBLIGATION_ISSUER by lazy { Party(CordaX500Name(O = "Snake Oil Issuer", OU = "corda", L = "London", C = "GB"), DUMMY_OBLIGATION_ISSUER_KEY.public) }

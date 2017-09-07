@@ -1,7 +1,6 @@
 package net.corda.core.identity
 
 import net.corda.core.internal.toX509CertHolder
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.PublicKey
 import java.security.cert.*
@@ -24,7 +23,7 @@ class PartyAndCertificate(val certPath: CertPath) {
     @Transient val party: Party = Party(certificate)
 
     val owningKey: PublicKey get() = party.owningKey
-    val name: X500Name get() = party.name
+    val name: CordaX500Name get() = party.name
 
     operator fun component1(): Party = party
     operator fun component2(): X509CertificateHolder = certificate

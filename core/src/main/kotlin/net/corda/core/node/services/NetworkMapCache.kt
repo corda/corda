@@ -3,13 +3,13 @@ package net.corda.core.node.services
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
-import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import java.security.PublicKey
 
@@ -77,7 +77,7 @@ interface NetworkMapCache {
     fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 
     /** Look up the node info for a legal name. */
-    fun getNodeByLegalName(principal: X500Name): NodeInfo?
+    fun getNodeByLegalName(principal: CordaX500Name): NodeInfo?
 
     /** Look up the node info for a host and port. */
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
@@ -100,7 +100,7 @@ interface NetworkMapCache {
     fun getPartyInfo(party: Party): PartyInfo?
 
     /** Gets a notary identity by the given name. */
-    fun getNotary(principal: X500Name): Party? {
+    fun getNotary(principal: CordaX500Name): Party? {
         val notaryNode = notaryNodes.filter {
             it.advertisedServices.any { it.info.type.isSubTypeOf(ServiceType.notary) && it.info.name == principal }
         }.randomOrNull()

@@ -9,6 +9,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
@@ -21,8 +22,11 @@ import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -77,7 +81,7 @@ class FlowFrameworkTests {
 
         // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
-        val notaryService = ServiceInfo(ValidatingNotaryService.type, getX500Name(O = "notary-service-2000", L = "London", C = "GB"))
+        val notaryService = ServiceInfo(ValidatingNotaryService.type, CordaX500Name(O = "notary-service-2000", L = "London", C = "GB"))
         val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.

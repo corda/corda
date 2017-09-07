@@ -3,6 +3,7 @@ package net.corda.node.services.vault
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.*
@@ -54,7 +55,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
     // test cash notary
     val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(21)) }
-    val CASH_NOTARY: Party get() = Party(getX500Name(O = "Cash Notary Service", OU = "corda", L = "Zurich", C = "CH"), CASH_NOTARY_KEY.public)
+    val CASH_NOTARY: Party get() = Party(CordaX500Name(O = "Cash Notary Service", OU = "corda", L = "Zurich", C = "CH"), CASH_NOTARY_KEY.public)
     val CASH_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CASH_NOTARY.nameOrNull(), CASH_NOTARY_KEY.public)
 
     @Before
@@ -1484,15 +1485,15 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets for selected issuer parties`() {
         // GBP issuer
         val gbpCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1001))
-        val gbpCashIssuer = Party(getX500Name(O = "British Pounds Cash Issuer", OU = "corda", L = "London", C = "GB"), gbpCashIssuerKey.public).ref(1)
+        val gbpCashIssuer = Party(CordaX500Name(O = "British Pounds Cash Issuer", OU = "corda", L = "London", C = "GB"), gbpCashIssuerKey.public).ref(1)
         val gbpCashIssuerServices = MockServices(gbpCashIssuerKey)
         // USD issuer
         val usdCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1002))
-        val usdCashIssuer = Party(getX500Name(O = "US Dollars Cash Issuer", OU = "corda", L = "New York", C = "US"), usdCashIssuerKey.public).ref(1)
+        val usdCashIssuer = Party(CordaX500Name(O = "US Dollars Cash Issuer", OU = "corda", L = "New York", C = "US"), usdCashIssuerKey.public).ref(1)
         val usdCashIssuerServices = MockServices(usdCashIssuerKey)
         // CHF issuer
         val chfCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1003))
-        val chfCashIssuer = Party(getX500Name(O = "Swiss Francs Cash Issuer", OU = "corda", L = "Zurich", C = "CH"), chfCashIssuerKey.public).ref(1)
+        val chfCashIssuer = Party(CordaX500Name(O = "Swiss Francs Cash Issuer", OU = "corda", L = "Zurich", C = "CH"), chfCashIssuerKey.public).ref(1)
         val chfCashIssuerServices = MockServices(chfCashIssuerKey)
 
         database.transaction {

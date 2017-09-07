@@ -1,15 +1,15 @@
 package net.corda.core.node
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.getX500Name
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ServiceInfoTests {
     val serviceType = ServiceType.getServiceType("test", "service").getSubType("subservice")
-    val name = getX500Name(O = "service.name", L = "London", C = "GB")
+    val name = CordaX500Name(O = "service.name", L = "London", C = "GB")
 
     @Test
     fun `type and name encodes correctly`() {

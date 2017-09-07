@@ -1,12 +1,12 @@
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send
@@ -31,7 +31,6 @@ import net.corda.testing.DUMMY_MAP
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -47,7 +46,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     lateinit var alice: MockNode
 
     companion object {
-        val subscriberLegalName = getX500Name(O="Subscriber",L="New York",C="US")
+        val subscriberLegalName = CordaX500Name(O="Subscriber",L="New York",C="US")
     }
 
     @Before
@@ -251,14 +250,14 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         mockNet.runNetwork()
     }
 
-    private fun addNewNodeToNetworkMap(legalName: X500Name): MockNode {
+    private fun addNewNodeToNetworkMap(legalName: CordaX500Name): MockNode {
         val node = mockNet.createNode(mapServiceNode.network.myAddress, legalName = legalName)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
         return node
     }
 
-    private fun newNodeSeparateFromNetworkMap(legalName: X500Name): MockNode {
+    private fun newNodeSeparateFromNetworkMap(legalName: CordaX500Name): MockNode {
         return mockNet.createNode(legalName = legalName, nodeFactory = NoNMSNodeFactory)
     }
 

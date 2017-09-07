@@ -3,10 +3,7 @@ package net.corda.node.services.identity
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.*
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
@@ -15,7 +12,6 @@ import net.corda.core.utilities.cert
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
 import java.security.InvalidAlgorithmParameterException
@@ -56,11 +52,11 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             )
         }
 
-        fun createX500Map(): AppendOnlyPersistentMap<X500Name, SecureHash, PersistentIdentityNames, String> {
+        fun createX500Map(): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
-                    fromPersistentEntity = { Pair(X500Name(it.name), SecureHash.parse(it.publicKeyHash)) },
-                    toPersistentEntity = { key: X500Name, value: SecureHash ->
+                    fromPersistentEntity = { Pair(CordaX500Name.parse(it.name), SecureHash.parse(it.publicKeyHash)) },
+                    toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
                         PersistentIdentityNames(key.toString(), value.toString())
                     },
                     persistentEntityClass = PersistentIdentityNames::class.java
@@ -134,20 +130,20 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[mapToKey(owningKey)]
-    private fun certificateFromX500Name(name: X500Name): PartyAndCertificate? {
+    private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
         val partyId = principalToParties[name]
         return if (partyId != null) {
             keyToParties[partyId]
         } else null
     }
 
-    override fun certificateFromParty(party: Party): PartyAndCertificate = certificateFromX500Name(party.name) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
+    override fun certificateFromParty(party: Party): PartyAndCertificate = certificateFromCordaX500Name(party.name) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
 
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = keyToParties.allPersisted().map { it.second }.asIterable()
 
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
-    override fun partyFromX500Name(principal: X500Name): Party? = certificateFromX500Name(principal)?.party
+    override fun partyFromX500Name(principal: CordaX500Name): Party? = certificateFromCordaX500Name(principal)?.party
     override fun partyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: partyFromKey(party.owningKey)
@@ -172,7 +168,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         val results = LinkedHashSet<Party>()
         for ((x500name, partyId) in principalToParties.allPersisted()) {
             val party = keyToParties[partyId]!!.party
-            for (rdn in x500name.rdNs) {
+            for (rdn in x500name.x500Name.rdNs) {
                 val component = rdn.first.value.toString()
                 if (exactMatch && component == query) {
                     results += party

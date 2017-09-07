@@ -5,12 +5,11 @@ import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
-import net.corda.core.utilities.organisation
+import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.User
-import org.bouncycastle.asn1.x500.X500Name
 
 class NodeConfig(
-        val legalName: X500Name,
+        val legalName: CordaX500Name,
         val p2pPort: Int,
         val rpcPort: Int,
         val webPort: Int,

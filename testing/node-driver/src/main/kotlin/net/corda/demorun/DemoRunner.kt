@@ -2,6 +2,7 @@ package net.corda.demorun
 
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
+import net.corda.core.identity.CordaX500Name
 import net.corda.testing.driver.NetworkMapStartStrategy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
@@ -17,7 +18,7 @@ fun CordformDefinition.clean() {
 fun CordformDefinition.runNodes() = driver(
         isDebug = true,
         driverDirectory = driverDirectory,
-        networkMapStartStrategy = NetworkMapStartStrategy.Nominated(networkMapNodeName),
+        networkMapStartStrategy = NetworkMapStartStrategy.Nominated(CordaX500Name.build(networkMapNodeName)),
         portAllocation = PortAllocation.Incremental(10001)
 ) {
     setup(this)

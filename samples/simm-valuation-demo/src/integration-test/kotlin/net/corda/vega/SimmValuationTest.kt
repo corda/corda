@@ -1,21 +1,21 @@
 package net.corda.vega
 
 import com.opengamma.strata.product.common.BuySell
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.driver.driver
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.IntegrationTestCategory
+import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -52,7 +52,7 @@ class SimmValuationTest : IntegrationTestCategory {
         }
     }
 
-    private fun getPartyWithName(partyApi: HttpApi, counterparty: X500Name): PortfolioApi.ApiParty {
+    private fun getPartyWithName(partyApi: HttpApi, counterparty: CordaX500Name): PortfolioApi.ApiParty {
         return getAvailablePartiesFor(partyApi).counterparties.single { it.text == counterparty }
     }
 

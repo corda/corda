@@ -2,6 +2,7 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
@@ -9,7 +10,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.unwrap
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
@@ -29,7 +29,7 @@ class CordappSmokeTest {
     private val factory = NodeProcess.Factory()
 
     private val aliceConfig = NodeConfig(
-            legalName = getX500Name(O = "Alice Corp", L = "Madrid", C = "ES"),
+            legalName = CordaX500Name(O = "Alice Corp", L = "Madrid", C = "ES"),
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             webPort = port.andIncrement,

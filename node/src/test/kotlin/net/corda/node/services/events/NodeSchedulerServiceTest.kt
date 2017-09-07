@@ -6,13 +6,13 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
-import net.corda.core.utilities.getX500Name
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
@@ -31,7 +31,6 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.node.TestClock
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -82,7 +81,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
         database.transaction {
-            val nullIdentity = X500Name("cn=None")
+            val nullIdentity = CordaX500Name(O = "None", L = "None", C = "GB")
             val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(
                     false,
                     InMemoryMessagingNetwork.PeerHandle(0, nullIdentity),
@@ -90,7 +89,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     database)
             services = object : MockServiceHubInternal(
                     database,
-                    testNodeConfiguration(Paths.get("."), getX500Name(O = "Alice", L = "London", C = "GB")),
+                    testNodeConfiguration(Paths.get("."), CordaX500Name(O = "Alice", L = "London", C = "GB")),
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {

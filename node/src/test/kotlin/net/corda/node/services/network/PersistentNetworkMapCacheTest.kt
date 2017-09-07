@@ -4,13 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.seconds
-import net.corda.core.utilities.toBase58String
-import net.corda.core.utilities.unwrap
+import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
@@ -18,7 +15,6 @@ import net.corda.testing.CHARLIE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -26,7 +22,7 @@ import kotlin.test.assertFails
 
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
     val partiesList = listOf(DUMMY_NOTARY, ALICE, BOB)
-    val addressesMap: HashMap<X500Name, NetworkHostAndPort> = HashMap()
+    val addressesMap: HashMap<CordaX500Name, NetworkHostAndPort> = HashMap()
     val infos: MutableSet<NodeInfo> = HashSet()
 
     @Before

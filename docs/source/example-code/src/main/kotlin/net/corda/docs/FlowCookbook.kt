@@ -7,6 +7,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.node.services.ServiceType
@@ -103,7 +104,7 @@ object FlowCookbook {
             //   - To serve as a timestamping authority if the transaction has a time-window
             // We retrieve the notary from the network map.
             // DOCSTART 1
-            val specificNotary: Party? = serviceHub.networkMapCache.getNotary(getX500Name(O = "Notary Service", OU = "corda", L = "London", C = "UK"))
+            val specificNotary: Party? = serviceHub.networkMapCache.getNotary(CordaX500Name(O = "Notary Service", OU = "corda", L = "London", C = "UK"))
             val anyNotary: Party? = serviceHub.networkMapCache.getAnyNotary()
             // Unlike the first two methods, ``getNotaryNodes`` returns a
             // ``List<NodeInfo>``. We have to extract the notary identity of
@@ -114,7 +115,7 @@ object FlowCookbook {
             // We may also need to identify a specific counterparty. Again, we
             // do so using the network map.
             // DOCSTART 2
-            val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(getX500Name(O = "NodeA", L = "London", C = "UK"))?.legalIdentity
+            val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(CordaX500Name(O = "NodeA", L = "London", C = "UK"))?.legalIdentity
             val keyedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalIdentityKey(dummyPubKey)?.legalIdentity
             val firstCounterparty: Party = serviceHub.networkMapCache.partyNodes[0].legalIdentity
             // DOCEND 2

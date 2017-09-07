@@ -15,6 +15,7 @@ import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
@@ -46,25 +47,25 @@ object JacksonSupport {
     // If you change this API please update the docs in the docsite (json.rst)
 
     interface PartyObjectMapper {
-        fun partyFromX500Name(name: X500Name): Party?
+        fun partyFromX500Name(name: CordaX500Name): Party?
         fun partyFromKey(owningKey: PublicKey): Party?
         fun partiesFromName(query: String): Set<Party>
     }
 
     class RpcObjectMapper(val rpc: CordaRPCOps, factory: JsonFactory, val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
-        override fun partyFromX500Name(name: X500Name): Party? = rpc.partyFromX500Name(name)
+        override fun partyFromX500Name(name: CordaX500Name): Party? = rpc.partyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = rpc.partiesFromName(query, fuzzyIdentityMatch)
     }
 
     class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory, val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
-        override fun partyFromX500Name(name: X500Name): Party? = identityService.partyFromX500Name(name)
+        override fun partyFromX500Name(name: CordaX500Name): Party? = identityService.partyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = identityService.partiesFromName(query, fuzzyIdentityMatch)
     }
 
     class NoPartyObjectMapper(factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
-        override fun partyFromX500Name(name: X500Name): Party? = throw UnsupportedOperationException()
+        override fun partyFromX500Name(name: CordaX500Name): Party? = throw UnsupportedOperationException()
         override fun partyFromKey(owningKey: PublicKey): Party? = throw UnsupportedOperationException()
         override fun partiesFromName(query: String) = throw UnsupportedOperationException()
     }
@@ -191,7 +192,7 @@ object JacksonSupport {
             // Base58 keys never include an equals character, while X.500 names always will, so we use that to determine
             // how to parse the content
             return if (parser.text.contains("=")) {
-                val principal = X500Name(parser.text)
+                val principal = CordaX500Name.parse(parser.text)
                 mapper.partyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name $principal")
             } else {
                 val nameMatches = mapper.partiesFromName(parser.text)

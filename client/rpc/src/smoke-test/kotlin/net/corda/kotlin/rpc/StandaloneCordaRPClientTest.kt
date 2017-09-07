@@ -4,12 +4,16 @@ import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
@@ -54,7 +58,7 @@ class StandaloneCordaRPClientTest {
     private lateinit var notaryNode: NodeInfo
 
     private val notaryConfig = NodeConfig(
-            legalName = getX500Name(O = "Notary Service", OU = "corda", L = "Zurich", C = "CH"),
+            legalName = CordaX500Name(O = "Notary Service", OU = "corda", L = "Zurich", C = "CH"),
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             webPort = port.andIncrement,

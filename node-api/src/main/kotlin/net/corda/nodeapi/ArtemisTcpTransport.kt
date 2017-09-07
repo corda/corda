@@ -1,5 +1,6 @@
 package net.corda.nodeapi
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -12,7 +13,7 @@ import java.nio.file.Path
 sealed class ConnectionDirection {
     data class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
     data class Outbound(
-            val expectedCommonName: X500Name? = null,
+            val expectedCommonName: CordaX500Name? = null,
             val connectorFactoryClassName: String = NettyConnectorFactory::class.java.name
     ) : ConnectionDirection()
 }

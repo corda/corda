@@ -3,7 +3,7 @@ package net.corda.testing.node
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.utilities.getX500Name
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.core.messaging.MessageRecipientGroup
@@ -20,7 +20,6 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -80,8 +79,8 @@ class InMemoryMessagingNetwork(
 
     // Holds the mapping from services to peers advertising the service.
     private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
-    // Holds the mapping from node's X500Name to PeerHandle.
-    private val peersMapping = HashMap<X500Name, PeerHandle>()
+    // Holds the mapping from node's X.500 name to PeerHandle.
+    private val peersMapping = HashMap<CordaX500Name, PeerHandle>()
 
     @Suppress("unused") // Used by the visualiser tool.
             /** A stream of (sender, message, recipients) triples */
@@ -127,7 +126,7 @@ class InMemoryMessagingNetwork(
             id: Int,
             executor: AffinityExecutor,
             advertisedServices: List<ServiceEntry>,
-            description: X500Name = getX500Name(O = "In memory node $id", L = "London", C = "UK"),
+            description: CordaX500Name = CordaX500Name(O = "In memory node $id", L = "London", C = "UK"),
             database: CordaPersistence)
             : MessagingServiceBuilder<InMemoryMessaging> {
         val peerHandle = PeerHandle(id, description)
@@ -200,7 +199,7 @@ class InMemoryMessagingNetwork(
     }
 
     @CordaSerializable
-    data class PeerHandle(val id: Int, val description: X500Name) : SingleMessageRecipient {
+    data class PeerHandle(val id: Int, val description: CordaX500Name) : SingleMessageRecipient {
         override fun toString() = description.toString()
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
         override fun hashCode() = id.hashCode()
@@ -289,7 +288,7 @@ class InMemoryMessagingNetwork(
                                                override val platformVersion: Int,
                                                override val uniqueMessageId: UUID,
                                                override val debugTimestamp: Instant,
-                                               override val peer: X500Name) : ReceivedMessage
+                                               override val peer: CordaX500Name) : ReceivedMessage
 
     /**
      * An [InMemoryMessaging] provides a [MessagingService] that isn't backed by any kind of network or disk storage

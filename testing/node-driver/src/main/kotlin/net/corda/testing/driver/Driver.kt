@@ -11,6 +11,7 @@ import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.*
@@ -88,7 +89,7 @@ interface DriverDSLExposedInterface : CordformContext {
      */
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
-            providedName: X500Name? = defaultParameters.providedName,
+            providedName: CordaX500Name? = defaultParameters.providedName,
             advertisedServices: Set<ServiceInfo> = defaultParameters.advertisedServices,
             rpcUsers: List<User> = defaultParameters.rpcUsers,
             verifierType: VerifierType = defaultParameters.verifierType,
@@ -124,7 +125,7 @@ interface DriverDSLExposedInterface : CordformContext {
      * @return The [Party] identity of the distributed notary service, and the [NodeInfo]s of the notaries in the cluster.
      */
     fun startNotaryCluster(
-            notaryName: X500Name,
+            notaryName: CordaX500Name,
             clusterSize: Int = 3,
             type: ServiceType = RaftValidatingNotaryService.type,
             verifierType: VerifierType = VerifierType.InMemory,
@@ -252,14 +253,14 @@ sealed class PortAllocation {
  * Helper builder for configuring a [node] from Java.
  */
 data class NodeParameters(
-        val providedName: X500Name? = null,
+        val providedName: CordaX500Name? = null,
         val advertisedServices: Set<ServiceInfo> = emptySet(),
         val rpcUsers: List<User> = emptyList(),
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null
 ) {
-    fun setProvidedName(providedName: X500Name?) = copy(providedName = providedName)
+    fun setProvidedName(providedName: CordaX500Name?) = copy(providedName = providedName)
     fun setAdvertisedServices(advertisedServices: Set<ServiceInfo>) = copy(advertisedServices = advertisedServices)
     fun setRpcUsers(rpcUsers: List<User>) = copy(rpcUsers = rpcUsers)
     fun setVerifierType(verifierType: VerifierType) = copy(verifierType = verifierType)
@@ -641,19 +642,19 @@ class DriverDSL(
         }
     }
 
-    private fun networkMapServiceConfigLookup(networkMapCandidates: List<NodeDefinition>): (X500Name) -> Map<String, String>? {
+    private fun networkMapServiceConfigLookup(networkMapCandidates: List<NodeDefinition>): (CordaX500Name) -> Map<String, String>? {
         return networkMapStartStrategy.run {
             when (this) {
                 is NetworkMapStartStrategy.Dedicated -> {
                     serviceConfig(dedicatedNetworkMapAddress).let {
-                        { _: X500Name -> it }
+                        { _: CordaX500Name -> it }
                     }
                 }
                 is NetworkMapStartStrategy.Nominated -> {
                     serviceConfig(networkMapCandidates.filter {
                         it.name == legalName.toString()
                     }.single().config.getString("p2pAddress").parseNetworkHostAndPort()).let {
-                        { nodeName: X500Name -> if (nodeName == legalName) null else it }
+                        { nodeName: CordaX500Name -> if (nodeName == legalName) null else it }
                     }
                 }
             }
@@ -662,7 +663,7 @@ class DriverDSL(
 
     override fun startNode(
             defaultParameters: NodeParameters,
-            providedName: X500Name?,
+            providedName: CordaX500Name?,
             advertisedServices: Set<ServiceInfo>,
             rpcUsers: List<User>,
             verifierType: VerifierType,
@@ -673,13 +674,13 @@ class DriverDSL(
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?: getX500Name(O = "${oneOf(names).organisation}-${p2pAddress.port}", L = "London", C = "GB")
+        val name = providedName ?: CordaX500Name(O = "${oneOf(names).organisation}-${p2pAddress.port}", L = "London", C = "GB")
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(listOf(object : NodeDefinition {
             override fun getName() = name.toString()
             override fun getConfig() = configOf("p2pAddress" to p2pAddress.toString())
         }))
         val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory(name),
+                baseDirectory = baseDirectory(name.x500Name),
                 allowMissingConfig = true,
                 configOverrides = configOf(
                         "myLegalName" to name.toString(),
@@ -701,10 +702,10 @@ class DriverDSL(
         return nodes.map { node ->
             portAllocation.nextHostAndPort() // rpcAddress
             val webAddress = portAllocation.nextHostAndPort()
-            val name = X500Name(node.name)
+            val name = CordaX500Name.parse(node.name)
 
             val config = ConfigHelper.loadConfig(
-                    baseDirectory = baseDirectory(name),
+                    baseDirectory = baseDirectory(name.x500Name),
                     allowMissingConfig = true,
                     configOverrides = node.config + mapOf(
                             "extraAdvertisedServiceIds" to node.advertisedServices,
@@ -718,15 +719,15 @@ class DriverDSL(
     }
 
     override fun startNotaryCluster(
-            notaryName: X500Name,
+            notaryName: CordaX500Name,
             clusterSize: Int,
             type: ServiceType,
             verifierType: VerifierType,
             rpcUsers: List<User>,
             startInSameProcess: Boolean?
     ): CordaFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (0 until clusterSize).map { getX500Name(O = "Notary Service $it", OU = "corda", L = "Zurich", C = "CH") }
-        val paths = nodeNames.map { baseDirectory(it) }
+        val nodeNames = (0 until clusterSize).map { CordaX500Name(O = "Notary Service $it", OU = "corda", L = "Zurich", C = "CH") }
+        val paths = nodeNames.map { baseDirectory(it.x500Name) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
@@ -797,7 +798,7 @@ class DriverDSL(
         val webAddress = portAllocation.nextHostAndPort()
         val networkMapLegalName = networkMapStartStrategy.legalName
         val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory(networkMapLegalName),
+                baseDirectory = baseDirectory(networkMapLegalName.x500Name),
                 allowMissingConfig = true,
                 configOverrides = configOf(
                         "myLegalName" to networkMapLegalName.toString(),

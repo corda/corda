@@ -9,6 +9,7 @@ import net.corda.core.contracts.Amount.Companion.sumOrThrow
 import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServiceHub
@@ -18,7 +19,6 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.toBase58String
 import net.corda.finance.contracts.asset.cash.selection.CashSelectionH2Impl
 import net.corda.finance.schemas.CashSchemaV1
@@ -346,7 +346,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 /** A randomly generated key. */
 val DUMMY_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_CASH_ISSUER by lazy { Party(getX500Name(O = "Snake Oil Issuer", OU = "corda", L = "London", C = "GB"), DUMMY_CASH_ISSUER_KEY.public).ref(1) }
+val DUMMY_CASH_ISSUER by lazy { Party(CordaX500Name(O = "Snake Oil Issuer", OU = "corda", L = "London", C = "GB"), DUMMY_CASH_ISSUER_KEY.public).ref(1) }
 /** An extension property that lets you write 100.DOLLARS.CASH */
 val Amount<Currency>.CASH: Cash.State get() = Cash.State(Amount(quantity, Issued(DUMMY_CASH_ISSUER, token)), NULL_PARTY)
 /** An extension property that lets you get a cash state from an issued token, under the [NULL_PARTY] */

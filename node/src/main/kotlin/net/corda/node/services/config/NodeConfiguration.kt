@@ -1,5 +1,6 @@
 package net.corda.node.services.config
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.NetworkMapInfo
@@ -8,7 +9,6 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.OldConfig
-import org.bouncycastle.asn1.x500.X500Name
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -21,7 +21,7 @@ data class BFTSMaRtConfiguration(val replicaId: Int, val debug: Boolean, val exp
 interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
     // TODO: Remove this so we don't accidentally use this identity in the code?
-    val myLegalName: X500Name
+    val myLegalName: CordaX500Name
     val networkMapService: NetworkMapInfo?
     val minimumPlatformVersion: Int
     val emailAddress: String
@@ -42,10 +42,10 @@ interface NodeConfiguration : NodeSSLConfiguration {
 data class FullNodeConfiguration(
         // TODO Remove this subsitution value and use baseDirectory as the subsitution instead
         @Deprecated(
-                "This is a subsitution value which points to the baseDirectory and is manually added into the config before parsing",
+                "This is a substitution value which points to the baseDirectory and is manually added into the config before parsing",
                 ReplaceWith("baseDirectory"))
         val basedir: Path,
-        override val myLegalName: X500Name,
+        override val myLegalName: CordaX500Name,
         override val emailAddress: String,
         override val keyStorePassword: String,
         override val trustStorePassword: String,
