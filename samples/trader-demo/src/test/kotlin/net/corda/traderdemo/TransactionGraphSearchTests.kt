@@ -1,5 +1,6 @@
-package net.corda.core.contracts
+package net.corda.traderdemo
 
+import net.corda.core.contracts.CommandData
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -53,8 +54,7 @@ class TransactionGraphSearchTests : TestDependencyInjectionBase() {
     @Test
     fun `return empty from empty`() {
         val storage = buildTransactions(DummyContract.Commands.Create())
-        val search = TransactionGraphSearch(storage, emptyList())
-        search.query = TransactionGraphSearch.Query()
+        val search = TransactionGraphSearch(storage, emptyList(), TransactionGraphSearch.Query())
         val expected = emptyList<WireTransaction>()
         val actual = search.call()
 
@@ -64,8 +64,7 @@ class TransactionGraphSearchTests : TestDependencyInjectionBase() {
     @Test
     fun `return empty from no match`() {
         val storage = buildTransactions(DummyContract.Commands.Create())
-        val search = TransactionGraphSearch(storage, listOf(storage.inputTx.tx))
-        search.query = TransactionGraphSearch.Query()
+        val search = TransactionGraphSearch(storage, listOf(storage.inputTx.tx), TransactionGraphSearch.Query())
         val expected = emptyList<WireTransaction>()
         val actual = search.call()
 
@@ -75,8 +74,7 @@ class TransactionGraphSearchTests : TestDependencyInjectionBase() {
     @Test
     fun `return origin on match`() {
         val storage = buildTransactions(DummyContract.Commands.Create())
-        val search = TransactionGraphSearch(storage, listOf(storage.inputTx.tx))
-        search.query = TransactionGraphSearch.Query(DummyContract.Commands.Create::class.java)
+        val search = TransactionGraphSearch(storage, listOf(storage.inputTx.tx), TransactionGraphSearch.Query(DummyContract.Commands.Create::class.java))
         val expected = listOf(storage.originTx.tx)
         val actual = search.call()
 
