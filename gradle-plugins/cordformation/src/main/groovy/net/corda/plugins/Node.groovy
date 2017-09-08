@@ -101,7 +101,9 @@ class Node extends CordformNode {
     protected void build() {
         configureRpcUsers()
         installCordaJar()
-        installWebserverJar()
+        if (config.hasPath("webAddress")) {
+            installWebserverJar()
+        }
         installBuiltPlugin()
         installCordapps()
         installConfig()
