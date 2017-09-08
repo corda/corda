@@ -28,13 +28,15 @@ dependencies {
     cordapp project(':finance')
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':client:jfx')
     cordaCompile project(':client:rpc')
     cordaCompile project(':webserver')
-    cordaCompile project(':node-driver')
+
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+
+    testCompile project(':node-driver')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
@@ -120,7 +122,7 @@ task runIssuer(type: JavaExec) {
 }
 
 task runRPCCashIssue(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
+    classpath = sourceSets.test.runtimeClasspath
     main = 'net.corda.bank.BankOfCordaDriverKt'
     args '--role'
     args 'ISSUE_CASH_RPC'
@@ -131,7 +133,7 @@ task runRPCCashIssue(type: JavaExec) {
 }
 
 task runWebCashIssue(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
+    classpath = sourceSets.test.runtimeClasspath
     main = 'net.corda.bank.BankOfCordaDriverKt'
     args '--role'
     args 'ISSUE_CASH_WEB'

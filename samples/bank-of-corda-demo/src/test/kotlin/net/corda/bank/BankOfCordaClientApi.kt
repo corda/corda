@@ -1,4 +1,4 @@
-package net.corda.bank.api
+package net.corda.bank
 
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.client.rpc.CordaRPCClient

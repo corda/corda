@@ -1,7 +1,6 @@
 package net.corda.bank
 
 import joptsimple.OptionParser
-import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
