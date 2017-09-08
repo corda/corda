@@ -45,7 +45,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         """.trimIndent())
 
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    val DUMMY_CASH_ISSUER = Party(CordaX500Name(O = "Cash issuer", L = "London", C = "GB"), DUMMY_CASH_ISSUER_KEY.public)
+    val DUMMY_CASH_ISSUER = Party(CordaX500Name(organisation = "Cash issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public)
 
     lateinit var oracle: NodeInterestRates.Oracle
     lateinit var database: CordaPersistence

@@ -1,6 +1,7 @@
 package net.corda.traderdemo
 
 import net.corda.core.contracts.Amount
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -21,7 +22,6 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
-import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 
 /**
@@ -42,7 +42,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
     }
 
-    fun runIssuer(amount: Amount<Currency>, buyerName: X500Name, sellerName: X500Name) {
+    fun runIssuer(amount: Amount<Currency>, buyerName: CordaX500Name, sellerName: CordaX500Name) {
         val ref = OpaqueBytes.of(1)
         val buyer = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
         val seller = rpc.partyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
@@ -75,7 +75,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         println("Commercial paper issued to seller")
     }
 
-    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, buyerName: X500Name) {
+    fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, buyerName: CordaX500Name) {
         val otherParty = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
         // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
         //

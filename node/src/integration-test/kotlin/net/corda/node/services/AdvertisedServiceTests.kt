@@ -3,6 +3,7 @@ package net.corda.node.services
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
@@ -14,7 +15,7 @@ import org.junit.Test
 import kotlin.test.assertTrue
 
 class AdvertisedServiceTests {
-    private val serviceName = getX500Name(O = "Custom Service", OU = "corda", L = "London", C = "GB")
+    private val serviceName = CordaX500Name(organisation = "Custom Service", locality = "London", country = "GB")
     private val serviceType = ServiceType.corda.getSubType("custom")
     private val user = "bankA"
     private val pass = "passA"

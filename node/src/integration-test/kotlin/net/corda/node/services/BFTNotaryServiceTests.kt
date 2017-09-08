@@ -7,6 +7,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
@@ -15,7 +16,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.network.NetworkMapService
@@ -35,7 +35,7 @@ import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
     companion object {
-        private val clusterName = getX500Name(O = "BFT", OU = "corda", L = "Zurich", C = "CH")
+        private val clusterName = CordaX500Name(organisation = "BFT", locality = "Zurich", country = "CH")
         private val serviceType = BFTNonValidatingNotaryService.type
     }
 

@@ -5,16 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getX500Name
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.webserver.WebServerConfig
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.io.StringWriter
 import java.nio.file.Path
@@ -29,7 +28,7 @@ class NodeConfigTest {
 
     companion object {
         private val baseDir: Path = Paths.get(".").toAbsolutePath()
-        private val myLegalName = getX500Name(OU = "Corda QA Department", O = "My Name", L = "New York", C = "US")
+        private val myLegalName = CordaX500Name(organisation = "My Name", locality = "New York", country = "US")
     }
 
     @Test
@@ -146,7 +145,7 @@ class NodeConfigTest {
                 + "\"detectPublicIp\":false,"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
-                + "\"myLegalName\":\"C=US,L=New York,O=My Name,OU=Corda QA Department\","
+                + "\"myLegalName\":\"C=US,L=New York,O=My Name\","
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["
@@ -168,13 +167,13 @@ class NodeConfigTest {
                 services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name.x500Name, 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         assertEquals(prettyPrint("{"
                 + "\"detectPublicIp\":false,"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
-                + "\"myLegalName\":\"C=US,L=New York,O=My Name,OU=Corda QA Department\","
+                + "\"myLegalName\":\"C=US,L=New York,O=My Name\","
                 + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"C=CH,L=Zurich,O=Notary Service\"},"
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
@@ -197,7 +196,7 @@ class NodeConfigTest {
                 services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name.x500Name, 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
@@ -205,7 +204,7 @@ class NodeConfigTest {
                 .resolve()
         val fullConfig = nodeConfig.parseAs<FullNodeConfiguration>()
 
-        assertEquals(myLegalName, fullConfig.myLegalName.x500Name)
+        assertEquals(myLegalName, fullConfig.myLegalName)
         assertEquals(localPort(40002), fullConfig.rpcAddress)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf("my.service"), fullConfig.extraAdvertisedServiceIds)
@@ -227,7 +226,7 @@ class NodeConfigTest {
                 services = mutableListOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name.x500Name, 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
@@ -253,7 +252,7 @@ class NodeConfigTest {
     }
 
     private fun createConfig(
-            legalName: X500Name = getX500Name(O = "Unknown", OU = "corda", L = "Nowhere", C = "GB"),
+            legalName: CordaX500Name = CordaX500Name(organisation = "Unknown", locality = "Nowhere", country = "GB"),
             p2pPort: Int = -1,
             rpcPort: Int = -1,
             webPort: Int = -1,

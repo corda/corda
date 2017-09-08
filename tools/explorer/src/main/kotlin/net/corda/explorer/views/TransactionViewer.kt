@@ -24,9 +24,9 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.organisation
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
@@ -40,7 +40,6 @@ import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.sign
 import net.corda.explorer.ui.setCustomCellFactory
 import net.corda.finance.contracts.asset.Cash
-import org.bouncycastle.asn1.x500.X500Name
 import tornadofx.*
 import java.util.*
 
@@ -200,7 +199,7 @@ class TransactionViewer : CordaView("Transactions") {
         })
     }
 
-    private fun ObservableList<List<ObservableValue<Party?>>>.formatJoinPartyNames(separator: String = ",", formatter: Formatter<X500Name>): String {
+    private fun ObservableList<List<ObservableValue<Party?>>>.formatJoinPartyNames(separator: String = ",", formatter: Formatter<CordaX500Name>): String {
         return flatten().map {
             it.value?.let { formatter.format(it.name) }
         }.filterNotNull().toSet().joinToString(separator)

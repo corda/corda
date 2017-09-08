@@ -2,6 +2,7 @@ package net.corda.demorun.util
 
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.User
@@ -11,7 +12,7 @@ fun CordformDefinition.node(configure: CordformNode.() -> Unit) {
     addNode { cordformNode -> cordformNode.configure() }
 }
 
-fun CordformNode.name(name: X500Name) = name(name.toString())
+fun CordformNode.name(name: CordaX500Name) = name(name.toString())
 
 fun CordformNode.rpcUsers(vararg users: User) {
     rpcUsers = users.map { it.toMap() }

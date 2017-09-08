@@ -103,7 +103,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                 val clientKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
 
                 // Set name constrain to the legal name.
-                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName))), arrayOf())
+                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
                 val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCA.certificate,
                         intermediateCA.keyPair, legalName, clientKey.public, nameConstraints = nameConstraints)
                 val tlsKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)

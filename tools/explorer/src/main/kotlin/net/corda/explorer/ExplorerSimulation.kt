@@ -6,6 +6,7 @@ import net.corda.client.mock.EventGenerator
 import net.corda.client.mock.Generator
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.Amount
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.CordaRPCOps
@@ -15,7 +16,6 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
@@ -78,8 +78,8 @@ class ExplorerSimulation(val options: OptionSet) {
             val bob = startNode(providedName = BOB.name, rpcUsers = arrayListOf(user),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                     customOverrides = mapOf("nearestCity" to "Madrid"))
-            val ukBankName = getX500Name(O = "UK Bank Plc", L = "London", C = "GB")
-            val usaBankName = getX500Name(O = "USA Bank Corp", L = "New York", C = "USA")
+            val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
+            val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "USA")
             val issuerGBP = startNode(providedName = ukBankName, rpcUsers = arrayListOf(manager),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
                     customOverrides = mapOf("nearestCity" to "London"))

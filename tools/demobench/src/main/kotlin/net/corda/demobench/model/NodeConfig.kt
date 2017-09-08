@@ -1,6 +1,7 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.locality
 import net.corda.nodeapi.User
 import org.bouncycastle.asn1.x500.X500Name
@@ -11,7 +12,7 @@ import java.nio.file.StandardCopyOption
 
 class NodeConfig(
         baseDir: Path,
-        legalName: X500Name,
+        legalName: CordaX500Name,
         p2pPort: Int,
         val rpcPort: Int,
         val webPort: Int,

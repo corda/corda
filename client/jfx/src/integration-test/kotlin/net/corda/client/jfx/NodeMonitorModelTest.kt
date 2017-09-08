@@ -8,6 +8,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -25,14 +26,13 @@ import net.corda.finance.USD
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
 import net.corda.testing.node.DriverBasedTest
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import rx.Observable
 
@@ -50,7 +50,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
-    lateinit var newNode: (X500Name) -> NodeInfo
+    lateinit var newNode: (CordaX500Name) -> NodeInfo
 
     override fun setup() = driver {
         val cashUser = User("user1", "test", permissions = setOf(
