@@ -2,7 +2,6 @@ package net.corda.loadtest.tests
 
 import net.corda.client.mock.Generator
 import net.corda.client.mock.generateAmount
-import net.corda.client.mock.pickOne
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.withoutIssuer

@@ -5,7 +5,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.containsType
+import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.locality
@@ -278,3 +278,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         mockNet.stopNodes()
     }
 }
+
+/**
+ * Helper function for verifying that a service info contains the given type of advertised service. For non-simulation cases
+ * this is a configuration matter rather than implementation.
+ */
+fun Iterable<ServiceInfo>.containsType(type: ServiceType) = any { it.type == type }
