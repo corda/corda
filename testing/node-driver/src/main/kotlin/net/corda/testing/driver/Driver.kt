@@ -188,7 +188,15 @@ sealed class NodeHandle {
             override val webAddress: NetworkHostAndPort,
             val debugPort: Int?,
             val process: Process
-    ) : NodeHandle()
+    ) : NodeHandle() {
+        override fun stop(): CordaFuture<Unit> {
+            with(process) {
+                destroy()
+                waitFor()
+            }
+            return doneFuture(Unit)
+        }
+    }
 
     data class InProcess(
             override val nodeInfo: NodeInfo,
@@ -197,9 +205,23 @@ sealed class NodeHandle {
             override val webAddress: NetworkHostAndPort,
             val node: Node,
             val nodeThread: Thread
-    ) : NodeHandle()
+    ) : NodeHandle() {
+        override fun stop(): CordaFuture<Unit> {
+            node.stop()
+            with(nodeThread) {
+                interrupt()
+                join()
+            }
+            return doneFuture(Unit)
+        }
+    }
 
     fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!, initialiseSerialization = false)
+
+    /**
+     * Stops the referenced node.
+     */
+    abstract fun stop(): CordaFuture<Unit>
 }
 
 data class WebserverHandle(
