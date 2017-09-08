@@ -242,7 +242,7 @@ open class Node(override val configuration: FullNodeConfiguration,
         session.deleteQueue(queueName)
         clientFactory.close()
 
-        return publicHostAndPort.removePrefix("/").parseNetworkHostAndPort().host
+        return NetworkHostAndPort.parse(publicHostAndPort.removePrefix("/")).host
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {

@@ -24,7 +24,7 @@ class NetworkHostAndPortTest {
         listOf(65536, -1).forEach {
             assertThatThrownBy {
                 NetworkHostAndPort("example.com", it)
-            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(NetworkHostAndPort.invalidPortFormat.format(it))
+            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(NetworkHostAndPort.INVALID_PORT_FORMAT.format(it))
         }
     }
 
@@ -41,20 +41,20 @@ class NetworkHostAndPortTest {
 
     @Test
     fun `parseNetworkHostAndPort works`() {
-        assertEquals(NetworkHostAndPort("example.com", 1234), "example.com:1234".parseNetworkHostAndPort())
-        assertEquals(NetworkHostAndPort("example.com", 65535), "example.com:65535".parseNetworkHostAndPort())
-        assertEquals(NetworkHostAndPort("1.2.3.4", 1234), "1.2.3.4:1234".parseNetworkHostAndPort())
-        assertEquals(NetworkHostAndPort("::1", 1234), "[::1]:1234".parseNetworkHostAndPort())
-        assertEquals(NetworkHostAndPort("0:0:0:0:0:0:0:1", 1234), "[0:0:0:0:0:0:0:1]:1234".parseNetworkHostAndPort())
+        assertEquals(NetworkHostAndPort("example.com", 1234), NetworkHostAndPort.parse("example.com:1234"))
+        assertEquals(NetworkHostAndPort("example.com", 65535), NetworkHostAndPort.parse("example.com:65535"))
+        assertEquals(NetworkHostAndPort("1.2.3.4", 1234), NetworkHostAndPort.parse("1.2.3.4:1234"))
+        assertEquals(NetworkHostAndPort("::1", 1234), NetworkHostAndPort.parse("[::1]:1234"))
+        assertEquals(NetworkHostAndPort("0:0:0:0:0:0:0:1", 1234), NetworkHostAndPort.parse("[0:0:0:0:0:0:0:1]:1234"))
         listOf("0:0:0:0:0:0:0:1:1234", ":1234", "example.com:-1").forEach {
             assertThatThrownBy {
-                it.parseNetworkHostAndPort()
-            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(NetworkHostAndPort.unparseableAddressFormat.format(it))
+                NetworkHostAndPort.parse(it)
+            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(NetworkHostAndPort.UNPARSEABLE_ADDRESS_FORMAT.format(it))
         }
         listOf("example.com:", "example.com").forEach {
             assertThatThrownBy {
-                it.parseNetworkHostAndPort()
-            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(NetworkHostAndPort.missingPortFormat.format(it))
+                NetworkHostAndPort.parse(it)
+            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(NetworkHostAndPort.MISSING_PORT_FORMAT.format(it))
         }
     }
 }

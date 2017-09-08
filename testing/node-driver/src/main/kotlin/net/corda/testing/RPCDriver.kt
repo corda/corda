@@ -12,7 +12,6 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.parseNetworkHostAndPort
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
@@ -508,7 +507,7 @@ class RandomRpcUser {
             require(args.size == 4)
             @Suppress("UNCHECKED_CAST")
             val rpcClass = Class.forName(args[0]) as Class<RPCOps>
-            val hostAndPort = args[1].parseNetworkHostAndPort()
+            val hostAndPort = NetworkHostAndPort.parse(args[1])
             val username = args[2]
             val password = args[3]
             CordaRPCClient.initialiseSerialization()
