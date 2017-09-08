@@ -82,5 +82,7 @@ object Models {
         @Suppress("UNCHECKED_CAST")
         return model as M
     }
+
+    inline fun <reified M : Any> get(origin: KClass<*>): M = get(M::class, origin)
 }
 

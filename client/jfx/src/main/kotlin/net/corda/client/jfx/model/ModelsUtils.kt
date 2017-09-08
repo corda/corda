@@ -12,9 +12,6 @@ import rx.Observer
 import rx.subjects.Subject
 import kotlin.reflect.KClass
 
-
-inline fun <reified M : Any> get(origin: KClass<*>): M = Models.get(M::class, origin)
-
 inline fun <reified M : Any, T> observable(noinline observableProperty: (M) -> Observable<T>) =
         TrackedDelegate.ObservableDelegate(M::class, observableProperty)
 
