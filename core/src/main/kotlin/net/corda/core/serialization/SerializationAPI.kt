@@ -86,10 +86,6 @@ abstract class SerializationFactory {
     }
 }
 
-enum class CommonPropertyNames {
-    IncludeInternalInfo
-}
-
 /**
  * Parameters to serialization and deserialization.
  */
