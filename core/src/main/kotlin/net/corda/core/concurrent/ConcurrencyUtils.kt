@@ -1,3 +1,4 @@
+@file:JvmName("ConcurrencyUtils")
 package net.corda.core.concurrent
 
 import net.corda.core.internal.concurrent.openFuture

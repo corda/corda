@@ -25,5 +25,3 @@ data class ServiceInfo(val type: ServiceType, val name: X500Name? = null) {
 
     override fun toString() = if (name != null) "$type|$name" else type.toString()
 }
-
-fun Iterable<ServiceInfo>.containsType(type: ServiceType) = any { it.type == type }

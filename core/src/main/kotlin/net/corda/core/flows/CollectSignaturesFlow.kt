@@ -262,7 +262,9 @@ abstract class SignTransactionFlow(val otherParty: Party,
      * @param stx a partially signed transaction received from your counter-party.
      * @throws FlowException if the proposed transaction fails the checks.
      */
-    @Suspendable abstract protected fun checkTransaction(stx: SignedTransaction)
+    @Suspendable
+    @Throws(FlowException::class)
+    abstract protected fun checkTransaction(stx: SignedTransaction)
 
     @Suspendable private fun checkMySignatureRequired(stx: SignedTransaction, signingKey: PublicKey) {
         require(signingKey in stx.tx.requiredSigningKeys) {
