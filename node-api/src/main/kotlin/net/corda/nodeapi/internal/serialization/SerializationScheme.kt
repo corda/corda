@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutionException
 
 val attachmentsClassLoaderEnabledPropertyName = "attachments.class.loader.enabled"
 
@@ -42,19 +43,28 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
 
     private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = CacheBuilder.newBuilder().weakValues().maximumSize(1024).build()
 
-    // We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
+    /**
+     * {@inheritDoc}
+     *
+     * We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
+     */
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
         properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean ?: false || return this
         val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContextImpl ?: return this // Some tests don't set one.
-        return withClassLoader(cache.get(attachmentHashes) {
-            val missing = ArrayList<SecureHash>()
-            val attachments = ArrayList<Attachment>()
-            attachmentHashes.forEach { id ->
-                serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
-            }
-            missing.isNotEmpty() && throw MissingAttachmentsException(missing)
-            AttachmentsClassLoader(attachments)
-        })
+        try {
+            return withClassLoader(cache.get(attachmentHashes) {
+                val missing = ArrayList<SecureHash>()
+                val attachments = ArrayList<Attachment>()
+                attachmentHashes.forEach { id ->
+                    serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
+                }
+                missing.isNotEmpty() && throw MissingAttachmentsException(missing)
+                AttachmentsClassLoader(attachments)
+            })
+        } catch (e: ExecutionException) {
+            // Caught from within the cache get, so unwrap.
+            throw e.cause!!
+        }
     }
 
     override fun withProperty(property: Any, value: Any): SerializationContext {
