@@ -11,7 +11,9 @@ import java.io.NotSerializableException
 
 class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(Throwable::class.java, ThrowableProxy::class.java, factory) {
 
-    private val logger = loggerFor<ThrowableSerializer>()
+    companion object {
+        private val logger = loggerFor<ThrowableSerializer>()
+    }
 
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(StackTraceElementSerializer(factory))
 
