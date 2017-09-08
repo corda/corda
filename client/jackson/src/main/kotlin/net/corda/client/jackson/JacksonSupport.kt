@@ -31,7 +31,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.utilities.toBase58String
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -106,8 +105,8 @@ object JacksonSupport {
             addSerializer(OpaqueBytes::class.java, OpaqueBytesSerializer)
 
             // For X.500 distinguished names
-            addDeserializer(X500Name::class.java, X500NameDeserializer)
-            addSerializer(X500Name::class.java, X500NameSerializer)
+            addDeserializer(CordaX500Name::class.java, CordaX500NameDeserializer)
+            addSerializer(CordaX500Name::class.java, CordaX500NameSerializer)
 
             // Mixins for transaction types to prevent some properties from being serialized
             setMixInAnnotation(SignedTransaction::class.java, SignedTransactionMixin::class.java)
@@ -212,22 +211,22 @@ object JacksonSupport {
         }
     }
 
-    object X500NameSerializer : JsonSerializer<X500Name>() {
-        override fun serialize(obj: X500Name, generator: JsonGenerator, provider: SerializerProvider) {
+    object CordaX500NameSerializer : JsonSerializer<CordaX500Name>() {
+        override fun serialize(obj: CordaX500Name, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeString(obj.toString())
         }
     }
 
-    object X500NameDeserializer : JsonDeserializer<X500Name>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): X500Name {
+    object CordaX500NameDeserializer : JsonDeserializer<CordaX500Name>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): CordaX500Name {
             if (parser.currentToken == JsonToken.FIELD_NAME) {
                 parser.nextToken()
             }
 
             return try {
-                X500Name(parser.text)
+                CordaX500Name.parse(parser.text)
             } catch(ex: IllegalArgumentException) {
-                throw JsonParseException(parser, "Invalid X.500 name ${parser.text}: ${ex.message}", ex)
+                throw JsonParseException(parser, "Invalid Corda X.500 name ${parser.text}: ${ex.message}", ex)
             }
         }
     }
