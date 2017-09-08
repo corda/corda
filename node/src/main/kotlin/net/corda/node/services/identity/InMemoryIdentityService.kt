@@ -1,7 +1,6 @@
 package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.utilities.cert
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -11,7 +10,9 @@ import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.cert
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.subject
 import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
@@ -65,8 +66,17 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
-        identity.verify(trustAnchor)
-
+        try {
+            identity.verify(trustAnchor)
+        } catch (e: CertPathValidatorException) {
+            log.error("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subject}.")
+            log.error("Certificate path :")
+            identity.certPath.certificates.reversed().forEachIndexed { index, certificate ->
+                val space = (0 until index).map { "   " }.joinToString("")
+                log.error("$space${certificate.toX509CertHolder().subject}")
+            }
+            throw e
+        }
         log.trace { "Registering identity $identity" }
         keyToParties[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity

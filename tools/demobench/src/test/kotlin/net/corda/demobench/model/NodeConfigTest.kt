@@ -7,11 +7,12 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.utilities.getX500Name
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.webserver.WebServerConfig
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
@@ -28,7 +29,7 @@ class NodeConfigTest {
 
     companion object {
         private val baseDir: Path = Paths.get(".").toAbsolutePath()
-        private val myLegalName = X500Name("CN=My Name,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
+        private val myLegalName = getX500Name(OU = "Corda QA Department", O = "My Name", L = "New York", C = "US")
     }
 
     @Test
@@ -145,7 +146,7 @@ class NodeConfigTest {
                 + "\"detectPublicIp\":false,"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
-                + "\"myLegalName\":\"CN=My Name,OU=Corda QA Department,O=R3 CEV,L=New York,C=US\","
+                + "\"myLegalName\":\"C=US,L=New York,O=My Name,OU=Corda QA Department\","
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["
@@ -173,8 +174,8 @@ class NodeConfigTest {
                 + "\"detectPublicIp\":false,"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
-                + "\"myLegalName\":\"CN=My Name,OU=Corda QA Department,O=R3 CEV,L=New York,C=US\","
-                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH\"},"
+                + "\"myLegalName\":\"C=US,L=New York,O=My Name,OU=Corda QA Department\","
+                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"C=CH,L=Zurich,O=Notary Service,OU=corda\"},"
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["
@@ -252,7 +253,7 @@ class NodeConfigTest {
     }
 
     private fun createConfig(
-            legalName: X500Name = X500Name("CN=Unknown,O=R3,OU=corda,L=Nowhere,C=GB"),
+            legalName: X500Name = getX500Name(O = "Unknown", OU = "corda", L = "Nowhere", C = "GB"),
             p2pPort: Int = -1,
             rpcPort: Int = -1,
             webPort: Int = -1,

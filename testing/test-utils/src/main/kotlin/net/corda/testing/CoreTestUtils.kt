@@ -4,14 +4,12 @@
 package net.corda.testing
 
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.*
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.loggerFor
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -20,8 +18,6 @@ import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.internal.serialization.AMQP_ENABLED
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
 import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
@@ -62,20 +58,20 @@ val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
 val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
 
-val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX509Name("MegaCorp", "London", "demo@r3.com", null), MEGA_CORP_PUBKEY)
+val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX500Name(O = "MegaCorp", L = "London", C = "GB"), MEGA_CORP_PUBKEY)
 val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
-val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX509Name("MiniCorp", "London", "demo@r3.com", null), MINI_CORP_PUBKEY)
+val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX500Name(O = "MiniCorp", L = "London", C = "GB"), MINI_CORP_PUBKEY)
 val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getTestX509Name("BankOfCorda"), BOC_PUBKEY)
+val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX500Name(O = "BankOfCorda", L = "London", C = "GB"), BOC_PUBKEY)
 val BOC: Party get() = BOC_IDENTITY.party
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX509Name("BigCorporation", "London", "demo@r3.com", null), BIG_CORP_PUBKEY)
+val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getX500Name(O = "BigCorporation", L = "London", C = "GB"), BIG_CORP_PUBKEY)
 val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
@@ -127,21 +123,6 @@ fun configureTestSSL(legalName: X500Name = MEGA_CORP.name): SSLConfiguration = o
     init {
         configureDevKeyAndTrustStores(legalName)
     }
-}
-
-
-/**
- * Return a bogus X.509 for testing purposes.
- */
-fun getTestX509Name(commonName: String): X500Name {
-    require(!commonName.startsWith("CN="))
-    // TODO: Consider if we want to make these more variable, i.e. different locations?
-    val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
-    nameBuilder.addRDN(BCStyle.CN, commonName)
-    nameBuilder.addRDN(BCStyle.O, "R3")
-    nameBuilder.addRDN(BCStyle.L, "New York")
-    nameBuilder.addRDN(BCStyle.C, "US")
-    return nameBuilder.build()
 }
 
 fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {

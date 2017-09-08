@@ -1,7 +1,7 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.*
-import net.corda.core.utilities.locationOrNull
+import net.corda.core.utilities.locality
 import net.corda.nodeapi.User
 import org.bouncycastle.asn1.x500.X500Name
 import java.io.File
@@ -26,7 +26,7 @@ class NodeConfig(
         val defaultUser = user("guest")
     }
 
-    val nearestCity: String = legalName.locationOrNull ?: "Unknown location"
+    val nearestCity: String = legalName.locality
     val nodeDir: Path = baseDir.resolve(key)
     override val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")

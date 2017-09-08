@@ -6,12 +6,12 @@ import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.FlowHandle;
 import net.corda.core.node.NodeInfo;
 import net.corda.core.utilities.OpaqueBytes;
+import net.corda.core.utilities.X500NameUtils;
 import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
 import net.corda.nodeapi.User;
 import net.corda.smoketesting.NodeConfig;
 import net.corda.smoketesting.NodeProcess;
-import org.bouncycastle.asn1.x500.X500Name;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +43,7 @@ public class StandaloneCordaRPCJavaClientTest {
     private NodeInfo notaryNode;
 
     private NodeConfig notaryConfig = new NodeConfig(
-            new X500Name("CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"),
+            X500NameUtils.getX500Name("Notary Service", "Zurich", "CH"),
             port.getAndIncrement(),
             port.getAndIncrement(),
             port.getAndIncrement(),

@@ -5,11 +5,11 @@ import com.opengamma.strata.product.swap.IborRateCalculation
 import com.opengamma.strata.product.swap.RateCalculationSwapLeg
 import com.opengamma.strata.product.swap.SwapLegType
 import net.corda.core.contracts.hash
-import net.corda.core.utilities.commonName
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.utilities.toBase58String
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.utilities.organisation
+import net.corda.core.utilities.toBase58String
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
 import net.corda.vega.portfolio.Portfolio
@@ -136,7 +136,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
 
         return TradeView(
                 fixedLeg = mapOf(
-                        "fixedRatePayer" to (fixedRatePayer.nameOrNull()?.commonName ?: fixedRatePayer.owningKey.toBase58String()),
+                        "fixedRatePayer" to (fixedRatePayer.nameOrNull()?.organisation ?: fixedRatePayer.owningKey.toBase58String()),
                         "notional" to mapOf(
                                 "token" to fixedLeg.currency.code,
                                 "quantity" to fixedLeg.notionalSchedule.amount.initialValue
@@ -152,7 +152,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
                         "paymentCalendar" to mapOf<String, Any>() // TODO
                 ),
                 floatingLeg = mapOf(
-                        "floatingRatePayer" to (floatingRatePayer.nameOrNull()?.commonName ?: floatingRatePayer.owningKey.toBase58String()),
+                        "floatingRatePayer" to (floatingRatePayer.nameOrNull()?.organisation ?: floatingRatePayer.owningKey.toBase58String()),
                         "notional" to mapOf(
                                 "token" to floatingLeg.currency.code,
                                 "quantity" to floatingLeg.notionalSchedule.amount.initialValue

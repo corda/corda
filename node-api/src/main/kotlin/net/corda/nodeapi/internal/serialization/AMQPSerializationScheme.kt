@@ -27,7 +27,7 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     internal companion object {
         private val pluginRegistries: List<CordaPluginRegistry> by lazy {
-            ServiceLoader.load(CordaPluginRegistry::class.java, this.javaClass.classLoader).toList()
+            ServiceLoader.load(CordaPluginRegistry::class.java, this::class.java.classLoader).toList()
         }
 
         fun registerCustomSerializers(factory: SerializerFactory) {

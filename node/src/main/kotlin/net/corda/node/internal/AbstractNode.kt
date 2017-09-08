@@ -147,6 +147,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     val nodeReadyFuture: CordaFuture<Unit>
         get() = _nodeReadyFuture
 
+    protected val myLegalName: X500Name by lazy {
+        loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_CA).subject.withCommonName(null)
+    }
+
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
     open val pluginRegistries: List<CordaPluginRegistry> by lazy {
         ServiceLoader.load(CordaPluginRegistry::class.java).toList()
@@ -414,7 +418,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         checkpointStorage = DBCheckpointStorage()
         _services = ServiceHubInternalImpl()
         attachments = NodeAttachmentService(services.monitoringService.metrics)
-        val legalIdentity = obtainIdentity("identity", configuration.myLegalName)
+        val legalIdentity = obtainIdentity()
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
 
@@ -497,9 +501,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     protected open fun makeServiceEntries(): List<ServiceEntry> {
         return advertisedServices.map {
-            val serviceId = it.type.id
-            val serviceName = it.name ?: X500Name("${configuration.myLegalName},OU=$serviceId")
-            val identity = obtainIdentity(serviceId, serviceName)
+            val identity = obtainIdentity(it)
             ServiceEntry(it, identity)
         }
     }
@@ -524,12 +526,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     "Please either copy your existing identity key and certificate from another node, " +
                     "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
                     "Read more at: https://docs.corda.net/permissioning.html"
-        }
-        val identitiesKeystore = loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
-        val tlsIdentity = identitiesKeystore.getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject
-
-        require(tlsIdentity == configuration.myLegalName) {
-            "Expected '${configuration.myLegalName}' but got '$tlsIdentity' from the keystore."
         }
     }
 
@@ -692,15 +688,23 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected abstract fun startMessagingService(rpcOps: RPCOps)
 
-    private fun obtainIdentity(id: String, name: X500Name): PartyAndCertificate {
+    private fun obtainIdentity(serviceInfo: ServiceInfo? = null): PartyAndCertificate {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
         // the public key. Obviously in a real system this would need to be a certificate chain of some kind to ensure
         // the legal name is actually validated in some way.
+        val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
+
+        val (id, name) = if (serviceInfo == null) {
+            // Create node identity if service info = null
+            Pair("identity", myLegalName.withCommonName(null))
+        } else {
+            val name = serviceInfo.name ?: myLegalName.withCommonName(serviceInfo.type.id)
+            Pair(serviceInfo.type.id, name)
+        }
 
         // TODO: Integrate with Key management service?
-        val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val privateKeyAlias = "$id-private-key"
         val compositeKeyAlias = "$id-composite-key"
 
@@ -715,7 +719,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 migrateKeysFromFile(keyStore, name, pubIdentityFile, privKeyFile, compositeKeyFile, privateKeyAlias, compositeKeyAlias)
             } else {
                 log.info("$privateKeyAlias not found in key store ${configuration.nodeKeystore}, generating fresh key!")
-                keyStore.saveNewKeyPair(name, privateKeyAlias, generateKeyPair())
+                keyStore.signAndSaveNewKeyPair(name, privateKeyAlias, generateKeyPair())
             }
         }
 
@@ -751,7 +755,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // Load the private key.
         val publicKey = Crypto.decodePublicKey(pubKeyFile.readAll())
         val privateKey = Crypto.decodePrivateKey(privKeyFile.readAll())
-        keyStore.saveNewKeyPair(serviceName, privateKeyAlias, KeyPair(publicKey, privateKey))
+        keyStore.signAndSaveNewKeyPair(serviceName, privateKeyAlias, KeyPair(publicKey, privateKey))
         // Store composite key separately.
         if (compositeKeyFile.exists()) {
             keyStore.savePublicKey(serviceName, compositeKeyAlias, Crypto.decodePublicKey(compositeKeyFile.readAll()))

@@ -130,7 +130,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                            clusterSize: Int,
                            serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { baseDirectory(notaryName.appendToCommonName("-$it")) },
+                (0 until clusterSize).map { baseDirectory(getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country)) },
                 serviceType.id,
                 notaryName)
 
@@ -138,19 +138,19 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
         val masterNodeFuture = startNode(
-                getX509Name("${notaryName.commonName}-0", "London", "demo@r3.com", null),
+                getX500Name(O = "${notaryName.organisation}-0", L = notaryName.locality, C = notaryName.country),
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
-                    "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.commonName}0".replace(Regex("[^0-9A-Za-z]+"),"") else "")))
+                        "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else "")))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
-                    getX509Name("${notaryName.commonName}-$it", "London", "demo@r3.com", null),
+                    getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
                             "notaryClusterAddresses" to listOf(nodeAddresses[0]),
-                            "database" to mapOf("serverNameTablePrefix" to "${notaryName.commonName}$it".replace(Regex("[^0-9A-Za-z]+"), ""))))
+                            "database" to mapOf("serverNameTablePrefix" to "${notaryName.organisation}$it".replace(Regex("[^0-9A-Za-z]+"), ""))))
         }
 
         return remainingNodesFutures.transpose().flatMap { remainingNodes ->
@@ -158,7 +158,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         }
     }
 
-    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.commonName.replace(WHITESPACE, "")
+    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.organisation.replace(WHITESPACE, "")
 
     private fun startNodeInternal(legalName: X500Name,
                                   platformVersion: Int,
@@ -187,7 +187,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 initialiseSerialization = false)
         node.start()
         nodes += node
-        thread(name = legalName.commonName) {
+        thread(name = legalName.organisation) {
             node.run()
         }
         return node

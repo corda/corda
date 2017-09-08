@@ -3,7 +3,7 @@ package net.corda.testing.node
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.utilities.getX509Name
+import net.corda.core.utilities.getX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.core.messaging.MessageRecipientGroup
@@ -127,7 +127,7 @@ class InMemoryMessagingNetwork(
             id: Int,
             executor: AffinityExecutor,
             advertisedServices: List<ServiceEntry>,
-            description: X500Name = getX509Name("In memory node $id", "London", "demo@r3.com", null),
+            description: X500Name = getX500Name(O = "In memory node $id", L = "London", C = "UK"),
             database: CordaPersistence)
             : MessagingServiceBuilder<InMemoryMessaging> {
         val peerHandle = PeerHandle(id, description)

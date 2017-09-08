@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.getTestX509Name
+import net.corda.core.utilities.getX500Name
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
@@ -112,7 +112,7 @@ class ConfigParsingTest {
 
     @Test
     fun x500Name() {
-        testPropertyType<X500NameData, X500NameListData, X500Name>(getTestX509Name("Mock Party"), getTestX509Name("Mock Party 2"), valuesToString = true)
+        testPropertyType<X500NameData, X500NameListData, X500Name>(getX500Name(O = "Mock Party", L = "London", C = "GB"), getX500Name(O = "Mock Party 2", L = "London", C = "GB"), valuesToString = true)
     }
 
     @Test

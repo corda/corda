@@ -2,12 +2,9 @@ package net.corda.services.messaging
 
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.utilities.cert
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.seconds
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.*
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.sendRequest
@@ -30,7 +27,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `incorrect legal name for the network map service config`() {
-        val incorrectNetworkMapName = getTestX509Name("NetworkMap-${random63BitValue()}")
+        val incorrectNetworkMapName = getX500Name(O = "NetworkMap-${random63BitValue()}", L = "London", C = "GB")
         val node = startNode(BOB.name, configOverrides = mapOf(
                 "networkMapService" to mapOf(
                         "address" to networkMapNode.configuration.p2pAddress.toString(),

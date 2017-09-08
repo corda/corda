@@ -50,9 +50,9 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
+    networkMap "O=Notary Service,OU=corda,L=Zurich,C=CH"
     node {
-        name "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
+        name "O=Notary Service,OU=corda,L=Zurich,C=CH"
         advertisedServices = ["corda.notary.validating", "corda.interest_rates"]
         p2pPort 10002
         rpcPort 10003
@@ -61,7 +61,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         useTestClock true
     }
     node {
-        name "CN=Bank A,O=Bank A,L=London,C=GB"
+        name "O=Bank A,L=London,C=GB"
         advertisedServices = []
         p2pPort 10005
         rpcPort 10006
@@ -70,7 +70,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         useTestClock true
     }
     node {
-        name "CN=Bank B,O=Bank B,L=New York,C=US"
+        name "O=Bank B,L=New York,C=US"
         advertisedServices = []
         p2pPort 10008
         rpcPort 10009

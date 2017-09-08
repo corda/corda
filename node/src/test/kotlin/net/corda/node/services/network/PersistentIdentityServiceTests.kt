@@ -9,6 +9,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.utilities.CertificateAndKeyPair
 import net.corda.core.utilities.cert
+import net.corda.core.utilities.getX500Name
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.CordaPersistence
@@ -96,7 +97,7 @@ class PersistentIdentityServiceTests {
             identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
             identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
         }
-        val alicente = getTestPartyAndCertificate(X500Name("O=Alicente Worldwide,L=London,C=GB"), generateKeyPair().public)
+        val alicente = getTestPartyAndCertificate(getX500Name(O = "Alicente Worldwide", L = "London", C = "GB"), generateKeyPair().public)
         database.transaction {
             identityService.verifyAndRegisterIdentity(alicente)
             assertEquals(setOf(ALICE, alicente.party), identityService.partiesFromName("Alice", false))
@@ -108,7 +109,7 @@ class PersistentIdentityServiceTests {
     @Test
     fun `get identity by name`() {
         val identities = listOf("Node A", "Node B", "Node C")
-                .map { getTestPartyAndCertificate(X500Name("CN=$it,O=R3,OU=corda,L=London,C=GB"), generateKeyPair().public) }
+                .map { getTestPartyAndCertificate(getX500Name(O = it, OU = "corda", L = "London", C = "GB"), generateKeyPair().public) }
         database.transaction {
             assertNull(identityService.partyFromX500Name(identities.first().name))
         }
