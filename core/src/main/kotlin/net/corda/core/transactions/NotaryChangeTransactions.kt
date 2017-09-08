@@ -6,6 +6,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 
 /**
@@ -13,6 +14,7 @@ import java.security.PublicKey
  * old and new notaries. Output states can be computed by applying the notary modification to corresponding inputs
  * on the fly.
  */
+@CordaSerializable
 data class NotaryChangeWireTransaction(
         override val inputs: List<StateRef>,
         override val notary: Party,

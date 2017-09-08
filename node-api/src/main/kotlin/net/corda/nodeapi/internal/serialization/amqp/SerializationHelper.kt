@@ -13,6 +13,7 @@ import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaType
 
 /**
@@ -48,7 +49,9 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
                 preferredCandidate = kotlinConstructor
             }
         }
-        return preferredCandidate ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")
+
+        return preferredCandidate?.apply { isAccessible = true}
+                ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")
     } else {
         return null
     }

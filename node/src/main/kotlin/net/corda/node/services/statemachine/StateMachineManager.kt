@@ -40,10 +40,10 @@ import net.corda.node.utilities.wrapWithDatabaseTransaction
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.io.NotSerializableException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -609,13 +609,20 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         val serialized = try {
             message.serialize()
-        } catch (e: KryoException) {
-            if (message !is ErrorSessionEnd || message.errorResponse == null) throw e
-            logger.warn("Something in ${message.errorResponse.javaClass.name} is not serialisable. " +
-                    "Instead sending back an exception which is serialisable to ensure session end occurs properly.", e)
-            // The subclass may have overridden toString so we use that
-            val exMessage = message.errorResponse.let { if (it.javaClass != FlowException::class.java) it.toString() else it.message }
-            message.copy(errorResponse = FlowException(exMessage)).serialize()
+        } catch (e: Exception) {
+            when(e) {
+                // Handling Kryo and AMQP serialization problems. Unfortunately the two exception types do not share much of a common exception interface.
+                is KryoException,
+                is NotSerializableException -> {
+                    if (message !is ErrorSessionEnd || message.errorResponse == null) throw e
+                    logger.warn("Something in ${message.errorResponse.javaClass.name} is not serialisable. " +
+                            "Instead sending back an exception which is serialisable to ensure session end occurs properly.", e)
+                    // The subclass may have overridden toString so we use that
+                    val exMessage = message.errorResponse.let { if (it.javaClass != FlowException::class.java) it.toString() else it.message }
+                    message.copy(errorResponse = FlowException(exMessage)).serialize()
+                }
+                else -> throw e
+            }
         }
 
         serviceHub.networkService.apply {
