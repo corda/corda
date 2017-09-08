@@ -8,12 +8,11 @@ import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.AttachmentsClassLoader
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializeAsTokenContext
@@ -241,9 +240,6 @@ fun Input.readBytesWithLength(): ByteArray {
 /** A serialisation engine that knows how to deserialise code inside a sandbox */
 @ThreadSafe
 object WireTransactionSerializer : Serializer<WireTransaction>() {
-    @VisibleForTesting
-    internal val attachmentsClassLoaderEnabled = "attachments.class.loader.enabled"
-
     override fun write(kryo: Kryo, output: Output, obj: WireTransaction) {
         kryo.writeClassAndObject(output, obj.inputs)
         kryo.writeClassAndObject(output, obj.attachments)
@@ -255,7 +251,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
     }
 
     private fun attachmentsClassLoader(kryo: Kryo, attachmentHashes: List<SecureHash>): ClassLoader? {
-        kryo.context[attachmentsClassLoaderEnabled] as? Boolean ?: false || return null
+        kryo.context[attachmentsClassLoaderEnabledPropertyName] as? Boolean ?: false || return null
         val serializationContext = kryo.serializationContext() ?: return null // Some tests don't set one.
         val missing = ArrayList<SecureHash>()
         val attachments = ArrayList<Attachment>()

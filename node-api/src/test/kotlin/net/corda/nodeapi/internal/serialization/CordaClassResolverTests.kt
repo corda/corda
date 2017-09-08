@@ -76,7 +76,7 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
 }
 
 class CordaClassResolverTests {
-    val factory: SerializationFactory = object : SerializationFactory {
+    val factory: SerializationFactory = object : SerializationFactory() {
         override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
