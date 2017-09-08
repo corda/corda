@@ -77,9 +77,9 @@ class IRSDemoTest : IntegrationTestCategory {
             assertThat(getFloatingLegFixCount(nodeAApi) == 0)
 
             // Wait until the initial trade and all scheduled fixings up to the current date have finished
-            nextFixingDates.firstWithTimeout(maxWaitTime){ it == null || it > currentDate }
+            nextFixingDates.firstWithTimeout(maxWaitTime) { it == null || it >= currentDate }
             runDateChange(nodeBApi)
-            nextFixingDates.firstWithTimeout(maxWaitTime) { it == null || it > futureDate }
+            nextFixingDates.firstWithTimeout(maxWaitTime) { it == null || it >= futureDate }
 
             assertThat(getFloatingLegFixCount(nodeAApi) > 0)
         }
