@@ -278,7 +278,7 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
 /**
  * A convenience class for passing around a state and it's contract
  *
- * @param state A state
- * @param contract The contract that should verify the state
+ * @property state A state
+ * @property contract The contract that should verify the state
  */
 data class StateAndContract(val state: ContractState, val contract: ContractClassName)

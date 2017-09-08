@@ -3,12 +3,12 @@ package net.corda.core.contracts
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 
-/**
- * A wrapper for [ContractState] containing additional platform-level state information.
- * This is the definitive state that is stored on the ledger and used in transaction outputs.
- */
 typealias ContractClassName = String
 
+/**
+ * A wrapper for [ContractState] containing additional platform-level state information and contract information.
+ * This is the definitive state that is stored on the ledger and used in transaction outputs.
+ */
 @CordaSerializable
 data class TransactionState<out T : ContractState> @JvmOverloads constructor(
         /** The custom contract state */
