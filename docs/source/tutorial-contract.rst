@@ -303,7 +303,7 @@ run two contracts one time each: Cash and CommercialPaper.
       @Override
       public void verify(LedgerTransaction tx) {
           List<InOutGroup<State, State>> groups = tx.groupStates(State.class, State::withoutOwner);
-          AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
+          CommandWithParties<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
 
 We start by using the ``groupStates`` method, which takes a type and a function. State grouping is a way of ensuring
 your contract can handle multiple unrelated states of the same type in the same transaction, which is needed for

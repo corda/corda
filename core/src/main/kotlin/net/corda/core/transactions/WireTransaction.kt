@@ -33,8 +33,9 @@ data class WireTransaction(
 ) : CoreTransaction(), TraversableTransaction {
     init {
         checkBaseInvariants()
+        check(inputs.isNotEmpty() || outputs.isNotEmpty()) { "A transaction must contain at least one input or output state" }
+        check(commands.isNotEmpty()) { "A transaction must contain at least one command" }
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
-        check(availableComponents.isNotEmpty()) { "A WireTransaction cannot be empty" }
     }
 
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */
@@ -83,7 +84,7 @@ data class WireTransaction(
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
             val parties = it.signers.mapNotNull { pk -> resolveIdentity(pk) }
-            AuthenticatedObject(it.signers, parties, it.value)
+            CommandWithParties(it.signers, parties, it.value)
         }
         // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
         val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
@@ -104,69 +105,6 @@ data class WireTransaction(
      * Builds whole Merkle tree for a transaction.
      */
     val merkleTree: MerkleTree by lazy { MerkleTree.getMerkleTree(availableComponentHashes) }
-
-    /**
-     * Construction of partial transaction from WireTransaction based on filtering.
-     * Note that list of nonces to be sent is updated on the fly, based on the index of the filtered tx component.
-     * @param filtering filtering over the whole WireTransaction
-     * @returns FilteredLeaves used in PartialMerkleTree calculation and verification.
-     */
-    fun filterWithFun(filtering: Predicate<Any>): FilteredLeaves {
-        val nonces: MutableList<SecureHash> = mutableListOf()
-        val offsets = indexOffsets()
-        fun notNullFalseAndNoncesUpdate(elem: Any?, index: Int): Any? {
-            return if (elem == null || !filtering.test(elem)) {
-                null
-            } else {
-                nonces.add(computeNonce(privacySalt, index))
-                elem
-            }
-        }
-
-        fun <T : Any> filterAndNoncesUpdate(t: T, index: Int): Boolean {
-            return if (filtering.test(t)) {
-                nonces.add(computeNonce(privacySalt, index))
-                true
-            } else {
-                false
-            }
-        }
-
-        // TODO: We should have a warning (require) if all leaves (excluding salt) are visible after filtering.
-        //      Consider the above after refactoring FilteredTransaction to implement TraversableTransaction,
-        //      so that a WireTransaction can be used when required to send a full tx (e.g. RatesFixFlow in Oracles).
-        return FilteredLeaves(
-                inputs.filterIndexed { index, it -> filterAndNoncesUpdate(it, index) },
-                attachments.filterIndexed { index, it -> filterAndNoncesUpdate(it, index + offsets[0]) },
-                outputs.filterIndexed { index, it -> filterAndNoncesUpdate(it, index + offsets[1]) },
-                commands.filterIndexed { index, it -> filterAndNoncesUpdate(it, index + offsets[2]) },
-                notNullFalseAndNoncesUpdate(notary, offsets[3]) as Party?,
-                notNullFalseAndNoncesUpdate(timeWindow, offsets[4]) as TimeWindow?,
-                nonces
-        )
-    }
-
-    // We use index offsets, to get the actual leaf-index per transaction component required for nonce computation.
-    private fun indexOffsets(): List<Int> {
-        // There is no need to add an index offset for inputs, because they are the first components in the
-        // transaction format and it is always zero. Thus, offsets[0] corresponds to attachments,
-        // offsets[1] to outputs, offsets[2] to commands and so on.
-        val offsets = mutableListOf(inputs.size, inputs.size + attachments.size)
-        offsets.add(offsets.last() + outputs.size)
-        offsets.add(offsets.last() + commands.size)
-        if (notary != null) {
-            offsets.add(offsets.last() + 1)
-        } else {
-            offsets.add(offsets.last())
-        }
-        if (timeWindow != null) {
-            offsets.add(offsets.last() + 1)
-        } else {
-            offsets.add(offsets.last())
-        }
-        // No need to add offset for privacySalt as it doesn't require a nonce.
-        return offsets
-    }
 
     /**
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.

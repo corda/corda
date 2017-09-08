@@ -7,14 +7,15 @@ import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.security.ProtectionDomain
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Used to collect classes through instrumentation.
  */
 class ClassRecorder {
-    val usedInstrumentedClasses = HashSet<String>()
-    val instrumentedClasses = HashSet<String>()
-    val scannedClasses = HashSet<String>()
+    val usedInstrumentedClasses = ConcurrentHashMap<String, Unit>()
+    val instrumentedClasses = ConcurrentHashMap<String, Unit>()
+    val scannedClasses = ConcurrentHashMap<String, Unit>()
 }
 
 /**
@@ -39,13 +40,12 @@ fun recordUsedInstrumentedCallStack() {
         index++
     }
     index++
-    while (true) {
-        require (index < throwable.stackTrace.size) { "Can't find Fiber call" }
+    while (index < throwable.stackTrace.size) {
         val stackElement = throwable.stackTrace[index]
         if (stackElement.className.startsWith("co.paralleluniverse")) {
             break
         }
-        classRecorder.usedInstrumentedClasses.add(stackElement.className)
+        classRecorder.usedInstrumentedClasses[stackElement.className] = Unit
         index++
     }
 }
@@ -55,7 +55,7 @@ fun recordUsedInstrumentedCallStack() {
  * instrumentation will happen.
  */
 fun recordInstrumentedClass(className: String) {
-    classRecorder.instrumentedClasses.add(className)
+    classRecorder.instrumentedClasses[className] = Unit
 }
 
 /**
@@ -63,7 +63,7 @@ fun recordInstrumentedClass(className: String) {
  */
 fun recordScannedClass(className: String?) {
     if (className != null) {
-        classRecorder.scannedClasses.add(className)
+        classRecorder.scannedClasses[className] = Unit
     }
 }
 
@@ -74,11 +74,13 @@ fun recordScannedClass(className: String?) {
  * @param expand A comma-separated list of packages to expand in the glob output. This is useful for certain top-level
  *     domains that we don't want to completely exclude, because later on classes may be loaded from those namespaces
  *     that require instrumentation.
+ * @param alwaysExcluded A comma-separated list of packages under which all touched classes will be excluded.
  * @param separator The package part separator character used in the above lists.
  */
 data class Arguments(
         val truncate: List<String>? = null,
         val expand: List<String>? = null,
+        val alwaysExcluded: List<String>? = null,
         val separator: Char = '.'
 )
 
@@ -98,6 +100,7 @@ class QuasarInstrumentationHookAgent {
                     when (key) {
                         "truncate" -> arguments = arguments.copy(truncate = value.split(","))
                         "expand" -> arguments = arguments.copy(expand = value.split(","))
+                        "alwaysExcluded" -> arguments = arguments.copy(alwaysExcluded = value.split(","))
                         "separator" -> arguments = arguments.copy(separator = value.toCharArray()[0])
                     }
                 }
@@ -113,19 +116,21 @@ class QuasarInstrumentationHookAgent {
                     println("  $it")
                 }
                 println("Scanned classes: ${classRecorder.scannedClasses.size}")
-                classRecorder.scannedClasses.take(20).forEach {
+                classRecorder.scannedClasses.keys.take(20).forEach {
                     println("  $it")
                 }
                 println("  (...)")
-                val scannedTree = PackageTree.fromStrings(classRecorder.scannedClasses.toList(), '/')
-                val instrumentedTree = PackageTree.fromStrings(classRecorder.instrumentedClasses.toList(), '/')
+                val scannedTree = PackageTree.fromStrings(classRecorder.scannedClasses.keys.toList(), '/')
+                val instrumentedTree = PackageTree.fromStrings(classRecorder.instrumentedClasses.keys.toList(), '/')
+                val alwaysExclude = arguments.alwaysExcluded?.let { PackageTree.fromStrings(it, arguments.separator) }
+                val alwaysExcludedTree = alwaysExclude?.let { instrumentedTree.truncate(it) } ?: instrumentedTree
                 println("Suggested exclude globs:")
                 val truncate = arguments.truncate?.let { PackageTree.fromStrings(it, arguments.separator) }
                 // The separator append is a hack, it causes a package with an empty name to be added to the exclude tree,
                 // which practically causes that level of the tree to be always expanded in the output globs.
                 val expand = arguments.expand?.let { PackageTree.fromStrings(it.map { "$it${arguments.separator}" }, arguments.separator) }
                 val truncatedTree = truncate?.let { scannedTree.truncate(it)} ?: scannedTree
-                val expandedTree = expand?.let { instrumentedTree.merge(it) } ?: instrumentedTree
+                val expandedTree = expand?.let { alwaysExcludedTree.merge(it) } ?: alwaysExcludedTree
                 val globs = truncatedTree.toGlobs(expandedTree)
                 globs.forEach {
                     println("  $it")

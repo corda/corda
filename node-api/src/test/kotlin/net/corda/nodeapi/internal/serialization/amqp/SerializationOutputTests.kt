@@ -12,15 +12,17 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.testing.BOB_IDENTITY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Ignore
 import org.junit.Test
 import java.io.IOException
@@ -29,9 +31,7 @@ import java.math.BigDecimal
 import java.nio.ByteBuffer
 import java.time.*
 import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalUnit
 import java.util.*
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -140,13 +140,13 @@ class SerializationOutputTests {
 
     data class PolymorphicProperty(val foo: FooInterface?)
 
-    private fun serdes(obj: Any,
+    private inline fun<reified T : Any> serdes(obj: T,
                        factory: SerializerFactory = SerializerFactory (
                                AllWhitelist, ClassLoader.getSystemClassLoader()),
                        freshDeserializationFactory: SerializerFactory = SerializerFactory(
                                AllWhitelist, ClassLoader.getSystemClassLoader()),
                        expectedEqual: Boolean = true,
-                       expectDeserializedEqual: Boolean = true): Any {
+                       expectDeserializedEqual: Boolean = true): T {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
 
@@ -158,6 +158,7 @@ class SerializationOutputTests {
             this.register(CompositeType.DESCRIPTOR, CompositeType.Companion)
             this.register(Choice.DESCRIPTOR, Choice.Companion)
             this.register(RestrictedType.DESCRIPTOR, RestrictedType.Companion)
+            this.register(ReferencedObject.DESCRIPTOR, ReferencedObject.Companion)
         }
         EncoderImpl(decoder)
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.bytes, 8, bytes.size - 8))
@@ -265,7 +266,7 @@ class SerializationOutputTests {
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test
     fun `test top level list array`() {
         val obj = arrayOf(listOf("Fred", "Ginger"), listOf("Rogers", "Hammerstein"))
         serdes(obj)
@@ -436,7 +437,7 @@ class SerializationOutputTests {
                 throw IllegalStateException("Layer 2", t)
             }
         } catch(t: Throwable) {
-            val desThrowable = serdes(t, factory, factory2, false) as Throwable
+            val desThrowable = serdes(t, factory, factory2, false)
             assertSerializedThrowableEquivalent(t, desThrowable)
         }
     }
@@ -468,7 +469,7 @@ class SerializationOutputTests {
                 throw e
             }
         } catch(t: Throwable) {
-            val desThrowable = serdes(t, factory, factory2, false) as Throwable
+            val desThrowable = serdes(t, factory, factory2, false)
             assertSerializedThrowableEquivalent(t, desThrowable)
         }
     }
@@ -538,7 +539,6 @@ class SerializationOutputTests {
         AbstractAMQPSerializationScheme.registerCustomSerializers(factory2)
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
-        assertTrue(desState is TransactionState<*>)
         assertTrue((desState as TransactionState<*>).data is FooState)
         assertTrue(desState.notary == state.notary)
         assertTrue(desState.encumbrance == state.encumbrance)
@@ -762,5 +762,108 @@ class SerializationOutputTests {
 
         val obj = StateRef(SecureHash.randomSHA256(), 0)
         serdes(obj, factory, factory2)
+    }
+
+    interface Container
+
+    data class SimpleContainer(val one: String, val another: String) : Container
+
+    data class ParentContainer(val left: SimpleContainer, val right: Container)
+
+    @Test
+    fun `test object referenced multiple times`() {
+        val simple = SimpleContainer("Fred", "Ginger")
+        val parentContainer = ParentContainer(simple, simple)
+        assertSame(parentContainer.left, parentContainer.right)
+
+        val parentCopy = serdes(parentContainer)
+        assertSame(parentCopy.left, parentCopy.right)
+    }
+
+    data class TestNode(val content: String, val children: MutableCollection<TestNode> = ArrayList())
+
+    @Test
+    @Ignore("Ignored due to cyclic graphs not currently supported by AMQP serialization")
+    fun `test serialization of cyclic graph`() {
+        val nodeA = TestNode("A")
+        val nodeB = TestNode("B", ArrayList(Arrays.asList(nodeA)))
+        nodeA.children.add(nodeB)
+
+        // Also blows with StackOverflow error
+        assertTrue(nodeB.hashCode() > 0)
+
+        val bCopy = serdes(nodeB)
+        assertEquals("A", bCopy.children.single().content)
+    }
+
+    data class Bob(val byteArrays: List<ByteArray>)
+
+    @Ignore("Causes DeserializedParameterizedType.make() to fail")
+    @Test
+    fun `test list of byte arrays`() {
+        val a = ByteArray(1)
+        val b = ByteArray(2)
+        val obj = Bob(listOf(a, b, a))
+
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        serdes(obj, factory, factory2)
+    }
+
+    data class Vic(val a: List<String>, val b: List<String>)
+
+    @Test
+    fun `test generics ignored from graph logic`() {
+        val a = listOf("a", "b")
+        val obj = Vic(a, a)
+
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val objCopy = serdes(obj, factory, factory2)
+        assertSame(objCopy.a, objCopy.b)
+    }
+
+    data class Spike private constructor(val a: String) {
+        constructor() : this("a")
+    }
+
+    @Test
+    fun `test private constructor`() {
+        val obj = Spike()
+
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        serdes(obj, factory, factory2)
+    }
+
+    data class BigDecimals(val a: BigDecimal, val b: BigDecimal)
+
+    @Test
+    fun `test toString custom serializer`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+
+        val obj = BigDecimals(BigDecimal.TEN, BigDecimal.TEN)
+        val objCopy = serdes(obj, factory, factory2)
+        assertEquals(objCopy.a, objCopy.b)
+    }
+
+    data class ByteArrays(val a: ByteArray, val b: ByteArray)
+
+    @Test
+    fun `test byte arrays not reference counted`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+
+        val bytes = ByteArray(1)
+        val obj = ByteArrays(bytes, bytes)
+        val objCopy = serdes(obj, factory, factory2, false, false)
+        assertNotSame(objCopy.a, objCopy.b)
     }
 }

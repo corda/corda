@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.containsAny
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.tee
@@ -115,7 +114,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
      * indicate whether an update consists entirely of regular or notary change transactions, which may require
      * different processing logic.
      */
-    override fun notifyAll(txns: Iterable<CoreTransaction>) {
+    fun notifyAll(txns: Iterable<CoreTransaction>) {
         // It'd be easier to just group by type, but then we'd lose ordering.
         val regularTxns = mutableListOf<WireTransaction>()
         val notaryChangeTxns = mutableListOf<NotaryChangeWireTransaction>()
@@ -143,11 +142,14 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList())
     }
 
+    /** Same as notifyAll but with a single transaction. */
+    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
+
     private fun notifyRegular(txns: Iterable<WireTransaction>) {
-        val ourKeys = services.keyManagementService.keys
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
+            val myKeys = services.keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val ourNewStates = tx.outputs.
-                    filter { isRelevant(it.data, ourKeys) }.
+                    filter { isRelevant(it.data, myKeys.toSet()) }.
                     map { tx.outRef<ContractState>(it.data) }
 
             // Retrieve all unconsumed states for this transaction's inputs
@@ -167,19 +169,15 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     }
 
     private fun notifyNotaryChange(txns: Iterable<NotaryChangeWireTransaction>) {
-        val ourKeys = services.keyManagementService.keys
         fun makeUpdate(tx: NotaryChangeWireTransaction): Vault.Update<ContractState> {
             // We need to resolve the full transaction here because outputs are calculated from inputs
             // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
             // input positions
             val ltx = tx.resolve(services, emptyList())
-
+            val myKeys = services.keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
-                    filter {
-                        (_, output) ->
-                        isRelevant(output.data, ourKeys)
-                    }.
+                    filter { (_, output) -> isRelevant(output.data, myKeys.toSet()) }.
                     unzip()
 
             val producedStateAndRefs = producedStates.map { ltx.outRef<ContractState>(it.data) }
@@ -373,27 +371,14 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         return claimedStates
     }
 
-    // TODO : Persists this in DB.
-    private val authorisedUpgrade = mutableMapOf<StateRef, Class<out UpgradedContract<*, *>>>()
 
-    override fun getAuthorisedContractUpgrade(ref: StateRef) = authorisedUpgrade[ref]
-
-    override fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) {
-        val upgrade = upgradedContractClass.newInstance()
-        if (upgrade.legacyContract != stateAndRef.state.data.contract.javaClass) {
-            throw IllegalArgumentException("The contract state cannot be upgraded using provided UpgradedContract.")
-        }
-        authorisedUpgrade.put(stateAndRef.ref, upgradedContractClass)
-    }
-
-    override fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>) {
-        authorisedUpgrade.remove(stateAndRef.ref)
-    }
 
     @VisibleForTesting
-    internal fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
-        is OwnableState -> state.owner.owningKey.containsAny(ourKeys)
-        is LinearState -> state.isRelevant(ourKeys)
-        else -> ourKeys.intersect(state.participants.map { it.owningKey }).isNotEmpty()
+    internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
+        val keysToCheck = when (state) {
+            is OwnableState -> listOf(state.owner.owningKey)
+            else -> state.participants.map { it.owningKey }
+        }
+        return keysToCheck.any { it in myKeys }
     }
 }

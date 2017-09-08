@@ -1,7 +1,7 @@
 package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.Emoji
 import net.corda.core.schemas.MappedSchema
@@ -18,7 +18,7 @@ import java.security.PublicKey
 import java.util.*
 
 class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Commands, DummyFungibleContract.State>() {
-    override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<DummyFungibleContract.Commands>>
+    override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<DummyFungibleContract.Commands>>
             = commands.select<DummyFungibleContract.Commands>()
 
     data class State(
@@ -127,7 +127,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
     private fun verifyIssueCommand(inputs: List<State>,
                                    outputs: List<State>,
                                    tx: LedgerTransaction,
-                                   issueCommand: AuthenticatedObject<Commands.Issue>,
+                                   issueCommand: CommandWithParties<Commands.Issue>,
                                    currency: Currency,
                                    issuer: PartyAndReference) {
         // If we have an issue command, perform special processing: the group is allowed to have no inputs,

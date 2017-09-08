@@ -2,7 +2,6 @@ package net.corda.vega
 
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
@@ -33,11 +32,14 @@ class SimmValuationTest : IntegrationTestCategory {
     @Test
     fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
-            startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-            val (nodeA, nodeB) = listOf(startNode(nodeALegalName), startNode(nodeBLegalName)).transpose().getOrThrow()
-            val (nodeAApi, nodeBApi) = listOf(startWebserver(nodeA), startWebserver(nodeB)).transpose()
-                    .getOrThrow()
-                    .map { HttpApi.fromHostAndPort(it.listenAddress, "api/simmvaluationdemo") }
+            startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+            val nodeAFuture = startNode(providedName = nodeALegalName)
+            val nodeBFuture = startNode(providedName = nodeBLegalName)
+            val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
+            val nodeAWebServerFuture = startWebserver(nodeA)
+            val nodeBWebServerFuture = startWebserver(nodeB)
+            val nodeAApi = HttpApi.fromHostAndPort(nodeAWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
+            val nodeBApi = HttpApi.fromHostAndPort(nodeBWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)
             val nodeAParty = getPartyWithName(nodeBApi, nodeALegalName)
 
@@ -55,7 +57,7 @@ class SimmValuationTest : IntegrationTestCategory {
     }
 
     private fun getAvailablePartiesFor(partyApi: HttpApi): PortfolioApi.AvailableParties {
-        return partyApi.getJson<PortfolioApi.AvailableParties>("whoami")
+        return partyApi.getJson("whoami")
     }
 
     private fun createTradeBetween(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String): Boolean {

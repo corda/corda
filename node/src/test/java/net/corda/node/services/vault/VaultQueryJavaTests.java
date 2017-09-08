@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableSet;
 import kotlin.Pair;
 import kotlin.Triple;
 import net.corda.core.contracts.*;
-import net.corda.core.crypto.EncodingUtils;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.messaging.DataFeed;
 import net.corda.core.node.services.IdentityService;
@@ -16,6 +15,7 @@ import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.core.schemas.MappedSchema;
+import net.corda.core.utilities.EncodingUtils;
 import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
@@ -49,8 +49,8 @@ import static net.corda.finance.contracts.asset.CashUtilities.getDUMMY_CASH_ISSU
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
 import static net.corda.testing.TestConstants.getDUMMY_NOTARY_KEY;
-import static net.corda.testing.node.MockServicesKt.makeTestDatabaseAndMockServices;
-import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
+import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
+import static net.corda.testing.node.MockServices.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests extends TestDependencyInjectionBase {

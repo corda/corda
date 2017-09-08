@@ -2,8 +2,8 @@ package net.corda.node.services.transactions
 
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.parsePublicKeyBase58
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.parsePublicKeyBase58
+import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.UniquenessException

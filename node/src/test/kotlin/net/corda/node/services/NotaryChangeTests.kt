@@ -9,6 +9,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
@@ -46,6 +47,7 @@ class NotaryChangeTests {
         newNotaryNode = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress, advertisedServices = ServiceInfo(SimpleNotaryService.type))
 
         mockNet.runNetwork() // Clear network map registration messages
+        oldNotaryNode.ensureRegistered()
     }
 
     @After
@@ -85,7 +87,7 @@ class NotaryChangeTests {
     @Test
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
-        val newEvilNotary = getTestPartyAndCertificate(X500Name("CN=Evil Notary,O=Evil R3,OU=corda,L=London,C=GB"), generateKeyPair().public)
+        val newEvilNotary = getTestPartyAndCertificate(getX500Name(OU="Evil Notary",O="Evil R3",L="London",C="GB"), generateKeyPair().public)
         val flow = NotaryChangeFlow(state, newEvilNotary.party)
         val future = clientNodeA.services.startFlow(flow)
 

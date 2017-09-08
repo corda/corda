@@ -1,21 +1,21 @@
 package net.corda.notarydemo
 
-import net.corda.core.internal.div
-import net.corda.core.node.services.ServiceInfo
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.demorun.util.*
-import net.corda.demorun.runNodes
-import net.corda.node.services.transactions.BFTNonValidatingNotaryService
-import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
+import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
+import net.corda.core.internal.div
 import net.corda.core.internal.stream
 import net.corda.core.internal.toTypedArray
+import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getX500Name
+import net.corda.demorun.runNodes
+import net.corda.demorun.util.*
+import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minCorrectReplicas
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
 
 fun main(args: Array<String>) = BFTNotaryCordform.runNodes()
 
@@ -23,7 +23,7 @@ private val clusterSize = 4 // Minimum size that tolerates a faulty replica.
 private val notaryNames = createNotaryNames(clusterSize)
 
 object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0]) {
-    private val clusterName = X500Name("CN=BFT,O=R3,OU=corda,L=Zurich,C=CH")
+    private val clusterName = getX500Name(O = "BFT", OU = "corda", L = "Zurich", C = "CH")
     private val advertisedService = ServiceInfo(BFTNonValidatingNotaryService.type, clusterName)
 
     init {

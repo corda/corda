@@ -8,6 +8,7 @@ import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.NetworkHostAndPort
 import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import java.security.PublicKey
@@ -44,7 +45,7 @@ interface NetworkMapCache {
     /** Tracks changes to the network map cache */
     val changed: Observable<MapChange>
     /** Future to track completion of the NetworkMapService registration. */
-    val mapServiceRegistered: CordaFuture<Void?>
+    val nodeReady: CordaFuture<Void?>
 
     /**
      * Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the
@@ -76,7 +77,10 @@ interface NetworkMapCache {
     fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 
     /** Look up the node info for a legal name. */
-    fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == principal }
+    fun getNodeByLegalName(principal: X500Name): NodeInfo?
+
+    /** Look up the node info for a host and port. */
+    fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
 
     /**
      * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
@@ -144,4 +148,9 @@ interface NetworkMapCache {
                 "Your options are: ${notaryNodes.map { "\"${it.notaryIdentity.name}\"" }.joinToString()}.")
         return notary.advertisedServices.any { it.info.type.isValidatingNotary() }
     }
+
+    /**
+     * Clear all network map data from local node cache.
+     */
+    fun clearNetworkMapCache()
 }

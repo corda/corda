@@ -1,7 +1,7 @@
 export class FixedLegViewModel {
   constructor() { }
 
-  fixedRatePayer = "CN=Bank A,O=Bank A,L=London,C=GB";
+  fixedRatePayer = "O=Bank A,L=London,C=GB";
   notional: Object = {
       quantity: 2500000000
   };

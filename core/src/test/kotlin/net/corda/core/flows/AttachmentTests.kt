@@ -56,6 +56,11 @@ class AttachmentTests {
         val nodes = mockNet.createSomeNodes(2)
         val n0 = nodes.partyNodes[0]
         val n1 = nodes.partyNodes[1]
+
+        // Ensure that registration was successful before progressing any further
+        mockNet.runNetwork()
+        n0.ensureRegistered()
+
         n0.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         n1.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
@@ -89,6 +94,11 @@ class AttachmentTests {
         val nodes = mockNet.createSomeNodes(2)
         val n0 = nodes.partyNodes[0]
         val n1 = nodes.partyNodes[1]
+
+        // Ensure that registration was successful before progressing any further
+        mockNet.runNetwork()
+        n0.ensureRegistered()
+
         n0.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         n1.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
@@ -118,6 +128,10 @@ class AttachmentTests {
             }
         }, advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
         val n1 = mockNet.createNode(n0.network.myAddress)
+
+        // Ensure that registration was successful before progressing any further
+        mockNet.runNetwork()
+        n0.ensureRegistered()
 
         n0.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         n1.registerInitiatedFlow(FetchAttachmentsResponse::class.java)

@@ -6,12 +6,12 @@ import net.corda.core.utilities.ByteSequence
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedByte
+import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.nio.ByteBuffer
-import java.util.*
 
 data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
 
@@ -22,11 +22,10 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
  * instances and threads.
  */
 class DeserializationInput(internal val serializerFactory: SerializerFactory) {
-    // TODO: we're not supporting object refs yet
-    private val objectHistory: MutableList<Any> = ArrayList()
+    private val objectHistory: MutableList<Any> = mutableListOf()
 
     internal companion object {
-        val BYTES_NEEDED_TO_PEEK: Int = 23
+        private val BYTES_NEEDED_TO_PEEK: Int = 23
 
         fun peekSize(bytes: ByteArray): Int {
             // There's an 8 byte header, and then a 0 byte plus descriptor followed by constructor
@@ -57,7 +56,6 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     @Throws(NotSerializableException::class)
     inline internal fun <reified T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>): ObjectAndEnvelope<T> =
             deserializeAndReturnEnvelope(bytes, T::class.java)
-
 
     @Throws(NotSerializableException::class)
     private fun getEnvelope(bytes: ByteSequence): Envelope {
@@ -95,40 +93,53 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
      * be deserialized and a schema describing the types of the objects.
      */
     @Throws(NotSerializableException::class)
-    fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>): T {
-        return des {
-            val envelope = getEnvelope(bytes)
-            clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz))
-        }
+    fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>): T = des {
+        val envelope = getEnvelope(bytes)
+        clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz))
     }
 
     @Throws(NotSerializableException::class)
-    internal fun <T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>, clazz: Class<T>): ObjectAndEnvelope<T> {
-        return des {
-            val envelope = getEnvelope(bytes)
-            // Now pick out the obj and schema from the envelope.
-            ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz)), envelope)
-        }
+    fun <T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>, clazz: Class<T>): ObjectAndEnvelope<T> = des {
+        val envelope = getEnvelope(bytes)
+        // Now pick out the obj and schema from the envelope.
+        ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz)), envelope)
     }
 
     internal fun readObjectOrNull(obj: Any?, schema: Schema, type: Type): Any? {
         return if (obj == null) null else readObject(obj, schema, type)
     }
 
-    internal fun readObject(obj: Any, schema: Schema, type: Type): Any {
-        if (obj is DescribedType) {
-            // Look up serializer in factory by descriptor
-            val serializer = serializerFactory.get(obj.descriptor, schema)
-            if (serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) })
-                throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
-                        "expected to be of type $type but was ${serializer.type}")
-            return serializer.readObject(obj.described, schema, this)
-        } else if (obj is Binary) {
-            return obj.array
-        } else {
-            return obj
-        }
-    }
+    internal fun readObject(obj: Any, schema: Schema, type: Type): Any =
+            if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
+                // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
+                val objectIndex = (obj.described as UnsignedInteger).toInt()
+                if (objectIndex !in 0..objectHistory.size)
+                    throw NotSerializableException("Retrieval of existing reference failed. Requested index $objectIndex " +
+                            "is outside of the bounds for the list of size: ${objectHistory.size}")
+
+                val objectRetrieved = objectHistory[objectIndex]
+                if (!objectRetrieved::class.java.isSubClassOf(type.asClass()!!))
+                    throw NotSerializableException("Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}'")
+                objectRetrieved
+            } else {
+                val objectRead = when (obj) {
+                    is DescribedType -> {
+                        // Look up serializer in factory by descriptor
+                        val serializer = serializerFactory.get(obj.descriptor, schema)
+                        if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) })
+                            throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
+                                    "expected to be of type $type but was ${serializer.type}")
+                        serializer.readObject(obj.described, schema, this)
+                    }
+                    is Binary -> obj.array
+                    else -> obj // this will be the case for primitive types like [boolean] et al.
+                }
+
+                // Store the reference in case we need it later on.
+                // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content
+                if (suitableForObjectReference(objectRead.javaClass)) objectHistory.add(objectRead)
+                objectRead
+            }
 
     /**
      * TODO: Currently performs rather basic checks aimed in particular at [java.util.List<Command<?>>] and
@@ -136,5 +147,5 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
      * In the future tighter control might be needed
      */
     private fun Type.materiallyEquivalentTo(that: Type): Boolean =
-        asClass() == that.asClass() && that is ParameterizedType
+            asClass() == that.asClass() && that is ParameterizedType
 }

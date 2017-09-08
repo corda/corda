@@ -1,16 +1,17 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.crypto.composite.CompositeKey.NodeAndWeight
-import net.corda.core.crypto.composite.CompositeSignature
+import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.cert
+import net.corda.core.utilities.getX500Name
+import net.corda.core.utilities.toBase58String
 import net.corda.node.utilities.*
 import net.corda.testing.TestDependencyInjectionBase
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.testing.kryoSpecific
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -88,7 +89,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
         val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
 
         val encoded = aliceAndBobOrCharlie.toBase58String()
-        val decoded = parsePublicKeyBase58(encoded)
+        val decoded = net.corda.core.utilities.parsePublicKeyBase58(encoded)
 
         assertEquals(decoded, aliceAndBobOrCharlie)
     }
@@ -216,7 +217,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     }
 
     @Test()
-    fun `composite key validation with graph cycle detection`() {
+    fun `composite key validation with graph cycle detection`() = kryoSpecific<CompositeKeyTests>("Cycle exists in the object graph which is not currently supported in AMQP mode") {
         val key1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build() as CompositeKey
         val key2 = CompositeKey.Builder().addKeys(alicePublicKey, key1).build() as CompositeKey
         val key3 = CompositeKey.Builder().addKeys(alicePublicKey, key2).build() as CompositeKey
@@ -330,10 +331,10 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
 
         // Create self sign CA.
         val caKeyPair = Crypto.generateKeyPair()
-        val ca = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Test CA"), caKeyPair)
+        val ca = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test CA", O = "R3", L = "London", C = "GB"), caKeyPair)
 
         // Sign the composite key with the self sign CA.
-        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca, caKeyPair, X500Name("CN=CompositeKey"), compositeKey)
+        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca, caKeyPair, getX500Name(CN = "CompositeKey", O = "R3", L = "London", C = "GB"), compositeKey)
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"

@@ -5,7 +5,7 @@ import io.netty.handler.ssl.SslHandler
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.AddressFormatException
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.crypto.parsePublicKeyBase58
+import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.openFuture
@@ -338,6 +338,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * TODO : Create the bridge directly from the list of queues on start up when we have a persisted network map service.
      */
     private fun updateBridgesOnNetworkChange(change: MapChange) {
+        log.debug { "Updating bridges on network map change: ${change.node}" }
         fun gatherAddresses(node: NodeInfo): Sequence<ArtemisPeerAddress> {
             val peerAddress = getArtemisPeerAddress(node)
             val addresses = mutableListOf(peerAddress)

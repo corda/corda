@@ -11,7 +11,7 @@ import javafx.scene.input.KeyCodeCombination
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import javafx.util.Duration
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.organisation
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
@@ -171,7 +171,7 @@ class NetworkMapVisualiser : Application() {
                 onNextInvoked()
             }
         }
-        viewModel.simulation.networkInitialisationFinished.then {
+        viewModel.simulation.networkInitialisationFinished.thenAccept {
             view.simulateInitialisationCheckbox.isVisible = false
         }
         view.runPauseButton.setOnAction {
@@ -233,7 +233,7 @@ class NetworkMapVisualiser : Application() {
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New flow started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
-                    val label = if (extraLabel != null) "${node.info.legalIdentity.name.commonName}: $extraLabel" else node.info.legalIdentity.name.commonName
+                    val label = if (extraLabel != null) "${node.info.legalIdentity.name.organisation}: $extraLabel" else node.info.legalIdentity.name.organisation
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     println("Added: $tracker, $widget")
                     viewModel.trackerBoxes[tracker] = widget

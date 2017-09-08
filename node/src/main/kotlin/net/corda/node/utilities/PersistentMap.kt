@@ -57,7 +57,7 @@ class PersistentMap<K, V, E, out EK> (
     }
 
     fun all(): Sequence<Pair<K, V>> {
-        return cache.asMap().asSequence().map { Pair(it.key, it.value.get()) }
+        return cache.asMap().asSequence().filter { it.value.isPresent }.map { Pair(it.key, it.value.get()) }
     }
 
     override val size get() = cache.size().toInt()

@@ -15,7 +15,7 @@ import net.corda.finance.contracts.asset.*
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestDatabaseAndMockServices
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized

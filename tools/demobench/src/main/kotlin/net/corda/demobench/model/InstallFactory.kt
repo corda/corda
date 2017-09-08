@@ -1,6 +1,8 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.Config
+import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.parseNetworkHostAndPort
 import org.bouncycastle.asn1.x500.X500Name
 import tornadofx.*
@@ -51,14 +53,14 @@ class InstallFactory : Controller() {
         return port
     }
 
-    private fun Config.parseExtraServices(path: String): List<String> {
-        val services = serviceController.services.toSortedSet()
+    private fun Config.parseExtraServices(path: String): MutableList<String> {
+        val services = serviceController.services.toSortedSet() + ServiceInfo(ServiceType.networkMap).toString()
         return this.getStringList(path)
                 .filter { !it.isNullOrEmpty() }
                 .map { svc ->
                     require(svc in services, { "Unknown service '$svc'." })
                     svc
-                }.toList()
+                }.toMutableList()
     }
 
 }

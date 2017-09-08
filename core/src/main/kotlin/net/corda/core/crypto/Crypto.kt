@@ -1,9 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.crypto.composite.CompositeSignature
-import net.corda.core.crypto.provider.CordaObjectIdentifier
-import net.corda.core.crypto.provider.CordaSecurityProvider
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
@@ -201,7 +197,7 @@ object Crypto {
     private val providerMap: Map<String, Provider> = mapOf(
             BouncyCastleProvider.PROVIDER_NAME to getBouncyCastleProvider(),
             CordaSecurityProvider.PROVIDER_NAME to CordaSecurityProvider(),
-            "BCPQC" to BouncyCastlePQCProvider()) // unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
+            "BCPQC" to BouncyCastlePQCProvider()) // Unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
 
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
         putAll(EdDSASecurityProvider())

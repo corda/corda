@@ -1,13 +1,13 @@
-@file:JvmName("CashUtilities")   // So the static extension functions get put into a class with a better name than CashKt
+@file:JvmName("CashUtilities")
+
+// So the static extension functions get put into a class with a better name than CashKt
 package net.corda.finance.contracts.asset
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.finance.contracts.asset.cash.selection.CashSelectionH2Impl
 import net.corda.core.contracts.*
 import net.corda.core.contracts.Amount.Companion.sumOrThrow
+import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.crypto.testing.NULL_PARTY
-import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
@@ -18,11 +18,13 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getX500Name
+import net.corda.core.utilities.toBase58String
+import net.corda.finance.contracts.asset.cash.selection.CashSelectionH2Impl
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
-import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
 import java.sql.DatabaseMetaData
@@ -56,7 +58,7 @@ interface CashSelection {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
                 } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
-                                                  "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection")
+                        "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection")
             }.invoke()
         }
     }
@@ -106,7 +108,7 @@ interface CashSelection {
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
 class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
-    override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Cash.Commands>>
+    override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<Cash.Commands>>
             = commands.select<Cash.Commands>()
 
     // DOCSTART 1
@@ -238,7 +240,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     private fun verifyIssueCommand(inputs: List<State>,
                                    outputs: List<State>,
                                    tx: LedgerTransaction,
-                                   issueCommand: AuthenticatedObject<Commands.Issue>,
+                                   issueCommand: CommandWithParties<Commands.Issue>,
                                    currency: Currency,
                                    issuer: PartyAndReference) {
         // If we have an issue command, perform special processing: the group is allowed to have no inputs,
@@ -345,7 +347,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 /** A randomly generated key. */
 val DUMMY_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_CASH_ISSUER by lazy { Party(X500Name("CN=Snake Oil Issuer,O=R3,OU=corda,L=London,C=GB"), DUMMY_CASH_ISSUER_KEY.public).ref(1) }
+val DUMMY_CASH_ISSUER by lazy { Party(getX500Name(O = "Snake Oil Issuer", OU = "corda", L = "London", C = "GB"), DUMMY_CASH_ISSUER_KEY.public).ref(1) }
 /** An extension property that lets you write 100.DOLLARS.CASH */
 val Amount<Currency>.CASH: Cash.State get() = Cash.State(Amount(quantity, Issued(DUMMY_CASH_ISSUER, token)), NULL_PARTY)
 /** An extension property that lets you get a cash state from an issued token, under the [NULL_PARTY] */

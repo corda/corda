@@ -1,20 +1,35 @@
 package net.corda.nodeapi.internal.serialization
 
-import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializedBytes
+import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-internal val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == AmqpHeaderV1_0
+val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == AmqpHeaderV1_0
+
+class AMQPSerializationCustomization(val factory: SerializerFactory) : SerializationCustomization {
+    override fun addToWhitelist(vararg types: Class<*>) {
+        factory.addToWhitelist(*types)
+    }
+}
+
+fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
+    for (type in types) {
+        (this.whitelist as? MutableClassWhitelist)?.add(type)
+    }
+}
 
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     internal companion object {
+        private val pluginRegistries: List<CordaPluginRegistry> by lazy {
+            ServiceLoader.load(CordaPluginRegistry::class.java, this::class.java.classLoader).toList()
+        }
+
         fun registerCustomSerializers(factory: SerializerFactory) {
             factory.apply {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
@@ -40,6 +55,8 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory))
             }
+            val customizer = AMQPSerializationCustomization(factory)
+            pluginRegistries.forEach { it.customizeSerialization(customizer) }
         }
     }
 

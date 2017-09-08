@@ -49,31 +49,6 @@ class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Accep
     }
 }
 
-class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Class<out UpgradedContract<ContractState, *>>>(otherSide) {
-    @Suspendable
-    @Throws(StateReplacementException::class)
-    override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Class<out UpgradedContract<ContractState, *>>>) {
-        // Retrieve signed transaction from our side, we will apply the upgrade logic to the transaction on our side, and
-        // verify outputs matches the proposed upgrade.
-        val ourSTX = serviceHub.validatedTransactions.getTransaction(proposal.stateRef.txhash)
-        requireNotNull(ourSTX) { "We don't have a copy of the referenced state" }
-        val oldStateAndRef = ourSTX!!.tx.outRef<ContractState>(proposal.stateRef.index)
-        val authorisedUpgrade = serviceHub.vaultService.getAuthorisedContractUpgrade(oldStateAndRef.ref) ?:
-                throw IllegalStateException("Contract state upgrade is unauthorised. State hash : ${oldStateAndRef.ref}")
-        val proposedTx = stx.tx
-        val expectedTx = ContractUpgradeFlow.assembleBareTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt).toWireTransaction()
-        requireThat {
-            "The instigator is one of the participants" using (otherSide in oldStateAndRef.state.data.participants)
-            "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" using (proposal.modification == authorisedUpgrade)
-            "The proposed tx matches the expected tx for this upgrade" using (proposedTx == expectedTx)
-        }
-        ContractUpgradeFlow.verify(
-                oldStateAndRef.state.data,
-                expectedTx.outRef<ContractState>(0).state.data,
-                expectedTx.toLedgerTransaction(serviceHub).commandsOfType<UpgradeCommand>().single())
-    }
-}
-
 class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean) : FlowLogic<Unit>() {
     constructor(otherSide: Party) : this(otherSide, false)
     companion object {

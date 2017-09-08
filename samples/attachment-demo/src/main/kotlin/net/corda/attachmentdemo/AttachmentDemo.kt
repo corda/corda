@@ -6,6 +6,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -115,8 +116,9 @@ class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: Secu
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
         val ptx = TransactionBuilder(notary)
-        ptx.addOutputState(AttachmentContract.State(hash))
-        ptx.addAttachment(hash)
+                .addOutputState(AttachmentContract.State(hash))
+                .addCommand(AttachmentContract.Command, serviceHub.legalIdentityKey)
+                .addAttachment(hash)
 
         progressTracker.currentStep = SIGNING
 
@@ -129,7 +131,7 @@ class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: Secu
 
 fun recipient(rpc: CordaRPCOps) {
     println("Waiting to receive transaction ...")
-    val stx = rpc.verifiedTransactionsFeed().updates.toBlocking().first()
+    val stx = rpc.internalVerifiedTransactionsFeed().updates.toBlocking().first()
     val wtx = stx.tx
     if (wtx.attachments.isNotEmpty()) {
         if (wtx.outputs.isNotEmpty()) {
@@ -182,6 +184,8 @@ class AttachmentContract : Contract {
         val attachment = tx.attachments.single()
         require(state.hash == attachment.id)
     }
+
+    object Command : TypeOnlyCommandData()
 
     data class State(val hash: SecureHash.SHA256) : ContractState {
         override val contract: Contract = AttachmentContract()

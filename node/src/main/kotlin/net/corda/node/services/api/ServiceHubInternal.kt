@@ -22,6 +22,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache {
@@ -53,6 +54,9 @@ interface NetworkMapCacheInternal : NetworkMapCache {
     /** For testing where the network map cache is manipulated marks the service as immediately ready. */
     @VisibleForTesting
     fun runWithoutMapService()
+
+    /** Indicates if loading network map data from database was successful. */
+    val loadDBSuccess: Boolean
 }
 
 @CordaSerializable
@@ -97,7 +101,7 @@ interface ServiceHubInternal : PluginServiceHub {
 
         if (notifyVault) {
             val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
-            vaultService.notifyAll(toNotify)
+            (vaultService as NodeVaultService).notifyAll(toNotify)
         }
     }
 
@@ -122,7 +126,7 @@ interface ServiceHubInternal : PluginServiceHub {
      * @throws net.corda.core.flows.IllegalFlowLogicException or IllegalArgumentException if there are problems with the
      * [logicType] or [args].
      */
-    fun <T : Any> invokeFlowAsync(
+    fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
             vararg args: Any?): FlowStateMachineImpl<T> {

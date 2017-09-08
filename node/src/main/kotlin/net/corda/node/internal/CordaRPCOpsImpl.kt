@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import net.corda.client.rpc.notUsed
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
@@ -18,10 +19,10 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
@@ -71,13 +72,13 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun verifiedTransactionsSnapshot(): List<SignedTransaction> {
-        val (snapshot, updates) = verifiedTransactionsFeed()
+    override fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction> {
+        val (snapshot, updates) = internalVerifiedTransactionsFeed()
         updates.notUsed()
         return snapshot
     }
 
-    override fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
+    override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
             services.validatedTransactions.track()
         }
@@ -127,7 +128,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
+    override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
         val stateMachine = startFlow(logicType, args)
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
@@ -136,12 +137,12 @@ class CordaRPCOpsImpl(
         )
     }
 
-    override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+    override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
         val stateMachine = startFlow(logicType, args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    private fun <T : Any> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
+    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
         val rpcContext = getRpcContext()
         rpcContext.requirePermission(startFlowPermission(logicType))
@@ -170,17 +171,51 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) = services.vaultService.authoriseContractUpgrade(state, upgradedContractClass)
-    override fun deauthoriseContractUpgrade(state: StateAndRef<*>) = services.vaultService.deauthoriseContractUpgrade(state)
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
-    override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
-    override fun partyFromAnonymous(party: AbstractParty): Party? = services.identityService.partyFromAnonymous(party)
-    override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
-    override fun partyFromX500Name(x500Name: X500Name) = services.identityService.partyFromX500Name(x500Name)
-    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = services.identityService.partiesFromName(query, exactMatch)
-    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? = services.networkMapCache.getNodeByLegalIdentity(party)
+
+    override fun waitUntilNetworkReady(): CordaFuture<Void?> {
+        return database.transaction {
+            services.networkMapCache.nodeReady
+        }
+    }
+
+    override fun partyFromAnonymous(party: AbstractParty): Party? {
+        return database.transaction {
+            services.identityService.partyFromAnonymous(party)
+        }
+    }
+
+    override fun partyFromKey(key: PublicKey): Party? {
+        return database.transaction {
+            services.identityService.partyFromKey(key)
+        }
+    }
+
+    override fun partyFromX500Name(x500Name: X500Name): Party? {
+        return database.transaction {
+            services.identityService.partyFromX500Name(x500Name)
+        }
+    }
+
+    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
+        return database.transaction {
+            services.identityService.partiesFromName(query, exactMatch)
+        }
+    }
+
+    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? {
+        return database.transaction {
+            services.networkMapCache.getNodeByLegalIdentity(party)
+        }
+    }
 
     override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
+
+    override fun clearNetworkMapCache() {
+        database.transaction {
+            services.networkMapCache.clearNetworkMapCache()
+        }
+    }
 
     companion object {
         private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {

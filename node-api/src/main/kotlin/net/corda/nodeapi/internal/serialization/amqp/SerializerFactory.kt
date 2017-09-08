@@ -7,49 +7,43 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
-import java.lang.reflect.GenericArrayType
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
-import java.lang.reflect.WildcardType
+import java.lang.reflect.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
-data class schemaAndDescriptor (val schema: Schema, val typeDescriptor: Any)
+data class schemaAndDescriptor(val schema: Schema, val typeDescriptor: Any)
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.
  */
-// TODO: enums
-// TODO: object references - need better fingerprinting?
-// TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
-// TODO: Inner classes etc. Should we allow? Currently not considered.
 // TODO: support for intern-ing of deserialized objects for some core types (e.g. PublicKey) for memory efficiency
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general
 // TODO: use guava caches etc so not unbounded
 // TODO: do we need to support a transient annotation to exclude certain properties?
 // TODO: allow definition of well known types that are left out of the schema.
-// TODO: generally map Object to '*' all over the place in the schema and make sure use of '*' amd '?' is consistent and documented in generics.
-// TODO: found a document that states textual descriptors are Symbols.  Adjust schema class appropriately.
 // TODO: document and alert to the fact that classes cannot default superclass/interface properties otherwise they are "erased" due to matching with constructor.
 // TODO: type name prefixes for interfaces and abstract classes?  Or use label?
 // TODO: generic types should define restricted type alias with source of the wildcarded version, I think, if we're to generate classes from schema
 // TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @ThreadSafe
-class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
+class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
     private val classCarpenter = ClassCarpenter(cl)
-    val classloader : ClassLoader
+    val classloader: ClassLoader
         get() = classCarpenter.classloader
 
-    fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: ObjectSerializer) : AMQPSerializer<Any> {
+    private fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: AMQPSerializer<Any>): AMQPSerializer<Any> {
         return serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
-            EvolutionSerializer.make(typeNotation as CompositeType, newSerializer, this)
+            when (typeNotation) {
+                is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, this)
+                is RestrictedType -> throw NotSerializableException("Enum evolution is not currently supported")
+            }
         }
     }
 
@@ -66,18 +60,29 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
 
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
-        val serializer = if (Collection::class.java.isAssignableFrom(declaredClass)) {
-            serializersByType.computeIfAbsent(declaredType) {
-                CollectionSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
-                        declaredClass, arrayOf(AnyType), null), this)
+        val serializer = when {
+            // Declared class may not be set to Collection, but actual class could be a collection.
+            // In this case use of CollectionSerializer is perfectly appropriate.
+            (Collection::class.java.isAssignableFrom(declaredClass) ||
+                (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) -> {
+                    val declaredTypeAmended= CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                    serializersByType.computeIfAbsent(declaredTypeAmended) {
+                        CollectionSerializer(declaredTypeAmended, this)
+                    }
             }
-        } else if (Map::class.java.isAssignableFrom(declaredClass)) {
-            serializersByType.computeIfAbsent(declaredClass) {
-                makeMapSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
-                        declaredClass, arrayOf(AnyType, AnyType), null))
+            // Declared class may not be set to Map, but actual class could be a map.
+            // In this case use of MapSerializer is perfectly appropriate.
+            (Map::class.java.isAssignableFrom(declaredClass) ||
+                (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
+                    val declaredTypeAmended= MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                    serializersByType.computeIfAbsent(declaredClass) {
+                        makeMapSerializer(declaredTypeAmended)
+                    }
             }
-        } else {
-            makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
+            Enum::class.java.isAssignableFrom(declaredClass) -> serializersByType.computeIfAbsent(declaredClass) {
+                EnumSerializer(actualType, actualClass ?: declaredClass, this)
+            }
+            else -> makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
         }
 
         serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
@@ -90,17 +95,17 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
      * type.
      */
     // TODO: test GenericArrayType
-    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: Type): Type? {
-        if (declaredType is ParameterizedType) {
-            return inferTypeVariables(actualClass, declaredClass, declaredType)
-        } else if (declaredType is Class<*>) {
-            // Nothing to infer, otherwise we'd have ParameterizedType
-            return actualClass
-        } else if (declaredType is GenericArrayType) {
-            val declaredComponent = declaredType.genericComponentType
-            return inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
-        } else return null
-    }
+    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: Type): Type? =
+            when (declaredType) {
+                is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
+                // Nothing to infer, otherwise we'd have ParameterizedType
+                is Class<*> -> actualClass
+                is GenericArrayType -> {
+                    val declaredComponent = declaredType.genericComponentType
+                    inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
+                }
+                else -> null
+            }
 
     /**
      * Try and infer concrete types for any generics type variables for the actual class encountered, based on the declared
@@ -117,8 +122,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
                 if (implementationChain != null) {
                     val start = implementationChain.last()
                     val rest = implementationChain.dropLast(1).drop(1)
-                    val resolver = rest.reversed().fold(TypeResolver().where(start, declaredType)) {
-                        resolved, chainEntry ->
+                    val resolver = rest.reversed().fold(TypeResolver().where(start, declaredType)) { resolved, chainEntry ->
                         val newResolved = resolved.resolveType(chainEntry)
                         TypeResolver().where(chainEntry, newResolved)
                     }
@@ -194,7 +198,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
                 // doesn't match that of the serialised object then we are dealing with  different
                 // instance of the class, as such we need to build an EvolutionSerialiser
                 if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
-                    getEvolutionSerializer(typeNotation, serialiser as ObjectSerializer)
+                    getEvolutionSerializer(typeNotation, serialiser)
                 }
             } catch (e: ClassNotFoundException) {
                 if (sentinel || (typeNotation !is CompositeType)) throw e
@@ -210,15 +214,13 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     }
 
     private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
-            is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
-            is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
-        }
-
-    private fun processRestrictedType(typeNotation: RestrictedType): AMQPSerializer<Any> {
-        // TODO: class loader logic, and compare the schema.
-        val type = typeForName(typeNotation.name, classloader)
-        return get(null, type)
+        is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
+        is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
     }
+
+    // TODO: class loader logic, and compare the schema.
+    private fun processRestrictedType(typeNotation: RestrictedType) = get(null,
+            typeForName(typeNotation.name, classloader))
 
     private fun processCompositeType(typeNotation: CompositeType): AMQPSerializer<Any> {
         // TODO: class loader logic, and compare the schema.
@@ -233,7 +235,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
             findCustomSerializer(clazz, declaredType) ?: run {
                 if (type.isArray()) {
                     // Allow Object[] since this can be quite common (i.e. an untyped array)
-                    if(type.componentType() != Object::class.java) whitelisted(type.componentType())
+                    if (type.componentType() != Object::class.java) whitelisted(type.componentType())
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
@@ -248,8 +250,9 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     }
 
     internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
-        // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is AbstractMap, only Map.
-        // Otherwise it needs to inject additional schema for a RestrictedType source of the super type.  Could be done, but do we need it?
+        // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is
+        // AbstractMap, only Map. Otherwise it needs to inject additional schema for a RestrictedType source of the
+        // super type.  Could be done, but do we need it?
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
                 val declaredSuperClass = declaredType.asClass()?.superclass
@@ -258,7 +261,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
                 } else {
                     // Make a subclass serializer for the subclass and return that...
                     @Suppress("UNCHECKED_CAST")
-                    return CustomSerializer.SubClass<Any>(clazz, customSerializer as CustomSerializer<Any>)
+                    return CustomSerializer.SubClass(clazz, customSerializer as CustomSerializer<Any>)
                 }
             }
         }
@@ -277,7 +280,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
             (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
 
     // Recursively check the class, interfaces and superclasses for our annotation.
-    internal fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
+    private fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
         return type.isAnnotationPresent(CordaSerializable::class.java) ||
                 type.interfaces.any { hasAnnotationInHierarchy(it) }
                 || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
@@ -334,7 +337,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
             }
             is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
             is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
-            is WildcardType -> "Any"
+            is WildcardType -> "?"
+            is TypeVariable<*> -> "?"
             else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 

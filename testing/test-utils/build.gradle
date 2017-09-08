@@ -1,0 +1,44 @@
+apply plugin: 'kotlin'
+apply plugin: 'kotlin-jpa'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Testing utilities for Corda'
+
+//noinspection GroovyAssignabilityCheck
+configurations {
+    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
+    runtime.exclude module: 'isolated'
+}
+
+dependencies {
+    compile project(':test-common')
+    compile project(':core')
+    compile project(':node')
+    compile project(':client:mock')
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    compile "com.google.guava:guava:$guava_version"
+
+    // Unit testing helpers.
+    compile "junit:junit:$junit_version"
+    compile "com.nhaarman:mockito-kotlin:1.1.0"
+
+    // Guava: Google test library (collections test suite)
+    compile "com.google.guava:guava-testlib:$guava_version"
+
+    // OkHTTP: Simple HTTP library.
+    compile "com.squareup.okhttp3:okhttp:$okhttp_version"
+}
+
+jar {
+    baseName 'corda-test-utils'
+}
+
+publish {
+    name jar.baseName
+}

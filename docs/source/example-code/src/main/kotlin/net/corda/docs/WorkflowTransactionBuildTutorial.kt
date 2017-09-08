@@ -3,7 +3,6 @@ package net.corda.docs
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
@@ -18,7 +17,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import java.security.PublicKey
 
 // Minimal state model of a manual approval process
 @CordaSerializable
@@ -32,7 +30,7 @@ enum class WorkflowState {
  * Minimal contract to encode a simple workflow with one initial state and two possible eventual states.
  * It is assumed one party unilaterally submits and the other manually retrieves the deal and completes it.
  */
-data class TradeApprovalContract(private val blank: Void? = null) : Contract {
+data class TradeApprovalContract(val blank: Unit? = null) : Contract {
 
     interface Commands : CommandData {
         class Issue : TypeOnlyCommandData(), Commands  // Record receipt of deal details
@@ -51,10 +49,6 @@ data class TradeApprovalContract(private val blank: Void? = null) : Contract {
 
         val parties: List<Party> get() = listOf(source, counterparty)
         override val participants: List<AbstractParty> get() = parties
-
-        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.owningKey.containsAny(ourKeys) }
-        }
     }
 
     /**

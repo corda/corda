@@ -1,15 +1,18 @@
 package net.corda.core.flows;
 
 import co.paralleluniverse.fibers.Suspendable;
+import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
 import net.corda.testing.node.MockNetwork;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.Assert.fail;
 
 public class FlowsInJavaTest {
 
@@ -18,11 +21,13 @@ public class FlowsInJavaTest {
     private MockNetwork.MockNode node2;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         MockNetwork.BasketOfNodes someNodes = mockNet.createSomeNodes(2);
         node1 = someNodes.getPartyNodes().get(0);
         node2 = someNodes.getPartyNodes().get(1);
         mockNet.runNetwork();
+        // Ensure registration was successful
+        node1.getNodeReadyFuture().get();
     }
 
     @After
@@ -36,6 +41,30 @@ public class FlowsInJavaTest {
         Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(node2.getInfo().getLegalIdentity())).getResultFuture();
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
+    }
+
+    @Test
+    public void primitiveClassForReceiveType() throws InterruptedException {
+        // Using the primitive classes causes problems with the checkpointing so we use the wrapper classes and convert
+        // to the primitive class at callsite.
+        for (Class<?> receiveType : Primitives.allWrapperTypes()) {
+            primitiveReceiveTypeTest(receiveType);
+        }
+    }
+
+    private void primitiveReceiveTypeTest(Class<?> receiveType) throws InterruptedException {
+        PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(node2.getInfo().getLegalIdentity(), receiveType);
+        Future<?> result = node1.getServices().startFlow(flow).getResultFuture();
+        mockNet.runNetwork();
+        try {
+            result.get();
+            fail("ExecutionException should have been thrown");
+        } catch (ExecutionException e) {
+            assertThat(e.getCause())
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("primitive")
+                    .hasMessageContaining(receiveType.getName());
+        }
     }
 
     @InitiatingFlow
@@ -71,4 +100,21 @@ public class FlowsInJavaTest {
         }
     }
 
+    @InitiatingFlow
+    private static class PrimitiveReceiveFlow extends FlowLogic<Void> {
+        private final Party otherParty;
+        private final Class<?> receiveType;
+
+        private PrimitiveReceiveFlow(Party otherParty, Class<?> receiveType) {
+            this.otherParty = otherParty;
+            this.receiveType = receiveType;
+        }
+
+        @Suspendable
+        @Override
+        public Void call() throws FlowException {
+            receive(Primitives.unwrap(receiveType), otherParty);
+            return null;
+        }
+    }
 }

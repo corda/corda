@@ -3,11 +3,12 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.SchedulableFlow
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
@@ -102,16 +103,10 @@ object FixingFlow {
     class Floater(override val otherParty: Party,
                   override val payload: FixingSession,
                   override val progressTracker: ProgressTracker = TwoPartyDealFlow.Primary.tracker()) : TwoPartyDealFlow.Primary() {
-
         @Suppress("UNCHECKED_CAST")
         internal val dealToFix: StateAndRef<FixableDealState> by transient {
             val state = serviceHub.loadState(payload.ref) as TransactionState<FixableDealState>
             StateAndRef(state, payload.ref)
-        }
-
-        override val myKey: PublicKey get() {
-            dealToFix.state.data.participants.single { it.owningKey == serviceHub.myInfo.legalIdentity.owningKey }
-            return serviceHub.legalIdentityKey
         }
 
         override val notaryNode: NodeInfo get() {

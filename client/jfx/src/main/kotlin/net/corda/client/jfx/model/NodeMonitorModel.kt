@@ -89,7 +89,7 @@ class NodeMonitorModel {
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
 
         // Transactions
-        val (transactions, newTransactions) = proxy.verifiedTransactionsFeed()
+        val (transactions, newTransactions) = proxy.internalVerifiedTransactionsFeed()
         newTransactions.startWith(transactions).subscribe(transactionsSubject)
 
         // SM -> TX mapping

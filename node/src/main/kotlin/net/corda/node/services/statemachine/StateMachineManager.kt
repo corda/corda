@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
+import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.fibers.instrument.SuspendableHelper
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
@@ -39,6 +40,7 @@ import net.corda.node.utilities.wrapWithDatabaseTransaction
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -170,7 +172,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         checkQuasarJavaAgentPresence()
         restoreFibersFromCheckpoints()
         listenToLedgerTransactions()
-        serviceHub.networkMapCache.mapServiceRegistered.then { executor.execute(this::resumeRestoredFibers) }
+        serviceHub.networkMapCache.nodeReady.then { executor.execute(this::resumeRestoredFibers) }
     }
 
     private fun checkQuasarJavaAgentPresence() {
@@ -426,6 +428,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun initFiber(fiber: FlowStateMachineImpl<*>) {
+        verifyFlowLogicIsSuspendable(fiber.logic)
         fiber.database = database
         fiber.serviceHub = serviceHub
         fiber.actionOnSuspend = { ioRequest ->
@@ -454,6 +457,19 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             totalStartedFlows.inc()
             unfinishedFibers.countUp()
             notifyChangeObservers(Change.Add(fiber.logic))
+        }
+    }
+
+    private fun verifyFlowLogicIsSuspendable(logic: FlowLogic<Any?>) {
+        // Quasar requires (in Java 8) that at least the call method be annotated suspendable. Unfortunately, it's
+        // easy to forget to add this when creating a new flow, so we check here to give the user a better error.
+        //
+        // The Kotlin compiler can sometimes generate a synthetic bridge method from a single call declaration, which
+        // forwards to the void method and then returns Unit. However annotations do not get copied across to this
+        // bridge, so we have to do a more complex scan here.
+        val call = logic.javaClass.methods.first { !it.isSynthetic && it.name == "call" && it.parameterCount == 0 }
+        if (call.getAnnotation(Suspendable::class.java) == null) {
+            throw FlowException("${logic.javaClass.name}.call() is not annotated as @Suspendable. Please fix this.")
         }
     }
 

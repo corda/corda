@@ -4,7 +4,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.node.services.IdentityService
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import org.hibernate.SessionFactory
 

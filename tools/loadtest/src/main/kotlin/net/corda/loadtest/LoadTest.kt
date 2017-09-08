@@ -2,7 +2,7 @@ package net.corda.loadtest
 
 import com.google.common.util.concurrent.RateLimiter
 import net.corda.client.mock.Generator
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.driver.PortAllocation
 import org.slf4j.LoggerFactory
@@ -185,7 +185,7 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
                 "    ${it.legalIdentity.name}: ${it.legalIdentity.owningKey.toBase58String()}"
             }.joinToString("\n")
             log.info("${connection.remoteNode.hostname} waiting for network map")
-            connection.proxy.waitUntilRegisteredWithNetworkMap().get()
+            connection.proxy.waitUntilNetworkReady().get()
             log.info("${connection.remoteNode.hostname} sees\n$pubKeysString")
             hostNodeMap.put(connection.remoteNode.hostname, connection)
         }

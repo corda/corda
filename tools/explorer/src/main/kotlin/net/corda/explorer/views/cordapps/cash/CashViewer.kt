@@ -22,8 +22,8 @@ import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
-import net.corda.core.crypto.commonName
 import net.corda.core.identity.AbstractParty
+import net.corda.core.utilities.organisation
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.identicon.identicon
@@ -148,7 +148,7 @@ class CashViewer : CordaView("Cash") {
          */
         val searchField = SearchField(cashStates,
                 "Currency" to { state, text -> state.state.data.amount.token.product.toString().contains(text, true) },
-                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.commonName?.contains(text, true) ?: false }
+                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.organisation?.contains(text, true) ?: false }
         )
         root.top = hbox(5.0) {
             button("New Transaction", FontAwesomeIconView(FontAwesomeIcon.PLUS)) {
@@ -174,11 +174,11 @@ class CashViewer : CordaView("Cash") {
                      * Next we create subgroups based on currency. [memberStates] here is all states holding currency [currency] issued by [issuer] above.
                      * Note that these states will not be displayed in the TreeTable, but rather in the side pane if the user clicks on the row.
                      */
-                    val currencyNodes = AggregatedList(memberStates, { it.state.data.amount.token.product }) { currency, memberStates ->
+                    val currencyNodes = AggregatedList(memberStates, { it.state.data.amount.token.product }) { currency, groupedMemberStates ->
                         /**
                          * We sum the states in the subgroup, to be displayed in the "Local Currency" column
                          */
-                        val amounts = memberStates.map { it.state.data.amount.withoutIssuer() }
+                        val amounts = groupedMemberStates.map { it.state.data.amount.withoutIssuer() }
                         val sumAmount = amounts.foldObservable(Amount(0, currency), Amount<Currency>::plus)
 
                         /**
@@ -190,7 +190,7 @@ class CashViewer : CordaView("Cash") {
                         /**
                          * Finally assemble the actual TreeTable Currency node.
                          */
-                        TreeItem(ViewerNode.CurrencyNode(sumAmount, equivSumAmount, memberStates))
+                        TreeItem(ViewerNode.CurrencyNode(sumAmount, equivSumAmount, groupedMemberStates))
                     }
 
                     /**
@@ -205,7 +205,7 @@ class CashViewer : CordaView("Cash") {
                     /**
                      * Assemble the Issuer node.
                      */
-                    val treeItem = TreeItem(ViewerNode.IssuerNode(issuer.resolveIssuer().value ?: issuer, equivSumAmount, memberStates))
+                    val treeItem = TreeItem(ViewerNode.IssuerNode(issuer.owningKey.toKnownParty().value ?: issuer, equivSumAmount, memberStates))
 
                     /**
                      * Bind the children in the TreeTable structure.

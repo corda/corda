@@ -2,7 +2,6 @@ package net.corda.irs.contract
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import net.corda.core.contracts.*
-import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -18,7 +17,6 @@ import org.apache.commons.jexl3.JexlBuilder
 import org.apache.commons.jexl3.MapContext
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.security.PublicKey
 import java.time.LocalDate
 import java.util.*
 
@@ -76,7 +74,7 @@ abstract class RatePaymentEvent(date: LocalDate,
 
     abstract val flow: Amount<Currency>
 
-    val days: Int get() = calculateDaysBetween(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
+    val days: Int get() = BusinessCalendar.calculateDaysBetween(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
 
     // TODO : Fix below (use daycount convention for division, not hardcoded 360 etc)
     val dayCountFactor: BigDecimal get() = (BigDecimal(days).divide(BigDecimal(360.0), 8, RoundingMode.HALF_UP)).setScale(4, RoundingMode.HALF_UP)
@@ -513,7 +511,7 @@ class InterestRateSwap : Contract {
         checkLegDates(listOf(irs.fixedLeg, irs.floatingLeg))
     }
 
-    private fun verifyFixCommand(inputs: List<State>, outputs: List<State>, command: AuthenticatedObject<Commands.Refix>) {
+    private fun verifyFixCommand(inputs: List<State>, outputs: List<State>, command: CommandWithParties<Commands.Refix>) {
         val irs = outputs.filterIsInstance<State>().single()
         val prevIrs = inputs.filterIsInstance<State>().single()
         val paymentDifferences = getFloatingLegPaymentsDifferences(prevIrs.calculation.floatingLegPaymentSchedule, irs.calculation.floatingLegPaymentSchedule)
@@ -617,10 +615,6 @@ class InterestRateSwap : Contract {
 
         override val participants: List<AbstractParty>
             get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
-
-        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return fixedLeg.fixedRatePayer.owningKey.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.containsAny(ourKeys)
-        }
 
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null

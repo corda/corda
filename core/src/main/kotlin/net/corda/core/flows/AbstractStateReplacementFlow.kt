@@ -138,6 +138,7 @@ abstract class AbstractStateReplacementFlow {
     // We use Void? instead of Unit? as that's what you'd use in Java.
     abstract class Acceptor<in T>(val otherSide: Party,
                                   override val progressTracker: ProgressTracker = Acceptor.tracker()) : FlowLogic<Void?>() {
+            constructor(otherSide: Party) : this(otherSide, Acceptor.tracker())
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
             object APPROVING : ProgressTracker.Step("State replacement approved")
