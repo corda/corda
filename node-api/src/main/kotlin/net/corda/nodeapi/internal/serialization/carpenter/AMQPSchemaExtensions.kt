@@ -1,3 +1,4 @@
+@file:JvmName("AMQPSchemaExtensions")
 package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
