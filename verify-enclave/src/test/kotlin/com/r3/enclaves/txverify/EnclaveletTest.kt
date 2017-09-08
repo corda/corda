@@ -6,6 +6,7 @@ import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.testing.DummyCommandData
 import net.corda.testing.MEGA_CORP_PUBKEY
 import net.corda.testing.MINI_CORP_PUBKEY
 import net.corda.testing.ledger
@@ -62,6 +63,7 @@ class EnclaveletTest {
             val wtx3 = transaction {
                 input("c1")
                 input("c2")
+                command(DUMMY_CASH_ISSUER.party.owningKey, DummyCommandData)
                 output(Cash.State(3000.POUNDS `issued by` DUMMY_CASH_ISSUER, AnonymousParty(MINI_CORP_PUBKEY)))
                 failsWith("Required ${Cash.Commands.Move::class.java.canonicalName} command")
             }

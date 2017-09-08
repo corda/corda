@@ -1,11 +1,9 @@
 package net.corda.finance.contracts;
 
 import co.paralleluniverse.fibers.Suspendable;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import kotlin.Unit;
 import net.corda.core.contracts.*;
-import net.corda.core.crypto.testing.NullPublicKey;
+import net.corda.core.crypto.NullKeys.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
@@ -20,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Currency;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -83,7 +82,7 @@ public class JavaCommercialPaper implements Contract {
             return owner;
         }
 
-        Amount<Issued<Currency>> getFaceValue() {
+        public Amount<Issued<Currency>> getFaceValue() {
             return faceValue;
         }
 
@@ -128,7 +127,7 @@ public class JavaCommercialPaper implements Contract {
         @NotNull
         @Override
         public List<AbstractParty> getParticipants() {
-            return ImmutableList.of(this.owner);
+            return Collections.singletonList(this.owner);
         }
     }
 
@@ -156,11 +155,11 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @NotNull
-    private List<AuthenticatedObject<Commands>> extractCommands(@NotNull LedgerTransaction tx) {
+    private List<CommandWithParties<Commands>> extractCommands(@NotNull LedgerTransaction tx) {
         return tx.getCommands()
                 .stream()
-                .filter((AuthenticatedObject<CommandData> command) -> command.getValue() instanceof Commands)
-                .map((AuthenticatedObject<CommandData> command) -> new AuthenticatedObject<>(command.getSigners(), command.getSigningParties(), (Commands) command.getValue()))
+                .filter((CommandWithParties<CommandData> command) -> command.getValue() instanceof Commands)
+                .map((CommandWithParties<CommandData> command) -> new CommandWithParties<>(command.getSigners(), command.getSigningParties(), (Commands) command.getValue()))
                 .collect(Collectors.toList());
     }
 
@@ -172,19 +171,19 @@ public class JavaCommercialPaper implements Contract {
 
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
-        final List<AuthenticatedObject<CommandData>> commands = tx.getCommands().stream().filter(
+        final List<CommandWithParties<CommandData>> commands = tx.getCommands().stream().filter(
                 it -> it.getValue() instanceof Commands
         ).collect(Collectors.toList());
-        final AuthenticatedObject<CommandData> command = Iterables.getOnlyElement(commands);
+        final CommandWithParties<CommandData> command = onlyElementOf(commands);
         final TimeWindow timeWindow = tx.getTimeWindow();
 
         for (final LedgerTransaction.InOutGroup<State, State> group : groups) {
             final List<State> inputs = group.getInputs();
             final List<State> outputs = group.getOutputs();
             if (command.getValue() instanceof Commands.Move) {
-                final AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
+                final CommandWithParties<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
-                final State input = Iterables.getOnlyElement(inputs);
+                final State input = onlyElementOf(inputs);
 
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
@@ -194,10 +193,10 @@ public class JavaCommercialPaper implements Contract {
                     throw new IllegalStateException("the state is propagated");
                 }
             } else if (command.getValue() instanceof Commands.Redeem) {
-                final AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
+                final CommandWithParties<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
                 // There should be only a single input due to aggregation above
-                final State input = Iterables.getOnlyElement(inputs);
+                final State input = onlyElementOf(inputs);
 
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
@@ -217,8 +216,8 @@ public class JavaCommercialPaper implements Contract {
                     return Unit.INSTANCE;
                 });
             } else if (command.getValue() instanceof Commands.Issue) {
-                final AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
-                final State output = Iterables.getOnlyElement(outputs);
+                final CommandWithParties<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
+                final State output = onlyElementOf(outputs);
                 final Instant time = null == timeWindow
                         ? null
                         : timeWindow.getUntilTime();
@@ -256,5 +255,14 @@ public class JavaCommercialPaper implements Contract {
         tx.addInputState(paper);
         tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary(), paper.getState().getEncumbrance()));
         tx.addCommand(new Command<>(new Commands.Move(), paper.getState().getData().getOwner().getOwningKey()));
+    }
+
+    private static <T> T onlyElementOf(Iterable<T> iterable) {
+        Iterator<T> iter = iterable.iterator();
+        T item = iter.next();
+        if (iter.hasNext()) {
+            throw new IllegalArgumentException("Iterable has more than one element!");
+        }
+        return item;
     }
 }

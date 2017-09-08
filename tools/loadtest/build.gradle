@@ -6,7 +6,7 @@ mainClassName = 'net.corda.loadtest.MainKt'
 dependencies {
     compile project(':client:mock')
     compile project(':client:rpc')
-    compile project(':test-utils')
+    compile project(':node-driver')
 
     // https://mvnrepository.com/artifact/com.jcraft/jsch
     compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'

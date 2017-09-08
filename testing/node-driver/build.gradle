@@ -1,0 +1,49 @@
+apply plugin: 'kotlin'
+apply plugin: 'kotlin-jpa'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+//noinspection GroovyAssignabilityCheck
+configurations {
+    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
+    runtime.exclude module: 'isolated'
+
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
+dependencies {
+    compile project(':test-utils')
+    compile project(':cordform-common')
+
+    // Integration test helpers
+    integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
+    integrationTestCompile "junit:junit:$junit_version"
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+jar {
+    baseName 'corda-node-driver'
+}
+
+publish {
+    name jar.baseName
+}

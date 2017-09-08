@@ -19,6 +19,8 @@ data class BFTSMaRtConfiguration(val replicaId: Int, val debug: Boolean, val exp
 }
 
 interface NodeConfiguration : NodeSSLConfiguration {
+    // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
+    // TODO: Remove this so we don't accidentally use this identity in the code?
     val myLegalName: X500Name
     val networkMapService: NetworkMapInfo?
     val minimumPlatformVersion: Int

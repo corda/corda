@@ -1,11 +1,11 @@
 package net.corda.node.services.vault
 
-import net.corda.core.internal.ThreadBox
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault
@@ -20,7 +20,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.utilities.DatabaseTransactionManager
 import org.hibernate.Session
 import rx.Observable

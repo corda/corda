@@ -4,7 +4,6 @@ import joptsimple.OptionSet
 import net.corda.client.mock.ErrorFlowsEventGenerator
 import net.corda.client.mock.EventGenerator
 import net.corda.client.mock.Generator
-import net.corda.client.mock.pickOne
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
@@ -16,6 +15,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
@@ -34,7 +34,6 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
-import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
 
@@ -71,20 +70,20 @@ class ExplorerSimulation(val options: OptionSet) {
         val portAllocation = PortAllocation.Incremental(20000)
         driver(portAllocation = portAllocation) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
-            val notary = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
+            val notary = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
                     customOverrides = mapOf("nearestCity" to "Zurich"))
-            val alice = startNode(ALICE.name, rpcUsers = arrayListOf(user),
+            val alice = startNode(providedName = ALICE.name, rpcUsers = arrayListOf(user),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                     customOverrides = mapOf("nearestCity" to "Milan"))
-            val bob = startNode(BOB.name, rpcUsers = arrayListOf(user),
+            val bob = startNode(providedName = BOB.name, rpcUsers = arrayListOf(user),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                     customOverrides = mapOf("nearestCity" to "Madrid"))
-            val ukBankName = X500Name("CN=UK Bank Plc,O=UK Bank Plc,L=London,C=GB")
-            val usaBankName = X500Name("CN=USA Bank Corp,O=USA Bank Corp,L=New York,C=USA")
-            val issuerGBP = startNode(ukBankName, rpcUsers = arrayListOf(manager),
+            val ukBankName = getX500Name(O = "UK Bank Plc", L = "London", C = "GB")
+            val usaBankName = getX500Name(O = "USA Bank Corp", L = "New York", C = "USA")
+            val issuerGBP = startNode(providedName = ukBankName, rpcUsers = arrayListOf(manager),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
                     customOverrides = mapOf("nearestCity" to "London"))
-            val issuerUSD = startNode(usaBankName, rpcUsers = arrayListOf(manager),
+            val issuerUSD = startNode(providedName = usaBankName, rpcUsers = arrayListOf(manager),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))),
                     customOverrides = mapOf("nearestCity" to "New York"))
 

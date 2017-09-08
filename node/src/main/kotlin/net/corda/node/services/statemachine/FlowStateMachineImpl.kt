@@ -1,9 +1,11 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
+import co.paralleluniverse.fibers.Fiber.parkAndSerialize
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import com.google.common.primitives.Primitives
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
@@ -13,6 +15,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.abbreviate
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.staticField
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
@@ -25,6 +28,7 @@ import net.corda.node.utilities.DatabaseTransaction
 import net.corda.node.utilities.DatabaseTransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.nio.file.Paths
 import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -165,29 +169,37 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                                           payload: Any,
                                           sessionFlow: FlowLogic<*>,
                                           retrySend: Boolean): UntrustworthyData<T> {
+        requireNonPrimitive(receiveType)
         logger.debug { "sendAndReceive(${receiveType.name}, $otherParty, ${payload.toString().abbreviate(300)}) ..." }
         val session = getConfirmedSessionIfPresent(otherParty, sessionFlow)
-        val sessionData = if (session == null) {
+        val receivedSessionData: ReceivedSessionMessage<SessionData> = if (session == null) {
             val newSession = startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = true, retryable = retrySend)
             // Only do a receive here as the session init has carried the payload
-            receiveInternal<SessionData>(newSession, receiveType)
+            receiveInternal(newSession, receiveType)
         } else {
             val sendData = createSessionData(session, payload)
-            sendAndReceiveInternal<SessionData>(session, sendData, receiveType)
+            sendAndReceiveInternal(session, sendData, receiveType)
         }
-        logger.debug { "Received ${sessionData.message.payload.toString().abbreviate(300)}" }
-        return sessionData.checkPayloadIs(receiveType)
+        logger.debug { "Received ${receivedSessionData.message.payload.toString().abbreviate(300)}" }
+        return receivedSessionData.checkPayloadIs(receiveType)
     }
 
     @Suspendable
     override fun <T : Any> receive(receiveType: Class<T>,
                                    otherParty: Party,
                                    sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
+        requireNonPrimitive(receiveType)
         logger.debug { "receive(${receiveType.name}, $otherParty) ..." }
         val session = getConfirmedSession(otherParty, sessionFlow)
         val sessionData = receiveInternal<SessionData>(session, receiveType)
         logger.debug { "Received ${sessionData.message.payload.toString().abbreviate(300)}" }
         return sessionData.checkPayloadIs(receiveType)
+    }
+
+    private fun requireNonPrimitive(receiveType: Class<*>) {
+        require(!receiveType.isPrimitive) {
+            "Use the wrapper type ${Primitives.wrap(receiveType).name} instead of the primitive $receiveType.class"
+        }
     }
 
     @Suspendable
@@ -337,7 +349,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), retryable)
         openSessions[Pair(sessionFlow, otherParty)] = session
         val (version, initiatingFlowClass) = sessionFlow.javaClass.flowVersionAndInitiatingClass
-        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, "not defined", firstPayload)
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, sessionFlow.javaClass.appName, firstPayload)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
@@ -479,5 +491,14 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
             ?: return found
             ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
                 "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
+    }
+}
+
+val Class<out FlowLogic<*>>.appName: String get() {
+    val jarFile = Paths.get(protectionDomain.codeSource.location.toURI())
+    return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
+        jarFile.fileName.toString().removeSuffix(".jar")
+    } else {
+        "<unknown>"
     }
 }

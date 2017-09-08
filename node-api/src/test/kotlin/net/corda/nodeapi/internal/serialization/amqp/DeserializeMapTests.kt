@@ -1,6 +1,8 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import org.assertj.core.api.Assertions
 import org.junit.Test
+import java.io.NotSerializableException
 import java.util.*
 
 class DeserializeCollectionTests {
@@ -11,7 +13,7 @@ class DeserializeCollectionTests {
         private const val VERBOSE = false
     }
 
-    val sf = testDefaultFactory()
+    private val sf = testDefaultFactory()
 
     @Test
     fun mapTest() {
@@ -57,7 +59,7 @@ class DeserializeCollectionTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test(expected=java.io.NotSerializableException::class)
+    @Test
     fun dictionaryTest() {
         data class C(val c: Dictionary<String, Int>)
         val v : Hashtable<String, Int> = Hashtable()
@@ -66,10 +68,11 @@ class DeserializeCollectionTests {
         val c = C(v)
 
         // expected to throw
-        TestSerializationOutput(VERBOSE, sf).serialize(c)
+        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+                .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Unable to serialise deprecated type class java.util.Dictionary.")
     }
 
-    @Test(expected=java.lang.IllegalArgumentException::class)
+    @Test
     fun hashtableTest() {
         data class C(val c: Hashtable<String, Int>)
         val v : Hashtable<String, Int> = Hashtable()
@@ -78,24 +81,27 @@ class DeserializeCollectionTests {
         val c = C(v)
 
         // expected to throw
-        TestSerializationOutput(VERBOSE, sf).serialize(c)
+        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive map type for declaredType")
     }
 
-    @Test(expected=java.lang.IllegalArgumentException::class)
+    @Test
     fun hashMapTest() {
         data class C(val c : HashMap<String, Int>)
         val c = C (HashMap (mapOf("A" to 1, "B" to 2)))
 
         // expect this to throw
-        TestSerializationOutput(VERBOSE, sf).serialize(c)
+        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive map type for declaredType")
     }
 
-    @Test(expected=java.lang.IllegalArgumentException::class)
+    @Test
     fun weakHashMapTest() {
         data class C(val c : WeakHashMap<String, Int>)
         val c = C (WeakHashMap (mapOf("A" to 1, "B" to 2)))
 
-        TestSerializationOutput(VERBOSE, sf).serialize(c)
+        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive map type for declaredType")
     }
 
     @Test

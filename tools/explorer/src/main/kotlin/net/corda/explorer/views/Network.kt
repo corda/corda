@@ -27,10 +27,10 @@ import javafx.util.Duration
 import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
-import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ScreenCoordinate
+import net.corda.core.utilities.toBase58String
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
 import tornadofx.*
@@ -79,7 +79,7 @@ class Network : CordaView() {
                     .filterNotNull()
                     .map { it.stateAndRef.state.data }.getParties()
             val outputParties = it.transaction.tx.outputStates.observable().getParties()
-            val signingParties = it.transaction.sigs.map { getModel<NetworkIdentityModel>().lookup(it.by) }
+            val signingParties = it.transaction.sigs.map { it.by.toKnownParty() }
             // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network.
             // TODO : Expose artemis queue to get real message information.
             inputParties.cross(outputParties) + inputParties.cross(signingParties)
@@ -99,7 +99,7 @@ class Network : CordaView() {
                         copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())).apply { minWidth = 400.0 }
                     }
                     row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
-                    node.worldMapLocation?.apply { row("Location :") { label(this@apply.description) } }
+                    node.getWorldMapLocation()?.apply { row("Location :") { label(this@apply.description) } }
                 }
             }
             setOnMouseClicked {
@@ -123,7 +123,7 @@ class Network : CordaView() {
             contentDisplay = ContentDisplay.TOP
             val coordinate = Bindings.createObjectBinding({
                 // These coordinates are obtained when we generate the map using TileMill.
-                node.worldMapLocation?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: ScreenCoordinate(0.0, 0.0)
+                node.getWorldMapLocation()?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: ScreenCoordinate(0.0, 0.0)
             }, arrayOf(mapPane.widthProperty(), mapPane.heightProperty()))
             // Center point of the label.
             layoutXProperty().bind(coordinate.map { it.screenX - width / 2 })
@@ -170,10 +170,10 @@ class Network : CordaView() {
         zoomOutButton.setOnAction { zoom(0.8) }
 
         lastTransactions.addListener { _, _, new ->
-            new?.forEach {
-                it.first.value?.let { a ->
-                    it.second.value?.let { b ->
-                        fireBulletBetweenNodes(a.legalIdentity, b.legalIdentity, "bank", "bank")
+            new?.forEach { (partyA, partyB) ->
+                partyA.value?.let { a ->
+                    partyB.value?.let { b ->
+                        fireBulletBetweenNodes(a, b, "bank", "bank")
                     }
                 }
             }
@@ -209,7 +209,7 @@ class Network : CordaView() {
         return Point2D(x, y)
     }
 
-    private fun List<ContractState>.getParties() = map { it.participants.map { getModel<NetworkIdentityModel>().lookup(it.owningKey) } }.flatten()
+    private fun List<ContractState>.getParties() = map { it.participants.map { it.owningKey.toKnownParty() } }.flatten()
 
     private fun fireBulletBetweenNodes(senderNode: Party, destNode: Party, startType: String, endType: String) {
         val senderNodeComp = allComponentMap[senderNode] ?: return

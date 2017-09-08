@@ -155,7 +155,7 @@ open class Node(override val configuration: FullNodeConfiguration,
                 myIdentityOrNullIfNetworkMapService,
                 serverThread,
                 database,
-                networkMapRegistrationFuture,
+                nodeReadyFuture,
                 services.monitoringService,
                 advertisedAddress)
     }
@@ -214,15 +214,17 @@ open class Node(override val configuration: FullNodeConfiguration,
         log.trace { "Trying to detect public hostname through the Network Map Service at $serverAddress" }
         val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, configuration)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
-            initialConnectAttempts = 5
-            retryInterval = 5.seconds.toMillis()
+            initialConnectAttempts = 2 // TODO Public host discovery needs rewriting, as we may start nodes without network map, and we don't want to wait that long on startup.
+            retryInterval = 2.seconds.toMillis()
             retryIntervalMultiplier = 1.5
             maxRetryInterval = 3.minutes.toMillis()
         }
         val clientFactory = try {
             locator.createSessionFactory()
         } catch (e: ActiveMQNotConnectedException) {
-            throw IOException("Unable to connect to the Network Map Service at $serverAddress for IP address discovery", e)
+            log.warn("Unable to connect to the Network Map Service at $serverAddress for IP address discovery. " +
+                    "Using the provided \"${configuration.p2pAddress.host}\" as the advertised address.")
+            return null
         }
 
         val session = clientFactory.createSession(PEER_USER, PEER_USER, false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
@@ -310,7 +312,7 @@ open class Node(override val configuration: FullNodeConfiguration,
         }
         super.start()
 
-        networkMapRegistrationFuture.thenMatch({
+        nodeReadyFuture.thenMatch({
             serverThread.execute {
                 // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
                 //
@@ -332,7 +334,9 @@ open class Node(override val configuration: FullNodeConfiguration,
 
                 _startupComplete.set(Unit)
             }
-        }, {})
+        },
+        { th -> logger.error("Unexpected exception", th)}
+        )
         shutdownHook = addShutdownHook {
             stop()
         }

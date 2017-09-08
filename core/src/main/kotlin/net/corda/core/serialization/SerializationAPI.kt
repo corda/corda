@@ -3,8 +3,6 @@ package net.corda.core.serialization
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.WriteOnceProperty
-import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
-import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
@@ -13,7 +11,7 @@ import net.corda.core.utilities.sequence
  * An abstraction for serializing and deserializing objects, with support for versioning of the wire format via
  * a header / prefix in the bytes.
  */
-interface SerializationFactory {
+abstract class SerializationFactory {
     /**
      * Deserialize the bytes in to an object, using the prefixed bytes to determine the format.
      *
@@ -21,7 +19,7 @@ interface SerializationFactory {
      * @param clazz The class or superclass or the object to be deserialized, or [Any] or [Object] if unknown.
      * @param context A context that configures various parameters to deserialization.
      */
-    fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
+    abstract fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
 
     /**
      * Serialize an object to bytes using the preferred serialization format version from the context.
@@ -29,7 +27,63 @@ interface SerializationFactory {
      * @param obj The object to be serialized.
      * @param context A context that configures various parameters to serialization, including the serialization format version.
      */
-    fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T>
+    abstract fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T>
+
+    /**
+     * If there is a need to nest serialization/deserialization with a modified context during serialization or deserialization,
+     * this will return the current context used to start serialization/deserialization.
+     */
+    val currentContext: SerializationContext? get() = _currentContext.get()
+
+    /**
+     * A context to use as a default if you do not require a specially configured context.  It will be the current context
+     * if the use is somehow nested (see [currentContext]).
+     */
+    val defaultContext: SerializationContext get() = currentContext ?: SerializationDefaults.P2P_CONTEXT
+
+    private val _currentContext = ThreadLocal<SerializationContext?>()
+
+    /**
+     * Change the current context inside the block to that supplied.
+     */
+    fun <T> withCurrentContext(context: SerializationContext?, block: () -> T): T {
+        val priorContext = _currentContext.get()
+        if (context != null) _currentContext.set(context)
+        try {
+            return block()
+        } finally {
+            if (context != null) _currentContext.set(priorContext)
+        }
+    }
+
+    /**
+     * Allow subclasses to temporarily mark themselves as the current factory for the current thread during serialization/deserialization.
+     * Will restore the prior context on exiting the block.
+     */
+    protected fun <T> asCurrent(block: SerializationFactory.() -> T): T {
+        val priorContext = _currentFactory.get()
+        _currentFactory.set(this)
+        try {
+            return block()
+        } finally {
+            _currentFactory.set(priorContext)
+        }
+    }
+
+    companion object {
+        private val _currentFactory = ThreadLocal<SerializationFactory?>()
+
+        /**
+         * A default factory for serialization/deserialization, taking into account the [currentFactory] if set.
+         */
+        val defaultFactory: SerializationFactory get() = currentFactory ?: SerializationDefaults.SERIALIZATION_FACTORY
+
+        /**
+         * If there is a need to nest serialization/deserialization with a modified context during serialization or deserialization,
+         * this will return the current factory used to start serialization/deserialization.
+         */
+        val currentFactory: SerializationFactory? get() = _currentFactory.get()
+    }
 }
 
 /**
@@ -77,6 +131,13 @@ interface SerializationContext {
     fun withClassLoader(classLoader: ClassLoader): SerializationContext
 
     /**
+     * Helper method to return a new context based on this context with the appropriate class loader constructed from the passed attachment identifiers.
+     * (Requires the attachment storage to have been enabled).
+     */
+    @Throws(MissingAttachmentsException::class)
+    fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext
+
+    /**
      * Helper method to return a new context based on this context with the given class specifically whitelisted.
      */
     fun withWhitelisted(clazz: Class<*>): SerializationContext
@@ -107,26 +168,26 @@ object SerializationDefaults {
 /**
  * Convenience extension method for deserializing a ByteSequence, utilising the defaults.
  */
-inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T {
+inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T {
     return serializationFactory.deserialize(this, T::class.java, context)
 }
 
 /**
  * Convenience extension method for deserializing SerializedBytes with type matching, utilising the defaults.
  */
-inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T {
+inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T {
     return serializationFactory.deserialize(this, T::class.java, context)
 }
 
 /**
  * Convenience extension method for deserializing a ByteArray, utilising the defaults.
  */
-inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T = this.sequence().deserialize(serializationFactory, context)
+inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T = this.sequence().deserialize(serializationFactory, context)
 
 /**
  * Convenience extension method for serializing an object of type T, utilising the defaults.
  */
-fun <T : Any> T.serialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): SerializedBytes<T> {
+fun <T : Any> T.serialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): SerializedBytes<T> {
     return serializationFactory.serialize(this, context)
 }
 

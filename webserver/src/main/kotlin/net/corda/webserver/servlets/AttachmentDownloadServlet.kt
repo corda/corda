@@ -1,6 +1,6 @@
 package net.corda.webserver.servlets
 
-import net.corda.core.contracts.extractFile
+import net.corda.core.internal.extractFile
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor

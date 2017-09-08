@@ -17,9 +17,9 @@ The ORM mapping is specified using the `Java Persistence API <https://en.wikiped
 in the node's local vault as part of a transaction.
 
 .. note:: Presently the node includes an instance of the H2 database but any database that supports JDBC is a
-   candidate and the node will in the future support a range of database implementations via their JDBC drivers. Much
-   of the node internal state is also persisted there. You can access the internal H2 database via JDBC, please see the
-   info in ":doc:`node-administration`" for details.
+          candidate and the node will in the future support a range of database implementations via their JDBC drivers. Much
+          of the node internal state is also persisted there. You can access the internal H2 database via JDBC, please see the
+          info in ":doc:`node-administration`" for details.
 
 Schemas
 -------
@@ -99,6 +99,8 @@ Schema entity attributes defined by identity types (``AbstractParty``, ``Party``
 processed to ensure only the ``X500Name`` of the identity is persisted where an identity is well known, otherwise a null
 value is stored in the associated column. To preserve privacy, identity keys are never persisted. Developers should use
 the ``IdentityService`` to resolve keys from well know X500 identity names.
+
+.. _jdbc_session_ref:
 
 JDBC session
 ------------

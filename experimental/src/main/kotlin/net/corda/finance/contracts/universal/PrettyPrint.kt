@@ -1,6 +1,6 @@
 package net.corda.finance.contracts.universal
 
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.organisation
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import java.math.BigDecimal
@@ -48,7 +48,7 @@ private class PrettyPrint(arr : Arrangement) {
 
     fun createPartyName(party : Party) : String
     {
-        val parts = party.name.commonName.toLowerCase().split(' ')
+        val parts = party.name.organisation.toLowerCase().split(' ')
 
         var camelName = parts.drop(1).fold(parts.first()) {
             s, i -> s + i.first().toUpperCase() + i.drop(1)
@@ -66,7 +66,7 @@ private class PrettyPrint(arr : Arrangement) {
 
     init {
         parties.forEach {
-            println( "val ${createPartyName(it)} = Party(\"${it.name.commonName}\", \"${it.owningKey.toStringShort()}\")" )
+            println("val ${createPartyName(it)} = Party(\"${it.name.organisation}\", \"${it.owningKey.toStringShort()}\")")
         }
     }
 

@@ -32,33 +32,33 @@ inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
 // TODO: Provide a version of select that interops with Java
 
 /** Filters the command list by type, party and public key all at once. */
-inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: PublicKey? = null,
+inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.select(signer: PublicKey? = null,
                                                                                          party: AbstractParty? = null) =
         filter { it.value is T }.
                 filter { if (signer == null) true else signer in it.signers }.
                 filter { if (party == null) true else party in it.signingParties }.
-                map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
+                map { CommandWithParties(it.signers, it.signingParties, it.value as T) }
 
 // TODO: Provide a version of select that interops with Java
 
 /** Filters the command list by type, parties and public keys all at once. */
-inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<PublicKey>?,
+inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.select(signers: Collection<PublicKey>?,
                                                                                          parties: Collection<Party>?) =
         filter { it.value is T }.
                 filter { if (signers == null) true else it.signers.containsAll(signers) }.
                 filter { if (parties == null) true else it.signingParties.containsAll(parties) }.
-                map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
+                map { CommandWithParties(it.signers, it.signingParties, it.value as T) }
 
 /** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
-inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand() = try {
+inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand() = try {
     select<T>().single()
 } catch (e: NoSuchElementException) {
     throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
 }
 
 /** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
-fun <C : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand(klass: Class<C>) =
-        mapNotNull { @Suppress("UNCHECKED_CAST") if (klass.isInstance(it.value)) it as AuthenticatedObject<C> else null }.single()
+fun <C : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand(klass: Class<C>) =
+        mapNotNull { @Suppress("UNCHECKED_CAST") if (klass.isInstance(it.value)) it as CommandWithParties<C> else null }.single()
 
 /**
  * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.
@@ -67,7 +67,7 @@ fun <C : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingle
  */
 @Throws(IllegalArgumentException::class)
 inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState>,
-                                                       commands: List<AuthenticatedObject<CommandData>>)
+                                                       commands: List<CommandWithParties<CommandData>>)
         : MoveCommand {
     // Now check the digital signatures on the move command. Every input has an owning public key, and we must
     // see a signature from each of those keys. The actual signatures have been verified against the transaction

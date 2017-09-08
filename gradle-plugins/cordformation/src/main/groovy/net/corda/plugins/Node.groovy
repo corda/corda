@@ -90,7 +90,7 @@ class Node extends CordformNode {
         def dirName
         try {
             X500Name x500Name = new X500Name(name)
-            dirName = x500Name.getRDNs(BCStyle.CN).getAt(0).getFirst().getValue().toString()
+            dirName = x500Name.getRDNs(BCStyle.O).getAt(0).getFirst().getValue().toString()
         } catch(IllegalArgumentException ignore) {
             // Can't parse as an X500 name, use the full string
             dirName = name
@@ -101,7 +101,9 @@ class Node extends CordformNode {
     protected void build() {
         configureRpcUsers()
         installCordaJar()
-        installWebserverJar()
+        if (config.hasPath("webAddress")) {
+            installWebserverJar()
+        }
         installBuiltPlugin()
         installCordapps()
         installConfig()

@@ -14,6 +14,7 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
+import java.util.function.Predicate
 
 /**
  * SignedTransaction wraps a serialized WireTransaction. It contains one or more signatures, each one for
@@ -29,6 +30,7 @@ import java.util.*
  * sign.
  */
 // DOCSTART 1
+@CordaSerializable
 data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                              override val sigs: List<TransactionSignature>
 ) : TransactionWithSignatures {
@@ -50,11 +52,17 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     /** The id of the contained [WireTransaction]. */
     override val id: SecureHash get() = transaction.id
 
-    /** Returns the contained [WireTransaction], or throws if this is a notary change transaction */
+    /** Returns the contained [WireTransaction], or throws if this is a notary change transaction. */
     val tx: WireTransaction get() = transaction as WireTransaction
 
-    /** Returns the contained [NotaryChangeWireTransaction], or throws if this is a normal transaction */
+    /** Returns the contained [NotaryChangeWireTransaction], or throws if this is a normal transaction. */
     val notaryChangeTx: NotaryChangeWireTransaction get() = transaction as NotaryChangeWireTransaction
+
+    /**
+     * Helper function to directly build a [FilteredTransaction] using provided filtering functions,
+     * without first accessing the [WireTransaction] [tx].
+     */
+    fun buildFilteredTransaction(filtering: Predicate<Any>) = tx.buildFilteredTransaction(filtering)
 
     /** Helper to access the inputs of the contained transaction */
     val inputs: List<StateRef> get() = transaction.inputs

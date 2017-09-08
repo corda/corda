@@ -9,10 +9,7 @@ import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.seconds
+import net.corda.core.utilities.*
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
@@ -26,7 +23,6 @@ import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -58,12 +54,12 @@ class StandaloneCordaRPClientTest {
     private lateinit var notaryNode: NodeInfo
 
     private val notaryConfig = NodeConfig(
-        legalName = X500Name("CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"),
-        p2pPort = port.andIncrement,
-        rpcPort = port.andIncrement,
-        webPort = port.andIncrement,
-        extraServices = listOf("corda.notary.validating"),
-        users = listOf(user)
+            legalName = getX500Name(O = "Notary Service", OU = "corda", L = "Zurich", C = "CH"),
+            p2pPort = port.andIncrement,
+            rpcPort = port.andIncrement,
+            webPort = port.andIncrement,
+            extraServices = listOf("corda.notary.validating"),
+            users = listOf(user)
     )
 
     @Before

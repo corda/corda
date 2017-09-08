@@ -1,7 +1,7 @@
 package net.corda.node.utilities.registration
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.cert
+import net.corda.core.utilities.cert
 import net.corda.core.internal.*
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.validateX500Name
@@ -19,13 +19,10 @@ import java.security.cert.Certificate
 import kotlin.system.exitProcess
 
 /**
- * This checks the config.certificatesDirectory field for certificates required to connect to a Corda network.
- * If the certificates are not found, a [org.bouncycastle.pkcs.PKCS10CertificationRequest] will be submitted to
- * Corda network permissioning server using [NetworkRegistrationService]. This process will enter a polling loop until
- * the request has been approved, and then the certificate chain will be downloaded and stored in [KeyStore] reside in
- * the certificates directory.
+ * Helper for managing the node registration process, which checks for any existing certificates and requests them if
+ * needed.
  */
-class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: NetworkRegistrationService) {
+class NetworkRegistrationHelper(private val config: NodeConfiguration, private val certService: NetworkRegistrationService) {
     companion object {
         val pollInterval = 10.seconds
         val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
@@ -36,6 +33,17 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
     // TODO: Use different password for private key.
     private val privateKeyPassword = config.keyStorePassword
 
+    /**
+     * Ensure the initial keystore for a node is set up; note that this function may cause the process to exit under
+     * some circumstances.
+     *
+     * This checks the "config.certificatesDirectory" field for certificates required to connect to a Corda network.
+     * If the certificates are not found, a PKCS #10 certification request will be submitted to the
+     * Corda network permissioning server via [NetworkRegistrationService]. This process will enter a polling loop until
+     * the request has been approved, and then the certificate chain will be downloaded and stored in [KeyStore] reside in
+     * the certificates directory.
+     */
+    // TODO: Stop killing the calling process from within a called function.
     fun buildKeystore() {
         validateX500Name(config.myLegalName)
         config.certificatesDirectory.createDirectories()
@@ -92,7 +100,6 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
         }
     }
 
-
     /**
      * Poll Certificate Signing Server for approved certificate,
      * enter a slow polling loop if server return null.
@@ -119,7 +126,7 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
     private fun submitOrResumeCertificateSigningRequest(keyPair: KeyPair): String {
         // Retrieve request id from file if exists, else post a request to server.
         return if (!requestIdStore.exists()) {
-            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, keyPair)
+            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, config.emailAddress, keyPair)
             val writer = StringWriter()
             JcaPEMWriter(writer).use {
                 it.writeObject(PemObject("CERTIFICATE REQUEST", request.encoded))

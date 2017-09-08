@@ -62,8 +62,9 @@
       <module name="node-api_test" target="1.8" />
       <module name="node-capsule_main" target="1.6" />
       <module name="node-capsule_test" target="1.6" />
-      <module name="node-schemas_main" target="1.8" />
-      <module name="node-schemas_test" target="1.8" />
+      <module name="node-driver_integrationTest" target="1.8" />
+      <module name="node-driver_main" target="1.8" />
+      <module name="node-driver_test" target="1.8" />
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
@@ -91,13 +92,15 @@
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
-      <module name="smoke-test-utils_main" target="1.8" />
-      <module name="smoke-test-utils_test" target="1.8" />
-      <module name="test-common_main" target="1.8" />
-      <module name="test-common_test" target="1.8" />
-      <module name="test-utils_integrationTest" target="1.8" />
-      <module name="test-utils_main" target="1.8" />
-      <module name="test-utils_test" target="1.8" />
+      <module name="testing-node-driver_integrationTest" target="1.8" />
+      <module name="testing-node-driver_main" target="1.8" />
+      <module name="testing-node-driver_test" target="1.8" />
+      <module name="testing-smoke-test-utils_main" target="1.8" />
+      <module name="testing-smoke-test-utils_test" target="1.8" />
+      <module name="testing-test-common_main" target="1.8" />
+      <module name="testing-test-common_test" target="1.8" />
+      <module name="testing-test-utils_main" target="1.8" />
+      <module name="testing-test-utils_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />

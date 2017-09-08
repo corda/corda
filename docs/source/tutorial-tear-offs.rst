@@ -45,7 +45,7 @@ In the Oracle example this step takes place in ``RatesFixFlow`` by overriding ``
         // Direct accsess to included commands, inputs, outputs, attachments etc.
         val cmds: List<Command> = ftx.filteredLeaves.commands
         val ins: List<StateRef> = ftx.filteredLeaves.inputs
-        val timestamp: Timestamp? = ftx.filteredLeaves.timestamp
+        val timeWindow: TimeWindow? = ftx.filteredLeaves.timeWindow
         ...
 
 .. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt

@@ -7,11 +7,9 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class DeserializeAndReturnEnvelopeTests {
-
-    fun testName(): String = Thread.currentThread().stackTrace[2].methodName
-
+    // the 'this' reference means we can't just move this to the common test utils
     @Suppress("NOTHING_TO_INLINE")
-    inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
+    inline private fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 
     @Test
     fun oneType() {

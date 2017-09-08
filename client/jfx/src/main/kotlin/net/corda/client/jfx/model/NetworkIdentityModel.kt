@@ -1,13 +1,14 @@
 package net.corda.client.jfx.model
 
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.CacheLoader
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
-import net.corda.client.jfx.utils.firstOrDefault
-import net.corda.client.jfx.utils.firstOrNullObservable
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
-import net.corda.core.crypto.keys
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import java.security.PublicKey
@@ -29,6 +30,12 @@ class NetworkIdentityModel {
 
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
 
+    private val identityCache = CacheBuilder.newBuilder()
+            .build<PublicKey, ObservableValue<NodeInfo?>>(CacheLoader.from {
+                publicKey ->
+                publicKey?.let { rpcProxy.map { it?.nodeIdentityFromParty(AnonymousParty(publicKey)) } }
+            })
+
     val parties: ObservableList<NodeInfo> = networkIdentities.filtered { !it.isCordaService() }
     val notaries: ObservableList<NodeInfo> = networkIdentities.filtered { it.advertisedServices.any { it.info.type.isNotary() } }
     val myIdentity = rpcProxy.map { it?.nodeIdentity() }
@@ -38,8 +45,5 @@ class NetworkIdentityModel {
         return advertisedServices.any { it.info.type.isNetworkMap() || it.info.type.isNotary() }
     }
 
-    // TODO: Use Identity Service in service hub instead?
-    fun lookup(publicKey: PublicKey): ObservableValue<NodeInfo?> = parties.firstOrDefault(notaries.firstOrNullObservable { it.notaryIdentity.owningKey.keys.any { it == publicKey } }) {
-        it.legalIdentity.owningKey.keys.any { it == publicKey }
-    }
+    fun partyFromPublicKey(publicKey: PublicKey): ObservableValue<NodeInfo?> = identityCache[publicKey]
 }

@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
+import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.fibers.instrument.SuspendableHelper
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
@@ -42,6 +43,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.io.NotSerializableException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -170,7 +172,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         checkQuasarJavaAgentPresence()
         restoreFibersFromCheckpoints()
         listenToLedgerTransactions()
-        serviceHub.networkMapCache.mapServiceRegistered.then { executor.execute(this::resumeRestoredFibers) }
+        serviceHub.networkMapCache.nodeReady.then { executor.execute(this::resumeRestoredFibers) }
     }
 
     private fun checkQuasarJavaAgentPresence() {
@@ -426,6 +428,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun initFiber(fiber: FlowStateMachineImpl<*>) {
+        verifyFlowLogicIsSuspendable(fiber.logic)
         fiber.database = database
         fiber.serviceHub = serviceHub
         fiber.actionOnSuspend = { ioRequest ->
@@ -454,6 +457,19 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             totalStartedFlows.inc()
             unfinishedFibers.countUp()
             notifyChangeObservers(Change.Add(fiber.logic))
+        }
+    }
+
+    private fun verifyFlowLogicIsSuspendable(logic: FlowLogic<Any?>) {
+        // Quasar requires (in Java 8) that at least the call method be annotated suspendable. Unfortunately, it's
+        // easy to forget to add this when creating a new flow, so we check here to give the user a better error.
+        //
+        // The Kotlin compiler can sometimes generate a synthetic bridge method from a single call declaration, which
+        // forwards to the void method and then returns Unit. However annotations do not get copied across to this
+        // bridge, so we have to do a more complex scan here.
+        val call = logic.javaClass.methods.first { !it.isSynthetic && it.name == "call" && it.parameterCount == 0 }
+        if (call.getAnnotation(Suspendable::class.java) == null) {
+            throw FlowException("${logic.javaClass.name}.call() is not annotated as @Suspendable. Please fix this.")
         }
     }
 
@@ -593,13 +609,20 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         val serialized = try {
             message.serialize()
-        } catch (e: KryoException) {
-            if (message !is ErrorSessionEnd || message.errorResponse == null) throw e
-            logger.warn("Something in ${message.errorResponse.javaClass.name} is not serialisable. " +
-                    "Instead sending back an exception which is serialisable to ensure session end occurs properly.", e)
-            // The subclass may have overridden toString so we use that
-            val exMessage = message.errorResponse.let { if (it.javaClass != FlowException::class.java) it.toString() else it.message }
-            message.copy(errorResponse = FlowException(exMessage)).serialize()
+        } catch (e: Exception) {
+            when(e) {
+                // Handling Kryo and AMQP serialization problems. Unfortunately the two exception types do not share much of a common exception interface.
+                is KryoException,
+                is NotSerializableException -> {
+                    if (message !is ErrorSessionEnd || message.errorResponse == null) throw e
+                    logger.warn("Something in ${message.errorResponse.javaClass.name} is not serialisable. " +
+                            "Instead sending back an exception which is serialisable to ensure session end occurs properly.", e)
+                    // The subclass may have overridden toString so we use that
+                    val exMessage = message.errorResponse.let { if (it.javaClass != FlowException::class.java) it.toString() else it.message }
+                    message.copy(errorResponse = FlowException(exMessage)).serialize()
+                }
+                else -> throw e
+            }
         }
 
         serviceHub.networkService.apply {

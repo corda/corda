@@ -1,9 +1,5 @@
 package net.corda.finance.contracts.asset
 
-import net.corda.finance.contracts.NetCommand
-import net.corda.finance.contracts.NetType
-import net.corda.finance.contracts.NettableState
-import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
@@ -16,7 +12,12 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.seconds
+import net.corda.finance.contracts.NetCommand
+import net.corda.finance.contracts.NetType
+import net.corda.finance.contracts.NettableState
+import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.finance.utils.sumFungibleOrNull
 import net.corda.finance.utils.sumObligations
 import net.corda.finance.utils.sumObligationsOrNull
@@ -283,7 +284,7 @@ class Obligation<P : Any> : Contract {
     private fun verifyIssueCommand(tx: LedgerTransaction,
                                    inputs: List<FungibleAsset<Terms<P>>>,
                                    outputs: List<FungibleAsset<Terms<P>>>,
-                                   issueCommand: AuthenticatedObject<Commands.Issue>,
+                                   issueCommand: CommandWithParties<Commands.Issue>,
                                    key: Issued<Terms<P>>) {
         // If we have an issue command, perform special processing: the group is allowed to have no inputs,
         // and the output states must have a deposit reference owned by the signer.
@@ -311,7 +312,7 @@ class Obligation<P : Any> : Contract {
     private fun verifySettleCommand(tx: LedgerTransaction,
                                     inputs: List<FungibleAsset<Terms<P>>>,
                                     outputs: List<FungibleAsset<Terms<P>>>,
-                                    command: AuthenticatedObject<Commands.Settle<P>>,
+                                    command: CommandWithParties<Commands.Settle<P>>,
                                     groupingKey: Issued<Terms<P>>) {
         val obligor = groupingKey.issuer.party
         val template = groupingKey.product
@@ -394,7 +395,7 @@ class Obligation<P : Any> : Contract {
         }
     }
 
-    private fun verifyNetCommand(tx: LedgerTransaction, command: AuthenticatedObject<NetCommand>) {
+    private fun verifyNetCommand(tx: LedgerTransaction, command: CommandWithParties<NetCommand>) {
         val groups = when (command.value.type) {
             NetType.CLOSE_OUT -> tx.groupStates { it: Obligation.State<P> -> it.bilateralNetState }
             NetType.PAYMENT -> tx.groupStates { it: Obligation.State<P> -> it.multilateralNetState }
@@ -434,7 +435,7 @@ class Obligation<P : Any> : Contract {
     private fun verifySetLifecycleCommand(inputs: List<FungibleAsset<Terms<P>>>,
                                           outputs: List<FungibleAsset<Terms<P>>>,
                                           tx: LedgerTransaction,
-                                          setLifecycleCommand: AuthenticatedObject<Commands.SetLifecycle>) {
+                                          setLifecycleCommand: CommandWithParties<Commands.SetLifecycle>) {
         // Default must not change anything except lifecycle, so number of inputs and outputs must match
         // exactly.
         require(inputs.size == outputs.size) { "Number of inputs and outputs must match" }
@@ -793,4 +794,4 @@ infix fun <T : Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_OBLIGATION_ISSUER by lazy { Party(X500Name("CN=Snake Oil Issuer,O=R3,OU=corda,L=London,C=GB"), DUMMY_OBLIGATION_ISSUER_KEY.public) }
+val DUMMY_OBLIGATION_ISSUER by lazy { Party(getX500Name(O = "Snake Oil Issuer", OU = "corda", L = "London", C = "GB"), DUMMY_OBLIGATION_ISSUER_KEY.public) }

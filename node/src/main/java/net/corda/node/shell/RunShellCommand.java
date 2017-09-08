@@ -1,7 +1,7 @@
 package net.corda.node.shell;
 
 import net.corda.core.messaging.*;
-import net.corda.jackson.*;
+import net.corda.client.jackson.*;
 import org.crsh.cli.*;
 import org.crsh.command.*;
 

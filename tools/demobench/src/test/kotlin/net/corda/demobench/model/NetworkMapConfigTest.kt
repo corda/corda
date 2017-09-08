@@ -8,7 +8,7 @@ class NetworkMapConfigTest {
 
     @Test
     fun keyValue() {
-        val config = NetworkMapConfig(X500Name("CN=My\tNasty Little\rLabel\n"), 10000)
+        val config = NetworkMapConfig(X500Name("O=My\tNasty Little\rLabel\n"), 10000)
         assertEquals("mynastylittlelabel", config.key)
     }
 

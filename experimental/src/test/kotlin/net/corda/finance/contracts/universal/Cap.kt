@@ -169,8 +169,6 @@ class Cap {
             output { stateInitial }
             timeWindow(TEST_TX_TIME_1)
 
-            this `fails with` "transaction has a single command"
-
             tweak {
                 command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
                 this `fails with` "the transaction is signed by all liable parties"

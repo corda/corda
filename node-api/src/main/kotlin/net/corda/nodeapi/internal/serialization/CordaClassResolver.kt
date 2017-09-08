@@ -6,7 +6,10 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
-import net.corda.core.serialization.*
+import net.corda.core.serialization.AttachmentsClassLoader
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.loggerFor
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
@@ -16,8 +19,10 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import java.util.*
 
-fun Kryo.addToWhitelist(type: Class<*>) {
-    ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassWhitelist)?.add(type)
+fun Kryo.addToWhitelist(vararg types: Class<*>) {
+    for (type in types) {
+        ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassWhitelist)?.add(type)
+    }
 }
 
 /**
@@ -134,7 +139,11 @@ object EmptyWhitelist : ClassWhitelist {
 }
 
 class BuiltInExceptionsWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = Throwable::class.java.isAssignableFrom(type) && type.`package`.name.startsWith("java.")
+    companion object {
+        private val packageName = "^(?:java|kotlin)(?:[.]|$)".toRegex()
+    }
+
+    override fun hasListed(type: Class<*>) = Throwable::class.java.isAssignableFrom(type) && packageName.containsMatchIn(type.`package`.name)
 }
 
 object AllWhitelist : ClassWhitelist {

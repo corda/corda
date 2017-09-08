@@ -196,8 +196,13 @@ updates. This section details the API for common tasks.
 
 Transaction building
 ^^^^^^^^^^^^^^^^^^^^
-The majority of the work performed during a flow will be to build, verify and sign a transaction. We cover this in
-:doc:`api-transactions`.
+The majority of the work performed during a flow will be to build, verify and sign a transaction. This is covered 
+in :doc:`api-transactions`.
+
+Extracting states from the vault
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+When building a transaction, you'll often need to extract the states you wish to consume from the vault. This is 
+covered in :doc:`api-vault-query`.
 
 Retrieving information about other nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

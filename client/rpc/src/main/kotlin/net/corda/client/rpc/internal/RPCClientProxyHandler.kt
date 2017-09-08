@@ -82,6 +82,19 @@ class RPCClientProxyHandler(
         val log = loggerFor<RPCClientProxyHandler>()
         // To check whether toString() is being invoked
         val toStringMethod: Method = Object::toString.javaMethod!!
+
+        private fun addRpcCallSiteToThrowable(throwable: Throwable, callSite: Throwable) {
+            var currentThrowable = throwable
+            while (true) {
+                val cause = currentThrowable.cause
+                if (cause == null) {
+                    currentThrowable.initCause(callSite)
+                    break
+                } else {
+                    currentThrowable = cause
+                }
+            }
+        }
     }
 
     // Used for reaping
@@ -393,6 +406,19 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
         return serializationContext.withProperty(RpcObservableContextKey, observableContext)
     }
 
+    private fun <T> pinInSubscriptions(observable: Observable<T>, hardReferenceStore: MutableSet<Observable<*>>): Observable<T> {
+        val refCount = AtomicInteger(0)
+        return observable.doOnSubscribe {
+            if (refCount.getAndIncrement() == 0) {
+                require(hardReferenceStore.add(observable)) { "Reference store already contained reference $this on add" }
+            }
+        }.doOnUnsubscribe {
+            if (refCount.decrementAndGet() == 0) {
+                require(hardReferenceStore.remove(observable)) { "Reference store did not contain reference $this on remove" }
+            }
+        }
+    }
+
     override fun read(kryo: Kryo, input: Input, type: Class<Observable<*>>): Observable<Any> {
         val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
         val observableId = RPCApi.ObservableId(input.readLong(true))
@@ -405,7 +431,7 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
         observableContext.callSiteMap?.put(observableId.toLong, rpcCallSite)
         // We pin all Observables into a hard reference store (rooted in the RPC proxy) on subscription so that users
         // don't need to store a reference to the Observables themselves.
-        return observable.pinInSubscriptions(observableContext.hardReferenceStore).doOnUnsubscribe {
+        return pinInSubscriptions(observable, observableContext.hardReferenceStore).doOnUnsubscribe {
             // This causes Future completions to give warnings because the corresponding OnComplete sent from the server
             // will arrive after the client unsubscribes from the observable and consequently invalidates the mapping.
             // The unsubscribe is due to [ObservableToFuture]'s use of first().
@@ -420,31 +446,5 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
     private fun getRpcCallSite(kryo: Kryo, observableContext: ObservableContext): Throwable? {
         val rpcRequestOrObservableId = kryo.context[RPCApi.RpcRequestOrObservableIdKey] as Long
         return observableContext.callSiteMap?.get(rpcRequestOrObservableId)
-    }
-}
-
-private fun addRpcCallSiteToThrowable(throwable: Throwable, callSite: Throwable) {
-    var currentThrowable = throwable
-    while (true) {
-        val cause = currentThrowable.cause
-        if (cause == null) {
-            currentThrowable.initCause(callSite)
-            break
-        } else {
-            currentThrowable = cause
-        }
-    }
-}
-
-private fun <T> Observable<T>.pinInSubscriptions(hardReferenceStore: MutableSet<Observable<*>>): Observable<T> {
-    val refCount = AtomicInteger(0)
-    return this.doOnSubscribe {
-        if (refCount.getAndIncrement() == 0) {
-            require(hardReferenceStore.add(this)) { "Reference store already contained reference $this on add" }
-        }
-    }.doOnUnsubscribe {
-        if (refCount.decrementAndGet() == 0) {
-            require(hardReferenceStore.remove(this)) { "Reference store did not contain reference $this on remove" }
-        }
     }
 }

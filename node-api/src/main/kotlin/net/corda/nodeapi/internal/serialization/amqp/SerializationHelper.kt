@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
 import org.apache.qpid.proton.codec.Data
 import java.beans.IndexedPropertyDescriptor
@@ -12,6 +13,7 @@ import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaType
 
 /**
@@ -36,7 +38,7 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
         val kotlinConstructors = clazz.kotlin.constructors
         val hasDefault = kotlinConstructors.any { it.parameters.isEmpty() }
         for (kotlinConstructor in kotlinConstructors) {
-            if (preferredCandidate == null && kotlinConstructors.size == 1 && !hasDefault) {
+            if (preferredCandidate == null && kotlinConstructors.size == 1) {
                 preferredCandidate = kotlinConstructor
             } else if (preferredCandidate == null && kotlinConstructors.size == 2 && hasDefault && kotlinConstructor.parameters.isNotEmpty()) {
                 preferredCandidate = kotlinConstructor
@@ -47,7 +49,9 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
                 preferredCandidate = kotlinConstructor
             }
         }
-        return preferredCandidate ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")
+
+        return preferredCandidate?.apply { isAccessible = true}
+                ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")
     } else {
         return null
     }
@@ -155,6 +159,19 @@ fun Data.withList(block: Data.() -> Unit) {
     exit() // exit list
 }
 
+/**
+ * Extension helper for outputting reference to already observed object
+ */
+fun Data.writeReferencedObject(refObject: ReferencedObject) {
+    // Write described
+    putDescribed()
+    enter()
+    // Write descriptor
+    putObject(refObject.descriptor)
+    putUnsignedInteger(refObject.described)
+    exit() // exit described
+}
+
 private fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
     val resolvedType = if (contextType != null) TypeToken.of(contextType).resolveType(actualType).type else actualType
     // TODO: surely we check it is concrete at this point with no TypeVariables
@@ -206,4 +223,10 @@ internal fun Type.asParameterizedType(): ParameterizedType {
 
 internal fun Type.isSubClassOf(type: Type): Boolean {
     return TypeToken.of(this).isSubtypeOf(type)
+}
+
+// ByteArrays, primtives and boxed primitives are not stored in the object history
+internal fun suitableForObjectReference(type: Type): Boolean {
+    val clazz = type.asClass()
+    return type != ByteArray::class.java && (clazz != null && !clazz.isPrimitive && !Primitives.unwrap(clazz).isPrimitive)
 }

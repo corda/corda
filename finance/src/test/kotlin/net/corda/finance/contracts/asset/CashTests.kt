@@ -22,7 +22,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestDatabaseAndMockServices
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -85,15 +85,16 @@ class CashTests : TestDependencyInjectionBase() {
     fun trivial() {
         transaction {
             input { inState }
-            this `fails with` "the amounts balance"
 
             tweak {
                 output { outState.copy(amount = 2000.DOLLARS `issued by` defaultIssuer) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
             tweak {
                 output { outState }
-                // No command arguments
+                command(ALICE_PUBKEY) { DummyCommandData }
+                // Invalid command
                 this `fails with` "required net.corda.finance.contracts.asset.Cash.Commands.Move command"
             }
             tweak {
@@ -279,12 +280,14 @@ class CashTests : TestDependencyInjectionBase() {
         transaction {
             input { inState }
             input { inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "zero sized inputs"
         }
         transaction {
             input { inState }
             output { inState }
             output { inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "zero sized outputs"
         }
     }
@@ -295,6 +298,7 @@ class CashTests : TestDependencyInjectionBase() {
         transaction {
             input { inState }
             output { outState `issued by` MINI_CORP }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't change deposit reference when splitting.
@@ -302,6 +306,7 @@ class CashTests : TestDependencyInjectionBase() {
             val splits2 = inState.amount.splitEvenly(2)
             input { inState }
             for (i in 0..1) output { outState.copy(amount = splits2[i]).editDepositRef(i.toByte()) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't mix currencies.
@@ -309,6 +314,7 @@ class CashTests : TestDependencyInjectionBase() {
             input { inState }
             output { outState.copy(amount = 800.DOLLARS `issued by` defaultIssuer) }
             output { outState.copy(amount = 200.POUNDS `issued by` defaultIssuer) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         transaction {
@@ -320,6 +326,7 @@ class CashTests : TestDependencyInjectionBase() {
                 )
             }
             output { outState.copy(amount = 1150.DOLLARS `issued by` defaultIssuer) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't have superfluous input states from different issuers.
@@ -335,6 +342,7 @@ class CashTests : TestDependencyInjectionBase() {
             input { inState }
             input { inState.editDepositRef(3) }
             output { outState.copy(amount = inState.amount * 2).editDepositRef(3) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "for reference [01]"
         }
     }
@@ -404,6 +412,7 @@ class CashTests : TestDependencyInjectionBase() {
             // Gather 2000 dollars from two different issuers.
             input { inState }
             input { inState `issued by` MINI_CORP }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
 
             // Can't merge them together.
             tweak {
@@ -420,7 +429,6 @@ class CashTests : TestDependencyInjectionBase() {
             // This works.
             output { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
             output { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) `issued by` MINI_CORP }
-            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this.verifies()
         }
     }

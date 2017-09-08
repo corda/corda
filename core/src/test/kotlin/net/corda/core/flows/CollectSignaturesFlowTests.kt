@@ -36,6 +36,7 @@ class CollectSignaturesFlowTests {
         c = nodes.partyNodes[2]
         notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
+        a.ensureRegistered()
     }
 
     @After
@@ -140,9 +141,13 @@ class CollectSignaturesFlowTests {
 
     @Test
     fun `successfully collects two signatures`() {
-        val bConfidentialIdentity = b.services.keyManagementService.freshKeyAndCert(b.info.legalIdentityAndCert, false)
-        // Normally this is handled by TransactionKeyFlow, but here we have to manually let A know about the identity
-        a.services.identityService.verifyAndRegisterIdentity(bConfidentialIdentity)
+        val bConfidentialIdentity = b.database.transaction {
+            b.services.keyManagementService.freshKeyAndCert(b.info.legalIdentityAndCert, false)
+        }
+        a.database.transaction {
+            // Normally this is handled by TransactionKeyFlow, but here we have to manually let A know about the identity
+            a.services.identityService.verifyAndRegisterIdentity(bConfidentialIdentity)
+        }
         registerFlowOnAllNodes(TestFlowTwo.Responder::class)
         val magicNumber = 1337
         val parties = listOf(a.info.legalIdentity, bConfidentialIdentity.party, c.info.legalIdentity)

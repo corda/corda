@@ -4,7 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.serialize
 import java.nio.ByteBuffer
 import java.util.function.Predicate
@@ -22,12 +22,12 @@ fun <T : Any> serializedHash(x: T, privacySalt: PrivacySalt?, index: Int): Secur
 
 fun <T : Any> serializedHash(x: T, nonce: SecureHash): SecureHash {
     return if (x !is PrivacySalt) // PrivacySalt is not required to have an accompanied nonce.
-        (x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes + nonce.bytes).sha256()
+        (x.serialize(context = SerializationFactory.defaultFactory.defaultContext.withoutReferences()).bytes + nonce.bytes).sha256()
     else
         serializedHash(x)
 }
 
-fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes.sha256()
+fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationFactory.defaultFactory.defaultContext.withoutReferences()).bytes.sha256()
 
 /** The nonce is computed as Hash(privacySalt || index). */
 fun computeNonce(privacySalt: PrivacySalt, index: Int) = (privacySalt.bytes + ByteBuffer.allocate(4).putInt(index).array()).sha256()
@@ -139,13 +139,13 @@ class FilteredLeaves(
 
 /**
  * Class representing merkleized filtered transaction.
- * @param rootHash Merkle tree root hash.
+ * @param id Merkle tree root hash.
  * @param filteredLeaves Leaves included in a filtered transaction.
  * @param partialMerkleTree Merkle branch needed to verify filteredLeaves.
  */
 @CordaSerializable
 class FilteredTransaction private constructor(
-        val rootHash: SecureHash,
+        val id: SecureHash,
         val filteredLeaves: FilteredLeaves,
         val partialMerkleTree: PartialMerkleTree
 ) {
@@ -159,21 +159,84 @@ class FilteredTransaction private constructor(
         fun buildMerkleTransaction(wtx: WireTransaction,
                                    filtering: Predicate<Any>
         ): FilteredTransaction {
-            val filteredLeaves = wtx.filterWithFun(filtering)
+            val filteredLeaves = filterWithFun(wtx, filtering)
             val merkleTree = wtx.merkleTree
             val pmt = PartialMerkleTree.build(merkleTree, filteredLeaves.availableComponentHashes)
             return FilteredTransaction(merkleTree.hash, filteredLeaves, pmt)
         }
+
+        /**
+         * Construction of partial transaction from WireTransaction based on filtering.
+         * Note that list of nonces to be sent is updated on the fly, based on the index of the filtered tx component.
+         * @param filtering filtering over the whole WireTransaction
+         * @returns FilteredLeaves used in PartialMerkleTree calculation and verification.
+         */
+        private fun filterWithFun(wtx: WireTransaction, filtering: Predicate<Any>): FilteredLeaves {
+            val nonces: MutableList<SecureHash> = mutableListOf()
+            val offsets = indexOffsets(wtx)
+            fun notNullFalseAndNoncesUpdate(elem: Any?, index: Int): Any? {
+                return if (elem == null || !filtering.test(elem)) {
+                    null
+                } else {
+                    nonces.add(computeNonce(wtx.privacySalt, index))
+                    elem
+                }
+            }
+
+            fun <T : Any> filterAndNoncesUpdate(t: T, index: Int): Boolean {
+                return if (filtering.test(t)) {
+                    nonces.add(computeNonce(wtx.privacySalt, index))
+                    true
+                } else {
+                    false
+                }
+            }
+
+            // TODO: We should have a warning (require) if all leaves (excluding salt) are visible after filtering.
+            //      Consider the above after refactoring FilteredTransaction to implement TraversableTransaction,
+            //      so that a WireTransaction can be used when required to send a full tx (e.g. RatesFixFlow in Oracles).
+            return FilteredLeaves(
+                    wtx.inputs.filterIndexed { index, it -> filterAndNoncesUpdate(it, index) },
+                    wtx.attachments.filterIndexed { index, it -> filterAndNoncesUpdate(it, index + offsets[0]) },
+                    wtx.outputs.filterIndexed { index, it -> filterAndNoncesUpdate(it, index + offsets[1]) },
+                    wtx.commands.filterIndexed { index, it -> filterAndNoncesUpdate(it, index + offsets[2]) },
+                    notNullFalseAndNoncesUpdate(wtx.notary, offsets[3]) as Party?,
+                    notNullFalseAndNoncesUpdate(wtx.timeWindow, offsets[4]) as TimeWindow?,
+                    nonces
+            )
+        }
+
+        // We use index offsets, to get the actual leaf-index per transaction component required for nonce computation.
+        private fun indexOffsets(wtx: WireTransaction): List<Int> {
+            // There is no need to add an index offset for inputs, because they are the first components in the
+            // transaction format and it is always zero. Thus, offsets[0] corresponds to attachments,
+            // offsets[1] to outputs, offsets[2] to commands and so on.
+            val offsets = mutableListOf(wtx.inputs.size, wtx.inputs.size + wtx.attachments.size)
+            offsets.add(offsets.last() + wtx.outputs.size)
+            offsets.add(offsets.last() + wtx.commands.size)
+            if (wtx.notary != null) {
+                offsets.add(offsets.last() + 1)
+            } else {
+                offsets.add(offsets.last())
+            }
+            if (wtx.timeWindow != null) {
+                offsets.add(offsets.last() + 1)
+            } else {
+                offsets.add(offsets.last())
+            }
+            // No need to add offset for privacySalt as it doesn't require a nonce.
+            return offsets
+        }
     }
 
     /**
-     * Runs verification of Partial Merkle Branch against [rootHash].
+     * Runs verification of partial Merkle branch against [id].
      */
     @Throws(MerkleTreeException::class)
     fun verify(): Boolean {
         val hashes: List<SecureHash> = filteredLeaves.availableComponentHashes
         if (hashes.isEmpty())
             throw MerkleTreeException("Transaction without included leaves.")
-        return partialMerkleTree.verify(rootHash, hashes)
+        return partialMerkleTree.verify(id, hashes)
     }
 }

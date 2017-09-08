@@ -10,19 +10,17 @@ import net.corda.core.internal.declaredField
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
-import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.serialization.AMQP_ENABLED
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
-import net.corda.nodeapi.internal.serialization.WireTransactionSerializer
+import net.corda.nodeapi.internal.serialization.attachmentsClassLoaderEnabledPropertyName
 import net.corda.nodeapi.internal.serialization.withTokenContext
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.kryoSpecific
 import net.corda.testing.node.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert
@@ -52,7 +50,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         private fun SerializationContext.withAttachmentStorage(attachmentStorage: AttachmentStorage): SerializationContext {
             val serviceHub = mock<ServiceHub>()
             whenever(serviceHub.attachments).thenReturn(attachmentStorage)
-            return this.withTokenContext(SerializeAsTokenContextImpl(serviceHub) {}).withProperty(WireTransactionSerializer.attachmentsClassLoaderEnabled, true)
+            return this.withTokenContext(SerializeAsTokenContextImpl(serviceHub) {}).withProperty(attachmentsClassLoaderEnabledPropertyName, true)
         }
     }
 
@@ -224,7 +222,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        val context = P2P_CONTEXT.withClassLoader(cl).withWhitelisted(contract.javaClass)
+        val context = SerializationFactory.defaultFactory.defaultContext.withClassLoader(cl).withWhitelisted(contract.javaClass)
         val state2 = bytes.deserialize(context = context)
         assertTrue(state2.javaClass.classLoader is AttachmentsClassLoader)
         assertNotNull(state2)
@@ -240,7 +238,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
         assertNotNull(data.contract)
 
-        val context2 = P2P_CONTEXT.withWhitelisted(data.contract.javaClass)
+        val context2 = SerializationFactory.defaultFactory.defaultContext.withWhitelisted(data.contract.javaClass)
 
         val bytes = data.serialize(context = context2)
 
@@ -252,7 +250,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        val context = P2P_CONTEXT.withClassLoader(cl).withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl))
+        val context = SerializationFactory.defaultFactory.defaultContext.withClassLoader(cl).withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl))
 
         val state2 = bytes.deserialize(context = context)
         assertEquals(cl, state2.contract.javaClass.classLoader)
@@ -261,7 +259,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         // We should be able to load same class from a different class loader and have them be distinct.
         val cl2 = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        val context3 = P2P_CONTEXT.withClassLoader(cl2).withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl2))
+        val context3 = SerializationFactory.defaultFactory.defaultContext.withClassLoader(cl2).withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl2))
 
         val state3 = bytes.deserialize(context = context3)
         assertEquals(cl2, state3.contract.javaClass.classLoader)
@@ -313,7 +311,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val storage = MockAttachmentStorage()
-        val context = P2P_CONTEXT.withWhitelisted(contract.javaClass)
+        val context = SerializationFactory.defaultFactory.defaultContext.withWhitelisted(contract.javaClass)
                 .withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract\$State", true, child))
                 .withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract\$Commands\$Create", true, child))
                 .withAttachmentStorage(storage)
@@ -332,8 +330,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    // Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not
-    fun `test deserialize of WireTransaction where contract cannot be found`() = kryoSpecific {
+    fun `test deserialize of WireTransaction where contract cannot be found`() = kryoSpecific<AttachmentClassLoaderTests>("Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not") {
         val child = ClassLoaderForTests()
         val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
@@ -348,13 +345,13 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
             val wireTransaction = tx.toWireTransaction()
 
-            wireTransaction.serialize(context = P2P_CONTEXT.withAttachmentStorage(storage))
+            wireTransaction.serialize(context = SerializationFactory.defaultFactory.defaultContext.withAttachmentStorage(storage))
         }
         // use empty attachmentStorage
 
         val e = assertFailsWith(MissingAttachmentsException::class) {
             val mockAttStorage = MockAttachmentStorage()
-            bytes.deserialize(context = P2P_CONTEXT.withAttachmentStorage(mockAttStorage))
+            bytes.deserialize(context = SerializationFactory.defaultFactory.defaultContext.withAttachmentStorage(mockAttStorage))
 
             if(mockAttStorage.openAttachment(attachmentRef) == null) {
                 throw MissingAttachmentsException(listOf(attachmentRef))
@@ -363,9 +360,40 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         assertEquals(attachmentRef, e.ids.single())
     }
 
-    private fun kryoSpecific(function: () -> Unit) = if(!AMQP_ENABLED) {
-        function()
-    } else {
-        loggerFor<AttachmentClassLoaderTests>().info("Ignoring Kryo specific test")
+    @Test
+    fun `test loading a class from attachment during deserialization`() {
+        val child = ClassLoaderForTests()
+        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contract = contractClass.newInstance() as DummyContractBackdoor
+        val storage = MockAttachmentStorage()
+        val attachmentRef = importJar(storage)
+        val outboundContext = SerializationFactory.defaultFactory.defaultContext.withClassLoader(child)
+        // We currently ignore annotations in attachments, so manually whitelist.
+        val inboundContext = SerializationFactory.defaultFactory.defaultContext.withWhitelisted(contract.javaClass).withAttachmentStorage(storage).withAttachmentsClassLoader(listOf(attachmentRef))
+
+        // Serialize with custom context to avoid populating the default context with the specially loaded class
+        val serialized = contract.serialize(context = outboundContext)
+        // Then deserialize with the attachment class loader associated with the attachment
+        serialized.deserialize(context = inboundContext)
+    }
+
+    @Test
+    fun `test loading a class with attachment missing during deserialization`() {
+        val child = ClassLoaderForTests()
+        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contract = contractClass.newInstance() as DummyContractBackdoor
+        val storage = MockAttachmentStorage()
+        val attachmentRef = SecureHash.randomSHA256()
+        val outboundContext = SerializationFactory.defaultFactory.defaultContext.withClassLoader(child)
+        // Serialize with custom context to avoid populating the default context with the specially loaded class
+        val serialized = contract.serialize(context = outboundContext)
+
+        // Then deserialize with the attachment class loader associated with the attachment
+        val e = assertFailsWith(MissingAttachmentsException::class) {
+            // We currently ignore annotations in attachments, so manually whitelist.
+            val inboundContext = SerializationFactory.defaultFactory.defaultContext.withWhitelisted(contract.javaClass).withAttachmentStorage(storage).withAttachmentsClassLoader(listOf(attachmentRef))
+            serialized.deserialize(context = inboundContext)
+        }
+        assertEquals(attachmentRef, e.ids.single())
     }
 }

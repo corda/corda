@@ -58,10 +58,6 @@ class ScheduledFlowTests {
         }
 
         override val participants: List<AbstractParty> = listOf(source, destination)
-
-        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.owningKey.containsAny(ourKeys) }
-        }
     }
 
     class InsertInitialStateFlow(val destination: Party) : FlowLogic<Unit>() {
@@ -109,6 +105,9 @@ class ScheduledFlowTests {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
         nodeA = mockNet.createNode(notaryNode.network.myAddress, start = false)
         nodeB = mockNet.createNode(notaryNode.network.myAddress, start = false)
+
+        notaryNode.ensureRegistered()
+
         mockNet.startNodes()
     }
 
@@ -182,6 +181,7 @@ class ScheduledFlowTests {
      * @return states ordered by the transaction ID.
      */
     private fun queryStatesWithPaging(vaultQueryService: VaultQueryService): List<StateAndRef<ScheduledState>> {
+        // DOCSTART VaultQueryExamplePaging
         var pageNumber = DEFAULT_PAGE_NUM
         val states = mutableListOf<StateAndRef<ScheduledState>>()
         do {
@@ -190,6 +190,7 @@ class ScheduledFlowTests {
             states.addAll(results.states)
             pageNumber++
         } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)
+        // DOCEND VaultQueryExamplePaging
         return states.toList()
     }
 }

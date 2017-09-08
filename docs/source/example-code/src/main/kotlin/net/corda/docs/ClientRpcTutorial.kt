@@ -49,8 +49,8 @@ fun main(args: Array<String>) {
             startFlowPermission<CashExitFlow>()))
 
     driver(driverDirectory = baseDirectory) {
-        startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
-        val node = startNode(ALICE.name, rpcUsers = listOf(user)).get()
+        startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+        val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user)).get()
         // END 1
 
         // START 2
@@ -63,7 +63,7 @@ fun main(args: Array<String>) {
         // END 2
 
         // START 3
-        val (transactions: List<SignedTransaction>, futureTransactions: Observable<SignedTransaction>) = proxy.verifiedTransactionsFeed()
+        val (transactions: List<SignedTransaction>, futureTransactions: Observable<SignedTransaction>) = proxy.internalVerifiedTransactionsFeed()
         // END 3
 
         // START 4

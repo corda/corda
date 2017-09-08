@@ -32,9 +32,9 @@ class IntegrationTestingTutorial {
                     startFlowPermission<CashPaymentFlow>()
             ))
             val (alice, bob, notary) = listOf(
-                    startNode(ALICE.name, rpcUsers = listOf(aliceUser)),
-                    startNode(BOB.name, rpcUsers = listOf(bobUser)),
-                    startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+                    startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),
+                    startNode(providedName = BOB.name, rpcUsers = listOf(bobUser)),
+                    startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
             ).transpose().getOrThrow()
             // END 1
 
@@ -45,8 +45,8 @@ class IntegrationTestingTutorial {
             val bobClient = bob.rpcClientToNode()
             val bobProxy = bobClient.start("bobUser", "testPassword2").proxy
 
-            aliceProxy.waitUntilRegisteredWithNetworkMap().getOrThrow()
-            bobProxy.waitUntilRegisteredWithNetworkMap().getOrThrow()
+            aliceProxy.waitUntilNetworkReady().getOrThrow()
+            bobProxy.waitUntilNetworkReady().getOrThrow()
             // END 2
 
             // START 3

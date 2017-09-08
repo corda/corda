@@ -41,10 +41,6 @@ class IdentitySyncFlowTests {
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         val alice: Party = aliceNode.services.myInfo.legalIdentity
         val bob: Party = bobNode.services.myInfo.legalIdentity
-        aliceNode.services.identityService.verifyAndRegisterIdentity(bobNode.info.legalIdentityAndCert)
-        aliceNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
-        bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
-        bobNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
         bobNode.registerInitiatedFlow(Receive::class.java)
 
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
@@ -53,12 +49,16 @@ class IdentitySyncFlowTests {
         val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notaryNode.services.myInfo.notaryIdentity))
         val issueTx = issueFlow.resultFuture.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
-        assertNull(bobNode.services.identityService.partyFromAnonymous(confidentialIdentity))
+        assertNull(bobNode.database.transaction { bobNode.services.identityService.partyFromAnonymous(confidentialIdentity) })
 
         // Run the flow to sync up the identities
         aliceNode.services.startFlow(Initiator(bob, issueTx.tx)).resultFuture.getOrThrow()
-        val expected = aliceNode.services.identityService.partyFromAnonymous(confidentialIdentity)
-        val actual = bobNode.services.identityService.partyFromAnonymous(confidentialIdentity)
+        val expected = aliceNode.database.transaction {
+            aliceNode.services.identityService.partyFromAnonymous(confidentialIdentity)
+        }
+        val actual = bobNode.database.transaction {
+            bobNode.services.identityService.partyFromAnonymous(confidentialIdentity)
+        }
         assertEquals(expected, actual)
     }
 

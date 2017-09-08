@@ -22,11 +22,14 @@ dependencies {
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
     testCompile project(":node")
-    testCompile project(":test-utils")
+    testCompile project(":node-driver")
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    // Quasar, for suspendable fibres.
+    compileOnly "co.paralleluniverse:quasar-core:$quasar_version:jdk8"
 
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:3.0.1"
@@ -64,6 +67,15 @@ dependencies {
     // JPA 2.1 annotations.
     compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
 }
+
+// TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
+task copyQuasarJar(type: Copy) {
+    from configurations.quasar
+    into "$project.rootProject.projectDir/lib"
+    rename { filename -> "quasar.jar"}
+}
+
+jar.finalizedBy(copyQuasarJar)
 
 configurations {
     testArtifacts.extendsFrom testRuntime

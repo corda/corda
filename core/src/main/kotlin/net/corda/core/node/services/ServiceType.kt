@@ -30,6 +30,7 @@ class ServiceType private constructor(val id: String) {
         val regulator: ServiceType = corda.getSubType("regulator")
         val networkMap: ServiceType = corda.getSubType("network_map")
 
+        @JvmStatic
         fun getServiceType(namespace: String, typeId: String): ServiceType {
             require(!namespace.startsWith("corda")) { "Corda namespace is protected" }
             return baseWithSubType(namespace, typeId)

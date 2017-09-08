@@ -3,7 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.crypto.toBase58String
+import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -262,7 +262,9 @@ abstract class SignTransactionFlow(val otherParty: Party,
      * @param stx a partially signed transaction received from your counter-party.
      * @throws FlowException if the proposed transaction fails the checks.
      */
-    @Suspendable abstract protected fun checkTransaction(stx: SignedTransaction)
+    @Suspendable
+    @Throws(FlowException::class)
+    abstract protected fun checkTransaction(stx: SignedTransaction)
 
     @Suspendable private fun checkMySignatureRequired(stx: SignedTransaction, signingKey: PublicKey) {
         require(signingKey in stx.tx.requiredSigningKeys) {

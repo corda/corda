@@ -132,9 +132,9 @@ exception will cause the transaction to be rejected.
 Commands
 ^^^^^^^^
 
-``LedgerTransaction`` contains the commands as a list of ``AuthenticatedObject`` instances.
-``AuthenticatedObject`` pairs an object with a list of signers. In this case, ``AuthenticatedObject`` pairs a command
-with a list of the entities that are required to sign a transaction where this command is present:
+``LedgerTransaction`` contains the commands as a list of ``CommandWithParties`` instances.
+``CommandWithParties`` pairs a command with a list of the entities that are required to sign a transaction
+where this command is present:
 
 .. container:: codeset
 
@@ -153,7 +153,7 @@ Extracting commands
 ~~~~~~~~~~~~~~~~~~~
 You can use the ``requireSingleCommand()`` helper method to extract commands.
 
-``<C : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand(klass: Class<C>)`` asserts that
+``<C : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand(klass: Class<C>)`` asserts that
 the transaction contains exactly one command of type ``T``, and returns it. If there is not exactly one command of this
 type in the transaction, an exception is thrown, rejecting the transaction.
 
@@ -197,7 +197,7 @@ execution of ``verify()``:
 
             @Override
             public void verify(LedgerTransaction tx) {
-                final AuthenticatedObject<Commands> command = requireSingleCommand(tx.getCommands(), Commands.class);
+                final CommandWithParties<Commands> command = requireSingleCommand(tx.getCommands(), Commands.class);
 
                 if (command.getValue() instanceof Commands.Issue) {
                     // Issuance verification logic.

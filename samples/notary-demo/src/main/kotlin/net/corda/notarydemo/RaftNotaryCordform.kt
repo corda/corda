@@ -1,30 +1,27 @@
 package net.corda.notarydemo
 
-import net.corda.core.crypto.appendToCommonName
+import net.corda.cordform.CordformContext
+import net.corda.cordform.CordformDefinition
+import net.corda.cordform.CordformNode
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getX500Name
+import net.corda.demorun.runNodes
 import net.corda.demorun.util.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.cordform.CordformDefinition
-import net.corda.cordform.CordformContext
-import net.corda.cordform.CordformNode
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.demorun.runNodes
-import net.corda.demorun.util.node
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
 
-internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
+internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { getX500Name(CN = "Notary Service $it", O = "R3 Ltd", OU = "corda", L = "Zurich", C = "CH") }
 
 private val notaryNames = createNotaryNames(3)
 
 object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0]) {
-    private val clusterName = X500Name("CN=Raft,O=R3,OU=corda,L=Zurich,C=CH")
+    private val clusterName = getX500Name(O = "Raft", OU = "corda", L = "Zurich", C = "CH")
     private val advertisedService = ServiceInfo(RaftValidatingNotaryService.type, clusterName)
 
     init {

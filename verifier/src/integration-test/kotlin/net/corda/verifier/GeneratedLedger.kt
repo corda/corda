@@ -8,11 +8,11 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.getX500Name
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.getTestX509Name
-import java.io.ByteArrayInputStream
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
@@ -184,11 +184,8 @@ data class GeneratedState(
     override val contract = DummyContract()
 }
 
-class GeneratedAttachment(
-        val bytes: ByteArray
-) : Attachment {
+class GeneratedAttachment(bytes: ByteArray) : AbstractAttachment({ bytes }) {
     override val id = bytes.sha256()
-    override fun open() = ByteArrayInputStream(bytes)
 }
 
 class GeneratedCommandData(
@@ -212,7 +209,7 @@ fun commandGenerator(partiesToPickFrom: Collection<Party>): Generator<Pair<Comma
 }
 
 val partyGenerator: Generator<Party> = Generator.int().combine(publicKeyGenerator) { n, key ->
-    Party(getTestX509Name("Party$n"), key)
+    Party(getX500Name(O = "Party$n", L = "London", C = "GB"), key)
 }
 
 fun <A> pickOneOrMaybeNew(from: Collection<A>, generator: Generator<A>): Generator<A> {

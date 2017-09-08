@@ -1,30 +1,33 @@
 package net.corda.node.services.events
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.utilities.days
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.services.MockServiceHubInternal
-import net.corda.node.services.database.HibernateConfiguration
+import net.corda.core.utilities.days
+import net.corda.core.utilities.getX500Name
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.node.testing.MockServiceHubInternal
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
-import net.corda.testing.node.*
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.node.TestClock
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
@@ -32,7 +35,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
@@ -87,7 +89,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     database)
             services = object : MockServiceHubInternal(
                     database,
-                    testNodeConfiguration(Paths.get("."), getTestX509Name("Alice")),
+                    testNodeConfiguration(Paths.get("."), getX500Name(O = "Alice", L = "London", C = "GB")),
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
@@ -120,13 +122,11 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         resetTestSerialization()
     }
 
-    class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {
+    class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant, val myIdentity: Party) : LinearState, SchedulableState {
         override val participants: List<AbstractParty>
-            get() = throw UnsupportedOperationException()
+            get() = listOf(myIdentity)
 
         override val linearId = UniqueIdentifier()
-
-        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean = true
 
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             return ScheduledActivity(flowLogicRef, instant)
@@ -137,6 +137,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     }
 
     class TestFlowLogic(val increment: Int = 1) : FlowLogic<Unit>() {
+        @Suspendable
         override fun call() {
             (serviceHub as TestReference).testReference.calls += increment
             (serviceHub as TestReference).testReference.countDown.countDown()
@@ -279,7 +280,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         database.transaction {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
-                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant)
+                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant, services.myInfo.legalIdentity)
                 val builder = TransactionBuilder(null).apply {
                     addOutputState(state, DUMMY_NOTARY)
                     addCommand(Command(), freshKey)

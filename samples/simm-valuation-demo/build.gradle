@@ -56,36 +56,36 @@ dependencies {
     compile "com.opengamma.strata:strata-math:${strata_version}"
 
     // Test dependencies
-    testCompile project(':test-utils')
+    testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
+    networkMap "O=Notary Service,OU=corda,L=Zurich,C=CH"
     node {
-        name "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
+        name "O=Notary Service,OU=corda,L=Zurich,C=CH"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         cordapps = ["net.corda:finance:$corda_release_version"]
     }
     node {
-        name "CN=Bank A,O=Bank A,L=London,C=GB"
+        name "O=Bank A,L=London,C=GB"
         advertisedServices = []
         p2pPort 10004
         webPort 10005
         cordapps = ["net.corda:finance:$corda_release_version"]
     }
     node {
-        name "CN=Bank B,O=Bank B,L=New York,C=US"
+        name "O=Bank B,L=New York,C=US"
         advertisedServices = []
         p2pPort 10006
         webPort 10007
         cordapps = ["net.corda:finance:$corda_release_version"]
     }
     node {
-        name "CN=Bank C,O=Bank C,L=Tokyo,C=Japan"
+        name "O=Bank C,L=Tokyo,C=Japan"
         advertisedServices = []
         p2pPort 10008
         webPort 10009

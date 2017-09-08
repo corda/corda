@@ -48,11 +48,8 @@ class ZeroCouponBond {
 
     @Test
     fun `issue - signature`() {
-
         transaction {
             output { inState }
-
-            this `fails with` "transaction has a single command"
 
             tweak {
                 command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }

@@ -21,11 +21,8 @@ import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.*
 import net.corda.core.utilities.ProgressTracker.Change
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -73,9 +70,13 @@ class FlowFrameworkTests {
     fun start() {
         node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         node2 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
+
+        mockNet.runNetwork()
+        node1.ensureRegistered()
+
         // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
-        val notaryService = ServiceInfo(ValidatingNotaryService.type, getTestX509Name("notary-service-2000"))
+        val notaryService = ServiceInfo(ValidatingNotaryService.type, getX500Name(O = "notary-service-2000", L = "London", C = "GB"))
         val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
@@ -88,8 +89,10 @@ class FlowFrameworkTests {
         // We don't create a network map, so manually handle registrations
         val nodes = listOf(node1, node2, notary1, notary2)
         nodes.forEach { node ->
-            nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
-                node.services.identityService.verifyAndRegisterIdentity(identity)
+            node.database.transaction {
+                nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
+                    node.services.identityService.verifyAndRegisterIdentity(identity)
+                }
             }
         }
     }
@@ -166,6 +169,7 @@ class FlowFrameworkTests {
         node3.services.startFlow(flow)
         assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
         node3.disableDBCloseOnStop()
+        node3.services.networkMapCache.clearNetworkMapCache() // zap persisted NetworkMapCache to force use of network.
         node3.stop()
 
         node3 = mockNet.createNode(node1.network.myAddress, node3.id)
@@ -175,6 +179,7 @@ class FlowFrameworkTests {
         node3.smm.executor.flush()
         assertEquals(true, restoredFlow.flowStarted) // Now we should have run the flow and hopefully cleared the init checkpoint
         node3.disableDBCloseOnStop()
+        node3.services.networkMapCache.clearNetworkMapCache() // zap persisted NetworkMapCache to force use of network.
         node3.stop()
 
         // Now it is completed the flow should leave no Checkpoint.
@@ -220,6 +225,7 @@ class FlowFrameworkTests {
         node2.stop()
         node2.database.transaction {
             assertEquals(1, node2.checkpointStorage.checkpoints().size) // confirm checkpoint
+            node2.services.networkMapCache.clearNetworkMapCache()
         }
         val node2b = mockNet.createNode(node1.network.myAddress, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
         node2.manuallyCloseDB()
@@ -912,6 +918,7 @@ class FlowFrameworkTests {
         override val progressTracker: ProgressTracker = ProgressTracker(START_STEP)
         lateinit var exceptionThrown: E
 
+        @Suspendable
         override fun call(): Nothing {
             progressTracker.currentStep = START_STEP
             exceptionThrown = exception()

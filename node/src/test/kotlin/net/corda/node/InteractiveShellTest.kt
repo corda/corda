@@ -10,7 +10,8 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
-import net.corda.jackson.JacksonSupport
+import net.corda.client.jackson.JacksonSupport
+import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.shell.InteractiveShell
 import net.corda.testing.DUMMY_CA
@@ -30,6 +31,7 @@ class InteractiveShellTest {
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
         constructor(party: Party) : this(party.name.toString())
 
+        override val progressTracker = ProgressTracker()
         override fun call() = a
     }
 

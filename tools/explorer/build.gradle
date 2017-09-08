@@ -1,8 +1,5 @@
 repositories {
     mavenCentral()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
 }
 
 apply plugin: 'java'
@@ -30,7 +27,7 @@ dependencies {
     compile project(':core')
     compile project(':client:jfx')
     compile project(':client:mock')
-    compile project(':test-utils')
+    compile project(':node-driver')
     compile project(':finance')
 
     // Capsule is a library for building independently executable fat JARs.

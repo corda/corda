@@ -12,9 +12,9 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.MEGA_CORP
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestDatabaseProperties
-import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.After

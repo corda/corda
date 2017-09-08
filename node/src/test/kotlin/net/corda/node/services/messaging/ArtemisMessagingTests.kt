@@ -12,17 +12,18 @@ import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
-import net.corda.node.services.network.InMemoryNetworkMapCache
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.testing.MockServiceHubInternal
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
-import net.corda.testing.node.MOCK_VERSION_INFO
-import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestDatabaseProperties
-import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -54,8 +55,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
 
-    // TODO: We should have a dummy service hub rather than change behaviour in tests
-    val networkMapCache = InMemoryNetworkMapCache(serviceHub = null)
+    lateinit var networkMapCache: PersistentNetworkMapCache
 
     val rpcOps = object : RPCOps {
         override val protocolVersion: Int get() = throw UnsupportedOperationException()
@@ -71,6 +71,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         networkMapRegistrationFuture = doneFuture(Unit)
+        networkMapCache = PersistentNetworkMapCache(serviceHub = object : MockServiceHubInternal(database, config) {})
     }
 
     @After
