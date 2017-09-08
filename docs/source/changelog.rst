@@ -126,6 +126,11 @@ UNRELEASED
 
 * Test type ``NodeHandle`` now has method ``stop(): CordaFuture<Unit>`` that terminates the referenced node.
 
+* Fixed some issues in IRS demo:
+   * Fixed leg and floating leg notional amounts were not displayed for created deals neither in single nor in list view.
+   * Parties were not displayed for created deals in single view.
+   * Non-default notional amounts caused the creation of new deals to fail.
+
 Milestone 14
 ------------
 
