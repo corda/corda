@@ -76,7 +76,7 @@ class FlowFrameworkTests {
 
         // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
-        val notaryService = ServiceInfo(ValidatingNotaryService.type, getX500Name(O = "notary-service-2000", L = "London", C = "GB"))
+        val notaryService = ServiceInfo(ValidatingNotaryService.type)
         val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
