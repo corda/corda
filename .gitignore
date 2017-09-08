@@ -16,6 +16,7 @@ local.properties
 **/build/*
 
 lib/dokka.jar
+lib/quasar.jar
 
 **/logs/*
 

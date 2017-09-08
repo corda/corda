@@ -4,8 +4,8 @@ import com.jediterm.terminal.ui.JediTermWidget
 import com.jediterm.terminal.ui.UIUtil
 import com.jediterm.terminal.ui.settings.SettingsProvider
 import com.pty4j.PtyProcess
-import net.corda.core.utilities.commonName
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.organisation
 import org.bouncycastle.asn1.x500.X500Name
 import java.awt.Dimension
 import java.io.IOException
@@ -34,7 +34,7 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
         val process = PtyProcess.exec(command, environment, workingDir)
 
         try {
-            return PtyProcessTtyConnector(name.commonName, process, UTF_8)
+            return PtyProcessTtyConnector(name.organisation, process, UTF_8)
         } catch (e: Exception) {
             process.destroyForcibly()
             process.waitFor(30, SECONDS)

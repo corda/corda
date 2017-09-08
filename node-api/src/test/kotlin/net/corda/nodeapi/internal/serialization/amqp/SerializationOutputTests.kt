@@ -266,7 +266,7 @@ class SerializationOutputTests {
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test
     fun `test top level list array`() {
         val obj = arrayOf(listOf("Fred", "Ginger"), listOf("Rogers", "Hammerstein"))
         serdes(obj)

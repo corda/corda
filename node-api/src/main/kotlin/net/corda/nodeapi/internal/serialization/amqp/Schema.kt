@@ -2,10 +2,11 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
-import net.corda.core.utilities.toBase64
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.toBase64
 import org.apache.qpid.proton.amqp.DescribedType
+import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.Data
@@ -13,7 +14,6 @@ import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
 import java.lang.reflect.*
 import java.util.*
-
 import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterField
 import net.corda.nodeapi.internal.serialization.carpenter.Schema as CarpenterSchema
 
@@ -106,7 +106,9 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
     override fun toString(): String = types.joinToString("\n")
 }
 
-data class Descriptor(val name: String?, val code: UnsignedLong? = null) : DescribedType {
+data class Descriptor(val name: Symbol?, val code: UnsignedLong? = null) : DescribedType {
+    constructor(name: String?) : this(Symbol.valueOf(name))
+
     companion object : DescribedTypeConstructor<Descriptor> {
         val DESCRIPTOR = DescriptorRegistry.OBJECT_DESCRIPTOR.amqpDescriptor
 
@@ -122,7 +124,7 @@ data class Descriptor(val name: String?, val code: UnsignedLong? = null) : Descr
 
         override fun newInstance(described: Any?): Descriptor {
             val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
-            return Descriptor(list[0] as? String, list[1] as? UnsignedLong)
+            return Descriptor(list[0] as? Symbol, list[1] as? UnsignedLong)
         }
     }
 

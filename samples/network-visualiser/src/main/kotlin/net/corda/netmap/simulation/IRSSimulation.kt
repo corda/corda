@@ -136,10 +136,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,
-                            val payload: AutoOffer,
-                            val myKey: PublicKey) : FlowLogic<SignedTransaction>() {
+                            val payload: AutoOffer) : FlowLogic<SignedTransaction>() {
             @Suspendable
-            override fun call(): SignedTransaction = subFlow(Instigator(otherParty, payload, myKey))
+            override fun call(): SignedTransaction = subFlow(Instigator(otherParty, payload))
         }
 
         @InitiatedBy(StartDealFlow::class)
@@ -157,8 +156,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val instigator = StartDealFlow(
                 node2.info.legalIdentity,
-                AutoOffer(notary.info.notaryIdentity, irs),
-                node1.services.legalIdentityKey)
+                AutoOffer(notary.info.notaryIdentity, irs))
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
         return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose { instigatorTxFuture.toCompletableFuture() }

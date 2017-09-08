@@ -169,7 +169,6 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     }
 
     private fun notifyNotaryChange(txns: Iterable<NotaryChangeWireTransaction>) {
-        val ourKeys = services.keyManagementService.keys
         fun makeUpdate(tx: NotaryChangeWireTransaction): Vault.Update<ContractState> {
             // We need to resolve the full transaction here because outputs are calculated from inputs
             // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on

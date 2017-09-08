@@ -16,16 +16,12 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.*
 import net.corda.core.utilities.ProgressTracker.Step
-import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.utilities.seconds
-import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
-import org.bouncycastle.asn1.x500.X500Name
 import java.security.PublicKey
 import java.time.Instant
 
@@ -63,6 +59,7 @@ object FlowCookbook {
                 // subflow's progress steps in our flow's progress tracker.
                 override fun childProgressTracker() = CollectSignaturesFlow.tracker()
             }
+
             object VERIFYING_SIGS : Step("Verifying a transaction's signatures.")
             object FINALISATION : Step("Finalising a transaction.") {
                 override fun childProgressTracker() = FinalityFlow.tracker()
@@ -105,7 +102,7 @@ object FlowCookbook {
             //   - To serve as a timestamping authority if the transaction has a time-window
             // We retrieve the notary from the network map.
             // DOCSTART 1
-            val specificNotary: Party? = serviceHub.networkMapCache.getNotary(X500Name("CN=Notary Service,O=R3,OU=corda,L=London,C=UK"))
+            val specificNotary: Party? = serviceHub.networkMapCache.getNotary(getX500Name(O = "Notary Service", OU = "corda", L = "London", C = "UK"))
             val anyNotary: Party? = serviceHub.networkMapCache.getAnyNotary()
             // Unlike the first two methods, ``getNotaryNodes`` returns a
             // ``List<NodeInfo>``. We have to extract the notary identity of
@@ -116,7 +113,7 @@ object FlowCookbook {
             // We may also need to identify a specific counterparty. Again, we
             // do so using the network map.
             // DOCSTART 2
-            val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(X500Name("CN=NodeA,O=NodeA,L=London,C=UK"))?.legalIdentity
+            val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(getX500Name(O = "NodeA", L = "London", C = "UK"))?.legalIdentity
             val keyedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalIdentityKey(dummyPubKey)?.legalIdentity
             val firstCounterparty: Party = serviceHub.networkMapCache.partyNodes[0].legalIdentity
             // DOCEND 2
@@ -389,7 +386,7 @@ object FlowCookbook {
             subFlow(SendTransactionFlow(counterparty, twiceSignedTx))
 
             // Optional request verification to further restrict data access.
-            subFlow(object :SendTransactionFlow(counterparty, twiceSignedTx){
+            subFlow(object : SendTransactionFlow(counterparty, twiceSignedTx) {
                 override fun verifyDataRequest(dataRequest: FetchDataFlow.Request.Data) {
                     // Extra request verification.
                 }

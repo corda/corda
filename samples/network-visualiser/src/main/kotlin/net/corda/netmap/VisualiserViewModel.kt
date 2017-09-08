@@ -7,9 +7,10 @@ import javafx.scene.layout.StackPane
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
-import net.corda.core.utilities.commonName
 import net.corda.core.node.ScreenCoordinate
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.getX500Name
+import net.corda.core.utilities.organisation
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
@@ -85,7 +86,7 @@ class VisualiserViewModel {
         // bottom left: -23.2031,29.8406
         // top right: 33.0469,64.3209
         try {
-            return node.place.coordinate!!.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
+            return node.place.coordinate.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
         } catch(e: Exception) {
             throw Exception("Cannot project ${node.info.legalIdentity}", e)
         }
@@ -127,7 +128,7 @@ class VisualiserViewModel {
         }
     }
 
-    fun makeNodeWidget(forNode: MockNetwork.MockNode, type: String, label: X500Name = X500Name("CN=Bank of Bologna,OU=Corda QA Department,O=R3 CEV,L=Bologna,C=IT"),
+    fun makeNodeWidget(forNode: MockNetwork.MockNode, type: String, label: X500Name = getX500Name(O = "Bank of Bologna", OU = "Corda QA Department", L = "Bologna", C = "IT"),
                        nodeType: NetworkMapVisualiser.NodeType, index: Int): NodeWidget {
         fun emitRadarPulse(initialRadius: Double, targetRadius: Double, duration: Double): Pair<Circle, Animation> {
             val pulse = Circle(initialRadius).apply {
@@ -157,7 +158,7 @@ class VisualiserViewModel {
         view.root.children += longPulseOuterDot
         view.root.children += innerDot
 
-        val nameLabel = Label(label.commonName)
+        val nameLabel = Label(label.organisation)
         val nameLabelRect = StackPane(nameLabel).apply {
             styleClass += "node-label"
             alignment = Pos.CENTER_RIGHT

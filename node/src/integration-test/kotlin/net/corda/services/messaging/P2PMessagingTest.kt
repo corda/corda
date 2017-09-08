@@ -12,6 +12,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.Node
 import net.corda.node.services.messaging.*
@@ -30,8 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = getTestX509Name("DistributedService")
-        val SERVICE_2_NAME = getTestX509Name("Service 2")
+        val DISTRIBUTED_SERVICE_NAME = getX500Name(O = "DistributedService", L = "London", C = "GB")
+        val SERVICE_2_NAME = getX500Name(O = "Service 2", L = "London", C = "GB")
     }
 
     @Test

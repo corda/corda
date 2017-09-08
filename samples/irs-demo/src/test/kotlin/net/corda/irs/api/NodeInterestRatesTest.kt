@@ -11,6 +11,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
@@ -48,7 +49,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         """.trimIndent())
 
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    val DUMMY_CASH_ISSUER = Party(X500Name("CN=Cash issuer,O=R3,OU=corda,L=London,C=GB"), DUMMY_CASH_ISSUER_KEY.public)
+    val DUMMY_CASH_ISSUER = Party(getX500Name(O="Cash issuer",OU="corda",L="London",C="GB"), DUMMY_CASH_ISSUER_KEY.public)
 
     lateinit var oracle: NodeInterestRates.Oracle
     lateinit var database: CordaPersistence

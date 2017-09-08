@@ -82,7 +82,7 @@ public class JavaCommercialPaper implements Contract {
             return owner;
         }
 
-        Amount<Issued<Currency>> getFaceValue() {
+        public Amount<Issued<Currency>> getFaceValue() {
             return faceValue;
         }
 

@@ -2,7 +2,7 @@ package net.corda.demobench.model
 
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.getX509Name
+import net.corda.core.utilities.getX500Name
 import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
 import tornadofx.*
@@ -54,11 +54,10 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         val location = nodeData.nearestCity.value
         val config = NodeConfig(
                 baseDir,
-                getX509Name(
-                    myLegalName = nodeData.legalName.value.trim(),
-                    email = "corda@city.${location.countryCode!!.toLowerCase()}.example",
-                    nearestCity = location.description!!,
-                    country = location.countryCode
+                getX500Name(
+                        O = nodeData.legalName.value.trim(),
+                        L = location.description,
+                        C = location.countryCode
                 ),
                 nodeData.p2pPort.value,
                 nodeData.rpcPort.value,

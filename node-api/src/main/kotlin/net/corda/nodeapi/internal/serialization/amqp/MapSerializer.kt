@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -10,15 +11,18 @@ import kotlin.collections.Map
 import kotlin.collections.iterator
 import kotlin.collections.map
 
+private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
+
 /**
  * Serialization / deserialization of certain supported [Map] types.
  */
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
-    override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
+    override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
+    override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
 
     companion object {
-        private val supportedTypes: Map<Class<out Any?>, (Map<*, *>) -> Map<*, *>> = mapOf(
+        // NB: Order matters in this map, the most specific classes should be listed at the end
+        private val supportedTypes: Map<Class<out Map<*, *>>, MapCreationFunction> = Collections.unmodifiableMap(linkedMapOf(
                 // Interfaces
                 Map::class.java to { map -> Collections.unmodifiableMap(map) },
                 SortedMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) },
@@ -26,15 +30,38 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
                 // concrete classes for user convenience
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
                 TreeMap::class.java to { map -> TreeMap(map) }
-        )
-        private fun findConcreteType(clazz: Class<*>): (Map<*, *>) -> Map<*, *> {
+        ))
+
+        private fun findConcreteType(clazz: Class<*>): MapCreationFunction {
             return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported map type $clazz.")
         }
+
+        fun deriveParameterizedType(declaredType: Type, declaredClass: Class<*>, actualClass: Class<*>?): ParameterizedType {
+            if(supportedTypes.containsKey(declaredClass)) {
+                // Simple case - it is already known to be a map.
+                @Suppress("UNCHECKED_CAST")
+                return deriveParametrizedType(declaredType, declaredClass as Class<out Map<*, *>>)
+            }
+            else if (actualClass != null && Map::class.java.isAssignableFrom(actualClass)) {
+                // Declared class is not map, but [actualClass] is - represent it accordingly.
+                val mapClass = findMostSuitableMapType(actualClass)
+                return deriveParametrizedType(declaredType, mapClass)
+            }
+
+            throw NotSerializableException("Cannot derive map type for declaredType: '$declaredType', declaredClass: '$declaredClass', actualClass: '$actualClass'")
+        }
+
+        private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Map<*, *>>): ParameterizedType =
+                (declaredType as? ParameterizedType) ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType, SerializerFactory.AnyType))
+
+
+        private fun findMostSuitableMapType(actualClass: Class<*>): Class<out Map<*, *>> =
+                MapSerializer.supportedTypes.keys.findLast { it.isAssignableFrom(actualClass) }!!
     }
 
-    private val concreteBuilder: (Map<*, *>) -> Map<*, *> = findConcreteType(declaredType.rawType as Class<*>)
+    private val concreteBuilder: MapCreationFunction = findConcreteType(declaredType.rawType as Class<*>)
 
-    private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor), emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {

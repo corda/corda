@@ -6,7 +6,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.locationOrNull
+import net.corda.core.utilities.locality
 
 /**
  * Information for an advertised service including the service specific identity information.
@@ -44,7 +44,7 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
      * Uses node's owner X500 name to infer the node's location. Used in Explorer in map view.
      */
     fun getWorldMapLocation(): WorldMapLocation? {
-        val nodeOwnerLocation = legalIdentity.name.locationOrNull
-        return nodeOwnerLocation?.let { CityDatabase[it] }
+        val nodeOwnerLocation = legalIdentity.name.locality
+        return nodeOwnerLocation.let { CityDatabase[it] }
     }
 }

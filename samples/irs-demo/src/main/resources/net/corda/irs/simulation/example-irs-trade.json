@@ -1,6 +1,6 @@
 {
   "fixedLeg": {
-    "fixedRatePayer": "CN=Bank A,O=Bank A,L=London,C=GB",
+    "fixedRatePayer": "O=Bank A,L=London,C=GB",
     "notional": "€25000000",
     "paymentFrequency": "SemiAnnual",
     "effectiveDate": "2016-03-11",
@@ -22,7 +22,7 @@
     "interestPeriodAdjustment": "Adjusted"
   },
   "floatingLeg": {
-    "floatingRatePayer": "CN=Bank B,O=Bank B,L=New York,C=US",
+    "floatingRatePayer": "O=Bank B,L=New York,C=US",
     "notional": "€25000000",
     "paymentFrequency": "Quarterly",
     "effectiveDate": "2016-03-11",

@@ -8,6 +8,10 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
+import net.corda.core.contracts.Attachment
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.LazyPool
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
@@ -16,6 +20,8 @@ import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+
+val attachmentsClassLoaderEnabledPropertyName = "attachments.class.loader.enabled"
 
 object NotSupportedSeralizationScheme : SerializationScheme {
     private fun doThrow(): Nothing = throw UnsupportedOperationException("Serialization scheme not supported.")
@@ -33,6 +39,24 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
                                     override val properties: Map<Any, Any>,
                                     override val objectReferencesEnabled: Boolean,
                                     override val useCase: SerializationContext.UseCase) : SerializationContext {
+
+    private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = CacheBuilder.newBuilder().weakValues().maximumSize(1024).build()
+
+    // We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
+    override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
+        properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean ?: false || return this
+        val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContextImpl ?: return this // Some tests don't set one.
+        return withClassLoader(cache.get(attachmentHashes) {
+            val missing = ArrayList<SecureHash>()
+            val attachments = ArrayList<Attachment>()
+            attachmentHashes.forEach { id ->
+                serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
+            }
+            missing.isNotEmpty() && throw MissingAttachmentsException(missing)
+            AttachmentsClassLoader(attachments)
+        })
+    }
+
     override fun withProperty(property: Any, value: Any): SerializationContext {
         return copy(properties = properties + (property to value))
     }
@@ -56,7 +80,7 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
 
 private const val HEADER_SIZE: Int = 8
 
-open class SerializationFactoryImpl : SerializationFactory {
+open class SerializationFactoryImpl : SerializationFactory() {
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
 
     private val registeredSchemes: MutableCollection<SerializationScheme> = Collections.synchronizedCollection(mutableListOf())
@@ -75,10 +99,12 @@ open class SerializationFactoryImpl : SerializationFactory {
     }
 
     @Throws(NotSerializableException::class)
-    override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T = schemeFor(byteSequence, context.useCase).deserialize(byteSequence, clazz, context)
+    override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
+        return asCurrent { withCurrentContext(context) { schemeFor(byteSequence, context.useCase).deserialize(byteSequence, clazz, context) } }
+    }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        return schemeFor(context.preferredSerializationVersion, context.useCase).serialize(obj, context)
+        return asCurrent { withCurrentContext(context) { schemeFor(context.preferredSerializationVersion, context.useCase).serialize(obj, context) } }
     }
 
     fun registerScheme(scheme: SerializationScheme) {

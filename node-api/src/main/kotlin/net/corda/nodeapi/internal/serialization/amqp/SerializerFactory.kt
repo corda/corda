@@ -4,14 +4,10 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.nodeapi.internal.serialization.amqp.CollectionSerializer.Companion.deriveParameterizedType
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
-import java.lang.reflect.GenericArrayType
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
-import java.lang.reflect.WildcardType
+import java.lang.reflect.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -22,17 +18,12 @@ data class schemaAndDescriptor(val schema: Schema, val typeDescriptor: Any)
 /**
  * Factory of serializers designed to be shared across threads and invocations.
  */
-// TODO: object references - need better fingerprinting?
-// TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
-// TODO: Inner classes etc. Should we allow? Currently not considered.
 // TODO: support for intern-ing of deserialized objects for some core types (e.g. PublicKey) for memory efficiency
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general
 // TODO: use guava caches etc so not unbounded
 // TODO: do we need to support a transient annotation to exclude certain properties?
 // TODO: allow definition of well known types that are left out of the schema.
-// TODO: generally map Object to '*' all over the place in the schema and make sure use of '*' amd '?' is consistent and documented in generics.
-// TODO: found a document that states textual descriptors are Symbols.  Adjust schema class appropriately.
 // TODO: document and alert to the fact that classes cannot default superclass/interface properties otherwise they are "erased" due to matching with constructor.
 // TODO: type name prefixes for interfaces and abstract classes?  Or use label?
 // TODO: generic types should define restricted type alias with source of the wildcarded version, I think, if we're to generate classes from schema
@@ -70,20 +61,23 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
         val serializer = when {
+            // Declared class may not be set to Collection, but actual class could be a collection.
+            // In this case use of CollectionSerializer is perfectly appropriate.
             (Collection::class.java.isAssignableFrom(declaredClass) ||
-                    // declared class may not be set to Collection, but actual class could be a collection.
-                    // In this case use of CollectionSerializer is perfectly appropriate.
-                    (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) -> {
-
-                val declaredTypeAmended= deriveParameterizedType(declaredType, declaredClass, actualClass)
-
-                serializersByType.computeIfAbsent(declaredTypeAmended) {
-                    CollectionSerializer(declaredTypeAmended, this)
-                }
+                (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) -> {
+                    val declaredTypeAmended= CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                    serializersByType.computeIfAbsent(declaredTypeAmended) {
+                        CollectionSerializer(declaredTypeAmended, this)
+                    }
             }
-            Map::class.java.isAssignableFrom(declaredClass) -> serializersByType.computeIfAbsent(declaredClass) {
-                makeMapSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
-                        declaredClass, arrayOf(AnyType, AnyType), null))
+            // Declared class may not be set to Map, but actual class could be a map.
+            // In this case use of MapSerializer is perfectly appropriate.
+            (Map::class.java.isAssignableFrom(declaredClass) ||
+                (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
+                    val declaredTypeAmended= MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                    serializersByType.computeIfAbsent(declaredClass) {
+                        makeMapSerializer(declaredTypeAmended)
+                    }
             }
             Enum::class.java.isAssignableFrom(declaredClass) -> serializersByType.computeIfAbsent(declaredClass) {
                 EnumSerializer(actualType, actualClass ?: declaredClass, this)
@@ -343,7 +337,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
             }
             is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
             is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
-            is WildcardType -> "Any"
+            is WildcardType -> "?"
+            is TypeVariable<*> -> "?"
             else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 

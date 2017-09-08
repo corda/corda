@@ -15,7 +15,7 @@ import javafx.scene.layout.VBox
 import javafx.util.Duration
 import net.corda.core.concurrent.match
 import net.corda.core.contracts.ContractState
-import net.corda.core.utilities.commonName
+import net.corda.core.utilities.organisation
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.vault.PageSpecification
@@ -71,7 +71,7 @@ class NodeTerminalView : Fragment() {
     private lateinit var swingTerminal: SwingNode
 
     fun open(config: NodeConfig, onExit: (Int) -> Unit) {
-        nodeName.text = config.legalName.commonName
+        nodeName.text = config.legalName.organisation
 
         swingTerminal = SwingNode()
         swingTerminal.setOnMouseClicked {

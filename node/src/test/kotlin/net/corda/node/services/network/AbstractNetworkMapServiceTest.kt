@@ -6,6 +6,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.getX500Name
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send
@@ -46,7 +47,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     lateinit var alice: MockNode
 
     companion object {
-        val subscriberLegalName = X500Name("CN=Subscriber,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
+        val subscriberLegalName = getX500Name(O="Subscriber",L="New York",C="US")
     }
 
     @Before
