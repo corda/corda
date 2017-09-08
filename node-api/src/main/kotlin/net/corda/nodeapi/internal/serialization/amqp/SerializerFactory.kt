@@ -18,16 +18,12 @@ data class schemaAndDescriptor(val schema: Schema, val typeDescriptor: Any)
 /**
  * Factory of serializers designed to be shared across threads and invocations.
  */
-// TODO: object references - need better fingerprinting?
-// TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
-// TODO: Inner classes etc. Should we allow? Currently not considered.
 // TODO: support for intern-ing of deserialized objects for some core types (e.g. PublicKey) for memory efficiency
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general
 // TODO: use guava caches etc so not unbounded
 // TODO: do we need to support a transient annotation to exclude certain properties?
 // TODO: allow definition of well known types that are left out of the schema.
-// TODO: found a document that states textual descriptors are Symbols.  Adjust schema class appropriately.
 // TODO: document and alert to the fact that classes cannot default superclass/interface properties otherwise they are "erased" due to matching with constructor.
 // TODO: type name prefixes for interfaces and abstract classes?  Or use label?
 // TODO: generic types should define restricted type alias with source of the wildcarded version, I think, if we're to generate classes from schema

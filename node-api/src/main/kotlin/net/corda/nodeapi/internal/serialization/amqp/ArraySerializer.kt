@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.Type
@@ -31,12 +32,12 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
             "${type.componentType().typeName}$arrayType"
         }
 
-    override val typeDescriptor by lazy { "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}" }
+    override val typeDescriptor by lazy { Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}") }
     internal val elementType: Type by lazy { type.componentType() }
     internal open val typeName by lazy { calcTypeName(type) }
 
     internal val typeNotation: TypeNotation by lazy {
-        RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
+        RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())
     }
 
     override fun writeClassInfo(output: SerializationOutput) {

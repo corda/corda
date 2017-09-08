@@ -4,7 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.serialize
 import java.nio.ByteBuffer
 import java.util.function.Predicate
@@ -22,12 +22,12 @@ fun <T : Any> serializedHash(x: T, privacySalt: PrivacySalt?, index: Int): Secur
 
 fun <T : Any> serializedHash(x: T, nonce: SecureHash): SecureHash {
     return if (x !is PrivacySalt) // PrivacySalt is not required to have an accompanied nonce.
-        (x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes + nonce.bytes).sha256()
+        (x.serialize(context = SerializationFactory.defaultFactory.defaultContext.withoutReferences()).bytes + nonce.bytes).sha256()
     else
         serializedHash(x)
 }
 
-fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = P2P_CONTEXT.withoutReferences()).bytes.sha256()
+fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationFactory.defaultFactory.defaultContext.withoutReferences()).bytes.sha256()
 
 /** The nonce is computed as Hash(privacySalt || index). */
 fun computeNonce(privacySalt: PrivacySalt, index: Int) = (privacySalt.bytes + ByteBuffer.allocate(4).putInt(index).array()).sha256()

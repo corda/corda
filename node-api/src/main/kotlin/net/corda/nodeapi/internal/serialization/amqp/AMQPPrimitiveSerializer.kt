@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import org.apache.qpid.proton.amqp.Binary
+import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
@@ -10,7 +11,7 @@ import java.lang.reflect.Type
  * [ByteArray] is automatically marshalled to/from the Proton-J wrapper, [Binary].
  */
 class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer<Any> {
-    override val typeDescriptor: String = SerializerFactory.primitiveTypeName(clazz)!!
+    override val typeDescriptor = Symbol.valueOf(SerializerFactory.primitiveTypeName(clazz)!!)
     override val type: Type = clazz
 
     // NOOP since this is a primitive type.
