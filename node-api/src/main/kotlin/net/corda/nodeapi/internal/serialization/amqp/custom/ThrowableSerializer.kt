@@ -2,6 +2,8 @@ package net.corda.nodeapi.internal.serialization.amqp.custom
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.CordaThrowable
+import net.corda.core.serialization.CommonPropertyNames
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
@@ -33,7 +35,18 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
         } else {
             obj.message
         }
-        return ThrowableProxy(obj.javaClass.name, message, obj.stackTrace, obj.cause, obj.suppressed, extraProperties)
+        return if(shouldIncludeInternalInfo())
+                    ThrowableProxy(obj.javaClass.name, message, obj.stackTrace, obj.cause, obj.suppressed, extraProperties)
+                else
+                    ThrowableProxy(obj.javaClass.name, message, emptyArray(), obj.cause, obj.suppressed, extraProperties)
+    }
+
+    private fun shouldIncludeInternalInfo(): Boolean {
+
+        val currentContext = SerializationFactory.currentFactory?.currentContext
+        val includeInternalInfo = currentContext?.properties?.get(CommonPropertyNames.IncludeInternalInfo)
+
+        return true == includeInternalInfo
     }
 
     override fun fromProxy(proxy: ThrowableProxy): Throwable {
