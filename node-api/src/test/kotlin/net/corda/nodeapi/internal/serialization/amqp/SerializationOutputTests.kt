@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
@@ -18,6 +19,7 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion
 import net.corda.testing.BOB_IDENTITY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
+import net.corda.testing.withTestSerialization
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
@@ -418,8 +420,16 @@ class SerializationOutputTests {
         factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory2))
 
         val t = IllegalAccessException("message").fillInStackTrace()
-        val desThrowable = serdes(t, factory, factory2, false) as Throwable
+
+        val desThrowable = serdesThrowableWithInternalInfo(t, factory, factory2, false)
         assertSerializedThrowableEquivalent(t, desThrowable)
+    }
+
+    private fun serdesThrowableWithInternalInfo(t: Throwable, factory: SerializerFactory, factory2: SerializerFactory, expectedEqual: Boolean = true): Throwable = withTestSerialization {
+        val newContext = SerializationFactory.defaultFactory.defaultContext.withProperty(CommonPropertyNames.IncludeInternalInfo, true)
+
+        val deserializedObj = SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
+        return deserializedObj
     }
 
     @Test
@@ -437,7 +447,7 @@ class SerializationOutputTests {
                 throw IllegalStateException("Layer 2", t)
             }
         } catch(t: Throwable) {
-            val desThrowable = serdes(t, factory, factory2, false)
+            val desThrowable = serdesThrowableWithInternalInfo(t, factory, factory2, false)
             assertSerializedThrowableEquivalent(t, desThrowable)
         }
     }
@@ -469,7 +479,7 @@ class SerializationOutputTests {
                 throw e
             }
         } catch(t: Throwable) {
-            val desThrowable = serdes(t, factory, factory2, false)
+            val desThrowable = serdesThrowableWithInternalInfo(t, factory, factory2, false)
             assertSerializedThrowableEquivalent(t, desThrowable)
         }
     }
@@ -483,7 +493,7 @@ class SerializationOutputTests {
         factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory2))
 
         val obj = FlowException("message").fillInStackTrace()
-        serdes(obj, factory, factory2)
+        serdesThrowableWithInternalInfo(obj, factory, factory2)
     }
 
     @Test
@@ -495,7 +505,7 @@ class SerializationOutputTests {
         factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(factory2))
 
         val obj = RPCException("message").fillInStackTrace()
-        serdes(obj, factory, factory2)
+        serdesThrowableWithInternalInfo(obj, factory, factory2)
     }
 
     @Test

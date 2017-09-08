@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
+import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.codec.Data
 import java.beans.IndexedPropertyDescriptor
 import java.beans.Introspector
@@ -229,4 +230,11 @@ internal fun Type.isSubClassOf(type: Type): Boolean {
 internal fun suitableForObjectReference(type: Type): Boolean {
     val clazz = type.asClass()
     return type != ByteArray::class.java && (clazz != null && !clazz.isPrimitive && !Primitives.unwrap(clazz).isPrimitive)
+}
+
+/**
+ * Common properties that are to be used in the [SerializationContext.properties] to alter serialization behavior/content
+ */
+internal enum class CommonPropertyNames {
+    IncludeInternalInfo,
 }
