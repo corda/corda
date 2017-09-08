@@ -79,7 +79,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             var publicKeyHash: String = "",
 
             @Lob
-            @Column
+            @Column(name = "value")
             var identity: ByteArray = ByteArray(0)
     )
 

@@ -34,7 +34,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             @JoinTable(name = "link_nodeinfo_party",
                     joinColumns = arrayOf(JoinColumn(name="node_info_id")),
                     inverseJoinColumns = arrayOf(JoinColumn(name="party_name")))
-            val legalIdentitiesAndCerts: Set<DBPartyAndCertificate>,
+            val legalIdentitiesAndCerts: Set<NodeInfoSchemaV1.DBPartyAndCertificate>,
 
             @Column(name = "platform_version")
             val platformVersion: Int,
@@ -99,7 +99,7 @@ object NodeInfoSchemaV1 : MappedSchema(
     @Table(name = "node_info_party_cert")
     data class DBPartyAndCertificate(
             @Id
-            @Column(name = "owning_key", length = 65535, nullable = false)
+            @Column(name = "owning_key", length = 8000, nullable = false)
             val owningKey: String,
 
             //@Id // TODO Do we assume that names are unique? Note: We can't have it as Id, because our toString on X500 is inconsistent.

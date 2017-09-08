@@ -21,6 +21,8 @@ class CashSelectionMySQLImpl : CashSelection {
         return metadata.driverName == JDBC_DRIVER_NAME
     }
 
+    override fun toString() = "${this::class.java} for ${CashSelectionH2Impl.JDBC_DRIVER_NAME}"
+
     override fun unconsumedCashStatesForSpending(services: ServiceHub,
                                                  amount: Amount<Currency>,
                                                  onlyFromIssuerParties: Set<AbstractParty>,

@@ -33,23 +33,17 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
             @Id @Column(name = "node_party_key")
             var publicKey: String = "",
 
-            @Column
-            var nodeParty: NodeParty = NodeParty(),
-
-            @Lob @Column
-            var registrationInfo: ByteArray = ByteArray(0)
-    )
-
-    @Embeddable
-    class NodeParty(
             @Column(name = "node_party_name")
             var name: String = "",
 
-            @Column(name = "node_party_certificate", length = 4096)
+            @Lob @Column(name = "node_party_certificate")
             var certificate: ByteArray = ByteArray(0),
 
-            @Column(name = "node_party_path", length = 4096)
-            var certPath: ByteArray = ByteArray(0)
+            @Lob @Column(name = "node_party_path")
+            var certPath: ByteArray = ByteArray(0),
+
+            @Lob @Column
+            var registrationInfo: ByteArray = ByteArray(0)
     )
 
     private companion object {
@@ -59,17 +53,15 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
             return PersistentMap(
                     toPersistentEntityKey = { it.owningKey.toBase58String() },
                     fromPersistentEntity = {
-                        Pair(PartyAndCertificate(factory.generateCertPath(ByteArrayInputStream(it.nodeParty.certPath))),
+                        Pair(PartyAndCertificate(factory.generateCertPath(ByteArrayInputStream(it.certPath))),
                                 it.registrationInfo.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
                     toPersistentEntity = { key: PartyAndCertificate, value: NodeRegistrationInfo ->
                         NetworkNode(
                                 publicKey = key.owningKey.toBase58String(),
-                                nodeParty = NodeParty(
-                                        key.name.toString(),
-                                        key.certificate.encoded,
-                                        key.certPath.encoded
-                                ),
+                                name =  key.name.toString(),
+                                certificate = key.certificate.encoded,
+                                certPath = key.certPath.encoded,
                                 registrationInfo = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                         )
                     },
@@ -112,10 +104,10 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
             @Id @Column
             var id: String = "",
 
-            @Column(length = 4096)
+            @Lob @Column(name = "subscriber_key")
             var key: ByteArray = ByteArray(0),
 
-            @Column(length = 4096)
+            @Lob @Column
             var value: ByteArray = ByteArray(0)
     )
 

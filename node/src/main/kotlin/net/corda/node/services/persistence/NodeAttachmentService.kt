@@ -32,7 +32,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
            indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
     class DBAttachment(
             @Id
-            @Column(name = "att_id", length = 65535)
+            @Column(name = "att_id")
             var attId: String,
 
             @Column(name = "content")
