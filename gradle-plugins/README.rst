@@ -13,7 +13,7 @@ the rest of the Corda libraries.
 Version number
 --------------
 
-TO modify the version number edit constants.properties in root dir
+To modify the version number edit constants.properties in root dir
 
 Installing
 ----------
