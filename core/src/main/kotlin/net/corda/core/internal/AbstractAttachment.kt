@@ -53,18 +53,3 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     override fun hashCode() = id.hashCode()
     override fun toString() = "${javaClass.simpleName}(id=$id)"
 }
-
-@Throws(IOException::class)
-fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
-    fun String.norm() = toLowerCase().split('\\', '/') // XXX: Should this really be locale-sensitive?
-    val p = path.norm()
-    while (true) {
-        val e = nextJarEntry ?: break
-        if (!e.isDirectory && e.name.norm() == p) {
-            copyTo(outputTo)
-            return
-        }
-        closeEntry()
-    }
-    throw FileNotFoundException(path)
-}
