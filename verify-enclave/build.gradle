@@ -50,8 +50,12 @@ jar {
     from '../node/capsule/NOTICE' // Copy CDDL notice
     // Create a fat jar by packing all deps into the output
     from {
-        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
     }
+    exclude "META-INF/*.DSA"
+    exclude "META-INF/*.RSA"
+    exclude "META-INF/*.SF"
+    exclude "META-INF/*.MF"
     archiveName "corda-enclavelet.jar"
     manifest {
         attributes(
