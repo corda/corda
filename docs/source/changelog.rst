@@ -12,8 +12,9 @@ UNRELEASED
 * About half of the code in test-utils has been moved to a new module ``node-driver``,
   and the test scope modules are now located in a ``testing`` directory.
 
-* Improved support for testing custom schemas using a MockNetwork.
-  It is no longer necessary to explicitly configure and declare a CordaPluginRegistry to use custom contract schemas.
+* Removed `requireSchemas` CordaPluginRegistry configuration item.
+  Custom schemas are now automatically located using classpath scanning for deployed CorDapps.
+  Improved support for testing custom schemas in MockNode and MockServices using explicit registration.
 
 * Contract Upgrades: deprecated RPC authorisation / deauthorisation API calls in favour of equivalent flows in ContractUpgradeFlow.
   Implemented contract upgrade persistence using JDBC backed persistent map.

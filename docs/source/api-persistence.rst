@@ -77,12 +77,14 @@ other ``MappedSchema``.
 Custom schema registration
 --------------------------
 Custom contract schemas are automatically registered at startup time for CorDapps. The node bootstrap process will scan
-for schemas (any class that extends the ``MappedSchema`` interface) in the `plugins` configuration directory of your CorDapp.
+for schemas (any class that extends the ``MappedSchema`` interface) in the `plugins` configuration directory in your CorDapp jar.
+
 For testing purposes it is necessary to manually register custom schemas as follows:
-1. Tests using the `MockNetwork` and `MockNode` must explicitly register schemas using the `registerCustomSchemas()` method of MockNode
-2. Tests using `MockServices` must explicitly register schemas using `customSchemas` attribute of `makeTestDatabaseAndMockServices()` MockServices helper.
-3. Tests using the `DriverDSL` may override the location of automatic classpath scanning by setting the ``net.corda.node.cordapp.scan.package``
-   system property in its `systemsProperties` constructor attribute. Note that the default behaviour of `DriverDSL` is to use the current "caller package" as root search classpath.
+
+- Tests using ``MockNetwork`` and ``MockNode`` must explicitly register custom schemas using the `registerCustomSchemas()` method of ``MockNode``
+- Tests using ``MockServices`` must explicitly register schemas using `customSchemas` attribute of the ``MockServices`` `makeTestDatabaseAndMockServices()` helper method.
+
+.. note:: Tests using the `DriverDSL` will automatically register your custom schemas if they are in the same project structure as the driver call.
 
 Object relational mapping
 -------------------------
