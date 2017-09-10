@@ -69,7 +69,8 @@ There are four implementations of this interface which can be chained together t
 
 4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the :doc:`Persistence </api-persistence>` documentation and associated examples. Custom criteria expressions are expressed using one of several type-safe ``CriteriaExpression``: BinaryLogical, Not, ColumnPredicateExpression, AggregateFunctionExpression. The ``ColumnPredicateExpression`` allows for specification arbitrary criteria using the previously enumerated operator types. The ``AggregateFunctionExpression`` allows for the specification of an aggregate function type (sum, avg, max, min, count) with optional grouping and sorting. Furthermore, a rich DSL is provided to enable simple construction of custom criteria using any combination of ``ColumnPredicate``. See the ``Builder`` object in ``QueryCriteriaUtils`` for a complete specification of the DSL. 
 
-    .. note:: It is a requirement to register any custom contract schemas to be used in Vault Custom queries, either in the associated `CordaPluginRegistry` configuration for the respective CorDapp using the ``requiredSchemas`` configuration field (which specifies a set of `MappedSchema`) or by passing the package location of the custom schemas to the ``net.corda.node.cordapp.scan.package` system property (for example -Dnet.corda.node.cordapp.scan.package="net.corda.testing.schemas")
+    .. note:: custom contract schemas are automatically registered upon node startup for CorDapps. Please refer to
+    :doc:`Persistence </api-persistence>` for mechanisms of registering custom schemas for different testing purposes.
 
 All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators.
 

@@ -212,10 +212,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             startMessagingService(rpcOps)
             installCoreFlows()
 
-            installCordaServices()
-            registerCordappFlows()
-            _services.rpcFlows += cordappLoader.findRPCFlows()
-            _services.schemaService.registerCustomSchemas(findCustomSchemas(scanResult))
+
+                installCordaServices()
+                registerCordappFlows()
+                _services.rpcFlows += cordappLoader.findRPCFlows()
+                registerCustomSchemas(findCustomSchemas(scanResult))
+
 
             runOnStop += network::stop
         }
@@ -657,7 +659,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val monitoringService = MonitoringService(MetricRegistry())
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
+        override val schemaService by lazy { NodeSchemaService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(this) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
@@ -703,6 +705,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
         override fun jdbcSession(): Connection = database.createSession()
+    }
+
+    fun registerCustomSchemas(schemas: Set<MappedSchema>) {
+        database.hibernateConfig.schemaService.registerCustomSchemas(schemas)
     }
 
 }

@@ -7,6 +7,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
@@ -38,6 +39,8 @@ class CustomVaultQueryTest {
 
         nodeA.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
         nodeA.installCordaService(CustomVaultQuery.Service::class.java)
+        nodeA.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.registerCustomSchemas(setOf(CashSchemaV1))
     }
 
     @After
@@ -53,7 +56,7 @@ class CustomVaultQueryTest {
         issueCashForCurrency(SWISS_FRANCS(800))
         val (cashBalancesOriginal, _) = getBalances()
 
-        // top up all currencies (by double original)
+        // top up all currencies (by double original)Fore
         topUpCurrencies()
         val (cashBalancesAfterTopup, _) = getBalances()
 

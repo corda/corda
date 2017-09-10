@@ -55,12 +55,6 @@ integration points and not necessarily with every upgrade to the contract code. 
 ``MappedSchema`` offered by a ``QueryableState``, automatically upgrade to a later version of a schema or even
 provide a ``MappedSchema`` not originally offered by the ``QueryableState``.
 
-.. note:: custom contract schemas should be registered in an associated `CordaPluginRegistry` configuration for the 
-   respective CorDapp using the ``requiredSchemas`` configuration field (which specifies a set of `MappedSchema`).
-   Alternatively you may pass the package location of the custom schemas to the ``net.corda.node.cordapp.scan.package` 
-   system property (for example -Dnet.corda.node.cordapp.scan.package="net.corda.testing.schemas"). This approach is
-   recommended for Unit tests using the ``MockNetwork`` test framework.
-
 It is expected that multiple different contract state implementations might provide mappings to some common schema.
 For example an Interest Rate Swap contract and an Equity OTC Option contract might both provide a mapping to a common
 Derivative schema. The schemas should typically not be part of the contract itself and should exist independently of it
@@ -79,6 +73,16 @@ other ``MappedSchema``.
    implementation offers none of this and simply results in all versions of all schemas supported by a
    ``QueryableState`` being persisted. This will change in due course. Similarly, it does not currently support
    configuring ``SchemaOptions`` but will do so in the future.
+
+Custom schema registration
+--------------------------
+Custom contract schemas are automatically registered at startup time for CorDapps. The node bootstrap process will scan
+for schemas (any class that extends the ``MappedSchema`` interface) in the `plugins` configuration directory of your CorDapp.
+For testing purposes it is necessary to manually register custom schemas as follows:
+1. Tests using the `MockNetwork` and `MockNode` must explicitly register schemas using the `registerCustomSchemas()` method of MockNode
+2. Tests using `MockServices` must explicitly register schemas using `customSchemas` attribute of `makeTestDatabaseAndMockServices()` MockServices helper.
+3. Tests using the `DriverDSL` may override the location of automatic classpath scanning by setting the ``net.corda.node.cordapp.scan.package``
+   system property in its `systemsProperties` constructor attribute. Note that the default behaviour of `DriverDSL` is to use the current "caller package" as root search classpath.
 
 Object relational mapping
 -------------------------
