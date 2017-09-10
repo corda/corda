@@ -8,7 +8,7 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.utilities.CertificateAndKeyPair
+import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.core.utilities.getX500Name
 import net.corda.node.utilities.X509Utilities
 import java.math.BigInteger

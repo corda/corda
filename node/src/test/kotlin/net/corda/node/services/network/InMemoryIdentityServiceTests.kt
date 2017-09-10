@@ -6,7 +6,7 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.core.utilities.CertificateAndKeyPair
+import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.core.utilities.cert
 import net.corda.core.utilities.getX500Name
 import net.corda.node.services.identity.InMemoryIdentityService

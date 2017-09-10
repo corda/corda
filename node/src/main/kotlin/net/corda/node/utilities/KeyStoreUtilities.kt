@@ -1,12 +1,11 @@
 package net.corda.node.utilities
 
-import net.corda.core.utilities.CertificateAndKeyPair
 import net.corda.core.crypto.Crypto
-import net.corda.core.utilities.cert
 import net.corda.core.internal.exists
 import net.corda.core.internal.read
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.write
+import net.corda.core.utilities.cert
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.IOException
