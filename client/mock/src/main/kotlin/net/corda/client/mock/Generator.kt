@@ -59,7 +59,7 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
 
     fun generateOrFail(random: SplittableRandom, numberOfTries: Int = 1): A {
         var error: Throwable? = null
-        for (i in 0..numberOfTries - 1) {
+        for (i in 0 until numberOfTries) {
             val result = generate(random)
             error = when (result) {
                 is Try.Success -> return result.value
@@ -115,13 +115,14 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
 
         fun <A> frequency(vararg generators: Pair<Double, Generator<A>>) = frequency(generators.toList())
 
-        fun <A> sequence(generators: List<Generator<A>>) = Generator<List<A>> {
+        fun <A> sequence(generators: List<Generator<A>>) = Generator {
             val result = mutableListOf<A>()
             for (generator in generators) {
                 val element = generator.generate(it)
+                @Suppress("UNCHECKED_CAST")
                 when (element) {
                     is Try.Success -> result.add(element.value)
-                    is Try.Failure -> return@Generator element
+                    is Try.Failure -> return@Generator element as Try<List<A>>
                 }
             }
             Try.Success(result)
@@ -135,12 +136,12 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
 
         fun intRange(range: IntRange) = intRange(range.first, range.last)
         fun intRange(from: Int, to: Int): Generator<Int> = Generator.success {
-            (from + Math.abs(it.nextInt()) % (to - from + 1)).toInt()
+            (from + Math.abs(it.nextInt()) % (to - from + 1))
         }
 
         fun longRange(range: LongRange) = longRange(range.first, range.last)
         fun longRange(from: Long, to: Long): Generator<Long> = Generator.success {
-            (from + Math.abs(it.nextLong()) % (to - from + 1)).toLong()
+            (from + Math.abs(it.nextLong()) % (to - from + 1))
         }
 
         fun double() = Generator.success { it.nextDouble() }
@@ -153,7 +154,7 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
             if (Character.isValidCodePoint(codePoint)) {
                 return@Generator Try.Success(codePoint.toChar())
             } else {
-                Try.Failure(IllegalStateException("Could not generate valid codepoint"))
+                Try.Failure<Any>(IllegalStateException("Could not generate valid codepoint"))
             }
         }
 
@@ -174,7 +175,7 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
         }
 
 
-        fun <A> replicatePoisson(meanSize: Double, generator: Generator<A>, atLeastOne: Boolean = false) = Generator<List<A>> {
+        fun <A> replicatePoisson(meanSize: Double, generator: Generator<A>, atLeastOne: Boolean = false) = Generator {
             val chance = (meanSize - 1) / meanSize
             val result = mutableListOf<A>()
             var finish = false
@@ -190,7 +191,8 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
                     }
                 }
                 if (res is Try.Failure) {
-                    return@Generator res
+                    @Suppress("UNCHECKED_CAST")
+                    return@Generator res as Try<List<A>>
                 }
             }
             Try.Success(result)
@@ -200,11 +202,11 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
         fun <A> pickN(number: Int, list: List<A>) = Generator<List<A>> {
             val mask = BitSet(list.size)
             val size = Math.min(list.size, number)
-            for (i in 0..size - 1) {
+            for (i in 0 until size) {
                 // mask[i] = 1 desugars into mask.set(i, 1), which sets a range instead of a bit
                 mask[i] = true
             }
-            for (i in 0..list.size - 1) {
+            for (i in 0 until list.size) {
                 val bit = mask[i]
                 val swapIndex = i + it.nextInt(size - i)
                 mask[i] = mask[swapIndex]
