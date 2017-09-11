@@ -205,7 +205,7 @@ class TwoPartyTradeFlowTests {
             val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
             allNodes.forEach { node ->
                 node.database.transaction {
-                    allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.registerIdentity(identity) }
+                    allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.verifyAndRegisterIdentity(identity) }
                 }
             }
 
@@ -619,7 +619,7 @@ class TwoPartyTradeFlowTests {
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
         allNodes.forEach { node ->
             node.database.transaction {
-                allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.registerIdentity(identity) }
+                allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.verifyAndRegisterIdentity(identity) }
             }
         }
 
