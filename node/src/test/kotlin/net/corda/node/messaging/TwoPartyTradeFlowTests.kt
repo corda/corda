@@ -93,15 +93,13 @@ class TwoPartyTradeFlowTests {
         mockNet = MockNetwork(false, true)
 
         ledger(initialiseSerialization = false) {
-            val basketOfNodes = mockNet.createSomeNodes(3)
-            val notaryNode = basketOfNodes.notaryNode
-            val aliceNode = basketOfNodes.partyNodes[0]
-            val bobNode = basketOfNodes.partyNodes[1]
-            val bankNode = basketOfNodes.partyNodes[2]
+            val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+            val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+            val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+            val bankNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
+            val notary = aliceNode.services.getDefaultNotary()
             val cashIssuer = bankNode.info.chooseIdentity().ref(1)
             val cpIssuer = bankNode.info.chooseIdentity().ref(1, 2, 3)
-            val notary = aliceNode.services.getDefaultNotary()
-
 
             aliceNode.internals.disableDBCloseOnStop()
             bobNode.internals.disableDBCloseOnStop()

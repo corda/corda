@@ -7,13 +7,9 @@ import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
 import net.corda.node.internal.StartedNode
-import net.corda.testing.ALICE
-import net.corda.testing.chooseIdentity
-import net.corda.testing.getDefaultNotary
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
-import net.corda.testing.setCordappPackages
-import net.corda.testing.unsetCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -31,9 +27,9 @@ class FinalityFlowTests {
     fun setup() {
         setCordappPackages("net.corda.finance.contracts.asset")
         mockNet = MockNetwork()
-        val nodes = mockNet.createSomeNodes(2)
-        nodeA = nodes.partyNodes[0]
-        nodeB = nodes.partyNodes[1]
+        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        nodeA = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+        nodeB = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         mockNet.runNetwork()
         nodeA.internals.ensureRegistered()
         notary = nodeA.services.getDefaultNotary()

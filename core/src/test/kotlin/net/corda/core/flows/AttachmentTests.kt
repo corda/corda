@@ -10,12 +10,15 @@ import net.corda.core.internal.FetchDataFlow
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -55,9 +58,9 @@ class AttachmentTests {
 
     @Test
     fun `download and store`() {
-        val nodes = mockNet.createSomeNodes(2)
-        val n0 = nodes.partyNodes[0]
-        val n1 = nodes.partyNodes[1]
+        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val n0 = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+        val n1 = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
@@ -93,9 +96,9 @@ class AttachmentTests {
 
     @Test
     fun `missing`() {
-        val nodes = mockNet.createSomeNodes(2)
-        val n0 = nodes.partyNodes[0]
-        val n1 = nodes.partyNodes[1]
+        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val n0 = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+        val n1 = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
