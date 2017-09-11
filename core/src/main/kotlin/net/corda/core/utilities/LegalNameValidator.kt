@@ -54,7 +54,7 @@ private val supportedAttributes = mandatoryAttributes + setOf(BCStyle.CN, BCStyl
  * @see <a href="https://r3-cev.atlassian.net/wiki/spaces/AWG/pages/129206341/Distinguished+name+structure">Design Doc</a>.
  */
 fun validateX500Name(x500Name: X500Name) {
-    val rDNs = x500Name.rdNs.flatMap { it.typesAndValues.toList() }
+    val rDNs = x500Name.rdNs.flatMap { it.typesAndValues.asList() }
     val attributes = rDNs.map { it.type }
 
     // Duplicate attribute value checks.
@@ -79,12 +79,12 @@ fun validateX500Name(x500Name: X500Name) {
     require(x500Name.country.toUpperCase() == x500Name.country) { "Country code should be in upper case." }
     require(countryCodes.contains(x500Name.country)) { "Invalid country code '${x500Name.country}'" }
 
-    require(x500Name.organisation.length < 127) { "Organisation attribute (O) must contain less then 127 characters." }
+    require(x500Name.organisation.length < 128) { "Organisation attribute (O) must contain less then 128 characters." }
     require(x500Name.locality.length < 64) { "Locality attribute (L) must contain less then 64 characters." }
 
     x500Name.state?.let { require(it.length < 64) { "State attribute (ST) must contain less then 64 characters." } }
-    x500Name.organisationUnit?.let { require(x500Name.organisationUnit!!.length < 64) { "Organisation Unit attribute (OU) must contain less then 64 characters." } }
-    x500Name.commonName?.let { require(x500Name.commonName!!.length < 64) { "Common Name attribute (CN) must contain less then 64 characters." } }
+    x500Name.organisationUnit?.let { require(it.length < 64) { "Organisation Unit attribute (OU) must contain less then 64 characters." } }
+    x500Name.commonName?.let { require(it.length < 64) { "Common Name attribute (CN) must contain less then 64 characters." } }
 }
 
 private sealed class Rule<in T> {
