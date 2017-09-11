@@ -243,11 +243,14 @@ object X509Utilities {
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
-    internal fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerSigner: ContentSigner,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
-        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
+    internal fun createCertificate(certificateType: CertificateType,
+                                   issuer: X509CertificateHolder,
+                                   issuerSigner: ContentSigner,
+                                   subject: CordaX500Name, subjectPublicKey: PublicKey,
+                                   validityWindow: Pair<Date, Date>,
+                                   nameConstraints: NameConstraints? = null): X509CertificateHolder {
+        val issuerName = CordaX500Name.build(issuer.issuer)
+        val builder = createCertificate(certificateType, issuerName, subject, subjectPublicKey, validityWindow, nameConstraints)
         return builder.build(issuerSigner).apply {
             require(isValidOn(Date()))
         }
@@ -282,12 +285,10 @@ object X509Utilities {
     /**
      * Create certificate signing request using provided information.
      */
-    internal fun createCertificateSigningRequest(subject: X500Name, email: String, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
+    internal fun createCertificateSigningRequest(subject: CordaX500Name, email: String, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
         val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.findProvider(signatureScheme.providerName))
-        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).addAttribute(BCStyle.E, DERUTF8String(email)).build(signer)
+        return JcaPKCS10CertificationRequestBuilder(subject.x500Name, keyPair.public).addAttribute(BCStyle.E, DERUTF8String(email)).build(signer)
     }
-
-    fun createCertificateSigningRequest(subject: X500Name, email: String, keyPair: KeyPair) = createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
 }
 
 

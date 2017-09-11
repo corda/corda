@@ -1,8 +1,8 @@
 package net.corda.node.utilities.registration
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.utilities.cert
 import net.corda.core.internal.*
+import net.corda.core.utilities.cert
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.*
@@ -124,7 +124,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
     private fun submitOrResumeCertificateSigningRequest(keyPair: KeyPair): String {
         // Retrieve request id from file if exists, else post a request to server.
         return if (!requestIdStore.exists()) {
-            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName.x500Name, config.emailAddress, keyPair)
+            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, config.emailAddress, keyPair)
             val writer = StringWriter()
             JcaPEMWriter(writer).use {
                 it.writeObject(PemObject("CERTIFICATE REQUEST", request.encoded))
