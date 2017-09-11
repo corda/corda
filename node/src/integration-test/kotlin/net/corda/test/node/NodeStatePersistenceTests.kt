@@ -1,13 +1,7 @@
 package net.corda.test.node
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Command
-import net.corda.core.contracts.CommandData
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.LinearState
-import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.contracts.requireSingleCommand
-import net.corda.core.contracts.requireThat
+import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -71,7 +65,6 @@ fun isQuasarAgentSpecified(): Boolean {
 data class Message(val value: String)
 
 data class MessageState(val message: Message, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
-    override val contract = MessageContract()
     override val participants: List<AbstractParty> = listOf(by)
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
@@ -103,6 +96,8 @@ object MessageSchemaV1 : MappedSchema(
             var value: String
     ) : PersistentState()
 }
+
+val MESSAGE_CONTRACT_PROGRAM_ID = "net.corda.test.node.MessageContract"
 
 open class MessageContract : Contract {
     override fun verify(tx: LedgerTransaction) {
@@ -146,7 +141,7 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
         val messageState = MessageState(message = message, by = serviceHub.myInfo.legalIdentity)
         val txCommand = Command(MessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
-        val txBuilder = TransactionBuilder(notary).withItems(messageState, txCommand)
+        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), txCommand)
 
         progressTracker.currentStep = VERIFYING_TRANSACTION
         txBuilder.toWireTransaction().toLedgerTransaction(serviceHub).verify()

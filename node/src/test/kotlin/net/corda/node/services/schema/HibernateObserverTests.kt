@@ -12,6 +12,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.MEGA_CORP
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
@@ -72,9 +73,6 @@ class HibernateObserverTests {
             throw UnsupportedOperationException()
         }
 
-        override val contract: Contract
-            get() = throw UnsupportedOperationException()
-
         override val participants: List<AbstractParty>
             get() = throw UnsupportedOperationException()
     }
@@ -101,7 +99,7 @@ class HibernateObserverTests {
         @Suppress("UNUSED_VARIABLE")
         val observer = HibernateObserver(rawUpdatesPublisher, database.hibernateConfig)
         database.transaction {
-            rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
+            rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), DUMMY_PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
             val parentRowCountResult = DatabaseTransactionManager.current().connection.prepareStatement("select count(*) from Parents").executeQuery()
             parentRowCountResult.next()
             val parentRows = parentRowCountResult.getInt(1)

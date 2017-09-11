@@ -224,7 +224,7 @@ object TwoPartyTradeFlow {
             tx.addInputState(assetForSale)
 
             val (command, state) = assetForSale.state.data.withNewOwner(buyerAnonymousIdentity.party)
-            tx.addOutputState(state, assetForSale.state.notary)
+            tx.addOutputState(state, assetForSale.state.contract, assetForSale.state.notary)
             tx.addCommand(command, assetForSale.state.data.owner.owningKey)
 
             // We set the transaction's time-window: it may be that none of the contracts need this!

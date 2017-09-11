@@ -10,13 +10,11 @@ import net.corda.finance.contracts.FixOf
 import java.math.BigDecimal
 import java.time.Instant
 
-val UNIVERSAL_PROGRAM_ID = UniversalContract()
+val UNIVERSAL_PROGRAM_ID = "net.corda.finance.contracts.universal.UniversalContract"
 
 class UniversalContract : Contract {
     data class State(override val participants: List<AbstractParty>,
-                     val details: Arrangement) : ContractState {
-        override val contract = UNIVERSAL_PROGRAM_ID
-    }
+                     val details: Arrangement) : ContractState
 
     interface Commands : CommandData {
 
@@ -317,7 +315,7 @@ class UniversalContract : Contract {
 
     fun generateIssue(tx: TransactionBuilder, arrangement: Arrangement, at: PartyAndReference, notary: Party) {
         check(tx.inputStates().isEmpty())
-        tx.addOutputState(State(listOf(notary), arrangement))
+        tx.addOutputState(State(listOf(notary), arrangement), UNIVERSAL_PROGRAM_ID)
         tx.addCommand(Commands.Issue(), at.party.owningKey)
     }
 }

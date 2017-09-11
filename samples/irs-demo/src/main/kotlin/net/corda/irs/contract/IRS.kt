@@ -20,7 +20,7 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import java.util.*
 
-val IRS_PROGRAM_ID = InterestRateSwap()
+val IRS_PROGRAM_ID = "net.corda.irs.contract.InterestRateSwap"
 
 // This is a placeholder for some types that we haven't identified exactly what they are just yet for things still in discussion
 @CordaSerializable
@@ -605,9 +605,6 @@ class InterestRateSwap : Contract {
             val common: Common,
             override val linearId: UniqueIdentifier = UniqueIdentifier(common.tradeID)
     ) : FixableDealState, SchedulableState {
-
-        override val contract = IRS_PROGRAM_ID
-
         override val oracleType: ServiceType
             get() = NodeInterestRates.Oracle.type
 
@@ -627,7 +624,7 @@ class InterestRateSwap : Contract {
         override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
 
         override fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix) {
-            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, oldState.state.notary), oldState.ref), fix)
+            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, IRS_PROGRAM_ID, oldState.state.notary), oldState.ref), fix)
         }
 
         override fun nextFixingOf(): FixOf? {
@@ -721,7 +718,7 @@ class InterestRateSwap : Contract {
 
         // Put all the above into a new State object.
         val state = State(fixedLeg, floatingLeg, newCalculation, common)
-        return TransactionBuilder(notary).withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
+        return TransactionBuilder(notary).withItems(StateAndContract(state, IRS_PROGRAM_ID), Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
     }
 
     private fun calcFixingDate(date: LocalDate, fixingPeriodOffset: Int, calendar: BusinessCalendar): LocalDate {
@@ -736,6 +733,7 @@ class InterestRateSwap : Contract {
         val fixedRate = FixedRate(RatioUnit(fixing.value))
         tx.addOutputState(
                 irs.state.data.copy(calculation = irs.state.data.calculation.applyFixing(fixing.of.forDay, fixedRate)),
+                irs.state.contract,
                 irs.state.notary
         )
         tx.addCommand(Commands.Refix(fixing), listOf(irs.state.data.floatingLeg.floatingRatePayer.owningKey, irs.state.data.fixedLeg.fixedRatePayer.owningKey))

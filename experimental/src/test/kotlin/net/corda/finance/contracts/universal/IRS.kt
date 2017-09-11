@@ -133,7 +133,7 @@ class IRS {
     @Test
     fun issue() {
         transaction {
-            output { stateInitial }
+            output(UNIVERSAL_PROGRAM_ID) { stateInitial }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -150,8 +150,8 @@ class IRS {
     @Test
     fun `first fixing`() {
         transaction {
-            input { stateInitial }
-            output { stateAfterFixingFirst }
+            input(UNIVERSAL_PROGRAM_ID) { stateInitial }
+            output(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFirst }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -195,9 +195,9 @@ class IRS {
     @Test
     fun `first execute`() {
         transaction {
-            input { stateAfterFixingFirst }
-            output { stateAfterExecutionFirst }
-            output { statePaymentFirst }
+            input(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFirst }
+            output(UNIVERSAL_PROGRAM_ID) { stateAfterExecutionFirst }
+            output(UNIVERSAL_PROGRAM_ID) { statePaymentFirst }
 
             timeWindow(TEST_TX_TIME_1)
 

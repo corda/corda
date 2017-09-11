@@ -68,8 +68,14 @@ data class LedgerTransaction(
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      */
     private fun verifyContracts() {
-        val contracts = (inputs.map { it.state.data.contract } + outputs.map { it.data.contract }).toSet()
-        for (contract in contracts) {
+        val contracts = (inputs.map { it.state.contract } + outputs.map { it.contract }).toSet()
+        for (contractClassName in contracts) {
+            val contract = try {
+                javaClass.classLoader.loadClass(contractClassName).asSubclass(Contract::class.java).getConstructor().newInstance()
+            } catch(e: ClassNotFoundException) {
+                throw TransactionVerificationException.ContractCreationError(id, contractClassName, e)
+            }
+
             try {
                 contract.verify(this)
             } catch(e: Throwable) {

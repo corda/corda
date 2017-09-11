@@ -166,7 +166,7 @@ class Cap {
     @Test
     fun issue() {
         transaction {
-            output { stateInitial }
+            output(UNIVERSAL_PROGRAM_ID) { stateInitial }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -183,8 +183,8 @@ class Cap {
     @Test
     fun `first fixing`() {
         transaction {
-            input { stateInitial }
-            output { stateAfterFixingFirst }
+            input(UNIVERSAL_PROGRAM_ID) { stateInitial }
+            output(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFirst }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -228,9 +228,9 @@ class Cap {
     @Test
     fun `first execute`() {
         transaction {
-            input { stateAfterFixingFirst }
-            output { stateAfterExecutionFirst }
-            output { statePaymentFirst }
+            input(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFirst }
+            output(UNIVERSAL_PROGRAM_ID) { stateAfterExecutionFirst }
+            output(UNIVERSAL_PROGRAM_ID) { statePaymentFirst }
 
             timeWindow(TEST_TX_TIME_1)
 
@@ -248,8 +248,8 @@ class Cap {
     @Test
     fun `final execute`() {
         transaction {
-            input { stateAfterFixingFinal }
-            output { statePaymentFinal }
+            input(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFinal }
+            output(UNIVERSAL_PROGRAM_ID) { statePaymentFinal }
 
             timeWindow(TEST_TX_TIME_1)
 
@@ -267,8 +267,8 @@ class Cap {
     @Test
     fun `second fixing`() {
         transaction {
-            input { stateAfterExecutionFirst }
-            output { stateAfterFixingFinal }
+            input(UNIVERSAL_PROGRAM_ID) { stateAfterExecutionFirst }
+            output(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFinal }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {

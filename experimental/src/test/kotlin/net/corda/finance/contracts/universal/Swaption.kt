@@ -59,7 +59,7 @@ class Swaption {
     @Test
     fun issue() {
         transaction {
-            output { stateInitial }
+            output(UNIVERSAL_PROGRAM_ID) { stateInitial }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {

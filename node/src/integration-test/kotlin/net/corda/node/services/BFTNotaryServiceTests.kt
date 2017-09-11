@@ -23,6 +23,7 @@ import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
@@ -72,7 +73,7 @@ class BFTNotaryServiceTests {
         val notary = bftNotaryCluster(minClusterSize(1), true) // This true adds a sleep to expose the race.
         val f = node.run {
             val trivialTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.legalIdentity))
+                addOutputState(DummyContract.SingleOwnerState(owner = info.legalIdentity), DUMMY_PROGRAM_ID)
             }
             // Create a new consensus while the redundant replica is sleeping:
             services.startFlow(NotaryFlow.Client(trivialTx)).resultFuture
@@ -96,7 +97,7 @@ class BFTNotaryServiceTests {
         val notary = bftNotaryCluster(clusterSize)
         node.run {
             val issueTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.legalIdentity))
+                addOutputState(DummyContract.SingleOwnerState(owner = info.legalIdentity), DUMMY_PROGRAM_ID)
             }
             database.transaction {
                 services.recordTransactions(issueTx)

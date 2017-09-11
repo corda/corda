@@ -43,7 +43,7 @@ import java.util.*
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 class CommercialPaper : Contract {
     companion object {
-        val CP_PROGRAM_ID = CommercialPaper()
+        val CP_PROGRAM_ID = "net.corda.finance.contracts.CommercialPaper"
     }
     data class State(
             val issuance: PartyAndReference,
@@ -51,7 +51,6 @@ class CommercialPaper : Contract {
             val faceValue: Amount<Issued<Currency>>,
             val maturityDate: Instant
     ) : OwnableState, QueryableState, ICommercialPaperState {
-        override val contract = CP_PROGRAM_ID
         override val participants = listOf(owner)
 
         override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
@@ -87,7 +86,6 @@ class CommercialPaper : Contract {
         }
 
         /** @suppress */ infix fun `owned by`(owner: AbstractParty) = copy(owner = owner)
-        /** @suppress */ infix fun `with notary`(notary: Party) = TransactionState(this, notary)
     }
 
     interface Commands : CommandData {
@@ -164,7 +162,7 @@ class CommercialPaper : Contract {
     fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant,
                       notary: Party): TransactionBuilder {
         val state = State(issuance, issuance.party, faceValue, maturityDate)
-        return TransactionBuilder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
+        return TransactionBuilder(notary = notary).withItems(StateAndContract(state, CP_PROGRAM_ID), Command(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**
@@ -172,7 +170,7 @@ class CommercialPaper : Contract {
      */
     fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: AbstractParty) {
         tx.addInputState(paper)
-        tx.addOutputState(paper.state.data.withOwner(newOwner))
+        tx.addOutputState(paper.state.data.withOwner(newOwner), CP_PROGRAM_ID)
         tx.addCommand(Commands.Move(), paper.state.data.owner.owningKey)
     }
 

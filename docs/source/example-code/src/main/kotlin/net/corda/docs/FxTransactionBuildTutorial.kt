@@ -1,10 +1,7 @@
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.withoutIssuer
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
@@ -17,6 +14,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
+import net.corda.finance.contracts.asset.CASH_PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.schemas.CashSchemaV1
 import java.util.*
@@ -184,8 +182,8 @@ class ForeignExchangeFlow(val tradeId: String,
         // Build and add the inputs and outputs
         builder.withItems(*ourInputStates.toTypedArray())
         builder.withItems(*theirInputStates.toTypedArray())
-        builder.withItems(*ourOutputState.toTypedArray())
-        builder.withItems(*theirOutputState.toTypedArray())
+        builder.withItems(*ourOutputState.map { StateAndContract(it, CASH_PROGRAM_ID) }.toTypedArray())
+        builder.withItems(*theirOutputState.map { StateAndContract(it, CASH_PROGRAM_ID) }.toTypedArray())
 
         // We have already validated their response and trust our own data
         // so we can sign. Note the returned SignedTransaction is still not fully signed

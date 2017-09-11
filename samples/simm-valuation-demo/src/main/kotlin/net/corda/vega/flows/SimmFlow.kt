@@ -84,7 +84,7 @@ object SimmFlow {
         private fun agreePortfolio(portfolio: Portfolio) {
             logger.info("Agreeing portfolio")
             val parties = Pair(myIdentity, otherParty)
-            val portfolioState = PortfolioState(portfolio.refs, PortfolioSwap(), parties, valuationDate)
+            val portfolioState = PortfolioState(portfolio.refs, parties, valuationDate)
 
             send(otherParty, OfferMessage(notary, portfolioState, existing?.ref, valuationDate))
             logger.info("Awaiting two party deal acceptor")

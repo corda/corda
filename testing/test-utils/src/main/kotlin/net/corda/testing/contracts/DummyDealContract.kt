@@ -14,17 +14,17 @@ import net.corda.finance.contracts.DealState
 import net.corda.testing.schemas.DummyDealStateSchemaV1
 import java.security.PublicKey
 
+val DUMMY_DEAL_PROGRAM_ID = "net.corda.testing.contracts.DummyDealContract"
+
 class DummyDealContract : Contract {
     override fun verify(tx: LedgerTransaction) {}
 
     data class State(
-            override val contract: Contract,
             override val participants: List<AbstractParty>,
             override val linearId: UniqueIdentifier) : DealState, QueryableState
     {
-        constructor(contract: Contract = DummyDealContract(),
-                    participants: List<AbstractParty> = listOf(),
-                    ref: String) : this(contract, participants, UniqueIdentifier(ref))
+        constructor(participants: List<AbstractParty> = listOf(),
+                    ref: String) : this(participants, UniqueIdentifier(ref))
 
         override fun generateAgreement(notary: Party): TransactionBuilder {
             throw UnsupportedOperationException("not implemented")

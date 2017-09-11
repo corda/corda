@@ -531,16 +531,14 @@ class SerializationOutputTests {
         }
     }
 
+    val FOO_PROGRAM_ID = "net.corda.nodeapi.internal.serialization.amqp.SerializationOutputTests.FooContract"
     class FooState : ContractState {
-        override val contract: Contract
-            get() = FooContract
-        override val participants: List<AbstractParty>
-            get() = emptyList()
+        override val participants: List<AbstractParty> = emptyList()
     }
 
     @Test
     fun `test transaction state`() {
-        val state = TransactionState(FooState(), MEGA_CORP)
+        val state = TransactionState(FooState(), FOO_PROGRAM_ID, MEGA_CORP)
 
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         AbstractAMQPSerializationScheme.registerCustomSerializers(factory)

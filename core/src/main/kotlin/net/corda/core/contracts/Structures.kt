@@ -20,106 +20,6 @@ interface NamedByHash {
     val id: SecureHash
 }
 
-// DOCSTART 1
-/**
- * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
- * file that the program can use to persist data across transactions. States are immutable: once created they are never
- * updated, instead, any changes must generate a new successor state. States can be updated (consumed) only once: the
- * notary is responsible for ensuring there is no "double spending" by only signing a transaction if the input states
- * are all free.
- */
-@CordaSerializable
-interface ContractState {
-    /**
-     * An instance of the contract class that will verify this state.
-     *
-     * # Discussion
-     *
-     * This field is not the final design, it's just a piece of temporary scaffolding. Once the contract sandbox is
-     * further along, this field will become a description of which attachments are acceptable for defining the
-     * contract.
-     *
-     * Recall that an attachment is a zip file that can be referenced from any transaction. The contents of the
-     * attachments are merged together and cannot define any overlapping files, thus for any given transaction there
-     * is a miniature file system in which each file can be precisely mapped to the defining attachment.
-     *
-     * Attachments may contain many things (data files, legal documents, etc) but mostly they contain JVM bytecode.
-     * The class files inside define not only [Contract] implementations but also the classes that define the states.
-     * Within the rest of a transaction, user-providable components are referenced by name only.
-     *
-     * This means that a smart contract in Corda does two things:
-     *
-     * 1. Define the data structures that compose the ledger (the states)
-     * 2. Define the rules for updating those structures
-     *
-     * The first is merely a utility role ... in theory contract code could manually parse byte streams by hand.
-     * The second is vital to the integrity of the ledger. So this field needs to be able to express constraints like:
-     *
-     * - Only attachment 733c350f396a727655be1363c06635ba355036bd54a5ed6e594fd0b5d05f42f6 may be used with this state.
-     * - Any attachment signed by public key 2d1ce0e330c52b8055258d776c40 may be used with this state.
-     * - Attachments (1, 2, 3) may all be used with this state.
-     *
-     * and so on. In this way it becomes possible for the business logic governing a state to be evolved, if the
-     * constraints are flexible enough.
-     *
-     * Because contract classes often also define utilities that generate relevant transactions, and because attachments
-     * cannot know their own hashes, we will have to provide various utilities to assist with obtaining the right
-     * code constraints from within the contract code itself.
-     *
-     * TODO: Implement the above description. See COR-226
-     */
-    val contract: Contract
-
-    /**
-     * A _participant_ is any party that is able to consume this state in a valid transaction.
-     *
-     * The list of participants is required for certain types of transactions. For example, when changing the notary
-     * for this state, every participant has to be involved and approve the transaction
-     * so that they receive the updated state, and don't end up in a situation where they can no longer use a state
-     * they possess, since someone consumed that state during the notary change process.
-     *
-     * The participants list should normally be derived from the contents of the state.
-     */
-    val participants: List<AbstractParty>
-}
-// DOCEND 1
-
-// DOCSTART 4
-/**
- * A wrapper for [ContractState] containing additional platform-level state information.
- * This is the definitive state that is stored on the ledger and used in transaction outputs.
- */
-@CordaSerializable
-data class TransactionState<out T : ContractState> @JvmOverloads constructor(
-        /** The custom contract state */
-        val data: T,
-        /** Identity of the notary that ensures the state is not used as an input to a transaction more than once */
-        val notary: Party,
-        /**
-         * All contract states may be _encumbered_ by up to one other state.
-         *
-         * The encumbrance state, if present, forces additional controls over the encumbered state, since the platform checks
-         * that the encumbrance state is present as an input in the same transaction that consumes the encumbered state, and
-         * the contract code and rules of the encumbrance state will also be verified during the execution of the transaction.
-         * For example, a cash contract state could be encumbered with a time-lock contract state; the cash state is then only
-         * processable in a transaction that verifies that the time specified in the encumbrance time-lock has passed.
-         *
-         * The encumbered state refers to another by index, and the referred encumbrance state
-         * is an output state in a particular position on the same transaction that created the encumbered state. An alternative
-         * implementation would be encumbering by reference to a [StateRef], which would allow the specification of encumbrance
-         * by a state created in a prior transaction.
-         *
-         * Note that an encumbered state that is being consumed must have its encumbrance consumed in the same transaction,
-         * otherwise the transaction is not valid.
-         */
-        val encumbrance: Int? = null)
-// DOCEND 4
-
-/** Wraps the [ContractState] in a [TransactionState] object */
-infix fun <T : ContractState> T.`with notary`(newNotary: Party) = withNotary(newNotary)
-
-infix fun <T : ContractState> T.withNotary(newNotary: Party) = TransactionState(this, newNotary)
-
 /**
  * The [Issued] data class holds the details of an on ledger digital asset.
  * In particular it gives the public credentials of the entity that created these digital tokens
@@ -250,7 +150,7 @@ data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, va
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
 inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
-    return mapNotNull { if (it.state.data is T) StateAndRef(TransactionState(it.state.data, it.state.notary), it.ref) else null }
+    return mapNotNull { if (it.state.data is T) StateAndRef(TransactionState(it.state.data, it.state.contract, it.state.notary), it.ref) else null }
 }
 
 /**
@@ -297,7 +197,7 @@ interface MoveCommand : CommandData {
 }
 
 /** Indicates that this transaction replaces the inputs contract state to another contract state */
-data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<*, *>>) : CommandData
+data class UpgradeCommand(val upgradedContractClass: ContractClassName) : CommandData
 
 // DOCSTART 6
 /** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key. */
@@ -345,7 +245,7 @@ annotation class LegalProseReference(val uri: String)
  * @param NewState the upgraded contract state.
  */
 interface UpgradedContract<in OldState : ContractState, out NewState : ContractState> : Contract {
-    val legacyContract: Class<out Contract>
+    val legacyContract: ContractClassName
     /**
      * Upgrade contract's state object to a new state object.
      *
@@ -374,3 +274,11 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
         require(!bytes.all { it == 0.toByte() }) { "Privacy salt should not be all zeros." }
     }
 }
+
+/**
+ * A convenience class for passing around a state and it's contract
+ *
+ * @property state A state
+ * @property contract The contract that should verify the state
+ */
+data class StateAndContract(val state: ContractState, val contract: ContractClassName)

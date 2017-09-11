@@ -26,6 +26,8 @@ enum class WorkflowState {
     REJECTED
 }
 
+val TRADE_APPROVAL_PROGRAM_ID = "net.corda.docs.TradeApprovalContract"
+
 /**
  * Minimal contract to encode a simple workflow with one initial state and two possible eventual states.
  * It is assumed one party unilaterally submits and the other manually retrieves the deal and completes it.
@@ -44,9 +46,7 @@ data class TradeApprovalContract(val blank: Unit? = null) : Contract {
                      val source: Party,
                      val counterparty: Party,
                      val state: WorkflowState = WorkflowState.NEW,
-                     override val linearId: UniqueIdentifier = UniqueIdentifier(tradeId),
-                     override val contract: TradeApprovalContract = TradeApprovalContract()) : LinearState {
-
+                     override val linearId: UniqueIdentifier = UniqueIdentifier(tradeId)) : LinearState {
         val parties: List<Party> get() = listOf(source, counterparty)
         override val participants: List<AbstractParty> get() = parties
     }
@@ -108,7 +108,7 @@ class SubmitTradeApprovalFlow(val tradeId: String,
         val notary = serviceHub.networkMapCache.getAnyNotary()
         // Create the TransactionBuilder and populate with the new state.
         val tx = TransactionBuilder(notary)
-                .withItems(tradeProposal, Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
+                .withItems(StateAndContract(tradeProposal, TRADE_APPROVAL_PROGRAM_ID), Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
         tx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)
         // We can automatically sign as there is no untrusted data.
         val signedTx = serviceHub.signInitialTransaction(tx)
@@ -168,7 +168,7 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
         val tx = TransactionBuilder(notary).
                 withItems(
                         latestRecord,
-                        newState,
+                        StateAndContract(newState, TRADE_APPROVAL_PROGRAM_ID),
                         Command(TradeApprovalContract.Commands.Completed(),
                                 listOf(serviceHub.myInfo.legalIdentity.owningKey, latestRecord.state.data.source.owningKey)))
         tx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)

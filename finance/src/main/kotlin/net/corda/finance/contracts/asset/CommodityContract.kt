@@ -33,7 +33,7 @@ import java.util.*
 class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, CommodityContract.State>() {
     companion object {
         // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
-        val COMMODITY_PROGRAM_ID = CommodityContract()
+        val COMMODITY_PROGRAM_ID = "net.corda.finance.contracts.asset.CommodityContract"
     }
 
     /** A state representing a commodity claim against some party */
@@ -45,8 +45,6 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     ) : FungibleAsset<Commodity> {
         constructor(deposit: PartyAndReference, amount: Amount<Commodity>, owner: AbstractParty)
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
-
-        override val contract = COMMODITY_PROGRAM_ID
         override val exitKeys: Set<PublicKey> = Collections.singleton(owner.owningKey)
         override val participants = listOf(owner)
 
@@ -160,7 +158,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Commodity>>, owner: AbstractParty, notary: Party)
-            = generateIssue(tx, TransactionState(State(amount, owner), notary), Commands.Issue())
+            = generateIssue(tx, TransactionState(State(amount, owner), COMMODITY_PROGRAM_ID, notary), Commands.Issue())
 
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Commodity>>, owner: AbstractParty)
