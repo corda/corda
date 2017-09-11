@@ -72,7 +72,7 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `get identity by name`() {
         val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
-        val identities = listOf("Node A", "Node B", "Node C")
+        val identities = listOf("Org A", "Org B", "Org C")
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
         assertNull(service.partyFromX500Name(identities.first().name))
         identities.forEach { service.verifyAndRegisterIdentity(it) }
