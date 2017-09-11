@@ -56,7 +56,7 @@ class CustomVaultQueryTest {
         issueCashForCurrency(SWISS_FRANCS(800))
         val (cashBalancesOriginal, _) = getBalances()
 
-        // top up all currencies (by double original)Fore
+        // top up all currencies (by double original)
         topUpCurrencies()
         val (cashBalancesAfterTopup, _) = getBalances()
 
