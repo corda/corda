@@ -95,10 +95,10 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     fun `dynamically load AnotherDummyContract from isolated contracts jar`() {
         val child = ClassLoaderForTests()
 
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
         val contract = contractClass.newInstance() as Contract
 
-        assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.declaredField<Any?>("legalContractReference").value)
+        assertEquals(SecureHash.sha256("helloworld"), contract.declaredField<Any?>("magicString").value)
     }
 
     fun fakeAttachment(filepath: String, content: String): ByteArray {
@@ -186,10 +186,10 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl)
+        val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, cl)
         val contract = contractClass.newInstance() as Contract
         assertEquals(cl, contract.javaClass.classLoader)
-        assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.declaredField<Any?>("legalContractReference").value)
+        assertEquals(SecureHash.sha256("helloworld"), contract.declaredField<Any?>("magicString").value)
     }
 
 
@@ -203,7 +203,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
     fun createContract2Cash(): Contract {
         val cl = ClassLoaderForTests()
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl)
+        val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, cl)
         return contractClass.newInstance() as Contract
     }
 
@@ -306,7 +306,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     @Test
     fun `test serialization of WireTransaction with dynamically loaded contract`() {
         val child = ClassLoaderForTests()
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val storage = MockAttachmentStorage()
@@ -365,7 +365,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     @Test
     fun `test loading a class from attachment during deserialization`() {
         val child = ClassLoaderForTests()
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val storage = MockAttachmentStorage()
         val attachmentRef = importJar(storage)
@@ -382,7 +382,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     @Test
     fun `test loading a class with attachment missing during deserialization`() {
         val child = ClassLoaderForTests()
-        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val storage = MockAttachmentStorage()
         val attachmentRef = SecureHash.randomSHA256()
