@@ -1,6 +1,7 @@
 package net.corda.core.identity
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.*
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.X500Name
@@ -14,7 +15,7 @@ import org.bouncycastle.asn1.x500.style.BCStyle
  *
  * @property commonName optional name by the which the entity is usually known. Used only for services (for
  * organisations, the [organisation] property is the name). Corresponds to the "CN" attribute type.
- * @property organisationalUnit optional name of a unit within the [organisation]. Corresponds to the "OU" attribute type.
+ * @property organisationUnit optional name of a unit within the [organisation]. Corresponds to the "OU" attribute type.
  * @property organisation name of the organisation. Corresponds to the "O" attribute type.
  * @property locality locality of the organisation, typically nearest major city. For distributed services this would be
  * where one of the organisations is based. Corresponds to the "L" attribute type.
@@ -25,13 +26,26 @@ import org.bouncycastle.asn1.x500.style.BCStyle
  */
 @CordaSerializable
 data class CordaX500Name(val commonName: String?,
-                         val organisationalUnit: String?,
-                         val organisation: String,
-                         val locality: String,
-                         val state: String?,
-                         val country: String) {
+                    val organisationUnit: String?,
+                    val organisation: String,
+                    val locality: String,
+                    val state: String?,
+                    val country: String) {
     init {
-        // TODO: validateX500Name(config.myLegalName)
+        // Legal name checks.
+        validateLegalName(organisation)
+
+        // Attribute data width checks.
+        require(country.length == LENGTH_COUNTRY) { "Invalid country '$country' Country code must be 2 letters ISO code " }
+        require(country.toUpperCase() == country) { "Country code should be in upper case." }
+        require(countryCodes.contains(country)) { "Invalid country code '${x500Name.country}'" }
+
+        require(organisation.length < MAX_LENGTH_ORGANISATION) { "Organisation attribute (O) must contain less then $MAX_LENGTH_ORGANISATION characters." }
+        require(locality.length < MAX_LENGTH_LOCALITY) { "Locality attribute (L) must contain less then $MAX_LENGTH_LOCALITY characters." }
+
+        state?.let { require(it.length < MAX_LENGTH_STATE) { "State attribute (ST) must contain less then $MAX_LENGTH_STATE characters." } }
+        organisationUnit?.let { require(it.length < MAX_LENGTH_ORGANISATION_UNIT) { "Organisation Unit attribute (OU) must contain less then $MAX_LENGTH_ORGANISATION_UNIT characters." } }
+        commonName?.let { require(it.length < MAX_LENGTH_COMMON_NAME) { "Common Name attribute (CN) must contain less then $MAX_LENGTH_COMMON_NAME characters." } }
     }
     constructor(commonName: String, organisation: String, locality: String, country: String) : this(null, commonName, organisation, locality, null, country)
     /**
@@ -42,24 +56,36 @@ data class CordaX500Name(val commonName: String?,
     constructor(organisation: String, locality: String, country: String) : this(null, null, organisation, locality, null, country)
 
     companion object {
-        val VALID_ATTRIBUTE_TYPES = setOf(BCStyle.CN, BCStyle.OU, BCStyle.O, BCStyle.L, BCStyle.ST, BCStyle.C)
-        val REQUIRED_ATTRIBUTE_TYPES = setOf(BCStyle.O, BCStyle.L, BCStyle.C)
+        const val LENGTH_COUNTRY = 2
+        const val MAX_LENGTH_ORGANISATION = 128
+        const val MAX_LENGTH_LOCALITY = 64
+        const val MAX_LENGTH_STATE = 64
+        const val MAX_LENGTH_ORGANISATION_UNIT = 64
+        const val MAX_LENGTH_COMMON_NAME = 64
+        private val mandatoryAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L)
+        private val supportedAttributes = mandatoryAttributes + setOf(BCStyle.CN, BCStyle.ST, BCStyle.OU)
 
         @JvmStatic
-        fun build(x500: X500Name) : CordaX500Name {
-            val attrsMap = HashMap<ASN1ObjectIdentifier, ASN1Encodable>()
-            x500.rdNs.forEach { rdn ->
-                require(!rdn.isMultiValued) { "Corda X.500 names must not include multi-valued attributes" }
-                val attr = rdn.first
-                if (attr.type in VALID_ATTRIBUTE_TYPES) {
-                    attrsMap[attr.type] = attr.value
-                } else {
-                    throw IllegalArgumentException("Corda X.500 names do not support the ${attr.type.id} attribute.")
-                }
+        fun build(x500Name: X500Name) : CordaX500Name {
+            val rDNs = x500Name.rdNs.flatMap { it.typesAndValues.toList() }
+            val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = rDNs.map { Pair(it.type, it.value) }.toMap()
+            val attributes = attrsMap.keys
+
+            // Duplicate attribute value checks.
+            require(attributes.size == attributes.toSet().size) { "X500Name contain duplicate attribute." }
+
+            // Mandatory attribute checks.
+            require(attributes.containsAll(mandatoryAttributes)) {
+                val missingAttributes = mandatoryAttributes.subtract(attributes).map { BCStyle.INSTANCE.oidToDisplayName(it) }
+                "The following attribute${if (missingAttributes.size > 1) "s are" else " is"} missing from the legal name : $missingAttributes"
             }
-            REQUIRED_ATTRIBUTE_TYPES.forEach { attrType ->
-                require(attrType in attrsMap.keys) { "Corda X.500 names must include an $attrType attribute" }
+
+            // Supported attribute checks.
+            require(attributes.subtract(supportedAttributes).isEmpty()) {
+                val unsupportedAttributes = attributes.subtract(supportedAttributes).map { BCStyle.INSTANCE.oidToDisplayName(it) }
+                "The following attribute${if (unsupportedAttributes.size > 1) "s are" else " is"} not supported in Corda :$unsupportedAttributes"
             }
+
             val CN = attrsMap[BCStyle.CN]?.toString()
             val OU = attrsMap[BCStyle.OU]?.toString()
             val O = attrsMap[BCStyle.O]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
@@ -70,17 +96,6 @@ data class CordaX500Name(val commonName: String?,
         }
         @JvmStatic
         fun parse(name: String) : CordaX500Name = build(X500Name(name))
-
-        private fun appendAttr(builder: StringBuilder, id: ASN1ObjectIdentifier, value: String?): StringBuilder {
-            if (value != null) {
-                if (builder.isNotEmpty()) {
-                    builder.append(",")
-                }
-                // TODO: Should we be doing any encoding of values?
-                builder.append(id.id).append("=").append(value)
-            }
-            return builder
-        }
     }
 
     @Transient
@@ -100,7 +115,7 @@ data class CordaX500Name(val commonName: String?,
                     state?.let { addRDN(BCStyle.ST, it) }
                     addRDN(BCStyle.L, locality)
                     addRDN(BCStyle.O, organisation)
-                    organisationalUnit?.let { addRDN(BCStyle.OU, it) }
+                    organisationUnit?.let { addRDN(BCStyle.OU, it) }
                     commonName?.let { addRDN(BCStyle.CN, it) }
                 }.build()
             }

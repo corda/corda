@@ -1,5 +1,6 @@
 package net.corda.core.utilities
 
+import net.corda.core.identity.CordaX500Name
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -103,30 +104,30 @@ class LegalNameValidatorTest {
 
     @Test
     fun `validate x500Name`() {
-        validateX500Name(X500Name("O=Bank A, L=New York, C=US, OU=Org Unit, CN=Service Name"))
-        validateX500Name(X500Name("O=Bank A, L=New York, C=US, CN=Service Name"))
-        validateX500Name(X500Name("O=Bank A, L=New York, C=US"))
-        validateX500Name(X500Name("O=Bank A, L=New York, C=US"))
+        CordaX500Name.parse("O=Bank A, L=New York, C=US, OU=Org Unit, CN=Service Name")
+        CordaX500Name.parse("O=Bank A, L=New York, C=US, CN=Service Name")
+        CordaX500Name.parse("O=Bank A, L=New York, C=US")
+        CordaX500Name.parse("O=Bank A, L=New York, C=US")
 
         // Missing Organisation
         assertFailsWith(IllegalArgumentException::class) {
-            validateX500Name(X500Name("L=New York, C=US, OU=Org Unit, CN=Service Name"))
+            CordaX500Name.parse("L=New York, C=US, OU=Org Unit, CN=Service Name")
         }
         // Missing Locality
         assertFailsWith(IllegalArgumentException::class) {
-            validateX500Name(X500Name("O=Bank A, C=US, OU=Org Unit, CN=Service Name"))
+            CordaX500Name.parse("O=Bank A, C=US, OU=Org Unit, CN=Service Name")
         }
         // Missing Country
         assertFailsWith(IllegalArgumentException::class) {
-            validateX500Name(X500Name("O=Bank A, L=New York, OU=Org Unit, CN=Service Name"))
+            CordaX500Name.parse("O=Bank A, L=New York, OU=Org Unit, CN=Service Name")
         }
         // Wrong organisation name format
         assertFailsWith(IllegalArgumentException::class) {
-            validateX500Name(X500Name("O=B, L=New York, C=US, OU=Org Unit, CN=Service Name"))
+            CordaX500Name.parse("O=B, L=New York, C=US, OU=Org Unit, CN=Service Name")
         }
         // Wrong organisation name format
         assertFailsWith(IllegalArgumentException::class) {
-            validateX500Name(X500Name("O=B, L=New York, C=US, OU=Org Unit, CN=Service Name"))
+            CordaX500Name.parse("O=B, L=New York, C=US, OU=Org Unit, CN=Service Name")
         }
     }
 }

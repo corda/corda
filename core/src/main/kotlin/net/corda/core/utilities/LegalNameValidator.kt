@@ -2,8 +2,6 @@
 
 package net.corda.core.utilities
 
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.style.BCStyle
 import java.lang.Character.UnicodeScript.*
 import java.text.Normalizer
 import java.util.regex.Pattern
@@ -35,57 +33,6 @@ fun normaliseLegalName(legalName: String): String {
 }
 
 val WHITESPACE = "\\s++".toRegex()
-
-private val mandatoryAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L)
-private val supportedAttributes = mandatoryAttributes + setOf(BCStyle.CN, BCStyle.ST, BCStyle.OU)
-
-/**
- * Validate X500Name according to Corda X500Name specification
- *
- * Supported attributes:
- * - organisation (O) – VARCHAR(127)
- * - state (ST) – VARCHAR(64) nullable
- * - locality (L) – VARCHAR(64)
- * - country (C) – VARCHAR(2)  - ISO code of the country in which it is registered
- * - organizational-unit (OU) – VARCHAR(64) nullable
- * - common name (CN) – VARCHAR(64)
- *
- * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
- * @see <a href="https://r3-cev.atlassian.net/wiki/spaces/AWG/pages/129206341/Distinguished+name+structure">Design Doc</a>.
- */
-fun validateX500Name(x500Name: X500Name) {
-    val rDNs = x500Name.rdNs.flatMap { it.typesAndValues.asList() }
-    val attributes = rDNs.map { it.type }
-
-    // Duplicate attribute value checks.
-    require(attributes.size == attributes.toSet().size) { "X500Name contain duplicate attribute." }
-
-    // Mandatory attribute checks.
-    require(attributes.containsAll(mandatoryAttributes)) {
-        val missingAttributes = mandatoryAttributes.subtract(attributes).map { BCStyle.INSTANCE.oidToDisplayName(it) }
-        "The following attribute${if (missingAttributes.size > 1) "s are" else " is"} missing from the legal name : $missingAttributes"
-    }
-
-    // Supported attribute checks.
-    require(attributes.subtract(supportedAttributes).isEmpty()) {
-        val unsupportedAttributes = attributes.subtract(supportedAttributes).map { BCStyle.INSTANCE.oidToDisplayName(it) }
-        "The following attribute${if (unsupportedAttributes.size > 1) "s are" else " is"} not supported in Corda :$unsupportedAttributes"
-    }
-    // Legal name checks.
-    validateLegalName(x500Name.organisation)
-
-    // Attribute data width checks.
-    require(x500Name.country.length == 2) { "Invalid country '${x500Name.country}' Country code must be 2 letters ISO code " }
-    require(x500Name.country.toUpperCase() == x500Name.country) { "Country code should be in upper case." }
-    require(countryCodes.contains(x500Name.country)) { "Invalid country code '${x500Name.country}'" }
-
-    require(x500Name.organisation.length < 128) { "Organisation attribute (O) must contain less then 128 characters." }
-    require(x500Name.locality.length < 64) { "Locality attribute (L) must contain less then 64 characters." }
-
-    x500Name.state?.let { require(it.length < 64) { "State attribute (ST) must contain less then 64 characters." } }
-    x500Name.organisationUnit?.let { require(it.length < 64) { "Organisation Unit attribute (OU) must contain less then 64 characters." } }
-    x500Name.commonName?.let { require(it.length < 64) { "Common Name attribute (CN) must contain less then 64 characters." } }
-}
 
 private sealed class Rule<in T> {
     companion object {
