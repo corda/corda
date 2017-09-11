@@ -22,6 +22,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import net.corda.core.utilities.unwrap
 
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
     val partiesList = listOf(DUMMY_NOTARY, ALICE, BOB)

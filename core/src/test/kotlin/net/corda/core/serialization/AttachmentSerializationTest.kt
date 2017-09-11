@@ -29,6 +29,7 @@ import java.security.KeyPair
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.assertEquals
+import net.corda.core.utilities.unwrap
 
 private fun createAttachmentData(content: String) = ByteArrayOutputStream().apply {
     ZipOutputStream(this).use {

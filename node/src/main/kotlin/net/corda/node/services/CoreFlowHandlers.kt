@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 
 // TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
 //       includes us in any outside that list. Potentially just if it includes any outside that list at all.

@@ -6,6 +6,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.Party
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 
 /**
  * Very basic flow which exchanges transaction key and certificate paths between two parties in a transaction.

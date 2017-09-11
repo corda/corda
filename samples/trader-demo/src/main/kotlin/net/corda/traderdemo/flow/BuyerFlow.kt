@@ -14,6 +14,7 @@ import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.TwoPartyTradeFlow
 import net.corda.traderdemo.TransactionGraphSearch
 import java.util.*
+import net.corda.core.utilities.unwrap
 
 @InitiatedBy(SellerFlow::class)
 class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {

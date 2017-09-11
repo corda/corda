@@ -15,7 +15,7 @@ import java.io.Serializable
  * - Are any objects *reachable* from this object mismatched or not what you expected?
  * - Is it suspiciously large or small?
  */
-class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
+class UntrustworthyData<out T>(@PublishedApi internal val fromUntrustedWorld: T) {
     @Suspendable
     @Throws(FlowException::class)
     fun <R> unwrap(validator: Validator<T, R>) = validator.validate(fromUntrustedWorld)
@@ -26,8 +26,6 @@ class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
         @Throws(FlowException::class)
         fun validate(data: T): R
     }
-
-    @Suspendable
-    @Throws(FlowException::class)
-    fun <R> unwrap(validator: (T) -> R): R = validator(fromUntrustedWorld)
 }
+
+inline fun <T, R> UntrustworthyData<T>.unwrap(validator: (T) -> R): R = validator(fromUntrustedWorld)

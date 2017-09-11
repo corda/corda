@@ -35,6 +35,7 @@ import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
+import net.corda.core.utilities.unwrap
 
 /**
  * Runs a series of MQ-related attacks against a node. Subclasses need to call [startAttacker] to connect

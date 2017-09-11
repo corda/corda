@@ -63,6 +63,7 @@ import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import net.corda.core.utilities.unwrap
 
 /**
  * In this example, Alice wishes to sell her commercial paper to Bob in return for $1,000,000 and they wish to do

@@ -16,6 +16,7 @@ import net.corda.nodeapi.User
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import net.corda.core.utilities.unwrap
 
 class CordappScanningDriverTest {
     @Test

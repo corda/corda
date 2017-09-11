@@ -20,6 +20,7 @@ import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import java.util.*
+import net.corda.core.utilities.unwrap
 
 // DOCSTART CustomVaultQuery
 object CustomVaultQuery {

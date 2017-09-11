@@ -16,6 +16,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.unwrap
 
 // Minimal state model of a manual approval process
 @CordaSerializable

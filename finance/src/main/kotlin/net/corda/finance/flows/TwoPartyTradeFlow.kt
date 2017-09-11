@@ -15,6 +15,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.utils.sumCashBy
 import java.security.PublicKey

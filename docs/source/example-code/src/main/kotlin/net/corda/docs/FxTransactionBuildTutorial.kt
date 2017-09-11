@@ -19,6 +19,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.schemas.CashSchemaV1
 import java.util.*
+import net.corda.core.utilities.unwrap
 
 @CordaSerializable
 private data class FxRequest(val tradeId: String,

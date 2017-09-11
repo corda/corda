@@ -11,6 +11,7 @@ import net.corda.testing.BOB
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import net.corda.core.utilities.unwrap
 
 class FlowVersioningTest : NodeBasedTest() {
     @Test

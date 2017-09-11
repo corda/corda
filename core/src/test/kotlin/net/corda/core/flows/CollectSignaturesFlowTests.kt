@@ -17,6 +17,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.reflect.KClass
 import kotlin.test.assertFailsWith
+import net.corda.core.utilities.unwrap
 
 class CollectSignaturesFlowTests {
     lateinit var mockNet: MockNetwork

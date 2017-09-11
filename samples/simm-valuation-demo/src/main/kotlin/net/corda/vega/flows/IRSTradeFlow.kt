@@ -12,6 +12,7 @@ import net.corda.finance.flows.TwoPartyDealFlow
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.OGTrade
 import net.corda.vega.contracts.SwapData
+import net.corda.core.utilities.unwrap
 
 object IRSTradeFlow {
     @CordaSerializable

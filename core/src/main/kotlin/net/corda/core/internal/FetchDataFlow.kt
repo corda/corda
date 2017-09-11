@@ -18,6 +18,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
 import java.util.*
+import net.corda.core.utilities.unwrap
 
 /**
  * An abstract flow for fetching typed data from a remote peer.

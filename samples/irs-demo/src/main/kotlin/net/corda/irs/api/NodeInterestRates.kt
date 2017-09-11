@@ -34,6 +34,7 @@ import kotlin.collections.HashSet
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
+import net.corda.core.utilities.unwrap
 
 /**
  * An interest rates service is an oracle that signs transactions which contain embedded assertions about an interest

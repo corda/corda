@@ -7,6 +7,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.utilities.unwrap
 
 class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSide, service) {
     /**

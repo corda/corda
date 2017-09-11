@@ -17,6 +17,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import net.corda.core.utilities.unwrap
 
 class IdentitySyncFlowTests {
     lateinit var mockNet: MockNetwork

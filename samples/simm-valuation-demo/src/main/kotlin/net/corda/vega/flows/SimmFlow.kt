@@ -24,6 +24,7 @@ import net.corda.vega.contracts.*
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import java.time.LocalDate
+import net.corda.core.utilities.unwrap
 
 /**
  * The Simm Flow is between two parties that both agree on a portfolio of trades to run valuations on. Both sides

@@ -10,6 +10,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
 /**

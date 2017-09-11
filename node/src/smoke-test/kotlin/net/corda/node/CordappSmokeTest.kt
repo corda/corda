@@ -1,7 +1,11 @@
 package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowContext
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
@@ -18,6 +22,7 @@ import org.junit.Test
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.streams.toList
+import net.corda.core.utilities.unwrap
 
 class CordappSmokeTest {
     private companion object {
