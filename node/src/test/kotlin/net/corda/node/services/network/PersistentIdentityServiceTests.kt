@@ -107,7 +107,7 @@ class PersistentIdentityServiceTests {
 
     @Test
     fun `get identity by name`() {
-        val identities = listOf("Node A", "Node B", "Node C")
+        val identities = listOf("Organisation A", "Organisation B", "Organisation C")
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
         database.transaction {
             assertNull(identityService.partyFromX500Name(identities.first().name))
