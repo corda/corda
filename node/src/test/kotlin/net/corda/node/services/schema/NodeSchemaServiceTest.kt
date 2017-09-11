@@ -1,31 +1,23 @@
 package net.corda.node.services.schema
 
+import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.messaging.startFlow
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import javax.persistence.*
 import kotlin.test.assertTrue
 
 class NodeSchemaServiceTest {
-
-    @Before
-    fun setUp() {
-
-    }
-
-    @After
-    fun cleanUp() {
-
-    }
-
     /**
      * Note: this test requires explicitly registering custom contract schemas with a MockNode
      */
@@ -51,8 +43,19 @@ class NodeSchemaServiceTest {
     fun `auto scanning of custom schemas for testing with Driver`() {
         driver (startNodesInProcess = true) {
             val node = startNode()
-            val nodeHandle = node.toCompletableFuture().getOrThrow()
-            nodeHandle.rpc
+            val nodeHandle = node.getOrThrow()
+            val result = nodeHandle.rpc.startFlow(::MappedSchemasFlow)
+            val mappedSchemas = result.returnValue.getOrThrow()
+            assertTrue(mappedSchemas.contains(TestSchema.name))
+        }
+    }
+
+    @StartableByRPC
+    class MappedSchemasFlow : FlowLogic<List<String>>() {
+        @Suspendable
+        override fun call() : List<String> {
+            // returning MappedSchema's as String'ified family names to avoid whitelist serialization errors
+            return (this.serviceHub as ServiceHubInternal).schemaService.schemaOptions.keys.map { it.name }
         }
     }
 }
