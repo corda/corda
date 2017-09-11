@@ -8,7 +8,7 @@ class EnumClassTests : AmqpCarpenterBase() {
 
     @Test
     fun oneValue() {
-        val enumConstants = mapOf ("A" to EnumField())
+        val enumConstants = mapOf("A" to EnumField())
 
         val schema = EnumSchema("gen.enum", enumConstants)
 
@@ -17,7 +17,7 @@ class EnumClassTests : AmqpCarpenterBase() {
 
     @Test
     fun oneValueInstantiate() {
-        val enumConstants = mapOf ("A" to EnumField())
+        val enumConstants = mapOf("A" to EnumField())
         val schema = EnumSchema("gen.enum", enumConstants)
         val clazz = cc.build(schema)
 
@@ -30,7 +30,7 @@ class EnumClassTests : AmqpCarpenterBase() {
 
     @Test
     fun twoValuesInstantiate() {
-        val enumConstants = mapOf ("left" to EnumField(), "right" to EnumField())
+        val enumConstants = mapOf("left" to EnumField(), "right" to EnumField())
         val schema = EnumSchema("gen.enum", enumConstants)
         val clazz = cc.build(schema)
 
@@ -70,12 +70,12 @@ class EnumClassTests : AmqpCarpenterBase() {
         val schema = EnumSchema("gen.enum", enumConstants)
         val clazz = cc.build(schema)
 
-        assertEquals("CCC", clazz.getMethod("valueOf", String::class.java).invoke (null, "CCC").toString())
-        assertEquals("CCC", (clazz.getMethod("valueOf", String::class.java).invoke (null, "CCC") as Enum<*>).name)
+        assertEquals("CCC", clazz.getMethod("valueOf", String::class.java).invoke(null, "CCC").toString())
+        assertEquals("CCC", (clazz.getMethod("valueOf", String::class.java).invoke(null, "CCC") as Enum<*>).name)
 
-        val ddd = clazz.getMethod("valueOf", String::class.java).invoke (null, "DDD") as Enum<*>
+        val ddd = clazz.getMethod("valueOf", String::class.java).invoke(null, "DDD") as Enum<*>
 
-        assertTrue (ddd::class.java.isEnum)
+        assertTrue(ddd::class.java.isEnum)
         assertEquals("DDD", ddd.name)
         assertEquals(3, ddd.ordinal)
     }
@@ -91,7 +91,7 @@ class EnumClassTests : AmqpCarpenterBase() {
 
         val enumClazz = cc2.build(schema1)
 
-        val schema2 = ClassSchema ("gen.class",
+        val schema2 = ClassSchema("gen.class",
                 mapOf(
                         "a" to NonNullableField(Int::class.java),
                         "b" to NonNullableField(enumClazz)))

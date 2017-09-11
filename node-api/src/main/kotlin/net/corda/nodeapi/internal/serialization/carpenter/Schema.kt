@@ -17,12 +17,11 @@ abstract class Schema(
         var fields: Map<String, Field>,
         val superclass: Schema? = null,
         val interfaces: List<Class<*>> = emptyList(),
-        updater : (String, Field) -> Unit)
-{
+        updater: (String, Field) -> Unit) {
     private fun Map<String, Field>.descriptors() = LinkedHashMap(this.mapValues { it.value.descriptor })
 
     init {
-        fields.forEach { updater (it.key, it.value) }
+        fields.forEach { updater(it.key, it.value) }
 
         // Fix the order up front if the user didn't, inject the name into the field as it's
         // neater when iterating
@@ -54,7 +53,7 @@ class ClassSchema(
         interfaces: List<Class<*>> = emptyList()
 ) : Schema(name, fields, superclass, interfaces, { name, field -> field.name = name }) {
     override fun generateFields(cw: ClassWriter) {
-        cw.apply { fields.forEach { it.value.generateField(this) }  }
+        cw.apply { fields.forEach { it.value.generateField(this) } }
     }
 }
 
@@ -69,7 +68,7 @@ class InterfaceSchema(
         interfaces: List<Class<*>> = emptyList()
 ) : Schema(name, fields, superclass, interfaces, { name, field -> field.name = name }) {
     override fun generateFields(cw: ClassWriter) {
-        cw.apply { fields.forEach { it.value.generateField(this) }  }
+        cw.apply { fields.forEach { it.value.generateField(this) } }
     }
 }
 
@@ -80,8 +79,8 @@ class EnumSchema(
         name: String,
         fields: Map<String, Field>
 ) : Schema(name, fields, null, emptyList(), { fieldName, field ->
-        (field as EnumField).name = fieldName
-        field.descriptor = "L${name.replace(".", "/")};"
+    (field as EnumField).name = fieldName
+    field.descriptor = "L${name.replace(".", "/")};"
 }) {
     override fun generateFields(cw: ClassWriter) {
         with(cw) {
@@ -104,8 +103,8 @@ object CarpenterSchemaFactory {
             superclass: Schema? = null,
             interfaces: List<Class<*>> = emptyList(),
             isInterface: Boolean = false
-    ) : Schema =
-            if (isInterface) InterfaceSchema (name, fields, superclass, interfaces)
-            else ClassSchema (name, fields, superclass, interfaces)
+    ): Schema =
+            if (isInterface) InterfaceSchema(name, fields, superclass, interfaces)
+            else ClassSchema(name, fields, superclass, interfaces)
 }
 

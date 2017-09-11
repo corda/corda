@@ -20,7 +20,7 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
-class CarpenterClassLoader (parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
+class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
         ClassLoader(parentClassLoader) {
     fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
 }
@@ -121,7 +121,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             }
         }
 
-        assert (schema.name in _loaded)
+        assert(schema.name in _loaded)
 
         return _loaded[schema.name]!!
     }
@@ -242,7 +242,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
                 visitFieldInsn(GETFIELD, schema.jvmName, name, type.descriptor)
                 when (type.field) {
                     java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-                            java.lang.Character.TYPE -> visitInsn(IRETURN)
+                    java.lang.Character.TYPE -> visitInsn(IRETURN)
                     java.lang.Long.TYPE -> visitInsn(LRETURN)
                     java.lang.Double.TYPE -> visitInsn(DRETURN)
                     java.lang.Float.TYPE -> visitInsn(FRETURN)
@@ -286,7 +286,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             visitFieldInsn(PUTSTATIC, schema.jvmName, "\$VALUES", schema.asArray)
             visitInsn(RETURN)
 
-            visitMaxs(0,0)
+            visitMaxs(0, 0)
         }.visitEnd()
     }
 
@@ -375,7 +375,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     private fun MethodVisitor.load(slot: Int, type: Field): Int {
         when (type.field) {
             java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-                    java.lang.Character.TYPE -> visitVarInsn(ILOAD, slot)
+            java.lang.Character.TYPE -> visitVarInsn(ILOAD, slot)
             java.lang.Long.TYPE -> visitVarInsn(LLOAD, slot)
             java.lang.Double.TYPE -> visitVarInsn(DLOAD, slot)
             java.lang.Float.TYPE -> visitVarInsn(FLOAD, slot)
@@ -419,7 +419,8 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     companion object {
-        @JvmStatic @Suppress("UNUSED")
+        @JvmStatic
+        @Suppress("UNUSED")
         fun getField(obj: Any, name: String): Any? = obj.javaClass.getMethod("get" + name.capitalize()).invoke(obj)
     }
 }

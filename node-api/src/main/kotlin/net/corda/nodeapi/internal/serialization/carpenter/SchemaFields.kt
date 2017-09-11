@@ -96,7 +96,7 @@ class NullableField(field: Class<out Any?>) : ClassField(field) {
 
     constructor(name: String, field: Class<out Any?>) : this(field) {
         if (field.isPrimitive) {
-            throw NullablePrimitiveException (
+            throw NullablePrimitiveException(
                     "Field $name is primitive type ${Type.getDescriptor(field)} and thus cannot be nullable")
         }
 
@@ -111,8 +111,8 @@ class NullableField(field: Class<out Any?>) : ClassField(field) {
 /**
  * Represents enum constants within an enum
  */
-class EnumField: Field(Enum::class.java) {
-    override var descriptor : String? = null
+class EnumField : Field(Enum::class.java) {
+    override var descriptor: String? = null
 
     override val type: String
         get() = "Ljava/lang/Enum;"
@@ -132,7 +132,7 @@ class EnumField: Field(Enum::class.java) {
  * the AMQP schema indicates it's mandatory (non nullable) or not (nullable)
  */
 object FieldFactory {
-    fun newInstance (mandatory: Boolean, name: String, field: Class<out Any?>) =
-            if (mandatory) NonNullableField (name, field) else NullableField (name, field)
+    fun newInstance(mandatory: Boolean, name: String, field: Class<out Any?>) =
+            if (mandatory) NonNullableField(name, field) else NullableField(name, field)
 
 }
