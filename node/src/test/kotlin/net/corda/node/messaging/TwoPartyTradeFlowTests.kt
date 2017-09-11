@@ -31,7 +31,7 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
-import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.CommercialPaper
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.`issued by`

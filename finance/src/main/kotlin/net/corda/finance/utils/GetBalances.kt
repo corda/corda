@@ -1,6 +1,6 @@
 @file:JvmName("GetBalances")
 
-package net.corda.finance.contracts
+package net.corda.finance.utils
 
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.FungibleAsset

@@ -22,7 +22,7 @@ import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.finance.contracts.getCashBalance
+import net.corda.finance.utils.getCashBalance
 import net.corda.finance.utils.sumCash
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*

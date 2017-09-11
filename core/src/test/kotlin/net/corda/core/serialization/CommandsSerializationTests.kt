@@ -1,6 +1,6 @@
 package net.corda.core.serialization
 
-import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.CommercialPaper
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.TestDependencyInjectionBase
 import org.junit.Test

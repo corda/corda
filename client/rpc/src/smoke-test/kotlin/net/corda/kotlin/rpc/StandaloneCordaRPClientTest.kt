@@ -15,8 +15,8 @@ import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.getCashBalance
-import net.corda.finance.contracts.getCashBalances
+import net.corda.finance.utils.getCashBalance
+import net.corda.finance.utils.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.nodeapi.User

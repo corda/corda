@@ -10,7 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.CommercialPaper
 import net.corda.finance.flows.TwoPartyTradeFlow
 import java.util.*
 

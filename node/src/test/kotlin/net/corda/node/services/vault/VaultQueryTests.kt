@@ -10,7 +10,7 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.utilities.*
 import net.corda.finance.*
-import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.CommercialPaper
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
