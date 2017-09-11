@@ -56,7 +56,6 @@ class TraderDemoTest : NodeBasedTest() {
         val expectedBCash = clientB.cashCount + 1
         val expectedPaper = listOf(clientA.commercialPaperCount + 1, clientB.commercialPaperCount)
 
-        // TODO: Enable anonymisation
         clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.info.legalIdentity.name, sellerName = nodeB.info.legalIdentity.name)
         clientB.runSeller(buyerName = nodeA.info.legalIdentity.name, amount = 5.DOLLARS)
 

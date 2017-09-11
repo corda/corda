@@ -116,10 +116,10 @@ class CordaRPCOpsImplTest {
             )
         }
 
-        result.returnValue.getOrThrow()
+        val anonymisedRecipient = result.returnValue.getOrThrow().recipient!!
         val expectedState = Cash.State(Amount(quantity,
                 Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
-                recipient)
+                anonymisedRecipient)
 
         // Query vault via RPC
         val cash = rpc.vaultQueryBy<Cash.State>()
@@ -141,7 +141,6 @@ class CordaRPCOpsImplTest {
             vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
         }
 
-        val anonymous = false
         val result = rpc.startFlow(::CashIssueFlow,
                 100.DOLLARS,
                 OpaqueBytes(ByteArray(1, { 1 })),
@@ -150,7 +149,7 @@ class CordaRPCOpsImplTest {
 
         mockNet.runNetwork()
 
-        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.info.legalIdentity, anonymous)
+        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.info.legalIdentity)
 
         mockNet.runNetwork()
 
@@ -183,7 +182,7 @@ class CordaRPCOpsImplTest {
                         require(stx.tx.inputs.isEmpty())
                         require(stx.tx.outputs.size == 1)
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
-                        // Only Alice signed
+                        // Only Alice signed, as issuer
                         val aliceKey = aliceNode.info.legalIdentity.owningKey
                         require(signaturePubKeys.size <= aliceKey.keys.size)
                         require(aliceKey.isFulfilledBy(signaturePubKeys))
@@ -194,7 +193,7 @@ class CordaRPCOpsImplTest {
                         require(stx.tx.outputs.size == 1)
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
-                        require(aliceNode.info.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
+                        require(aliceNode.services.keyManagementService.filterMyKeys(signaturePubKeys).toList().isNotEmpty())
                         require(notaryNode.info.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
                     }
             )
