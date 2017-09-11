@@ -10,6 +10,7 @@ import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.node.chooseIdentity
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
@@ -22,6 +23,7 @@ import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
+import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import java.security.PublicKey
@@ -112,18 +114,17 @@ object FlowCookbook {
             val firstNotary: Party = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
             // DOCEND 1
 
-            // We may also need to identify a specific counterparty. Again, we
-            // do so using the network map.
+            // We may also need to identify a specific counterparty. We
+            // do so using identity service.
             // DOCSTART 2
-            val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(CordaX500Name(organisation = "NodeA", locality = "London", country = "UK"))?.legalIdentity
-            val keyedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalIdentityKey(dummyPubKey)?.legalIdentity
-            val firstCounterparty: Party = serviceHub.networkMapCache.partyNodes[0].legalIdentity
+            val namedCounterparty: Party? = serviceHub.identityService.partyFromX500Name(CordaX500Name(organisation = "NodeA", locality = "London", country = "UK"))
+            val keyedCounterparty: Party? = serviceHub.identityService.partyFromKey(dummyPubKey)
             // DOCEND 2
 
             // Finally, we can use the map to identify nodes providing a
             // specific service (e.g. a regulator or an oracle).
             // DOCSTART 3
-            val regulator: Party = serviceHub.networkMapCache.getNodesWithService(ServiceType.regulator)[0].legalIdentity
+            val regulator: Party = serviceHub.networkMapCache.getPeersWithService(ServiceType.regulator)[0].identity.party
             // DOCEND 3
 
             /**-----------------------------
@@ -248,7 +249,7 @@ object FlowCookbook {
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
             val commandData: DummyContract.Commands.Create = DummyContract.Commands.Create()
-            val ourPubKey: PublicKey = serviceHub.legalIdentityKey
+            val ourPubKey: PublicKey = serviceHub.chooseIdentity().owningKey
             val counterpartyPubKey: PublicKey = counterparty.owningKey
             val requiredSigners: List<PublicKey> = listOf(ourPubKey, counterpartyPubKey)
             val ourCommand: Command<DummyContract.Commands.Create> = Command(commandData, requiredSigners)

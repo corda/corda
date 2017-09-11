@@ -5,6 +5,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.messaging.DataFeed
@@ -29,9 +31,9 @@ interface NetworkMapCacheInternal : NetworkMapCache {
     /**
      * Deregister from updates from the given map service.
      * @param network the network messaging service.
-     * @param service the network map service to fetch current state from.
+     * @param mapParty the network map service party to fetch current state from.
      */
-    fun deregisterForUpdates(network: MessagingService, service: NodeInfo): CordaFuture<Unit>
+    fun deregisterForUpdates(network: MessagingService, mapParty: Party): CordaFuture<Unit>
 
     /**
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
@@ -116,7 +118,7 @@ interface ServiceHubInternal : ServiceHub {
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T>
+    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate? = null): FlowStateMachineImpl<T>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
@@ -129,11 +131,12 @@ interface ServiceHubInternal : ServiceHub {
     fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
+            me: PartyAndCertificate? = null,
             vararg args: Any?): FlowStateMachineImpl<T> {
         val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
         @Suppress("UNCHECKED_CAST")
         val logic = FlowLogicRefFactoryImpl.toFlowLogic(logicRef) as FlowLogic<T>
-        return startFlow(logic, flowInitiator)
+        return startFlow(logic, flowInitiator, me)
     }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?

@@ -57,7 +57,7 @@ class SwapIdentitiesHandler(val otherSide: Party, val revocationEnabled: Boolean
     override fun call(): Unit {
         val revocationEnabled = false
         progressTracker.currentStep = SENDING_KEY
-        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
+        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(me, revocationEnabled)
         sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->
             SwapIdentitiesFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
         }

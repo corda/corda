@@ -53,8 +53,6 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         fun tracker() = ProgressTracker(NOTARISING, BROADCASTING)
     }
 
-    open protected val ourIdentity: Party get() = serviceHub.myInfo.legalIdentity
-
     @Suspendable
     @Throws(NotaryException::class)
     override fun call(): List<SignedTransaction> {
@@ -70,7 +68,7 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         // Each transaction has its own set of recipients, but extra recipients get them all.
         progressTracker.currentStep = BROADCASTING
         for ((stx, parties) in notarisedTxns) {
-            val participants = (parties + extraRecipients).filter { it != ourIdentity }.toSet()
+            val participants = (parties + extraRecipients).filter { it != me }.toSet()
             if (participants.isNotEmpty()) {
                 broadcastTransaction(stx, participants.toNonEmptySet())
             }

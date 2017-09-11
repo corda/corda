@@ -16,6 +16,7 @@ import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
 import org.junit.Test
 import java.util.*
@@ -38,16 +39,16 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
         val firstTxBuilder = TransactionBuilder(notaryParty)
                 .addInputState(inputState)
-                .addCommand(dummyCommand(bankA.services.legalIdentityKey))
+                .addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))
         val firstSpendTx = bankA.services.signInitialTransaction(firstTxBuilder)
 
         val firstSpend = bankA.services.startFlow(NotaryFlow.Client(firstSpendTx))
         firstSpend.resultFuture.getOrThrow()
 
         val secondSpendBuilder = TransactionBuilder(notaryParty).withItems(inputState).run {
-            val dummyState = DummyContract.SingleOwnerState(0, bankA.info.legalIdentity)
+            val dummyState = DummyContract.SingleOwnerState(0, bankA.info.chooseIdentity())
             addOutputState(dummyState, DUMMY_PROGRAM_ID)
-            addCommand(dummyCommand(bankA.services.legalIdentityKey))
+            addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))
             this
         }
         val secondSpendTx = bankA.services.signInitialTransaction(secondSpendBuilder)
@@ -60,7 +61,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
     private fun issueState(node: StartedNode<*>, notary: Party): StateAndRef<*> {
         return node.database.transaction {
-            val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
+            val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.chooseIdentity().ref(0))
             val stx = node.services.signInitialTransaction(builder)
             node.services.recordTransactions(stx)
             StateAndRef(builder.outputStates().first(), StateRef(stx.id, 0))

@@ -176,16 +176,17 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate, clientCa?.certificate?.cert)
                     .filterNotNull()
                     .toTypedArray()
-            val identityService = PersistentIdentityService(setOf(legalIdentity),
+            val identityService = PersistentIdentityService(info.legalIdentitiesAndCerts,
                     trustRoot = trustRoot, caCertificates = *caCertificates)
-            services.networkMapCache.partyNodes.forEach { identityService.verifyAndRegisterIdentity(it.legalIdentityAndCert) }
+            services.networkMapCache.partyNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
             services.networkMapCache.changed.subscribe { mapChange ->
                 // TODO how should we handle network map removal
                 if (mapChange is NetworkMapCache.MapChange.Added) {
-                    identityService.verifyAndRegisterIdentity(mapChange.node.legalIdentityAndCert)
+                    mapChange.node.legalIdentitiesAndCerts.forEach {
+                        identityService.verifyAndRegisterIdentity(it)
+                    }
                 }
             }
-
             return identityService
         }
 
@@ -372,6 +373,18 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     /**
+     * Register network identities in identity service, normally it's done on network map cache change, but we may run without
+     * network map service.
+     */
+    fun registerIdentities(){
+        nodes.forEach { itNode ->
+            itNode.database.transaction {
+                nodes.map { it.info.legalIdentitiesAndCerts.first() }.map(itNode.services.identityService::verifyAndRegisterIdentity)
+            }
+        }
+    }
+
+    /**
      * A bundle that separates the generic user nodes and service-providing nodes. A real network might not be so
      * clearly separated, but this is convenient for testing.
      */
@@ -417,8 +430,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return when (msgRecipient) {
             is SingleMessageRecipient -> nodes.single { it.started!!.network.myAddress == msgRecipient }
             is InMemoryMessagingNetwork.ServiceHandle -> {
-                nodes.firstOrNull { it.advertisedServices.any { it == msgRecipient.service.info } }
-                        ?: throw IllegalArgumentException("Couldn't find node advertising service with info: ${msgRecipient.service.info} ")
+                nodes.firstOrNull { it.advertisedServices.any { it.name == msgRecipient.party.name } }
+                        ?: throw IllegalArgumentException("Couldn't find node advertising service with owning party name: ${msgRecipient.party.name} ")
             }
             else -> throw IllegalArgumentException("Method not implemented for different type of message recipients")
         }

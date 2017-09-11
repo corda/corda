@@ -6,7 +6,6 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -54,15 +53,15 @@ object UpdateBusinessDayFlow {
          * Ordering is required so that we avoid situations where on clock update a party starts a scheduled flow, but
          * the notary or counterparty still use the old clock, so the time-window on the transaction does not validate.
          */
-        private fun getRecipients(): Iterable<NodeInfo> {
-            val notaryNodes = serviceHub.networkMapCache.notaryNodes
-            val partyNodes = (serviceHub.networkMapCache.partyNodes - notaryNodes).sortedBy { it.legalIdentity.name.toString() }
+        private fun getRecipients(): Iterable<Party> {
+            val notaryNodes = serviceHub.networkMapCache.notaryNodes.map { it.legalIdentitiesAndCerts.first().party } // TODO Will break on distributed nodes, but it will change after services removal.
+            val partyNodes = (serviceHub.networkMapCache.partyNodes.map { it.legalIdentitiesAndCerts.first().party } - notaryNodes).sortedBy { it.name.toString() }
             return notaryNodes + partyNodes
         }
 
         @Suspendable
-        private fun doNextRecipient(recipient: NodeInfo) {
-            send(recipient.legalIdentity, UpdateBusinessDayMessage(date))
+        private fun doNextRecipient(recipient: Party) {
+            send(recipient, UpdateBusinessDayMessage(date))
         }
     }
 }

@@ -8,6 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceEntry
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
@@ -58,6 +59,14 @@ interface NetworkMapCache {
         return partyNodes.filter { it.advertisedServices.any { it.info.type.isSubTypeOf(serviceType) } }
     }
 
+    // TODO It will be removed with services + part of these functions will get merged into database backed NetworkMapCache
+    fun getPeersWithService(serviceType: ServiceType): List<ServiceEntry> {
+        return partyNodes.fold(ArrayList<ServiceEntry>()) {
+            acc, elem -> acc.addAll(elem.advertisedServices.filter { it.info.type.isSubTypeOf(serviceType)})
+            acc
+        }
+    }
+
     /**
      * Get a recommended node that advertises a service, and is suitable for the specified contract and parties.
      * Implementations might understand, for example, the correct regulator to use for specific contracts/parties,
@@ -82,14 +91,17 @@ interface NetworkMapCache {
     /** Look up the node info for a host and port. */
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
 
+    fun getPeerByLegalName(principal: X500Name): Party? = getNodeByLegalName(principal)?.let {
+        it.legalIdentitiesAndCerts.singleOrNull { it.name == principal }?.party
+    }
+
     /**
      * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
      * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
      * the identity of the *whole group*.
      */
-
-    /** Look up the node info for a specific peer key. */
-    fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo?
+    /** Look up the node infos for a specific peer key. */
+    fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo>
 
     /** Look up all nodes advertising the service owned by [publicKey] */
     fun getNodesByAdvertisedServiceIdentityKey(publicKey: PublicKey): List<NodeInfo> {

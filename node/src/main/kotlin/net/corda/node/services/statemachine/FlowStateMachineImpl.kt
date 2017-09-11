@@ -11,6 +11,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
@@ -35,7 +36,8 @@ class FlowPermissionException(message: String) : FlowException(message)
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
-                              override val flowInitiator: FlowInitiator) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
+                              override val flowInitiator: FlowInitiator,
+                              override val me: PartyAndCertificate) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
     companion object {
         // Used to work around a small limitation in Quasar.
         private val QUASAR_UNBLOCKER = Fiber::class.staticField<Any>("SERIALIZER_BLOCKER").value

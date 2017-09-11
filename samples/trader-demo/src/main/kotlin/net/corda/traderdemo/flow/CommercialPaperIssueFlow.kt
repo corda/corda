@@ -39,9 +39,8 @@ class CommercialPaperIssueFlow(val amount: Amount<Currency>,
     override fun call(): SignedTransaction {
         progressTracker.currentStep = ISSUING
 
-        val me = serviceHub.myInfo.legalIdentity
         val issuance: SignedTransaction = run {
-            val tx = CommercialPaper().generateIssue(me.ref(issueRef), amount `issued by` me.ref(issueRef),
+            val tx = CommercialPaper().generateIssue(me.party.ref(issueRef), amount `issued by` me.party.ref(issueRef),
                     Instant.now() + 10.days, notary)
 
             // TODO: Consider moving these two steps below into generateIssue.

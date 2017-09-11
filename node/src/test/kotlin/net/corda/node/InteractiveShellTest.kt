@@ -7,6 +7,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.identity.InMemoryIdentityService

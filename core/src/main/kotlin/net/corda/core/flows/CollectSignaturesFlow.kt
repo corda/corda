@@ -77,7 +77,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
     @Suspendable override fun call(): SignedTransaction {
         // Check the signatures which have already been provided and that the transaction is valid.
         // Usually just the Initiator and possibly an oracle would have signed at this point.
-        val myKeys: Iterable<PublicKey> = myOptionalKeys ?: listOf(serviceHub.myInfo.legalIdentity.owningKey)
+        val myKeys: Iterable<PublicKey> = myOptionalKeys ?: listOf(me.owningKey)
         val signed = partiallySignedTx.sigs.map { it.by }
         val notSigned = partiallySignedTx.tx.requiredSigningKeys - signed
 
@@ -112,7 +112,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
     }
 
     /**
-     * Lookup the [Party] object for each [PublicKey] using the [ServiceHub.networkMapCache].
+     * Lookup the [Party] object for each [PublicKey] using the [ServiceHub.identityService].
      *
      * @return a pair of the well known identity to contact for a signature, and the public key that party should sign
      * with (this may belong to a confidential identity).

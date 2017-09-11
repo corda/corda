@@ -60,7 +60,7 @@ class P2PSecurityTest : NodeBasedTest() {
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName).also {
-            whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
+            whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.chooseIdentity().name))
         }
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
         return SimpleNode(config, trustRoot = trustRoot).apply { start() }
@@ -68,7 +68,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     private fun SimpleNode.registerWithNetworkMap(registrationName: CordaX500Name): CordaFuture<NetworkMapService.RegistrationResponse> {
         val legalIdentity = getTestPartyAndCertificate(registrationName, identity.public)
-        val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), legalIdentity, NonEmptySet.of(legalIdentity), 1, serial = 1)
+        val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(legalIdentity), 1, serial = 1)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
         val request = RegistrationRequest(registration.toWire(keyService, identity.public), network.myAddress)
         return network.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.network.myAddress)

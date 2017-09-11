@@ -20,20 +20,16 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
 // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
 @CordaSerializable
 data class NodeInfo(val addresses: List<NetworkHostAndPort>,
-                    // TODO After removing of services these two fields will be merged together and made NonEmptySet.
-                    val legalIdentityAndCert: PartyAndCertificate,
-                    val legalIdentitiesAndCerts: Set<PartyAndCertificate>,
+                    val legalIdentitiesAndCerts: List<PartyAndCertificate>,
                     val platformVersion: Int,
                     val advertisedServices: List<ServiceEntry> = emptyList(),
                     val serial: Long
 ) {
     init {
-        require(advertisedServices.none { it.identity == legalIdentityAndCert }) {
-            "Service identities must be different from node legal identity"
-        }
+        require(legalIdentitiesAndCerts.isNotEmpty()) { "Node should have at least one legal identity" }
     }
 
-    val legalIdentity: Party get() = legalIdentityAndCert.party
+    // TODO This part will be removed with services removal.
     val notaryIdentity: Party get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
     fun serviceIdentities(type: ServiceType): List<Party> {
         return advertisedServices.mapNotNull { if (it.info.type.isSubTypeOf(type)) it.identity.party else null }
@@ -43,7 +39,9 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
      * Uses node's owner X500 name to infer the node's location. Used in Explorer in map view.
      */
     fun getWorldMapLocation(): WorldMapLocation? {
-        val nodeOwnerLocation = legalIdentity.name.locality
+        val nodeOwnerLocation = legalIdentitiesAndCerts.first().name.locality
         return nodeOwnerLocation.let { CityDatabase[it] }
     }
+    val legalIdentities: List<Party>
+        get() = legalIdentitiesAndCerts.map { it.party }
 }

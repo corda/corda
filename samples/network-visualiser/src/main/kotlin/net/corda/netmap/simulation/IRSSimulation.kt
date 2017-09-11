@@ -21,6 +21,8 @@ import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.FixingFlow
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.DUMMY_CA
+import net.corda.testing.chooseIdentity
+import net.corda.testing.chooseIdentityAndCert
 import net.corda.testing.node.InMemoryMessagingNetwork
 import rx.Observable
 import java.time.LocalDate
@@ -42,7 +44,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): CompletableFuture<Unit> {
-        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap.internals + ratesOracle).map { it.started!!.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
+        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap.internals + ratesOracle).flatMap { it.started!!.info.legalIdentitiesAndCerts }, trustRoot = DUMMY_CA.certificate))
         registerFinanceJSONMappers(om)
 
         return startIRSDealBetween(0, 1).thenCompose {
@@ -131,8 +133,8 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
                 .reader()
                 .readText()
                 .replace("oracleXXX", RatesOracleFactory.RATES_SERVICE_NAME.toString()))
-        irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
-        irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
+        irs.fixedLeg.fixedRatePayer = node1.info.chooseIdentity()
+        irs.floatingLeg.floatingRatePayer = node2.info.chooseIdentity()
 
         node1.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
         node2.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
@@ -158,7 +160,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         showConsensusFor(listOf(node1.internals, node2.internals, regulators[0]))
 
         val instigator = StartDealFlow(
-                node2.info.legalIdentity,
+                node2.info.chooseIdentity(),
                 AutoOffer(notary.info.notaryIdentity, irs))
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 

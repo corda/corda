@@ -38,7 +38,8 @@ class NetworkIdentityModel {
 
     val parties: ObservableList<NodeInfo> = networkIdentities.filtered { !it.isCordaService() }
     val notaries: ObservableList<NodeInfo> = networkIdentities.filtered { it.advertisedServices.any { it.info.type.isNotary() } }
-    val myIdentity = rpcProxy.map { it?.nodeIdentity() }
+    val myNodeInfo = rpcProxy.map { it?.nodeInfo() } // TODO Used only for querying for advertised services, remove with services.
+    val myIdentity = myNodeInfo.map { it?.legalIdentitiesAndCerts?.first()?.party }
 
     private fun NodeInfo.isCordaService(): Boolean {
         // TODO: better way to identify Corda service?
@@ -46,4 +47,11 @@ class NetworkIdentityModel {
     }
 
     fun partyFromPublicKey(publicKey: PublicKey): ObservableValue<NodeInfo?> = identityCache[publicKey]
+    //TODO rebase fix
+//    // TODO: Use Identity Service in service hub instead?
+//    fun lookup(publicKey: PublicKey): ObservableValue<PartyAndCertificate?> {
+//        val party = parties.flatMap { it.legalIdentitiesAndCerts }.firstOrNull { publicKey in it.owningKey.keys } ?:
+//                notaries.flatMap { it.legalIdentitiesAndCerts }.firstOrNull { it.owningKey.keys.any { it == publicKey }}
+//        return ReadOnlyObjectWrapper(party)
+//    }
 }

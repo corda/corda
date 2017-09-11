@@ -15,6 +15,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
@@ -54,7 +55,7 @@ class NotaryServiceTests {
             val inputState = issueState(clientNode)
             val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
                     .addInputState(inputState)
-                    .addCommand(dummyCommand(clientNode.services.legalIdentityKey))
+                    .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
                     .setTimeWindow(Instant.now(), 30.seconds)
             clientNode.services.signInitialTransaction(tx)
         }
@@ -70,7 +71,7 @@ class NotaryServiceTests {
             val inputState = issueState(clientNode)
             val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
                     .addInputState(inputState)
-                    .addCommand(dummyCommand(clientNode.services.legalIdentityKey))
+                    .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -85,7 +86,7 @@ class NotaryServiceTests {
             val inputState = issueState(clientNode)
             val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
                     .addInputState(inputState)
-                    .addCommand(dummyCommand(clientNode.services.legalIdentityKey))
+                    .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
                     .setTimeWindow(Instant.now().plusSeconds(3600), 30.seconds)
             clientNode.services.signInitialTransaction(tx)
         }
@@ -102,7 +103,7 @@ class NotaryServiceTests {
             val inputState = issueState(clientNode)
             val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
                     .addInputState(inputState)
-                    .addCommand(dummyCommand(clientNode.services.legalIdentityKey))
+                    .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -122,14 +123,14 @@ class NotaryServiceTests {
         val stx = run {
             val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
                     .addInputState(inputState)
-                    .addCommand(dummyCommand(clientNode.services.legalIdentityKey))
+                    .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
             clientNode.services.signInitialTransaction(tx)
         }
         val stx2 = run {
             val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
                     .addInputState(inputState)
                     .addInputState(issueState(clientNode))
-                    .addCommand(dummyCommand(clientNode.services.legalIdentityKey))
+                    .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -154,7 +155,7 @@ class NotaryServiceTests {
     }
 
     fun issueState(node: StartedNode<*>): StateAndRef<*> {
-        val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.legalIdentity.ref(0))
+        val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.chooseIdentity().ref(0))
         val signedByNode = node.services.signInitialTransaction(tx)
         val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
         node.services.recordTransactions(stx)

@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.testing.chooseIdentity
 
 @StartableByRPC
 class DummyIssueAndMove(private val notary: Party, private val counterpartyNode: Party, private val discriminator: Int) : FlowLogic<SignedTransaction>() {
@@ -26,10 +27,10 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
     @Suspendable
     override fun call(): SignedTransaction {
         // Self issue an asset
-        val state = State(listOf(serviceHub.myInfo.legalIdentity), discriminator)
+        val state = State(listOf(serviceHub.myInfo.chooseIdentity()), discriminator)
         val issueTx = serviceHub.signInitialTransaction(TransactionBuilder(notary).apply {
             addOutputState(state, DO_NOTHING_PROGRAM_ID)
-            addCommand(DummyCommand(),listOf(serviceHub.myInfo.legalIdentity.owningKey))
+            addCommand(DummyCommand(),listOf(serviceHub.myInfo.chooseIdentity().owningKey))
         })
         serviceHub.recordTransactions(issueTx)
         // Move ownership of the asset to the counterparty
@@ -37,7 +38,7 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
         return serviceHub.signInitialTransaction(TransactionBuilder(notary).apply {
             addInputState(issueTx.tx.outRef<ContractState>(0))
             addOutputState(state.copy(participants = listOf(counterpartyNode)), DO_NOTHING_PROGRAM_ID)
-            addCommand(DummyCommand(),listOf(serviceHub.myInfo.legalIdentity.owningKey))
+            addCommand(DummyCommand(),listOf(serviceHub.myInfo.chooseIdentity().owningKey))
         })
     }
 }

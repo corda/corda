@@ -20,7 +20,7 @@ class BroadcastTransactionFlow(val notarisedTransaction: SignedTransaction,
     @Suspendable
     override fun call() {
         // TODO: Messaging layer should handle this broadcast for us
-        participants.filter { it != serviceHub.myInfo.legalIdentity }.forEach { participant ->
+        participants.filter { it !in serviceHub.myInfo.legalIdentities }.forEach { participant ->
             // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
             subFlow(SendTransactionFlow(participant, notarisedTransaction))
         }
