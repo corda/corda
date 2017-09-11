@@ -37,6 +37,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         }
 
         fun deriveParameterizedType(declaredType: Type, declaredClass: Class<*>, actualClass: Class<*>?): ParameterizedType {
+            declaredClass.checkSupportedMapType()
             if(supportedTypes.containsKey(declaredClass)) {
                 // Simple case - it is already known to be a map.
                 @Suppress("UNCHECKED_CAST")
@@ -71,7 +72,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        obj.javaClass.checkNotUnsupportedHashMap()
+        obj.javaClass.checkSupportedMapType()
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             // Write map
@@ -96,7 +97,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
                     input.readObjectOrNull(entry.value, schema, declaredType.actualTypeArguments[1])
 }
 
-internal fun Class<*>.checkNotUnsupportedHashMap() {
+internal fun Class<*>.checkSupportedMapType() {
     if (HashMap::class.java.isAssignableFrom(this) && !LinkedHashMap::class.java.isAssignableFrom(this)) {
         throw IllegalArgumentException(
                 "Map type $this is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
