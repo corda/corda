@@ -98,7 +98,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
         val contract = contractClass.newInstance() as Contract
 
-        assertEquals(SecureHash.sha256("helloworld"), contract.declaredField<Any?>("magicString").value)
+        assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
     }
 
     fun fakeAttachment(filepath: String, content: String): ByteArray {
@@ -189,7 +189,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, cl)
         val contract = contractClass.newInstance() as Contract
         assertEquals(cl, contract.javaClass.classLoader)
-        assertEquals(SecureHash.sha256("helloworld"), contract.declaredField<Any?>("magicString").value)
+        assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
     }
 
 
