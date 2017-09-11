@@ -15,6 +15,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.abbreviate
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.staticField
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
@@ -27,6 +28,7 @@ import net.corda.node.utilities.DatabaseTransaction
 import net.corda.node.utilities.DatabaseTransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.nio.file.Paths
 import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -347,7 +349,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), retryable)
         openSessions[Pair(sessionFlow, otherParty)] = session
         val (version, initiatingFlowClass) = sessionFlow.javaClass.flowVersionAndInitiatingClass
-        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, "not defined", firstPayload)
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, sessionFlow.javaClass.appName, firstPayload)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
@@ -489,5 +491,14 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
             ?: return found
             ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
                 "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
+    }
+}
+
+val Class<out FlowLogic<*>>.appName: String get() {
+    val jarFile = Paths.get(protectionDomain.codeSource.location.toURI())
+    return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
+        jarFile.fileName.toString().removeSuffix(".jar")
+    } else {
+        "<unknown>"
     }
 }

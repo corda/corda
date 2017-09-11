@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
+import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.codec.Data
 import java.beans.IndexedPropertyDescriptor
 import java.beans.Introspector
@@ -13,6 +14,7 @@ import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaType
 
 /**
@@ -48,7 +50,9 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
                 preferredCandidate = kotlinConstructor
             }
         }
-        return preferredCandidate ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")
+
+        return preferredCandidate?.apply { isAccessible = true}
+                ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")
     } else {
         return null
     }
@@ -226,4 +230,11 @@ internal fun Type.isSubClassOf(type: Type): Boolean {
 internal fun suitableForObjectReference(type: Type): Boolean {
     val clazz = type.asClass()
     return type != ByteArray::class.java && (clazz != null && !clazz.isPrimitive && !Primitives.unwrap(clazz).isPrimitive)
+}
+
+/**
+ * Common properties that are to be used in the [SerializationContext.properties] to alter serialization behavior/content
+ */
+internal enum class CommonPropertyNames {
+    IncludeInternalInfo,
 }

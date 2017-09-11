@@ -2,15 +2,10 @@
 
 package net.corda.core.utilities
 
-import net.corda.core.internal.toX509CertHolder
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
-import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
-import java.security.KeyPair
-import java.security.cert.X509Certificate
 
 val X500Name.commonName: String? get() = getRDNValueString(BCStyle.CN)
 val X500Name.organisationUnit: String? get() = getRDNValueString(BCStyle.OU)
@@ -20,9 +15,6 @@ val X500Name.locality: String get() = getRDNValueString(BCStyle.L) ?: throw Ille
 val X500Name.country: String get() = getRDNValueString(BCStyle.C) ?: throw IllegalArgumentException("Malformed X500 name, country attribute (C) cannot be empty.")
 
 private fun X500Name.getRDNValueString(identifier: ASN1ObjectIdentifier): String? = getRDNs(identifier).firstOrNull()?.first?.value?.toString()
-
-val X509Certificate.subject: X500Name get() = toX509CertHolder().subject
-val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 /**
  * Generate a distinguished name from the provided X500 .
@@ -54,5 +46,3 @@ fun X500Name.toWellFormattedName(): X500Name {
     validateX500Name(this)
     return getX500Name(organisation, locality, country, commonName, organisationUnit, state)
 }
-
-data class CertificateAndKeyPair(val certificate: X509CertificateHolder, val keyPair: KeyPair)

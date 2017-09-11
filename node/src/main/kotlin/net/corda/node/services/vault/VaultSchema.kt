@@ -39,8 +39,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var contractStateClassName: String,
 
             /** refers to serialized transaction Contract State */
-            // TODO: define contract state size maximum size and adjust length accordingly
-            @Column(name = "contract_state", length = 100000)
+            @Lob
+            @Column(name = "contract_state")
             var contractState: ByteArray,
 
             /** state lifecycle: unconsumed, consumed */

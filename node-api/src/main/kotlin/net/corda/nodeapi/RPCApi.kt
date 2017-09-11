@@ -170,7 +170,7 @@ object RPCApi {
             override fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REPLY.ordinal)
                 message.putLongProperty(RPC_ID_FIELD_NAME, id.toLong)
-                message.bodyBuffer.writeBytes(result.safeSerialize(context) { Try.Failure(it) }.bytes)
+                message.bodyBuffer.writeBytes(result.safeSerialize(context) { Try.Failure<Any>(it) }.bytes)
             }
         }
 

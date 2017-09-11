@@ -35,27 +35,30 @@ sealed class Try<out A> {
     abstract fun getOrThrow(): A
 
     /** Maps the given function to the value from this [Success], or returns `this` if this is a [Failure]. */
+    @Suppress("UNCHECKED_CAST")
     inline fun <B> map(function: (A) -> B): Try<B> = when (this) {
         is Success -> Success(function(value))
-        is Failure -> this
+        is Failure -> this as Try<B>
     }
 
     /** Returns the given function applied to the value from this [Success], or returns `this` if this is a [Failure]. */
+    @Suppress("UNCHECKED_CAST")
     inline fun <B> flatMap(function: (A) -> Try<B>): Try<B> = when (this) {
         is Success -> function(value)
-        is Failure -> this
+        is Failure -> this as Try<B>
     }
 
     /**
      * Maps the given function to the values from this [Success] and [other], or returns `this` if this is a [Failure]
      * or [other] if [other] is a [Failure].
      */
+    @Suppress("UNCHECKED_CAST")
     inline fun <B, C> combine(other: Try<B>, function: (A, B) -> C): Try<C> = when (this) {
         is Success -> when (other) {
             is Success -> Success(function(value, other.value))
-            is Failure -> other
+            is Failure -> other as Try<C>
         }
-        is Failure -> this
+        is Failure -> this as Try<C>
     }
 
     data class Success<out A>(val value: A) : Try<A>() {
@@ -65,10 +68,10 @@ sealed class Try<out A> {
         override fun toString(): String = "Success($value)"
     }
 
-    data class Failure(val exception: Throwable) : Try<Nothing>() {
+    data class Failure<out A>(val exception: Throwable) : Try<A>() {
         override val isSuccess: Boolean get() = false
         override val isFailure: Boolean get() = true
-        override fun getOrThrow(): Nothing = throw exception
+        override fun getOrThrow(): A = throw exception
         override fun toString(): String = "Failure($exception)"
     }
 }

@@ -81,15 +81,16 @@ open class ReadOnlyBackedObservableMapBase<K, A, B> : ObservableMap<K, A> {
         throw UnsupportedOperationException("remove() can't be called on ReadOnlyObservableMapBase")
     }
 
-}
-
-fun <A, K> ObservableMap<K, A>.createMapChange(key: K, removedValue: A?, addedValue: A?): MapChangeListener.Change<K, A> {
-    return object : MapChangeListener.Change<K, A>(this) {
-        override fun getKey() = key
-        override fun wasRemoved() = removedValue != null
-        override fun wasAdded() = addedValue != null
-        override fun getValueRemoved() = removedValue
-        override fun getValueAdded() = addedValue
+    /**
+     * Construct an object modelling the given change to an observed map.
+     */
+    fun createMapChange(key: K, removedValue: A?, addedValue: A?): MapChangeListener.Change<K, A> {
+        return object : MapChangeListener.Change<K, A>(this) {
+            override fun getKey() = key
+            override fun wasRemoved() = removedValue != null
+            override fun wasAdded() = addedValue != null
+            override fun getValueRemoved() = removedValue
+            override fun getValueAdded() = addedValue
+        }
     }
 }
-

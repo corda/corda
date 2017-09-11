@@ -1,4 +1,4 @@
-package net.corda.core.schemas.converters
+package net.corda.node.services.persistence
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.IdentityService
@@ -13,29 +13,26 @@ import javax.persistence.Converter
  */
 @Converter(autoApply = true)
 class AbstractPartyToX500NameAsStringConverter(identitySvc: () -> IdentityService) : AttributeConverter<AbstractParty, String> {
-
-    private val identityService: IdentityService by lazy {
-        identitySvc()
-    }
-
     companion object {
-        val log = loggerFor<AbstractPartyToX500NameAsStringConverter>()
+        private val log = loggerFor<AbstractPartyToX500NameAsStringConverter>()
     }
+
+    private val identityService: IdentityService by lazy(identitySvc)
 
     override fun convertToDatabaseColumn(party: AbstractParty?): String? {
-        party?.let {
+        if (party != null) {
             val partyName = identityService.partyFromAnonymous(party)?.toString()
             if (partyName != null) return partyName
-            else log.warn ("Identity service unable to resolve AbstractParty: $party")
+            log.warn("Identity service unable to resolve AbstractParty: $party")
         }
         return null // non resolvable anonymous parties
     }
 
     override fun convertToEntityAttribute(dbData: String?): AbstractParty? {
-        dbData?.let {
+        if (dbData != null) {
             val party = identityService.partyFromX500Name(X500Name(dbData))
             if (party != null) return party
-            else log.warn ("Identity service unable to resolve X500name: $dbData")
+            log.warn ("Identity service unable to resolve X500name: $dbData")
         }
         return null // non resolvable anonymous parties are stored as nulls
     }
