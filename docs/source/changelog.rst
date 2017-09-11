@@ -126,6 +126,10 @@ UNRELEASED
 
 * Test type ``NodeHandle`` now has method ``stop(): CordaFuture<Unit>`` that terminates the referenced node.
 
+.. warning:: Renamed configuration property key `basedir` to `baseDirectory`. This will require updating existing configuration files.
+
+* Removed deprecated parts of the API.
+
 Milestone 14
 ------------
 

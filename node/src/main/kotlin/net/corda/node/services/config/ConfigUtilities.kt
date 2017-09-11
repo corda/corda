@@ -37,7 +37,7 @@ object ConfigHelper {
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
         val finalConfig = configOf(
                 // Add substitution values here
-                "basedir" to baseDirectory.toString())
+                "baseDirectory" to baseDirectory.toString())
                 .withFallback(configOverrides)
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
