@@ -1,11 +1,11 @@
 package net.corda.core.identity
 
+import net.corda.core.internal.LegalNameValidator
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.countryCodes
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
-import org.bouncycastle.asn1.x500.RDN
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle

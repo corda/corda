@@ -1,11 +1,11 @@
-package net.corda.core.identity
+package net.corda.core.internal
 
 import java.lang.Character.UnicodeScript.*
 import java.text.Normalizer
 import java.util.regex.Pattern
 import javax.security.auth.x500.X500Principal
 
-internal object LegalNameValidator {
+object LegalNameValidator {
     /**
      * The validation function will validate the input string using the following rules:
      *

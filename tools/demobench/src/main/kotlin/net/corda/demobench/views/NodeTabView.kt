@@ -14,14 +14,9 @@ import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.readAllLines
-import net.corda.core.internal.writeLines
+import net.corda.core.internal.*
 import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
-import net.corda.core.identity.normaliseLegalName
-import net.corda.core.identity.validateLegalName
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
 import org.controlsfx.control.CheckListView
@@ -193,11 +188,11 @@ class NodeTabView : Fragment() {
         validator {
             if (it == null) {
                 error("Node name is required")
-            } else if (nodeController.nameExists(normaliseLegalName(it))) {
+            } else if (nodeController.nameExists(LegalNameValidator.normaliseLegalName(it))) {
                 error("Node with this name already exists")
             } else {
                 try {
-                    validateLegalName(normaliseLegalName(it))
+                    LegalNameValidator.validateLegalName(LegalNameValidator.normaliseLegalName(it))
                     null
                 } catch (e: IllegalArgumentException) {
                     error(e.message)

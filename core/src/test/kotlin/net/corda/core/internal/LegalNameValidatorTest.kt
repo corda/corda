@@ -1,4 +1,4 @@
-package net.corda.core.identity
+package net.corda.core.internal
 
 import org.junit.Test
 import kotlin.test.assertEquals
