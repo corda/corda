@@ -3,15 +3,16 @@ package com.r3.corda.doorman.internal.persistence
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
+import com.r3.corda.doorman.persistence.DoormanSchemaService
 import com.r3.corda.doorman.toX509Certificate
-import net.corda.core.crypto.CertificateType
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
+import net.corda.core.crypto.SecureHash
+import net.corda.core.utilities.getX500Name
+import net.corda.node.utilities.CertificateType
+import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.configureDatabase
-import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
@@ -19,29 +20,27 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.security.KeyPair
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class DBCertificateRequestStorageTest {
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val intermediateCACert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Corda Node Intermediate CA"), intermediateCAKey)
-    private var closeDb: Closeable? = null
+    private val intermediateCACert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Corda Node Intermediate CA", O = "R3 Ltd", L = "London", C = "GB"), intermediateCAKey)
     private lateinit var storage: DBCertificateRequestStorage
+    private lateinit var persistence: CordaPersistence
 
     @Before
     fun startDb() {
-        configureDatabase(makeTestDataSourceProperties()).apply {
-            closeDb = first
-            storage = DBCertificateRequestStorage(second)
-        }
+        persistence = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { DoormanSchemaService() }, createIdentityService = { throw UnsupportedOperationException() })
+        storage = DBCertificateRequestStorage(persistence)
     }
 
     @After
     fun closeDb() {
-        closeDb?.close()
+        persistence.close()
     }
 
     @Test
@@ -132,11 +131,11 @@ class DBCertificateRequestStorageTest {
     }
 
     private fun createRequest(legalName: String): Pair<CertificationRequestData, KeyPair> {
-        val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
+        val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val request = CertificationRequestData(
                 "hostname",
                 "0.0.0.0",
-                X509Utilities.createCertificateSigningRequest(X500Name("CN=$legalName"), keyPair))
+                X509Utilities.createCertificateSigningRequest(getX500Name(O = legalName, L = "London", C = "GB"), "my@mail.com", keyPair))
         return Pair(request, keyPair)
     }
 
@@ -147,5 +146,23 @@ class DBCertificateRequestStorageTest {
                 X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints).toX509Certificate()
             }
         }
+    }
+
+    private fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+        val props = Properties()
+        props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
+        props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
+        props.setProperty("dataSource.user", "sa")
+        props.setProperty("dataSource.password", "")
+        return props
+    }
+
+    private fun makeTestDatabaseProperties(key: String? = null, value: String? = null): Properties {
+        val props = Properties()
+        props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
+        if (key != null) {
+            props.setProperty(key, value)
+        }
+        return props
     }
 }

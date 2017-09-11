@@ -5,8 +5,13 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import net.corda.core.crypto.*
-import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.utilities.CertificateAndKeyPair
+import net.corda.node.utilities.CertificateStream
+import net.corda.node.utilities.CertificateType
+import net.corda.node.utilities.X509Utilities
+import net.corda.node.utilities.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
@@ -57,7 +62,7 @@ class DoormanServiceTest {
         startSigningServer(storage)
 
         val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
-        val request = X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName"), keyPair)
+        val request = X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName"), "my@mail.com", keyPair)
         // Post request to signing server via http.
 
         assertEquals(id, submitRequest(request))
@@ -80,7 +85,7 @@ class DoormanServiceTest {
             on { approveRequest(eq(id), any()) }.then {
                 @Suppress("UNCHECKED_CAST")
                 val certGen = it.arguments[1] as ((CertificationRequestData) -> Certificate)
-                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName,L=London"), keyPair))
+                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName,L=London"), "my@mail.com", keyPair))
                 certificateStore[id] = certGen(request)
                 Unit
             }
@@ -126,7 +131,7 @@ class DoormanServiceTest {
             on { approveRequest(eq(id), any()) }.then {
                 @Suppress("UNCHECKED_CAST")
                 val certGen = it.arguments[1] as ((CertificationRequestData) -> Certificate)
-                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName,L=London"), keyPair))
+                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName,L=London"), "my@mail.com", keyPair))
                 certificateStore[id] = certGen(request)
                 Unit
             }

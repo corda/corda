@@ -2,85 +2,110 @@ package com.r3.corda.doorman.persistence
 
 import com.r3.corda.doorman.CertificateUtilities
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.commonName
-import net.corda.node.utilities.instant
-import net.corda.node.utilities.transaction
-import org.apache.commons.io.IOUtils
+import net.corda.core.utilities.validateX500Name
+import net.corda.core.utilities.withCommonName
+import net.corda.node.utilities.CordaPersistence
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import org.jetbrains.exposed.sql.*
 import java.security.cert.Certificate
 import java.time.Instant
-import javax.sql.rowset.serial.SerialBlob
+import javax.persistence.*
+import javax.persistence.criteria.CriteriaBuilder
+import javax.persistence.criteria.Path
+import javax.persistence.criteria.Predicate
 
 // TODO Relax the uniqueness requirement to be on the entire X.500 subject rather than just the legal name
-class DBCertificateRequestStorage(private val database: Database) : CertificationRequestStorage {
-    private object DataTable : Table("certificate_signing_request") {
-        val requestId = varchar("request_id", 64).index().primaryKey()
-        val hostName = varchar("hostName", 100)
-        val ipAddress = varchar("ip_address", 15)
-        val legalName = varchar("legal_name", 256)
-        // TODO : Do we need to store this in column? or is it ok with blob.
-        val request = blob("request")
-        val requestTimestamp = instant("request_timestamp")
-        val processTimestamp = instant("process_timestamp").nullable()
-        val certificate = blob("certificate").nullable()
-        val rejectReason = varchar("reject_reason", 256).nullable()
-    }
+class DBCertificateRequestStorage(private val database: CordaPersistence) : CertificationRequestStorage {
+    @Entity
+    @Table(name = "certificate_signing_request")
+    class CertificateSigningRequest(
+            @Id
+            @Column(name = "request_id", length = 64)
+            var requestId: String = "",
 
-    init {
-        // Create table if not exists.
-        database.transaction {
-            SchemaUtils.create(DataTable)
-        }
-    }
+            @Column(name = "host_name", length = 100)
+            var hostName: String = "",
+
+            @Column(name = "ip_address", length = 15)
+            var ipAddress: String = "",
+
+            @Column(name = "legal_name", length = 256)
+            var legalName: String = "",
+
+            @Lob
+            @Column
+            var request: ByteArray = ByteArray(0),
+
+            @Column(name = "request_timestamp")
+            var requestTimestamp: Instant = Instant.now(),
+
+            @Column(name = "process_timestamp", nullable = true)
+            var processTimestamp: Instant? = null,
+
+            @Lob
+            @Column(nullable = true)
+            var certificate: ByteArray? = null,
+
+            @Column(name = "reject_reason", length = 256, nullable = true)
+            var rejectReason: String? = null
+    )
 
     override fun saveRequest(certificationData: CertificationRequestData): String {
-        val legalName = certificationData.request.subject.commonName
+        val legalName = certificationData.request.subject.withCommonName(null)
         val requestId = SecureHash.randomSHA256().toString()
         database.transaction {
-            val duplicate = DataTable.select {
-                // A duplicate legal name is one where a previously approved, or currently pending, request has the same legal name.
-                // A rejected request with the same legal name doesn't count as a duplicate
-                DataTable.legalName eq legalName and (DataTable.certificate.isNotNull() or DataTable.processTimestamp.isNull())
-            }.any()
-            val rejectReason = if (duplicate) {
-                "Duplicate legal name"
-            } else if ("[=,]".toRegex() in legalName) {
-                "Legal name cannot contain '=' or ','"
-            } else {
-                null
-            }
-            val now = Instant.now()
-            DataTable.insert {
-                it[this.requestId] = requestId
-                it[hostName] = certificationData.hostName
-                it[ipAddress] = certificationData.ipAddress
-                it[this.legalName] = legalName
-                it[request] = SerialBlob(certificationData.request.encoded)
-                it[requestTimestamp] = now
-                if (rejectReason != null) {
-                    it[this.rejectReason] = rejectReason
-                    it[processTimestamp] = now
+            val query = session.criteriaBuilder.run {
+                val criteriaQuery = createQuery(CertificateSigningRequest::class.java)
+                criteriaQuery.from(CertificateSigningRequest::class.java).run {
+                    val nameEq = equal(get<String>(CertificateSigningRequest::legalName.name), legalName.toString())
+                    val certNotNull = isNotNull(get<String>(CertificateSigningRequest::certificate.name))
+                    val processTimeIsNull = isNull(get<String>(CertificateSigningRequest::processTimestamp.name))
+                    criteriaQuery.where(and(nameEq, or(certNotNull, processTimeIsNull)))
                 }
             }
+            val duplicate = session.createQuery(query).resultList.isNotEmpty()
+            val rejectReason = if (duplicate) {
+                "Duplicate legal name"
+            } else {
+                try {
+                    validateX500Name(legalName)
+                    null
+                } catch (e: IllegalArgumentException) {
+                    "Name validation failed with exception : ${e.message}"
+                }
+            }
+
+            val now = Instant.now()
+            val request = CertificateSigningRequest(
+                    requestId,
+                    certificationData.hostName,
+                    certificationData.ipAddress,
+                    legalName.toString(),
+                    certificationData.request.encoded,
+                    now,
+                    rejectReason = rejectReason,
+                    processTimestamp = rejectReason?.let { now }
+            )
+            session.save(request)
         }
         return requestId
     }
 
     override fun getResponse(requestId: String): CertificateResponse {
         return database.transaction {
-            val response = DataTable
-                    .select { DataTable.requestId eq requestId and DataTable.processTimestamp.isNotNull() }
-                    .map { Pair(it[DataTable.certificate]?.let { IOUtils.toByteArray(it.binaryStream) }, it[DataTable.rejectReason]) }
-                    .singleOrNull()
+            val response = singleRequestWhere { builder, path ->
+                val eq = builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
+                val timeNotNull = builder.isNotNull(path.get<Instant>(CertificateSigningRequest::processTimestamp.name))
+                builder.and(eq, timeNotNull)
+            }
+
             if (response == null) {
                 CertificateResponse.NotReady
             } else {
-                val (certificate, rejectReason) = response
+                val certificate = response.certificate
                 if (certificate != null) {
                     CertificateResponse.Ready(CertificateUtilities.toX509Certificate(certificate))
                 } else {
-                    CertificateResponse.Unauthorised(rejectReason!!)
+                    CertificateResponse.Unauthorised(response.rejectReason!!)
                 }
             }
         }
@@ -88,46 +113,67 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
 
     override fun approveRequest(requestId: String, generateCertificate: CertificationRequestData.() -> Certificate) {
         database.transaction {
-            val request = singleRequestWhere { DataTable.requestId eq requestId and DataTable.processTimestamp.isNull() }
+            val request = singleRequestWhere { builder, path ->
+                val eq = builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
+                val timeIsNull = builder.isNull(path.get<Instant>(CertificateSigningRequest::processTimestamp.name))
+                builder.and(eq, timeIsNull)
+            }
             if (request != null) {
-                DataTable.update({ DataTable.requestId eq requestId }) {
-                    it[certificate] = SerialBlob(request.generateCertificate().encoded)
-                    it[processTimestamp] = Instant.now()
-                }
+                request.certificate = request.toRequestData().generateCertificate().encoded
+                request.processTimestamp = Instant.now()
+                session.save(request)
             }
         }
     }
 
     override fun rejectRequest(requestId: String, rejectReason: String) {
         database.transaction {
-            val request = singleRequestWhere { DataTable.requestId eq requestId and DataTable.processTimestamp.isNull() }
+            val request = singleRequestWhere { builder, path ->
+                val eq = builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
+                val timeIsNull = builder.isNull(path.get<Instant>(CertificateSigningRequest::processTimestamp.name))
+                builder.and(eq, timeIsNull)
+            }
             if (request != null) {
-                DataTable.update({ DataTable.requestId eq requestId }) {
-                    it[this.rejectReason] = rejectReason
-                    it[processTimestamp] = Instant.now()
-                }
+                request.rejectReason = rejectReason
+                request.processTimestamp = Instant.now()
+                session.save(request)
             }
         }
     }
 
     override fun getRequest(requestId: String): CertificationRequestData? {
         return database.transaction {
-            singleRequestWhere { DataTable.requestId eq requestId }
-        }
+            singleRequestWhere { builder, path ->
+                builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
+            }
+        }?.toRequestData()
     }
 
     override fun getPendingRequestIds(): List<String> {
         return database.transaction {
-            DataTable.select { DataTable.processTimestamp.isNull() }.map { it[DataTable.requestId] }
+            val builder = session.criteriaBuilder
+            val query = builder.createQuery(String::class.java).run {
+                from(CertificateSigningRequest::class.java).run {
+                    select(get(CertificateSigningRequest::requestId.name))
+                    where(builder.isNull(get<String>(CertificateSigningRequest::processTimestamp.name)))
+                }
+            }
+            session.createQuery(query).resultList
         }
     }
 
     override fun getApprovedRequestIds(): List<String> = emptyList()
 
-    private fun singleRequestWhere(where: SqlExpressionBuilder.() -> Op<Boolean>): CertificationRequestData? {
-        return DataTable
-                .select(where)
-                .map { CertificationRequestData(it[DataTable.hostName], it[DataTable.ipAddress], PKCS10CertificationRequest(IOUtils.toByteArray(it[DataTable.request].binaryStream))) }
-                .singleOrNull()
+    private fun singleRequestWhere(predicate: (CriteriaBuilder, Path<CertificateSigningRequest>) -> Predicate): CertificateSigningRequest? {
+        return database.transaction {
+            val builder = session.criteriaBuilder
+            val criteriaQuery = builder.createQuery(CertificateSigningRequest::class.java)
+            val query = criteriaQuery.from(CertificateSigningRequest::class.java).run {
+                criteriaQuery.where(predicate(builder, this))
+            }
+            session.createQuery(query).uniqueResultOptional().orElse(null)
+        }
     }
+
+    private fun CertificateSigningRequest.toRequestData() = CertificationRequestData(hostName, ipAddress, PKCS10CertificationRequest(request))
 }

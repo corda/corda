@@ -5,22 +5,22 @@ import com.google.common.net.HostAndPort
 import com.r3.corda.doorman.DoormanServer.Companion.logger
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
+import com.r3.corda.doorman.persistence.DoormanSchemaService
 import com.r3.corda.doorman.persistence.JiraCertificateRequestStorage
-import net.corda.core.createDirectories
-import net.corda.core.crypto.*
-import net.corda.core.crypto.KeyStoreUtilities.loadKeyStore
-import net.corda.core.crypto.KeyStoreUtilities.loadOrCreateKeyStore
-import net.corda.core.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
-import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.core.crypto.X509Utilities.createCertificate
-import net.corda.core.seconds
+import net.corda.core.crypto.Crypto
+import net.corda.core.internal.createDirectories
+import net.corda.core.utilities.CertificateAndKeyPair
 import net.corda.core.utilities.loggerFor
-import net.corda.node.utilities.configureDatabase
+import net.corda.core.utilities.seconds
+import net.corda.core.utilities.withCommonName
+import net.corda.node.utilities.*
+import net.corda.node.utilities.X509Utilities.CORDA_INTERMEDIATE_CA
+import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
+import net.corda.node.utilities.X509Utilities.createCertificate
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.cert.path.CertPath
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
@@ -37,6 +37,7 @@ import java.security.cert.Certificate
 import java.time.Instant
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
+
 
 /**
  *  DoormanServer runs on Jetty server and provide certificate signing service via http.
@@ -88,8 +89,13 @@ class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CertificateAnd
                             // please see [sun.security.x509.X500Name.isWithinSubtree()] for more information.
                             // We assume all attributes in the subject name has been checked prior approval.
                             // TODO: add validation to subject name.
-                            val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, request.subject))), arrayOf())
-                            createCertificate(CertificateType.CLIENT_CA, caCertAndKey.certificate, caCertAndKey.keyPair, request.subject, request.publicKey, nameConstraints = nameConstraints).toX509Certificate()
+                            val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, request.subject.withCommonName(null)))), arrayOf())
+                            createCertificate(CertificateType.CLIENT_CA,
+                                    caCertAndKey.certificate,
+                                    caCertAndKey.keyPair,
+                                    request.subject.withCommonName(X509Utilities.CORDA_CLIENT_CA_CN),
+                                    request.publicKey,
+                                    nameConstraints = nameConstraints).toX509Certificate()
                         }
                         logger.info("Approved request $id")
                         serverStatus.lastApprovalTime = Instant.now()
@@ -151,7 +157,7 @@ private fun DoormanParameters.generateRootKeyPair() {
 
     val selfSignKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     val selfSignCert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Corda Root CA, O=R3, OU=Corda, L=London, C=GB"), selfSignKey)
-    rootStore.addOrReplaceKey(CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), CertPath(arrayOf(selfSignCert)))
+    rootStore.addOrReplaceKey(CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert))
     rootStore.save(rootStorePath, rootKeystorePassword)
 
     println("Root CA keypair and certificate stored in $rootStorePath.")
@@ -183,7 +189,7 @@ private fun DoormanParameters.generateCAKeyPair() {
     val intermediateKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     val intermediateCert = createCertificate(CertificateType.INTERMEDIATE_CA, rootKeyAndCert.certificate, rootKeyAndCert.keyPair, X500Name("CN=Corda Intermediate CA, O=R3, OU=Corda, L=London, C=GB"), intermediateKey.public)
     keyStore.addOrReplaceKey(CORDA_INTERMEDIATE_CA, intermediateKey.private,
-            caPrivateKeyPassword.toCharArray(), CertPath(arrayOf(intermediateCert, rootKeyAndCert.certificate)))
+            caPrivateKeyPassword.toCharArray(), arrayOf(intermediateCert, rootKeyAndCert.certificate))
     keyStore.save(keystorePath, keystorePassword)
     println("Intermediate CA keypair and certificate stored in $keystorePath.")
     println(loadKeyStore(keystorePath, keystorePassword).getCertificate(CORDA_INTERMEDIATE_CA).publicKey)
@@ -199,7 +205,10 @@ private fun DoormanParameters.startDoorman() {
     val rootCACert = keystore.getCertificateChain(CORDA_INTERMEDIATE_CA).last()
     val caCertAndKey = keystore.getCertificateAndKeyPair(CORDA_INTERMEDIATE_CA, caPrivateKeyPassword)
     // Create DB connection.
-    val database = configureDatabase(dataSourceProperties).second
+    val database = configureDatabase(dataSourceProperties, databaseProperties, { DoormanSchemaService() }, createIdentityService = {
+        // Identity service not needed doorman, corda persistence is not very generic.
+        throw UnsupportedOperationException()
+    })
 
     val requestStorage = DBCertificateRequestStorage(database)
 

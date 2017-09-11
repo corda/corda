@@ -3,10 +3,10 @@ package com.r3.corda.doorman
 import com.r3.corda.doorman.OptionParserHelper.toConfigWithOptions
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-import net.corda.core.div
-import net.corda.node.utilities.getPath
+import net.corda.core.internal.div
 import net.corda.nodeapi.config.parseAs
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 
 data class DoormanParameters(val basedir: Path,
@@ -17,6 +17,7 @@ data class DoormanParameters(val basedir: Path,
                              val host: String,
                              val port: Int,
                              val dataSourceProperties: Properties,
+                             val databaseProperties: Properties? = null,
                              val keygen: Boolean = false,
                              val rootKeygen: Boolean = false,
                              val jiraConfig: JiraConfig? = null,
@@ -55,9 +56,9 @@ fun parseParameters(vararg args: String): DoormanParameters {
     }
 
     val configFile = if (argConfig.hasPath("configFile")) {
-        argConfig.getPath("configFile")
+        Paths.get(argConfig.getString("configFile"))
     } else {
-        argConfig.getPath("basedir") / "node.conf"
+        Paths.get(argConfig.getString("basedir")) / "node.conf"
     }
     val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))).resolve()
     return config.parseAs<DoormanParameters>()

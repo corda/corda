@@ -3,10 +3,10 @@ package com.r3.corda.doorman
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import net.corda.core.crypto.CertificateAndKeyPair
-import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
-import net.corda.core.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
-import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.core.utilities.CertificateAndKeyPair
+import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_CA
+import net.corda.node.utilities.X509Utilities.CORDA_INTERMEDIATE_CA
+import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.codehaus.jackson.map.ObjectMapper
 import java.io.ByteArrayOutputStream

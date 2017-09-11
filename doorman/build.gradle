@@ -1,7 +1,7 @@
 ext {
     // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman releases are
     // align with the corresponding Corda release.
-    corda_dependency_version = '0.12.1'
+    corda_dependency_version = '0.16-SNAPSHOT'
 }
 
 version "$corda_dependency_version"
@@ -40,10 +40,10 @@ task buildDoormanJAR(type: FatCapsule, dependsOn: 'jar') {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-    compile "net.corda:core:$corda_dependency_version"
-    compile "net.corda:node:$corda_dependency_version"
-    compile "net.corda:node-api:$corda_dependency_version"
-    testCompile "net.corda:test-utils:$corda_dependency_version"
+    compile "net.corda:corda-core:$corda_dependency_version"
+    compile "net.corda:corda-node:$corda_dependency_version"
+    compile "net.corda:corda-node-api:$corda_dependency_version"
+    testCompile "net.corda:corda-test-utils:$corda_dependency_version"
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"

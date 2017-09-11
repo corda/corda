@@ -5,9 +5,11 @@ import com.atlassian.jira.rest.client.api.domain.Field
 import com.atlassian.jira.rest.client.api.domain.IssueType
 import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder
 import com.atlassian.jira.rest.client.api.domain.input.TransitionInput
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.commonName
+import net.corda.core.utilities.country
+import net.corda.core.utilities.locality
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.organisation
+import net.corda.node.utilities.X509Utilities
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
@@ -39,14 +41,16 @@ class JiraCertificateRequestStorage(val delegate: CertificationRequestStorage,
             JcaPEMWriter(request).use {
                 it.writeObject(PemObject("CERTIFICATE REQUEST", certificationData.request.encoded))
             }
-            val commonName = certificationData.request.subject.commonName
-            val email = certificationData.request.subject.getRDNs(BCStyle.EmailAddress).firstOrNull()?.first?.value
-            val nearestCity = certificationData.request.subject.getRDNs(BCStyle.L).firstOrNull()?.first?.value
+            val organisation = certificationData.request.subject.organisation
+            val nearestCity = certificationData.request.subject.locality
+            val country = certificationData.request.subject.country
+
+            val email = certificationData.request.getAttributes(BCStyle.E).firstOrNull()?.attrValues?.firstOrNull()?.toString()
 
             val issue = IssueInputBuilder().setIssueTypeId(taskIssueType.id)
                     .setProjectKey(projectCode)
-                    .setDescription("Legal Name: $commonName\nNearest City: $nearestCity\nEmail: $email\n\n{code}$request{code}")
-                    .setSummary(commonName)
+                    .setDescription("Organisation: $organisation\nNearest City: $nearestCity\nCountry: $country\nEmail: $email\n\n{code}$request{code}")
+                    .setSummary(organisation)
                     .setFieldValue(requestIdField.id, requestId)
             // This will block until the issue is created.
             jiraClient.issueClient.createIssue(issue.build()).fail { logger.error("Exception when creating JIRA issue.", it) }.claim()
