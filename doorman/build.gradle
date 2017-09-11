@@ -17,7 +17,7 @@ repositories {
     }
     jcenter()
     maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
+        url 'http://ci-artifactory.corda.r3cev.com/artifactory/corda-dev'
     }
 }
 
