@@ -12,8 +12,8 @@ class NodeControllerTest {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
     private val controller = NodeController({ _, _ -> })
-    private val node1Name = "Node 1"
-    private val node2Name = "Node 2"
+    private val node1Name = "Organisation 1"
+    private val organisation2Name = "Organisation 2"
 
     @Test
     fun `test unique nodes after validate`() {
@@ -28,9 +28,9 @@ class NodeControllerTest {
         val data = NodeData()
         data.legalName.value = node1Name
 
-        assertFalse(controller.keyExists("node1"))
+        assertFalse(controller.keyExists("organisation1"))
         controller.validate(data)
-        assertTrue(controller.keyExists("node1"))
+        assertTrue(controller.keyExists("organisation1"))
     }
 
     @Test
@@ -38,13 +38,13 @@ class NodeControllerTest {
         val data = NodeData()
         data.legalName.value = node1Name
 
-        assertFalse(controller.nameExists("Node 1"))
-        assertFalse(controller.nameExists("Node1"))
-        assertFalse(controller.nameExists("node 1"))
+        assertFalse(controller.nameExists("Organisation 1"))
+        assertFalse(controller.nameExists("Organisation1"))
+        assertFalse(controller.nameExists("organisation 1"))
         controller.validate(data)
-        assertTrue(controller.nameExists("Node 1"))
-        assertTrue(controller.nameExists("Node1"))
-        assertTrue(controller.nameExists("node 1"))
+        assertTrue(controller.nameExists("Organisation 1"))
+        assertTrue(controller.nameExists("Organisation1"))
+        assertTrue(controller.nameExists("organisation 1"))
     }
 
     @Test
@@ -60,36 +60,36 @@ class NodeControllerTest {
 
     @Test
     fun `test register unique nodes`() {
-        val config = createConfig(commonName = node2Name)
+        val config = createConfig(commonName = organisation2Name)
         assertTrue(controller.register(config))
         assertFalse(controller.register(config))
     }
 
     @Test
     fun `test unique key after register`() {
-        val config = createConfig(commonName = node2Name)
+        val config = createConfig(commonName = organisation2Name)
 
-        assertFalse(controller.keyExists("node2"))
+        assertFalse(controller.keyExists("organisation2"))
         controller.register(config)
-        assertTrue(controller.keyExists("node2"))
+        assertTrue(controller.keyExists("organisation2"))
     }
 
     @Test
     fun `test matching name after register`() {
-        val config = createConfig(commonName = node2Name)
+        val config = createConfig(commonName = organisation2Name)
 
-        assertFalse(controller.nameExists("Node 2"))
-        assertFalse(controller.nameExists("Node2"))
-        assertFalse(controller.nameExists("node 2"))
+        assertFalse(controller.nameExists("Organisation 2"))
+        assertFalse(controller.nameExists("Organisation2"))
+        assertFalse(controller.nameExists("organisation 2"))
         controller.register(config)
-        assertTrue(controller.nameExists("Node 2"))
-        assertTrue(controller.nameExists("Node2"))
-        assertTrue(controller.nameExists("node 2"))
+        assertTrue(controller.nameExists("Organisation 2"))
+        assertTrue(controller.nameExists("Organisation2"))
+        assertTrue(controller.nameExists("organisation 2"))
     }
 
     @Test
     fun `test register network map node`() {
-        val config = createConfig(commonName = "Node is Network Map")
+        val config = createConfig(commonName = "Organisation is Network Map")
         assertTrue(config.isNetworkMap())
 
         assertFalse(controller.hasNetworkMap())
@@ -99,7 +99,7 @@ class NodeControllerTest {
 
     @Test
     fun `test register non-network-map node`() {
-        val config = createConfig(commonName = "Node is not Network Map")
+        val config = createConfig(commonName = "Organisation is not Network Map")
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 10000)
         assertFalse(config.isNetworkMap())
 
