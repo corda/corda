@@ -6,7 +6,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.getX500Name
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver
@@ -14,7 +13,6 @@ import org.junit.Test
 import kotlin.test.assertTrue
 
 class AdvertisedServiceTests {
-    private val serviceName = getX500Name(O = "Custom Service", OU = "corda", L = "London", C = "GB")
     private val serviceType = ServiceType.corda.getSubType("custom")
     private val user = "bankA"
     private val pass = "passA"
@@ -32,7 +30,7 @@ class AdvertisedServiceTests {
     fun `service is accessible through getAnyServiceOfType`() {
         driver(startNodesInProcess = true) {
             val bankA = startNode(rpcUsers = listOf(User(user, pass, setOf(startFlowPermission<ServiceTypeCheckingFlow>())))).get()
-            startNode(advertisedServices = setOf(ServiceInfo(serviceType, serviceName))).get()
+            startNode(advertisedServices = setOf(ServiceInfo(serviceType))).get()
             bankA.rpcClientToNode().use(user, pass) { connection ->
                 val result = connection.proxy.startFlow(::ServiceTypeCheckingFlow).returnValue.get()
                 assertTrue(result)

@@ -165,17 +165,18 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
                     .filterNotNull()
                     .toTypedArray()
-            val identityService = PersistentIdentityService(setOf(info.legalIdentityAndCert),
+            val service = PersistentIdentityService(setOf(info.legalIdentityAndCert),
                     trustRoot = trustRoot, caCertificates = *caCertificates)
-            services.networkMapCache.partyNodes.forEach { identityService.verifyAndRegisterIdentity(it.legalIdentityAndCert) }
+            val allIdAndCerts = services.networkMapCache.partyNodes.flatMap { it.legalIdentitiesAndCerts + it.legalIdentityAndCert }
+            allIdAndCerts.forEach { idAndCert -> service.verifyAndRegisterIdentity(idAndCert) }
             services.networkMapCache.changed.subscribe { mapChange ->
                 // TODO how should we handle network map removal
                 if (mapChange is NetworkMapCache.MapChange.Added) {
-                    identityService.verifyAndRegisterIdentity(mapChange.node.legalIdentityAndCert)
+                    val idAndCerts = mapChange.node.legalIdentitiesAndCerts + mapChange.node.legalIdentityAndCert
+                    idAndCerts.forEach { idAndCert -> service.verifyAndRegisterIdentity(idAndCert) }
                 }
             }
-
-            return identityService
+            return service
         }
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
