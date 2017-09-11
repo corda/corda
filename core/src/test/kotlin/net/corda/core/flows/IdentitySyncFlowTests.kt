@@ -5,6 +5,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
@@ -17,7 +18,6 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import net.corda.core.utilities.unwrap
 
 class IdentitySyncFlowTests {
     lateinit var mockNet: MockNetwork

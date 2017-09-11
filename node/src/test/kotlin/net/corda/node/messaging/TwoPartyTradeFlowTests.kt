@@ -28,6 +28,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
+import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
@@ -63,7 +64,6 @@ import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import net.corda.core.utilities.unwrap
 
 /**
  * In this example, Alice wishes to sell her commercial paper to Bob in return for $1,000,000 and they wish to do

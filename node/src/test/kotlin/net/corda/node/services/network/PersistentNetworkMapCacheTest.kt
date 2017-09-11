@@ -10,6 +10,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.toBase58String
+import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
@@ -22,7 +23,6 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
-import net.corda.core.utilities.unwrap
 
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
     val partiesList = listOf(DUMMY_NOTARY, ALICE, BOB)

@@ -13,6 +13,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
@@ -29,7 +30,6 @@ import java.security.KeyPair
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.assertEquals
-import net.corda.core.utilities.unwrap
 
 private fun createAttachmentData(content: String) = ByteArrayOutputStream().apply {
     ZipOutputStream(this).use {

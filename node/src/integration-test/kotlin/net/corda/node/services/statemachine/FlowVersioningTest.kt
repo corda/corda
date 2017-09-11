@@ -6,12 +6,12 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import net.corda.core.utilities.unwrap
 
 class FlowVersioningTest : NodeBasedTest() {
     @Test

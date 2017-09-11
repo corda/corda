@@ -3,7 +3,6 @@ package net.corda.core.flows;
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
-import net.corda.core.utilities.UntrustworthyData;
 import net.corda.testing.node.MockNetwork;
 import org.junit.After;
 import org.junit.Before;
@@ -79,7 +78,7 @@ public class FlowsInJavaTest {
         @Suspendable
         @Override
         public String call() throws FlowException {
-            return receive(String.class, otherParty).unwrap((UntrustworthyData.Validator<String, String>) data -> {
+            return receive(String.class, otherParty).unwrap(data -> {
                 send(otherParty, "Something");
                 return data;
             });
@@ -97,7 +96,7 @@ public class FlowsInJavaTest {
         @Suspendable
         @Override
         public String call() throws FlowException {
-            return sendAndReceive(String.class, otherParty, "Hello").unwrap((UntrustworthyData.Validator<String, String>) data -> data);
+            return sendAndReceive(String.class, otherParty, "Hello").unwrap(data -> data);
         }
     }
 

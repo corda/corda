@@ -8,11 +8,11 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.OGTrade
 import net.corda.vega.contracts.SwapData
-import net.corda.core.utilities.unwrap
 
 object IRSTradeFlow {
     @CordaSerializable

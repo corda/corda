@@ -18,13 +18,13 @@ import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow
 import net.corda.vega.analytics.*
 import net.corda.vega.contracts.*
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import java.time.LocalDate
-import net.corda.core.utilities.unwrap
 
 /**
  * The Simm Flow is between two parties that both agree on a portfolio of trades to run valuations on. Both sides

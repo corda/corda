@@ -14,6 +14,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
+import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
@@ -35,7 +36,6 @@ import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
-import net.corda.core.utilities.unwrap
 
 /**
  * Runs a series of MQ-related attacks against a node. Subclasses need to call [startAttacker] to connect

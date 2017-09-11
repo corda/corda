@@ -9,12 +9,12 @@ import net.corda.core.internal.Emoji
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.TwoPartyTradeFlow
 import net.corda.traderdemo.TransactionGraphSearch
 import java.util.*
-import net.corda.core.utilities.unwrap
 
 @InitiatedBy(SellerFlow::class)
 class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {

@@ -8,6 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
@@ -17,7 +18,6 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.reflect.KClass
 import kotlin.test.assertFailsWith
-import net.corda.core.utilities.unwrap
 
 class CollectSignaturesFlowTests {
     lateinit var mockNet: MockNetwork
