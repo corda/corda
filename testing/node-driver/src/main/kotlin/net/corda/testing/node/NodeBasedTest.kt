@@ -7,7 +7,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.WHITESPACE
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.organisation
@@ -41,6 +40,8 @@ import kotlin.concurrent.thread
  */
 // TODO Some of the logic here duplicates what's in the driver
 abstract class NodeBasedTest : TestDependencyInjectionBase() {
+    val WHITESPACE = "\\s++".toRegex()
+
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()

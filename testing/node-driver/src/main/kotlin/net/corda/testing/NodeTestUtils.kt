@@ -7,14 +7,11 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.commonName
-import net.corda.core.utilities.organisation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import org.bouncycastle.asn1.x500.X500Name
 import java.net.URL
 import java.nio.file.Path
 

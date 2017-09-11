@@ -792,7 +792,10 @@ class DriverDSL(
         }
     }
 
-    override fun baseDirectory(nodeName: X500Name): Path = driverDirectory / nodeName.organisation.replace(WHITESPACE, "")
+    override fun baseDirectory(nodeName: X500Name): Path {
+        val nodeDirectoryName = String(nodeName.organisation.filter { !it.isWhitespace() }.toCharArray())
+        return driverDirectory / nodeDirectoryName
+    }
 
     override fun startDedicatedNetworkMapService(startInProcess: Boolean?): CordaFuture<NodeHandle> {
         val webAddress = portAllocation.nextHostAndPort()

@@ -10,11 +10,8 @@ import javafx.util.Duration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ScreenCoordinate
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.getX500Name
-import net.corda.core.utilities.organisation
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.testing.node.MockNetwork
-import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 
 class VisualiserViewModel {

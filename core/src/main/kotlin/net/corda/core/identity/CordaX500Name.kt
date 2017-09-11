@@ -33,7 +33,7 @@ data class CordaX500Name(val commonName: String?,
                     val country: String) {
     init {
         // Legal name checks.
-        validateLegalName(organisation)
+        LegalNameValidator.validateLegalName(organisation)
 
         // Attribute data width checks.
         require(country.length == LENGTH_COUNTRY) { "Invalid country '$country' Country code must be 2 letters ISO code " }

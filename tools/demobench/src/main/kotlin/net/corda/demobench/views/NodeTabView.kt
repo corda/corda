@@ -20,9 +20,8 @@ import net.corda.core.internal.readAllLines
 import net.corda.core.internal.writeLines
 import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
-import net.corda.core.utilities.normaliseLegalName
-import net.corda.core.utilities.organisation
-import net.corda.core.utilities.validateLegalName
+import net.corda.core.identity.normaliseLegalName
+import net.corda.core.identity.validateLegalName
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
 import org.controlsfx.control.CheckListView

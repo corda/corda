@@ -9,7 +9,7 @@ import kotlin.test.assertFailsWith
 
 class ServiceInfoTests {
     val serviceType = ServiceType.getServiceType("test", "service").getSubType("subservice")
-    val name = CordaX500Name(organisation = "service.name", locality = "London", country = "GB")
+    val name = CordaX500Name(organisation = "Service.name", locality = "London", country = "GB")
 
     @Test
     fun `type and name encodes correctly`() {
