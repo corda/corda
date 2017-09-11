@@ -4,7 +4,6 @@ import joptsimple.OptionSet
 import net.corda.client.mock.ErrorFlowsEventGenerator
 import net.corda.client.mock.EventGenerator
 import net.corda.client.mock.Generator
-import net.corda.client.mock.pickOne
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party

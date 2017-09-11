@@ -60,7 +60,7 @@ abstract class SerializationFactory {
      * Allow subclasses to temporarily mark themselves as the current factory for the current thread during serialization/deserialization.
      * Will restore the prior context on exiting the block.
      */
-    protected fun <T> asCurrent(block: SerializationFactory.() -> T): T {
+    fun <T> asCurrent(block: SerializationFactory.() -> T): T {
         val priorContext = _currentFactory.get()
         _currentFactory.set(this)
         try {
@@ -134,6 +134,7 @@ interface SerializationContext {
      * Helper method to return a new context based on this context with the appropriate class loader constructed from the passed attachment identifiers.
      * (Requires the attachment storage to have been enabled).
      */
+    @Throws(MissingAttachmentsException::class)
     fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext
 
     /**

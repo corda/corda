@@ -26,14 +26,6 @@ class TransactionKeyFlowTests {
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         val alice: Party = aliceNode.services.myInfo.legalIdentity
         val bob: Party = bobNode.services.myInfo.legalIdentity
-        aliceNode.database.transaction {
-            aliceNode.services.identityService.verifyAndRegisterIdentity(bobNode.info.legalIdentityAndCert)
-            aliceNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
-        }
-        bobNode.database.transaction {
-            bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
-            bobNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
-        }
 
         // Run the flows
         val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow(bob))

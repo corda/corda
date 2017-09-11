@@ -57,16 +57,11 @@ data class FlowProgressHandleImpl<A>(
 
     // Remember to add @Throws to FlowProgressHandle.close() if this throws an exception.
     override fun close() {
-        progress.notUsed()
+        try {
+            progress.subscribe({}, {}).unsubscribe()
+        } catch (e: Exception) {
+            // Swallow any other exceptions as well.
+        }
         returnValue.cancel(false)
-    }
-}
-
-// Private copy of the version in client:rpc.
-private fun <T> Observable<T>.notUsed() {
-    try {
-        this.subscribe({}, {}).unsubscribe()
-    } catch (e: Exception) {
-        // Swallow any other exceptions as well.
     }
 }

@@ -10,7 +10,6 @@ import net.corda.core.internal.declaredField
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
-import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ByteSequence
@@ -376,5 +375,25 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         val serialized = contract.serialize(context = outboundContext)
         // Then deserialize with the attachment class loader associated with the attachment
         serialized.deserialize(context = inboundContext)
+    }
+
+    @Test
+    fun `test loading a class with attachment missing during deserialization`() {
+        val child = ClassLoaderForTests()
+        val contractClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, child)
+        val contract = contractClass.newInstance() as DummyContractBackdoor
+        val storage = MockAttachmentStorage()
+        val attachmentRef = SecureHash.randomSHA256()
+        val outboundContext = SerializationFactory.defaultFactory.defaultContext.withClassLoader(child)
+        // Serialize with custom context to avoid populating the default context with the specially loaded class
+        val serialized = contract.serialize(context = outboundContext)
+
+        // Then deserialize with the attachment class loader associated with the attachment
+        val e = assertFailsWith(MissingAttachmentsException::class) {
+            // We currently ignore annotations in attachments, so manually whitelist.
+            val inboundContext = SerializationFactory.defaultFactory.defaultContext.withWhitelisted(contract.javaClass).withAttachmentStorage(storage).withAttachmentsClassLoader(listOf(attachmentRef))
+            serialized.deserialize(context = inboundContext)
+        }
+        assertEquals(attachmentRef, e.ids.single())
     }
 }

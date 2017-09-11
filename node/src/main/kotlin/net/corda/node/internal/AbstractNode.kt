@@ -55,6 +55,7 @@ import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.appName
 import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
 import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
@@ -349,13 +350,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         require(classWithAnnotation == initiatingFlow) {
             "${InitiatedBy::class.java.name} must point to ${classWithAnnotation.name} and not ${initiatingFlow.name}"
         }
-        val jarFile = Paths.get(initiatedFlow.protectionDomain.codeSource.location.toURI())
-        val appName = if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
-            jarFile.fileName.toString().removeSuffix(".jar")
-        } else {
-            "<unknown>"
-        }
-        val flowFactory = InitiatedFlowFactory.CorDapp(version, appName, { ctor.newInstance(it) })
+        val flowFactory = InitiatedFlowFactory.CorDapp(version, initiatedFlow.appName, { ctor.newInstance(it) })
         val observable = internalRegisterFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
         log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
         return observable

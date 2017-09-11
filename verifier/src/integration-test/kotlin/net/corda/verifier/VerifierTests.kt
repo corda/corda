@@ -1,6 +1,5 @@
 package net.corda.verifier
 
-import net.corda.client.mock.generateOrFail
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
