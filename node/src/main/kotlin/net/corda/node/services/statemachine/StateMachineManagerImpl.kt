@@ -16,6 +16,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
@@ -48,42 +49,24 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 import javax.annotation.concurrent.ThreadSafe
-import kotlin.collections.ArrayList
 
 /**
- * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachineImpl] objects.
- * Each such object represents an instantiation of a (two-party) flow that has reached a particular point.
- *
- * An implementation of this class will persist state machines to long term storage so they can survive process restarts
- * and, if run with a single-threaded executor, will ensure no two state machines run concurrently with each other
- * (bad for performance, good for programmer mental health!).
- *
- * A "state machine" is a class with a single call method. The call method and any others it invokes are rewritten by
- * a bytecode rewriting engine called Quasar, to ensure the code can be suspended and resumed at any point.
- *
- * The SMM will always invoke the flow fibers on the given [AffinityExecutor], regardless of which thread actually
- * starts them via [add].
- *
- * TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
- *       continuation is always unique?
- * TODO: Think about how to bring the system to a clean stop so it can be upgraded without any serialised stacks on disk
- * TODO: Timeouts
- * TODO: Surfacing of exceptions via an API and/or management UI
- * TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
- * TODO: Don't store all active flows in memory, load from the database on demand.
+ * The StateMachineManagerImpl will always invoke the flow fibers on the given [AffinityExecutor], regardless of which
+ * thread actually starts them via [startFlow].
  */
 @ThreadSafe
-class StateMachineManager(val serviceHub: ServiceHubInternal,
-                          val checkpointStorage: CheckpointStorage,
-                          val executor: AffinityExecutor,
-                          val database: CordaPersistence,
-                          private val unfinishedFibers: ReusableLatch = ReusableLatch(),
-                          private val classloader: ClassLoader = javaClass.classLoader) {
-
+class StateMachineManagerImpl(
+        val serviceHub: ServiceHubInternal,
+        val checkpointStorage: CheckpointStorage,
+        val executor: AffinityExecutor,
+        val database: CordaPersistence,
+        private val unfinishedFibers: ReusableLatch = ReusableLatch(),
+        private val classloader: ClassLoader = StateMachineManagerImpl::class.java.classLoader
+) : StateMachineManager {
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
 
     companion object {
-        private val logger = loggerFor<StateMachineManager>()
+        private val logger = loggerFor<StateMachineManagerImpl>()
         internal val sessionTopic = TopicSession("platform.session")
 
         init {
@@ -93,22 +76,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    sealed class Change {
-        abstract val logic: FlowLogic<*>
-
-        data class Add(override val logic: FlowLogic<*>) : Change()
-        data class Removed(override val logic: FlowLogic<*>, val result: Try<*>) : Change()
-    }
-
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
     private class InnerState {
         var started = false
         val stateMachines = LinkedHashMap<FlowStateMachineImpl<*>, Checkpoint>()
-        val changesPublisher = PublishSubject.create<Change>()!!
+        val changesPublisher = PublishSubject.create<StateMachineManager.Change>()!!
         val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash, FlowStateMachineImpl<*>>()!!
 
-        fun notifyChangeObservers(change: Change) {
+        fun notifyChangeObservers(change: StateMachineManager.Change) {
             changesPublisher.bufferUntilDatabaseCommit().onNext(change)
         }
     }
@@ -139,24 +115,22 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val openSessions = ConcurrentHashMap<Long, FlowSessionInternal>()
     private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
 
-    internal val tokenizableServices = ArrayList<Any>()
     // Context for tokenized services in checkpoints
+    private lateinit var tokenizableServices: List<Any>
     private val serializationContext by lazy {
         SerializeAsTokenContextImpl(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
     }
 
-    fun findServices(predicate: (Any) -> Boolean) = tokenizableServices.filter(predicate)
-
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
-    fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, CordaFuture<T>>> {
+    override fun <A : FlowLogic<*>> findStateMachines(flowClass: Class<A>): List<Pair<A, CordaFuture<*>>> {
         return mutex.locked {
             stateMachines.keys.mapNotNull {
-                flowClass.castIfPossible(it.logic)?.let { it to uncheckedCast<FlowStateMachine<*>, FlowStateMachineImpl<T>>(it.stateMachine).resultFuture }
+                flowClass.castIfPossible(it.logic)?.let { it to uncheckedCast<FlowStateMachine<*>, FlowStateMachineImpl<*>>(it.stateMachine).resultFuture }
             }
         }
     }
 
-    val allStateMachines: List<FlowLogic<*>>
+    override val allStateMachines: List<FlowLogic<*>>
         get() = mutex.locked { stateMachines.keys.map { it.logic } }
 
     /**
@@ -165,9 +139,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      *
      * We use assignment here so that multiple subscribers share the same wrapped Observable.
      */
-    val changes: Observable<Change> = mutex.content.changesPublisher.wrapWithDatabaseTransaction()
+    override val changes: Observable<StateMachineManager.Change> = mutex.content.changesPublisher.wrapWithDatabaseTransaction()
 
-    fun start() {
+    override fun start(tokenizableServices: List<Any>) {
+        this.tokenizableServices = tokenizableServices
         checkQuasarJavaAgentPresence()
         restoreFibersFromCheckpoints()
         listenToLedgerTransactions()
@@ -207,12 +182,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     /**
-     * Start the shutdown process, bringing the [StateMachineManager] to a controlled stop.  When this method returns,
+     * Start the shutdown process, bringing the [StateMachineManagerImpl] to a controlled stop.  When this method returns,
      * all Fibers have been suspended and checkpointed, or have completed.
      *
      * @param allowedUnsuspendedFiberCount Optional parameter is used in some tests.
      */
-    fun stop(allowedUnsuspendedFiberCount: Int = 0) {
+    override fun stop(allowedUnsuspendedFiberCount: Int) {
         require(allowedUnsuspendedFiberCount >= 0)
         mutex.locked {
             if (stopping) throw IllegalStateException("Already stopping!")
@@ -229,9 +204,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * Atomic get snapshot + subscribe. This is needed so we don't miss updates between subscriptions to [changes] and
      * calls to [allStateMachines]
      */
-    fun track(): DataFeed<List<FlowStateMachineImpl<*>>, Change> {
+    override fun track(): DataFeed<List<FlowLogic<*>>, StateMachineManager.Change> {
         return mutex.locked {
-            DataFeed(stateMachines.keys.toList(), changesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            DataFeed(stateMachines.keys.map { it.logic }, changesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 
@@ -460,7 +435,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             try {
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
-                    notifyChangeObservers(Change.Removed(fiber.logic, result))
+                    notifyChangeObservers(StateMachineManager.Change.Removed(fiber.logic, result))
                 }
                 endAllFiberSessions(fiber, result, propagated)
             } finally {
@@ -473,7 +448,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         mutex.locked {
             totalStartedFlows.inc()
             unfinishedFibers.countUp()
-            notifyChangeObservers(Change.Add(fiber.logic))
+            notifyChangeObservers(StateMachineManager.Change.Add(fiber.logic))
         }
     }
 
@@ -526,11 +501,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      *
      * Note that you must be on the [executor] thread.
      */
-    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T> {
+    override fun <A> startFlow(flowLogic: FlowLogic<A>, flowInitiator: FlowInitiator, ourIdentity: Party?): CordaFuture<FlowStateMachine<A>> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         val fiber = database.transaction {
-            val fiber = createFiber(logic, flowInitiator, ourIdentity)
+            val fiber = createFiber(flowLogic, flowInitiator, ourIdentity)
             updateCheckpoint(fiber)
             fiber
         }
@@ -540,7 +515,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 resumeFiber(fiber)
             }
         }
-        return fiber
+        return doneFuture(fiber)
     }
 
     private fun updateCheckpoint(fiber: FlowStateMachineImpl<*>) {

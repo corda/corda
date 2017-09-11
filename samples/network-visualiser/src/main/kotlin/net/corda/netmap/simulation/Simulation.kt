@@ -12,11 +12,14 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.testing.*
+import net.corda.testing.DUMMY_MAP
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.setTo
+import net.corda.testing.testNodeConfiguration
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.math.BigInteger
@@ -118,7 +121,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                     registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
                     javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
                         database.transaction {
-                            installCordaService(NodeInterestRates.Oracle::class.java).uploadFixes(it.reader().readText())
+                            findTokenizableService(NodeInterestRates.Oracle::class.java)!!.uploadFixes(it.reader().readText())
                         }
                     }
                 }
@@ -143,7 +146,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val mockNet = MockNetwork(
             networkSendManuallyPumped = networkSendManuallyPumped,
             threadPerNode = runAsync,
-            cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract"))
+            cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract", "net.corda.irs"))
     // This one must come first.
     val networkMap = mockNet.startNetworkMapNode(nodeFactory = NetworkMapNodeFactory)
     val notary = mockNet.createNotaryNode(validating = false, nodeFactory = NotaryNodeFactory)

@@ -11,13 +11,10 @@ import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.cert
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.toX509CertHolder
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NodeInfo
@@ -30,6 +27,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
@@ -146,6 +144,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected var myNotaryIdentity: PartyAndCertificate? = null
     protected lateinit var checkpointStorage: CheckpointStorage
     protected lateinit var smm: StateMachineManager
+    private lateinit var tokenizableServices: List<Any>
     protected lateinit var attachments: NodeAttachmentService
     protected lateinit var inNodeNetworkMapService: NetworkMapService
     protected lateinit var network: MessagingService
@@ -209,18 +208,11 @@ abstract class AbstractNode(config: NodeConfiguration,
         val startedImpl = initialiseDatabasePersistence(schemaService) {
             val transactionStorage = makeTransactionStorage()
             val stateLoader = StateLoaderImpl(transactionStorage)
-            val tokenizableServices = makeServices(schemaService, transactionStorage, stateLoader)
+            val services = makeServices(schemaService, transactionStorage, stateLoader)
             saveOwnNodeInfo()
-            smm = StateMachineManager(services,
-                    checkpointStorage,
-                    serverThread,
-                    database,
-                    busyNodeLatch,
-                    cordappLoader.appClassLoader)
+            smm = makeStateMachineManager()
             val flowStarter = FlowStarterImpl(serverThread, smm)
             val schedulerService = NodeSchedulerService(platformClock, this@AbstractNode.database, flowStarter, stateLoader, unfinishedSchedules = busyNodeLatch, serverThread = serverThread)
-            smm.tokenizableServices.addAll(tokenizableServices)
-            smm.tokenizableServices.add(schedulerService)
             if (serverThread is ExecutorService) {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
@@ -233,7 +225,8 @@ abstract class AbstractNode(config: NodeConfiguration,
             val rpcOps = makeRPCOps(flowStarter)
             startMessagingService(rpcOps)
             installCoreFlows()
-            installCordaServices(flowStarter)
+            val cordaServices = installCordaServices(flowStarter)
+            tokenizableServices = services + cordaServices + schedulerService
             registerCordappFlows()
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
@@ -245,7 +238,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
         return startedImpl.apply {
             database.transaction {
-                smm.start()
+                smm.start(tokenizableServices)
                 // Shut down the SMM so no Fibers are scheduled.
                 runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
                 schedulerService.start()
@@ -254,20 +247,34 @@ abstract class AbstractNode(config: NodeConfiguration,
         }
     }
 
+    protected open fun makeStateMachineManager(): StateMachineManager {
+        return StateMachineManagerImpl(
+                services,
+                checkpointStorage,
+                serverThread,
+                database,
+                busyNodeLatch,
+                cordappLoader.appClassLoader
+        )
+    }
+
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
-    private fun installCordaServices(flowStarter: FlowStarter) {
+    private fun installCordaServices(flowStarter: FlowStarter): List<SerializeAsToken> {
         val loadedServices = cordappLoader.cordapps.flatMap { it.services }
-        filterServicesToInstall(loadedServices).forEach {
+        return filterServicesToInstall(loadedServices).mapNotNull {
             try {
                 installCordaService(flowStarter, it)
             } catch (e: NoSuchMethodException) {
                 log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
                         ServiceHub::class.java.name)
+                null
             } catch (e: ServiceInstantiationException) {
                 log.error("Corda service ${it.name} failed to instantiate", e.cause)
+                null
             } catch (e: Exception) {
                 log.error("Unable to install Corda service ${it.name}", e)
+                null
             }
         }
     }
@@ -309,11 +316,11 @@ abstract class AbstractNode(config: NodeConfiguration,
             return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
         }
 
-        private fun <T> startFlowChecked(flow: FlowLogic<T>): FlowStateMachineImpl<T> {
+        private fun <T> startFlowChecked(flow: FlowLogic<T>): FlowStateMachine<T> {
             val logicType = flow.javaClass
             require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }
             val currentUser = FlowInitiator.Service(serviceInstance.javaClass.name)
-            return flowStarter.startFlow(flow, currentUser)
+            return flowStarter.startFlow(flow, currentUser).getOrThrow()
         }
 
         override fun equals(other: Any?): Boolean {
@@ -327,7 +334,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         override fun hashCode() = Objects.hash(serviceHub, flowStarter, serviceInstance)
     }
 
-    internal fun <T : SerializeAsToken> installCordaService(flowStarter: FlowStarter, serviceClass: Class<T>): T {
+    private fun <T : SerializeAsToken> installCordaService(flowStarter: FlowStarter, serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
         val service = try {
             val serviceContext = AppServiceHubImpl<T>(services, flowStarter)
@@ -351,13 +358,18 @@ abstract class AbstractNode(config: NodeConfiguration,
             throw ServiceInstantiationException(e.cause)
         }
         cordappServices.putInstance(serviceClass, service)
-        smm.tokenizableServices += service
 
         if (service is NotaryService) handleCustomNotaryService(service)
 
         log.info("Installed ${serviceClass.name} Corda service")
         return service
     }
+
+    fun <T : Any> findTokenizableService(clazz: Class<T>): T? {
+        return tokenizableServices.firstOrNull { clazz.isAssignableFrom(it.javaClass) }?.let { uncheckedCast(it) }
+    }
+
+    inline fun <reified T : Any> findTokenizableService() = findTokenizableService(T::class.java)
 
     private fun handleCustomNotaryService(service: NotaryService) {
         runOnStop += service::stop
@@ -801,7 +813,7 @@ abstract class AbstractNode(config: NodeConfiguration,
 }
 
 internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager) : FlowStarter {
-    override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party?): FlowStateMachineImpl<T> {
-        return serverThread.fetchFrom { smm.add(logic, flowInitiator, ourIdentity) }
+    override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party?): CordaFuture<FlowStateMachine<T>> {
+        return serverThread.fetchFrom { smm.startFlow(logic, flowInitiator, ourIdentity) }
     }
 }
