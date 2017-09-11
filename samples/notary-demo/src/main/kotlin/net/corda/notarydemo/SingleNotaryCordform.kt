@@ -18,6 +18,8 @@ fun main(args: Array<String>) = SingleNotaryCordform.runNodes()
 
 val notaryDemoUser = User("demou", "demop", setOf(startFlowPermission<DummyIssueAndMove>(), startFlowPermission<RPCStartableNotaryFlowClient>()))
 
+// This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
+// NOT use this as a design to copy.
 object SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", DUMMY_NOTARY.name.toString()) {
     init {
         node {
