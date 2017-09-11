@@ -74,18 +74,20 @@ val Int.millis: Duration get() = Duration.ofMillis(toLong())
  * will not be serialized, and if it's missing (or the first time it's accessed), the initializer will be
  * used to set it up.
  */
-@Suppress("DEPRECATION")
-fun <T> transient(initializer: () -> T) = TransientProperty(initializer)
+fun <T> transient(initializer: () -> T): ValueProperty<T> = TransientProperty(initializer)
 
-@Deprecated("Use transient")
+interface ValueProperty<out T> {
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): T
+}
+
 @CordaSerializable
-class TransientProperty<out T>(private val initialiser: () -> T) {
+private class TransientProperty<out T> internal constructor(private val initialiser: () -> T) : ValueProperty<T> {
     @Transient private var initialised = false
     @Transient private var value: T? = null
 
     @Suppress("UNCHECKED_CAST")
     @Synchronized
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+    override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
         if (!initialised) {
             value = initialiser()
             initialised = true

@@ -10,7 +10,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.toBase58String
-import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.testing.ALICE
 import net.corda.testing.BOB

@@ -15,7 +15,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow

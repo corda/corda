@@ -5,7 +5,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.unwrap
 
 /**
  * The [SendTransactionFlow] should be used to send a transaction to another peer that wishes to verify that transaction's
@@ -53,15 +52,17 @@ sealed class DataVendingFlow(val otherSide: Party, val payload: Any) : FlowLogic
                         verifyDataRequest(request)
                         request
                     }
-                    FetchDataFlow.Request.End -> return null
+                    FetchDataFlow.Request.End -> return@unwrap null
                 }
             }
-            payload = when (dataRequest.dataType) {
-                FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map {
-                    serviceHub.validatedTransactions.getTransaction(it) ?: throw FetchDataFlow.HashNotFound(it)
-                }
-                FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
-                    serviceHub.attachments.openAttachment(it)?.open()?.readBytes() ?: throw FetchDataFlow.HashNotFound(it)
+            if (dataRequest != null) {
+                payload = when (dataRequest.dataType) {
+                    FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map {
+                        serviceHub.validatedTransactions.getTransaction(it) ?: throw FetchDataFlow.HashNotFound(it)
+                    }
+                    FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
+                        serviceHub.attachments.openAttachment(it)?.open()?.readBytes() ?: throw FetchDataFlow.HashNotFound(it)
+                    }
                 }
             }
         }

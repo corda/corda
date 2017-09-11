@@ -17,7 +17,6 @@ import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.utilities.unwrap
 import java.util.*
 
 /**

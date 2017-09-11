@@ -8,7 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.unwrap
+import net.corda.core.utilities.unwrap2
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
@@ -82,7 +82,7 @@ class CollectSignaturesFlowTests {
         class Responder(val otherParty: Party, val identities: Map<Party, AnonymousParty>) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
-                val state = receive<DummyContract.MultiOwnerState>(otherParty).unwrap { it }
+                val state = receive<DummyContract.MultiOwnerState>(otherParty).unwrap2 { it }
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
                 val myInputKeys = state.participants.map { it.owningKey }

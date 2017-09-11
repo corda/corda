@@ -1,9 +1,25 @@
 package net.corda.testing
 
-import net.corda.core.contracts.*
-import net.corda.core.crypto.*
-import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.keys
+import net.corda.core.crypto.sign
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
@@ -39,38 +55,6 @@ import kotlin.collections.set
 //     }
 // }
 //
-
-/**
- * Here follows implementations of the [LedgerDSLInterpreter] and [TransactionDSLInterpreter] interfaces to be used in
- * tests. Top level primitives [ledger] and [transaction] that bind the interpreter types are also defined here.
- */
-
-@Deprecated(
-        message = "ledger doesn't nest, use tweak",
-        replaceWith = ReplaceWith("tweak"),
-        level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER", "unused")
-fun TransactionDSLInterpreter.ledger(
-        dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
-}
-
-@Deprecated(
-        message = "transaction doesn't nest, use tweak",
-        replaceWith = ReplaceWith("tweak"),
-        level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER", "unused")
-fun TransactionDSLInterpreter.transaction(
-        dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) {
-}
-
-@Deprecated(
-        message = "ledger doesn't nest, use tweak",
-        replaceWith = ReplaceWith("tweak"),
-        level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER", "unused")
-fun LedgerDSLInterpreter<TransactionDSLInterpreter>.ledger(
-        dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
-}
 
 /**
  * If you jumped here from a compiler error make sure the last line of your test tests for a transaction verify or fail.

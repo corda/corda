@@ -10,7 +10,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
 import net.corda.irs.flows.RatesFixFlow.FixOutOfRange

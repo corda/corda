@@ -58,10 +58,6 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         }
     }
 
-    override fun registerIdentity(party: PartyAndCertificate) {
-        verifyAndRegisterIdentity(party)
-    }
-
     // TODO: Check the certificate validation logic
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {

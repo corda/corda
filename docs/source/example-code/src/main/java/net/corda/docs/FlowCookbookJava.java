@@ -184,7 +184,7 @@ public class FlowCookbookJava {
             // ``UntrustworthyData`` using a lambda.
             // DOCSTART 5
             UntrustworthyData<Integer> packet1 = receive(Integer.class, counterparty);
-            Integer integer = packet1.unwrap(data -> {
+            Integer integer = packet1.unwrap((UntrustworthyData.Validator<Integer, Integer>) data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
                 // Return the object.
@@ -198,7 +198,7 @@ public class FlowCookbookJava {
             // back.
             // DOCSTART 7
             UntrustworthyData<Boolean> packet2 = sendAndReceive(Boolean.class, counterparty, "You can send and receive any class!");
-            Boolean bool = packet2.unwrap(data -> {
+            Boolean bool = packet2.unwrap((UntrustworthyData.Validator<Boolean, Boolean>)data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
                 // Return the object.
@@ -581,8 +581,8 @@ public class FlowCookbookJava {
             //    ``Boolean`` instance back
             // Our side of the flow must mirror these calls.
             // DOCSTART 8
-            Object obj = receive(Object.class, counterparty).unwrap(data -> data);
-            String string = sendAndReceive(String.class, counterparty, 99).unwrap(data -> data);
+            Object obj = receive(Object.class, counterparty).unwrap((UntrustworthyData.Validator<Object, Object>) data -> data);
+            String string = sendAndReceive(String.class, counterparty, 99).unwrap((UntrustworthyData.Validator<String, String>) data -> data);
             send(counterparty, true);
             // DOCEND 8
 

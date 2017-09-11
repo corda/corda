@@ -25,16 +25,6 @@ interface IdentityService {
     /**
      * Verify and then store an identity.
      *
-     * @param party a party representing a legal entity and the certificate path linking them to the network trust root.
-     * @throws IllegalArgumentException if the certificate path is invalid.
-     */
-    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    @Deprecated("Use verifyAndRegisterIdentity() instead, which is the same function with a better name")
-    fun registerIdentity(party: PartyAndCertificate)
-
-    /**
-     * Verify and then store an identity.
-     *
      * @param identity a party and the certificate path linking them to the network trust root.
      * @return the issuing entity, if known.
      * @throws IllegalArgumentException if the certificate path is invalid.

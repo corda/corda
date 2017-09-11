@@ -16,10 +16,6 @@ import java.io.Serializable
  * - Is it suspiciously large or small?
  */
 class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
-    val data: T
-        @Deprecated("Accessing the untrustworthy data directly without validating it first is a bad idea")
-        get() = fromUntrustedWorld
-
     @Suspendable
     @Throws(FlowException::class)
     fun <R> unwrap(validator: Validator<T, R>) = validator.validate(fromUntrustedWorld)
@@ -30,7 +26,8 @@ class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
         @Throws(FlowException::class)
         fun validate(data: T): R
     }
-}
 
-@Suppress("DEPRECATION")
-inline fun <T, R> UntrustworthyData<T>.unwrap(validator: (T) -> R): R = validator(data)
+    @Suspendable
+    @Throws(FlowException::class)
+    fun <R> unwrap(validator: (T) -> R): R = validator(fromUntrustedWorld)
+}

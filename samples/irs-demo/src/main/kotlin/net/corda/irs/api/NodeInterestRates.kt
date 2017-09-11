@@ -16,7 +16,6 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf

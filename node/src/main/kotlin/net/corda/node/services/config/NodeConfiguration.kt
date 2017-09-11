@@ -40,11 +40,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
 }
 
 data class FullNodeConfiguration(
-        // TODO Remove this subsitution value and use baseDirectory as the subsitution instead
-        @Deprecated(
-                "This is a subsitution value which points to the baseDirectory and is manually added into the config before parsing",
-                ReplaceWith("baseDirectory"))
-        val basedir: Path,
+        /** This is not retrieved from the config file but rather from a command line argument. */
+        override val baseDirectory: Path,
         override val myLegalName: X500Name,
         override val emailAddress: String,
         override val keyStorePassword: String,
@@ -73,9 +70,6 @@ data class FullNodeConfiguration(
         val useTestClock: Boolean = false,
         val detectPublicIp: Boolean = true
 ) : NodeConfiguration {
-    /** This is not retrieved from the config file but rather from a command line argument. */
-    @Suppress("DEPRECATION")
-    override val baseDirectory: Path get() = basedir
     override val exportJMXto: String get() = "http"
 
     init {

@@ -16,7 +16,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
-import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.DealState
 import java.security.PublicKey
 
