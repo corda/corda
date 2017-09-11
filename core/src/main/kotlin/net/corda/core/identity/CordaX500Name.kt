@@ -9,11 +9,19 @@ import org.bouncycastle.asn1.x500.style.BCStyle
 
 /**
  * X.500 distinguished name data type customised to how Corda uses names. This restricts the attributes to those Corda
- * supports, and requires that O, L and C attributes are specified.
+ * supports, and requires that organsation, locality and country attributes are specified. See also RFC 4519 for
+ * the underlying attribute type definitions
  *
- * @property organisation name of the organisation.
- * @property locality locality of the organisation, typically nearest major city.
- * @property country country the organisation is in, as an ISO 3166-1 2-letter country code.
+ * @property commonName optional name by the which the entity is usually known. Used only for services (for
+ * organisations, the [organisation] property is the name). Corresponds to the "CN" attribute type.
+ * @property organisationalUnit optional name of a unit within the [organisation]. Corresponds to the "OU" attribute type.
+ * @property organisation name of the organisation. Corresponds to the "O" attribute type.
+ * @property locality locality of the organisation, typically nearest major city. For distributed services this would be
+ * where one of the organisations is based. Corresponds to the "L" attribute type.
+ * @property state the full name of the state or province the organisation is based in. Corresponds to the "ST"
+ * attribute type.
+ * @property country country the organisation is in, as an ISO 3166-1 2-letter country code. Corresponds to the "C"
+ * attribute type.
  */
 @CordaSerializable
 data class CordaX500Name(val commonName: String?,
@@ -34,31 +42,31 @@ data class CordaX500Name(val commonName: String?,
     constructor(organisation: String, locality: String, country: String) : this(null, null, organisation, locality, null, country)
 
     companion object {
+        val VALID_ATTRIBUTE_TYPES = setOf(BCStyle.CN, BCStyle.OU, BCStyle.O, BCStyle.L, BCStyle.ST, BCStyle.C)
+        val REQUIRED_ATTRIBUTE_TYPES = setOf(BCStyle.O, BCStyle.L, BCStyle.C)
+
         @JvmStatic
         fun build(x500: X500Name) : CordaX500Name {
             val attrsMap = HashMap<ASN1ObjectIdentifier, ASN1Encodable>()
             x500.rdNs.forEach { rdn ->
                 require(!rdn.isMultiValued) { "Corda X.500 names must not include multi-valued attributes" }
                 val attr = rdn.first
-                when (attr.type) {
-                    BCStyle.CN -> { attrsMap[attr.type] = attr.value }
-                    BCStyle.OU -> { attrsMap[attr.type] = attr.value }
-                    BCStyle.O -> { attrsMap[attr.type] = attr.value }
-                    BCStyle.L -> { attrsMap[attr.type] = attr.value }
-                    BCStyle.ST -> { attrsMap[attr.type] = attr.value }
-                    BCStyle.C -> { attrsMap[attr.type] = attr.value }
-                    else -> {
-                        throw IllegalArgumentException("Corda X.500 names do not support the ${attr.type.id} attribute.")
-                    }
+                if (attr.type in VALID_ATTRIBUTE_TYPES) {
+                    attrsMap[attr.type] = attr.value
+                } else {
+                    throw IllegalArgumentException("Corda X.500 names do not support the ${attr.type.id} attribute.")
                 }
             }
-            val commonName = attrsMap[BCStyle.CN]?.toString()
+            REQUIRED_ATTRIBUTE_TYPES.forEach { attrType ->
+                require(attrType in attrsMap.keys) { "Corda X.500 names must include an $attrType attribute" }
+            }
+            val CN = attrsMap[BCStyle.CN]?.toString()
             val OU = attrsMap[BCStyle.OU]?.toString()
             val O = attrsMap[BCStyle.O]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
             val L = attrsMap[BCStyle.L]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
             val ST = attrsMap[BCStyle.ST]?.toString()
             val C = attrsMap[BCStyle.C]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
-            return CordaX500Name(commonName, OU, O, L, ST, C)
+            return CordaX500Name(CN, OU, O, L, ST, C)
         }
         @JvmStatic
         fun parse(name: String) : CordaX500Name = build(X500Name(name))

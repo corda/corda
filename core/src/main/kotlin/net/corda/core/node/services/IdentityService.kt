@@ -75,7 +75,7 @@ interface IdentityService {
 
     fun partyFromKey(key: PublicKey): Party?
 
-    fun partyFromX500Name(principal: CordaX500Name): Party?
+    fun partyFromX500Name(name: CordaX500Name): Party?
 
     /**
      * Returns the well known identity from an abstract party. This is intended to resolve the well known identity

@@ -87,7 +87,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
 
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
-    override fun partyFromX500Name(principal: CordaX500Name): Party? = principalToParties[principal]?.party
+    override fun partyFromX500Name(name: CordaX500Name): Party? = principalToParties[name]?.party
     override fun partyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: keyToParties[party.owningKey]?.party

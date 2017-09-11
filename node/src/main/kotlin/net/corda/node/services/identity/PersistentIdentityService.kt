@@ -143,7 +143,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = keyToParties.allPersisted().map { it.second }.asIterable()
 
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
-    override fun partyFromX500Name(principal: CordaX500Name): Party? = certificateFromCordaX500Name(principal)?.party
+    override fun partyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
     override fun partyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: partyFromKey(party.owningKey)

@@ -126,8 +126,10 @@ object X509Utilities {
      */
     @JvmStatic
     fun createCertificate(certificateType: CertificateType,
-                          issuerCertificate: X509CertificateHolder, issuerKeyPair: KeyPair,
-                          subject: X500Name, subjectPublicKey: PublicKey,
+                          issuerCertificate: X509CertificateHolder,
+                          issuerKeyPair: KeyPair,
+                          subject: X500Name,
+                          subjectPublicKey: PublicKey,
                           validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
                           nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, issuerCertificate)
