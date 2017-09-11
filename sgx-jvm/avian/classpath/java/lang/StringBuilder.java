@@ -62,7 +62,7 @@ public class StringBuilder implements CharSequence, Appendable {
     return append(sequence.toString());
   }
 
-  public Appendable append(CharSequence sequence, int start, int end) {
+  public StringBuilder append(CharSequence sequence, int start, int end) {
     return append(sequence.subSequence(start, end));
   }
 

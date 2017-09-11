@@ -979,10 +979,6 @@ void uncaughtException(Thread *t, GcThrowable *e)
   if (dispatch != NULL) {
     THREAD_RESOURCE0(t, {
       if (t->exception != NULL) {
-        // We ignore any exceptions from the uncaught
-        // exception handler itself.
-        t->exception = NULL;
-
         // The stack will be unwound when this resource is
         // released, which means that uncaughtException()
         // will not return. So repeat the thread clean-up here.

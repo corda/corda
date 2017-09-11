@@ -4,7 +4,7 @@ name = avian
 version := $(shell grep version gradle.properties | cut -d'=' -f2)
 
 java-version := $(shell "$(JAVA_HOME)/bin/java" -version 2>&1 \
-	| head -n 1 \
+	| grep 'version "1' \
 	| sed 's/.*version "1.\([^.]*\).*/\1/')
 
 build-arch := $(shell uname -m \
@@ -172,7 +172,7 @@ library-path = $(library-path-variable)=$(build)
 
 ifneq ($(openjdk),)
 	openjdk-version := $(shell $(openjdk)/bin/java -version 2>&1 \
-		| head -n 1 \
+		| grep 'version "1' \
 		| sed 's/.*version "1.\([^.]*\).*/\1/')
 
 	openjdk-arch = $(arch)

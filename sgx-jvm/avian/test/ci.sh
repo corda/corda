@@ -71,6 +71,9 @@ has_flag() {
 
 ### START ###
 
+echo "java version:"
+${JAVA_HOME}/bin/java -version
+
 install-deps
 
 if [[ "${1}" == "PUBLISH" ]]; then
