@@ -54,6 +54,10 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.ClassSerializer(this))
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.StringBufferSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.SimpleStringSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.InputStreamSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.BitSetSerializer(this))
             }
             val customizer = AMQPSerializationCustomization(factory)
             pluginRegistries.forEach { it.customizeSerialization(customizer) }

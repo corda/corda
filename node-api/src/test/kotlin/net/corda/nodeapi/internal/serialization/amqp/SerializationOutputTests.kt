@@ -20,6 +20,7 @@ import net.corda.testing.BOB_IDENTITY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
 import net.corda.testing.withTestSerialization
+import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
@@ -27,6 +28,7 @@ import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Ignore
 import org.junit.Test
+import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.NotSerializableException
 import java.math.BigDecimal
@@ -180,7 +182,7 @@ class SerializationOutputTests {
         assertTrue(Objects.deepEquals(desObj, desObj2) == expectDeserializedEqual)
 
         // TODO: add some schema assertions to check correctly formed.
-        return desObj2
+        return desObj
     }
 
     @Test
@@ -355,7 +357,7 @@ class SerializationOutputTests {
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test
     fun `test TreeMap`() {
         val obj = TreeMap<Int, Foo>()
         obj[456] = Foo("Fred", 123)
@@ -722,8 +724,18 @@ class SerializationOutputTests {
         serdes(obj, factory, factory2)
     }
 
-    // TODO: ignored due to Proton-J bug https://issues.apache.org/jira/browse/PROTON-1551
-    @Ignore
+    @Test
+    fun `test month serialize`() {
+        val obj = Month.APRIL
+        serdes(obj)
+    }
+
+    @Test
+    fun `test day of week serialize`() {
+        val obj = DayOfWeek.FRIDAY
+        serdes(obj)
+    }
+
     @Test
     fun `test certificate holder serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
@@ -736,8 +748,6 @@ class SerializationOutputTests {
         serdes(obj, factory, factory2)
     }
 
-    // TODO: ignored due to Proton-J bug https://issues.apache.org/jira/browse/PROTON-1551
-    @Ignore
     @Test
     fun `test party and certificate serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
@@ -808,7 +818,6 @@ class SerializationOutputTests {
 
     data class Bob(val byteArrays: List<ByteArray>)
 
-    @Ignore("Causes DeserializedParameterizedType.make() to fail")
     @Test
     fun `test list of byte arrays`() {
         val a = ByteArray(1)
@@ -817,7 +826,9 @@ class SerializationOutputTests {
 
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        serdes(obj, factory, factory2)
+        val obj2 = serdes(obj, factory, factory2, false, false)
+
+        assertNotSame(obj2.byteArrays[0], obj2.byteArrays[2])
     }
 
     data class Vic(val a: List<String>, val b: List<String>)
@@ -875,5 +886,89 @@ class SerializationOutputTests {
         val obj = ByteArrays(bytes, bytes)
         val objCopy = serdes(obj, factory, factory2, false, false)
         assertNotSame(objCopy.a, objCopy.b)
+    }
+
+    @Test
+    fun `test StringBuffer serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.StringBufferSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.StringBufferSerializer)
+
+        val obj = StringBuffer("Bob")
+        val obj2 = serdes(obj, factory, factory2, false, false)
+        assertEquals(obj.toString(), obj2.toString())
+    }
+
+    @Test
+    fun `test SimpleString serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.SimpleStringSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.SimpleStringSerializer)
+
+        val obj = SimpleString("Bob")
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test kotlin Unit serialize`() {
+        val obj = Unit
+        serdes(obj)
+    }
+
+    @Test
+    fun `test kotlin Pair serialize`() {
+        val obj = Pair("a", 3)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test InputStream serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.InputStreamSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.InputStreamSerializer)
+        val bytes = ByteArray(10) { it.toByte() }
+        val obj = ByteArrayInputStream(bytes)
+        val obj2 = serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
+        val obj3 = ByteArrayInputStream(bytes)  // Can't use original since the stream pointer has moved.
+        assertEquals(obj3.available(), obj2.available())
+        assertEquals(obj3.read(), obj2.read())
+    }
+
+    @Test
+    fun `test EnumSet serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.EnumSetSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.EnumSetSerializer(factory2))
+
+        val obj = EnumSet.of(Month.APRIL, Month.AUGUST)
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test BitSet serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BitSetSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.BitSetSerializer(factory2))
+
+        val obj = BitSet.valueOf(kotlin.ByteArray(16) { it.toByte() }).get(0, 123)
+        serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test EnumMap serialize`() {
+        val obj = EnumMap<Month, Int>(Month::class.java)
+        obj[Month.APRIL] = Month.APRIL.value
+        obj[Month.AUGUST] = Month.AUGUST.value
+        serdes(obj)
     }
 }

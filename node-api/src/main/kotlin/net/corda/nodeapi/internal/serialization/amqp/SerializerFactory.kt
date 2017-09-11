@@ -5,6 +5,7 @@ import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.carpenter.*
+import net.corda.nodeapi.internal.serialization.carpenter.Schema
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -13,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
-data class schemaAndDescriptor(val schema: Schema, val typeDescriptor: Any)
+data class FactorySchemaAndDescriptor(val schema: Schema, val typeDescriptor: Any)
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.
@@ -64,7 +65,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
             // Declared class may not be set to Collection, but actual class could be a collection.
             // In this case use of CollectionSerializer is perfectly appropriate.
             (Collection::class.java.isAssignableFrom(declaredClass) ||
-                (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) -> {
+                    (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) &&
+                    !EnumSet::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
                     val declaredTypeAmended= CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
                     serializersByType.computeIfAbsent(declaredTypeAmended) {
                         CollectionSerializer(declaredTypeAmended, this)
@@ -79,7 +81,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                         makeMapSerializer(declaredTypeAmended)
                     }
             }
-            Enum::class.java.isAssignableFrom(declaredClass) -> serializersByType.computeIfAbsent(declaredClass) {
+            Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
                 EnumSerializer(actualType, actualClass ?: declaredClass, this)
             }
             else -> makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
@@ -164,7 +166,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     @Throws(NotSerializableException::class)
     fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer<Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
-            processSchema(schemaAndDescriptor(schema, typeDescriptor))
+            processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
             serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException(
                     "Could not find type matching descriptor $typeDescriptor.")
         }()
@@ -188,7 +190,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
      * Iterate over an AMQP schema, for each type ascertain weather it's on ClassPath of [classloader] amd
      * if not use the [ClassCarpenter] to generate a class to use in it's place
      */
-    private fun processSchema(schema: schemaAndDescriptor, sentinel: Boolean = false) {
+    private fun processSchema(schema: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
         val carpenterSchemas = CarpenterSchemas.newInstance()
         for (typeNotation in schema.schema.types) {
             try {
@@ -234,8 +236,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         } else {
             findCustomSerializer(clazz, declaredType) ?: run {
                 if (type.isArray()) {
-                    // Allow Object[] since this can be quite common (i.e. an untyped array)
-                    if (type.componentType() != Object::class.java) whitelisted(type.componentType())
+                    // Don't need to check the whitelist since each element will come back through the whitelisting process.
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
@@ -256,7 +257,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
                 val declaredSuperClass = declaredType.asClass()?.superclass
-                if (declaredSuperClass == null || !customSerializer.isSerializerFor(declaredSuperClass)) {
+                if (declaredSuperClass == null || !customSerializer.isSerializerFor(declaredSuperClass) || !customSerializer.revealSubclassesInSchema) {
                     return customSerializer
                 } else {
                     // Make a subclass serializer for the subclass and return that...
