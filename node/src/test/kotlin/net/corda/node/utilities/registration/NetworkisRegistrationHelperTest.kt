@@ -11,6 +11,7 @@ import net.corda.core.internal.toTypedArray
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.cert
 import net.corda.node.utilities.X509Utilities
+import net.corda.node.utilities.getX509Certificate
 import net.corda.node.utilities.loadKeyStore
 import net.corda.testing.ALICE
 import net.corda.testing.testNodeConfiguration
@@ -81,7 +82,8 @@ class NetworkRegistrationHelperTest {
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_TLS))
             val certificateChain = getCertificateChain(X509Utilities.CORDA_CLIENT_TLS)
             assertEquals(4, certificateChain.size)
-            assertEquals(listOf("CORDA_CLIENT_CA", "CORDA_CLIENT_CA", "CORDA_INTERMEDIATE_CA", "CORDA_ROOT_CA"), certificateChain.map { it.toX509CertHolder().subject.commonName })
+            assertEquals(listOf(getX500Name(O = "R3 Ltd", L = "London", C = "GB")) + identities, certificateChain.map { it.toX509CertHolder().subject })
+            assertEquals(getX500Name(O = "R3 Ltd", L = "London", C = "GB"), getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject)
         }
 
         trustStore.run {
