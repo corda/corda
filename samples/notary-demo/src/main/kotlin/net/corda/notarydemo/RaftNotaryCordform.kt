@@ -16,7 +16,7 @@ import net.corda.testing.BOB
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
 
-internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { getX500Name(CN = "Notary Service $it", O = "R3 Ltd", OU = "corda", L = "Zurich", C = "CH") }
+internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { getX500Name(O = "Notary Service $it", OU = "corda", L = "Zurich", C = "CH") }
 
 private val notaryNames = createNotaryNames(3)
 
