@@ -50,7 +50,7 @@ class FXFwdTimeOption
     @Test
     fun `issue - signature`() {
         transaction {
-            output { inState }
+            output(UNIVERSAL_PROGRAM_ID) { inState }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -71,9 +71,9 @@ class FXFwdTimeOption
     @Test
     fun `maturity, bank exercise`() {
         transaction {
-            input { inState }
-            output { outState1 }
-            output { outState2 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState1 }
+            output(UNIVERSAL_PROGRAM_ID) { outState2 }
 
             timeWindow(TEST_TX_TIME_AFTER_MATURITY)
 
@@ -103,9 +103,9 @@ class FXFwdTimeOption
     @Test
     fun `maturity, corp exercise`() {
         transaction {
-            input { inState }
-            output { outState1 }
-            output { outState2 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState1 }
+            output(UNIVERSAL_PROGRAM_ID) { outState2 }
 
             timeWindow(TEST_TX_TIME_BEFORE_MATURITY)
 

@@ -31,6 +31,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.*
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
@@ -337,10 +338,10 @@ class FlowFrameworkTests {
         node1.services.startFlow(CashIssueFlow(
                 2000.DOLLARS,
                 OpaqueBytes.of(0x01),
-                notary1.info.notaryIdentity))
+                notary1.info.notaryIdentity)).resultFuture.getOrThrow()
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1..3) {
-            val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity, anonymous = false))
+            val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity))
             mockNet.runNetwork()
             flow.resultFuture.getOrThrow()
         }
@@ -599,7 +600,7 @@ class FlowFrameworkTests {
     @Test
     fun `wait for transaction`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-                .addOutputState(DummyState())
+                .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
                 .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
@@ -614,7 +615,7 @@ class FlowFrameworkTests {
     @Test
     fun `committer throws exception before calling the finality flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-                .addOutputState(DummyState())
+                .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
                 .addCommand(dummyCommand())
         val stx = node1.services.signInitialTransaction(ptx)
 
@@ -631,7 +632,7 @@ class FlowFrameworkTests {
     @Test
     fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-                .addOutputState(DummyState())
+                .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
                 .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 

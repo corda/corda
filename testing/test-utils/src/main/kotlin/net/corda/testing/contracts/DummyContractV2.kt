@@ -8,17 +8,16 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
-val DUMMY_V2_PROGRAM_ID = DummyContractV2()
+val DUMMY_V2_PROGRAM_ID = "net.corda.testing.contracts.DummyContractV2"
 
 /**
  * Dummy contract state for testing of the upgrade process.
  */
 // DOCSTART 1
 class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
-    override val legacyContract = DummyContract::class.java
+    override val legacyContract = DummyContract::class.java.name
 
     data class State(val magicNumber: Int = 0, val owners: List<AbstractParty>) : ContractState {
-        override val contract = DUMMY_V2_PROGRAM_ID
         override val participants: List<AbstractParty> = owners
     }
 
@@ -51,8 +50,8 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
         return Pair(TransactionBuilder(notary).apply {
             states.forEach {
                 addInputState(it)
-                addOutputState(upgrade(it.state.data))
-                addCommand(UpgradeCommand(DUMMY_V2_PROGRAM_ID.javaClass), signees.map { it.owningKey }.toList())
+                addOutputState(upgrade(it.state.data), DUMMY_V2_PROGRAM_ID)
+                addCommand(UpgradeCommand(DUMMY_V2_PROGRAM_ID), signees.map { it.owningKey }.toList())
             }
         }.toWireTransaction(), signees)
     }

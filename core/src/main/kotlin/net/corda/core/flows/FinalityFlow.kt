@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.AbstractParty
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.node.ServiceHub
@@ -126,6 +127,12 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         // Calculate who is meant to see the results based on the participants involved.
         return extractParticipants(ltx)
                 .map(this::partyFromAnonymous)
+                .map { participant ->
+                    if (participant.wellKnown != null)
+                        participant
+                    else
+                        throw IllegalArgumentException("Could not resolve well known identity of participant ${participant.participant.owningKey.toStringShort()}")
+                }
                 .toSet()
     }
 

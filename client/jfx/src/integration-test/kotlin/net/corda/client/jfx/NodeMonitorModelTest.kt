@@ -133,8 +133,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
     @Test
     fun `cash issue and move`() {
         val anonymous = false
-        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
-        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity, anonymous).returnValue.getOrThrow()
+        val (_, issueIdentity) = rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
+        val (_, paymentIdentity) = rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
@@ -191,7 +191,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                         require(stx.tx.outputs.size == 1)
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
-                        require(aliceNode.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
+                        require(issueIdentity!!.owningKey.isFulfilledBy(signaturePubKeys))
                         require(notaryNode.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
                         moveTx = stx
                     }

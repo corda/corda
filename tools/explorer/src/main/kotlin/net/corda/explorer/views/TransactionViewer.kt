@@ -134,8 +134,8 @@ class TransactionViewer : CordaView("Transactions") {
 
         val searchField = SearchField(transactions,
                 "Transaction ID" to { tx, s -> "${tx.id}".contains(s, true) },
-                "Input" to { tx, s -> tx.inputs.resolved.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
-                "Output" to { tx, s -> tx.outputs.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
+                "Input" to { tx, s -> tx.inputs.resolved.any { it.state.contract.contains(s, true) } },
+                "Output" to { tx, s -> tx.outputs.any { it.state.contract.contains(s, true) } },
                 "Input Party" to { tx, s -> tx.inputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) ?: false } } },
                 "Output Party" to { tx, s -> tx.outputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) ?: false } } },
                 "Command Type" to { tx, s -> tx.commandTypes.any { it.simpleName.contains(s, true) } }
@@ -207,7 +207,7 @@ class TransactionViewer : CordaView("Transactions") {
     }
 
     private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { it.owningKey.toKnownParty() } }
-    private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract().javaClass.simpleName }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
+    private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract() }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
 
     private class TransactionWidget : BorderPane() {
         private val partiallyResolvedTransactions by observableListReadOnly(TransactionDataModel::partiallyResolvedTransactions)
@@ -299,7 +299,7 @@ class TransactionViewer : CordaView("Transactions") {
         }
     }
 
-    private fun StateAndRef<ContractState>.contract() = this.state.data.contract
+    private fun StateAndRef<ContractState>.contract() = this.state.contract
 
 }
 

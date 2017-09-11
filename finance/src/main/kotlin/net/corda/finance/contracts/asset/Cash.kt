@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicReference
 //
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
-val CASH_PROGRAM_ID = Cash()
+val CASH_PROGRAM_ID = "net.corda.finance.contracts.asset.Cash"
 
 /**
  * Pluggable interface to allow for different cash selection provider implementations
@@ -123,7 +123,6 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val exitKeys = setOf(owner.owningKey, amount.token.issuer.party.owningKey)
-        override val contract = CASH_PROGRAM_ID
         override val participants = listOf(owner)
 
         override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty): FungibleAsset<Currency>
@@ -191,7 +190,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: AbstractParty, notary: Party)
-            = generateIssue(tx, TransactionState(State(amount, owner), notary), Commands.Issue())
+            = generateIssue(tx, TransactionState(State(amount, owner), CASH_PROGRAM_ID, notary), Commands.Issue())
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))

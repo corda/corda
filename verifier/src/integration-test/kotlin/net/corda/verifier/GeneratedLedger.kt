@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.core.utilities.getX500Name
 import net.corda.testing.contracts.DummyContract
 import java.math.BigInteger
@@ -62,7 +63,7 @@ data class GeneratedLedger(
             Generator.sequence(
                     outputs.map { output ->
                         pickOneOrMaybeNew(identities, partyGenerator).map { notary ->
-                            TransactionState(output, notary, null)
+                            TransactionState(output, DUMMY_PROGRAM_ID, notary, null)
                         }
                     }
             )
@@ -127,7 +128,7 @@ data class GeneratedLedger(
     fun regularTransactionGenerator(inputNotary: Party, inputsToChooseFrom: List<StateAndRef<ContractState>>): Generator<Pair<WireTransaction, GeneratedLedger>> {
         val outputsGen = outputsGenerator.map { outputs ->
             outputs.map { output ->
-                TransactionState(output, inputNotary, null)
+                TransactionState(output, DUMMY_PROGRAM_ID, inputNotary, null)
             }
         }
         val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
@@ -180,9 +181,7 @@ data class GeneratedLedger(
 data class GeneratedState(
         val nonce: Long,
         override val participants: List<AbstractParty>
-) : ContractState {
-    override val contract = DummyContract()
-}
+) : ContractState
 
 class GeneratedAttachment(bytes: ByteArray) : AbstractAttachment({ bytes }) {
     override val id = bytes.sha256()

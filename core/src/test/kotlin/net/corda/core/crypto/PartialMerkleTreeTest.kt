@@ -9,6 +9,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
+import net.corda.finance.contracts.asset.CASH_PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.*
 import org.junit.Test
@@ -31,13 +32,13 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
 
     val testLedger = ledger {
         unverifiedTransaction {
-            output("MEGA_CORP cash") {
+            output(CASH_PROGRAM_ID, "MEGA_CORP cash") {
                 Cash.State(
                         amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
                         owner = MEGA_CORP
                 )
             }
-            output("dummy cash 1") {
+            output(CASH_PROGRAM_ID, "dummy cash 1") {
                 Cash.State(
                         amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
                         owner = MINI_CORP
@@ -47,7 +48,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
 
         transaction {
             input("MEGA_CORP cash")
-            output("MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
+            output(CASH_PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
             timeWindow(TEST_TX_TIME)
             this.verifies()

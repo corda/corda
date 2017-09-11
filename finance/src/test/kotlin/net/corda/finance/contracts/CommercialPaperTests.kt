@@ -31,6 +31,7 @@ interface ICommercialPaperTestTemplate {
     fun getIssueCommand(notary: Party): CommandData
     fun getRedeemCommand(notary: Party): CommandData
     fun getMoveCommand(): CommandData
+    fun getContract(): ContractClassName
 }
 
 class JavaCommercialPaperTest : ICommercialPaperTestTemplate {
@@ -44,6 +45,7 @@ class JavaCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getIssueCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Issue()
     override fun getRedeemCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Redeem()
     override fun getMoveCommand(): CommandData = JavaCommercialPaper.Commands.Move()
+    override fun getContract() = JavaCommercialPaper.JCP_PROGRAM_ID
 }
 
 class KotlinCommercialPaperTest : ICommercialPaperTestTemplate {
@@ -57,6 +59,7 @@ class KotlinCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue()
     override fun getRedeemCommand(notary: Party): CommandData = CommercialPaper.Commands.Redeem()
     override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
+    override fun getContract() = CommercialPaper.CP_PROGRAM_ID
 }
 
 class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
@@ -70,6 +73,7 @@ class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
     override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue()
     override fun getRedeemCommand(notary: Party): CommandData = CommercialPaper.Commands.Redeem()
     override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
+    override fun getContract() = CommercialPaper.CP_PROGRAM_ID
 }
 
 @RunWith(Parameterized::class)
@@ -89,13 +93,13 @@ class CommercialPaperTestsGeneric {
         val someProfits = 1200.DOLLARS `issued by` issuer
         ledger {
             unverifiedTransaction {
-                output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
-                output("some profits", someProfits.STATE `owned by` MEGA_CORP)
+                output(CASH_PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
+                output(CASH_PROGRAM_ID, "some profits", someProfits.STATE `owned by` MEGA_CORP)
             }
 
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
-                output("paper") { thisTest.getPaper() }
+                output(thisTest.getContract(), "paper") { thisTest.getPaper() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
@@ -106,8 +110,8 @@ class CommercialPaperTestsGeneric {
             transaction("Trade") {
                 input("paper")
                 input("alice's $900")
-                output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
-                output("alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
+                output(CASH_PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
+                output(thisTest.getContract(), "alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
                 this.verifies()
@@ -120,8 +124,8 @@ class CommercialPaperTestsGeneric {
                 input("some profits")
 
                 fun TransactionDSL<TransactionDSLInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
-                    output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE }
-                    output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP }
+                    output(CASH_PROGRAM_ID, "Alice's profit") { aliceGetsBack.STATE `owned by` ALICE }
+                    output(CASH_PROGRAM_ID, "Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP }
                 }
 
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
@@ -142,7 +146,7 @@ class CommercialPaperTestsGeneric {
                 timeWindow(TEST_TX_TIME + 8.days)
 
                 tweak {
-                    output { "paper".output<ICommercialPaperState>() }
+                    output(thisTest.getContract()) { "paper".output<ICommercialPaperState>() }
                     this `fails with` "must be destroyed"
                 }
 
@@ -154,7 +158,7 @@ class CommercialPaperTestsGeneric {
     @Test
     fun `key mismatch at issue`() {
         transaction {
-            output { thisTest.getPaper() }
+            output(thisTest.getContract()) { thisTest.getPaper() }
             command(MINI_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timeWindow(TEST_TX_TIME)
             this `fails with` "output states are issued by a command signer"
@@ -164,7 +168,7 @@ class CommercialPaperTestsGeneric {
     @Test
     fun `face value is not zero`() {
         transaction {
-            output { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
+            output(thisTest.getContract()) { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timeWindow(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
@@ -174,7 +178,7 @@ class CommercialPaperTestsGeneric {
     @Test
     fun `maturity date not in the past`() {
         transaction {
-            output { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
+            output(thisTest.getContract()) { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timeWindow(TEST_TX_TIME)
             this `fails with` "maturity date is not in the past"
@@ -184,8 +188,8 @@ class CommercialPaperTestsGeneric {
     @Test
     fun `issue cannot replace an existing state`() {
         transaction {
-            input(thisTest.getPaper())
-            output { thisTest.getPaper() }
+            input(thisTest.getContract(), thisTest.getPaper())
+            output(thisTest.getContract()) { thisTest.getPaper() }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timeWindow(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"

@@ -32,7 +32,7 @@ object ContractUpgradeFlow {
         @Suspendable
         override fun call(): Void? {
             val upgrade = upgradedContractClass.newInstance()
-            if (upgrade.legacyContract != stateAndRef.state.data.contract.javaClass) {
+            if (upgrade.legacyContract != stateAndRef.state.contract) {
                 throw FlowException("The contract state cannot be upgraded using provided UpgradedContract.")
             }
             serviceHub.contractUpgradeService.storeAuthorisedContractUpgrade(stateAndRef.ref, upgradedContractClass)
@@ -73,8 +73,8 @@ object ContractUpgradeFlow {
                 return TransactionBuilder(stateRef.state.notary)
                         .withItems(
                                 stateRef,
-                                contractUpgrade.upgrade(stateRef.state.data),
-                                Command(UpgradeCommand(upgradedContractClass), stateRef.state.data.participants.map { it.owningKey }),
+                                StateAndContract(contractUpgrade.upgrade(stateRef.state.data), upgradedContractClass.name),
+                                Command(UpgradeCommand(upgradedContractClass.name), stateRef.state.data.participants.map { it.owningKey }),
                                 privacySalt
                         )
             }
@@ -99,23 +99,23 @@ object ContractUpgradeFlow {
             @JvmStatic
             fun verify(tx: LedgerTransaction) {
                 // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
-                verify(tx.inputStates.single(),
-                        tx.outputStates.single(),
+                verify(tx.inputs.single().state,
+                        tx.outputs.single(),
                         tx.commandsOfType<UpgradeCommand>().single())
             }
 
             @JvmStatic
-            fun verify(input: ContractState, output: ContractState, commandData: Command<UpgradeCommand>) {
+            fun verify(input: TransactionState<ContractState>, output: TransactionState<ContractState>, commandData: Command<UpgradeCommand>) {
                 val command = commandData.value
-                val participantKeys: Set<PublicKey> = input.participants.map { it.owningKey }.toSet()
+                val participantKeys: Set<PublicKey> = input.data.participants.map { it.owningKey }.toSet()
                 val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
                 @Suppress("UNCHECKED_CAST")
-                val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
+                val upgradedContract = javaClass.classLoader.loadClass(command.upgradedContractClass).newInstance() as UpgradedContract<ContractState, *>
                 requireThat {
                     "The signing keys include all participant keys" using keysThatSigned.containsAll(participantKeys)
-                    "Inputs state reference the legacy contract" using (input.contract.javaClass == upgradedContract.legacyContract)
-                    "Outputs state reference the upgraded contract" using (output.contract.javaClass == command.upgradedContractClass)
-                    "Output state must be an upgraded version of the input state" using (output == upgradedContract.upgrade(input))
+                    "Inputs state reference the legacy contract" using (input.contract == upgradedContract.legacyContract)
+                    "Outputs state reference the upgraded contract" using (output.contract == command.upgradedContractClass)
+                    "Output state must be an upgraded version of the input state" using (output.data == upgradedContract.upgrade(input.data))
                 }
             }
         }
@@ -138,8 +138,8 @@ object ContractUpgradeFlow {
                 "The proposed tx matches the expected tx for this upgrade" using (proposedTx == expectedTx)
             }
             ContractUpgradeFlow.Acceptor.verify(
-                    oldStateAndRef.state.data,
-                    expectedTx.outRef<ContractState>(0).state.data,
+                    oldStateAndRef.state,
+                    expectedTx.outRef<ContractState>(0).state,
                     expectedTx.toLedgerTransaction(serviceHub).commandsOfType<UpgradeCommand>().single())
         }
     }

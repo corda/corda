@@ -149,8 +149,7 @@ class NewTransaction : Fragment() {
         dialogPane = root
         initOwner(window)
         setResultConverter {
-            // TODO: Enable confidential identities
-            val anonymous = false
+            val anonymous = true
             val defaultRef = OpaqueBytes.of(1)
             val issueRef = if (issueRef.value != null) OpaqueBytes.of(issueRef.value) else defaultRef
             when (it) {

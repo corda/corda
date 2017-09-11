@@ -55,8 +55,7 @@ private class BankOfCordaDriver {
         // The ISSUE_CASH will request some Cash from the ISSUER on behalf of Big Corporation node
         val role = options.valueOf(roleArg)!!
 
-        val anonymous = true
-        val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name, DUMMY_NOTARY.name, anonymous)
+        val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name, DUMMY_NOTARY.name)
 
         try {
             when (role) {

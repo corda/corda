@@ -102,7 +102,7 @@ A state is a class that stores data that is checked by the contract. A commercia
               val faceValue: Amount<Issued<Currency>>,
               val maturityDate: Instant
       ) : OwnableState {
-          override val contract = CommercialPaper()
+          override val contract = "net.corda.finance.contracts.CommercialPaper"
           override val participants = listOf(owner)
 
           fun withoutOwner() = copy(owner = AnonymousParty(NullPublicKey))

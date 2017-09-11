@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* ``ContractState::contract`` has been moved ``TransactionState::contract`` and it's type has changed to ``String`` in order to
+  support dynamic classloading of contract and contract constraints.
+
 * About half of the code in test-utils has been moved to a new module ``node-driver``,
   and the test scope modules are now located in a ``testing`` directory.
 

@@ -74,7 +74,7 @@ define an ``IOUState``:
         class IOUState(val value: Int,
                        val lender: Party,
                        val borrower: Party) : ContractState {
-            override val contract = TemplateContract()
+            override val contract = "net.corda.contract.TemplateContract"
             override val participants get() = listOf(lender, borrower)
         }
 
