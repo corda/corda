@@ -4,6 +4,8 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.countryCodes
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.x500.AttributeTypeAndValue
+import org.bouncycastle.asn1.x500.RDN
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -68,7 +70,7 @@ data class CordaX500Name(val commonName: String?,
         @JvmStatic
         fun build(x500Name: X500Name) : CordaX500Name {
             val rDNs = x500Name.rdNs.flatMap { it.typesAndValues.toList() }
-            val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = rDNs.map { Pair(it.type, it.value) }.toMap()
+            val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = rDNs.associateBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
             val attributes = attrsMap.keys
 
             // Duplicate attribute value checks.
