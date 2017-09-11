@@ -1,6 +1,7 @@
 package net.corda.core.node
 
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
@@ -29,6 +30,9 @@ interface ServicesForResolution {
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
+
+    /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
+    val cordappProvider: CordappProvider
 
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
@@ -127,9 +131,9 @@ interface ServiceHub : ServicesForResolution {
     fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
         return if (stx.isNotaryChangeTransaction()) {
-            stx.resolveNotaryChangeTransaction(this).outRef<T>(stateRef.index)
+            stx.resolveNotaryChangeTransaction(this).outRef(stateRef.index)
         } else {
-            stx.tx.outRef<T>(stateRef.index)
+            stx.tx.outRef(stateRef.index)
         }
     }
 
@@ -137,7 +141,7 @@ interface ServiceHub : ServicesForResolution {
 
     // Helper method to construct an initial partially signed transaction from a [TransactionBuilder].
     private fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey, signatureMetadata: SignatureMetadata): SignedTransaction {
-        return builder.toSignedTransaction(keyManagementService, publicKey, signatureMetadata)
+        return builder.toSignedTransaction(keyManagementService, publicKey, signatureMetadata, this)
     }
 
     /**

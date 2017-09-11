@@ -40,22 +40,26 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
     val vault: VaultService get() = services.vaultService
     val vaultQuery: VaultQueryService get() = services.vaultQueryService
     lateinit var database: CordaPersistence
-    val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+    lateinit var notaryServices: MockServices
 
     @Before
     fun setUp() {
+        setCordappPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
+
         LogHelper.setLevel(VaultWithCashTest::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(DUMMY_CASH_ISSUER_KEY, DUMMY_NOTARY_KEY),
                                                                   customSchemas = setOf(CashSchemaV1))
         database = databaseAndServices.first
         services = databaseAndServices.second
         issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(DUMMY_NOTARY_KEY)
     }
 
     @After
     fun tearDown() {
         LogHelper.reset(VaultWithCashTest::class)
         database.close()
+        unsetCordappPackages()
     }
 
     @Test

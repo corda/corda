@@ -15,10 +15,8 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.dummyCommand
 import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
@@ -38,6 +36,7 @@ class NotaryServiceTests {
 
     @Before
     fun setup() {
+        setCordappPackages("net.corda.testing.contracts")
         mockNet = MockNetwork()
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
@@ -51,6 +50,7 @@ class NotaryServiceTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        unsetCordappPackages()
     }
 
     @Test

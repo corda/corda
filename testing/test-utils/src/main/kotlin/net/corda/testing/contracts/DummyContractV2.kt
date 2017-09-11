@@ -3,6 +3,7 @@ package net.corda.testing.contracts
 import net.corda.core.contracts.*
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.identity.AbstractParty
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -40,9 +41,10 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
      *
      * Note: This is a convenience helper method used for testing only.
      *
+     * @param services Services required to resolve the wire transaction
      * @return a pair of wire transaction, and a set of those who should sign the transaction for it to be valid.
      */
-    fun generateUpgradeFromV1(vararg states: StateAndRef<DummyContract.State>): Pair<WireTransaction, Set<AbstractParty>> {
+    fun generateUpgradeFromV1(services: ServicesForResolution, vararg states: StateAndRef<DummyContract.State>): Pair<WireTransaction, Set<AbstractParty>> {
         val notary = states.map { it.state.notary }.single()
         require(states.isNotEmpty())
 
@@ -50,9 +52,9 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
         return Pair(TransactionBuilder(notary).apply {
             states.forEach {
                 addInputState(it)
-                addOutputState(upgrade(it.state.data), DUMMY_V2_PROGRAM_ID)
+                addOutputState(upgrade(it.state.data), DUMMY_V2_PROGRAM_ID, it.state.constraint)
                 addCommand(UpgradeCommand(DUMMY_V2_PROGRAM_ID), signees.map { it.owningKey }.toList())
             }
-        }.toWireTransaction(), signees)
+        }.toWireTransaction(services), signees)
     }
 }

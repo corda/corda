@@ -16,7 +16,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TransactionSerializationTests : TestDependencyInjectionBase() {
-    val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests.TestCash"
+    val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests\$TestCash"
 
     class TestCash : Contract {
         override fun verify(tx: LedgerTransaction) {
@@ -45,8 +45,8 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
 
-    val megaCorpServices = MockServices(MEGA_CORP_KEY)
-    val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+    val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), MEGA_CORP_KEY)
+    val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder
 
     @Before

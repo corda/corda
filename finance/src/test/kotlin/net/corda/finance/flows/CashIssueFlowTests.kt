@@ -12,6 +12,7 @@ import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.setCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -19,7 +20,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashIssueFlowTests {
-    private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+    private lateinit var mockNet : MockNetwork
     private lateinit var bankOfCordaNode: StartedNode<MockNode>
     private lateinit var bankOfCorda: Party
     private lateinit var notaryNode: StartedNode<MockNode>
@@ -27,6 +28,8 @@ class CashIssueFlowTests {
 
     @Before
     fun start() {
+        setCordappPackages("net.corda.finance.contracts.asset")
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
         val nodes = mockNet.createSomeNodes(1)
         notaryNode = nodes.notaryNode
         bankOfCordaNode = nodes.partyNodes[0]

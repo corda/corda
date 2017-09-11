@@ -40,6 +40,10 @@ import java.util.*
  *    which may need to be tracked. That, in turn, requires validation logic (there is a bean validator that knows how
  *    to do this in the Apache BVal project).
  */
+
+// Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
+val CP_PROGRAM_ID = "net.corda.finance.contracts.CommercialPaper"
+
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 class CommercialPaper : Contract {
     companion object {

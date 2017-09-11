@@ -10,8 +10,8 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
-import net.corda.nodeapi.AttachmentsClassLoaderTests
 import net.corda.nodeapi.internal.AttachmentsClassLoader
+import net.corda.nodeapi.internal.AttachmentsClassLoaderTests
 import net.corda.testing.node.MockAttachmentStorage
 import org.junit.Rule
 import org.junit.Test
@@ -82,11 +82,11 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
 class CordaClassResolverTests {
     val factory: SerializationFactory = object : SerializationFactory() {
         override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            TODO("not implemented")
         }
 
         override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            TODO("not implemented")
         }
 
     }

@@ -10,9 +10,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.StartedNode
-import net.corda.testing.MINI_CORP_KEY
-import net.corda.testing.chooseIdentity
-import net.corda.testing.chooseIdentityAndCert
+import net.corda.testing.*
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.getDefaultNotary
@@ -30,9 +28,12 @@ class CollectSignaturesFlowTests {
     lateinit var b: StartedNode<MockNetwork.MockNode>
     lateinit var c: StartedNode<MockNetwork.MockNode>
     lateinit var notary: Party
+    lateinit var services: MockServices
 
     @Before
     fun setup() {
+        setCordappPackages("net.corda.testing.contracts")
+        services = MockServices()
         mockNet = MockNetwork()
         val nodes = mockNet.createSomeNodes(3)
         a = nodes.partyNodes[0]
@@ -46,6 +47,7 @@ class CollectSignaturesFlowTests {
     @After
     fun tearDown() {
         mockNet.stopNodes()
+        unsetCordappPackages()
     }
 
     private fun registerFlowOnAllNodes(flowClass: KClass<out FlowLogic<*>>) {

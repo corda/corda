@@ -1,1 +1,1 @@
-net.corda.finance.contracts.isolated.DummyPlugin
+net.corda.finance.contracts.isolated.IsolatedPlugin

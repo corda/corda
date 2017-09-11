@@ -7,8 +7,9 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.nodeapi.DummyContractBackdoor
 
-val ANOTHER_DUMMY_PROGRAM_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+const val ANOTHER_DUMMY_PROGRAM_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
+@Suppress("UNUSED")
 class AnotherDummyContract : Contract, DummyContractBackdoor {
     val magicString = "helloworld"
 
@@ -31,5 +32,4 @@ class AnotherDummyContract : Contract, DummyContractBackdoor {
     }
 
     override fun inspectState(state: ContractState): Int = (state as State).magicNumber
-
 }
