@@ -26,11 +26,12 @@ dependencies {
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
-    cordaCompile project(':webserver')
-    cordaCompile project(':node-driver')
+
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+
+    testCompile project(':node-driver')
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
@@ -90,15 +91,15 @@ publishing {
 }
 
 task runSender(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.attachmentdemo.AttachmentDemoKt'
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'net.corda.attachmentdemo.MainKt'
     args '--role'
     args 'SENDER'
 }
 
 task runRecipient(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.attachmentdemo.AttachmentDemoKt'
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'net.corda.attachmentdemo.MainKt'
     args '--role'
     args 'RECIPIENT'
 }

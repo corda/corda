@@ -18,12 +18,13 @@ dependencies {
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':client:jfx')
     cordaCompile project(':client:rpc')
     cordaCompile project(':node-driver')
+
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 }
 
 idea {

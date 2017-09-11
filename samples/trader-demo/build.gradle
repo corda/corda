@@ -28,14 +28,15 @@ dependencies {
     cordapp project(':finance')
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
+    cordaCompile project(':test-utils')
+
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 
     // Corda Plugins: dependent flows and services
     cordapp project(':samples:bank-of-corda-demo')
 
-    testCompile project(':test-utils')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }

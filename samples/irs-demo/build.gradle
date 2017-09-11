@@ -31,7 +31,6 @@ dependencies {
     cordapp project(':finance')
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':webserver')
@@ -42,6 +41,8 @@ dependencies {
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
+
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 
     testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"

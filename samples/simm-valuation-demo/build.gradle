@@ -34,7 +34,6 @@ dependencies {
     cordapp project(':finance')
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':webserver')
@@ -54,6 +53,8 @@ dependencies {
     compile "com.opengamma.strata:strata-collect:${strata_version}"
     compile "com.opengamma.strata:strata-loader:${strata_version}"
     compile "com.opengamma.strata:strata-math:${strata_version}"
+
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 
     // Test dependencies
     testCompile project(':node-driver')
