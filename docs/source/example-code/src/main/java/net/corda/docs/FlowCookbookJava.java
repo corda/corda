@@ -588,7 +588,6 @@ public class FlowCookbookJava {
 
             /*-----------------------------------------
              * RESPONDING TO COLLECT_SIGNATURES_FLOW *
-             * RESPONDING TO COLLECT_SIGNATURES_FLOW *
             -----------------------------------------*/
             progressTracker.setCurrentStep(SIGNING);
 
