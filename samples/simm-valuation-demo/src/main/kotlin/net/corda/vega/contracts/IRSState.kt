@@ -3,12 +3,10 @@ package net.corda.vega.contracts
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.keys
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.DealState
-import java.security.PublicKey
 
 val IRS_PROGRAM_ID = "net.corda.vega.contracts.OGTrade"
 

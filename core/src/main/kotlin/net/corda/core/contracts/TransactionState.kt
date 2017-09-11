@@ -71,4 +71,8 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          * Note that an encumbered state that is being consumed must have its encumbrance consumed in the same transaction,
          * otherwise the transaction is not valid.
          */
-        val encumbrance: Int? = null)
+        val encumbrance: Int? = null,
+        /**
+         * A validator for the contract attachments on the transaction.
+         */
+        val constraint: AttachmentConstraint = AlwaysAcceptAttachmentConstraint)

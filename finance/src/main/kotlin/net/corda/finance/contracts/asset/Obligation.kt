@@ -1,6 +1,10 @@
 package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
+import net.corda.finance.contracts.NetCommand
+import net.corda.finance.contracts.NetType
+import net.corda.finance.contracts.NettableState
+import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AbstractParty
@@ -14,15 +18,10 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.seconds
-import net.corda.finance.contracts.NetCommand
-import net.corda.finance.contracts.NetType
-import net.corda.finance.contracts.NettableState
-import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.finance.utils.sumFungibleOrNull
 import net.corda.finance.utils.sumObligations
 import net.corda.finance.utils.sumObligationsOrNull
 import net.corda.finance.utils.sumObligationsOrZero
-import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
 import java.time.Duration
@@ -132,7 +131,7 @@ class Obligation<P : Any> : Contract {
             val quantity: Long,
             /** The public key of the entity the contract pays to */
             val beneficiary: AbstractParty
-    ) : FungibleAsset<Obligation.Terms<P>>, NettableState<State<P>, MultilateralNetState<P>> {
+    ) : FungibleAsset<Terms<P>>, NettableState<State<P>, MultilateralNetState<P>> {
         override val amount: Amount<Issued<Terms<P>>> = Amount(quantity, Issued(obligor.ref(0), template))
         override val exitKeys: Collection<PublicKey> = setOf(beneficiary.owningKey)
         val dueBefore: Instant = template.dueBefore

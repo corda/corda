@@ -1,7 +1,6 @@
 package net.corda.vega.contracts
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -9,7 +8,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.DealState
 import net.corda.vega.flows.SimmRevaluation
-import java.security.PublicKey
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit

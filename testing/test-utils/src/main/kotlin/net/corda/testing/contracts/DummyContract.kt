@@ -28,7 +28,7 @@ data class DummyContract(val blank: Any? = null) : Contract {
      * in a different field, however this is a good example of a contract with multiple states.
      */
     data class MultiOwnerState(override val magicNumber: Int = 0,
-                               val owners: List<AbstractParty>) : ContractState, State {
+                               val owners: List<AbstractParty>) : State {
         override val participants: List<AbstractParty> get() = owners
     }
 
