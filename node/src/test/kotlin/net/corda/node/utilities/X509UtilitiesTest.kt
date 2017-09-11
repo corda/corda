@@ -10,7 +10,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.cert
-import net.corda.core.utilities.commonName
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.config.createKeystoreForCordaNode
 import net.corda.nodeapi.internal.serialization.AllWhitelist
@@ -49,6 +48,7 @@ import javax.net.ssl.*
 import kotlin.concurrent.thread
 import kotlin.test.*
 
+
 class X509UtilitiesTest {
     @Rule
     @JvmField
@@ -58,7 +58,7 @@ class X509UtilitiesTest {
     fun `create valid self-signed CA certificate`() {
         val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val caCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Test Cert", organisation = "R3 Ltd", locality = "London", country = "GB"), caKey)
-        assertEquals("CN=Test Cert,O=R3 Ltd,L=London,C=GB", caCert.subject.commonName) // using our subject common name
+        assertEquals(X500Name("CN=Test Cert,O=R3 Ltd,L=London,C=GB"), caCert.subject) // using our subject common name
         assertEquals(caCert.issuer, caCert.subject) //self-signed
         caCert.isValidOn(Date()) // throws on verification problems
         caCert.isSignatureValid(JcaContentVerifierProviderBuilder().build(caKey.public)) // throws on verification problems
