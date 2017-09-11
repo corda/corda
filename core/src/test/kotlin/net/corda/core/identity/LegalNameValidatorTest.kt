@@ -99,33 +99,4 @@ class LegalNameValidatorTest {
             LegalNameValidator.validateLegalName("Legal Name With\n\rLine\nBreaks")
         }
     }
-
-    @Test
-    fun `validate x500Name`() {
-        CordaX500Name.parse("O=Bank A, L=New York, C=US, OU=Org Unit, CN=Service Name")
-        CordaX500Name.parse("O=Bank A, L=New York, C=US, CN=Service Name")
-        CordaX500Name.parse("O=Bank A, L=New York, C=US")
-        CordaX500Name.parse("O=Bank A, L=New York, C=US")
-
-        // Missing Organisation
-        assertFailsWith(IllegalArgumentException::class) {
-            CordaX500Name.parse("L=New York, C=US, OU=Org Unit, CN=Service Name")
-        }
-        // Missing Locality
-        assertFailsWith(IllegalArgumentException::class) {
-            CordaX500Name.parse("O=Bank A, C=US, OU=Org Unit, CN=Service Name")
-        }
-        // Missing Country
-        assertFailsWith(IllegalArgumentException::class) {
-            CordaX500Name.parse("O=Bank A, L=New York, OU=Org Unit, CN=Service Name")
-        }
-        // Wrong organisation name format
-        assertFailsWith(IllegalArgumentException::class) {
-            CordaX500Name.parse("O=B, L=New York, C=US, OU=Org Unit, CN=Service Name")
-        }
-        // Wrong organisation name format
-        assertFailsWith(IllegalArgumentException::class) {
-            CordaX500Name.parse("O=B, L=New York, C=US, OU=Org Unit, CN=Service Name")
-        }
-    }
 }

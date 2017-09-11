@@ -211,7 +211,7 @@ data class RpcServerHandle(
 )
 
 val rpcTestUser = User("user1", "test", permissions = emptySet())
-val fakeNodeLegalName = CordaX500Name(organisation = "not:a:valid:name", locality = "Nowhere", country = "GB")
+val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
 // Use a global pool so that we can run RPC tests in parallel
 private val globalPortAllocation = PortAllocation.Incremental(10000)
