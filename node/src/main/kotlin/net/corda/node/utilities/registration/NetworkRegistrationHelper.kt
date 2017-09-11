@@ -51,7 +51,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
             if (!caKeyStore.containsAlias(SELF_SIGNED_PRIVATE_KEY)) {
                 val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val selfSignCert = X509Utilities.createSelfSignedCACertificate(config.myLegalName.x500Name, keyPair)
+                val selfSignCert = X509Utilities.createSelfSignedCACertificate(config.myLegalName, keyPair)
                 // Save to the key store.
                 caKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, keyPair.private, privateKeyPassword.toCharArray(),
                         arrayOf(selfSignCert))

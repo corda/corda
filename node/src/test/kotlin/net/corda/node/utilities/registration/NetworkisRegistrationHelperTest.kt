@@ -34,7 +34,7 @@ class NetworkRegistrationHelperTest {
         val identities = listOf("CORDA_CLIENT_CA",
                 "CORDA_INTERMEDIATE_CA",
                 "CORDA_ROOT_CA")
-                .map { getX500Name(CN = it, O = "R3 Ltd", L = "London", C = "GB") }
+                .map { CordaX500Name(commonName = it, organisation = "R3 Ltd", locality = "London", country = "GB") }
         val certs = identities.stream().map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
                 .map { it.cert }.toTypedArray()
 

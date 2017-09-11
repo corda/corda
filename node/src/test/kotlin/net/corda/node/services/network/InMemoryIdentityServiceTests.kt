@@ -86,7 +86,7 @@ class InMemoryIdentityServiceTests {
     fun `assert unknown anonymous key is unrecognised`() {
         withTestSerialization {
             val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Name, rootKey)
+            val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
             val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
             // TODO: Generate certificate with an EdDSA key rather than ECDSA
