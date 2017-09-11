@@ -37,12 +37,3 @@ fun getX500Name(O: String, L: String, C: String, CN: String? = null, OU: String?
         CN?.let { addRDN(BCStyle.CN, it) }
     }.build()
 }
-
-fun X500Name.withCommonName(commonName: String?): X500Name {
-    return getX500Name(organisation, locality, country, commonName, organisationUnit, state)
-}
-
-fun X500Name.toWellFormattedName(): X500Name {
-    validateX500Name(this)
-    return getX500Name(organisation, locality, country, commonName, organisationUnit, state)
-}
