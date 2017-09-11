@@ -96,8 +96,9 @@ abstract class AbstractStateReplacementFlow {
 
         @Suspendable
         private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<TransactionSignature> {
+            // In identity service we record all identities we know about from network map.
             val parties = participants.map {
-                serviceHub.identityService.partyFromKey(it) ?: // In identity service we record all identities we know about from network map.
+                serviceHub.identityService.partyFromKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
             }
 
