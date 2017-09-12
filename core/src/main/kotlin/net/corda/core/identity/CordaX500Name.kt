@@ -1,8 +1,8 @@
 package net.corda.core.identity
 
 import net.corda.core.internal.LegalNameValidator
-import net.corda.core.internal.countryCodes
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.internal.CountryCodes
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
@@ -48,7 +48,7 @@ data class CordaX500Name(val commonName: String?,
         // Attribute data width checks.
         require(country.length == LENGTH_COUNTRY) { "Invalid country '$country' Country code must be $LENGTH_COUNTRY letters ISO code " }
         require(country.toUpperCase() == country) { "Country code should be in upper case." }
-        require(country in countryCodes) { "Invalid country code $country" }
+        require(country in CountryCodes.iso3166TwoLetterCodes) { "Invalid country code '$country'" }
 
         require(organisation.length < MAX_LENGTH_ORGANISATION) {
             "Organisation attribute (O) must contain less then $MAX_LENGTH_ORGANISATION characters."
