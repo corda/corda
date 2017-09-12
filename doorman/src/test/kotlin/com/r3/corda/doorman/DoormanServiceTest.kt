@@ -7,7 +7,7 @@ import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.CertificateAndKeyPair
+import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.CertificateStream
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities

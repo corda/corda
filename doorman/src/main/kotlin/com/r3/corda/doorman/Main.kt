@@ -8,11 +8,10 @@ import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
 import com.r3.corda.doorman.persistence.DoormanSchemaService
 import com.r3.corda.doorman.persistence.JiraCertificateRequestStorage
 import net.corda.core.crypto.Crypto
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
-import net.corda.core.utilities.CertificateAndKeyPair
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
-import net.corda.core.utilities.withCommonName
 import net.corda.node.utilities.*
 import net.corda.node.utilities.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
@@ -89,11 +88,11 @@ class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CertificateAnd
                             // please see [sun.security.x509.X500Name.isWithinSubtree()] for more information.
                             // We assume all attributes in the subject name has been checked prior approval.
                             // TODO: add validation to subject name.
-                            val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, request.subject.withCommonName(null)))), arrayOf())
+                            val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CordaX500Name.build(request.subject).copy(commonName = null).x500Name))), arrayOf())
                             createCertificate(CertificateType.CLIENT_CA,
                                     caCertAndKey.certificate,
                                     caCertAndKey.keyPair,
-                                    request.subject.withCommonName(X509Utilities.CORDA_CLIENT_CA_CN),
+                                    CordaX500Name.build(request.subject).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN),
                                     request.publicKey,
                                     nameConstraints = nameConstraints).toX509Certificate()
                         }

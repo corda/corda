@@ -2,8 +2,7 @@ package com.r3.corda.doorman.persistence
 
 import com.r3.corda.doorman.CertificateUtilities
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.validateX500Name
-import net.corda.core.utilities.withCommonName
+import net.corda.core.identity.CordaX500Name
 import net.corda.node.utilities.CordaPersistence
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.Certificate
@@ -50,30 +49,31 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
     )
 
     override fun saveRequest(certificationData: CertificationRequestData): String {
-        val legalName = certificationData.request.subject.withCommonName(null)
         val requestId = SecureHash.randomSHA256().toString()
-        database.transaction {
-            val query = session.criteriaBuilder.run {
-                val criteriaQuery = createQuery(CertificateSigningRequest::class.java)
-                criteriaQuery.from(CertificateSigningRequest::class.java).run {
-                    val nameEq = equal(get<String>(CertificateSigningRequest::legalName.name), legalName.toString())
-                    val certNotNull = isNotNull(get<String>(CertificateSigningRequest::certificate.name))
-                    val processTimeIsNull = isNull(get<String>(CertificateSigningRequest::processTimestamp.name))
-                    criteriaQuery.where(and(nameEq, or(certNotNull, processTimeIsNull)))
-                }
-            }
-            val duplicate = session.createQuery(query).resultList.isNotEmpty()
-            val rejectReason = if (duplicate) {
-                "Duplicate legal name"
-            } else {
-                try {
-                    validateX500Name(legalName)
-                    null
-                } catch (e: IllegalArgumentException) {
-                    "Name validation failed with exception : ${e.message}"
-                }
-            }
 
+        database.transaction {
+            val (legalName, rejectReason) = try {
+                // This will fail with IllegalArgumentException if subject name is malformed.
+                val legalName = CordaX500Name.build(certificationData.request.subject).copy(commonName = null)
+                // Checks database for duplicate name.
+                val query = session.criteriaBuilder.run {
+                    val criteriaQuery = createQuery(CertificateSigningRequest::class.java)
+                    criteriaQuery.from(CertificateSigningRequest::class.java).run {
+                        val nameEq = equal(get<String>(CertificateSigningRequest::legalName.name), legalName.toString())
+                        val certNotNull = isNotNull(get<String>(CertificateSigningRequest::certificate.name))
+                        val processTimeIsNull = isNull(get<String>(CertificateSigningRequest::processTimestamp.name))
+                        criteriaQuery.where(and(nameEq, or(certNotNull, processTimeIsNull)))
+                    }
+                }
+                val duplicate = session.createQuery(query).resultList.isNotEmpty()
+                if (duplicate) {
+                    Pair(legalName.x500Name, "Duplicate legal name")
+                } else {
+                    Pair(legalName.x500Name, null)
+                }
+            } catch (e: IllegalArgumentException) {
+                Pair(certificationData.request.subject, "Name validation failed with exception : ${e.message}")
+            }
             val now = Instant.now()
             val request = CertificateSigningRequest(
                     requestId,
