@@ -5,7 +5,6 @@ import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.carpenter.*
-import net.corda.nodeapi.internal.serialization.carpenter.Schema
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -23,8 +22,8 @@ data class FactorySchemaAndDescriptor(val schema: Schema, val typeDescriptor: An
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general
 // TODO: use guava caches etc so not unbounded
-// TODO: do we need to support a transient annotation to exclude certain properties?
 // TODO: allow definition of well known types that are left out of the schema.
+// TODO: migrate some core types to unsigned integer descriptor
 // TODO: document and alert to the fact that classes cannot default superclass/interface properties otherwise they are "erased" due to matching with constructor.
 // TODO: type name prefixes for interfaces and abstract classes?  Or use label?
 // TODO: generic types should define restricted type alias with source of the wildcarded version, I think, if we're to generate classes from schema
