@@ -7,6 +7,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.cert
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
+import net.corda.core.utilities.x500Name
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.DERSequence

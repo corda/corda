@@ -4,6 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
+import net.corda.core.utilities.x500Name
 import net.corda.node.utilities.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER

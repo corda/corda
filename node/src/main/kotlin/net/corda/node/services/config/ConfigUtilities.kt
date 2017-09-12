@@ -12,6 +12,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.x500Name
 import net.corda.node.utilities.*
 import net.corda.nodeapi.config.SSLConfiguration
 import org.bouncycastle.asn1.x509.GeneralName
