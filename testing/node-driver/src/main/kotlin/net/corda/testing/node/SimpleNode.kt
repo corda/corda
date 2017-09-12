@@ -7,7 +7,6 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.organisation
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration

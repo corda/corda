@@ -8,7 +8,6 @@ import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.organisation
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
@@ -24,6 +23,7 @@ import net.corda.testing.DUMMY_MAP
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
+import net.corda.testing.getX500Name
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import org.apache.logging.log4j.Level
 import org.bouncycastle.asn1.x500.X500Name

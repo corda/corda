@@ -9,18 +9,13 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.cert
-import net.corda.core.utilities.commonName
-import net.corda.core.utilities.getX500Name
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.config.createKeystoreForCordaNode
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.BOB_PUBKEY
-import net.corda.testing.MEGA_CORP
+import net.corda.testing.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
@@ -58,7 +53,7 @@ class X509UtilitiesTest {
     fun `create valid self-signed CA certificate`() {
         val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val caCert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test Cert", O = "R3 Ltd", L = "London", C = "GB"), caKey)
-        assertTrue { caCert.subject.commonName == "Test Cert" } // using our subject common name
+        assertEquals(X500Name("CN=Test Cert,O=R3 Ltd,L=London,C=GB"), caCert.subject)
         assertEquals(caCert.issuer, caCert.subject) //self-signed
         caCert.isValidOn(Date()) // throws on verification problems
         caCert.isSignatureValid(JcaContentVerifierProviderBuilder().build(caKey.public)) // throws on verification problems
