@@ -26,7 +26,7 @@ import java.util.stream.Collectors
 import kotlin.reflect.KClass
 
 /**
- * Handles Cordapp loading and classpath scanning
+ * Handles CorDapp loading and classpath scanning
  */
 class CordappLoader private constructor (val cordappClassPath: List<Path>) {
     val appClassLoader: ClassLoader = javaClass.classLoader
@@ -50,7 +50,6 @@ class CordappLoader private constructor (val cordappClassPath: List<Path>) {
             val paths = javaClass.classLoader.getResources(resource)
                     .asSequence()
                     .map {
-                        println(it)
                         val uri = if (it.protocol == "jar") {
                             (it.openConnection() as JarURLConnection).jarFileURL.toURI()
                         } else {
