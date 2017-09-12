@@ -16,6 +16,7 @@ import java.security.*
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 
 val KEYSTORE_TYPE = "JKS"
 
@@ -136,7 +137,7 @@ fun KeyStore.getKeyPair(alias: String, keyPassword: String): KeyPair = getCertif
  * @param keyPassword The password for the PrivateKey (not the store access password).
  */
 fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): CertificateAndKeyPair {
-    val cert = getX509Certificate(alias)
+    val cert = getX509Certificate(alias).toX509CertHolder()
     val publicKey = Crypto.toSupportedPublicKey(cert.subjectPublicKeyInfo)
     return CertificateAndKeyPair(cert, KeyPair(publicKey, getSupportedKey(alias, keyPassword)))
 }
@@ -146,9 +147,9 @@ fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): Certi
  * @param alias The name to lookup the Key and Certificate chain from.
  * @return The X509Certificate found in the KeyStore under the specified alias.
  */
-fun KeyStore.getX509Certificate(alias: String): X509CertificateHolder {
-    val certificate = getCertificate(alias) ?: throw IllegalArgumentException("No certificate under alias \"$alias\"")
-    return certificate.toX509CertHolder()
+fun KeyStore.getX509Certificate(alias: String): X509Certificate {
+    val certificate = getCertificate(alias) ?: throw IllegalArgumentException("No certificate under alias \"$alias\".")
+    return certificate as? X509Certificate  ?: throw IllegalArgumentException("Certificate under alias \"$alias\" is not an X.509 certificate.")
 }
 
 /**

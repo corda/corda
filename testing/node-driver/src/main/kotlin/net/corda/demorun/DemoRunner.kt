@@ -6,6 +6,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.testing.driver.NetworkMapStartStrategy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import javax.security.auth.x500.X500Principal
 
 fun CordformDefinition.clean() {
     System.err.println("Deleting: $driverDirectory")

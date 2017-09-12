@@ -319,8 +319,7 @@ class X509UtilitiesTest {
         // Double check hostname manually
         val peerChain = clientSocket.session.peerCertificates
         val peerX500Principal = (peerChain[0] as X509Certificate).subjectX500Principal
-        val x500name = X500Name(peerX500Principal.name)
-        assertEquals(MEGA_CORP.name.x500Name, x500name)
+        assertEquals(MEGA_CORP.name.x500Principal, peerX500Principal)
         X509Utilities.validateCertificateChain(trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA), *peerChain)
         val output = DataOutputStream(clientSocket.outputStream)
         output.writeUTF("Hello World")

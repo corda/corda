@@ -7,7 +7,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.internal.stream
 import net.corda.core.internal.toTypedArray
-import net.corda.core.internal.x500Name
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demorun.runNodes

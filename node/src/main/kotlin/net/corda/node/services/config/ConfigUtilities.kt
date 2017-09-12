@@ -79,7 +79,7 @@ fun createKeystoreForCordaNode(sslKeyStorePath: Path,
                                legalName: CordaX500Name,
                                signatureScheme: SignatureScheme = X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME) {
 
-    val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
+    val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).toX509CertHolder()
     val (intermediateCACert, intermediateCAKeyPair) = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, caKeyPassword)
 
     val clientKey = Crypto.generateKeyPair(signatureScheme)

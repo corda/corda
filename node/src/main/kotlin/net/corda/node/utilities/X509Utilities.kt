@@ -144,10 +144,10 @@ object X509Utilities {
     }
 
     @Throws(CertPathValidatorException::class)
-    fun validateCertificateChain(trustedRoot: X509CertificateHolder, vararg certificates: Certificate) {
+    fun validateCertificateChain(trustedRoot: X509Certificate, vararg certificates: Certificate) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         val certFactory = CertificateFactory.getInstance("X509")
-        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot.cert, null)))
+        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
         params.isRevocationEnabled = false
         val certPath = certFactory.generateCertPath(certificates.toList())
         val pathValidator = CertPathValidator.getInstance("PKIX")

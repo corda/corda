@@ -79,7 +79,16 @@ data class CordaX500Name(val commonName: String?,
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
 
         @JvmStatic
-        fun build(x500Name: X500Name): CordaX500Name {
+        fun build(certificate: java.security.cert.X509Certificate) : CordaX500Name = build(certificate.subjectX500Principal)
+        @JvmStatic
+        fun build(certificate: javax.security.cert.X509Certificate) : CordaX500Name {
+            val principal = X500Principal(certificate.subjectDN.name)
+            return build(principal)
+        }
+
+        @JvmStatic
+        fun build(principal: X500Principal) : CordaX500Name {
+            val x500Name = X500Name.getInstance(principal.encoded)
             val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = x500Name.rdNs
                     .flatMap { it.typesAndValues.asList() }
                     .groupBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
@@ -106,24 +115,21 @@ data class CordaX500Name(val commonName: String?,
         }
 
         @JvmStatic
-        fun build(x500Principal: X500Principal) = build(X500Name.getInstance(x500Principal.encoded))
-
-        @JvmStatic
-        fun parse(name: String): CordaX500Name = build(X500Name(name))
+        fun parse(name: String) : CordaX500Name = build(X500Principal(name))
     }
 
     @Transient
-    private var x500Cache: X500Name? = null
-
-    override fun toString(): String {
-        if (x500Cache == null) {
-            x500Cache = this.x500Name
-        }
-        return x500Cache!!.toString()
-    }
+    private var x500Cache: X500Principal? = null
 
     val x500Principal: X500Principal
         get() {
-            return X500Principal(x500Name.encoded)
+            if (x500Cache == null) {
+                x500Cache = X500Principal(this.x500Name.encoded)
+            }
+            return x500Cache!!
         }
+
+    override fun toString(): String {
+        return x500Principal.toString()
+    }
 }

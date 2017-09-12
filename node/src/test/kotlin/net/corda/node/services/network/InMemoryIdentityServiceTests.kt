@@ -7,14 +7,15 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.core.utilities.cert
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.testing.*
 import org.junit.Test
 import java.security.cert.CertificateFactory
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -151,7 +152,7 @@ class InMemoryIdentityServiceTests {
 
             assertFailsWith<IllegalArgumentException> {
                 val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
-                val subject = CordaX500Name.build(trustRoot.certificate.subject)
+                val subject = CordaX500Name.build(X500Principal(trustRoot.certificate.subject.encoded))
                 service.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
             }
         }
