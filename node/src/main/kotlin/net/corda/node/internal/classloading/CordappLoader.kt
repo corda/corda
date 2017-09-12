@@ -35,6 +35,12 @@ class CordappLoader private constructor (val cordappClassPath: List<Path>) {
     companion object {
         private val logger = loggerFor<CordappLoader>()
 
+        /**
+         * Creates the default CordappLoader intended to be used in non-dev or non-test environments.
+         *
+         * @param   basedir The directory that this node is running in. Will use this to resolve the plugins directory
+         *                  for classpath scanning.
+         */
         fun createDefault(baseDir: Path): CordappLoader {
             val pluginsDir = baseDir / "plugins"
             return CordappLoader(if (!pluginsDir.exists()) emptyList<Path>() else pluginsDir.list {
@@ -42,9 +48,12 @@ class CordappLoader private constructor (val cordappClassPath: List<Path>) {
             })
         }
 
-        // Rather than looking in the plugins directory, figure out the classpath for the given package and scan that
-        // instead. This is used in tests where we avoid having to package stuff up in jars and then having to move
-        // them to the plugins directory for each node.
+        /**
+         * Creates the dev mode CordappLoader intended to only be used in dev or test environments.
+         *
+         * @param   scanPackage Resolves the JARs that contain scanPackage and use them as the source for
+         *                      the classpath scanning.
+         */
         fun createDevMode(scanPackage: String): CordappLoader {
             val resource = scanPackage.replace('.', '/')
             val paths = javaClass.classLoader.getResources(resource)
