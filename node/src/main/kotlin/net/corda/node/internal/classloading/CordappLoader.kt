@@ -16,7 +16,6 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.NodeConfiguration
 import java.lang.reflect.Modifier
 import java.net.JarURLConnection
 import java.net.URI
@@ -30,7 +29,7 @@ import kotlin.reflect.KClass
  * Handles Cordapp loading and classpath scanning
  */
 class CordappLoader private constructor (val cordappClassPath: List<Path>) {
-    val appClassLoader: CordappClassLoader = CordappClassLoader(1, cordappClassPath.map { it.toUri().toURL() }.toTypedArray())
+    val appClassLoader: ClassLoader = javaClass.classLoader
     val scanResult = scanCordapps()
 
     companion object {
