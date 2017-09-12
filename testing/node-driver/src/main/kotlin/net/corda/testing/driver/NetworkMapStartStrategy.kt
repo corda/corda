@@ -1,12 +1,12 @@
 package net.corda.testing.driver
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.DUMMY_MAP
-import org.bouncycastle.asn1.x500.X500Name
 
 sealed class NetworkMapStartStrategy {
     internal abstract val startDedicated: Boolean
-    internal abstract val legalName: X500Name
+    internal abstract val legalName: CordaX500Name
     internal fun serviceConfig(address: NetworkHostAndPort) = mapOf(
             "address" to address.toString(),
             "legalName" to legalName.toString()
@@ -17,7 +17,7 @@ sealed class NetworkMapStartStrategy {
         override val legalName = DUMMY_MAP.name
     }
 
-    class Nominated(override val legalName: X500Name) : NetworkMapStartStrategy() {
+    class Nominated(override val legalName: CordaX500Name) : NetworkMapStartStrategy() {
         override val startDedicated = false
     }
 }

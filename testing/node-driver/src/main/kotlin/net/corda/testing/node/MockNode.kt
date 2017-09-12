@@ -5,6 +5,7 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.createDirectories
@@ -31,7 +32,6 @@ import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.math.BigInteger
 import java.nio.file.Path
@@ -288,7 +288,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
      */
     fun createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null,
-                   start: Boolean = true, legalName: X500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
+                   start: Boolean = true, legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                    vararg advertisedServices: ServiceInfo,
                    configOverrides: (NodeConfiguration) -> Any? = {}): MockNode {
@@ -297,14 +297,14 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
     fun <N : MockNode> createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null, nodeFactory: Factory<N>,
-                   start: Boolean = true, legalName: X500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
+                   start: Boolean = true, legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                    vararg advertisedServices: ServiceInfo,
                    configOverrides: (NodeConfiguration) -> Any? = {}): N {
         val id = forcedID ?: nextNodeId++
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(id).createDirectories(),
-                myLegalName = legalName ?: getX500Name(O = "Mock Company $id", L = "London", C = "GB")).also {
+                myLegalName = legalName ?: CordaX500Name(organisation = "Mock Company $id", locality = "London", country = "GB")).also {
             whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
             configOverrides(it)
         }
@@ -369,15 +369,15 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun createNotaryNode(networkMapAddress: SingleMessageRecipient? = null,
-                         legalName: X500Name? = null,
+                         legalName: CordaX500Name? = null,
                          overrideServices: Map<ServiceInfo, KeyPair>? = null,
-                         serviceName: X500Name? = null): MockNode {
+                         serviceName: CordaX500Name? = null): MockNode {
         return createNode(networkMapAddress, legalName = legalName, overrideServices = overrideServices,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type, serviceName)))
     }
 
     fun createPartyNode(networkMapAddress: SingleMessageRecipient,
-                        legalName: X500Name? = null,
+                        legalName: CordaX500Name? = null,
                         overrideServices: Map<ServiceInfo, KeyPair>? = null): MockNode {
         return createNode(networkMapAddress, legalName = legalName, overrideServices = overrideServices)
     }

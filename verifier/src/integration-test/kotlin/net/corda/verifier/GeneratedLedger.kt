@@ -1,19 +1,18 @@
 package net.corda.verifier
 
-import net.corda.client.mock.*
+import net.corda.client.mock.Generator
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
-import net.corda.core.utilities.getX500Name
-import net.corda.testing.contracts.DummyContract
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
@@ -208,7 +207,7 @@ fun commandGenerator(partiesToPickFrom: Collection<Party>): Generator<Pair<Comma
 }
 
 val partyGenerator: Generator<Party> = Generator.int().combine(publicKeyGenerator) { n, key ->
-    Party(getX500Name(O = "Party$n", L = "London", C = "GB"), key)
+    Party(CordaX500Name(organisation = "Party$n", locality = "London", country = "GB"), key)
 }
 
 fun <A> pickOneOrMaybeNew(from: Collection<A>, generator: Generator<A>): Generator<A> {

@@ -3,10 +3,10 @@ package net.corda.notarydemo
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getX500Name
 import net.corda.demorun.runNodes
 import net.corda.demorun.util.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -16,12 +16,12 @@ import net.corda.testing.BOB
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
 
-internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { getX500Name(O = "Notary Service $it", OU = "corda", L = "Zurich", C = "CH") }
+internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { CordaX500Name(commonName ="Notary Service $it", organisationUnit = "corda", organisation = "R3 Ltd", locality = "Zurich", state = null, country = "CH") }
 
 private val notaryNames = createNotaryNames(3)
 
-object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0]) {
-    private val clusterName = getX500Name(O = "Raft", OU = "corda", L = "Zurich", C = "CH")
+object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0].x500Name) {
+    private val clusterName = CordaX500Name(organisation = "Raft", locality = "Zurich", country = "CH")
     private val advertisedService = ServiceInfo(RaftValidatingNotaryService.type, clusterName)
 
     init {
@@ -62,6 +62,6 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it) }, advertisedService.type.id, clusterName)
+        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it.x500Name) }, advertisedService.type.id, clusterName)
     }
 }

@@ -2,9 +2,10 @@ package net.corda.node.services.messaging
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.andForget
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -38,13 +39,15 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
-import org.bouncycastle.asn1.x500.X500Name
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
 
 // TODO: Stop the wallet explorer and other clients from using this class and get rid of persistentInbox
 
@@ -245,7 +248,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             }, {})
 
             val myLegalName = loadKeyStore(config.sslKeystore, config.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject
-            rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, myLegalName)
+            rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, CordaX500Name.build(myLegalName))
 
             fun checkVerifierCount() {
                 if (session.queueQuery(SimpleString(VERIFICATION_REQUESTS_QUEUE_NAME)).consumerCount == 0) {
@@ -377,7 +380,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             val uuid = message.required(HDR_DUPLICATE_DETECTION_ID) { UUID.fromString(message.getStringProperty(it)) }
             log.trace { "Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid" }
 
-            return ArtemisReceivedMessage(TopicSession(topic, sessionID), X500Name(user), platformVersion, uuid, message)
+            return ArtemisReceivedMessage(TopicSession(topic, sessionID), CordaX500Name.parse(user), platformVersion, uuid, message)
         } catch (e: Exception) {
             log.error("Unable to process message, ignoring it: $message", e)
             return null
@@ -390,7 +393,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     private class ArtemisReceivedMessage(override val topicSession: TopicSession,
-                                         override val peer: X500Name,
+                                         override val peer: CordaX500Name,
                                          override val platformVersion: Int,
                                          override val uniqueMessageId: UUID,
                                          private val message: ClientMessage) : ReceivedMessage {

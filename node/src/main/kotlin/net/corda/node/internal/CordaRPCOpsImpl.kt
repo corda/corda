@@ -3,13 +3,12 @@ package net.corda.node.internal
 import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
@@ -26,7 +25,6 @@ import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
-import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -191,7 +189,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun partyFromX500Name(x500Name: X500Name): Party? {
+    override fun partyFromX500Name(x500Name: CordaX500Name): Party? {
         return database.transaction {
             services.identityService.partyFromX500Name(x500Name)
         }

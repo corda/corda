@@ -1,14 +1,13 @@
 package net.corda.netmap.simulation
 
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.getX500Name
-import net.corda.core.utilities.locality
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
@@ -72,7 +71,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = getX500Name(O = "Bank $letter", L = city, C = country))
+                    myLegalName = CordaX500Name(organisation = "Bank $letter", locality = city, country = country))
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
         }
 
@@ -112,7 +111,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object RatesOracleFactory : MockNetwork.Factory<SimulatedNode> {
         // TODO: Make a more realistic legal name
-        val RATES_SERVICE_NAME = getX500Name(O = "Rates Service Provider", OU = "corda", L = "Madrid", C = "ES")
+        val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
 
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,

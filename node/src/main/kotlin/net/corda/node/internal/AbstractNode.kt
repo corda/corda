@@ -10,6 +10,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.*
 import net.corda.core.flows.*
 import net.corda.core.flows.ContractUpgradeFlow.Acceptor
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
@@ -28,7 +29,9 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.cert
+import net.corda.core.utilities.debug
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.node.services.TransactionKeyHandler
@@ -65,7 +68,6 @@ import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
@@ -148,8 +150,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     val nodeReadyFuture: CordaFuture<Unit>
         get() = _nodeReadyFuture
 
-    protected val myLegalName: X500Name by lazy {
-        loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_CA).subject.withCommonName(null)
+    protected val myLegalName: CordaX500Name by lazy {
+        val cert = loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_CA)
+        CordaX500Name.build(cert.subject).copy(commonName = null)
     }
 
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
@@ -693,9 +696,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         val (id, name) = if (serviceInfo == null) {
             // Create node identity if service info = null
-            Pair("identity", myLegalName.withCommonName(null))
+            Pair("identity", myLegalName.copy(commonName = null))
         } else {
-            val name = serviceInfo.name ?: myLegalName.withCommonName(serviceInfo.type.id)
+            val name = serviceInfo.name ?: myLegalName.copy(commonName = serviceInfo.type.id)
             Pair(serviceInfo.type.id, name)
         }
 
@@ -735,14 +738,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
 
         val subject = certificates[0].toX509CertHolder().subject
-        if (subject != name)
+        if (subject != name.x500Name)
             throw ConfigurationException("The name for $id doesn't match what's in the key store: $name vs $subject")
 
         partyKeys += keys
         return PartyAndCertificate(CertificateFactory.getInstance("X509").generateCertPath(certificates))
     }
 
-    private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
+    private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: CordaX500Name,
                                     pubKeyFile: Path, privKeyFile: Path, compositeKeyFile:Path,
                                     privateKeyAlias: String, compositeKeyAlias: String) {
         log.info("Migrating $privateKeyAlias from file to key store...")

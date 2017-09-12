@@ -1,7 +1,7 @@
 package net.corda.core.node.services
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
-import org.bouncycastle.asn1.x500.X500Name
 
 /**
  * A container for additional information for an advertised service.
@@ -11,14 +11,14 @@ import org.bouncycastle.asn1.x500.X500Name
  *             grouping identifier for nodes collectively running a distributed service.
  */
 @CordaSerializable
-data class ServiceInfo(val type: ServiceType, val name: X500Name? = null) {
+data class ServiceInfo(val type: ServiceType, val name: CordaX500Name? = null) {
     companion object {
         fun parse(encoded: String): ServiceInfo {
             val parts = encoded.split("|")
             require(parts.size in 1..2) { "Invalid number of elements found" }
             val type = ServiceType.parse(parts[0])
             val name = parts.getOrNull(1)
-            val principal = name?.let { X500Name(it) }
+            val principal = name?.let { CordaX500Name.parse(it) }
             return ServiceInfo(type, principal)
         }
     }

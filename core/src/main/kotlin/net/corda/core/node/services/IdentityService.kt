@@ -1,11 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.core.identity.*
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -79,7 +75,7 @@ interface IdentityService {
 
     fun partyFromKey(key: PublicKey): Party?
 
-    fun partyFromX500Name(principal: X500Name): Party?
+    fun partyFromX500Name(name: CordaX500Name): Party?
 
     /**
      * Returns the well known identity from an abstract party. This is intended to resolve the well known identity

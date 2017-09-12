@@ -10,6 +10,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.map
@@ -46,7 +47,6 @@ import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -307,7 +307,7 @@ class TwoPartyTradeFlowTests {
     // of gets and puts.
     private fun makeNodeWithTracking(
             networkMapAddress: SingleMessageRecipient?,
-            name: X500Name): MockNetwork.MockNode {
+            name: CordaX500Name): MockNetwork.MockNode {
         // Create a node in the mock network ...
         return mockNet.createNode(networkMapAddress, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration,

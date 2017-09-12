@@ -8,7 +8,6 @@ import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
 
 val X500Name.commonName: String? get() = getRDNValueString(BCStyle.CN)
-val X500Name.organisationUnit: String? get() = getRDNValueString(BCStyle.OU)
 val X500Name.state: String? get() = getRDNValueString(BCStyle.ST)
 val X500Name.organisation: String get() = getRDNValueString(BCStyle.O) ?: throw IllegalArgumentException("Malformed X500 name, organisation attribute (O) cannot be empty.")
 val X500Name.locality: String get() = getRDNValueString(BCStyle.L) ?: throw IllegalArgumentException("Malformed X500 name, locality attribute (L) cannot be empty.")
@@ -36,13 +35,4 @@ fun getX500Name(O: String, L: String, C: String, CN: String? = null, OU: String?
         OU?.let { addRDN(BCStyle.OU, it) }
         CN?.let { addRDN(BCStyle.CN, it) }
     }.build()
-}
-
-fun X500Name.withCommonName(commonName: String?): X500Name {
-    return getX500Name(organisation, locality, country, commonName, organisationUnit, state)
-}
-
-fun X500Name.toWellFormattedName(): X500Name {
-    validateX500Name(this)
-    return getX500Name(organisation, locality, country, commonName, organisationUnit, state)
 }

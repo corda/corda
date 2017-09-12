@@ -331,10 +331,10 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
 
         // Create self sign CA.
         val caKeyPair = Crypto.generateKeyPair()
-        val ca = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test CA", O = "R3", L = "London", C = "GB"), caKeyPair)
+        val ca = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test CA", O = "R3 Ltd", L = "London", C = "GB"), caKeyPair)
 
         // Sign the composite key with the self sign CA.
-        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca, caKeyPair, getX500Name(CN = "CompositeKey", O = "R3", L = "London", C = "GB"), compositeKey)
+        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca, caKeyPair, getX500Name(CN = "CompositeKey", O = "R3 Ltd", L = "London", C = "GB"), compositeKey)
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"

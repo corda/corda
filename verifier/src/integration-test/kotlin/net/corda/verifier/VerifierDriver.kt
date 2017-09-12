@@ -4,13 +4,12 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.div
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.organisation
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisTcpTransport
@@ -31,7 +30,6 @@ import org.apache.activemq.artemis.core.security.CheckType
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager
-import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
@@ -44,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 interface VerifierExposedDSLInterface : DriverDSLExposedInterface {
     /** Starts a lightweight verification requestor that implements the Node's Verifier API */
-    fun startVerificationRequestor(name: X500Name): CordaFuture<VerificationRequestorHandle>
+    fun startVerificationRequestor(name: CordaX500Name): CordaFuture<VerificationRequestorHandle>
 
     /** Starts an out of process verifier connected to [address] */
     fun startVerifier(address: NetworkHostAndPort): CordaFuture<VerifierHandle>
@@ -173,14 +171,14 @@ data class VerifierDriverDSL(
         }
     }
 
-    override fun startVerificationRequestor(name: X500Name): CordaFuture<VerificationRequestorHandle> {
+    override fun startVerificationRequestor(name: CordaX500Name): CordaFuture<VerificationRequestorHandle> {
         val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
         return driverDSL.executorService.fork {
             startVerificationRequestorInternal(name, hostAndPort)
         }
     }
 
-    private fun startVerificationRequestorInternal(name: X500Name, hostAndPort: NetworkHostAndPort): VerificationRequestorHandle {
+    private fun startVerificationRequestorInternal(name: CordaX500Name, hostAndPort: NetworkHostAndPort): VerificationRequestorHandle {
         val baseDir = driverDSL.driverDirectory / name.organisation
         val sslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = baseDir
@@ -249,7 +247,7 @@ data class VerifierDriverDSL(
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val processFuture = driverDSL.executorService.fork {
-            val verifierName = getX500Name(O = "Verifier$id", L = "London", C = "GB")
+            val verifierName = CordaX500Name(organisation = "Verifier$id", locality = "London", country = "GB")
             val baseDirectory = driverDSL.driverDirectory / verifierName.organisation
             val config = createConfiguration(baseDirectory, address)
             val configFilename = "verifier.conf"

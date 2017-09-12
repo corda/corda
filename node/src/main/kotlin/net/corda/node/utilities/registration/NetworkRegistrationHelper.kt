@@ -4,7 +4,6 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.utilities.cert
 import net.corda.core.internal.*
 import net.corda.core.utilities.seconds
-import net.corda.core.utilities.validateX500Name
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.*
 import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_CA
@@ -45,7 +44,6 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
      */
     // TODO: Stop killing the calling process from within a called function.
     fun buildKeystore() {
-        validateX500Name(config.myLegalName)
         config.certificatesDirectory.createDirectories()
         val caKeyStore = loadOrCreateKeyStore(config.nodeKeystore, keystorePassword)
         if (!caKeyStore.containsAlias(CORDA_CLIENT_CA)) {
@@ -53,7 +51,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
             if (!caKeyStore.containsAlias(SELF_SIGNED_PRIVATE_KEY)) {
                 val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val selfSignCert = X509Utilities.createSelfSignedCACertificate(config.myLegalName, keyPair)
+                val selfSignCert = X509Utilities.createSelfSignedCACertificate(config.myLegalName.x500Name, keyPair)
                 // Save to the key store.
                 caKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, keyPair.private, privateKeyPassword.toCharArray(),
                         arrayOf(selfSignCert))
@@ -126,7 +124,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
     private fun submitOrResumeCertificateSigningRequest(keyPair: KeyPair): String {
         // Retrieve request id from file if exists, else post a request to server.
         return if (!requestIdStore.exists()) {
-            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, config.emailAddress, keyPair)
+            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName.x500Name, config.emailAddress, keyPair)
             val writer = StringWriter()
             JcaPEMWriter(writer).use {
                 it.writeObject(PemObject("CERTIFICATE REQUEST", request.encoded))
