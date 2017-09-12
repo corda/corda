@@ -64,7 +64,7 @@ abstract class SerializationFactory {
         val priorContext = _currentFactory.get()
         _currentFactory.set(this)
         try {
-            return block()
+            return this.block()
         } finally {
             _currentFactory.set(priorContext)
         }
