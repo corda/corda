@@ -119,17 +119,20 @@ data class CordaX500Name(val commonName: String?,
     }
 
     @Transient
-    private var x500Cache: X500Principal? = null
+    private var x500Cache: X500Name? = null
 
     val x500Principal: X500Principal
         get() {
             if (x500Cache == null) {
-                x500Cache = X500Principal(this.x500Name.encoded)
+                x500Cache = this.x500Name
             }
-            return x500Cache!!
+            return X500Principal(x500Cache!!.encoded)
         }
 
     override fun toString(): String {
-        return x500Principal.toString()
+        if (x500Cache == null) {
+            x500Cache = this.x500Name
+        }
+        return x500Cache.toString()
     }
 }
