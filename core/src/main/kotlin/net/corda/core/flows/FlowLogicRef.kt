@@ -32,4 +32,8 @@ interface FlowLogicRef
  * properties loaded from the attachments.  And perhaps the authenticated user for an API call?
  */
 @CordaSerializable
-data class AppContext(val attachments: List<SecureHash>, val classLoader: ClassLoader)
+data class AppContext(val attachments: List<SecureHash>) {
+    // TODO: build a real [AttachmentsClassLoader] etc
+    val classLoader: ClassLoader
+        get() = this.javaClass.classLoader
+}

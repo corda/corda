@@ -75,7 +75,7 @@ object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactor
     internal fun createKotlin(type: Class<out FlowLogic<*>>, args: Map<String, Any?>): FlowLogicRef {
         // TODO: we need to capture something about the class loader or "application context" into the ref,
         //       perhaps as some sort of ThreadLocal style object.  For now, just create an empty one.
-        val appContext = AppContext(emptyList(), javaClass.classLoader)
+        val appContext = AppContext(emptyList())
         // Check we can find a constructor and populate the args to it, but don't call it
         createConstructor(type, args)
         return FlowLogicRefImpl(type.name, appContext, args)
