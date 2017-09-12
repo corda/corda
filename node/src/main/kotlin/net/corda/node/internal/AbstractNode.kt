@@ -274,7 +274,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         cordappLoader.findInitiatedFlows()
                 .forEach {
                     try {
-                        require(it.classLoader == cordappLoader.appClassLoader)
                         registerInitiatedFlowInternal(it, track = false)
                     } catch (e: NoSuchMethodException) {
                         log.error("${it.name}, as an initiated flow, must have a constructor with a single parameter " +
@@ -296,20 +295,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun <F : FlowLogic<*>> registerInitiatedFlowInternal(initiatedFlow: Class<F>, track: Boolean): Observable<F> {
         val ctor = initiatedFlow.getDeclaredConstructor(Party::class.java).apply { isAccessible = true }
-        println("CTOR CLASSLOADER: ${initiatedFlow.classLoader}")
-        println("CLASSLOADER: ${cordappLoader.appClassLoader}")
-        assert(initiatedFlow.classLoader == cordappLoader.appClassLoader)
         val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
         val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
         require(classWithAnnotation == initiatingFlow) {
             "${InitiatedBy::class.java.name} must point to ${classWithAnnotation.name} and not ${initiatingFlow.name}"
         }
-        val flowFactory = InitiatedFlowFactory.CorDapp(version, initiatedFlow.appName, { 
-            val out = ctor.newInstance(it)
-            println("${out.javaClass.classLoader} == ${cordappLoader.appClassLoader}")
-            assert(out.javaClass.classLoader == cordappLoader.appClassLoader)
-            out
-        })
+        val flowFactory = InitiatedFlowFactory.CorDapp(version, initiatedFlow.appName, { ctor.newInstance(it) })
         val observable = internalRegisterFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
         log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
         return observable

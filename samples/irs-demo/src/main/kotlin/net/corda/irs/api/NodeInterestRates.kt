@@ -66,9 +66,6 @@ object NodeInterestRates {
 
         @Suspendable
         override fun call(): Unit {
-            println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            println(javaClass.classLoader.hashCode())
-            println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             val request = receive<RatesFixFlow.QueryRequest>(otherParty).unwrap { it }
             progressTracker.currentStep = RECEIVED
             val oracle = serviceHub.cordaService(Oracle::class.java)
