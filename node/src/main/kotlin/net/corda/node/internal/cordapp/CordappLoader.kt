@@ -1,60 +1,70 @@
-package net.corda.node.internal.classloading
+package net.corda.node.internal.cordapp
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
+import net.corda.core.contracts.Contract
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceType
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
+import net.corda.node.internal.classloading.requireAnnotation
 import java.lang.reflect.Modifier
 import java.net.JarURLConnection
 import java.net.URI
+import java.net.URL
+import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.reflect.KClass
+import kotlin.streams.toList
 
 /**
- * Handles CorDapp loading and classpath scanning
+ * Handles CorDapp loading and classpath scanning of CorDapp JARs
+ *
+ * @property cordappJarPaths The classpath of cordapp JARs
  */
-class CordappLoader private constructor (val cordappClassPath: List<Path>) {
-    val appClassLoader: ClassLoader = javaClass.classLoader
-    val scanResult = scanCordapps()
+class CordappLoader private constructor(private val cordappJarPaths: List<URL>) {
+    val cordapps: List<Cordapp> by lazy { loadCordapps() }
+
+    @VisibleForTesting
+    internal val appClassLoader: ClassLoader = javaClass.classLoader
 
     companion object {
         private val logger = loggerFor<CordappLoader>()
 
         /**
-         * Creates the default CordappLoader intended to be used in non-dev or non-test environments.
+         * Creates a default CordappLoader intended to be used in non-dev or non-test environments.
          *
-         * @param   basedir The directory that this node is running in. Will use this to resolve the plugins directory
+         * @param baseDir The directory that this node is running in. Will use this to resolve the plugins directory
          *                  for classpath scanning.
          */
         fun createDefault(baseDir: Path): CordappLoader {
             val pluginsDir = baseDir / "plugins"
-            return CordappLoader(if (!pluginsDir.exists()) emptyList<Path>() else pluginsDir.list {
-                it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.collect(Collectors.toList())
+            return CordappLoader(if (!pluginsDir.exists()) emptyList<URL>() else pluginsDir.list {
+                it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
             })
         }
 
         /**
-         * Creates the dev mode CordappLoader intended to only be used in dev or test environments.
+         * Creates a dev mode CordappLoader intended to only be used in test environments.
          *
-         * @param   scanPackage Resolves the JARs that contain scanPackage and use them as the source for
+         * @param scanPackage Resolves the JARs that contain scanPackage and use them as the source for
          *                      the classpath scanning.
          */
         fun createDevMode(scanPackage: String): CordappLoader {
             val resource = scanPackage.replace('.', '/')
-            val paths = javaClass.classLoader.getResources(resource)
+            val paths = this::class.java.classLoader.getResources(resource)
                     .asSequence()
                     .map {
                         val uri = if (it.protocol == "jar") {
@@ -62,43 +72,37 @@ class CordappLoader private constructor (val cordappClassPath: List<Path>) {
                         } else {
                             URI(it.toExternalForm().removeSuffix(resource))
                         }
-                        Paths.get(uri)
+                        uri.toURL()
                     }
                     .toList()
             return CordappLoader(paths)
         }
+
+        /**
+         * Creates a dev mode CordappLoader intended only to be used in test environments
+         *
+         * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection
+         */
+        @VisibleForTesting
+        internal fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars)
     }
 
-    fun findServices(info: NodeInfo): List<Class<out SerializeAsToken>> {
-        fun getServiceType(clazz: Class<*>): ServiceType? {
-            return try {
-                clazz.getField("type").get(null) as ServiceType
-            } catch (e: NoSuchFieldException) {
-                logger.warn("${clazz.name} does not have a type field, optimistically proceeding with install.")
-                null
-            }
+    private fun loadCordapps(): List<Cordapp> {
+        return cordappJarPaths.map {
+            val scanResult = scanCordapp(it)
+            Cordapp(findContractClassNames(scanResult), findInitiatedFlows(scanResult), findRPCFlows(scanResult), findServices(scanResult), findPlugins(it), it)
         }
-
-        return scanResult?.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
-                ?.filter {
-                    val serviceType = getServiceType(it)
-                    if (serviceType != null && info.serviceIdentities(serviceType).isEmpty()) {
-                        logger.debug {
-                            "Ignoring ${it.name} as a Corda service since $serviceType is not one of our " +
-                                    "advertised services"
-                        }
-                        false
-                    } else {
-                        true
-                    }
-                } ?: emptyList<Class<SerializeAsToken>>()
     }
 
-    fun findInitiatedFlows(): List<Class<out FlowLogic<*>>> {
-        return scanResult?.getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
+    private fun findServices(scanResult: ScanResult): List<Class<out SerializeAsToken>> {
+        return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
+    }
+
+    private fun findInitiatedFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
                 // First group by the initiating flow class in case there are multiple mappings
-                ?.groupBy { it.requireAnnotation<InitiatedBy>().value.java }
-                ?.map { (initiatingFlow, initiatedFlows) ->
+                .groupBy { it.requireAnnotation<InitiatedBy>().value.java }
+                .map { (initiatingFlow, initiatedFlows) ->
                     val sorted = initiatedFlows.sortedWith(FlowTypeHierarchyComparator(initiatingFlow))
                     if (sorted.size > 1) {
                         logger.warn("${initiatingFlow.name} has been specified as the inititating flow by multiple flows " +
@@ -106,41 +110,43 @@ class CordappLoader private constructor (val cordappClassPath: List<Path>) {
                                 "specific sub-type for registration: ${sorted[0].name}.")
                     }
                     sorted[0]
-                } ?: emptyList<Class<out FlowLogic<*>>>()
+                }
     }
 
-    fun findRPCFlows(): List<Class<out FlowLogic<*>>> {
+    private fun findRPCFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
         fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
             return Modifier.isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || Modifier.isStatic(modifiers))
         }
 
-        val found = scanResult?.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class)?.filter { it.isUserInvokable() } ?: emptyList<Class<out FlowLogic<*>>>()
+        val found = scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() }
         val coreFlows = listOf(ContractUpgradeFlow.Initiator::class.java)
         return found + coreFlows
+    }
+
+    private fun findContractClassNames(scanResult: ScanResult): List<String> {
+        return scanResult.getNamesOfClassesImplementing(Contract::class.java)
+    }
+
+    private fun findPlugins(cordappJarPath: URL): List<CordaPluginRegistry> {
+        return ServiceLoader.load(CordaPluginRegistry::class.java, URLClassLoader(arrayOf(cordappJarPath), null)).toList()
     }
 
     fun findCustomSchemas(): Set<MappedSchema> {
         return scanResult?.getClassesWithSuperclass(MappedSchema::class)?.toSet() ?: emptySet()
     }
 
-    private fun scanCordapps(): ScanResult? {
-        logger.info("Scanning CorDapps in $cordappClassPath")
-        return if (cordappClassPath.isNotEmpty())
-            FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappClassPath).scan()
-        else
-            null
+    private fun scanCordapp(cordappJarPath: URL): ScanResult {
+        logger.info("Scanning CorDapp in $cordappJarPath")
+        return FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath).scan()
     }
 
     private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {
         override fun compare(o1: Class<out FlowLogic<*>>, o2: Class<out FlowLogic<*>>): Int {
-            return if (o1 == o2) {
-                0
-            } else if (o1.isAssignableFrom(o2)) {
-                1
-            } else if (o2.isAssignableFrom(o1)) {
-                -1
-            } else {
-                throw IllegalArgumentException("${initiatingFlow.name} has been specified as the initiating flow by " +
+            return when {
+                o1 == o2 -> 0
+                o1.isAssignableFrom(o2) -> 1
+                o2.isAssignableFrom(o1) -> -1
+                else -> throw IllegalArgumentException("${initiatingFlow.name} has been specified as the initiating flow by " +
                         "both ${o1.name} and ${o2.name}")
             }
         }
@@ -148,7 +154,7 @@ class CordappLoader private constructor (val cordappClassPath: List<Path>) {
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
-            appClassLoader.loadClass(className) as Class<T>
+            appClassLoader.loadClass(className).asSubclass(type.java)
         } catch (e: ClassCastException) {
             logger.warn("As $className must be a sub-type of ${type.java.name}")
             null

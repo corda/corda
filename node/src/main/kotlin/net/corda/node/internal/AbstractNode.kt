@@ -31,7 +31,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.cert
 import net.corda.core.utilities.debug
-import net.corda.node.internal.classloading.CordappLoader
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
@@ -68,6 +68,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -148,18 +149,18 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         CordaX500Name.build(cert.subject).copy(commonName = null)
     }
 
-    /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
-    open val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        ServiceLoader.load(CordaPluginRegistry::class.java).toList()
-    }
-
     val cordappLoader: CordappLoader by lazy {
-        if (System.getProperty("net.corda.node.cordapp.scan.package") != null) {
+        val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
+        if (scanPackage != null) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createDevMode(System.getProperty("net.corda.node.cordapp.scan.package"))
+            CordappLoader.createDevMode(scanPackage)
         } else {
             CordappLoader.createDefault(configuration.baseDirectory)
         }
+    }
+
+    open val pluginRegistries: List<CordaPluginRegistry> by lazy {
+        cordappLoader.cordapps.flatMap { it.plugins } + DefaultWhitelist()
     }
 
     /** Set to true once [start] has been successfully called. */
@@ -213,7 +214,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             installCordaServices()
             registerCordappFlows()
-            _services.rpcFlows += cordappLoader.findRPCFlows()
+            _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             registerCustomSchemas(cordappLoader.findCustomSchemas())
 
             runOnStop += network::stop
@@ -232,7 +233,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
 
     private fun installCordaServices() {
-        cordappLoader.findServices(info).forEach {
+        cordappLoader.cordapps.flatMap { it.filterEnabledServices(info) }.map {
             try {
                 installCordaService(it)
             } catch (e: NoSuchMethodException) {
@@ -274,7 +275,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun registerCordappFlows() {
-        cordappLoader.findInitiatedFlows()
+        cordappLoader.cordapps.flatMap { it.initiatedFlows }
                 .forEach {
                     try {
                         registerInitiatedFlowInternal(it, track = false)
