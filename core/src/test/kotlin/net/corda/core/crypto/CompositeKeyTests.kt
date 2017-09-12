@@ -7,10 +7,10 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.cert
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.toBase58String
 import net.corda.node.utilities.*
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.getX500Name
 import net.corda.testing.kryoSpecific
 import org.junit.Rule
 import org.junit.Test

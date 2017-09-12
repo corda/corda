@@ -507,8 +507,9 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                 }
                 // Make sure certificate has the same name.
                 val peerCertificate = session.peerCertificateChain[0].toX509CertHolder()
-                require(peerCertificate.subject == expectedLegalName.x500Name) {
-                    "Peer has wrong subject name in the certificate - expected $expectedLegalName but got ${peerCertificate.subject}. This is either a fatal " +
+                val peerCertificateName = CordaX500Name.build(peerCertificate.subject)
+                require(peerCertificateName == expectedLegalName) {
+                    "Peer has wrong subject name in the certificate - expected $expectedLegalName but got $peerCertificateName. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
                 X509Utilities.validateCertificateChain(session.localCertificates.last().toX509CertHolder(), *session.peerCertificates)

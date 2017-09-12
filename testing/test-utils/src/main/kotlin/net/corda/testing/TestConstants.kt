@@ -10,7 +10,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.node.utilities.CertificateAndKeyPair
-import net.corda.core.utilities.getX500Name
 import net.corda.node.utilities.X509Utilities
 import java.math.BigInteger
 import java.security.KeyPair

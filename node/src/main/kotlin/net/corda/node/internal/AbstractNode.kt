@@ -737,8 +737,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        val subject = certificates[0].toX509CertHolder().subject
-        if (subject != name.x500Name)
+        val subject = CordaX500Name.build(certificates[0].toX509CertHolder().subject)
+        if (subject != name)
             throw ConfigurationException("The name for $id doesn't match what's in the key store: $name vs $subject")
 
         partyKeys += keys
