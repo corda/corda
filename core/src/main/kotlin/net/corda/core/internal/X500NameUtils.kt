@@ -1,6 +1,6 @@
 @file:JvmName("X500NameUtils")
 
-package net.corda.core.utilities
+package net.corda.core.internal
 
 import net.corda.core.identity.CordaX500Name
 import org.bouncycastle.asn1.ASN1ObjectIdentifier

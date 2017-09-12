@@ -6,11 +6,11 @@ import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.internal.toTypedArray
+import net.corda.core.internal.x500Name
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.cert
-import net.corda.core.utilities.x500Name
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.config.createKeystoreForCordaNode
 import net.corda.nodeapi.internal.serialization.AllWhitelist

@@ -2,13 +2,12 @@ package net.corda.core.identity
 
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.countryCodes
+import net.corda.core.internal.x500Name
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.x500Name
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
 import javax.security.auth.x500.X500Principal
 
