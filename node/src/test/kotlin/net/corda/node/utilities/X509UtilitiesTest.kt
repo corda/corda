@@ -85,7 +85,7 @@ class X509UtilitiesTest {
         val subject = CordaX500Name(commonName = "Server Cert", organisation = "R3 Ltd", locality = "London", country = "GB")
         val keyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val serverCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, caKey, subject, keyPair.public)
-        assertTrue { serverCert.subject.toString().contains("CN=Server Cert") } // using our subject common name
+        assertEquals(X500Name("C=GB,L=London,O=R3 Ltd,CN=Server Cert"), serverCert.subject) // using our subject common name
         assertEquals(caCert.issuer, serverCert.issuer) // Issued by our CA cert
         serverCert.isValidOn(Date()) // throws on verification problems
         serverCert.isSignatureValid(JcaContentVerifierProviderBuilder().build(caKey.public)) // throws on verification problems
