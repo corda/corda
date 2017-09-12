@@ -5,6 +5,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
@@ -29,10 +30,9 @@ class NetworkMapCacheTest {
 
     @Test
     fun registerWithNetwork() {
-        val nodes = mockNet.createSomeNodes(1)
-        val n0 = nodes.mapNode
-        val n1 = nodes.partyNodes[0]
-        val future = n1.services.networkMapCache.addMapService(n1.network, n0.network.myAddress, false, null)
+        val mapNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val aliceNode = mockNet.createPartyNode(mapNode.network.myAddress, ALICE.name)
+        val future = aliceNode.services.networkMapCache.addMapService(aliceNode.network, mapNode.network.myAddress, false, null)
         mockNet.runNetwork()
         future.getOrThrow()
     }
@@ -56,9 +56,8 @@ class NetworkMapCacheTest {
 
     @Test
     fun `getNodeByLegalIdentity`() {
-        val nodes = mockNet.createSomeNodes(1)
-        val n0 = nodes.mapNode
-        val n1 = nodes.partyNodes[0]
+        val n0 = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val n1 = mockNet.createPartyNode(n0.network.myAddress, ALICE.name)
         val node0Cache: NetworkMapCache = n0.services.networkMapCache
         val expected = n1.info
 
@@ -71,9 +70,8 @@ class NetworkMapCacheTest {
 
     @Test
     fun `remove node from cache`() {
-        val nodes = mockNet.createSomeNodes(1)
-        val n0 = nodes.mapNode
-        val n1 = nodes.partyNodes[0]
+        val n0 = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val n1 = mockNet.createPartyNode(n0.network.myAddress, ALICE.name)
         val n0Identity = n0.info.chooseIdentity()
         val n1Identity = n1.info.chooseIdentity()
         val node0Cache = n0.services.networkMapCache as PersistentNetworkMapCache

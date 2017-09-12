@@ -60,7 +60,7 @@ class FinalityFlowTests {
     @Test
     fun `reject a transaction with unknown parties`() {
         val amount = 1000.POUNDS.issuedBy(nodeA.info.chooseIdentity().ref(0))
-        val fakeIdentity = ALICE // Alice isn't part of this network, so node A won't recognise them
+        val fakeIdentity = CHARLIE // Charlie isn't part of this network, so node A won't recognise them
         val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, fakeIdentity, notary)
         val stx = nodeA.services.signInitialTransaction(builder)

@@ -33,11 +33,11 @@ class CashPaymentFlowTests {
     fun start() {
         setCordappPackages("net.corda.finance.contracts.asset")
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
-        val nodes = mockNet.createSomeNodes(1)
-        notaryNode = nodes.notaryNode
-        bankOfCordaNode = nodes.partyNodes[0]
+        notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        bankOfCordaNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
         notary = notaryNode.services.getDefaultNotary()
+
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
