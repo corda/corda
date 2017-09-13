@@ -37,7 +37,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
                               override val flowInitiator: FlowInitiator,
-                              override val me: PartyAndCertificate) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
+                              override val ourIdentity: PartyAndCertificate) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
     companion object {
         // Used to work around a small limitation in Quasar.
         private val QUASAR_UNBLOCKER = Fiber::class.staticField<Any>("SERIALIZER_BLOCKER").value
