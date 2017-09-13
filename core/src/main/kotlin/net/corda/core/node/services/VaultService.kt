@@ -9,7 +9,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
-import net.corda.core.transactions.CoreTransaction
 import net.corda.core.utilities.NonEmptySet
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -221,8 +220,33 @@ interface VaultService {
      */
     fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>? = null)
     // DOCEND SoftLockAPI
+
+    /**
+     * Helper function to combine using [VaultQueryService] calls to determine spendable states and soft locking them.
+     * Currently performance will be worse than for the hand optimised version in `Cash.unconsumedCashStatesForSpending`
+     * However, this is fully generic and can operate with custom [FungibleAsset] states.
+     * @param lockId The [FlowLogic.runId.uuid] of the current flow used to soft lock the states.
+     * @param eligibleStatesQuery A custom query object that selects down to the appropriate subset of all states of the
+     * [contractType]. e.g. by selecting on account, issuer, etc. The query is internally augmented with the UNCONSUMED,
+     * soft lock and contract type requirements.
+     * @param amount The required amount of the asset, but with the issuer stripped off.
+     * It is assumed that compatible issuer states will be filtered out by the [eligibleStatesQuery].
+     * @param contractType class type of the result set.
+     * @return Returns a locked subset of the [eligibleStatesQuery] sufficient to satisfy the requested amount,
+     * or else an empty list and no change in the stored lock states when their are insufficient resources available.
+     */
+    @Suspendable
+    @Throws(StatesNotAvailableException::class)
+    fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
+                                                                         eligibleStatesQuery: QueryCriteria,
+                                                                         amount: Amount<U>,
+                                                                         contractType: Class<out T>): List<StateAndRef<T>>
+
 }
 
+interface VaultServiceInternal : VaultService {
+    var vaultQueryService: VaultQueryService
+}
 
 class StatesNotAvailableException(override val message: String?, override val cause: Throwable? = null) : FlowException(message, cause) {
     override fun toString() = "Soft locking error: $message"

@@ -1,12 +1,17 @@
 package net.corda.node.services.vault
 
-import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.services.*
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.VaultQueryService
+import net.corda.core.node.services.VaultServiceInternal
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
@@ -14,7 +19,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.trace
 import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.utilities.DatabaseTransactionManager
@@ -24,8 +28,8 @@ import java.lang.Exception
 import java.util.*
 import javax.persistence.Tuple
 
-class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
-                              val vault: VaultService) : SingletonSerializeAsToken(), VaultQueryService {
+class HibernateVaultQueryImpl(private val hibernateConfig: HibernateConfiguration,
+                              val vault: VaultServiceInternal) : SingletonSerializeAsToken(), VaultQueryService {
     companion object {
         val log = loggerFor<HibernateVaultQueryImpl>()
     }
@@ -40,6 +44,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
     private val contractTypeMappings = bootstrapContractStateTypes()
 
     init {
+        vault.vaultQueryService = this
         vault.rawUpdates.subscribe { update ->
             update.produced.forEach {
                 val concreteType = it.state.data.javaClass
@@ -164,7 +169,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
     /**
      * Derive list from existing vault states and then incrementally update using vault observables
      */
-    fun bootstrapContractStateTypes(): MutableMap<String, MutableSet<String>> {
+    private fun bootstrapContractStateTypes(): MutableMap<String, MutableSet<String>> {
         val criteria = criteriaBuilder.createQuery(String::class.java)
         val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
         criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
@@ -191,47 +196,12 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
         val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
         clazz.interfaces.forEach {
-            if (!it.equals(ContractState::class.java)) {
+            if (it != ContractState::class.java) {
                 @Suppress("UNCHECKED_CAST")
                 myInterfaces.add(it as Class<T>)
                 myInterfaces.addAll(deriveContractInterfaces(it))
             }
         }
         return myInterfaces
-    }
-
-    @Suspendable
-    @Throws(StatesNotAvailableException::class)
-    override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
-                                                                                  eligibleStatesQuery: QueryCriteria,
-                                                                                  amount: Amount<U>,
-                                                                                  contractType: Class<out T>): List<StateAndRef<T>> {
-        if (amount.quantity == 0L) {
-            return emptyList()
-        }
-        // Enrich QueryCriteria with additional default attributes (such as soft locks)
-        val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
-        val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
-        val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
-                contractStateTypes = setOf(contractType),
-                softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)))
-        val results = queryBy(contractType, enrichedCriteria.and(eligibleStatesQuery), sorter)
-        var claimedAmount = 0L
-        val claimedStates = mutableListOf<StateAndRef<T>>()
-        for (state in results.states) {
-            val issuedAssetToken = state.state.data.amount.token
-            if (issuedAssetToken.product == amount.token) {
-                claimedStates += state
-                claimedAmount += state.state.data.amount.quantity
-                if (claimedAmount > amount.quantity) {
-                    break
-                }
-            }
-        }
-        if (claimedStates.isEmpty() || claimedAmount < amount.quantity) {
-            return emptyList()
-        }
-        vault.softLockReserve(lockId, claimedStates.map { it.ref }.toNonEmptySet())
-        return claimedStates
     }
 }

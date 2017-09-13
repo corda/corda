@@ -14,18 +14,7 @@ import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
 
-/**
- * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
- * forms ready for verification.
- *
- * @see ServiceHub
- */
-interface ServicesForResolution {
-    val identityService: IdentityService
-
-    /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
-    val attachments: AttachmentStorage
-
+interface StateLoader {
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
      *
@@ -33,6 +22,19 @@ interface ServicesForResolution {
      */
     @Throws(TransactionResolutionException::class)
     fun loadState(stateRef: StateRef): TransactionState<*>
+}
+
+/**
+ * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
+ * forms ready for verification.
+ *
+ * @see ServiceHub
+ */
+interface ServicesForResolution : StateLoader {
+    val identityService: IdentityService
+
+    /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
+    val attachments: AttachmentStorage
 }
 
 /**
@@ -99,19 +101,6 @@ interface ServiceHub : ServicesForResolution {
      */
     fun recordTransactions(txs: Iterable<SignedTransaction>) {
         recordTransactions(true, txs)
-    }
-
-    /**
-     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
-     *
-     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
-     */
-    @Throws(TransactionResolutionException::class)
-    override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return if (stx.isNotaryChangeTransaction()) {
-            stx.resolveNotaryChangeTransaction(this).outputs[stateRef.index]
-        } else stx.tx.outputs[stateRef.index]
     }
 
     /**

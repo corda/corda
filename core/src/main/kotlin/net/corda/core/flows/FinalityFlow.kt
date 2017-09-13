@@ -8,7 +8,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.ResolveTransactionsFlow
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
@@ -140,11 +140,11 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         val sorted = ResolveTransactionsFlow.topologicalSort(signedTransactions.toList())
         // Build a ServiceHub that consults the argument list as well as what's in local tx storage so uncommitted
         // transactions can depend on each other.
-        val augmentedLookup = object : ServiceHub by serviceHub {
+        val augmentedLookup = object : ServicesForResolution by serviceHub {
             val hashToTx = sorted.associateBy { it.id }
             override fun loadState(stateRef: StateRef): TransactionState<*> {
                 val provided: TransactionState<ContractState>? = hashToTx[stateRef.txhash]?.let { it.tx.outputs[stateRef.index] }
-                return provided ?: super.loadState(stateRef)
+                return provided ?: serviceHub.loadState(stateRef)
             }
         }
         // Load and verify each transaction.
