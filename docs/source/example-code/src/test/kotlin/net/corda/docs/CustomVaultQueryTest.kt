@@ -8,6 +8,7 @@ import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
@@ -39,6 +40,8 @@ class CustomVaultQueryTest {
 
         nodeA.node.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
         nodeA.node.installCordaService(CustomVaultQuery.Service::class.java)
+        nodeA.node.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.node.registerCustomSchemas(setOf(CashSchemaV1))
     }
 
     @After

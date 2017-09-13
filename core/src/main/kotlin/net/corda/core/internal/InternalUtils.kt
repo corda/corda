@@ -26,6 +26,7 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.reflect.KClass
+import kotlin.reflect.full.createInstance
 
 val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
 fun Throwable.getStackTraceAsString() = StringWriter().also { printStackTrace(PrintWriter(it)) }.toString()
@@ -238,6 +239,11 @@ fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaCl
  * in its superclass [clazz].
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
+
+/** creates a new instance if not a Kotlin object */
+fun <T: Any> KClass<T>.objectOrNewInstance(): T {
+    return this.objectInstance ?: this.createInstance()
+}
 
 /**
  * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
