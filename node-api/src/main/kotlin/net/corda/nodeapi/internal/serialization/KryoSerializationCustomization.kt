@@ -5,6 +5,8 @@ import net.corda.core.serialization.SerializationCustomization
 
 class KryoSerializationCustomization(val kryo: Kryo) : SerializationCustomization {
     override fun addToWhitelist(vararg types: Class<*>) {
-        kryo.addToWhitelist(*types)
+        for (type in types) {
+            ((kryo.classResolver as? CordaClassResolver)?.whitelist as? MutableClassWhitelist)?.add(type)
+        }
     }
 }
