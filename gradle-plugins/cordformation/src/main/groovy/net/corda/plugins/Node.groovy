@@ -107,6 +107,7 @@ class Node extends CordformNode {
         installBuiltPlugin()
         installCordapps()
         installConfig()
+        appendExtraConfig()
     }
 
     /**
@@ -180,7 +181,21 @@ class Node extends CordformNode {
     private void installConfig() {
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
 
-        // Appending properties from an optional file
+        // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
+        def tmpDir = new File(project.buildDir, "tmp")
+        def tmpConfFile = new File(tmpDir, 'node.conf')
+        Files.write(tmpConfFile.toPath(), configFileText, StandardCharsets.UTF_8)
+
+        project.copy {
+            from tmpConfFile
+            into nodeDir
+        }
+    }
+
+    /**
+     * Appends installed config file with properties from an optional file.
+     */
+    private void appendExtraConfig() {
         final configFileProperty = "configFile"
         File additionalConfig
         if (project.findProperty(configFileProperty)) { //provided by -PconfigFile command line property when running Gradle task
@@ -192,20 +207,11 @@ class Node extends CordformNode {
             if (!additionalConfig.exists()) {
                println "$configFileProperty '$additionalConfig' not found"
             } else {
-                additionalConfig.eachLine {
-                    line -> configFileText << line
+                def confFile = new File(project.buildDir.getPath() + "/../" + nodeDir, 'node.conf')
+                additionalConfig.withInputStream {
+                    input -> confFile << input
                 }
             }
-        }
-
-        // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
-        def tmpDir = new File(project.buildDir, "tmp")
-        def tmpConfFile = new File(tmpDir, 'node.conf')
-        Files.write(tmpConfFile.toPath(), configFileText, StandardCharsets.UTF_8)
-
-        project.copy {
-            from tmpConfFile
-            into nodeDir
         }
     }
 

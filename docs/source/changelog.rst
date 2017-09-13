@@ -281,6 +281,8 @@ Release 1.0
   on the node's keystore.
 
 .. _changelog_m14:
+* Cordformation node building DSL can have an additional parameter `configFile` with the path to a properties file
+  to be appended to node.conf.
 
 Milestone 14
 ------------
