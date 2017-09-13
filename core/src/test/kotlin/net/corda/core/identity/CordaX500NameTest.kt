@@ -60,4 +60,11 @@ class CordaX500NameTest {
             CordaX500Name.parse("O=B, L=New York, C=US, OU=Org Unit, CN=Service Name")
         }
     }
+
+    @Test
+    fun `rejects name with unsupported attribute`() {
+        assertFailsWith(IllegalArgumentException::class) {
+            CordaX500Name.parse("O=Bank A, L=New York, C=US, SN=blah")
+        }
+    }
 }

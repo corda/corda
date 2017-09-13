@@ -1,8 +1,8 @@
 package net.corda.core.identity
 
 import net.corda.core.internal.LegalNameValidator
+import net.corda.core.internal.countryCodes
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.countryCodes
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
@@ -28,27 +28,11 @@ import org.bouncycastle.asn1.x500.style.BCStyle
  */
 @CordaSerializable
 data class CordaX500Name(val commonName: String?,
-                    val organisationUnit: String?,
-                    val organisation: String,
-                    val locality: String,
-                    val state: String?,
-                    val country: String) {
-    init {
-        // Legal name checks.
-        LegalNameValidator.validateLegalName(organisation)
-
-        // Attribute data width checks.
-        require(country.length == LENGTH_COUNTRY) { "Invalid country '$country' Country code must be 2 letters ISO code " }
-        require(country.toUpperCase() == country) { "Country code should be in upper case." }
-        require(countryCodes.contains(country)) { "Invalid country code '${country}'" }
-
-        require(organisation.length < MAX_LENGTH_ORGANISATION) { "Organisation attribute (O) must contain less then $MAX_LENGTH_ORGANISATION characters." }
-        require(locality.length < MAX_LENGTH_LOCALITY) { "Locality attribute (L) must contain less then $MAX_LENGTH_LOCALITY characters." }
-
-        state?.let { require(it.length < MAX_LENGTH_STATE) { "State attribute (ST) must contain less then $MAX_LENGTH_STATE characters." } }
-        organisationUnit?.let { require(it.length < MAX_LENGTH_ORGANISATION_UNIT) { "Organisation Unit attribute (OU) must contain less then $MAX_LENGTH_ORGANISATION_UNIT characters." } }
-        commonName?.let { require(it.length < MAX_LENGTH_COMMON_NAME) { "Common Name attribute (CN) must contain less then $MAX_LENGTH_COMMON_NAME characters." } }
-    }
+                         val organisationUnit: String?,
+                         val organisation: String,
+                         val locality: String,
+                         val state: String?,
+                         val country: String) {
     constructor(commonName: String, organisation: String, locality: String, country: String) : this(null, commonName, organisation, locality, null, country)
     /**
      * @param organisation name of the organisation.
@@ -57,6 +41,29 @@ data class CordaX500Name(val commonName: String?,
      */
     constructor(organisation: String, locality: String, country: String) : this(null, null, organisation, locality, null, country)
 
+    init {
+        // Legal name checks.
+        LegalNameValidator.validateLegalName(organisation)
+
+        // Attribute data width checks.
+        require(country.length == LENGTH_COUNTRY) { "Invalid country '$country' Country code must be $LENGTH_COUNTRY letters ISO code " }
+        require(country.toUpperCase() == country) { "Country code should be in upper case." }
+        require(country in countryCodes) { "Invalid country code $country" }
+
+        require(organisation.length < MAX_LENGTH_ORGANISATION) {
+            "Organisation attribute (O) must contain less then $MAX_LENGTH_ORGANISATION characters."
+        }
+        require(locality.length < MAX_LENGTH_LOCALITY) { "Locality attribute (L) must contain less then $MAX_LENGTH_LOCALITY characters." }
+
+        state?.let { require(it.length < MAX_LENGTH_STATE) { "State attribute (ST) must contain less then $MAX_LENGTH_STATE characters." } }
+        organisationUnit?.let { require(it.length < MAX_LENGTH_ORGANISATION_UNIT) {
+            "Organisation Unit attribute (OU) must contain less then $MAX_LENGTH_ORGANISATION_UNIT characters." }
+        }
+        commonName?.let { require(it.length < MAX_LENGTH_COMMON_NAME) {
+            "Common Name attribute (CN) must contain less then $MAX_LENGTH_COMMON_NAME characters." }
+        }
+    }
+
     companion object {
         const val LENGTH_COUNTRY = 2
         const val MAX_LENGTH_ORGANISATION = 128
@@ -64,28 +71,24 @@ data class CordaX500Name(val commonName: String?,
         const val MAX_LENGTH_STATE = 64
         const val MAX_LENGTH_ORGANISATION_UNIT = 64
         const val MAX_LENGTH_COMMON_NAME = 64
-        private val mandatoryAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L)
-        private val supportedAttributes = mandatoryAttributes + setOf(BCStyle.CN, BCStyle.ST, BCStyle.OU)
+        private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
 
         @JvmStatic
         fun build(x500Name: X500Name) : CordaX500Name {
-            val rDNs = x500Name.rdNs.flatMap { it.typesAndValues.toList() }
-            val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = rDNs.associateBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
-            val attributes = attrsMap.keys
-
-            // Duplicate attribute value checks.
-            require(attributes.size == attributes.toSet().size) { "X500Name contain duplicate attribute." }
-
-            // Mandatory attribute checks.
-            require(attributes.containsAll(mandatoryAttributes)) {
-                val missingAttributes = mandatoryAttributes.subtract(attributes).map { BCStyle.INSTANCE.oidToDisplayName(it) }
-                "The following attribute${if (missingAttributes.size > 1) "s are" else " is"} missing from the legal name : $missingAttributes"
-            }
+            val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = x500Name.rdNs
+                    .flatMap { it.typesAndValues.asList() }
+                    .groupBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
+                    .mapValues {
+                        require(it.value.size == 1) { "Duplicate attribute ${it.key}" }
+                        it.value[0]
+                    }
 
             // Supported attribute checks.
-            require(attributes.subtract(supportedAttributes).isEmpty()) {
-                val unsupportedAttributes = attributes.subtract(supportedAttributes).map { BCStyle.INSTANCE.oidToDisplayName(it) }
-                "The following attribute${if (unsupportedAttributes.size > 1) "s are" else " is"} not supported in Corda :$unsupportedAttributes"
+            (attrsMap.keys - supportedAttributes).let { unsupported ->
+                require(unsupported.isEmpty()) {
+                    "The following attribute${if (unsupported.size > 1) "s are" else " is"} not supported in Corda: " +
+                            unsupported.map { BCStyle.INSTANCE.oidToDisplayName(it) }
+                }
             }
 
             val CN = attrsMap[BCStyle.CN]?.toString()

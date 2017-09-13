@@ -597,7 +597,7 @@ class InterestRateSwap : Contract {
     /**
      * The state class contains the 4 major data classes.
      */
-    @JsonIgnoreProperties("parties", "participants", ignoreUnknown = true)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class State(
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,
