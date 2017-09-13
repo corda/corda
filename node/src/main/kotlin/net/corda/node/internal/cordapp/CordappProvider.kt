@@ -28,9 +28,7 @@ class CordappProvider(private val attachmentStorage: AttachmentStorage, private 
      * @param cordapp The cordapp to get the attachment ID
      * @return An attachment ID if it exists, otherwise nothing
      */
-    fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? {
-        cordappAttachments.inverse().get(cordapp)!!
-    }
+    fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse().get(cordapp)
 
     private fun loadContractsIntoAttachmentStore(): Map<SecureHash, Cordapp> {
         val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }
