@@ -74,7 +74,6 @@ import rx.Observable
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.CertificateFactory
@@ -212,12 +211,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             startMessagingService(rpcOps)
             installCoreFlows()
 
-
-                installCordaServices()
-                registerCordappFlows()
-                _services.rpcFlows += cordappLoader.findRPCFlows()
-                registerCustomSchemas(findCustomSchemas(scanResult))
-
+            installCordaServices()
+            registerCordappFlows()
+            _services.rpcFlows += cordappLoader.findRPCFlows()
+            registerCustomSchemas(cordappLoader.findCustomSchemas())
 
             runOnStop += network::stop
         }

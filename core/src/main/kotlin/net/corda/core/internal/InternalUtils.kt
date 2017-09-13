@@ -240,10 +240,9 @@ fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaCl
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
-/** returns object instance or creates new instance if not yet created */
-fun <T: Any> Class<T>.defaultOrNewInstance(): T {
-    val kclazz = this.kotlin
-    return kclazz.objectInstance?: kclazz.objectInstance ?: kclazz.createInstance()
+/** creates a new instance if not a Kotlin object */
+fun <T: Any> KClass<T>.objectOrNewInstance(): T {
+    return this.objectInstance ?: this.createInstance()
 }
 
 /**
