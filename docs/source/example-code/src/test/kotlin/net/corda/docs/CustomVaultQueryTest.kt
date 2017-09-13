@@ -7,6 +7,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.node.internal.StartedNode
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -22,9 +23,9 @@ import java.util.*
 class CustomVaultQueryTest {
 
     lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: MockNetwork.MockNode
-    lateinit var nodeA: MockNetwork.MockNode
-    lateinit var nodeB: MockNetwork.MockNode
+    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
+    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    lateinit var nodeB: StartedNode<MockNetwork.MockNode>
 
     @Before
     fun setup() {
@@ -37,10 +38,10 @@ class CustomVaultQueryTest {
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
 
-        nodeA.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
-        nodeA.installCordaService(CustomVaultQuery.Service::class.java)
-        nodeA.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeA.internals.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
+        nodeA.internals.installCordaService(CustomVaultQuery.Service::class.java)
+        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1))
     }
 
     @After

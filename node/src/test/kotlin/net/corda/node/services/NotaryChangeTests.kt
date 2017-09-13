@@ -11,7 +11,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.DUMMY_NOTARY
@@ -31,10 +31,10 @@ import kotlin.test.assertTrue
 
 class NotaryChangeTests {
     lateinit var mockNet: MockNetwork
-    lateinit var oldNotaryNode: MockNetwork.MockNode
-    lateinit var newNotaryNode: MockNetwork.MockNode
-    lateinit var clientNodeA: MockNetwork.MockNode
-    lateinit var clientNodeB: MockNetwork.MockNode
+    lateinit var oldNotaryNode: StartedNode<MockNetwork.MockNode>
+    lateinit var newNotaryNode: StartedNode<MockNetwork.MockNode>
+    lateinit var clientNodeA: StartedNode<MockNetwork.MockNode>
+    lateinit var clientNodeB: StartedNode<MockNetwork.MockNode>
 
     @Before
     fun setUp() {
@@ -47,7 +47,7 @@ class NotaryChangeTests {
         newNotaryNode = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress, advertisedServices = ServiceInfo(SimpleNotaryService.type))
 
         mockNet.runNetwork() // Clear network map registration messages
-        oldNotaryNode.ensureRegistered()
+        oldNotaryNode.internals.ensureRegistered()
     }
 
     @After
@@ -132,7 +132,7 @@ class NotaryChangeTests {
         }
     }
 
-    private fun issueEncumberedState(node: AbstractNode, notaryNode: AbstractNode): WireTransaction {
+    private fun issueEncumberedState(node: StartedNode<*>, notaryNode: StartedNode<*>): WireTransaction {
         val owner = node.info.legalIdentity.ref(0)
         val notary = notaryNode.info.notaryIdentity
 
@@ -160,7 +160,7 @@ class NotaryChangeTests {
     //       - The transaction type is not a notary change transaction at all.
 }
 
-fun issueState(node: AbstractNode, notaryNode: AbstractNode): StateAndRef<*> {
+fun issueState(node: StartedNode<*>, notaryNode: StartedNode<*>): StateAndRef<*> {
     val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.legalIdentity.ref(0))
     val signedByNode = node.services.signInitialTransaction(tx)
     val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
@@ -168,7 +168,7 @@ fun issueState(node: AbstractNode, notaryNode: AbstractNode): StateAndRef<*> {
     return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
 }
 
-fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: AbstractNode): StateAndRef<DummyContract.MultiOwnerState> {
+fun issueMultiPartyState(nodeA: StartedNode<*>, nodeB: StartedNode<*>, notaryNode: StartedNode<*>): StateAndRef<DummyContract.MultiOwnerState> {
     val state = TransactionState(DummyContract.MultiOwnerState(0,
             listOf(nodeA.info.legalIdentity, nodeB.info.legalIdentity)), DUMMY_PROGRAM_ID, notaryNode.info.notaryIdentity)
     val tx = TransactionBuilder(notary = notaryNode.info.notaryIdentity).withItems(state, dummyCommand())
@@ -181,7 +181,7 @@ fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: A
     return stateAndRef
 }
 
-fun issueInvalidState(node: AbstractNode, notary: Party): StateAndRef<*> {
+fun issueInvalidState(node: StartedNode<*>, notary: Party): StateAndRef<*> {
     val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
     tx.setTimeWindow(Instant.now(), 30.seconds)
     val stx = node.services.signInitialTransaction(tx)

@@ -11,7 +11,7 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.StartedNode
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
@@ -58,7 +58,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
         assertEquals(error.txId, secondSpendTx.id)
     }
 
-    private fun issueState(node: AbstractNode, notary: Party): StateAndRef<*> {
+    private fun issueState(node: StartedNode<*>, notary: Party): StateAndRef<*> {
         return node.database.transaction {
             val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
             val stx = node.services.signInitialTransaction(builder)

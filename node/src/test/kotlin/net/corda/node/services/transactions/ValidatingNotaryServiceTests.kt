@@ -12,7 +12,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.issueInvalidState
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.DUMMY_NOTARY
@@ -30,8 +30,8 @@ import kotlin.test.assertFailsWith
 
 class ValidatingNotaryServiceTests {
     lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: MockNetwork.MockNode
-    lateinit var clientNode: MockNetwork.MockNode
+    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
+    lateinit var clientNode: StartedNode<MockNetwork.MockNode>
 
     @Before
     fun setup() {
@@ -42,7 +42,7 @@ class ValidatingNotaryServiceTests {
         )
         clientNode = mockNet.createNode(notaryNode.network.myAddress)
         mockNet.runNetwork() // Clear network map registration messages
-        notaryNode.ensureRegistered()
+        notaryNode.internals.ensureRegistered()
     }
 
     @After
@@ -96,7 +96,7 @@ class ValidatingNotaryServiceTests {
         return future
     }
 
-    fun issueState(node: AbstractNode): StateAndRef<*> {
+    fun issueState(node: StartedNode<*>): StateAndRef<*> {
         val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.legalIdentity.ref(0))
         val signedByNode = node.services.signInitialTransaction(tx)
         val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)

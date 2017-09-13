@@ -16,7 +16,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -139,7 +139,7 @@ class BFTNotaryServiceTests {
     }
 }
 
-private fun AbstractNode.signInitialTransaction(
+private fun StartedNode<*>.signInitialTransaction(
         notary: Party,
         block: TransactionBuilder.() -> Any?
 ): SignedTransaction {

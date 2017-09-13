@@ -114,6 +114,8 @@ interface NetworkMapService {
     data class UpdateAcknowledge(val mapVersion: Int, val replyTo: MessageRecipients)
 }
 
+object NullNetworkMapService : NetworkMapService
+
 @ThreadSafe
 class InMemoryNetworkMapService(services: ServiceHubInternal, minimumPlatformVersion: Int)
     : AbstractNetworkMapService(services, minimumPlatformVersion) {

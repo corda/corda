@@ -13,11 +13,11 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -95,8 +95,8 @@ class DataVendingServiceTests {
         }
     }
 
-    private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
-        walletServiceNode.registerInitiatedFlow(InitiateNotifyTxFlow::class.java)
+    private fun StartedNode<*>.sendNotifyTx(tx: SignedTransaction, walletServiceNode: StartedNode<*>) {
+        walletServiceNode.internals.registerInitiatedFlow(InitiateNotifyTxFlow::class.java)
         services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
         mockNet.runNetwork()
     }

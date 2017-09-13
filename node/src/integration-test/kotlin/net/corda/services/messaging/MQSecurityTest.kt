@@ -16,6 +16,7 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
@@ -43,7 +44,7 @@ import kotlin.test.assertEquals
  */
 abstract class MQSecurityTest : NodeBasedTest() {
     val rpcUser = User("user1", "pass", permissions = emptySet())
-    lateinit var alice: Node
+    lateinit var alice: StartedNode<Node>
     lateinit var attacker: SimpleMQClient
     private val clients = ArrayList<SimpleMQClient>()
 
@@ -155,9 +156,9 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     fun loginToRPCAndGetClientQueue(): String {
-        loginToRPC(alice.configuration.rpcAddress!!, rpcUser)
+        loginToRPC(alice.internals.configuration.rpcAddress!!, rpcUser)
         val clientQueueQuery = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
-        val client = clientTo(alice.configuration.rpcAddress!!)
+        val client = clientTo(alice.internals.configuration.rpcAddress!!)
         client.start(rpcUser.username, rpcUser.password, false)
         return client.session.addressQuery(clientQueueQuery).queueNames.single().toString()
     }
@@ -217,7 +218,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     private fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode(BOB.name).getOrThrow()
-        bob.registerInitiatedFlow(ReceiveFlow::class.java)
+        bob.internals.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.legalIdentity
         // Perform a protocol exchange to force the peer queue to be created
         alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()

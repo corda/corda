@@ -7,6 +7,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.node.internal.StartedNode
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -20,9 +21,9 @@ import kotlin.test.assertEquals
 
 class FxTransactionBuildTutorialTest {
     lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: MockNetwork.MockNode
-    lateinit var nodeA: MockNetwork.MockNode
-    lateinit var nodeB: MockNetwork.MockNode
+    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
+    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    lateinit var nodeB: StartedNode<MockNetwork.MockNode>
 
     @Before
     fun setup() {
@@ -34,9 +35,9 @@ class FxTransactionBuildTutorialTest {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
-        nodeA.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
+        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.internals.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
     }
 
     @After

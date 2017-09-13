@@ -10,6 +10,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.node.internal.StartedNode
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
@@ -23,9 +24,9 @@ import kotlin.test.assertFailsWith
 
 class CollectSignaturesFlowTests {
     lateinit var mockNet: MockNetwork
-    lateinit var a: MockNetwork.MockNode
-    lateinit var b: MockNetwork.MockNode
-    lateinit var c: MockNetwork.MockNode
+    lateinit var a: StartedNode<MockNetwork.MockNode>
+    lateinit var b: StartedNode<MockNetwork.MockNode>
+    lateinit var c: StartedNode<MockNetwork.MockNode>
     lateinit var notary: Party
     val services = MockServices()
 
@@ -38,7 +39,7 @@ class CollectSignaturesFlowTests {
         c = nodes.partyNodes[2]
         notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
-        a.ensureRegistered()
+        a.internals.ensureRegistered()
     }
 
     @After
@@ -48,7 +49,7 @@ class CollectSignaturesFlowTests {
 
     private fun registerFlowOnAllNodes(flowClass: KClass<out FlowLogic<*>>) {
         listOf(a, b, c).forEach {
-            it.registerInitiatedFlow(flowClass.java)
+            it.internals.registerInitiatedFlow(flowClass.java)
         }
     }
 

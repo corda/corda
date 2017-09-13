@@ -39,16 +39,16 @@ class TraderDemoTest : NodeBasedTest() {
         val bankNodeFuture = startNode(BOC.name, rpcUsers = listOf(bankUser))
         val (nodeA, nodeB, bankNode) = listOf(nodeAFuture, nodeBFuture, bankNodeFuture, notaryFuture).map { it.getOrThrow() }
 
-        nodeA.registerInitiatedFlow(BuyerFlow::class.java)
-        nodeA.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.registerCustomSchemas(setOf(CashSchemaV1, CommercialPaperSchemaV1))
+        nodeA.internals.registerInitiatedFlow(BuyerFlow::class.java)
+        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1, CommercialPaperSchemaV1))
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
-            val client = CordaRPCClient(it.configuration.rpcAddress!!, initialiseSerialization = false)
+            val client = CordaRPCClient(it.internals.configuration.rpcAddress!!, initialiseSerialization = false)
             client.start(demoUser.username, demoUser.password).proxy
         }
         val nodeBankRpc = let {
-            val client = CordaRPCClient(bankNode.configuration.rpcAddress!!, initialiseSerialization = false)
+            val client = CordaRPCClient(bankNode.internals.configuration.rpcAddress!!, initialiseSerialization = false)
             client.start(bankUser.username, bankUser.password).proxy
         }
 

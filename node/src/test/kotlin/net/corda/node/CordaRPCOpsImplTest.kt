@@ -23,6 +23,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.network.NetworkMapService
@@ -55,8 +56,8 @@ class CordaRPCOpsImplTest {
     }
 
     lateinit var mockNet: MockNetwork
-    lateinit var aliceNode: MockNode
-    lateinit var notaryNode: MockNode
+    lateinit var aliceNode: StartedNode<MockNode>
+    lateinit var notaryNode: StartedNode<MockNode>
     lateinit var rpc: CordaRPCOps
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var transactions: Observable<SignedTransaction>
@@ -75,7 +76,7 @@ class CordaRPCOpsImplTest {
         ))))
 
         mockNet.runNetwork()
-        networkMap.ensureRegistered()
+        networkMap.internals.ensureRegistered()
     }
 
     @After
