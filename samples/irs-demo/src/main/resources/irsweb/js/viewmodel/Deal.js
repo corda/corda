@@ -4,6 +4,7 @@ define(['viewmodel/FixedLeg', 'viewmodel/FloatingLeg', 'viewmodel/Common'], (fix
     return {
         fixedLeg: fixedLeg,
         floatingLeg: floatingLeg,
-        common: common
+        common: common,
+        oracle: "O=Notary Service,L=Zurich,C=CH"
     };
 });

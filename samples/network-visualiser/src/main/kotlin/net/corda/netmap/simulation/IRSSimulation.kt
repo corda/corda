@@ -3,6 +3,7 @@ package net.corda.netmap.simulation
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import net.corda.client.jackson.JacksonSupport
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
@@ -18,7 +19,6 @@ import net.corda.finance.flows.TwoPartyDealFlow.Instigator
 import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.FixingFlow
-import net.corda.client.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.DUMMY_CA
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -42,7 +42,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): CompletableFuture<Unit> {
-        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap.node).map { it.started!!.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
+        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap.node + ratesOracle).map { it.started!!.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
         registerFinanceJSONMappers(om)
 
         return startIRSDealBetween(0, 1).thenCompose {
@@ -126,7 +126,11 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // We load the IRS afresh each time because the leg parts of the structure aren't data classes so they don't
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
-        val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResource("net/corda/irs/simulation/trade.json"))
+
+        val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/trade.json")
+                .reader()
+                .readText()
+                .replace("oracleXXX", RatesOracleFactory.RATES_SERVICE_NAME.toString()))
         irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
         irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
 

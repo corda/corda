@@ -5,12 +5,10 @@ import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.*
-import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import org.apache.commons.jexl3.JexlBuilder
@@ -603,11 +601,9 @@ class InterestRateSwap : Contract {
             val floatingLeg: FloatingLeg,
             val calculation: Calculation,
             val common: Common,
+            override val oracle: Party,
             override val linearId: UniqueIdentifier = UniqueIdentifier(common.tradeID)
     ) : FixableDealState, SchedulableState {
-        override val oracleType: ServiceType
-            get() = NodeInterestRates.Oracle.type
-
         val ref: String get() = linearId.externalId ?: ""
 
         override val participants: List<AbstractParty>
@@ -621,7 +617,9 @@ class InterestRateSwap : Contract {
             return ScheduledActivity(flowLogicRefFactory.create(FixingFlow.FixingRoleDecider::class.java, thisStateRef), instant)
         }
 
-        override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
+        override fun generateAgreement(notary: Party): TransactionBuilder {
+            return InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, oracle, notary)
+        }
 
         override fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix) {
             InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, IRS_PROGRAM_ID, oldState.state.notary), oldState.ref), fix)
@@ -665,10 +663,14 @@ class InterestRateSwap : Contract {
      *  Note: The day count, interest rate calculation etc are not finished yet, but they are demonstrable.
      */
     fun generateAgreement(floatingLeg: FloatingLeg, fixedLeg: FixedLeg, calculation: Calculation,
-                          common: Common, notary: Party): TransactionBuilder {
-
+                          common: Common, oracle: Party, notary: Party): TransactionBuilder {
         val fixedLegPaymentSchedule = LinkedHashMap<LocalDate, FixedRatePaymentEvent>()
-        var dates = BusinessCalendar.createGenericSchedule(fixedLeg.effectiveDate, fixedLeg.paymentFrequency, fixedLeg.paymentCalendar, fixedLeg.rollConvention, endDate = fixedLeg.terminationDate)
+        var dates = BusinessCalendar.createGenericSchedule(
+                fixedLeg.effectiveDate,
+                fixedLeg.paymentFrequency,
+                fixedLeg.paymentCalendar,
+                fixedLeg.rollConvention,
+                endDate = fixedLeg.terminationDate)
         var periodStartDate = fixedLeg.effectiveDate
 
         // Create a schedule for the fixed payments
@@ -717,8 +719,11 @@ class InterestRateSwap : Contract {
         val newCalculation = Calculation(calculation.expression, floatingLegPaymentSchedule, fixedLegPaymentSchedule)
 
         // Put all the above into a new State object.
-        val state = State(fixedLeg, floatingLeg, newCalculation, common)
-        return TransactionBuilder(notary).withItems(StateAndContract(state, IRS_PROGRAM_ID), Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
+        val state = State(fixedLeg, floatingLeg, newCalculation, common, oracle)
+        return TransactionBuilder(notary).withItems(
+                StateAndContract(state, IRS_PROGRAM_ID),
+                Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey))
+        )
     }
 
     private fun calcFixingDate(date: LocalDate, fixingPeriodOffset: Int, calendar: BusinessCalendar): LocalDate {

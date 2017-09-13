@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.TransactionKeyFlow
+import net.corda.core.flows.SwapIdentitiesFlow
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -39,7 +39,7 @@ open class CashPaymentFlow(
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_ID
         val txIdentities = if (anonymous) {
-            subFlow(TransactionKeyFlow(recipient))
+            subFlow(SwapIdentitiesFlow(recipient))
         } else {
             emptyMap<Party, AnonymousParty>()
         }

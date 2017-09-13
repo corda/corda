@@ -1,5 +1,6 @@
 package net.corda.irs
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.irs.utilities.uploadFile
 import net.corda.testing.http.HttpApi
@@ -12,9 +13,9 @@ import java.net.URL
 class IRSDemoClientApi(private val hostAndPort: NetworkHostAndPort) {
     private val api = HttpApi.fromHostAndPort(hostAndPort, apiRoot)
 
-    fun runTrade(tradeId: String): Boolean {
+    fun runTrade(tradeId: String, oracleName: CordaX500Name): Boolean {
         val fileContents = IOUtils.toString(javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example-irs-trade.json"), Charsets.UTF_8.name())
-        val tradeFile = fileContents.replace("tradeXXX", tradeId)
+        val tradeFile = fileContents.replace("tradeXXX", tradeId).replace("oracleXXX", oracleName.toString())
         return api.postJson("deals", tradeFile)
     }
 

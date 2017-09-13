@@ -3,6 +3,7 @@
 package net.corda.irs
 
 import joptsimple.OptionParser
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import kotlin.system.exitProcess
 
@@ -30,7 +31,7 @@ fun main(args: Array<String>) {
     val value = options.valueOf(valueArg)
     when (role) {
         Role.UploadRates -> IRSDemoClientApi(NetworkHostAndPort("localhost", 10004)).runUploadRates()
-        Role.Trade -> IRSDemoClientApi(NetworkHostAndPort("localhost", 10007)).runTrade(value)
+        Role.Trade -> IRSDemoClientApi(NetworkHostAndPort("localhost", 10007)).runTrade(value, CordaX500Name.parse("O=Notary Service,L=Zurich,C=CH"))
         Role.Date -> IRSDemoClientApi(NetworkHostAndPort("localhost", 10010)).runDateChange(value)
     }
 }

@@ -53,7 +53,7 @@ object TwoPartyDealFlow {
 
         @Suspendable override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
-            val txIdentities = subFlow(TransactionKeyFlow(otherParty))
+            val txIdentities = subFlow(SwapIdentitiesFlow(otherParty))
             val anonymousMe = txIdentities.get(serviceHub.myInfo.legalIdentity) ?: serviceHub.myInfo.legalIdentity.anonymise()
             val anonymousCounterparty = txIdentities.get(otherParty) ?: otherParty.anonymise()
             progressTracker.currentStep = SENDING_PROPOSAL

@@ -69,7 +69,8 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
                 fixedLeg: fixedLeg,
                 floatingLeg: floatingLeg,
                 calculation: calculationModel,
-                common: common
+                common: common,
+                oracle: dealViewModel.oracle
             };
 
             return json;

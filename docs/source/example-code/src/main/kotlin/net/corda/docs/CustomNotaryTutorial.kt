@@ -10,16 +10,11 @@ import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.services.transactions.ValidatingNotaryService
 import java.security.SignatureException
 
 // START 1
 @CordaService
 class MyCustomValidatingNotaryService(override val services: PluginServiceHub) : TrustedAuthorityNotaryService() {
-    companion object {
-        val type = ValidatingNotaryService.type.getSubType("mycustom")
-    }
-
     override val timeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider = PersistentUniquenessProvider()
 
