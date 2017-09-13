@@ -2,12 +2,8 @@ package net.corda.node.internal.cordapp
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
 import java.net.URL
 
 /**
@@ -27,32 +23,4 @@ data class Cordapp(
         val services: List<Class<out SerializeAsToken>>,
         val plugins: List<CordaPluginRegistry>,
         val customSchemas: Set<MappedSchema>,
-        val jarPath: URL) {
-    companion object {
-        private val logger = loggerFor<Cordapp>()
-    }
-
-    fun filterEnabledServices(info: NodeInfo): List<Class<out SerializeAsToken>> {
-        return services.filter {
-            val serviceType = getServiceType(it)
-            if (serviceType != null && info.serviceIdentities(serviceType).isEmpty()) {
-                logger.debug {
-                    "Ignoring ${it.name} as a Corda service since $serviceType is not one of our " +
-                            "advertised services"
-                }
-                false
-            } else {
-                true
-            }
-        }
-    }
-
-    private fun getServiceType(clazz: Class<*>): ServiceType? {
-        return try {
-            clazz.getField("type").get(null) as ServiceType
-        } catch (e: NoSuchFieldException) {
-            logger.warn("${clazz.name} does not have a type field, optimistically proceeding with install.")
-            null
-        }
-    }
-}
+        val jarPath: URL)

@@ -15,7 +15,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.*
 import kotlin.test.assertEquals
-import net.corda.irs.contract.IRS_PROGRAM_ID
 
 fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     return when (irsSelect) {
@@ -103,7 +102,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
-            InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
+            InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, oracle = DUMMY_PARTY)
         }
         2 -> {
             // 10y swap, we pay 1.3% fixed 30/360 semi, rec 3m usd libor act/360 Q on 25m notional (mod foll/adj on both sides)
@@ -191,7 +190,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
-            return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
+            return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, oracle = DUMMY_PARTY)
 
         }
         else -> TODO("IRS number $irsSelect not defined")
@@ -199,9 +198,9 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
 }
 
 class IRSTests : TestDependencyInjectionBase() {
-    val megaCorpServices = MockServices(MEGA_CORP_KEY)
-    val miniCorpServices = MockServices(MINI_CORP_KEY)
-    val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+    private val megaCorpServices = MockServices(MEGA_CORP_KEY)
+    private val miniCorpServices = MockServices(MINI_CORP_KEY)
+    private val notaryServices = MockServices(DUMMY_NOTARY_KEY)
 
     @Test
     fun ok() {
@@ -216,7 +215,7 @@ class IRSTests : TestDependencyInjectionBase() {
     /**
      * Generate an IRS txn - we'll need it for a few things.
      */
-    fun generateIRSTxn(irsSelect: Int): SignedTransaction {
+    private fun generateIRSTxn(irsSelect: Int): SignedTransaction {
         val dummyIRS = createDummyIRS(irsSelect)
         val genTX: SignedTransaction = run {
             val gtx = InterestRateSwap().generateAgreement(
@@ -224,6 +223,7 @@ class IRSTests : TestDependencyInjectionBase() {
                     floatingLeg = dummyIRS.floatingLeg,
                     calculation = dummyIRS.calculation,
                     common = dummyIRS.common,
+                    oracle = DUMMY_PARTY,
                     notary = DUMMY_NOTARY).apply {
                 setTimeWindow(TEST_TX_TIME, 30.seconds)
             }
@@ -279,7 +279,7 @@ class IRSTests : TestDependencyInjectionBase() {
             newCalculation = newCalculation.applyFixing(key, FixedRate(PercentageRatioUnit(value)))
         }
 
-        val newIRS = InterestRateSwap.State(irs.fixedLeg, irs.floatingLeg, newCalculation, irs.common)
+        val newIRS = InterestRateSwap.State(irs.fixedLeg, irs.floatingLeg, newCalculation, irs.common, DUMMY_PARTY)
         println(newIRS.exportIRSToCSV())
     }
 

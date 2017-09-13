@@ -31,8 +31,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.cert
 import net.corda.core.utilities.debug
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.node.services.SwapIdentitiesHandler
@@ -135,9 +135,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var database: CordaPersistence
     protected var dbCloser: (() -> Any?)? = null
 
-    var isPreviousCheckpointsPresent = false
-        private set
-
     protected val _nodeReadyFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
@@ -149,7 +146,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         CordaX500Name.build(cert.subject).copy(commonName = null)
     }
 
-    val cordappLoader: CordappLoader by lazy {
+    private val cordappLoader: CordappLoader by lazy {
         val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
         if (scanPackage != null) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
@@ -205,10 +202,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             makeVaultObservers()
 
-            checkpointStorage.forEach {
-                isPreviousCheckpointsPresent = true
-                false
-            }
             startMessagingService(rpcOps)
             installCoreFlows()
 
@@ -233,7 +226,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
 
     private fun installCordaServices() {
-        cordappLoader.cordapps.flatMap { it.filterEnabledServices(info) }.map {
+        cordappLoader.cordapps.flatMap { it.services }.forEach {
             try {
                 installCordaService(it)
             } catch (e: NoSuchMethodException) {
@@ -486,8 +479,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val address: SingleMessageRecipient = networkMapAddress ?:
                 network.getAddressOfParty(PartyInfo.Node(info)) as SingleMessageRecipient
         // Register for updates, even if we're the one running the network map.
-        return sendNetworkMapRegistration(address).flatMap { response: RegistrationResponse ->
-            check(response.error == null) { "Unable to register with the network map service: ${response.error}" }
+        return sendNetworkMapRegistration(address).flatMap { (error) ->
+            check(error == null) { "Unable to register with the network map service: $error" }
             // The future returned addMapService will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
             services.networkMapCache.addMapService(network, address, true, null)
         }
