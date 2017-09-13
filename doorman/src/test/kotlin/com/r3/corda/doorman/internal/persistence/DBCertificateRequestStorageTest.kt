@@ -7,7 +7,7 @@ import com.r3.corda.doorman.persistence.DoormanSchemaService
 import com.r3.corda.doorman.toX509Certificate
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.getX500Name
+import net.corda.core.identity.CordaX500Name
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.X509Utilities
@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
 
 class DBCertificateRequestStorageTest {
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val intermediateCACert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Corda Node Intermediate CA", O = "R3 Ltd", L = "London", C = "GB"), intermediateCAKey)
+    private val intermediateCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Intermediate CA", organisation = "R3 Ltd", locality = "London", country = "GB").x500Name, intermediateCAKey)
     private lateinit var storage: DBCertificateRequestStorage
     private lateinit var persistence: CordaPersistence
 
@@ -114,28 +114,12 @@ class DBCertificateRequestStorageTest {
         assertThat(storage.getResponse(requestId2)).isInstanceOf(CertificateResponse.Ready::class.java)
     }
 
-    @Test
-    fun `request with equals symbol in legal name`() {
-        val requestId = storage.saveRequest(createRequest("Bank\\=A").first)
-        assertThat(storage.getPendingRequestIds()).isEmpty()
-        val response = storage.getResponse(requestId) as CertificateResponse.Unauthorised
-        assertThat(response.message).contains("=")
-    }
-
-    @Test
-    fun `request with comma in legal name`() {
-        val requestId = storage.saveRequest(createRequest("Bank\\,A").first)
-        assertThat(storage.getPendingRequestIds()).isEmpty()
-        val response = storage.getResponse(requestId) as CertificateResponse.Unauthorised
-        assertThat(response.message).contains(",")
-    }
-
     private fun createRequest(legalName: String): Pair<CertificationRequestData, KeyPair> {
         val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val request = CertificationRequestData(
                 "hostname",
                 "0.0.0.0",
-                X509Utilities.createCertificateSigningRequest(getX500Name(O = legalName, L = "London", C = "GB"), "my@mail.com", keyPair))
+                X509Utilities.createCertificateSigningRequest(CordaX500Name(organisation = legalName, locality = "London", country = "GB").x500Name, "my@mail.com", keyPair))
         return Pair(request, keyPair)
     }
 
