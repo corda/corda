@@ -7,10 +7,10 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.cert
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.toBase58String
 import net.corda.node.utilities.*
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.getX500Name
 import net.corda.testing.kryoSpecific
 import org.junit.Rule
 import org.junit.Test
@@ -331,10 +331,10 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
 
         // Create self sign CA.
         val caKeyPair = Crypto.generateKeyPair()
-        val ca = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test CA", O = "R3", L = "London", C = "GB"), caKeyPair)
+        val ca = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test CA", O = "R3 Ltd", L = "London", C = "GB"), caKeyPair)
 
         // Sign the composite key with the self sign CA.
-        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca, caKeyPair, getX500Name(CN = "CompositeKey", O = "R3", L = "London", C = "GB"), compositeKey)
+        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca, caKeyPair, getX500Name(CN = "CompositeKey", O = "R3 Ltd", L = "London", C = "GB"), compositeKey)
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"

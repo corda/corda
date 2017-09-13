@@ -7,6 +7,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.KeyManagementService
+import java.lang.UnsupportedOperationException
 import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Duration
@@ -58,7 +59,8 @@ open class TransactionBuilder(
                 is StateAndRef<*> -> addInputState(t)
                 is SecureHash -> addAttachment(t)
                 is TransactionState<*> -> addOutputState(t)
-                is ContractState -> addOutputState(t)
+                is StateAndContract -> addOutputState(t.state, t.contract)
+                is ContractState -> throw UnsupportedOperationException("Removed as of V1: please use a StateAndContract instead")
                 is Command<*> -> addCommand(t)
                 is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
                 is TimeWindow -> setTimeWindow(t)
@@ -99,14 +101,14 @@ open class TransactionBuilder(
     }
 
     @JvmOverloads
-    fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null): TransactionBuilder {
-        return addOutputState(TransactionState(state, notary, encumbrance))
+    fun addOutputState(state: ContractState, contract: ContractClassName, notary: Party, encumbrance: Int? = null): TransactionBuilder {
+        return addOutputState(TransactionState(state, contract, notary, encumbrance))
     }
 
     /** A default notary must be specified during builder construction to use this method */
-    fun addOutputState(state: ContractState): TransactionBuilder {
+    fun addOutputState(state: ContractState, contract: ContractClassName): TransactionBuilder {
         checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
-        addOutputState(state, notary!!)
+        addOutputState(state, contract, notary!!)
         return this
     }
 

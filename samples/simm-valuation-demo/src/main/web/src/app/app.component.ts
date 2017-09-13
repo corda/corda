@@ -37,7 +37,7 @@ export class AppComponent {
     var name = x500Name;
     x500Name.split(',').forEach(function (element) {
         var keyValue = element.split('=');
-        if (keyValue[0].toUpperCase() == 'CN') {
+        if (keyValue[0].toUpperCase() == 'O') {
             name = keyValue[1];
         }
     });
@@ -49,10 +49,11 @@ export class AppComponent {
   ngOnInit() {
     this.httpWrapperService.getAbsolute("whoami").toPromise().then((data) => {
       this.whoAmI = this.renderX500Name(data.self.text);
+      var self = this;
       this.counterParties = data.counterparties.map(function (x) {
           return {
               id: x.id,
-              text: this.renderX500Name(x.text)
+              text: self.renderX500Name(x.text)
           };
       });
       if (this.counterParties.length == 0) {

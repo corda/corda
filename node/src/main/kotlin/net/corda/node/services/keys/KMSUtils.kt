@@ -1,9 +1,9 @@
 package net.corda.node.services.keys
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.utilities.cert
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
+import net.corda.core.utilities.cert
 import net.corda.core.utilities.days
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.ContentSignerBuilder
@@ -35,7 +35,7 @@ fun freshCertificate(identityService: IdentityService,
     val issuerCertificate = issuer.certificate
     val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 3650.days, issuerCertificate)
     val ourCertificate = X509Utilities.createCertificate(CertificateType.IDENTITY, issuerCertificate.subject,
-            issuerSigner, issuer.name, subjectPublicKey, window)
+            issuerSigner, issuer.name.x500Name, subjectPublicKey, window)
     val certFactory = CertificateFactory.getInstance("X509")
     val ourCertPath = certFactory.generateCertPath(listOf(ourCertificate.cert) + issuer.certPath.certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)

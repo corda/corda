@@ -6,7 +6,6 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.locality
 
 /**
  * Information for an advertised service including the service specific identity information.

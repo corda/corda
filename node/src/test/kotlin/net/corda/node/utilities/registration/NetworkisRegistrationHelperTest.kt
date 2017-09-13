@@ -10,10 +10,10 @@ import net.corda.core.internal.toTypedArray
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.cert
 import net.corda.core.utilities.commonName
-import net.corda.core.utilities.getX500Name
 import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.loadKeyStore
 import net.corda.testing.ALICE
+import net.corda.testing.getX500Name
 import net.corda.testing.testNodeConfiguration
 import org.junit.Rule
 import org.junit.Test

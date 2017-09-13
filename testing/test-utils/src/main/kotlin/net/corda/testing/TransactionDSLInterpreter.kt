@@ -34,8 +34,9 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param notary The associated notary.
      * @param encumbrance The position of the encumbrance state.
      * @param contractState The state itself.
+     * @params contractClassName The class name of the contract that verifies this state.
      */
-    fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState)
+    fun _output(contractClassName: ContractClassName, label: String?, notary: Party, encumbrance: Int?, contractState: ContractState)
 
     /**
      * Adds an [Attachment] reference to the transaction.
@@ -75,30 +76,30 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      * input to the current transaction.
      * @param state The state to be added.
      */
-    fun input(state: ContractState) {
+    fun input(contractClassName: ContractClassName, state: ContractState) {
         val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary = DUMMY_NOTARY)) {
-            output { state }
+            output(contractClassName) { state }
         }
         input(transaction.outRef<ContractState>(0).ref)
     }
 
-    fun input(stateClosure: () -> ContractState) = input(stateClosure())
+    fun input(contractClassName: ContractClassName, stateClosure: () -> ContractState) = input(contractClassName, stateClosure())
 
     /**
      * @see TransactionDSLInterpreter._output
      */
     @JvmOverloads
-    fun output(label: String? = null, notary: Party = DUMMY_NOTARY, encumbrance: Int? = null, contractStateClosure: () -> ContractState) =
-            _output(label, notary, encumbrance, contractStateClosure())
+    fun output(contractClassName: ContractClassName, label: String? = null, notary: Party = DUMMY_NOTARY, encumbrance: Int? = null, contractStateClosure: () -> ContractState) =
+            _output(contractClassName, label, notary, encumbrance, contractStateClosure())
 
     /**
      * @see TransactionDSLInterpreter._output
      */
-    fun output(label: String, contractState: ContractState) =
-            _output(label, DUMMY_NOTARY, null, contractState)
+    fun output(contractClassName: ContractClassName, label: String, contractState: ContractState) =
+            _output(contractClassName, label, DUMMY_NOTARY, null, contractState)
 
-    fun output(contractState: ContractState) =
-            _output(null, DUMMY_NOTARY, null, contractState)
+    fun output(contractClassName: ContractClassName, contractState: ContractState) =
+            _output(contractClassName,null, DUMMY_NOTARY, null, contractState)
 
     /**
      * @see TransactionDSLInterpreter._command

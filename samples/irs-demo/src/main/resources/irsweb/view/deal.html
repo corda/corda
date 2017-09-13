@@ -13,7 +13,7 @@
                 <tr class="center aligned">
                     <td>Parties</td>
                     <td>
-                        <span ng-repeat="party in deal.parties">
+                        <span ng-repeat="party in deal.participants">
                             {{party}}<span ng-show="!$last">,</span>
                         </span>
                     </td>
@@ -55,7 +55,7 @@
                 </tr>
                 <tr class="center aligned">
                     <td>Notional</td>
-                    <td>{{deal.fixedLeg.notional.quantity | number}} {{deal.fixedLeg.notional.token}}</td>
+                    <td>{{deal.fixedLeg.notional}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Payment Frequency</td>
@@ -124,7 +124,7 @@
                 </tr>
                 <tr class="center aligned">
                     <td>Notional</td>
-                    <td>{{deal.floatingLeg.notional.quantity | number}} {{deal.floatingLeg.notional.token}}</td>
+                    <td>{{deal.floatingLeg.notional}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Payment Frequency</td>

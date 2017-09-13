@@ -5,14 +5,15 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.node.internal.AbstractNode
 import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.NodeBasedTest
@@ -22,7 +23,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class RaftNotaryServiceTests : NodeBasedTest() {
-    private val notaryName = getX500Name(O = "RAFT Notary Service", OU = "corda", L = "London", C = "GB")
+    private val notaryName = CordaX500Name(organisation = "RAFT Notary Service", locality = "London", country = "GB")
 
     @Test
     fun `detect double spend`() {
@@ -45,7 +46,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
         val secondSpendBuilder = TransactionBuilder(notaryParty).withItems(inputState).run {
             val dummyState = DummyContract.SingleOwnerState(0, bankA.info.legalIdentity)
-            addOutputState(dummyState)
+            addOutputState(dummyState, DUMMY_PROGRAM_ID)
             addCommand(dummyCommand(bankA.services.legalIdentityKey))
             this
         }

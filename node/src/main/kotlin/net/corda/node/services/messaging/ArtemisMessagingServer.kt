@@ -5,8 +5,8 @@ import io.netty.handler.ssl.SslHandler
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.AddressFormatException
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
@@ -51,7 +51,6 @@ import org.apache.activemq.artemis.spi.core.security.jaas.CertificateCallback
 import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
 import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
 import org.apache.activemq.artemis.utils.ConfigurationHelper
-import org.bouncycastle.asn1.x500.X500Name
 import rx.Subscription
 import java.io.IOException
 import java.math.BigInteger
@@ -373,7 +372,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         }
     }
 
-    private fun deployBridge(address: ArtemisPeerAddress, legalName: X500Name) {
+    private fun deployBridge(address: ArtemisPeerAddress, legalName: CordaX500Name) {
         deployBridge(address.queueName, address.hostAndPort, legalName)
     }
 
@@ -386,7 +385,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * as defined by ArtemisAddress.queueName. A bridge is then created to forward messages from this queue to the node's
      * P2P address.
      */
-    private fun deployBridge(queueName: String, target: NetworkHostAndPort, legalName: X500Name) {
+    private fun deployBridge(queueName: String, target: NetworkHostAndPort, legalName: CordaX500Name) {
         val connectionDirection = ConnectionDirection.Outbound(
                 connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
                 expectedCommonName = legalName
@@ -425,7 +424,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private fun getBridgeName(queueName: String, hostAndPort: NetworkHostAndPort): String = "$queueName -> $hostAndPort"
 
     // This is called on one of Artemis' background threads
-    internal fun hostVerificationFail(expectedLegalName: X500Name, errorMsg: String?) {
+    internal fun hostVerificationFail(expectedLegalName: CordaX500Name, errorMsg: String?) {
         log.error(errorMsg)
         if (expectedLegalName == config.networkMapService?.legalName) {
             // If the peer that failed host verification was the network map node then we're in big trouble and need to bail!
@@ -434,7 +433,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     }
 
     // This is called on one of Artemis' background threads
-    internal fun onTcpConnection(peerLegalName: X500Name) {
+    internal fun onTcpConnection(peerLegalName: CordaX500Name) {
         if (peerLegalName == config.networkMapService?.legalName) {
             _networkMapConnectionFuture!!.set(Unit)
         }
@@ -493,7 +492,7 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
     override fun createConnection(): Connection? {
         val connection = super.createConnection() as? NettyConnection
         if (sslEnabled && connection != null) {
-            val expectedLegalName = configuration[ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME] as X500Name
+            val expectedLegalName = configuration[ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME] as CordaX500Name
             try {
                 val session = connection.channel
                         .pipeline()
@@ -501,15 +500,16 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                         .engine()
                         .session
                 // Checks the peer name is the one we are expecting.
-                val peerLegalName = session.peerPrincipal.name.let(::X500Name)
+                val peerLegalName = CordaX500Name.parse(session.peerPrincipal.name)
                 require(peerLegalName == expectedLegalName) {
                     "Peer has wrong CN - expected $expectedLegalName but got $peerLegalName. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
                 // Make sure certificate has the same name.
                 val peerCertificate = session.peerCertificateChain[0].toX509CertHolder()
-                require(peerCertificate.subject == expectedLegalName) {
-                    "Peer has wrong subject name in the certificate - expected $expectedLegalName but got ${peerCertificate.subject}. This is either a fatal " +
+                val peerCertificateName = CordaX500Name.build(peerCertificate.subject)
+                require(peerCertificateName == expectedLegalName) {
+                    "Peer has wrong subject name in the certificate - expected $expectedLegalName but got $peerCertificateName. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
                 X509Utilities.validateCertificateChain(session.localCertificates.last().toX509CertHolder(), *session.peerCertificates)

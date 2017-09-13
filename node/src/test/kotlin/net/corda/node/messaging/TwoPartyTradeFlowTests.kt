@@ -10,6 +10,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.map
@@ -32,10 +33,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
-import net.corda.finance.contracts.asset.CASH
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.`issued by`
-import net.corda.finance.contracts.asset.`owned by`
+import net.corda.finance.contracts.asset.*
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode
@@ -49,7 +47,6 @@ import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -310,7 +307,7 @@ class TwoPartyTradeFlowTests {
     // of gets and puts.
     private fun makeNodeWithTracking(
             networkMapAddress: SingleMessageRecipient?,
-            name: X500Name): MockNetwork.MockNode {
+            name: CordaX500Name): MockNetwork.MockNode {
         // Create a node in the mock network ...
         return mockNet.createNode(networkMapAddress, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration,
@@ -690,8 +687,8 @@ class TwoPartyTradeFlowTests {
         // wants to sell to Bob.
         val eb1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             // Issued money to itself.
-            output("elbonian money 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }
-            output("elbonian money 2", notary = notary) { 1000.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }
+            output(CASH_PROGRAM_ID, "elbonian money 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }
+            output(CASH_PROGRAM_ID, "elbonian money 2", notary = notary) { 1000.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }
             if (!withError) {
                 command(issuer.party.owningKey) { Cash.Commands.Issue() }
             } else {
@@ -709,15 +706,15 @@ class TwoPartyTradeFlowTests {
         // Bob gets some cash onto the ledger from BoE
         val bc1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 1")
-            output("bob cash 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` owner }
+            output(CASH_PROGRAM_ID, "bob cash 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` owner }
             command(interimOwner.owningKey) { Cash.Commands.Move() }
             this.verifies()
         }
 
         val bc2 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 2")
-            output("bob cash 2", notary = notary) { 300.DOLLARS.CASH `issued by` issuer `owned by` owner }
-            output(notary = notary) { 700.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }   // Change output.
+            output(CASH_PROGRAM_ID, "bob cash 2", notary = notary) { 300.DOLLARS.CASH `issued by` issuer `owned by` owner }
+            output(CASH_PROGRAM_ID, notary = notary) { 700.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }   // Change output.
             command(interimOwner.owningKey) { Cash.Commands.Move() }
             this.verifies()
         }
@@ -734,7 +731,7 @@ class TwoPartyTradeFlowTests {
             attachmentID: SecureHash?,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val ap = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
-            output("alice's paper", notary = notary) {
+            output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", notary = notary) {
                 CommercialPaper.State(issuer, owner, amount, TEST_TX_TIME + 7.days)
             }
             command(issuer.party.owningKey) { CommercialPaper.Commands.Issue() }

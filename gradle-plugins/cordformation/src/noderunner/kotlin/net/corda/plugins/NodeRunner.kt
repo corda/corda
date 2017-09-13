@@ -101,6 +101,7 @@ private class TerminalWindowJavaCommand(jarName: String, dir: File, debugPort: I
         OS.MACOS -> {
             listOf("osascript", "-e", """tell app "Terminal"
     activate
+    delay 0.5
     tell app "System Events" to tell process "Terminal" to keystroke "t" using command down
     delay 0.5
     do script "bash -c 'cd $dir; ${command.joinToString(" ")} && exit'" in selected tab of the front window

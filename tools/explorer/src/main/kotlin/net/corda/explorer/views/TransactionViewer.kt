@@ -24,9 +24,9 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.organisation
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
@@ -40,7 +40,6 @@ import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.sign
 import net.corda.explorer.ui.setCustomCellFactory
 import net.corda.finance.contracts.asset.Cash
-import org.bouncycastle.asn1.x500.X500Name
 import tornadofx.*
 import java.util.*
 
@@ -134,8 +133,8 @@ class TransactionViewer : CordaView("Transactions") {
 
         val searchField = SearchField(transactions,
                 "Transaction ID" to { tx, s -> "${tx.id}".contains(s, true) },
-                "Input" to { tx, s -> tx.inputs.resolved.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
-                "Output" to { tx, s -> tx.outputs.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
+                "Input" to { tx, s -> tx.inputs.resolved.any { it.state.contract.contains(s, true) } },
+                "Output" to { tx, s -> tx.outputs.any { it.state.contract.contains(s, true) } },
                 "Input Party" to { tx, s -> tx.inputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) ?: false } } },
                 "Output Party" to { tx, s -> tx.outputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) ?: false } } },
                 "Command Type" to { tx, s -> tx.commandTypes.any { it.simpleName.contains(s, true) } }
@@ -200,14 +199,14 @@ class TransactionViewer : CordaView("Transactions") {
         })
     }
 
-    private fun ObservableList<List<ObservableValue<Party?>>>.formatJoinPartyNames(separator: String = ",", formatter: Formatter<X500Name>): String {
+    private fun ObservableList<List<ObservableValue<Party?>>>.formatJoinPartyNames(separator: String = ",", formatter: Formatter<CordaX500Name>): String {
         return flatten().map {
             it.value?.let { formatter.format(it.name) }
         }.filterNotNull().toSet().joinToString(separator)
     }
 
     private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { it.owningKey.toKnownParty() } }
-    private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract().javaClass.simpleName }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
+    private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract() }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
 
     private class TransactionWidget : BorderPane() {
         private val partiallyResolvedTransactions by observableListReadOnly(TransactionDataModel::partiallyResolvedTransactions)
@@ -299,7 +298,7 @@ class TransactionViewer : CordaView("Transactions") {
         }
     }
 
-    private fun StateAndRef<ContractState>.contract() = this.state.data.contract
+    private fun StateAndRef<ContractState>.contract() = this.state.contract
 
 }
 

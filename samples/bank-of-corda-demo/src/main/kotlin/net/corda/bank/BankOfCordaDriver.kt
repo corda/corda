@@ -3,10 +3,10 @@ package net.corda.bank
 import joptsimple.OptionParser
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getX500Name
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -28,7 +28,7 @@ fun main(args: Array<String>) {
 val BANK_USERNAME = "bankUser"
 val BIGCORP_USERNAME = "bigCorpUser"
 
-val BIGCORP_LEGAL_NAME = getX500Name(O = "BigCorporation", OU = "corda", L = "London", C = "GB")
+val BIGCORP_LEGAL_NAME = CordaX500Name(organisation = "BigCorporation", locality = "London", country = "GB")
 
 private class BankOfCordaDriver {
     enum class Role {
@@ -55,8 +55,7 @@ private class BankOfCordaDriver {
         // The ISSUE_CASH will request some Cash from the ISSUER on behalf of Big Corporation node
         val role = options.valueOf(roleArg)!!
 
-        val anonymous = true
-        val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name, DUMMY_NOTARY.name, anonymous)
+        val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name, DUMMY_NOTARY.name)
 
         try {
             when (role) {

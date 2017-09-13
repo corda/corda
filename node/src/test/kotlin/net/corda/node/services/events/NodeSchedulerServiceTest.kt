@@ -6,13 +6,13 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
-import net.corda.core.utilities.getX500Name
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
@@ -23,6 +23,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -30,7 +31,6 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.node.TestClock
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -81,7 +81,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
         database.transaction {
-            val nullIdentity = X500Name("cn=None")
+            val nullIdentity = CordaX500Name(organisation = "None", locality = "None", country = "GB")
             val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(
                     false,
                     InMemoryMessagingNetwork.PeerHandle(0, nullIdentity),
@@ -89,7 +89,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     database)
             services = object : MockServiceHubInternal(
                     database,
-                    testNodeConfiguration(Paths.get("."), getX500Name(O = "Alice", L = "London", C = "GB")),
+                    testNodeConfiguration(Paths.get("."), CordaX500Name(organisation = "Alice", locality = "London", country = "GB")),
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
@@ -131,9 +131,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             return ScheduledActivity(flowLogicRef, instant)
         }
-
-        override val contract: Contract
-            get() = throw UnsupportedOperationException()
     }
 
     class TestFlowLogic(val increment: Int = 1) : FlowLogic<Unit>() {
@@ -282,7 +279,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 val freshKey = services.keyManagementService.freshKey()
                 val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant, services.myInfo.legalIdentity)
                 val builder = TransactionBuilder(null).apply {
-                    addOutputState(state, DUMMY_NOTARY)
+                    addOutputState(state, DUMMY_PROGRAM_ID, DUMMY_NOTARY)
                     addCommand(Command(), freshKey)
                 }
                 val usefulTX = services.signInitialTransaction(builder, freshKey)

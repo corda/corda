@@ -61,13 +61,13 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
 
     // Required schemas are those used by internal Corda services
     // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)
-    val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
+    private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
                   Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
                   Pair(NodeInfoSchemaV1, SchemaService.SchemaOptions()),
                   Pair(NodeServicesV1, SchemaService.SchemaOptions()))
 
-    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
+    override var schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
         mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())
     })
 
@@ -91,5 +91,11 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
         if ((schema is VaultSchemaV1) && (state is FungibleAsset<*>))
             return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
         return (state as QueryableState).generateMappedObject(schema)
+    }
+
+    override fun registerCustomSchemas(_customSchemas: Set<MappedSchema>) {
+        schemaOptions = schemaOptions.plus(_customSchemas.map {
+            mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())
+        })
     }
 }

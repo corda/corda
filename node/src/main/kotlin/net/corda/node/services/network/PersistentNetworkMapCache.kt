@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
@@ -32,7 +33,6 @@ import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
-import org.bouncycastle.asn1.x500.X500Name
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -90,7 +90,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     }
 
     // TODO See comment to queryByLegalName why it's left like that.
-    override fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == principal }
+    override fun getNodeByLegalName(principal: CordaX500Name): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == principal }
             //serviceHub!!.database.transaction { queryByLegalName(principal).firstOrNull() }
     override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? =
             serviceHub.database.transaction { queryByIdentityKey(identityKey).firstOrNull() }
@@ -288,10 +288,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         }
     }
 
-    // TODO It's useless for now, because toString on X500 names is inconsistent and we have:
-    //    C=ES,L=Madrid,O=Alice Corp,CN=Alice Corp
-    //    CN=Alice Corp,O=Alice Corp,L=Madrid,C=ES
-    private fun queryByLegalName(name: X500Name): List<NodeInfo> {
+    private fun queryByLegalName(name: CordaX500Name): List<NodeInfo> {
         createSession {
             val query = it.createQuery(
                     "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",

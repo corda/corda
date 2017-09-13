@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
@@ -39,7 +40,6 @@ import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -378,4 +378,4 @@ open class Node(override val configuration: FullNodeConfiguration,
 
 class ConfigurationException(message: String) : Exception(message)
 
-data class NetworkMapInfo(val address: NetworkHostAndPort, val legalName: X500Name)
+data class NetworkMapInfo(val address: NetworkHostAndPort, val legalName: CordaX500Name)

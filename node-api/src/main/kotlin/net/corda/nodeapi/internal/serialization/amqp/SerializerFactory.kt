@@ -75,7 +75,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
             (Map::class.java.isAssignableFrom(declaredClass) ||
                 (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
                     val declaredTypeAmended= MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                    serializersByType.computeIfAbsent(declaredClass) {
+                    serializersByType.computeIfAbsent(declaredTypeAmended) {
                         makeMapSerializer(declaredTypeAmended)
                     }
             }
@@ -288,7 +288,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
 
     private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<Any> {
         val rawType = declaredType.rawType as Class<*>
-        rawType.checkNotUnsupportedHashMap()
+        rawType.checkSupportedMapType()
         return MapSerializer(declaredType, this)
     }
 

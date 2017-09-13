@@ -3,8 +3,12 @@ package net.corda.services.messaging
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.cert
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.sendRequest
@@ -17,7 +21,6 @@ import net.corda.testing.node.NodeBasedTest
 import net.corda.testing.node.SimpleNode
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.security.cert.X509Certificate
 import java.time.Instant
@@ -51,10 +54,10 @@ class P2PSecurityTest : NodeBasedTest() {
         }
     }
 
-    private fun startSimpleNode(legalName: X500Name,
+    private fun startSimpleNode(legalName: CordaX500Name,
                                 trustRoot: X509Certificate): SimpleNode {
         val config = testNodeConfiguration(
-                baseDirectory = baseDirectory(legalName),
+                baseDirectory = baseDirectory(legalName.x500Name),
                 myLegalName = legalName).also {
             whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
         }
@@ -62,7 +65,7 @@ class P2PSecurityTest : NodeBasedTest() {
         return SimpleNode(config, trustRoot = trustRoot).apply { start() }
     }
 
-    private fun SimpleNode.registerWithNetworkMap(registrationName: X500Name): CordaFuture<NetworkMapService.RegistrationResponse> {
+    private fun SimpleNode.registerWithNetworkMap(registrationName: CordaX500Name): CordaFuture<NetworkMapService.RegistrationResponse> {
         val legalIdentity = getTestPartyAndCertificate(registrationName, identity.public)
         val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), legalIdentity, NonEmptySet.of(legalIdentity), 1, serial = 1)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)

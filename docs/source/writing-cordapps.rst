@@ -78,9 +78,6 @@ The ``CordaPluginRegistry`` class defines the following:
 * ``customizeSerialization``, which can be overridden to provide a list of the classes to be whitelisted for object
   serialisation, over and above those tagged with the ``@CordaSerializable`` annotation. See :doc:`serialization`
 
-* ``requiredSchemas``, which can be overridden to return a set of the MappedSchemas to use for persistence and vault
-  queries
-
 The ``WebServerPluginRegistry`` class defines the following:
 
 * ``webApis``, which can be overridden to return a list of JAX-RS annotated REST access classes. These classes will be

@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -10,6 +11,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.MINI_CORP_KEY
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
@@ -88,7 +90,7 @@ class CollectSignaturesFlowTests {
                 val myInputKeys = state.participants.map { it.owningKey }
                 val myKeys = myInputKeys + (identities[serviceHub.myInfo.legalIdentity] ?: serviceHub.myInfo.legalIdentity).owningKey
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
-                val builder = TransactionBuilder(notary).withItems(state, command)
+                val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx, myKeys))
                 val ftx = subFlow(FinalityFlow(stx)).single()
@@ -109,7 +111,7 @@ class CollectSignaturesFlowTests {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
                 val myInputKeys = state.participants.map { it.owningKey }
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
-                val builder = TransactionBuilder(notary).withItems(state, command)
+                val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx, myInputKeys))
                 val ftx = subFlow(FinalityFlow(stx)).single()

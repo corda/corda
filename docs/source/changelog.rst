@@ -6,8 +6,15 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* ``ContractState::contract`` has been moved ``TransactionState::contract`` and it's type has changed to ``String`` in order to
+  support dynamic classloading of contract and contract constraints.
+
 * About half of the code in test-utils has been moved to a new module ``node-driver``,
   and the test scope modules are now located in a ``testing`` directory.
+
+* Removed `requireSchemas` CordaPluginRegistry configuration item.
+  Custom schemas are now automatically located using classpath scanning for deployed CorDapps.
+  Improved support for testing custom schemas in MockNode and MockServices using explicit registration.
 
 * Contract Upgrades: deprecated RPC authorisation / deauthorisation API calls in favour of equivalent flows in ContractUpgradeFlow.
   Implemented contract upgrade persistence using JDBC backed persistent map.
@@ -125,6 +132,11 @@ UNRELEASED
   ``tx: WireTransaction``.
 
 * Test type ``NodeHandle`` now has method ``stop(): CordaFuture<Unit>`` that terminates the referenced node.
+
+* Fixed some issues in IRS demo:
+   * Fixed leg and floating leg notional amounts were not displayed for created deals neither in single nor in list view.
+   * Parties were not displayed for created deals in single view.
+   * Non-default notional amounts caused the creation of new deals to fail.
 
 .. warning:: Renamed configuration property key `basedir` to `baseDirectory`. This will require updating existing configuration files.
 

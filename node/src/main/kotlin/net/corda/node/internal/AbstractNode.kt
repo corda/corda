@@ -4,12 +4,11 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.*
 import net.corda.core.flows.*
 import net.corda.core.flows.ContractUpgradeFlow.Acceptor
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
@@ -25,10 +24,15 @@ import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.cert
+import net.corda.core.utilities.debug
+import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.node.services.TransactionKeyHandler
@@ -64,17 +68,13 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.Modifier.*
-import java.net.JarURLConnection
-import java.net.URI
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.CertificateFactory
@@ -85,10 +85,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
-import java.util.stream.Collectors.toList
 import kotlin.collections.ArrayList
-import kotlin.collections.component1
-import kotlin.collections.component2
 import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
@@ -107,7 +104,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                             val advertisedServices: Set<ServiceInfo>,
                             val platformClock: Clock,
                             @VisibleForTesting val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
-
     // TODO: Persist this, as well as whether the node is registered.
     /**
      * Sequence number of changes sent to the network map service, when registering/de-registering this node.
@@ -148,17 +144,28 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     val nodeReadyFuture: CordaFuture<Unit>
         get() = _nodeReadyFuture
 
-    protected val myLegalName: X500Name by lazy {
-        loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_CA).subject.withCommonName(null)
+    protected val myLegalName: CordaX500Name by lazy {
+        val cert = loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_CA)
+        CordaX500Name.build(cert.subject).copy(commonName = null)
     }
 
-    /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
+    val cordappLoader: CordappLoader by lazy {
+        val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
+        if (scanPackage != null) {
+            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
+            CordappLoader.createDevMode(scanPackage)
+        } else {
+            CordappLoader.createDefault(configuration.baseDirectory)
+        }
+    }
+
     open val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        ServiceLoader.load(CordaPluginRegistry::class.java).toList()
+        cordappLoader.cordapps.flatMap { it.plugins } + DefaultWhitelist()
     }
 
     /** Set to true once [start] has been successfully called. */
-    @Volatile var started = false
+    @Volatile
+    var started = false
         private set
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
@@ -205,12 +212,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             startMessagingService(rpcOps)
             installCoreFlows()
 
-            val scanResult = scanCordapps()
-            if (scanResult != null) {
-                installCordaServices(scanResult)
-                registerInitiatedFlows(scanResult)
-                findRPCFlows(scanResult)
-            }
+            installCordaServices()
+            registerCordappFlows()
+            _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
+            registerCustomSchemas(cordappLoader.cordapps.flatMap { it.customSchemas }.toSet())
 
             runOnStop += network::stop
         }
@@ -227,39 +232,19 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
 
-    private fun installCordaServices(scanResult: ScanResult) {
-        fun getServiceType(clazz: Class<*>): ServiceType? {
-            return try {
-                clazz.getField("type").get(null) as ServiceType
-            } catch (e: NoSuchFieldException) {
-                log.warn("${clazz.name} does not have a type field, optimistically proceeding with install.")
-                null
+    private fun installCordaServices() {
+        cordappLoader.cordapps.flatMap { it.filterEnabledServices(info) }.map {
+            try {
+                installCordaService(it)
+            } catch (e: NoSuchMethodException) {
+                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter " +
+                        "of type ${PluginServiceHub::class.java.name}")
+            } catch (e: ServiceInstantiationException) {
+                log.error("Corda service ${it.name} failed to instantiate", e.cause)
+            } catch (e: Exception) {
+                log.error("Unable to install Corda service ${it.name}", e)
             }
         }
-
-        scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
-                .filter {
-                    val serviceType = getServiceType(it)
-                    if (serviceType != null && info.serviceIdentities(serviceType).isEmpty()) {
-                        log.debug { "Ignoring ${it.name} as a Corda service since $serviceType is not one of our " +
-                                "advertised services" }
-                        false
-                    } else {
-                        true
-                    }
-                }
-                .forEach {
-                    try {
-                        installCordaService(it)
-                    } catch (e: NoSuchMethodException) {
-                        log.error("${it.name}, as a Corda service, must have a constructor with a single parameter " +
-                                "of type ${PluginServiceHub::class.java.name}")
-                    } catch (e: ServiceInstantiationException) {
-                        log.error("Corda service ${it.name} failed to instantiate", e.cause)
-                    } catch (e: Exception) {
-                        log.error("Unable to install Corda service ${it.name}", e)
-                    }
-                }
     }
 
     /**
@@ -289,24 +274,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
     }
 
-    private inline fun <reified A : Annotation> Class<*>.requireAnnotation(): A {
-        return requireNotNull(getDeclaredAnnotation(A::class.java)) { "$name needs to be annotated with ${A::class.java.name}" }
-    }
-
-    private fun registerInitiatedFlows(scanResult: ScanResult) {
-        scanResult
-                .getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
-                // First group by the initiating flow class in case there are multiple mappings
-                .groupBy { it.requireAnnotation<InitiatedBy>().value.java }
-                .map { (initiatingFlow, initiatedFlows) ->
-                    val sorted = initiatedFlows.sortedWith(FlowTypeHierarchyComparator(initiatingFlow))
-                    if (sorted.size > 1) {
-                        log.warn("${initiatingFlow.name} has been specified as the initiating flow by multiple flows " +
-                                "in the same type hierarchy: ${sorted.joinToString { it.name }}. Choosing the most " +
-                                "specific sub-type for registration: ${sorted[0].name}.")
-                    }
-                    sorted[0]
-                }
+    private fun registerCordappFlows() {
+        cordappLoader.cordapps.flatMap { it.initiatedFlows }
                 .forEach {
                     try {
                         registerInitiatedFlowInternal(it, track = false)
@@ -317,21 +286,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                         log.error("Unable to register initiated flow ${it.name}", e)
                     }
                 }
-    }
-
-    private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {
-        override fun compare(o1: Class<out FlowLogic<*>>, o2: Class<out FlowLogic<*>>): Int {
-            return if (o1 == o2) {
-                0
-            } else if (o1.isAssignableFrom(o2)) {
-                1
-            } else if (o2.isAssignableFrom(o1)) {
-                -1
-            } else {
-                throw IllegalArgumentException("${initiatingFlow.name} has been specified as the initiating flow by " +
-                        "both ${o1.name} and ${o2.name}")
-            }
-        }
     }
 
     /**
@@ -368,19 +322,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
         flowFactories[initiatingFlowClass] = flowFactory
         return observable
-    }
-
-    private fun findRPCFlows(scanResult: ScanResult) {
-        fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
-            return isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || isStatic(modifiers))
-        }
-
-        _services.rpcFlows += scanResult
-                .getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class)
-                .filter { it.isUserInvokable() } +
-                    // Add any core flows here
-                    listOf(
-                            ContractUpgradeFlow.Initiator::class.java)
     }
 
     /**
@@ -424,58 +365,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     protected open fun makeTransactionStorage(): WritableTransactionStorage = DBTransactionStorage()
-
-    private fun scanCordapps(): ScanResult? {
-        val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
-        val paths = if (scanPackage != null) {
-            // Rather than looking in the plugins directory, figure out the classpath for the given package and scan that
-            // instead. This is used in tests where we avoid having to package stuff up in jars and then having to move
-            // them to the plugins directory for each node.
-            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            val resource = scanPackage.replace('.', '/')
-            javaClass.classLoader.getResources(resource)
-                    .asSequence()
-                    .map {
-                        val uri = if (it.protocol == "jar") {
-                            (it.openConnection() as JarURLConnection).jarFileURL.toURI()
-                        } else {
-                            URI(it.toExternalForm().removeSuffix(resource))
-                        }
-                        Paths.get(uri)
-                    }
-                    .toList()
-        } else {
-            val pluginsDir = configuration.baseDirectory / "plugins"
-            if (!pluginsDir.exists()) return null
-            pluginsDir.list {
-                it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.collect(toList())
-            }
-        }
-
-        log.info("Scanning CorDapps in $paths")
-
-        // This will only scan the plugin jars and nothing else
-        return if (paths.isNotEmpty()) FastClasspathScanner().overrideClasspath(paths).scan() else null
-    }
-
-    private fun <T : Any> ScanResult.getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
-        fun loadClass(className: String): Class<out T>? {
-            return try {
-                // TODO Make sure this is loaded by the correct class loader
-                Class.forName(className, false, javaClass.classLoader).asSubclass(type.java)
-            } catch (e: ClassCastException) {
-                log.warn("As $className is annotated with ${annotation.qualifiedName} it must be a sub-type of ${type.java.name}")
-                null
-            } catch (e: Exception) {
-                log.warn("Unable to load class $className", e)
-                null
-            }
-        }
-
-        return getNamesOfClassesWithAnnotation(annotation.java)
-                .mapNotNull { loadClass(it) }
-                .filterNot { isAbstract(it.modifiers) }
-    }
 
     private fun makeVaultObservers() {
         VaultSoftLockManager(services.vaultService, smm)
@@ -693,9 +582,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         val (id, name) = if (serviceInfo == null) {
             // Create node identity if service info = null
-            Pair("identity", myLegalName.withCommonName(null))
+            Pair("identity", myLegalName.copy(commonName = null))
         } else {
-            val name = serviceInfo.name ?: myLegalName.withCommonName(serviceInfo.type.id)
+            val name = serviceInfo.name ?: myLegalName.copy(commonName = serviceInfo.type.id)
             Pair(serviceInfo.type.id, name)
         }
 
@@ -734,7 +623,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        val subject = certificates[0].toX509CertHolder().subject
+        val subject = CordaX500Name.build(certificates[0].toX509CertHolder().subject)
         if (subject != name)
             throw ConfigurationException("The name for $id doesn't match what's in the key store: $name vs $subject")
 
@@ -742,7 +631,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return PartyAndCertificate(CertificateFactory.getInstance("X509").generateCertPath(certificates))
     }
 
-    private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
+    private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: CordaX500Name,
                                     pubKeyFile: Path, privKeyFile: Path, compositeKeyFile:Path,
                                     privateKeyAlias: String, compositeKeyAlias: String) {
         log.info("Migrating $privateKeyAlias from file to key store...")
@@ -768,7 +657,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val monitoringService = MonitoringService(MetricRegistry())
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
+        override val schemaService by lazy { NodeSchemaService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(this) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
@@ -814,6 +703,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
         override fun jdbcSession(): Connection = database.createSession()
+    }
+
+    fun registerCustomSchemas(schemas: Set<MappedSchema>) {
+        database.hibernateConfig.schemaService.registerCustomSchemas(schemas)
     }
 
 }

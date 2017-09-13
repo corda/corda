@@ -8,7 +8,6 @@ import net.corda.core.contracts.hash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.utilities.organisation
 import net.corda.core.utilities.toBase58String
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState

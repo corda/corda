@@ -1,5 +1,6 @@
 package net.corda.node.services.config
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.NetworkMapInfo
@@ -8,7 +9,6 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.OldConfig
-import org.bouncycastle.asn1.x500.X500Name
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -21,7 +21,7 @@ data class BFTSMaRtConfiguration(val replicaId: Int, val debug: Boolean, val exp
 interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
     // TODO: Remove this so we don't accidentally use this identity in the code?
-    val myLegalName: X500Name
+    val myLegalName: CordaX500Name
     val networkMapService: NetworkMapInfo?
     val minimumPlatformVersion: Int
     val emailAddress: String
@@ -42,7 +42,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
 data class FullNodeConfiguration(
         /** This is not retrieved from the config file but rather from a command line argument. */
         override val baseDirectory: Path,
-        override val myLegalName: X500Name,
+        override val myLegalName: CordaX500Name,
         override val emailAddress: String,
         override val keyStorePassword: String,
         override val trustStorePassword: String,

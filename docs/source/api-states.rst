@@ -9,7 +9,7 @@ In Corda, states are classes that implement ``ContractState``. The ``ContractSta
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/Structures.kt
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/ContractState.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
@@ -140,10 +140,10 @@ When a ``ContractState`` is added to a ``TransactionBuilder``, it is wrapped in 
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/Structures.kt
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/TransactionState.kt
         :language: kotlin
-        :start-after: DOCSTART 4
-        :end-before: DOCEND 4
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
 
 Where:
 

@@ -2,10 +2,10 @@ package net.corda.nodeapi.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigUtil
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseNetworkHostAndPort
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.LoggerFactory
 import java.net.Proxy
 import java.net.URL
@@ -72,7 +72,7 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         Path::class -> Paths.get(getString(path))
         URL::class -> URL(getString(path))
         Properties::class -> getConfig(path).toProperties()
-        X500Name::class -> X500Name(getString(path))
+        CordaX500Name::class -> CordaX500Name.parse(getString(path))
         else -> if (typeClass.java.isEnum) {
             parseEnum(typeClass.java, getString(path))
         } else {
@@ -99,7 +99,7 @@ private fun Config.getCollectionValue(path: String, type: KType): Collection<Any
         NetworkHostAndPort::class -> getStringList(path).map { it.parseNetworkHostAndPort() }
         Path::class -> getStringList(path).map { Paths.get(it) }
         URL::class -> getStringList(path).map(::URL)
-        X500Name::class -> getStringList(path).map(::X500Name)
+        CordaX500Name::class -> getStringList(path).map(CordaX500Name.Companion::parse)
         Properties::class -> getConfigList(path).map(Config::toProperties)
         else -> if (elementClass.java.isEnum) {
             getStringList(path).map { parseEnum(elementClass.java, it) }

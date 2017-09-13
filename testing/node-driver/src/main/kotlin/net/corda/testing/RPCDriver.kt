@@ -6,6 +6,7 @@ import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
@@ -42,7 +43,6 @@ import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
-import org.bouncycastle.asn1.x500.X500Name
 import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -60,7 +60,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
      */
     fun <I : RPCOps> startInVmRpcServer(
             rpcUser: User = rpcTestUser,
-            nodeLegalName: X500Name = fakeNodeLegalName,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
@@ -105,7 +105,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
     fun <I : RPCOps> startRpcServer(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
-            nodeLegalName: X500Name = fakeNodeLegalName,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
@@ -174,7 +174,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
 
     fun <I : RPCOps> startRpcServerWithBrokerRunning(
             rpcUser: User = rpcTestUser,
-            nodeLegalName: X500Name = fakeNodeLegalName,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             ops: I,
             brokerHandle: RpcBrokerHandle
@@ -211,7 +211,7 @@ data class RpcServerHandle(
 )
 
 val rpcTestUser = User("user1", "test", permissions = emptySet())
-val fakeNodeLegalName = X500Name("CN=not:a:valid:name")
+val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
 // Use a global pool so that we can run RPC tests in parallel
 private val globalPortAllocation = PortAllocation.Incremental(10000)
@@ -327,7 +327,7 @@ data class RPCDriverDSL(
 
     override fun <I : RPCOps> startInVmRpcServer(
             rpcUser: User,
-            nodeLegalName: X500Name,
+            nodeLegalName: CordaX500Name,
             maxFileSize: Int,
             maxBufferedBytesPerClient: Long,
             configuration: RPCServerConfiguration,
@@ -364,7 +364,7 @@ data class RPCDriverDSL(
     override fun <I : RPCOps> startRpcServer(
             serverName: String,
             rpcUser: User,
-            nodeLegalName: X500Name,
+            nodeLegalName: CordaX500Name,
             maxFileSize: Int,
             maxBufferedBytesPerClient: Long,
             configuration: RPCServerConfiguration,
@@ -460,7 +460,7 @@ data class RPCDriverDSL(
 
     override fun <I : RPCOps> startRpcServerWithBrokerRunning(
             rpcUser: User,
-            nodeLegalName: X500Name,
+            nodeLegalName: CordaX500Name,
             configuration: RPCServerConfiguration,
             ops: I,
             brokerHandle: RpcBrokerHandle

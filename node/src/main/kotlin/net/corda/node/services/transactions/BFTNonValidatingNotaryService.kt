@@ -3,9 +3,11 @@ package net.corda.node.services.transactions
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotaryException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker
@@ -18,7 +20,6 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
-import org.bouncycastle.asn1.x500.X500Name
 import javax.persistence.Entity
 import kotlin.concurrent.thread
 
@@ -106,7 +107,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
                                     id = SecureHash.parse(it.consumingTxHash),
                                     inputIndex = it.consumingIndex,
                                     requestingParty = Party(
-                                            name = X500Name(it.party.name),
+                                            name = CordaX500Name.parse(it.party.name),
                                             owningKey = parsePublicKeyBase58(it.party.owningKey))))
                     },
                     toPersistentEntity = { (txHash, index) : StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->

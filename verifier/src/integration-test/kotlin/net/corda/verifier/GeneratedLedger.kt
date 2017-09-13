@@ -1,18 +1,18 @@
 package net.corda.verifier
 
-import net.corda.client.mock.*
+import net.corda.client.mock.Generator
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.getX500Name
-import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
@@ -62,7 +62,7 @@ data class GeneratedLedger(
             Generator.sequence(
                     outputs.map { output ->
                         pickOneOrMaybeNew(identities, partyGenerator).map { notary ->
-                            TransactionState(output, notary, null)
+                            TransactionState(output, DUMMY_PROGRAM_ID, notary, null)
                         }
                     }
             )
@@ -127,7 +127,7 @@ data class GeneratedLedger(
     fun regularTransactionGenerator(inputNotary: Party, inputsToChooseFrom: List<StateAndRef<ContractState>>): Generator<Pair<WireTransaction, GeneratedLedger>> {
         val outputsGen = outputsGenerator.map { outputs ->
             outputs.map { output ->
-                TransactionState(output, inputNotary, null)
+                TransactionState(output, DUMMY_PROGRAM_ID, inputNotary, null)
             }
         }
         val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
@@ -180,9 +180,7 @@ data class GeneratedLedger(
 data class GeneratedState(
         val nonce: Long,
         override val participants: List<AbstractParty>
-) : ContractState {
-    override val contract = DummyContract()
-}
+) : ContractState
 
 class GeneratedAttachment(bytes: ByteArray) : AbstractAttachment({ bytes }) {
     override val id = bytes.sha256()
@@ -209,7 +207,7 @@ fun commandGenerator(partiesToPickFrom: Collection<Party>): Generator<Pair<Comma
 }
 
 val partyGenerator: Generator<Party> = Generator.int().combine(publicKeyGenerator) { n, key ->
-    Party(getX500Name(O = "Party$n", L = "London", C = "GB"), key)
+    Party(CordaX500Name(organisation = "Party$n", locality = "London", country = "GB"), key)
 }
 
 fun <A> pickOneOrMaybeNew(from: Collection<A>, generator: Generator<A>): Generator<A> {

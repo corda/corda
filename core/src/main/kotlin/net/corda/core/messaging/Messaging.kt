@@ -2,7 +2,6 @@ package net.corda.core.messaging
 
 import net.corda.core.serialization.CordaSerializable
 
-
 /** The interface for a group of message recipients (which may contain only one recipient) */
 @CordaSerializable
 interface MessageRecipients

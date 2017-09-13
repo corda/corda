@@ -12,6 +12,7 @@ import kotlin.test.assertFailsWith
 
 
 class VaultUpdateTests {
+    val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests.DummyContract"
 
     object DummyContract : Contract {
 
@@ -20,9 +21,7 @@ class VaultUpdateTests {
     }
 
     private class DummyState : ContractState {
-        override val participants: List<AbstractParty>
-            get() = emptyList()
-        override val contract = VaultUpdateTests.DummyContract
+        override val participants: List<AbstractParty> = emptyList()
     }
 
     private val stateRef0 = StateRef(SecureHash.randomSHA256(), 0)
@@ -31,11 +30,11 @@ class VaultUpdateTests {
     private val stateRef3 = StateRef(SecureHash.randomSHA256(), 3)
     private val stateRef4 = StateRef(SecureHash.randomSHA256(), 4)
 
-    private val stateAndRef0 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef0)
-    private val stateAndRef1 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef1)
-    private val stateAndRef2 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef2)
-    private val stateAndRef3 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef3)
-    private val stateAndRef4 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef4)
+    private val stateAndRef0 = StateAndRef(TransactionState(DummyState(), DUMMY_PROGRAM_ID, DUMMY_NOTARY), stateRef0)
+    private val stateAndRef1 = StateAndRef(TransactionState(DummyState(), DUMMY_PROGRAM_ID, DUMMY_NOTARY), stateRef1)
+    private val stateAndRef2 = StateAndRef(TransactionState(DummyState(), DUMMY_PROGRAM_ID, DUMMY_NOTARY), stateRef2)
+    private val stateAndRef3 = StateAndRef(TransactionState(DummyState(), DUMMY_PROGRAM_ID, DUMMY_NOTARY), stateRef3)
+    private val stateAndRef4 = StateAndRef(TransactionState(DummyState(), DUMMY_PROGRAM_ID, DUMMY_NOTARY), stateRef4)
 
     @Test
     fun `nothing plus nothing is nothing`() {

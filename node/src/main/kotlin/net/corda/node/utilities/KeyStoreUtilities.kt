@@ -1,12 +1,12 @@
 package net.corda.node.utilities
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.exists
 import net.corda.core.internal.read
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.write
 import net.corda.core.utilities.cert
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.IOException
 import java.io.InputStream
@@ -174,26 +174,26 @@ fun KeyStore.getSupportedKey(alias: String, keyPassword: String): PrivateKey {
 class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
     private val keyStore = storePath.read { loadKeyStore(it, storePassword) }
 
-    private fun createCertificate(serviceName: X500Name, pubKey: PublicKey): CertPath {
+    private fun createCertificate(serviceName: CordaX500Name, pubKey: PublicKey): CertPath {
         val clientCertPath = keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
         // Assume key password = store password.
         val clientCA = certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
         // Create new keys and store in keystore.
-        val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, pubKey)
+        val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName.x500Name, pubKey)
         val certPath = CertificateFactory.getInstance("X509").generateCertPath(listOf(cert.cert) + clientCertPath)
         require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
         // TODO: X509Utilities.validateCertificateChain()
         return certPath
     }
 
-    fun signAndSaveNewKeyPair(serviceName: X500Name, privateKeyAlias: String, keyPair: KeyPair) {
+    fun signAndSaveNewKeyPair(serviceName: CordaX500Name, privateKeyAlias: String, keyPair: KeyPair) {
         val certPath = createCertificate(serviceName, keyPair.public)
         // Assume key password = store password.
         keyStore.addOrReplaceKey(privateKeyAlias, keyPair.private, storePassword.toCharArray(), certPath.certificates.toTypedArray())
         keyStore.save(storePath, storePassword)
     }
 
-    fun savePublicKey(serviceName: X500Name, pubKeyAlias: String, pubKey: PublicKey) {
+    fun savePublicKey(serviceName: CordaX500Name, pubKeyAlias: String, pubKey: PublicKey) {
         val certPath = createCertificate(serviceName, pubKey)
         // Assume key password = store password.
         keyStore.addOrReplaceCertificate(pubKeyAlias, certPath.certificates.first())

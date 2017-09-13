@@ -9,19 +9,13 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.cert
-import net.corda.core.utilities.commonName
-import net.corda.core.utilities.getX500Name
-import net.corda.core.utilities.organisation
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.config.createKeystoreForCordaNode
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.BOB_PUBKEY
-import net.corda.testing.MEGA_CORP
+import net.corda.testing.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
@@ -59,7 +53,7 @@ class X509UtilitiesTest {
     fun `create valid self-signed CA certificate`() {
         val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val caCert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Test Cert", O = "R3 Ltd", L = "London", C = "GB"), caKey)
-        assertTrue { caCert.subject.commonName == "Test Cert" } // using our subject common name
+        assertEquals(X500Name("CN=Test Cert,O=R3 Ltd,L=London,C=GB"), caCert.subject)
         assertEquals(caCert.issuer, caCert.subject) //self-signed
         caCert.isValidOn(Date()) // throws on verification problems
         caCert.isSignatureValid(JcaContentVerifierProviderBuilder().build(caKey.public)) // throws on verification problems
@@ -318,7 +312,7 @@ class X509UtilitiesTest {
         val peerChain = clientSocket.session.peerCertificates
         val peerX500Principal = (peerChain[0] as X509Certificate).subjectX500Principal
         val x500name = X500Name(peerX500Principal.name)
-        assertEquals(MEGA_CORP.name, x500name)
+        assertEquals(MEGA_CORP.name.x500Name, x500name)
         X509Utilities.validateCertificateChain(trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA), *peerChain)
         val output = DataOutputStream(clientSocket.outputStream)
         output.writeUTF("Hello World")
@@ -409,7 +403,7 @@ class X509UtilitiesTest {
                 emptyMap(),
                 true,
                 SerializationContext.UseCase.P2P)
-        val expected: X509CertificateHolder = X509Utilities.createSelfSignedCACertificate(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+        val expected: X509CertificateHolder = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
         val serialized = expected.serialize(factory, context).bytes
         val actual: X509CertificateHolder = serialized.deserialize(factory, context)
         assertEquals(expected, actual)
@@ -426,8 +420,8 @@ class X509UtilitiesTest {
                 SerializationContext.UseCase.P2P)
         val certFactory = CertificateFactory.getInstance("X509")
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
-        val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name, BOB_PUBKEY)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Name, rootCAKey)
+        val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name.x500Name, BOB_PUBKEY)
         val expected = certFactory.generateCertPath(listOf(certificate.cert, rootCACert.cert))
         val serialized = expected.serialize(factory, context).bytes
         val actual: CertPath = serialized.deserialize(factory, context)

@@ -3,6 +3,7 @@ package net.corda.node.utilities
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.cert
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
@@ -106,7 +107,29 @@ object X509Utilities {
     @JvmStatic
     fun createCertificate(certificateType: CertificateType,
                           issuerCertificate: X509CertificateHolder, issuerKeyPair: KeyPair,
-                          subject: X500Name, subjectPublicKey: PublicKey,
+                          subject: CordaX500Name, subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, issuerCertificate)
+        return createCertificate(certificateType, issuerCertificate.subject, issuerKeyPair, subject.x500Name, subjectPublicKey, window, nameConstraints)
+    }
+
+    /**
+     * Create a X509 v3 cert.
+     * @param issuerCertificate The Public certificate of the root CA above this used to sign it.
+     * @param issuerKeyPair The KeyPair of the root CA above this used to sign it.
+     * @param subject subject of the generated certificate.
+     * @param subjectPublicKey subject 's public key.
+     * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
+     * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
+     * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
+     */
+    @JvmStatic
+    fun createCertificate(certificateType: CertificateType,
+                          issuerCertificate: X509CertificateHolder,
+                          issuerKeyPair: KeyPair,
+                          subject: X500Name,
+                          subjectPublicKey: PublicKey,
                           validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
                           nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, issuerCertificate)

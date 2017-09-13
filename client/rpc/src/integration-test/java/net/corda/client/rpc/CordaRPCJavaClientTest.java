@@ -10,6 +10,7 @@ import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
 import net.corda.finance.flows.CashPaymentFlow;
+import net.corda.finance.schemas.*;
 import net.corda.node.internal.Node;
 import net.corda.node.services.transactions.ValidatingNotaryService;
 import net.corda.nodeapi.User;
@@ -52,6 +53,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
         Set<ServiceInfo> services = new HashSet<>(singletonList(new ServiceInfo(ValidatingNotaryService.Companion.getType(), null)));
         CordaFuture<Node> nodeFuture = startNode(getALICE().getName(), 1, services, singletonList(rpcUser), emptyMap());
         node = nodeFuture.get();
+        node.registerCustomSchemas(Collections.singleton(CashSchemaV1.INSTANCE));
         client = new CordaRPCClient(requireNonNull(node.getConfiguration().getRpcAddress()), null, getDefault(), false);
     }
 

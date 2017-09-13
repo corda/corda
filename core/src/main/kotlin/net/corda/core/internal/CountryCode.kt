@@ -1,6 +1,8 @@
-package net.corda.core.utilities
+package net.corda.core.internal
 
-val countryCodes = hashSetOf(
+import com.google.common.collect.ImmutableSet
+
+val countryCodes: Set<String> = ImmutableSet.of(
         "AF",
         "AX",
         "AL",

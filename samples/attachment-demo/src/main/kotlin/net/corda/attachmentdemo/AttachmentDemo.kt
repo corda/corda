@@ -116,7 +116,7 @@ class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: Secu
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
         val ptx = TransactionBuilder(notary)
-                .addOutputState(AttachmentContract.State(hash))
+                .addOutputState(AttachmentContract.State(hash), ATTACHMENT_PROGRAM_ID)
                 .addCommand(AttachmentContract.Command, serviceHub.legalIdentityKey)
                 .addAttachment(hash)
 
@@ -178,6 +178,8 @@ private fun printHelp(parser: OptionParser) {
     parser.printHelpOn(System.out)
 }
 
+val ATTACHMENT_PROGRAM_ID = "net.corda.attachmentdemo.AttachmentContract"
+
 class AttachmentContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val state = tx.outputsOfType<AttachmentContract.State>().single()
@@ -188,7 +190,6 @@ class AttachmentContract : Contract {
     object Command : TypeOnlyCommandData()
 
     data class State(val hash: SecureHash.SHA256) : ContractState {
-        override val contract: Contract = AttachmentContract()
         override val participants: List<AbstractParty> = emptyList()
     }
 }

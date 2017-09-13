@@ -26,6 +26,7 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
                     extraProperties[prop.name] = prop.readMethod!!.invoke(obj)
                 }
             } catch(e: NotSerializableException) {
+                logger.warn("Unexpected exception", e)
             }
             obj.originalMessage
         } else {

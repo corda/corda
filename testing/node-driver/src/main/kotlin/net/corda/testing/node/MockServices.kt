@@ -12,8 +12,6 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
-import net.corda.finance.schemas.CashSchemaV1
-import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.node.VersionInfo
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.WritableTransactionStorage
@@ -25,13 +23,11 @@ import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransacti
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
-import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -102,7 +98,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
          * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
         @JvmStatic
-        fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1),
+        fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = emptySet(),
                                             keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
                                             createIdentityService: () -> IdentityService = { makeTestIdentityService() }): Pair<CordaPersistence, MockServices> {
             val dataSourceProps = makeTestDataSourceProperties()

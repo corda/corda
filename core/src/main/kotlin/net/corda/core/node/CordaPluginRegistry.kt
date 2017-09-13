@@ -22,13 +22,4 @@ abstract class CordaPluginRegistry {
      * @return true if you register types, otherwise you will be filtered out of the list of plugins considered in future.
      */
     open fun customizeSerialization(custom: SerializationCustomization): Boolean = false
-
-    /**
-     * Optionally, custom schemas to be used for contract state persistence and vault custom querying
-     *
-     * For example, if you implement the [QueryableState] interface on a new [ContractState]
-     * it needs to be registered here if you wish to perform custom queries on schema entity attributes using the
-     * [VaultQueryService] API
-     */
-    open val requiredSchemas: Set<MappedSchema> get() = emptySet()
 }

@@ -14,6 +14,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
 import net.corda.finance.`issued by`
+import net.corda.finance.contracts.asset.CASH_PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl
@@ -219,6 +220,7 @@ class ContractUpgradeFlowTest {
         val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx
+        val anonymisedRecipient = result.get().recipient!!
         val stateAndRef = stx.tx.outRef<Cash.State>(0)
         val baseState = a.database.transaction { a.services.vaultQueryService.queryBy<ContractState>().states.single() }
         assertTrue(baseState.state.data is Cash.State, "Contract state is old version.")
@@ -230,16 +232,17 @@ class ContractUpgradeFlowTest {
         val firstState = a.database.transaction { a.services.vaultQueryService.queryBy<ContractState>().states.single() }
         assertTrue(firstState.state.data is CashV2.State, "Contract state is upgraded to the new version.")
         assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (firstState.state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
-        assertEquals<Collection<AbstractParty>>(listOf(a.info.legalIdentity), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
+        assertEquals<Collection<AbstractParty>>(listOf(anonymisedRecipient), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
     }
 
+    val CASHV2_PROGRAM_ID = "net.corda.core.flows.ContractUpgradeFlowTest.CashV2"
+
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
-        override val legacyContract = Cash::class.java
+        override val legacyContract = CASH_PROGRAM_ID
 
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
             override val owner: AbstractParty = owners.first()
             override val exitKeys = (owners + amount.token.issuer.party).map { it.owningKey }.toSet()
-            override val contract = CashV2()
             override val participants = owners
 
             override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))

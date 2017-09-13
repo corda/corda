@@ -9,6 +9,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import java.io.InputStream
 import java.security.KeyPair
@@ -87,8 +88,8 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addInputState(StateAndRef(state, stateRef))
     }
 
-    override fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState) {
-        transactionBuilder.addOutputState(contractState, notary, encumbrance)
+    override fun _output(contractClassName: ContractClassName, label: String?, notary: Party, encumbrance: Int?, contractState: ContractState) {
+        transactionBuilder.addOutputState(contractState, contractClassName, notary, encumbrance)
         if (label != null) {
             if (label in labelToIndexMap) {
                 throw DuplicateOutputLabel(label)
@@ -244,7 +245,7 @@ data class TestLedgerDSLInterpreter private constructor(
     private fun fillTransaction(transactionBuilder: TransactionBuilder) {
         if (transactionBuilder.commands().isEmpty()) transactionBuilder.addCommand(dummyCommand())
         if (transactionBuilder.inputStates().isEmpty() && transactionBuilder.outputStates().isEmpty()) {
-            transactionBuilder.addOutputState(DummyContract.SingleOwnerState(owner = ALICE))
+            transactionBuilder.addOutputState(DummyContract.SingleOwnerState(owner = ALICE), DUMMY_PROGRAM_ID)
         }
     }
 

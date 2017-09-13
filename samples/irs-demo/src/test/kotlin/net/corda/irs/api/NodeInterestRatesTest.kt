@@ -3,28 +3,27 @@ package net.corda.irs.api
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
-import net.corda.core.contracts.`with notary`
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
-import net.corda.finance.contracts.asset.CASH
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.`issued by`
-import net.corda.finance.contracts.asset.`owned by`
+import net.corda.finance.contracts.asset.*
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
-import net.corda.testing.node.*
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockServices
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -34,9 +33,6 @@ import java.util.function.Predicate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 
 class NodeInterestRatesTest : TestDependencyInjectionBase() {
     val TEST_DATA = NodeInterestRates.parseFile("""
@@ -49,7 +45,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         """.trimIndent())
 
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    val DUMMY_CASH_ISSUER = Party(getX500Name(O="Cash issuer",OU="corda",L="London",C="GB"), DUMMY_CASH_ISSUER_KEY.public)
+    val DUMMY_CASH_ISSUER = Party(CordaX500Name(organisation = "Cash issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public)
 
     lateinit var oracle: NodeInterestRates.Oracle
     lateinit var database: CordaPersistence
@@ -246,7 +242,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     }
 
     private fun makePartialTX() = TransactionBuilder(DUMMY_NOTARY).withItems(
-        1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE `with notary` DUMMY_NOTARY)
+        TransactionState(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE, CASH_PROGRAM_ID, DUMMY_NOTARY))
 
     private fun makeFullTx() = makePartialTX().withItems(dummyCommand())
 }

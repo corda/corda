@@ -65,8 +65,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         ArrayList<KeyPair> keys = new ArrayList<>();
         keys.add(getMEGA_CORP_KEY());
         keys.add(getDUMMY_NOTARY_KEY());
-        Set<MappedSchema> requiredSchemas = new HashSet<>();
-        requiredSchemas.add(CashSchemaV1.INSTANCE);
+        Set<MappedSchema> requiredSchemas = Collections.singleton(CashSchemaV1.INSTANCE);
         IdentityService identitySvc = makeTestIdentityService();
         @SuppressWarnings("unchecked")
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(requiredSchemas, keys, () -> identitySvc);

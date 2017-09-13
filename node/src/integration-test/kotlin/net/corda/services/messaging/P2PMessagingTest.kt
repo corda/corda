@@ -2,6 +2,7 @@ package net.corda.services.messaging
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.elapsedTime
 import net.corda.core.internal.times
@@ -12,7 +13,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.Node
 import net.corda.node.services.messaging.*
@@ -22,7 +22,6 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -31,8 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = getX500Name(O = "DistributedService", L = "London", C = "GB")
-        val SERVICE_2_NAME = getX500Name(O = "Service 2", L = "London", C = "GB")
+        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(organisation = "DistributedService", locality = "London", country = "GB")
+        val SERVICE_2_NAME = CordaX500Name(organisation = "Service 2", locality = "London", country = "GB")
     }
 
     @Test
@@ -65,7 +64,7 @@ class P2PMessagingTest : NodeBasedTest() {
     @Test
     fun `communicating with a distributed service which the network map node is part of`() {
         ServiceIdentityGenerator.generateToDisk(
-                listOf(DUMMY_MAP.name, SERVICE_2_NAME).map { baseDirectory(it) },
+                listOf(DUMMY_MAP.name, SERVICE_2_NAME).map { baseDirectory(it.x500Name) },
                 RaftValidatingNotaryService.type.id,
                 DISTRIBUTED_SERVICE_NAME)
 
@@ -204,7 +203,7 @@ class P2PMessagingTest : NodeBasedTest() {
         return crashingNodes
     }
 
-    private fun assertAllNodesAreUsed(participatingServiceNodes: List<Node>, serviceName: X500Name, originatingNode: Node) {
+    private fun assertAllNodesAreUsed(participatingServiceNodes: List<Node>, serviceName: CordaX500Name, originatingNode: Node) {
         // Setup each node in the distributed service to return back it's NodeInfo so that we can know which node is being used
         participatingServiceNodes.forEach { node ->
             node.respondWith(node.info)

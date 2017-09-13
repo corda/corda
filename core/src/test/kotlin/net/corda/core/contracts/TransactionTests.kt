@@ -8,6 +8,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.testing.*
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import org.junit.Test
 import java.security.KeyPair
@@ -93,7 +94,7 @@ class TransactionTests : TestDependencyInjectionBase() {
 
     @Test
     fun `transactions with no inputs can have any notary`() {
-        val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
+        val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_PROGRAM_ID, DUMMY_NOTARY)
         val inputs = emptyList<StateAndRef<*>>()
         val outputs = listOf(baseOutState, baseOutState.copy(notary = ALICE), baseOutState.copy(notary = BOB))
         val commands = emptyList<CommandWithParties<CommandData>>()
@@ -133,7 +134,7 @@ class TransactionTests : TestDependencyInjectionBase() {
     @Test
     fun `general transactions cannot change notary`() {
         val notary: Party = DUMMY_NOTARY
-        val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), notary)
+        val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_PROGRAM_ID, notary)
         val outState = inState.copy(notary = ALICE)
         val inputs = listOf(StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)))
         val outputs = listOf(outState)
@@ -158,7 +159,7 @@ class TransactionTests : TestDependencyInjectionBase() {
 
     @Test
     fun `transactions with identical contents must have different ids`() {
-        val outputState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
+        val outputState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_PROGRAM_ID, DUMMY_NOTARY)
         fun buildTransaction() = WireTransaction(
                 inputs = emptyList(),
                 attachments = emptyList(),

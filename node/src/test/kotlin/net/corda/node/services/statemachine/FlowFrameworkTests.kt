@@ -9,6 +9,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
@@ -21,8 +22,11 @@ import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -31,6 +35,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.*
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
@@ -76,7 +81,7 @@ class FlowFrameworkTests {
 
         // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
-        val notaryService = ServiceInfo(ValidatingNotaryService.type, getX500Name(O = "notary-service-2000", L = "London", C = "GB"))
+        val notaryService = ServiceInfo(ValidatingNotaryService.type, CordaX500Name(organisation = "Notary service 2000", locality = "London", country = "GB"))
         val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
@@ -337,10 +342,10 @@ class FlowFrameworkTests {
         node1.services.startFlow(CashIssueFlow(
                 2000.DOLLARS,
                 OpaqueBytes.of(0x01),
-                notary1.info.notaryIdentity))
+                notary1.info.notaryIdentity)).resultFuture.getOrThrow()
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1..3) {
-            val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity, anonymous = false))
+            val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity))
             mockNet.runNetwork()
             flow.resultFuture.getOrThrow()
         }
@@ -599,7 +604,7 @@ class FlowFrameworkTests {
     @Test
     fun `wait for transaction`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-                .addOutputState(DummyState())
+                .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
                 .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
@@ -614,7 +619,7 @@ class FlowFrameworkTests {
     @Test
     fun `committer throws exception before calling the finality flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-                .addOutputState(DummyState())
+                .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
                 .addCommand(dummyCommand())
         val stx = node1.services.signInitialTransaction(ptx)
 
@@ -631,7 +636,7 @@ class FlowFrameworkTests {
     @Test
     fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-                .addOutputState(DummyState())
+                .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
                 .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 

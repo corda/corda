@@ -74,6 +74,18 @@ other ``MappedSchema``.
    ``QueryableState`` being persisted. This will change in due course. Similarly, it does not currently support
    configuring ``SchemaOptions`` but will do so in the future.
 
+Custom schema registration
+--------------------------
+Custom contract schemas are automatically registered at startup time for CorDapps. The node bootstrap process will scan
+for schemas (any class that extends the ``MappedSchema`` interface) in the `plugins` configuration directory in your CorDapp jar.
+
+For testing purposes it is necessary to manually register custom schemas as follows:
+
+- Tests using ``MockNetwork`` and ``MockNode`` must explicitly register custom schemas using the `registerCustomSchemas()` method of ``MockNode``
+- Tests using ``MockServices`` must explicitly register schemas using `customSchemas` attribute of the ``MockServices`` `makeTestDatabaseAndMockServices()` helper method.
+
+.. note:: Tests using the `DriverDSL` will automatically register your custom schemas if they are in the same project structure as the driver call.
+
 Object relational mapping
 -------------------------
 The persisted representation of a ``QueryableState`` should be an instance of a ``PersistentState`` subclass,

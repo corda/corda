@@ -7,6 +7,8 @@ import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -38,6 +40,8 @@ class TraderDemoTest : NodeBasedTest() {
         val (nodeA, nodeB, bankNode) = listOf(nodeAFuture, nodeBFuture, bankNodeFuture, notaryFuture).map { it.getOrThrow() }
 
         nodeA.registerInitiatedFlow(BuyerFlow::class.java)
+        nodeA.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.registerCustomSchemas(setOf(CashSchemaV1, CommercialPaperSchemaV1))
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
             val client = CordaRPCClient(it.configuration.rpcAddress!!, initialiseSerialization = false)
@@ -56,7 +60,6 @@ class TraderDemoTest : NodeBasedTest() {
         val expectedBCash = clientB.cashCount + 1
         val expectedPaper = listOf(clientA.commercialPaperCount + 1, clientB.commercialPaperCount)
 
-        // TODO: Enable anonymisation
         clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.info.legalIdentity.name, sellerName = nodeB.info.legalIdentity.name)
         clientB.runSeller(buyerName = nodeA.info.legalIdentity.name, amount = 5.DOLLARS)
 
