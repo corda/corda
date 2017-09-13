@@ -4,6 +4,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 
+// DOCSTART 1
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
  * file that the program can use to persist data across transactions. States are immutable: once created they are never
@@ -25,3 +26,4 @@ interface ContractState {
      */
     val participants: List<AbstractParty>
 }
+// DOCEND 1

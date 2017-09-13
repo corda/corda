@@ -3,6 +3,7 @@ package net.corda.core.contracts
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 
+// DOCSTART 1
 typealias ContractClassName = String
 
 /**
@@ -76,3 +77,4 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          * A validator for the contract attachments on the transaction.
          */
         val constraint: AttachmentConstraint = AlwaysAcceptAttachmentConstraint)
+// DOCEND 1
