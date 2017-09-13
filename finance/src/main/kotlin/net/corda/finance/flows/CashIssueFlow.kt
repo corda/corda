@@ -38,13 +38,13 @@ class CashIssueFlow(val amount: Amount<Currency>,
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary)
-        val issuer = me.party.ref(issuerBankPartyRef)
-        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), me.party, notary)
+        val issuer = ourIdentity.party.ref(issuerBankPartyRef)
+        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity.party, notary)
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(builder, signers)
         progressTracker.currentStep = FINALISING_TX
         subFlow(FinalityFlow(tx))
-        return Result(tx, me.party)
+        return Result(tx, ourIdentity.party)
     }
 
     @CordaSerializable

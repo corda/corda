@@ -40,7 +40,7 @@ class CommercialPaperIssueFlow(val amount: Amount<Currency>,
         progressTracker.currentStep = ISSUING
 
         val issuance: SignedTransaction = run {
-            val tx = CommercialPaper().generateIssue(me.party.ref(issueRef), amount `issued by` me.party.ref(issueRef),
+            val tx = CommercialPaper().generateIssue(ourIdentity.party.ref(issueRef), amount `issued by` ourIdentity.party.ref(issueRef),
                     Instant.now() + 10.days, notary)
 
             // TODO: Consider moving these two steps below into generateIssue.

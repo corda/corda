@@ -77,7 +77,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
     @Suspendable override fun call(): SignedTransaction {
         // Check the signatures which have already been provided and that the transaction is valid.
         // Usually just the Initiator and possibly an oracle would have signed at this point.
-        val myKeys: Iterable<PublicKey> = myOptionalKeys ?: listOf(me.owningKey)
+        val myKeys: Iterable<PublicKey> = myOptionalKeys ?: listOf(ourIdentity.owningKey)
         val signed = partiallySignedTx.sigs.map { it.by }
         val notSigned = partiallySignedTx.tx.requiredSigningKeys - signed
 

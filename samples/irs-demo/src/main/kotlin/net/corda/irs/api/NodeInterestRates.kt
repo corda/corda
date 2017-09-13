@@ -134,7 +134,7 @@ object NodeInterestRates {
             }
             // Performing validation of obtained FilteredLeaves.
             fun commandValidator(elem: Command<*>): Boolean {
-                require(services.myInfo.legalIdentity.owningKey in elem.signers && elem.value is Fix) {
+                require(services.myInfo.legalIdentities.first().owningKey in elem.signers && elem.value is Fix) {
                     "Oracle received unknown command (not in signers or not Fix)."
                 }
                 val fix = elem.value as Fix
@@ -159,7 +159,7 @@ object NodeInterestRates {
             // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
             // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
             // an invalid transaction the signature is worthless.
-            return services.createSignature(ftx, services.myInfo.legalIdentity.owningKey)
+            return services.createSignature(ftx, services.myInfo.legalIdentities.first().owningKey)
         }
         // DOCEND 1
 

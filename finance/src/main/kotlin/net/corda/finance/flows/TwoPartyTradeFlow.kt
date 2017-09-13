@@ -161,9 +161,9 @@ object TwoPartyTradeFlow {
 
             // Create the identity we'll be paying to, and send the counterparty proof we own the identity
             val buyerAnonymousIdentity = if (anonymous)
-                serviceHub.keyManagementService.freshKeyAndCert(me, false)
+                serviceHub.keyManagementService.freshKeyAndCert(ourIdentity, false)
             else
-                me
+                ourIdentity
             // Put together a proposed transaction that performs the trade, and sign it.
             progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(assetForSale, tradeRequest, buyerAnonymousIdentity)

@@ -42,7 +42,7 @@ object FixingFlow {
             // validate the party that initiated is the one on the deal and that the recipient corresponds with it.
             // TODO: this is in no way secure and will be replaced by general session initiation logic in the future
             // Also check we are one of the parties
-            require(deal.participants.count { it.owningKey == me.owningKey } == 1)
+            require(deal.participants.count { it.owningKey == ourIdentity.owningKey } == 1)
 
             return handshake
         }
@@ -53,7 +53,7 @@ object FixingFlow {
             val fixOf = deal.nextFixingOf()!!
 
             // TODO Do we need/want to substitute in new public keys for the Parties?
-            val myOldParty = deal.participants.single { it.owningKey == me.owningKey }
+            val myOldParty = deal.participants.single { it.owningKey == ourIdentity.owningKey }
 
             val newDeal = deal
 
@@ -138,7 +138,7 @@ object FixingFlow {
             val dealToFix = serviceHub.loadState(ref)
             val fixableDeal = (dealToFix.data as FixableDealState)
             val parties = fixableDeal.participants.sortedBy { it.owningKey.toBase58String() }
-            val myKey = me.owningKey
+            val myKey = ourIdentity.owningKey
             if (parties[0].owningKey == myKey) {
                 val fixing = FixingSession(ref, fixableDeal.oracle)
                 val counterparty = serviceHub.identityService.partyFromAnonymous(parties[1]) ?: throw IllegalStateException("Cannot resolve floater party")

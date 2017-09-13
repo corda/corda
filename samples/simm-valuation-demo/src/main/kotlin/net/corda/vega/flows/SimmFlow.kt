@@ -57,7 +57,7 @@ object SimmFlow {
 
         @Suspendable
         override fun call(): RevisionedState<PortfolioState.Update> {
-            logger.debug("Calling from: ${me.party}. Sending to: $otherParty")
+            logger.debug("Calling from: ${ourIdentity.party}. Sending to: $otherParty")
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
 
@@ -80,7 +80,7 @@ object SimmFlow {
         @Suspendable
         private fun agreePortfolio(portfolio: Portfolio) {
             logger.info("Agreeing portfolio")
-            val parties = Pair(me.party, otherParty)
+            val parties = Pair(ourIdentity.party, otherParty)
             val portfolioState = PortfolioState(portfolio.refs, parties, valuationDate)
 
             send(otherParty, OfferMessage(notary, portfolioState, existing?.ref, valuationDate))
