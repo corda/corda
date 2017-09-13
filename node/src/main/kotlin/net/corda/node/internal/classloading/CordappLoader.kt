@@ -6,13 +6,11 @@ import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.list
+import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceType
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -121,6 +119,10 @@ class CordappLoader private constructor (val cordappClassPath: List<Path>) {
         return found + coreFlows
     }
 
+    fun findCustomSchemas(): Set<MappedSchema> {
+        return scanResult?.getClassesWithSuperclass(MappedSchema::class)?.toSet() ?: emptySet()
+    }
+
     private fun scanCordapps(): ScanResult? {
         logger.info("Scanning CorDapps in $cordappClassPath")
         return if (cordappClassPath.isNotEmpty())
@@ -144,21 +146,28 @@ class CordappLoader private constructor (val cordappClassPath: List<Path>) {
         }
     }
 
-    private fun <T : Any> ScanResult.getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
-        fun loadClass(className: String): Class<out T>? {
-            return try {
-                appClassLoader.loadClass(className) as Class<T>
-            } catch (e: ClassCastException) {
-                logger.warn("As $className is annotated with ${annotation.qualifiedName} it must be a sub-type of ${type.java.name}")
-                null
-            } catch (e: Exception) {
-                logger.warn("Unable to load class $className", e)
-                null
-            }
+    private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
+        return try {
+            appClassLoader.loadClass(className) as Class<T>
+        } catch (e: ClassCastException) {
+            logger.warn("As $className must be a sub-type of ${type.java.name}")
+            null
+        } catch (e: Exception) {
+            logger.warn("Unable to load class $className", e)
+            null
         }
+    }
 
+    private fun <T : Any> ScanResult.getClassesWithSuperclass(type: KClass<T>): List<T> {
+        return getNamesOfSubclassesOf(type.java)
+                .mapNotNull { loadClass(it, type) }
+                .filterNot { Modifier.isAbstract(it.modifiers) }
+                .map { it.kotlin.objectOrNewInstance() }
+    }
+
+    private fun <T : Any> ScanResult.getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
         return getNamesOfClassesWithAnnotation(annotation.java)
-                .mapNotNull { loadClass(it) }
+                .mapNotNull { loadClass(it, type) }
                 .filterNot { Modifier.isAbstract(it.modifiers) }
     }
 }

@@ -24,14 +24,14 @@ import java.lang.Exception
 import java.util.*
 import javax.persistence.Tuple
 
-class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
+class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
                               val vault: VaultService) : SingletonSerializeAsToken(), VaultQueryService {
     companion object {
         val log = loggerFor<HibernateVaultQueryImpl>()
     }
 
-    private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
-    private val criteriaBuilder = sessionFactory.criteriaBuilder
+    private var sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
+    private var criteriaBuilder = sessionFactory.criteriaBuilder
 
     /**
      * Maintain a list of contract state interfaces to concrete types stored in the vault
@@ -59,6 +59,10 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractType, criteria: $criteria, pagination: $paging, sorting: $sorting")
+
+        // refresh to include any schemas registered after initial VQ service initialisation
+        sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
+        criteriaBuilder = sessionFactory.criteriaBuilder
 
         // calculate total results where a page specification has been defined
         var totalStates = -1L
