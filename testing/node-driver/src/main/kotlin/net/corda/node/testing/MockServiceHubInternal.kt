@@ -5,6 +5,8 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.StateLoader
+import net.corda.core.node.StateLoaderImpl
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.node.internal.InitiatedFlowFactory
@@ -24,7 +26,6 @@ import net.corda.testing.node.MockAttachmentStorage
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStateMachineRecordedTransactionMappingStorage
 import net.corda.testing.node.MockTransactionStorage
-import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
 
@@ -44,8 +45,9 @@ open class MockServiceHubInternal(
         val overrideClock: Clock? = NodeClock(),
         val schemas: SchemaService? = NodeSchemaService(),
         val customContractUpgradeService: ContractUpgradeService? = null,
-        val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2)
-) : ServiceHubInternal {
+        val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2),
+        protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
+) : ServiceHubInternal, StateLoader by stateLoader {
     override val vaultQueryService: VaultQueryService
         get() = customVaultQuery ?: throw UnsupportedOperationException()
     override val transactionVerifierService: TransactionVerifierService

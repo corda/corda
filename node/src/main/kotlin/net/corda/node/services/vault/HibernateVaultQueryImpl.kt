@@ -11,7 +11,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.VaultQueryService
-import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.VaultServiceInternal
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
@@ -28,8 +28,8 @@ import java.lang.Exception
 import java.util.*
 import javax.persistence.Tuple
 
-class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
-                              val vault: VaultService) : SingletonSerializeAsToken(), VaultQueryService {
+class HibernateVaultQueryImpl(private val hibernateConfig: HibernateConfiguration,
+                              private val vault: VaultServiceInternal) : SingletonSerializeAsToken(), VaultQueryService {
     companion object {
         val log = loggerFor<HibernateVaultQueryImpl>()
     }
@@ -58,6 +58,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
                 }
             }
         }
+        vault.vaultQueryService = this
     }
 
     @Throws(VaultQueryException::class)
@@ -168,7 +169,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
     /**
      * Derive list from existing vault states and then incrementally update using vault observables
      */
-    fun bootstrapContractStateTypes(): MutableMap<String, MutableSet<String>> {
+    private fun bootstrapContractStateTypes(): MutableMap<String, MutableSet<String>> {
         val criteria = criteriaBuilder.createQuery(String::class.java)
         val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
         criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
@@ -195,7 +196,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
         val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
         clazz.interfaces.forEach {
-            if (!it.equals(ContractState::class.java)) {
+            if (it != ContractState::class.java) {
                 @Suppress("UNCHECKED_CAST")
                 myInterfaces.add(it as Class<T>)
                 myInterfaces.addAll(deriveContractInterfaces(it))

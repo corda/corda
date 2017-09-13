@@ -20,9 +20,7 @@ import net.corda.core.internal.toX509CertHolder
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.schemas.MappedSchema
@@ -382,7 +380,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
-        _services = ServiceHubInternalImpl()
+        val transactionStorage = makeTransactionStorage()
+        _services = ServiceHubInternalImpl(transactionStorage, StateLoaderImpl(transactionStorage))
         attachments = NodeAttachmentService(services.monitoringService.metrics)
         cordappProvider = CordappProvider(attachments, makeCordappLoader())
         legalIdentity = obtainIdentity()
@@ -679,17 +678,18 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
-    private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
-
+    private inner class ServiceHubInternalImpl(
+            override val validatedTransactions: WritableTransactionStorage,
+            private val stateLoader: StateLoader
+    ) : SingletonSerializeAsToken(), ServiceHubInternal, StateLoader by stateLoader {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val monitoringService = MonitoringService(MetricRegistry())
-        override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val schemaService by lazy { NodeSchemaService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
-        override val vaultService by lazy { NodeVaultService(this) }
+        override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
         override val vaultQueryService by lazy {
             HibernateVaultQueryImpl(database.hibernateConfig, vaultService)

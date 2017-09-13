@@ -6,12 +6,13 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.StateLoader
+import net.corda.core.node.StateLoaderImpl
 import net.corda.core.node.services.*
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.NonEmptySet
 import net.corda.node.VersionInfo
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.WritableTransactionStorage
@@ -45,7 +46,11 @@ import java.util.*
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices(vararg val keys: KeyPair) : ServiceHub {
+open class MockServices @JvmOverloads constructor(
+        vararg val keys: KeyPair,
+        override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage(),
+        protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
+) : ServiceHub, StateLoader by stateLoader {
 
     companion object {
 
@@ -109,14 +114,14 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
             val mockService = database.transaction {
                 object : MockServices(*(keys.toTypedArray())) {
                     override val identityService: IdentityService = database.transaction { identityServiceRef }
-                    override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
+                    override val vaultService = makeVaultService(database.hibernateConfig)
 
                     override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                         for (stx in txs) {
                             validatedTransactions.addTransaction(stx)
                         }
                         // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                        (vaultService as NodeVaultService).notifyAll(txs.map { it.tx })
+                        vaultService.notifyAll(txs.map { it.tx })
                     }
 
                     override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
@@ -142,7 +147,6 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     }
 
     override val attachments: AttachmentStorage = MockAttachmentStorage()
-    override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage()
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
     override val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
@@ -160,8 +164,8 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
 
     lateinit var hibernatePersister: HibernateObserver
 
-    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration( { NodeSchemaService() }, makeTestDatabaseProperties(), { identityService })): VaultService {
-        val vaultService = NodeVaultService(this)
+    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration( { NodeSchemaService() }, makeTestDatabaseProperties(), { identityService })): NodeVaultService {
+        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, stateLoader)
         hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
