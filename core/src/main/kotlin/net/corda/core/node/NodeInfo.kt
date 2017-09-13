@@ -18,6 +18,8 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
  * Info about a network node that acts on behalf of some form of contract party.
  */
 // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
+//  Note that order of `legalIdentitiesAndCerts` is now important. We still treat the first identity as a special one.
+//  It will change after introducing proper multi-identity management.
 @CordaSerializable
 data class NodeInfo(val addresses: List<NetworkHostAndPort>,
                     val legalIdentitiesAndCerts: List<PartyAndCertificate>,

@@ -68,7 +68,7 @@ class ScheduledFlowTests {
             val notary = serviceHub.networkMapCache.getAnyNotary()
             val builder = TransactionBuilder(notary)
                     .addOutputState(scheduledState, DUMMY_PROGRAM_ID)
-                    .addCommand(dummyCommand(serviceHub.myInfo.chooseIdentity().owningKey))
+                    .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, setOf(serviceHub.myInfo.chooseIdentity())))
         }
