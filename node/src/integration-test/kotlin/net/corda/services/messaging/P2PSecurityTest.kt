@@ -57,7 +57,7 @@ class P2PSecurityTest : NodeBasedTest() {
     private fun startSimpleNode(legalName: CordaX500Name,
                                 trustRoot: X509Certificate): SimpleNode {
         val config = testNodeConfiguration(
-                baseDirectory = baseDirectory(legalName.x500Name),
+                baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName).also {
             whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
         }

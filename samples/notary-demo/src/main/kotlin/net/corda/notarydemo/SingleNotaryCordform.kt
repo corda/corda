@@ -19,7 +19,7 @@ fun main(args: Array<String>) = SingleNotaryCordform.runNodes()
 
 val notaryDemoUser = User("demou", "demop", setOf(startFlowPermission<DummyIssueAndMove>(), startFlowPermission<RPCStartableNotaryFlowClient>()))
 
-object SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", DUMMY_NOTARY.name.x500Name) {
+object SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", DUMMY_NOTARY.name.x500Principal) {
     init {
         node {
             name(ALICE.name)

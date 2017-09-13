@@ -135,7 +135,10 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                            clusterSize: Int,
                            serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<StartedNode<Node>>> {
         ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { baseDirectory(getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country)) },
+                (0 until clusterSize).map {
+                    val clusterNodeName = CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country)
+                    baseDirectory(clusterNodeName)
+                },
                 serviceType.id,
                 notaryName)
 
@@ -163,7 +166,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         }
     }
 
-    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.organisation.replace(WHITESPACE, "")
+    protected fun baseDirectory(legalName: CordaX500Name) = tempFolder.root.toPath() / legalName.organisation.replace(WHITESPACE, "")
 
     private fun startNodeInternal(legalName: CordaX500Name,
                                   platformVersion: Int,
@@ -171,7 +174,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>,
                                   noNetworkMap: Boolean = false): StartedNode<Node> {
-        val baseDirectory = baseDirectory(legalName.x500Name).createDirectories()
+        val baseDirectory = baseDirectory(legalName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
         val config = ConfigHelper.loadConfig(

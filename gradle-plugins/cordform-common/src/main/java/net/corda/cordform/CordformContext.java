@@ -1,8 +1,8 @@
 package net.corda.cordform;
 
-import org.bouncycastle.asn1.x500.X500Name;
+import javax.security.auth.x500.X500Principal;
 import java.nio.file.Path;
 
 public interface CordformContext {
-    Path baseDirectory(X500Name nodeName);
+    Path baseDirectory(X500Principal nodeName);
 }
