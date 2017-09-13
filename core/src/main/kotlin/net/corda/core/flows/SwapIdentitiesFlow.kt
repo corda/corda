@@ -15,7 +15,7 @@ import net.corda.core.utilities.unwrap
  */
 @StartableByRPC
 @InitiatingFlow
-class TransactionKeyFlow(val otherSide: Party,
+class SwapIdentitiesFlow(val otherSide: Party,
                          val revocationEnabled: Boolean,
                          override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
     constructor(otherSide: Party) : this(otherSide, false, tracker())

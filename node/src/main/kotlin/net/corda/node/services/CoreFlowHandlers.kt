@@ -1,10 +1,6 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.UpgradeCommand
-import net.corda.core.contracts.UpgradedContract
-import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.Party
@@ -49,7 +45,7 @@ class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Accep
     }
 }
 
-class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean) : FlowLogic<Unit>() {
+class SwapIdentitiesHandler(val otherSide: Party, val revocationEnabled: Boolean) : FlowLogic<Unit>() {
     constructor(otherSide: Party) : this(otherSide, false)
     companion object {
         object SENDING_KEY : ProgressTracker.Step("Sending key")
@@ -63,7 +59,7 @@ class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean
         progressTracker.currentStep = SENDING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
         sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->
-            TransactionKeyFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
+            SwapIdentitiesFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
         }
     }
 }
