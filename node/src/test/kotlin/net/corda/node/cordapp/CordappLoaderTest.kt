@@ -44,6 +44,7 @@ class CordappLoaderTest {
                 listOf(loader.appClassLoader.loadClass("net.corda.core.flows.ContractUpgradeFlow\$Initiator").asSubclass(FlowLogic::class.java)),
                 emptyList(),
                 emptyList(),
+                emptySet(),
                 isolatedJAR)
         val expected = arrayOf(expectedCordapp)
         Assert.assertArrayEquals(expected, loader.cordapps.toTypedArray())
