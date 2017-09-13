@@ -107,7 +107,7 @@ class Node extends CordformNode {
         installBuiltPlugin()
         installCordapps()
         installConfig()
-        appendExtraConfig()
+        appendOptionalConfig()
     }
 
     /**
@@ -195,20 +195,20 @@ class Node extends CordformNode {
     /**
      * Appends installed config file with properties from an optional file.
      */
-    private void appendExtraConfig() {
+    private void appendOptionalConfig() {
         final configFileProperty = "configFile"
-        File additionalConfig
+        File optionalConfig
         if (project.findProperty(configFileProperty)) { //provided by -PconfigFile command line property when running Gradle task
-            additionalConfig = new File(project.findProperty(configFileProperty))
+            optionalConfig = new File(project.findProperty(configFileProperty))
         } else if (config.hasPath(configFileProperty)) {
-            additionalConfig = new File(config.getString(configFileProperty))
+            optionalConfig = new File(config.getString(configFileProperty))
         }
-        if (additionalConfig) {
-            if (!additionalConfig.exists()) {
-               println "$configFileProperty '$additionalConfig' not found"
+        if (optionalConfig) {
+            if (!optionalConfig.exists()) {
+               println "$configFileProperty '$optionalConfig' not found"
             } else {
                 def confFile = new File(project.buildDir.getPath() + "/../" + nodeDir, 'node.conf')
-                additionalConfig.withInputStream {
+                optionalConfig.withInputStream {
                     input -> confFile << input
                 }
             }
