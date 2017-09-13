@@ -10,8 +10,8 @@ UNRELEASED
   support dynamic classloading of contract and contract constraints.
 
 * CorDapps that contain contracts are now automatically loaded into the attachment storage - for CorDapp developers this
-  now means that contracts should be stored in separate JARs to avoid large JARs being auto imported to the attachment
-  store.
+  now means that contracts should be stored in separate JARs to flows, services and utilities to avoid large JARs being
+  auto imported to the attachment store.
 
 * About half of the code in test-utils has been moved to a new module ``node-driver``,
   and the test scope modules are now located in a ``testing`` directory.

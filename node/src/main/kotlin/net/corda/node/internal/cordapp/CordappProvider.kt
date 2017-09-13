@@ -3,8 +3,6 @@ package net.corda.node.internal.cordapp
 import com.google.common.collect.HashBiMap
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentStorage
-import java.io.File
-import java.io.FileInputStream
 import java.util.*
 
 /**
@@ -40,9 +38,7 @@ class CordappProvider(private val attachmentStorage: AttachmentStorage, private 
 
     private fun loadContractsIntoAttachmentStore(): Map<SecureHash, Cordapp> {
         val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }
-        val attachmentIds = cordappsWithAttachments.map {
-            FileInputStream(File(it.jarPath.toURI()))
-        }.map { attachmentStorage.importAttachment(it) }
-        return attachmentIds.zip(cordappsWithAttachments).associate { it.first to it.second }
+        val attachmentIds = cordappsWithAttachments.map { it.jarPath.openStream().use { attachmentStorage.importAttachment(it) } }
+        return attachmentIds.zip(cordappsWithAttachments).toMap()
     }
 }
