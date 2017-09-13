@@ -4,6 +4,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -25,6 +26,7 @@ data class Cordapp(
         val rpcFlows: List<Class<out FlowLogic<*>>>,
         val services: List<Class<out SerializeAsToken>>,
         val plugins: List<CordaPluginRegistry>,
+        val customSchemas: Set<MappedSchema>,
         val jarPath: URL) {
     companion object {
         private val logger = loggerFor<Cordapp>()

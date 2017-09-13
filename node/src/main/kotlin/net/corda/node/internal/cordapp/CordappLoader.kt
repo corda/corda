@@ -90,7 +90,13 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
     private fun loadCordapps(): List<Cordapp> {
         return cordappJarPaths.map {
             val scanResult = scanCordapp(it)
-            Cordapp(findContractClassNames(scanResult), findInitiatedFlows(scanResult), findRPCFlows(scanResult), findServices(scanResult), findPlugins(it), it)
+            Cordapp(findContractClassNames(scanResult),
+                    findInitiatedFlows(scanResult),
+                    findRPCFlows(scanResult),
+                    findServices(scanResult),
+                    findPlugins(it),
+                    findCustomSchemas(scanResult),
+                    it)
         }
     }
 
@@ -131,8 +137,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         return ServiceLoader.load(CordaPluginRegistry::class.java, URLClassLoader(arrayOf(cordappJarPath), null)).toList()
     }
 
-    fun findCustomSchemas(): Set<MappedSchema> {
-        return scanResult?.getClassesWithSuperclass(MappedSchema::class)?.toSet() ?: emptySet()
+    private fun findCustomSchemas(scanResult: ScanResult): Set<MappedSchema> {
+        return scanResult.getClassesWithSuperclass(MappedSchema::class).toSet()
     }
 
     private fun scanCordapp(cordappJarPath: URL): ScanResult {

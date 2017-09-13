@@ -215,7 +215,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             installCordaServices()
             registerCordappFlows()
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-            registerCustomSchemas(cordappLoader.findCustomSchemas())
+            registerCustomSchemas(cordappLoader.cordapps.flatMap { it.customSchemas }.toSet())
 
             runOnStop += network::stop
         }
