@@ -169,7 +169,7 @@ object InteractiveShell {
                 }
             }
             val attributes = mapOf(
-                    "node" to node.node,
+                    "node" to node.internals,
                     "services" to node.services,
                     "ops" to node.rpcOps,
                     "mapper" to yamlInputMapper

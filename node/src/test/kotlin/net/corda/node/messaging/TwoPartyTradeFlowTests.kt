@@ -99,8 +99,8 @@ class TwoPartyTradeFlowTests {
             val cashIssuer = bankNode.info.legalIdentity.ref(1)
             val cpIssuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
-            aliceNode.node.disableDBCloseOnStop()
-            bobNode.node.disableDBCloseOnStop()
+            aliceNode.internals.disableDBCloseOnStop()
+            bobNode.internals.disableDBCloseOnStop()
 
             bobNode.database.transaction {
                 bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notaryNode.info.notaryIdentity,
@@ -127,11 +127,11 @@ class TwoPartyTradeFlowTests {
             aliceNode.database.transaction {
                 assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            aliceNode.node.manuallyCloseDB()
+            aliceNode.internals.manuallyCloseDB()
             bobNode.database.transaction {
                 assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            bobNode.node.manuallyCloseDB()
+            bobNode.internals.manuallyCloseDB()
         }
     }
 
@@ -146,8 +146,8 @@ class TwoPartyTradeFlowTests {
             val bankNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
             val issuer = bankNode.info.legalIdentity.ref(1)
 
-            aliceNode.node.disableDBCloseOnStop()
-            bobNode.node.disableDBCloseOnStop()
+            aliceNode.internals.disableDBCloseOnStop()
+            bobNode.internals.disableDBCloseOnStop()
 
             val cashStates = bobNode.database.transaction {
                 bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, notaryNode.info.notaryIdentity, 3, 3,
@@ -181,11 +181,11 @@ class TwoPartyTradeFlowTests {
             aliceNode.database.transaction {
                 assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            aliceNode.node.manuallyCloseDB()
+            aliceNode.internals.manuallyCloseDB()
             bobNode.database.transaction {
                 assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            bobNode.node.manuallyCloseDB()
+            bobNode.internals.manuallyCloseDB()
         }
     }
 
@@ -213,8 +213,8 @@ class TwoPartyTradeFlowTests {
             bobNode.database.transaction {
                 bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
             }
-            aliceNode.node.disableDBCloseOnStop()
-            bobNode.node.disableDBCloseOnStop()
+            aliceNode.internals.disableDBCloseOnStop()
+            bobNode.internals.disableDBCloseOnStop()
 
             val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
             val networkMapAddress = notaryNode.network.myAddress
@@ -299,8 +299,8 @@ class TwoPartyTradeFlowTests {
                 assertThat(restoredBobTransactions).containsAll(bobTransactionsBeforeCrash)
             }
 
-            aliceNode.node.manuallyCloseDB()
-            bobNode.node.manuallyCloseDB()
+            aliceNode.internals.manuallyCloseDB()
+            bobNode.internals.manuallyCloseDB()
         }
     }
 
@@ -338,7 +338,7 @@ class TwoPartyTradeFlowTests {
         val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
         mockNet.runNetwork()
-        notaryNode.node.ensureRegistered()
+        notaryNode.internals.ensureRegistered()
 
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
         allNodes.forEach { node ->
@@ -449,7 +449,7 @@ class TwoPartyTradeFlowTests {
         val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
         mockNet.runNetwork()
-        notaryNode.node.ensureRegistered()
+        notaryNode.internals.ensureRegistered()
 
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
         allNodes.forEach { node ->
@@ -554,7 +554,7 @@ class TwoPartyTradeFlowTests {
                                   buyerNode: StartedNode<MockNetwork.MockNode>,
                                   assetToSell: StateAndRef<OwnableState>,
                                   anonymous: Boolean = true): RunResult {
-        val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.node.registerInitiatedFlow(BuyerAcceptor::class.java)
+        val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.internals.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
         val seller = SellerInitiator(buyerNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, anonymous)
         val sellerResult = sellerNode.services.startFlow(seller).resultFuture
@@ -611,7 +611,7 @@ class TwoPartyTradeFlowTests {
         val issuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
         mockNet.runNetwork()
-        notaryNode.node.ensureRegistered()
+        notaryNode.internals.ensureRegistered()
 
         // Let the nodes know about each other - normally the network map would handle this
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)

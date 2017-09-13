@@ -66,8 +66,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         // Wait until ports are released
         val portNotBoundChecks = nodes.flatMap {
             listOf(
-                    it.node.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
-                    it.node.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
+                    it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
+                    it.internals.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
             )
         }.filterNotNull()
         nodes.clear()
@@ -116,7 +116,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         } else {
             mapOf(
                     "networkMapService" to mapOf(
-                            "address" to networkMapNode.node.configuration.p2pAddress.toString(),
+                            "address" to networkMapNode.internals.configuration.p2pAddress.toString(),
                             "legalName" to networkMapNode.info.legalIdentity.name.toString()
                     )
             )
@@ -128,7 +128,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 rpcUsers,
                 networkMapConf + configOverrides,
                 noNetworkMap)
-        return if (waitForConnection) node.node.nodeReadyFuture.map { node } else doneFuture(node)
+        return if (waitForConnection) node.internals.nodeReadyFuture.map { node } else doneFuture(node)
     }
 
     fun startNotaryCluster(notaryName: CordaX500Name,
@@ -192,7 +192,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 initialiseSerialization = false).start()
         nodes += node
         thread(name = legalName.organisation) {
-            node.node.run()
+            node.internals.run()
         }
         return node
     }

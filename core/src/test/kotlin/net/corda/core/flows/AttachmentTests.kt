@@ -60,10 +60,10 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        n0.node.ensureRegistered()
+        n0.internals.ensureRegistered()
 
-        n0.node.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        n1.node.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n0.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n1.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         // Insert an attachment into node zero's store directly.
         val id = n0.database.transaction {
@@ -98,10 +98,10 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        n0.node.ensureRegistered()
+        n0.internals.ensureRegistered()
 
-        n0.node.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        n1.node.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n0.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n1.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
@@ -129,10 +129,10 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        n0.node.ensureRegistered()
+        n0.internals.ensureRegistered()
 
-        n0.node.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        n1.node.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n0.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n1.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.

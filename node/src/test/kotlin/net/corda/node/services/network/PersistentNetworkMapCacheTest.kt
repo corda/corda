@@ -29,7 +29,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     @Before
     fun start() {
         val nodes = startNodesWithPort(partiesList)
-        nodes.forEach { it.node.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
+        nodes.forEach { it.internals.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
         nodes.forEach {
             infos.add(it.info)
             addressesMap[it.info.legalIdentity.name] = it.info.addresses[0]
@@ -124,13 +124,13 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         }
         // Start Network Map and see that charlie node appears in caches.
         val nms = startNodesWithPort(listOf(DUMMY_NOTARY), noNetworkMap = false)[0]
-        nms.node.startupComplete.get()
+        nms.internals.startupComplete.get()
         assert(nms.inNodeNetworkMapService != NullNetworkMapService)
         assert(infos.any {it.legalIdentity == nms.info.legalIdentity})
         otherNodes.forEach {
             assert(nms.info.legalIdentity in it.services.networkMapCache.partyNodes.map { it.legalIdentity })
         }
-        charlie.node.nodeReadyFuture.get() // Finish registration.
+        charlie.internals.nodeReadyFuture.get() // Finish registration.
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
         val cacheA = otherNodes[0].services.networkMapCache.partyNodes
         val cacheB = otherNodes[1].services.networkMapCache.partyNodes
@@ -162,7 +162,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     private fun checkConnectivity(nodes: List<StartedNode<*>>) {
         nodes.forEach { node1 ->
             nodes.forEach { node2 ->
-                node2.node.registerInitiatedFlow(SendBackFlow::class.java)
+                node2.internals.registerInitiatedFlow(SendBackFlow::class.java)
                 val resultFuture = node1.services.startFlow(SendFlow(node2.info.legalIdentity)).resultFuture
                 assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")
             }

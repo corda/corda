@@ -11,7 +11,7 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
 
 interface StartedNode<out N : AbstractNode> {
-    val node: N
+    val internals: N
     val services: ServiceHubInternal
     val info: NodeInfo
     val checkpointStorage: CheckpointStorage
@@ -21,5 +21,5 @@ interface StartedNode<out N : AbstractNode> {
     val network: MessagingService
     val database: CordaPersistence
     val rpcOps: CordaRPCOps
-    fun dispose() = node.stop()
+    fun dispose() = internals.stop()
 }

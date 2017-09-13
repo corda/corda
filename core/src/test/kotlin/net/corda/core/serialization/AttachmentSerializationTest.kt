@@ -71,9 +71,9 @@ class AttachmentSerializationTest {
         mockNet = MockNetwork()
         server = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         client = mockNet.createNode(server.network.myAddress)
-        client.node.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
+        client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
         mockNet.runNetwork()
-        server.node.ensureRegistered()
+        server.internals.ensureRegistered()
     }
 
     @After
@@ -145,7 +145,7 @@ class AttachmentSerializationTest {
     }
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int, sendData: Boolean = false) {
-        server.node.internalRegisterFlowFactory(
+        server.internals.internalRegisterFlowFactory(
                 ClientLogic::class.java,
                 InitiatedFlowFactory.Core { ServerLogic(it, sendData) },
                 ServerLogic::class.java,
@@ -156,7 +156,7 @@ class AttachmentSerializationTest {
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.dispose()
-        client = mockNet.createNode(server.network.myAddress, client.node.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
+        client = mockNet.createNode(server.network.myAddress, client.internals.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                                 entropyRoot: BigInteger): MockNetwork.MockNode {

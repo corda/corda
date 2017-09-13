@@ -35,9 +35,9 @@ class FxTransactionBuildTutorialTest {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
-        nodeA.node.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.node.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.node.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
+        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.internals.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
     }
 
     @After

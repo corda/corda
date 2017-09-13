@@ -201,10 +201,10 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         val mockNet = MockNetwork(initialiseSerialization = false)
         val n1 = mockNet.createNotaryNode()
         val oracleNode = mockNet.createNode(n1.network.myAddress).apply {
-            node.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
-            node.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
+            internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+            internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
-                node.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+                internals.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
             }
         }
         val tx = makePartialTX()

@@ -51,7 +51,7 @@ class ContractUpgradeFlowTest {
 
         // Process registration
         mockNet.runNetwork()
-        a.node.ensureRegistered()
+        a.internals.ensureRegistered()
 
         notary = nodes.notaryNode.info.notaryIdentity
 

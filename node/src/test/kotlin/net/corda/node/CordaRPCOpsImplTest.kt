@@ -76,7 +76,7 @@ class CordaRPCOpsImplTest {
         ))))
 
         mockNet.runNetwork()
-        networkMap.node.ensureRegistered()
+        networkMap.internals.ensureRegistered()
     }
 
     @After

@@ -39,7 +39,7 @@ class CollectSignaturesFlowTests {
         c = nodes.partyNodes[2]
         notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
-        a.node.ensureRegistered()
+        a.internals.ensureRegistered()
     }
 
     @After
@@ -49,7 +49,7 @@ class CollectSignaturesFlowTests {
 
     private fun registerFlowOnAllNodes(flowClass: KClass<out FlowLogic<*>>) {
         listOf(a, b, c).forEach {
-            it.node.registerInitiatedFlow(flowClass.java)
+            it.internals.registerInitiatedFlow(flowClass.java)
         }
     }
 

@@ -28,7 +28,7 @@ public class FlowsInJavaTest {
         node2 = someNodes.getPartyNodes().get(1);
         mockNet.runNetwork();
         // Ensure registration was successful
-        node1.getNode().getNodeReadyFuture().get();
+        node1.getInternals().getNodeReadyFuture().get();
     }
 
     @After
@@ -38,7 +38,7 @@ public class FlowsInJavaTest {
 
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
-        node2.getNode().registerInitiatedFlow(SendHelloAndThenReceive.class);
+        node2.getInternals().registerInitiatedFlow(SendHelloAndThenReceive.class);
         Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(node2.getInfo().getLegalIdentity())).getResultFuture();
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");

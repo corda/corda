@@ -40,7 +40,7 @@ class NotaryServiceTests {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
         clientNode = mockNet.createNode(notaryNode.network.myAddress)
         mockNet.runNetwork() // Clear network map registration messages
-        notaryNode.node.ensureRegistered()
+        notaryNode.internals.ensureRegistered()
     }
 
     @After

@@ -93,15 +93,15 @@ open class NodeStartup(val args: Array<String>) {
     open protected fun startNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
         val advertisedServices = conf.calculateServices()
         val node = createNode(conf, versionInfo, advertisedServices).start()
-        printPluginsAndServices(node.node)
-        node.node.nodeReadyFuture.thenMatch({
+        printPluginsAndServices(node.internals)
+        node.internals.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = node.info.legalIdentity.name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
-            node.node.startupComplete.then {
+            node.internals.startupComplete.then {
                 try {
                     InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, node)
                 } catch(e: Throwable) {
@@ -112,7 +112,7 @@ open class NodeStartup(val args: Array<String>) {
         {
             th -> logger.error("Unexpected exception during registration", th)
         })
-        node.node.run()
+        node.internals.run()
     }
 
     open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: FullNodeConfiguration) {

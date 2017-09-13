@@ -159,7 +159,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val ratesOracle = mockNet.createUnstartedNode(networkMap.network.myAddress, nodeFactory = RatesOracleFactory)
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
-    val serviceProviders: List<SimulatedNode> = listOf(notary.node, ratesOracle, networkMap.node)
+    val serviceProviders: List<SimulatedNode> = listOf(notary.internals, ratesOracle, networkMap.internals)
     val banks: List<SimulatedNode> = bankFactory.createAll()
 
     val clocks = (serviceProviders + regulators + banks).map { it.platformClock as TestClock }
@@ -230,7 +230,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     protected fun showProgressFor(nodes: List<StartedNode<SimulatedNode>>) {
         nodes.forEach { node ->
             node.smm.changes.filter { it is StateMachineManager.Change.Add }.subscribe {
-                linkFlowProgress(node.node, it.logic)
+                linkFlowProgress(node.internals, it.logic)
             }
         }
     }

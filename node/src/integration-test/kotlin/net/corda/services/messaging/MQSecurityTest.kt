@@ -156,9 +156,9 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     fun loginToRPCAndGetClientQueue(): String {
-        loginToRPC(alice.node.configuration.rpcAddress!!, rpcUser)
+        loginToRPC(alice.internals.configuration.rpcAddress!!, rpcUser)
         val clientQueueQuery = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
-        val client = clientTo(alice.node.configuration.rpcAddress!!)
+        val client = clientTo(alice.internals.configuration.rpcAddress!!)
         client.start(rpcUser.username, rpcUser.password, false)
         return client.session.addressQuery(clientQueueQuery).queueNames.single().toString()
     }
@@ -218,7 +218,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     private fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode(BOB.name).getOrThrow()
-        bob.node.registerInitiatedFlow(ReceiveFlow::class.java)
+        bob.internals.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.legalIdentity
         // Perform a protocol exchange to force the peer queue to be created
         alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()

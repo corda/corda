@@ -54,8 +54,8 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
         Set<ServiceInfo> services = new HashSet<>(singletonList(new ServiceInfo(ValidatingNotaryService.Companion.getType(), null)));
         CordaFuture<StartedNode<Node>> nodeFuture = startNode(getALICE().getName(), 1, services, singletonList(rpcUser), emptyMap());
         node = nodeFuture.get();
-        node.getNode().registerCustomSchemas(Collections.singleton(CashSchemaV1.INSTANCE));
-        client = new CordaRPCClient(requireNonNull(node.getNode().getConfiguration().getRpcAddress()), null, getDefault(), false);
+        node.getInternals().registerCustomSchemas(Collections.singleton(CashSchemaV1.INSTANCE));
+        client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()), null, getDefault(), false);
     }
 
     @After

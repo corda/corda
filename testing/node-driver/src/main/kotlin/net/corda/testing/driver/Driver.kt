@@ -889,7 +889,7 @@ class DriverDSL(
                 // TODO pass the version in?
                 val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, initialiseSerialization = false).start()
                 val nodeThread = thread(name = nodeConf.myLegalName.organisation) {
-                    node.node.run()
+                    node.internals.run()
                 }
                 node to nodeThread
             }.flatMap { nodeAndThread -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress).map { nodeAndThread } }

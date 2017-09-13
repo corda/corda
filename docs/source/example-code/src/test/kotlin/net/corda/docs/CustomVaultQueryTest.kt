@@ -38,10 +38,10 @@ class CustomVaultQueryTest {
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
 
-        nodeA.node.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
-        nodeA.node.installCordaService(CustomVaultQuery.Service::class.java)
-        nodeA.node.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.node.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeA.internals.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
+        nodeA.internals.installCordaService(CustomVaultQuery.Service::class.java)
+        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1))
     }
 
     @After

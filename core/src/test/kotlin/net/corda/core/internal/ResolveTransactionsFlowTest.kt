@@ -44,8 +44,8 @@ class ResolveTransactionsFlowTest {
         val nodes = mockNet.createSomeNodes()
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
-        a.node.registerInitiatedFlow(TestResponseFlow::class.java)
-        b.node.registerInitiatedFlow(TestResponseFlow::class.java)
+        a.internals.registerInitiatedFlow(TestResponseFlow::class.java)
+        b.internals.registerInitiatedFlow(TestResponseFlow::class.java)
         notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
     }

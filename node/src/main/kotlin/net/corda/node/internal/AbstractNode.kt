@@ -102,7 +102,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                             val platformClock: Clock,
                             @VisibleForTesting val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
     private class StartedNodeImpl<out N : AbstractNode>(
-            override val node: N,
+            override val internals: N,
             override val services: ServiceHubInternalImpl,
             override val info: NodeInfo,
             override val checkpointStorage: CheckpointStorage,
@@ -188,7 +188,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         log.info("Node starting up ...")
 
         // Do all of this in a database transaction so anything that might need a connection has one.
-        val started = initialiseDatabasePersistence {
+        val startedImpl = initialiseDatabasePersistence {
             val tokenizableServices = makeServices()
 
             smm = StateMachineManager(services,
@@ -224,7 +224,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
         // If we successfully  loaded network data from database, we set this future to Unit.
         _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
-        return started.apply {
+        return startedImpl.apply {
             database.transaction {
                 smm.start()
                 // Shut down the SMM so no Fibers are scheduled.

@@ -42,7 +42,7 @@ class WorkflowTransactionBuildTutorialTest {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
-        nodeA.node.registerInitiatedFlow(RecordCompletionFlow::class.java)
+        nodeA.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)
     }
 
     @After
