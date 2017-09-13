@@ -1,0 +1,43 @@
+{
+  "name": "angular-fcsa-number",
+  "version": "1.5.3",
+  "authors": [
+    "Paul Yoder <paulyoder@gmail.com>"
+  ],
+  "description": "An Angular directive that validates numbers and adds commas for the thousands separator.",
+  "main": "src/fcsaNumber.js",
+  "keywords": [
+    "angular",
+    "directive",
+    "format",
+    "number",
+    "validate"
+  ],
+  "license": "Apache V2",
+  "homepage": "https://github.com/FCSAmericaDev/angular-fcsa-number",
+  "ignore": [
+    "**/.*",
+    "**/*.coffee",
+    "node_modules",
+    "bower_components",
+    "test",
+    "Gruntfile.coffee",
+    "karma.conf.js",
+    "package.json"
+  ],
+  "dependencies": {
+    "angular": "~1.x"
+  },
+  "devDependencies": {
+    "angular-mocks": "~1.x"
+  },
+  "_release": "1.5.3",
+  "_resolution": {
+    "type": "version",
+    "tag": "v1.5.3",
+    "commit": "3472da66d408c9fed412f954397ea9a860e56dc6"
+  },
+  "_source": "https://github.com/FCSAmericaDev/angular-fcsa-number.git",
+  "_target": "^1.5.3",
+  "_originalSource": "angular-fcsa-number"
+}

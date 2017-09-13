@@ -1,0 +1,188 @@
+<div class="ui container">
+    <div class="ui hidden divider"></div>
+    <div class="ui negative message" id="form-error" ng-show="formError">{{formError}}</div>
+    <div class="ui negative message" id="http-error" ng-show="httpError">{{httpError}}</div>
+    <h3 class="ui horizontal divider header">
+        <i class="list icon"></i>
+        New Deal
+    </h3>
+    <form id="deal-form" class="ui form" ng-submit="createDeal()">
+        <div id="irscolumns" class="ui centered grid">
+            <div class="sixteen wide tablet eight wide computer column">
+                <div class="field">
+                    <label>Base Currency</label>
+                    <select class="ui  fluid" name="token" ng-model="deal.common.baseCurrency">
+                        <option value="EUR">EUR</option>
+                        <option value="USD">USD</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Effective Date</label>
+                    <input type="date" name="effectiveDate" ng-model="deal.common.effectiveDate"/>
+                </div>
+                <div class="field">
+                    <label>Termination Date</label>
+                    <input type="date" name="terminationDate" ng-model="deal.common.terminationDate"/>
+                </div>
+            </div>
+            <div class="sixteen wide column">
+                <button type="button" id="swapirscolumns" class="ui icon button fluid">
+                    <i class="exchange icon"></i>
+                </button>
+            </div>
+            <div class="eight wide column irscolumn" id="createfixedleg">
+                <h3>Fixed Leg</h3>
+                <div class="field">
+                    <label>Fixed Rate Payer</label>
+                    <input type="text" name="fixedRatePayer" ng-model="deal.fixedLeg.fixedRatePayer"/>
+                </div>
+                <div class="field">
+                    <label>Notional</label>
+                    <input type="text" name="quantity" ng-model="deal.fixedLeg.notional.quantity" fcsa-number/>
+                </div>
+                <div class="field">
+                    <label>Fixed Rate</label>
+                    <input type="text" name="value" class="percent" ng-model="deal.fixedLeg.fixedRate"/>
+                </div>
+                <div class="field">
+                    <label>Payment Frequency</label>
+                    <select class="ui selection" ng-model="deal.fixedLeg.paymentFrequency">
+                        <option value="Annual">Annual</option>
+                        <option value="SemiAnnual">Semi Annual</option>
+                        <option value="Quarterly">Quarterly</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Day Count Basis</label>
+                    <select class="ui selection"
+                            ng-model="deal.fixedLeg.dayCountBasis"
+                            ng-options="key for (key, value) in dayCountBasisLookup">
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Roll Convention</label>
+                    <select class="ui selection" ng-model="deal.fixedLeg.rollConvention">
+                        <option value="Following">Following</option>
+                        <option value="Preceding">Preceding</option>
+                        <option value="ModifiedFollowing">Modified following</option>
+                        <option value="ModifiedFollowingBimonthly">Modified following bimonthly</option>
+                        <option value="EndOfMonth">End of month</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Day in Month</label>
+                    <input type="number" name="dayInMonth" min="1" max="31" ng-model="deal.fixedLeg.dayInMonth"/>
+                </div>
+                <div class="field">
+                    <label>Payment Delay</label>
+                    <select class="ui selection" ng-model="deal.fixedLeg.paymentDelay">
+                        <option value="0">T+00D</option>
+                        <option value="1">T+01D</option>
+                        <option value="2" selected="selected">T+02D</option>
+                        <option value="3">T+03D</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Interest Period Adjustment</label>
+                    <select class="ui selection" ng-model="deal.fixedLeg.interestPeriodAdjustment">
+                        <option value="Adjusted">Adjusted</option>
+                        <option value="Unadjusted">Unadjusted</option>
+                    </select>
+                </div>
+            </div>
+            <div class="eight wide column irscolumn" id="createfloatingleg">
+                <h3>Floating Leg</h3>
+                <div class="field">
+                    <label>Floating Rate Payer</label>
+                    <input type="text" name="floatingRatePayer" ng-model="deal.floatingLeg.floatingRatePayer"/>
+                </div>
+                <div class="field">
+                    <label>Notional</label>
+                    <input type="text" name="quantity" ng-model="deal.floatingLeg.notional.quantity" fcsa-number/>
+                </div>
+                <div class="field">
+                    <label>Payment Frequency</label>
+                    <select class="ui selection" ng-model="deal.floatingLeg.paymentFrequency">
+                        <option value="Annual">Annual</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="SemiAnnual">Semi Annual</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Day Count Basis</label>
+                    <select class="ui selection"
+                            ng-model="deal.floatingLeg.dayCountBasis"
+                            ng-options="key for (key, value) in dayCountBasisLookup">
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Roll Convention</label>
+                    <select class="ui selection" ng-model="deal.floatingLeg.rollConvention">
+                        <option value="Following">Following</option>
+                        <option value="Preceding">Preceding</option>
+                        <option value="ModifiedFollowing">Modified following</option>
+                        <option value="ModifiedFollowingBimonthly">Modified following bimonthly</option>
+                        <option value="EndOfMonth">End of month</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Fixing Roll Convention</label>
+                    <select class="ui selection" ng-model="deal.floatingLeg.fixingRollConvention">
+                        <option value="Following">Following</option>
+                        <option value="Preceding">Preceding</option>
+                        <option value="ModifiedFollowing">Modified following</option>
+                        <option value="ModifiedFollowingBimonthly">Modified following bimonthly</option>
+                        <option value="EndOfMonth">End of month</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Day In Month</label>
+                    <input type="number" name="dayInMonth" min="1" max="31" ng-model="deal.floatingLeg.dayInMonth"/>
+                </div>
+                <div class="field">
+                    <label>Reset Day In Month</label>
+                    <input type="number" name="resetDayInMonth" min="1" max="31" ng-model="deal.floatingLeg.resetDayInMonth"/>
+                </div>
+                <div class="field">
+                    <label>Payment Delay</label>
+                    <select class="ui selection" ng-model="deal.floatingLeg.paymentDelay">
+                        <option value="0">T+00D</option>
+                        <option value="1">T+01D</option>
+                        <option value="2">T+02D</option>
+                        <option value="3">T+03D</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Interest Period Adjustment</label>
+                    <select class="ui selection" ng-model="deal.floatingLeg.interestPeriodAdjustment">
+                        <option value="Adjusted">Adjusted</option>
+                        <option value="Unadjusted">Unadjusted</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Fixing Period Offset</label>
+                    <input type="number" min="0" name="fixingPeriodOffset" ng-model="deal.floatingLeg.fixingPeriodOffset"/>
+                </div>
+                <div class="field">
+                    <label>Reset Rule</label>
+                    <select class="ui selection" ng-model="deal.floatingLeg.resetRule">
+                        <option value="InAdvance">In Advance</option>
+                        <option value="InArrears">In Arrears</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Fixings Per Payment</label>
+                    <select class="ui selection" ng-model="deal.floatingLeg.fixingsPerPayment">
+                        <option value="Annual">Annual</option>
+                        <option value="Quarterly" selected="selected">Quarterly</option>
+                        <option value="SemiAnnual">Semi Annual</option>
+                    </select>
+                </div>
+            </div>
+            <div class="sixteen wide tablet eight wide computer column">
+                <input type="submit" class="ui submit primary button fluid"/>
+            </div>
+        </div>
+    </form>
+</div>

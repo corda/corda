@@ -1,0 +1,58 @@
+<div class="ui container">
+    <div class="ui hidden divider"></div>
+    <div class="ui negative message" id="http-error" ng-show="httpError">{{httpError}}</div>
+    <div class="ui info message" id="info-message" ng-show="infoMsg">{{infoMsg}}</div>
+    <div class="ui active dimmer" ng-show="isLoading()">
+        <div class="ui text loader">Loading</div>
+    </div>
+    <h3 class="ui horizontal divider header">
+            <i class="options icon"></i>
+        Controls
+    </h3>
+    <div class="ui card centered">
+        <div class="content" style="width:110%">
+            <div class="header">Run fixings</div>
+            <div class="description">
+                <div class="ui left labeled button">
+                    <span class="ui basic label">{{date.year}}</span>
+                    <button class="ui icon button" ng-click="updateDate('year')"><i class="plus icon"></i></button>
+                </div>
+                <div class="ui left labeled button">
+                    <span class="ui basic label">{{date.month}}</span>
+                    <button class="ui icon button" ng-click="updateDate('month')"><i class="plus icon"></i></button>
+                </div>
+                <div class="ui left labeled button">
+                    <span class="ui basic label">{{date.day}}</span>
+                    <button class="ui icon button" ng-click="updateDate('day')"><i class="plus icon"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="ui hidden divider"></div>
+    <div class="ui main">
+        <h3 class="ui horizontal divider header">
+            <i class="browser icon"></i>
+            Recent deals
+        </h3>
+        <table class="ui striped table">
+            <thead>
+            <tr class="center aligned">
+                <th>Trade Id</th>
+                <th>Fixed Leg Payer</th>
+                <th>Amount</th>
+                <th>Floating Rate Payer</th>
+                <th>Amount</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr class="center aligned" ng-repeat="deal in deals">
+                <td><a href="#/deal/{{deal.ref}}">{{deal.ref}}</a></td>
+                <td class="single line">{{renderX500Name(deal.fixedLeg.fixedRatePayer)}}</td>
+                <td class="single line">{{deal.fixedLeg.notional.quantity | number}} {{deal.fixedLeg.notional.token}}</td>
+                <td class="single line">{{renderX500Name(deal.floatingLeg.floatingRatePayer)}}</td>
+                <td class="single line">{{deal.floatingLeg.notional.quantity | number}} {{deal.floatingLeg.notional.token}}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

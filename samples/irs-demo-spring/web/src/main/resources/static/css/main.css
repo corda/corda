@@ -1,0 +1,15 @@
+#fixedleg tbody tr:nth-child(odd) {
+   background-color: #EEFAEE;
+}
+
+#createfixedleg, #fixedleg tbody tr:nth-child(even), #fixedleg thead th {
+   background-color: #D0FAD0;
+}
+
+#floatingleg tbody tr:nth-child(odd) {
+   background-color: #FAEEEE;
+}
+
+#createfloatingleg, #floatingleg tbody tr:nth-child(even), #floatingleg thead th {
+   background-color: #FAD0D0;
+}
