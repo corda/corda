@@ -4,8 +4,6 @@ import jdk.internal.org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
-import java.beans.BeanDescriptor
-import java.util.*
 
 abstract class Field(val field: Class<out Any?>) {
     abstract var descriptor: String?
@@ -95,12 +93,14 @@ class NullableField(field: Class<out Any?>) : ClassField(field) {
     override val nullabilityAnnotation = "Ljavax/annotation/Nullable;"
 
     constructor(name: String, field: Class<out Any?>) : this(field) {
+        this.name = name
+    }
+
+    init {
         if (field.isPrimitive) {
             throw NullablePrimitiveException(
                     "Field $name is primitive type ${Type.getDescriptor(field)} and thus cannot be nullable")
         }
-
-        this.name = name
     }
 
     override fun nullTest(mv: MethodVisitor, slot: Int) {
