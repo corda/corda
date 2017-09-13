@@ -148,8 +148,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         CordaX500Name.build(cert.subject).copy(commonName = null)
     }
 
+    // TODO: Fix init ordering: this shouldn't be a property but is required for pluginRegistries to resolve correctly in MockNode
+    private val cordappLoader: CordappLoader by lazy { makeCordappLoader() }
+
     open val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        cordappProvider.cordapps.flatMap { it.plugins } + DefaultWhitelist()
+        cordappLoader.cordapps.flatMap { it.plugins } + DefaultWhitelist()
     }
 
     /** Set to true once [start] has been successfully called. */
@@ -339,7 +342,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         checkpointStorage = DBCheckpointStorage()
         _services = ServiceHubInternalImpl()
         attachments = NodeAttachmentService(services.monitoringService.metrics)
-        cordappProvider = CordappProvider(attachments, makeCordappLoader())
+        cordappProvider = CordappProvider(attachments, cordappLoader)
         val legalIdentity = obtainIdentity()
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
