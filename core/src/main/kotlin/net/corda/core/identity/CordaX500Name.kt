@@ -80,11 +80,6 @@ data class CordaX500Name(val commonName: String?,
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
 
         @JvmStatic
-        fun build(principal: Principal) : CordaX500Name {
-            return build(X500Principal(principal.name))
-        }
-
-        @JvmStatic
         fun build(principal: X500Principal) : CordaX500Name {
             val x500Name = X500Name.getInstance(principal.encoded)
             val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = x500Name.rdNs
