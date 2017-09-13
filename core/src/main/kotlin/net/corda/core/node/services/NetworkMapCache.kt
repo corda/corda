@@ -91,7 +91,7 @@ interface NetworkMapCache {
     /** Look up the node info for a host and port. */
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
 
-    fun getPeerByLegalName(principal: X500Name): Party? = getNodeByLegalName(principal)?.let {
+    fun getPeerByLegalName(principal: CordaX500Name): Party? = getNodeByLegalName(principal)?.let {
         it.legalIdentitiesAndCerts.singleOrNull { it.name == principal }?.party
     }
 

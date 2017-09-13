@@ -68,7 +68,7 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         // Each transaction has its own set of recipients, but extra recipients get them all.
         progressTracker.currentStep = BROADCASTING
         for ((stx, parties) in notarisedTxns) {
-            val participants = (parties + extraRecipients).filter { it != me }.toSet()
+            val participants = (parties + extraRecipients).filter { it != me.party }.toSet()
             if (participants.isNotEmpty()) {
                 broadcastTransaction(stx, participants.toNonEmptySet())
             }

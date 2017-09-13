@@ -1,5 +1,6 @@
 package net.corda.nodeapi
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipientGroup
@@ -10,7 +11,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.SSLConfiguration
-import org.bouncycastle.asn1.x500.X500Name
 import java.security.KeyStore
 import java.security.PublicKey
 
@@ -102,7 +102,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     }
 
     // Used for bridges creation.
-    fun getArtemisPeerAddress(party: Party, address: NetworkHostAndPort, netMapName: X500Name? = null): ArtemisPeerAddress {
+    fun getArtemisPeerAddress(party: Party, address: NetworkHostAndPort, netMapName: CordaX500Name? = null): ArtemisPeerAddress {
         return if (party.name == netMapName) {
             NetworkMapAddress(address)
         } else {

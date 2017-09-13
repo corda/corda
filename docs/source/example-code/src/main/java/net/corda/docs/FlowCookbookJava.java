@@ -10,7 +10,6 @@ import net.corda.core.flows.*;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.internal.FetchDataFlow;
-import net.corda.core.node.ServiceHubKt;
 import net.corda.core.node.services.ServiceType;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.Vault.Page;
@@ -267,7 +266,7 @@ public class FlowCookbookJava {
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
             DummyContract.Commands.Create commandData = new DummyContract.Commands.Create();
-            PublicKey ourPubKey = ServiceHubKt.chooseIdentity(getServiceHub()).getOwningKey();
+            PublicKey ourPubKey = getServiceHub().getMyInfo().getLegalIdentitiesAndCerts().get(0).getOwningKey();
             PublicKey counterpartyPubKey = counterparty.getOwningKey();
             List<PublicKey> requiredSigners = ImmutableList.of(ourPubKey, counterpartyPubKey);
             Command<DummyContract.Commands.Create> ourCommand = new Command<>(commandData, requiredSigners);

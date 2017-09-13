@@ -282,5 +282,3 @@ interface ServiceHub : ServicesForResolution {
      */
     fun jdbcSession(): Connection
 }
-
-fun ServiceHub.chooseIdentity(): Party = this.myInfo.legalIdentitiesAndCerts.first().party
