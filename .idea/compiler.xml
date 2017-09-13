@@ -80,6 +80,12 @@
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
+      <module name="smoke-test-utils_main" target="1.8" />
+      <module name="smoke-test-utils_test" target="1.8" />
+      <module name="test-common_main" target="1.8" />
+      <module name="test-common_test" target="1.8" />
+      <module name="test-utils_main" target="1.8" />
+      <module name="test-utils_test" target="1.8" />
       <module name="testing-node-driver_integrationTest" target="1.8" />
       <module name="testing-node-driver_main" target="1.8" />
       <module name="testing-node-driver_test" target="1.8" />

@@ -74,14 +74,30 @@ val Int.millis: Duration get() = Duration.ofMillis(toLong())
  * will not be serialized, and if it's missing (or the first time it's accessed), the initializer will be
  * used to set it up.
  */
-fun <T> transient(initializer: () -> T): ValueProperty<T> = TransientProperty(initializer)
+fun <T> transient(initializer: () -> T): PropertyDelegate<T> = TransientProperty(initializer)
 
-interface ValueProperty<out T> {
+/**
+ * Simple interface encapsulating the implicit Kotlin contract for immutable property delegates.
+ */
+interface PropertyDelegate<out T> {
+    /**
+     * Invoked as part of Kotlin delegated properties construct.
+     */
     operator fun getValue(thisRef: Any?, property: KProperty<*>): T
 }
 
+/**
+ * Simple interface encapsulating the implicit Kotlin contract for mutable property delegates.
+ */
+interface VariablePropertyDelegate<T> : PropertyDelegate<T> {
+    /**
+     * Invoked as part of Kotlin delegated properties construct.
+     */
+    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T)
+}
+
 @CordaSerializable
-private class TransientProperty<out T> internal constructor(private val initialiser: () -> T) : ValueProperty<T> {
+private class TransientProperty<out T> internal constructor(private val initialiser: () -> T) : PropertyDelegate<T> {
     @Transient private var initialised = false
     @Transient private var value: T? = null
 
