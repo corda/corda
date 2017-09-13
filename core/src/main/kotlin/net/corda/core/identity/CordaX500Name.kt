@@ -9,6 +9,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
+import java.security.Principal
 import javax.security.auth.x500.X500Principal
 
 /**
@@ -79,11 +80,8 @@ data class CordaX500Name(val commonName: String?,
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
 
         @JvmStatic
-        fun build(certificate: java.security.cert.X509Certificate) : CordaX500Name = build(certificate.subjectX500Principal)
-        @JvmStatic
-        fun build(certificate: javax.security.cert.X509Certificate) : CordaX500Name {
-            val principal = X500Principal(certificate.subjectDN.name)
-            return build(principal)
+        fun build(principal: Principal) : CordaX500Name {
+            return build(X500Principal(principal.name))
         }
 
         @JvmStatic

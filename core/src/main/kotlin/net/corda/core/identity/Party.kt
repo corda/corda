@@ -29,7 +29,7 @@ import javax.security.auth.x500.X500Principal
  * @see CompositeKey
  */
 class Party(val name: CordaX500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
-    constructor(certificate: X509Certificate) : this(CordaX500Name.build(certificate), Crypto.toSupportedPublicKey(certificate.publicKey))
+    constructor(certificate: X509Certificate) : this(CordaX500Name.build(certificate.subjectX500Principal), Crypto.toSupportedPublicKey(certificate.publicKey))
     constructor(certificate: X509CertificateHolder) : this(CordaX500Name.build(X500Principal(certificate.subject.encoded)), Crypto.toSupportedPublicKey(certificate.subjectPublicKeyInfo))
     override fun nameOrNull(): CordaX500Name = name
     fun anonymise(): AnonymousParty = AnonymousParty(owningKey)
