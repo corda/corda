@@ -35,7 +35,7 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
-import net.corda.node.services.TransactionKeyHandler
+import net.corda.node.services.SwapIdentitiesHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -343,7 +343,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         installCoreFlow(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
         installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
         installCoreFlow(ContractUpgradeFlow.Initiator::class, ::Acceptor)
-        installCoreFlow(TransactionKeyFlow::class, ::TransactionKeyHandler)
+        installCoreFlow(SwapIdentitiesFlow::class, ::SwapIdentitiesHandler)
     }
 
     /**

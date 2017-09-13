@@ -14,7 +14,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-class TransactionKeyFlowTests {
+class SwapIdentitiesFlowTests {
     @Test
     fun `issue key`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
@@ -28,7 +28,7 @@ class TransactionKeyFlowTests {
         val bob: Party = bobNode.services.myInfo.legalIdentity
 
         // Run the flows
-        val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow(bob))
+        val requesterFlow = aliceNode.services.startFlow(SwapIdentitiesFlow(bob))
 
         // Get the results
         val actual: Map<Party, AnonymousParty> = requesterFlow.resultFuture.getOrThrow().toMap()
