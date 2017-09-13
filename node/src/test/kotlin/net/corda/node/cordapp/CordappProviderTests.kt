@@ -17,8 +17,8 @@ class CordappProviderTests {
         provider.start()
         val maybeAttachmentId = provider.getCordappAttachmentId(provider.cordapps.first())
 
-        Assert.assertTrue(maybeAttachmentId.isPresent)
-        Assert.assertNotNull(attachmentStore.openAttachment(maybeAttachmentId.get()))
+        Assert.assertNotNull(maybeAttachmentId)
+        Assert.assertNotNull(attachmentStore.openAttachment(maybeAttachmentId!!))
     }
 
     @Test
@@ -29,8 +29,7 @@ class CordappProviderTests {
         val provider = CordappProvider(attachmentStore, loader)
 
         provider.start()
-        val maybeAttachmentId = provider.getCordappAttachmentId(provider.cordapps.first())
-
-        Assert.assertFalse(maybeAttachmentId.isPresent)
+        
+        Assert.assertNull(provider.getCordappAttachmentId(provider.cordapps.first()))
     }
 }
