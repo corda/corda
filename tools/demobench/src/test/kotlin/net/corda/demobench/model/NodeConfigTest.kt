@@ -199,7 +199,7 @@ class NodeConfigTest {
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         val nodeConfig = config.toFileConfig()
-                .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
+                .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
                 .withFallback(ConfigFactory.parseResources("reference.conf"))
                 .resolve()
         val fullConfig = nodeConfig.parseAs<FullNodeConfiguration>()
@@ -229,7 +229,7 @@ class NodeConfigTest {
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         val nodeConfig = config.toFileConfig()
-                .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
+                .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
                 .withFallback(ConfigFactory.parseResources("web-reference.conf"))
                 .resolve()
         val webConfig = WebServerConfig(baseDir, nodeConfig)

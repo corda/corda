@@ -3,22 +3,16 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.utilities.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.SchedulableFlow
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.seconds
-import net.corda.core.utilities.trace
-import net.corda.core.utilities.transient
+import net.corda.core.utilities.*
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixableDealState
 import net.corda.finance.flows.TwoPartyDealFlow
@@ -65,11 +59,8 @@ object FixingFlow {
 
             val ptx = TransactionBuilder(txState.notary)
 
-            val oracle = serviceHub.networkMapCache.getNodesWithService(handshake.payload.oracleType).first()
-            val oracleParty = oracle.serviceIdentities(handshake.payload.oracleType).first()
-
             // DOCSTART 1
-            val addFixing = object : RatesFixFlow(ptx, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
+            val addFixing = object : RatesFixFlow(ptx, handshake.payload.oracle, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload.ref), fix)
@@ -82,7 +73,7 @@ object FixingFlow {
                 @Suspendable
                 override fun filtering(elem: Any): Boolean {
                     return when (elem) {
-                        is Command<*> -> oracleParty.owningKey in elem.signers && elem.value is Fix
+                        is Command<*> -> handshake.payload.oracle.owningKey in elem.signers && elem.value is Fix
                         else -> false
                     }
                 }
@@ -104,7 +95,7 @@ object FixingFlow {
                   override val payload: FixingSession,
                   override val progressTracker: ProgressTracker = TwoPartyDealFlow.Primary.tracker()) : TwoPartyDealFlow.Primary() {
         @Suppress("UNCHECKED_CAST")
-        internal val dealToFix: StateAndRef<FixableDealState> by transient {
+        private val dealToFix: StateAndRef<FixableDealState> by transient {
             val state = serviceHub.loadState(payload.ref) as TransactionState<FixableDealState>
             StateAndRef(state, payload.ref)
         }
@@ -121,7 +112,7 @@ object FixingFlow {
 
     /** Used to set up the session between [Floater] and [Fixer] */
     @CordaSerializable
-    data class FixingSession(val ref: StateRef, val oracleType: ServiceType)
+    data class FixingSession(val ref: StateRef, val oracle: Party)
 
     /**
      * This flow looks at the deal and decides whether to be the Fixer or Floater role in agreeing a fixing.
@@ -142,14 +133,14 @@ object FixingFlow {
         }
 
         @Suspendable
-        override fun call(): Unit {
+        override fun call() {
             progressTracker.nextStep()
             val dealToFix = serviceHub.loadState(ref)
             val fixableDeal = (dealToFix.data as FixableDealState)
             val parties = fixableDeal.participants.sortedBy { it.owningKey.toBase58String() }
             val myKey = serviceHub.myInfo.legalIdentity.owningKey
             if (parties[0].owningKey == myKey) {
-                val fixing = FixingSession(ref, fixableDeal.oracleType)
+                val fixing = FixingSession(ref, fixableDeal.oracle)
                 val counterparty = serviceHub.identityService.partyFromAnonymous(parties[1]) ?: throw IllegalStateException("Cannot resolve floater party")
                 // Start the Floater which will then kick-off the Fixer
                 subFlow(Floater(counterparty, fixing))

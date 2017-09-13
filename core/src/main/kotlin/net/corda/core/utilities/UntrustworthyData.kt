@@ -15,11 +15,7 @@ import java.io.Serializable
  * - Are any objects *reachable* from this object mismatched or not what you expected?
  * - Is it suspiciously large or small?
  */
-class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
-    val data: T
-        @Deprecated("Accessing the untrustworthy data directly without validating it first is a bad idea")
-        get() = fromUntrustedWorld
-
+class UntrustworthyData<out T>(@PublishedApi internal val fromUntrustedWorld: T) {
     @Suspendable
     @Throws(FlowException::class)
     fun <R> unwrap(validator: Validator<T, R>) = validator.validate(fromUntrustedWorld)
@@ -32,5 +28,4 @@ class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
     }
 }
 
-@Suppress("DEPRECATION")
-inline fun <T, R> UntrustworthyData<T>.unwrap(validator: (T) -> R): R = validator(data)
+inline fun <T, R> UntrustworthyData<T>.unwrap(validator: (T) -> R): R = validator(fromUntrustedWorld)

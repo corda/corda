@@ -138,6 +138,10 @@ UNRELEASED
    * Parties were not displayed for created deals in single view.
    * Non-default notional amounts caused the creation of new deals to fail.
 
+.. warning:: Renamed configuration property key `basedir` to `baseDirectory`. This will require updating existing configuration files.
+
+* Removed deprecated parts of the API.
+
 Milestone 14
 ------------
 

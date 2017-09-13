@@ -7,7 +7,6 @@ import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
@@ -25,7 +24,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.junit.After
-import org.junit.Assert
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
@@ -35,7 +34,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
 class NodeInterestRatesTest : TestDependencyInjectionBase() {
-    val TEST_DATA = NodeInterestRates.parseFile("""
+    private val TEST_DATA = NodeInterestRates.parseFile("""
         LIBOR 2016-03-16 1M = 0.678
         LIBOR 2016-03-16 2M = 0.685
         LIBOR 2016-03-16 1Y = 0.890
@@ -44,30 +43,27 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
 
-    val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    val DUMMY_CASH_ISSUER = Party(CordaX500Name(organisation = "Cash issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public)
+    private val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
+    private val DUMMY_CASH_ISSUER = Party(CordaX500Name(organisation = "Cash issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public)
+    private val services = MockServices(DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
 
-    lateinit var oracle: NodeInterestRates.Oracle
-    lateinit var database: CordaPersistence
+    private lateinit var oracle: NodeInterestRates.Oracle
+    private lateinit var database: CordaPersistence
 
-    fun fixCmdFilter(elem: Any): Boolean {
+    private fun fixCmdFilter(elem: Any): Boolean {
         return when (elem) {
-            is Command<*> -> oracle.identity.owningKey in elem.signers && elem.value is Fix
+            is Command<*> -> services.myInfo.legalIdentity.owningKey in elem.signers && elem.value is Fix
             else -> false
         }
     }
 
-    fun filterCmds(elem: Any): Boolean = elem is Command<*>
+    private fun filterCmds(elem: Any): Boolean = elem is Command<*>
 
     @Before
     fun setUp() {
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         database.transaction {
-            oracle = NodeInterestRates.Oracle(
-                    MEGA_CORP,
-                    MEGA_CORP_KEY.public,
-                    MockServices(DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
-            ).apply { knownFixes = TEST_DATA }
+            oracle = NodeInterestRates.Oracle(services).apply { knownFixes = TEST_DATA }
         }
     }
 
@@ -103,7 +99,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 5M")
             val res = oracle.query(listOf(q))
             assertEquals(1, res.size)
-            Assert.assertEquals(0.7316228, res[0].value.toDouble(), 0.0000001)
+            assertEquals(0.7316228, res[0].value.toDouble(), 0.0000001)
             assertEquals(q, res[0].of)
         }
     }
@@ -150,10 +146,10 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         database.transaction {
             val tx = makePartialTX()
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
-            tx.addCommand(fix, oracle.identity.owningKey)
+            tx.addCommand(fix, services.myInfo.legalIdentity.owningKey)
             // Sign successfully.
             val wtx = tx.toWireTransaction()
-            val ftx = wtx.buildFilteredTransaction(Predicate { x -> fixCmdFilter(x) })
+            val ftx = wtx.buildFilteredTransaction(Predicate { fixCmdFilter(it) })
             val signature = oracle.sign(ftx)
             wtx.checkSignature(signature)
         }
@@ -165,9 +161,9 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
             val tx = makePartialTX()
             val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val badFix = Fix(fixOf, BigDecimal("0.6789"))
-            tx.addCommand(badFix, oracle.identity.owningKey)
+            tx.addCommand(badFix, services.myInfo.legalIdentity.owningKey)
             val wtx = tx.toWireTransaction()
-            val ftx = wtx.buildFilteredTransaction(Predicate { x -> fixCmdFilter(x) })
+            val ftx = wtx.buildFilteredTransaction(Predicate { fixCmdFilter(it) })
             val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.sign(ftx) }
             assertEquals(fixOf, e1.fix)
         }
@@ -180,12 +176,12 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
             fun filtering(elem: Any): Boolean {
                 return when (elem) {
-                    is Command<*> -> oracle.identity.owningKey in elem.signers && elem.value is Fix
+                    is Command<*> -> services.myInfo.legalIdentity.owningKey in elem.signers && elem.value is Fix
                     is TransactionState<ContractState> -> true
                     else -> false
                 }
             }
-            tx.addCommand(fix, oracle.identity.owningKey)
+            tx.addCommand(fix, services.myInfo.legalIdentity.owningKey)
             val wtx = tx.toWireTransaction()
             val ftx = wtx.buildFilteredTransaction(Predicate(::filtering))
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx) }
@@ -204,16 +200,16 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     fun `network tearoff`() {
         val mockNet = MockNetwork(initialiseSerialization = false)
         val n1 = mockNet.createNotaryNode()
-        val n2 = mockNet.createNode(n1.network.myAddress, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
-        n2.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
-        n2.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
-        n2.database.transaction {
-            n2.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+        val oracleNode = mockNet.createNode(n1.network.myAddress).apply {
+            registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+            registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
+            database.transaction {
+                installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+            }
         }
         val tx = makePartialTX()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val oracle = n2.info.serviceIdentities(NodeInterestRates.Oracle.type).first()
-        val flow = FilteredRatesFlow(tx, oracle, fixOf, BigDecimal("0.675"), BigDecimal("0.1"))
+        val flow = FilteredRatesFlow(tx, oracleNode.info.legalIdentity, fixOf, BigDecimal("0.675"), BigDecimal("0.1"))
         LogHelper.setLevel("rates")
         mockNet.runNetwork()
         val future = n1.services.startFlow(flow).resultFuture

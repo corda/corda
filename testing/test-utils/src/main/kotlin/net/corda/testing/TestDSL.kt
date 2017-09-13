@@ -43,38 +43,6 @@ import kotlin.collections.set
 //
 
 /**
- * Here follows implementations of the [LedgerDSLInterpreter] and [TransactionDSLInterpreter] interfaces to be used in
- * tests. Top level primitives [ledger] and [transaction] that bind the interpreter types are also defined here.
- */
-
-@Deprecated(
-        message = "ledger doesn't nest, use tweak",
-        replaceWith = ReplaceWith("tweak"),
-        level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER", "unused")
-fun TransactionDSLInterpreter.ledger(
-        dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
-}
-
-@Deprecated(
-        message = "transaction doesn't nest, use tweak",
-        replaceWith = ReplaceWith("tweak"),
-        level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER", "unused")
-fun TransactionDSLInterpreter.transaction(
-        dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) {
-}
-
-@Deprecated(
-        message = "ledger doesn't nest, use tweak",
-        replaceWith = ReplaceWith("tweak"),
-        level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER", "unused")
-fun LedgerDSLInterpreter<TransactionDSLInterpreter>.ledger(
-        dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
-}
-
-/**
  * If you jumped here from a compiler error make sure the last line of your test tests for a transaction verify or fail.
  * This is a dummy type that can only be instantiated by functions in this module. This way we can ensure that all tests
  * will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of

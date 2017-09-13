@@ -69,7 +69,7 @@ data class CmdLineOptions(val baseDirectory: Path,
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
         val overrideConfig = ConfigFactory.parseMap(configOverrides + mapOf(
                 // Add substitution values here
-                "basedir" to baseDirectory.toString())
+                "baseDirectory" to baseDirectory.toString())
         )
         val finalConfig = overrideConfig
                 .withFallback(appConfig)
