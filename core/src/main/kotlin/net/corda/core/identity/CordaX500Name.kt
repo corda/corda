@@ -33,7 +33,7 @@ data class CordaX500Name(val commonName: String?,
                          val locality: String,
                          val state: String?,
                          val country: String) {
-    constructor(commonName: String, organisation: String, locality: String, country: String) : this(null, commonName, organisation, locality, null, country)
+    constructor(commonName: String, organisation: String, locality: String, country: String) : this(commonName = commonName, organisationUnit = null, organisation = organisation, locality = locality, state = null,  country = country)
     /**
      * @param organisation name of the organisation.
      * @param locality locality of the organisation, typically nearest major city.
