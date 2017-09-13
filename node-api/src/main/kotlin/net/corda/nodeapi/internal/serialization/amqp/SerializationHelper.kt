@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
+import net.corda.core.internal.declaredField
 import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.codec.Data
 import java.beans.IndexedPropertyDescriptor
@@ -237,4 +238,26 @@ internal fun suitableForObjectReference(type: Type): Boolean {
  */
 internal enum class CommonPropertyNames {
     IncludeInternalInfo,
+}
+
+/**
+ * Utility function which helps tracking the path in the object graph when exceptions are thrown.
+ * Since there might be a chain of nested calls it is useful to record which part of teh graph caused an issue.
+ * Path information is added to the message of teh exception being thrown.
+ */
+internal fun <T> ifThrowsAppend(strToAppend: String, block: () -> T): T {
+    try {
+        return block()
+    } catch (th: Throwable) {
+        th.setMessage("$strToAppend<-" + th.message)
+        throw th
+    }
+}
+
+/**
+ * Not a public property so will have to use reflection
+ */
+private fun Throwable.setMessage(newMsg: String) {
+    val detailMessageField = this.javaClass.declaredField<String>("detailMessage")
+    detailMessageField.value = newMsg
 }
