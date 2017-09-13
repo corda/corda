@@ -631,7 +631,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        val subject: CordaX500Name? = (certificates[0] as? java.security.cert.X509Certificate)?.let { CordaX500Name.build(it.subjectX500Principal) }
+        val nodeCertificate: X509Certificate = if (certificates[0] is X509Certificate)
+            certificates[0] as X509Certificate
+        else
+            throw ConfigurationException("Node certificate must be an X.509 certificate")
+        val subject: CordaX500Name? = CordaX500Name.build(nodeCertificate.subjectX500Principal)
         if (subject != name)
             throw ConfigurationException("The name for $id doesn't match what's in the key store: $name vs $subject")
 
