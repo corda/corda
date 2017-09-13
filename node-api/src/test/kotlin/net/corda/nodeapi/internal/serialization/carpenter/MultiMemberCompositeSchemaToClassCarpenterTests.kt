@@ -35,7 +35,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("b", amqpSchema.fields[1].name)
         assertEquals("int", amqpSchema.fields[1].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
@@ -79,7 +79,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("b", amqpSchema.fields[1].name)
         assertEquals("string", amqpSchema.fields[1].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,

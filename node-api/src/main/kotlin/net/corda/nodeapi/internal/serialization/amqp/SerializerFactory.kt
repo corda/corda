@@ -34,7 +34,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
-    private val classCarpenter = ClassCarpenter(cl)
+    val classCarpenter = ClassCarpenter(cl)
     val classloader: ClassLoader
         get() = classCarpenter.classloader
 
@@ -190,7 +190,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
      * if not use the [ClassCarpenter] to generate a class to use in it's place
      */
     private fun processSchema(schema: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
-        val carpenterSchemas = CarpenterSchemas.newInstance()
+        val metaSchema = CarpenterMetaSchema.newInstance()
         for (typeNotation in schema.schema.types) {
             try {
                 val serialiser = processSchemaEntry(typeNotation)
@@ -202,13 +202,13 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                     getEvolutionSerializer(typeNotation, serialiser)
                 }
             } catch (e: ClassNotFoundException) {
-                if (sentinel || (typeNotation !is CompositeType)) throw e
-                typeNotation.carpenterSchema(classloader, carpenterSchemas = carpenterSchemas)
+                if (sentinel) throw e
+                metaSchema.buildFor(typeNotation, classloader)
             }
         }
 
-        if (carpenterSchemas.isNotEmpty()) {
-            val mc = MetaCarpenter(carpenterSchemas, classCarpenter)
+        if (metaSchema.isNotEmpty()) {
+            val mc = MetaCarpenter(metaSchema, classCarpenter)
             mc.build()
             processSchema(schema, true)
         }

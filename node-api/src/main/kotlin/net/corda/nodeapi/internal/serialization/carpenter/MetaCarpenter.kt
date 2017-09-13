@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
+import net.corda.nodeapi.internal.serialization.amqp.RestrictedType
 import net.corda.nodeapi.internal.serialization.amqp.TypeNotation
 
 /**
@@ -22,13 +23,13 @@ import net.corda.nodeapi.internal.serialization.amqp.TypeNotation
  * in turn look up all of those classes in the [dependsOn] list, remove their dependency on the newly created class,
  * and if that list is reduced to zero know we can now generate a [Schema] for them and carpent them up
  */
-data class CarpenterSchemas(
+data class CarpenterMetaSchema(
         val carpenterSchemas: MutableList<Schema>,
         val dependencies: MutableMap<String, Pair<TypeNotation, MutableList<String>>>,
         val dependsOn: MutableMap<String, MutableList<String>>) {
     companion object CarpenterSchemaConstructor {
-        fun newInstance(): CarpenterSchemas {
-            return CarpenterSchemas(mutableListOf(), mutableMapOf(), mutableMapOf())
+        fun newInstance(): CarpenterMetaSchema {
+            return CarpenterMetaSchema(mutableListOf(), mutableMapOf(), mutableMapOf())
         }
     }
 
@@ -42,18 +43,26 @@ data class CarpenterSchemas(
 
     fun isEmpty() = carpenterSchemas.isEmpty()
     fun isNotEmpty() = carpenterSchemas.isNotEmpty()
+
+    // we could make this an abstract method on TypeNotation but hat
+    // would mean the amqp package being "more" infected with carpenter
+    // specific bits
+    fun buildFor(target: TypeNotation, cl: ClassLoader) = when (target) {
+        is RestrictedType -> target.carpenterSchema(this)
+        is CompositeType -> target.carpenterSchema(cl, this, false)
+    }
 }
 
 /**
- * Take a dependency tree of [CarpenterSchemas] and reduce it to zero by carpenting those classes that
+ * Take a dependency tree of [CarpenterMetaSchema] and reduce it to zero by carpenting those classes that
  * require it. As classes are carpented check for depdency resolution, if now free generate a [Schema] for
- * that class and add it to the list of classes ([CarpenterSchemas.carpenterSchemas]) that require
+ * that class and add it to the list of classes ([CarpenterMetaSchema.carpenterSchemas]) that require
  * carpenting
  *
  * @property cc a reference to the actual class carpenter we're using to constuct classes
  * @property objects a list of carpented classes loaded into the carpenters class loader
  */
-abstract class MetaCarpenterBase(val schemas: CarpenterSchemas, val cc: ClassCarpenter = ClassCarpenter()) {
+abstract class MetaCarpenterBase(val schemas: CarpenterMetaSchema, val cc: ClassCarpenter = ClassCarpenter()) {
     val objects = mutableMapOf<String, Class<*>>()
 
     fun step(newObject: Schema) {
@@ -82,7 +91,7 @@ abstract class MetaCarpenterBase(val schemas: CarpenterSchemas, val cc: ClassCar
         get() = cc.classloader
 }
 
-class MetaCarpenter(schemas: CarpenterSchemas,
+class MetaCarpenter(schemas: CarpenterMetaSchema,
                     cc: ClassCarpenter = ClassCarpenter()) : MetaCarpenterBase(schemas, cc) {
     override fun build() {
         while (schemas.carpenterSchemas.isNotEmpty()) {
@@ -92,7 +101,7 @@ class MetaCarpenter(schemas: CarpenterSchemas,
     }
 }
 
-class TestMetaCarpenter(schemas: CarpenterSchemas,
+class TestMetaCarpenter(schemas: CarpenterMetaSchema,
                         cc: ClassCarpenter = ClassCarpenter()) : MetaCarpenterBase(schemas, cc) {
     override fun build() {
         if (schemas.carpenterSchemas.isEmpty()) return
