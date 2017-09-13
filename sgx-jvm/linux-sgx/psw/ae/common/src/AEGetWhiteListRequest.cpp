@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,104 +28,105 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEGetWhiteListRequest.h>
 #include <AEGetWhiteListResponse.h>
 #include <IAESMLogic.h>
 
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AEGetWhiteListRequest::AEGetWhiteListRequest()
-:mWhiteListSize(0) 
+AEGetWhiteListRequest::AEGetWhiteListRequest(const aesm::message::Request::GetWhiteListRequest& request) :
+    m_request(NULL)
 {
+    m_request = new aesm::message::Request::GetWhiteListRequest();
+    m_request->CopyFrom(request);
 }
 
 AEGetWhiteListRequest::AEGetWhiteListRequest(uint32_t whiteListSize, uint32_t timeout)
-:mWhiteListSize(0)
+    :m_request(NULL)
 
 {
-    CopyFields(whiteListSize, timeout);
+    m_request->set_white_list_size(whiteListSize);
+    m_request->set_timeout(timeout);
 }
 
 AEGetWhiteListRequest::AEGetWhiteListRequest(const AEGetWhiteListRequest& other)
-:IAERequest(other), mWhiteListSize(0)
+    :m_request(NULL)
 {
-    CopyFields(other.mWhiteListSize, other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::GetWhiteListRequest(*other.m_request);
 }
 
 AEGetWhiteListRequest::~AEGetWhiteListRequest()
 {
-    ReleaseMemory();
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AEGetWhiteListRequest::ReleaseMemory()
+AEMessage* AEGetWhiteListRequest::serialize()
 {
-    mWhiteListSize = 0;
-}
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
+    {
+        aesm::message::Request::GetWhiteListRequest* mutableReq = msg.mutable_getwhitelistreq();
+        mutableReq->CopyFrom(*m_request);
 
-void AEGetWhiteListRequest::CopyFields(uint32_t whiteListSize, uint32_t timeout)
-{
-    mWhiteListSize = whiteListSize;
-    mTimeout = timeout;
-}
-
-AEMessage* AEGetWhiteListRequest::serialize(ISerializer* serializer)
-{
-    return serializer->serialize(this);
-}
-
-void AEGetWhiteListRequest::inflateValues(uint32_t whiteListSize, uint32_t timeout)
-{
-    ReleaseMemory();
-    
-    CopyFields(whiteListSize, timeout);
-}
-
-bool AEGetWhiteListRequest::operator==(const AEGetWhiteListRequest& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mWhiteListSize != other.mWhiteListSize ||
-        mTimeout != other.mTimeout)
-        return false;
-
-    return true;
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
 AEGetWhiteListRequest& AEGetWhiteListRequest::operator=(const AEGetWhiteListRequest& other)
 {
     if (this == &other)
         return *this;
-
-    inflateValues(other.mWhiteListSize, other.mTimeout);
-
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::GetWhiteListRequest(*other.m_request);
     return *this;
 }
 
 bool AEGetWhiteListRequest::check()
 {
-    return true;
+    if (m_request == NULL)
+        return false;
+    return m_request->IsInitialized();
 }
 
 IAERequest::RequestClass AEGetWhiteListRequest::getRequestClass()
 {
-    return PLATFORM_CLASS;
+    return LAUNCH_CLASS;
 }
 
 IAEResponse* AEGetWhiteListRequest::execute(IAESMLogic* aesmLogic)
 {
-    uint8_t* white_list = new uint8_t[mWhiteListSize];
-        
-    aesm_error_t result = aesmLogic->getWhiteList(white_list, mWhiteListSize);
+    aesm_error_t result = AESM_UNEXPECTED_ERROR;
+    uint8_t* white_list = 0;
+    uint32_t white_list_size = 0;
 
-    AEGetWhiteListResponse* getWhiteListResponse = new AEGetWhiteListResponse(result, mWhiteListSize, white_list);
-    delete [] white_list;
+    if (check())
+    {
+        white_list_size =  m_request->white_list_size();
+        result = aesmLogic->getWhiteList(&white_list,white_list_size);
+    }
+
+    AEGetWhiteListResponse* getWhiteListResponse = new AEGetWhiteListResponse(result, white_list_size, white_list);
+
+    if (white_list)
+        delete [] white_list;
+
     return getWhiteListResponse;
-}
-
-void AEGetWhiteListRequest::visit(IAERequestVisitor& visitor)
-{
-    visitor.visitGetWhiteListRequest(*this);
 }

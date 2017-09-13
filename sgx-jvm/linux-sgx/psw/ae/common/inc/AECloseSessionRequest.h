@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,40 +32,38 @@
 #define _AE_CLOSE_SESSION_REQUEST_H
 
 #include <IAERequest.h>
+#include <stdint.h>
+namespace aesm
+{
+    namespace message
+    {
+        class Request_CloseSessionRequest;
+    };
+};
 
 class AECloseSessionRequest : public IAERequest
 {
     public:
-        AECloseSessionRequest();
+        AECloseSessionRequest(const aesm::message::Request_CloseSessionRequest& request);
         AECloseSessionRequest(uint32_t sessionId, uint32_t timeout);
         AECloseSessionRequest(const AECloseSessionRequest& other);
         ~AECloseSessionRequest();
 
-        AEMessage* serialize(ISerializer* serializer);
-        void inflateValues(uint32_t sessionId, uint32_t timeout);
-
-        //getters
-        int GetSessionId() const { return mSessionId; }
+        AEMessage* serialize();
 
         //operators
-        bool operator==(const AECloseSessionRequest& other) const;
-        AECloseSessionRequest& operator=(const AECloseSessionRequest& request);
+        AECloseSessionRequest& operator=(const AECloseSessionRequest& other);
 
         //checks
         bool check();
-        void visit(IAERequestVisitor& visitor);
-
         //hooks
         IAEResponse* execute(IAESMLogic* aesmLogic);
 
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
 
     protected:
-        void ReleaseMemory();
-        void CopyFields(uint32_t sessionId, uint32_t timeout);
-
-        uint32_t mSessionId;
+        aesm::message::Request_CloseSessionRequest* m_request;
 };
 
 #endif

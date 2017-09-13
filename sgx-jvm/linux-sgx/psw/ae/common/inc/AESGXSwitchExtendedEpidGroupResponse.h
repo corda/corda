@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,30 +33,36 @@
 
 #include <IAEResponse.h>
 
+namespace aesm
+{
+    namespace message
+    {
+            class Response_SGXSwitchExtendedEpidGroupResponse;
+    };
+};
+
 class AESGXSwitchExtendedEpidGroupResponse : public IAEResponse
 {
     public:
         AESGXSwitchExtendedEpidGroupResponse();
-        AESGXSwitchExtendedEpidGroupResponse(int errorCode);
+        AESGXSwitchExtendedEpidGroupResponse(aesm::message::Response_SGXSwitchExtendedEpidGroupResponse& response);
+        AESGXSwitchExtendedEpidGroupResponse(uint32_t errorCode);
         AESGXSwitchExtendedEpidGroupResponse(const AESGXSwitchExtendedEpidGroupResponse& other);
         ~AESGXSwitchExtendedEpidGroupResponse();
 
-        AEMessage* serialize(ISerializer* serializer);
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
-        void inflateValues(int errorCode);
+        AEMessage* serialize();
+        bool inflateWithMessage(AEMessage* message);
+        bool GetValues(uint32_t* errorCode) const;
 
         //operators
-        bool operator==(const AESGXSwitchExtendedEpidGroupResponse& other) const;
         AESGXSwitchExtendedEpidGroupResponse& operator=(const AESGXSwitchExtendedEpidGroupResponse& other);
 
         //checks
         bool check();
-        virtual void visit(IAEResponseVisitor& visitor);
 
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode);
-
+        aesm::message::Response_SGXSwitchExtendedEpidGroupResponse* m_response;
 };
 
 #endif

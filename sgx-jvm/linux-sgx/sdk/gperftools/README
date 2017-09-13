@@ -1,0 +1,30 @@
+Please, download the latest gperftools code from: https://github.com/gperftools/gperftools
+The Intel(R) Software Guard Extensions (Intel(R) SGX) tcmalloc is based on gperftools-2.5 (the latest version avaialble at the release date).
+
+Do the following to enable tcmalloc in Intel(R) SGX:
+1. Copy libsgx_tcmalloc.a to the Intel(R) SGX SDK installation directory.
+2. Add "-Wl,--whole-archive -lsgx_tcmalloc -Wl,--no-whole-archive" into enclave linking options in the Makefile.
+   For example:
+   Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
+	-Wl,--whole-archive -lsgx_tcmalloc -Wl,--no-whole-archive \
+	-Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
+	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
+	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
+	-Wl,--defsym,__ImageBase=0 \
+	-Wl,--version-script=Enclave/Enclave.lds
+
+   NOTE: The flags "-Wl,--whole-archive -lsgx_tcmalloc -Wl,--no-whole-archive" must be inserted before "-Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -Wl,--end-group".
+         Otherwise, the enclave build will fail.
+
+3. Set the enclave HeapMaxSize equal or larger than 0x900000 in Enclave.config.xml. For example:
+   <HeapMaxSize>0x900000</HeapMaxSize>
+
+Intel(R) SGX includes two C++ libs - C++ 11 and C++ stlport.
+Intel(R) SGX tcmalloc build uses one of the C++ libs and can be configured by editing "./gperftools-2.5/autogen-linux.sh".
+1. Build with C++ 11:
+   CPPFLAGS="-I../../../common/inc -I../../../common/inc/tlibc -I../../../common/inc/internal/ -I../../../sdk/tlibcxx/include -I../../../sdk/trts/"
+2. Build with C++ stlport:
+   CPPFLAGS="-I../../../common/inc -I../../../common/inc/tlibc -I../../../common/inc/internal/ -I../../../sdk/tlibstdcxx/stlport -I../../../sdk/trts/"
+
+   NOTE: The target Enclave project's link C++ lib must the same as Intel(R) SGX tcmalloc build C++ lib. Otherwise, the target enclave build will fail.

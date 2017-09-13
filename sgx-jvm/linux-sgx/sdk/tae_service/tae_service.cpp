@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,7 +55,7 @@ typedef struct _session_t
 {
     uint32_t session_id;
     sgx_key_128bit_t authenticated_encryption_key;
-    se_ps_sec_prop_desc_internal_t ps_security_property;//!ref i205169
+    se_ps_sec_prop_desc_internal_t ps_security_property;
     uint32_t transaction_number;//valid transaction_number is from 0 to 0x7FFFFFFF
     //seq_num in request message is transaction_number*2 and seq_num in response message is expected to be transaction_number*2+1
     bool session_inited;
@@ -164,24 +164,6 @@ sgx_status_t sgx_close_pse_session()
 
 static sgx_status_t verify_pse(sgx_dh_session_enclave_identity_t* dh_id)
 {
-
-    //verify dh_id->mr_signer same as hard-coded PSE MRSIGNER.
-    if(0!=memcmp(&dh_id->mr_signer, &G_SERVICE_ENCLAVE_MRSIGNER, sizeof(sgx_measurement_t)))
-    {
-        return SGX_ERROR_UNEXPECTED;
-    }
-    //verify dh_id->isv_prod_id same as hard-coded prod_id of PSE.
-    if(PSE_PROD_ID != dh_id->isv_prod_id)
-    {
-        return SGX_ERROR_UNEXPECTED;
-    }
-    //verify dh_id->isv_svn bigger or same as hard-coded minimal value if minimal value is not zero
-    //check PSE_ISV_SVN_MIN against 0 first to avoid "pointless comparison of unsigned integer with zero"
-    //compiler error on Windows and Linux 
-    if(PSE_ISV_SVN_MIN != 0 && !(dh_id->isv_svn >= PSE_ISV_SVN_MIN))
-    {
-        return SGX_ERROR_UNEXPECTED;
-    }
     //make sure debug flag is not set
     if(dh_id->attributes.flags & SGX_FLAGS_DEBUG)
     {
@@ -321,6 +303,25 @@ sgx_status_t sgx_get_ps_sec_prop(sgx_ps_sec_prop_desc_t* ps_security_property)
         ret = SGX_ERROR_AE_SESSION_INVALID;
     //unlock the session mutex
     g_session_mutex.unlock();
+    return ret;
+}
+
+sgx_status_t sgx_get_ps_sec_prop_ex(sgx_ps_sec_prop_desc_ex_t* ps_security_property_ex)
+{
+    sgx_status_t ret;
+    if (!ps_security_property_ex)
+        return SGX_ERROR_INVALID_PARAMETER;
+    ret = sgx_get_ps_sec_prop(&ps_security_property_ex->ps_sec_prop_desc);
+    if (ret != SGX_SUCCESS)
+    {
+        return ret;
+    }
+
+    se_ps_sec_prop_desc_internal_t* desc_internal =
+        (se_ps_sec_prop_desc_internal_t*)&ps_security_property_ex->ps_sec_prop_desc;
+    memcpy(&ps_security_property_ex->pse_mrsigner, &desc_internal->pse_mr_signer, sizeof(sgx_measurement_t));
+    memcpy(&ps_security_property_ex->pse_prod_id, &desc_internal->pse_prod_id, sizeof(sgx_prod_id_t));
+    memcpy(&ps_security_property_ex->pse_isv_svn, &desc_internal->pse_isvsvn, sizeof(sgx_isv_svn_t));
     return ret;
 }
 

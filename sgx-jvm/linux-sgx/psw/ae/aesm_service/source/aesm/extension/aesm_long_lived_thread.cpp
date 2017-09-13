@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 
 #include "aesm_long_lived_thread.h"
 #include "pve_logic.h"
+#include "pse_op_logic.h"
 #include "platform_info_logic.h"
 #include "oal/internal_log.h"
 #include "se_time.h"
@@ -392,6 +393,8 @@ static time_t get_timeout_via_ae_error(ae_error_t ae)
     case OAL_NETWORK_RESEND_REQUIRED:
         return cur-1;//always timeout, the error code will never be reused
     case PVE_INTEGRITY_CHECK_ERROR:
+    case PSE_OP_ERROR_EPH_SESSION_ESTABLISHMENT_INTEGRITY_ERROR:
+    case AESM_PSDA_LT_SESSION_INTEGRITY_ERROR:
     case OAL_NETWORK_UNAVAILABLE_ERROR:
     case OAL_NETWORK_BUSY:
     case PVE_SERVER_BUSY_ERROR:
@@ -400,7 +403,9 @@ static time_t get_timeout_via_ae_error(ae_error_t ae)
     case PVE_REVOKED_ERROR:
     case PVE_MSG_ERROR:
     case PVE_PERFORMANCE_REKEY_NOT_SUPPORTED:
-    case PSW_UPDATED_REQUIRED:
+    case AESM_PSDA_PLATFORM_KEYS_REVOKED:
+    case AESM_PSDA_PROTOCOL_NOT_SUPPORTED:
+    case PSW_UPDATE_REQUIRED:
         return cur+TIMEOUT_LONG_TIME;
     default:
         return cur+TIMEOUT_SHORT_TIME;//retry quicky for unknown error
@@ -447,6 +452,7 @@ bool ThreadStatus::query_status_and_reset_clock(void)
 //Code below to define IOCache of each thread
 static ThreadStatus epid_thread;
 
+static ThreadStatus long_term_paring_thread;
 
 static ThreadStatus white_list_thread;
 
@@ -483,12 +489,78 @@ public:
         return true;
     }
 };
+class CheckLtpIOCache:public BaseThreadIOCache{
+    bool is_new_pairing;//extra output
+protected:
+    CheckLtpIOCache(){
+        is_new_pairing=false;
+    }
+    virtual ae_error_t entry();
+    virtual ThreadStatus& get_thread();
+    friend ae_error_t start_check_ltp_thread(bool& is_new_pairing, unsigned long timeout);
+public:
+    virtual bool operator==(const BaseThreadIOCache& oc)const{
+        const CheckLtpIOCache *p=dynamic_cast<const CheckLtpIOCache *>(&oc);
+        if(p==NULL)return false;
+        return true;//no input, always equal
+    }
+};
+
+class UpdatePseIOCache:public BaseThreadIOCache{
+    platform_info_blob_wrapper_t pib;//input
+    uint32_t attestation_status;//input
+protected:
+    UpdatePseIOCache(const platform_info_blob_wrapper_t& pib_info, uint32_t attst_status){
+        (void)memcpy_s(&this->pib, sizeof(this->pib), &pib_info, sizeof(pib_info));
+        attestation_status=attst_status;
+    }
+    virtual ae_error_t entry();
+    virtual ThreadStatus& get_thread();
+    friend ae_error_t start_update_pse_thread(const platform_info_blob_wrapper_t* update_blob, uint32_t attestation_status, unsigned long timeout);
+public:
+    virtual bool operator==(const BaseThreadIOCache& oc)const{
+        const UpdatePseIOCache *p=dynamic_cast<const UpdatePseIOCache *>(&oc);
+        if(p==NULL)return false;
+        return attestation_status==p->attestation_status&&memcmp(&pib, &p->pib, sizeof(pib))==0;
+    }
+};
+
+class CertProvLtpIOCache:public BaseThreadIOCache{
+    bool is_new_pairing;//extra output
+protected:
+    CertProvLtpIOCache(){
+        is_new_pairing = false;
+    }
+    virtual ae_error_t entry();
+    virtual ThreadStatus& get_thread();
+    friend ae_error_t start_long_term_pairing_thread(bool& is_new_paring, unsigned long timeout);
+public:
+    virtual bool operator==(const BaseThreadIOCache& oc)const{
+        const CertProvLtpIOCache *p=dynamic_cast<const CertProvLtpIOCache *>(&oc);
+        if(p==NULL)return false;
+        return true;
+    }
+};
 
 ThreadStatus& EpidProvIOCache::get_thread()
 {
     return epid_thread;
 }
 
+ThreadStatus& CheckLtpIOCache::get_thread()
+{
+    return long_term_paring_thread;
+}
+
+ThreadStatus& UpdatePseIOCache::get_thread()
+{
+    return long_term_paring_thread;
+}
+
+ThreadStatus& CertProvLtpIOCache::get_thread()
+{
+    return long_term_paring_thread;
+}
 ThreadStatus& WhiteListIOCache::get_thread()
 {
     return white_list_thread;
@@ -497,6 +569,20 @@ ThreadStatus& WhiteListIOCache::get_thread()
 ae_error_t EpidProvIOCache::entry()
 {
     return ae_ret = PvEAESMLogic::epid_provision_thread_func(performance_rekey); 
+}
+ae_error_t CheckLtpIOCache::entry()
+{
+    return ae_ret = PlatformInfoLogic::check_ltp_thread_func(is_new_pairing);
+}
+
+ae_error_t UpdatePseIOCache::entry()
+{
+    return ae_ret = PlatformInfoLogic::update_pse_thread_func(&pib, attestation_status);
+}
+
+ae_error_t CertProvLtpIOCache::entry()
+{
+    return ae_ret = PSEOPAESMLogic::certificate_provisioning_and_long_term_pairing_func(is_new_pairing);
 }
 ae_error_t WhiteListIOCache::entry()
 {
@@ -541,9 +627,32 @@ ae_error_t start_white_list_thread(unsigned long timeout)
     INIT_THREAD(WhiteListIOCache, timeout, ())
     FINI_THREAD()
 }
+ae_error_t start_check_ltp_thread(bool& is_new_pairing, unsigned long timeout)
+{
+    INIT_THREAD(CheckLtpIOCache, timeout, ())
+    COPY_OUTPUT(is_new_pairing);
+    FINI_THREAD()
+}
+
+ae_error_t start_update_pse_thread(const platform_info_blob_wrapper_t* update_blob, uint32_t attestation_status, unsigned long timeout)
+{
+    INIT_THREAD(UpdatePseIOCache, timeout, (*update_blob, attestation_status))
+    FINI_THREAD()
+}
+
+ae_error_t start_long_term_pairing_thread(bool& is_new_pairing, unsigned long timeout)
+{
+    INIT_THREAD(CertProvLtpIOCache, timeout, ())
+    COPY_OUTPUT(is_new_pairing);
+    FINI_THREAD()
+}
 bool query_pve_thread_status(void)
 {
     return epid_thread.query_status_and_reset_clock();
+}
+bool query_pse_thread_status(void)
+{
+    return long_term_paring_thread.query_status_and_reset_clock();
 }
 ae_error_t wait_pve_thread(uint64_t time_out_milliseconds)
 {
@@ -555,6 +664,7 @@ void stop_all_long_lived_threads(uint64_t time_out_milliseconds)
     uint64_t freq = se_get_tick_count_freq();
     uint64_t stop_tick_count = se_get_tick_count()+(time_out_milliseconds*freq+500)/1000;
     epid_thread.stop_thread(stop_tick_count);
+    long_term_paring_thread.stop_thread(stop_tick_count);
     white_list_thread.stop_thread(stop_tick_count);
 }
 

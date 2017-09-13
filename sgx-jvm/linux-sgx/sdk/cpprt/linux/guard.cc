@@ -161,8 +161,7 @@ extern "C" void __cxa_guard_abort(int64_t *guard_object)
  */
 extern "C" void __cxa_guard_release(int64_t *guard_object)
 {
-    // Set the first byte to 1
-    *guard_object |= ((int64_t)1);
+    *((char*)guard_object) = 1;
     __cxa_guard_abort(guard_object);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,31 +32,34 @@
 #define __AE_GET_PS_CAP_REQUEST_H
 
 #include <IAERequest.h>
-class IAESMLogic;
+#include <stdint.h>
+namespace aesm
+{
+    namespace message
+    {
+        class Request_GetPsCapRequest;
+    };
+};
 
 class AEGetPsCapRequest : public IAERequest{
     public:
+        AEGetPsCapRequest(const aesm::message::Request_GetPsCapRequest& request);
         AEGetPsCapRequest(uint32_t timeout = 0);
         AEGetPsCapRequest(const AEGetPsCapRequest& other);
         ~AEGetPsCapRequest();
 
-        void ReleaseMemory();
 
-        AEMessage*  serialize(ISerializer* serializer);
-
-        //inflater -> empty for now ... but soon
-        void inflateValues(uint32_t timeout = 0);
-
+        AEMessage*  serialize();
         //checks
-        bool check() {return true;} // no special check for this object. Maybe later
+        bool check();
         virtual IAEResponse* execute(IAESMLogic*);
 
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
-        bool operator==(const AEGetPsCapRequest& other) const;
         AEGetPsCapRequest& operator=(const AEGetPsCapRequest& other);
-        void visit(IAERequestVisitor& visitor);
-        void CopyFields(uint32_t timeout);
-};
+
+    protected:
+        //release all members
+        void ReleaseMemory();        aesm::message::Request_GetPsCapRequest* m_request;};
 
 #endif

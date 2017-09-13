@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -66,11 +66,53 @@ select_install_path()
             fi
         fi
     fi
-
-    USER_INPUT_PATH=$(cd "$USER_INPUT_PATH"; pwd -P)
 }
 
-select_install_path
+
+prev=
+for option
+do
+  if test -n "$prev"; then
+    eval $prev=\$option
+    prev=
+    continue
+  fi
+
+  case $option in
+  *=?*) optarg=`expr "X$option" : '[^=]*=\(.*\)'` ;;
+  *=)   optarg= ;;
+  *)    optarg=yes ;;
+  esac
+
+  case $option in
+  -prefix | --prefix | --prefi | --pref | --pre | --pr | --p)
+    prev=prefix ;;
+  -prefix=* | --prefix=* | --prefi=* | --pref=* | --pre=* | --pr=* | --p=*)
+    prefix=$optarg ;;
+
+  esac
+done
+
+if [ -n "$prefix" ]; then
+    eval USER_INPUT_PATH="$prefix"
+
+    if [ -d "$USER_INPUT_PATH" ]; then
+        if [ ! -w "$USER_INPUT_PATH" ]; then
+            echo "Can not install in $USER_INPUT_PATH, please check the permission!"
+            exit 4
+        fi
+    else
+        mkdir -p "$USER_INPUT_PATH"
+        if [ "$?" != "0" ]; then
+            echo "Can not install in $USER_INPUT_PATH, please check the permission!"
+            exit 4
+        fi
+    fi
+else
+    select_install_path
+fi
+
+USER_INPUT_PATH=$(cd "$USER_INPUT_PATH"; pwd -P)
 
 PATH=/usr/bin:/bin
 umask 022

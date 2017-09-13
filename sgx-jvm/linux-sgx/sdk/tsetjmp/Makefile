@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -36,14 +36,19 @@ ASFLAGS  := $(CFLAGS)
 CFLAGS   += -std=c99
 CXXFLAGS += $(ENCLAVE_CXXFLAGS) -fno-exceptions -fno-rtti -D_TLIBC_USE_INTEL_FAST_STRING_
 
-CPPFLAGS += -I.                          \
-            -I$(COMMON_DIR)/inc/internal \
+CPPFLAGS += -I.                                \
+            -I$(COMMON_DIR)/inc                \
+            -I$(COMMON_DIR)/inc/internal       \
             -I$(COMMON_DIR)/inc/internal/linux \
+            -I$(COMMON_DIR)/inc/tlibc          \
+            -I ../trts/linux                   \
+            -I ../trts
+			
 
 LIBLONGJMP_CPP_SRCS := tlongjmp_version.cpp
 LIBLONGJMP_ASM_SRCS := $(wildcard *.S)
 
-LIBLONGJMP_OBJS := $(LIBLONGJMP_ASM_SRCS:.S=.o)
+LIBLONGJMP_OBJS := $(sort $(LIBLONGJMP_ASM_SRCS:.S=.o))
 LIBLONGJMP_OBJS += $(LIBLONGJMP_CPP_SRCS:.cpp=.o)
 
 LIBLONGJMP_NAME    := libsgx_tsetjmp.a

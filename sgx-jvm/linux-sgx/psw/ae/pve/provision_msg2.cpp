@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -71,7 +71,6 @@ static pve_status_t prov_msg2_proc_sigrl_header(const external_memory_byte_t* em
     sgx_status_t sgx_status = SGX_SUCCESS;
     pve_status_t pve_status = PVEC_SUCCESS;
     const uint32_t sigrl_header_size = static_cast<uint32_t>(sizeof(se_sig_rl_t) - sizeof(SigRlEntry));
-    const uint32_t sigrl_header_prefix_size = static_cast<uint32_t>(sizeof(se_sig_rl_t) - sizeof(SigRl));
     if(sigrl_size<sigrl_header_size+2*SE_ECDSA_SIGN_SIZE){
         //sigrl with too small size, it should contains at least sigrl header and the ECDSA Signature
         return PVEC_SIGRL_INTEGRITY_CHECK_ERROR;//signature not checked so integrity error

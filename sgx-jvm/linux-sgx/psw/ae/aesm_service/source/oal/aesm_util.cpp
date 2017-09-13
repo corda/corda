@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -217,7 +217,6 @@ ae_error_t aesm_get_pathname(aesm_data_type_t type, aesm_data_id_t id, char *buf
     }
     else if (info->loc == AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA){
         char name[MAX_PATH];
-        int num_bytes = 0;
         ae_error_t ae_err;
         if (xgid == INVALID_EGID){//INVALID_EGID should not be used for file to support multi extended_epid_group
             return AE_FAILURE;

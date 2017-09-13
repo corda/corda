@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,27 +28,38 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AESGXGetExtendedEpidGroupIdResponse.h>
 
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AESGXGetExtendedEpidGroupIdResponse::AESGXGetExtendedEpidGroupIdResponse() :
-    mExtendedEpidGroupId(-1)
+AESGXGetExtendedEpidGroupIdResponse::AESGXGetExtendedEpidGroupIdResponse()
+    :m_response(NULL)
 {
 }
 
-AESGXGetExtendedEpidGroupIdResponse::AESGXGetExtendedEpidGroupIdResponse(int errorCode, uint32_t extendedGroupId) :
-    mExtendedEpidGroupId(-1)
+AESGXGetExtendedEpidGroupIdResponse::AESGXGetExtendedEpidGroupIdResponse(aesm::message::Response::SGXGetExtendedEpidGroupIdResponse& response)
+    :m_response(NULL)
 {
-    CopyFields(errorCode, extendedGroupId);
+    m_response = new aesm::message::Response::SGXGetExtendedEpidGroupIdResponse(response);
 }
 
-AESGXGetExtendedEpidGroupIdResponse::AESGXGetExtendedEpidGroupIdResponse(const AESGXGetExtendedEpidGroupIdResponse& other) :
-    mExtendedEpidGroupId(-1)
+AESGXGetExtendedEpidGroupIdResponse::AESGXGetExtendedEpidGroupIdResponse(uint32_t errorCode, uint32_t extendedGroupId)
+    :m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mExtendedEpidGroupId);
+    m_response = new aesm::message::Response::SGXGetExtendedEpidGroupIdResponse();
+    m_response->set_errorcode(errorCode);
+    m_response->set_x_group_id(extendedGroupId);
+}
+
+AESGXGetExtendedEpidGroupIdResponse::AESGXGetExtendedEpidGroupIdResponse(const AESGXGetExtendedEpidGroupIdResponse& other)
+    :m_response(NULL)
+{
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::SGXGetExtendedEpidGroupIdResponse(*other.m_response);
 }
 
 AESGXGetExtendedEpidGroupIdResponse::~AESGXGetExtendedEpidGroupIdResponse()
@@ -58,40 +69,50 @@ AESGXGetExtendedEpidGroupIdResponse::~AESGXGetExtendedEpidGroupIdResponse()
 
 void AESGXGetExtendedEpidGroupIdResponse::ReleaseMemory()
 {
-    mErrorCode = SGX_ERROR_UNEXPECTED;
+    if (m_response != NULL)
+    {
+        delete m_response;
+        m_response = NULL;
+    }
 }
 
-void AESGXGetExtendedEpidGroupIdResponse::CopyFields(int errorCode, uint32_t extendedGroupId)
+AEMessage* AESGXGetExtendedEpidGroupIdResponse::serialize()
 {
-    mErrorCode = errorCode;
-    mExtendedEpidGroupId = extendedGroupId;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    if (check())
+    {
+        aesm::message::Response::SGXGetExtendedEpidGroupIdResponse* mutableRes = msg.mutable_sgxgetextendedepidgroupidres();
+        mutableRes->CopyFrom(*m_response);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-
-AEMessage* AESGXGetExtendedEpidGroupIdResponse::serialize(ISerializer* serializer)
+bool AESGXGetExtendedEpidGroupIdResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->serialize(this);
-}
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_sgxgetextendedepidgroupidres() == false)
+        return false;
 
-bool AESGXGetExtendedEpidGroupIdResponse::inflateWithMessage(AEMessage* message, ISerializer *serializer)
-{
-    return serializer->inflateResponse(message, this);
-}
-
-void AESGXGetExtendedEpidGroupIdResponse::inflateValues(int errorCode, uint32_t extendedGroupId)
-{
+    //this is an AESGXGetExtendedEpidGroupIdResponse
     ReleaseMemory();
-
-    CopyFields(errorCode, extendedGroupId);
+    m_response = new aesm::message::Response::SGXGetExtendedEpidGroupIdResponse(msg.sgxgetextendedepidgroupidres());
+    return true;
 }
 
-bool AESGXGetExtendedEpidGroupIdResponse::operator==(const AESGXGetExtendedEpidGroupIdResponse &other) const
+bool AESGXGetExtendedEpidGroupIdResponse::GetValues(uint32_t* errorCode, uint32_t* extendedGroupId) const
 {
-    if (this == &other)
-            return true;
-
-    if (mExtendedEpidGroupId!= other.mExtendedEpidGroupId)
-            return false;
+    *extendedGroupId = m_response->x_group_id();
+    *errorCode = m_response->errorcode();
     return true;
 }
 
@@ -100,27 +121,17 @@ AESGXGetExtendedEpidGroupIdResponse & AESGXGetExtendedEpidGroupIdResponse::opera
     if (this == &other)
         return *this;
 
-    inflateValues(other.mErrorCode, other.mExtendedEpidGroupId);
-
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::SGXGetExtendedEpidGroupIdResponse(*other.m_response);
+    }
     return *this;
 }
 
 bool AESGXGetExtendedEpidGroupIdResponse::check()
 {
-    // no MAC to check at this point, but do some generic parameter check
-
-    //impose a limit of 1MB for these messages. If larger then a transmission, or unmarshalling error may have occured
-    //also a big value here might be an attack
-
-    //first, fail if errorCode is not 0
-    if (mErrorCode != SGX_SUCCESS)
+    if (m_response == NULL)
         return false;
-
-    return true;
+    return m_response->IsInitialized();
 }
-
-void AESGXGetExtendedEpidGroupIdResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitSGXGetExtendedEpidGroupIdResponse(*this);
-}
-

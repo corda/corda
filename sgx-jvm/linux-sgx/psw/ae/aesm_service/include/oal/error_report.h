@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #define AESM_LOG_REPORT_FATAL   0 
 #define AESM_LOG_REPORT_ERROR   1
 #define AESM_LOG_REPORT_WARNING 2
+#define AESM_LOG_REPORT_INFO    3
 #include "event_strings.h"
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +49,11 @@ extern "C" {
 #define AESM_LOG_FATAL(format, args...) aesm_log_report(AESM_LOG_REPORT_FATAL, format, ## args)
 #define AESM_LOG_ERROR(format, args...) aesm_log_report(AESM_LOG_REPORT_ERROR, format, ## args)
 #define AESM_LOG_WARN(format, args...)  aesm_log_report(AESM_LOG_REPORT_WARNING, format, ## args)
+#define AESM_LOG_INFO(format, args...)  aesm_log_report(AESM_LOG_REPORT_INFO, format, ## args)
+#define AESM_LOG_FATAL_ADMIN(format, args...) aesm_log_report(AESM_LOG_REPORT_FATAL, "[ADMIN]" format, ## args)
+#define AESM_LOG_ERROR_ADMIN(format, args...) aesm_log_report(AESM_LOG_REPORT_ERROR, "[ADMIN]" format, ## args)
+#define AESM_LOG_WARN_ADMIN(format, args...) aesm_log_report(AESM_LOG_REPORT_WARNING, "[ADMIN]" format, ## args)
+#define AESM_LOG_INFO_ADMIN(format, args...) aesm_log_report(AESM_LOG_REPORT_INFO, "[ADMIN]" format, ## args)
 #define AESM_LOG_INIT() aesm_log_init()
 #define AESM_LOG_FINI() aesm_log_fini()
 #define AESM_LOG_ERROR_UNICODE AESM_LOG_ERROR

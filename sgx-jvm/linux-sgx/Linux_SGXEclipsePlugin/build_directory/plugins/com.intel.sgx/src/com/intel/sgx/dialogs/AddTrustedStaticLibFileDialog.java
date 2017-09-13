@@ -79,7 +79,7 @@ public class AddTrustedStaticLibFileDialog extends SGXDialogBase  {
 	@Override
 	protected void configureShell(Shell newShell) {
 		super.configureShell(newShell);
-		newShell.setText("Add New SGX Static Trusted Library Dialog");
+		newShell.setText("Add New Intel(R) SGX Static Trusted Library Dialog");
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,7 +61,6 @@ void AESMWorkerThread::run()
 void AESMWorkerThread::enqueue(RequestData* requestData)
 {
     if (isStopped()) {
-        //! [mlu] don't like the silent ignore; at least a log should go here.
         return;
     }
     m_queue->push(requestData);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,221 +28,137 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEGetLaunchTokenRequest.h>
 #include <AEGetLaunchTokenResponse.h>
 #include <IAESMLogic.h>
 
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AEGetLaunchTokenRequest::AEGetLaunchTokenRequest() :
-    mEnclaveMeasurementLength(0),
-    mEnclaveMeasurement(NULL),
-    mSigstructLength(0),
-    mSigstruct(NULL),
-    mSEAttributesLength(0),
-    mSEAttributes(NULL)
+AEGetLaunchTokenRequest::AEGetLaunchTokenRequest(const aesm::message::Request::GetLaunchTokenRequest& request) :
+    m_request(NULL)
 {
+    m_request = new aesm::message::Request::GetLaunchTokenRequest();
+    m_request->CopyFrom(request);
 }
 
 AEGetLaunchTokenRequest::AEGetLaunchTokenRequest(uint32_t measurementLength, const uint8_t* measurement,
-        uint32_t sigstructLength, const uint8_t* sigstruct,
+        uint32_t pubkeyLength, const uint8_t* pubkey,
         uint32_t attributesLength, const uint8_t* attributes,
         uint32_t timeout) :
-    mEnclaveMeasurementLength(0),
-    mEnclaveMeasurement(NULL),
-    mSigstructLength(0),
-    mSigstruct(NULL),
-    mSEAttributesLength(0),
-    mSEAttributes(NULL)
+        m_request(NULL)
 {
-    CopyFields(measurementLength, measurement, sigstructLength, sigstruct, attributesLength, attributes, timeout);
+    m_request = new aesm::message::Request::GetLaunchTokenRequest();
+    if (measurementLength != 0 && measurement != NULL)
+        m_request->set_mr_enclave(measurement, measurementLength);
+    if (pubkeyLength!= 0 && pubkey != NULL)
+        m_request->set_mr_signer(pubkey, pubkeyLength);
+    if (attributesLength != 0 && attributes != NULL)
+        m_request->set_se_attributes(attributes, attributesLength);
+    m_request->set_timeout(timeout);
 }
 
 AEGetLaunchTokenRequest::AEGetLaunchTokenRequest(const AEGetLaunchTokenRequest& other) :
-    IAERequest(other),
-    mEnclaveMeasurementLength(0),
-    mEnclaveMeasurement(NULL),
-    mSigstructLength(0),
-    mSigstruct(NULL),
-    mSEAttributesLength(0),
-    mSEAttributes(NULL)
+    m_request(NULL)
 {
-    CopyFields(other.mEnclaveMeasurementLength, other.mEnclaveMeasurement, other.mSigstructLength, other.mSigstruct, other.mSEAttributesLength, other.mSEAttributes, other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::GetLaunchTokenRequest(*other.m_request);
 }
 
 AEGetLaunchTokenRequest::~AEGetLaunchTokenRequest()
 {
-    ReleaseMemory();
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AEGetLaunchTokenRequest::CopyFields(uint32_t measurementLength,const uint8_t* measurement,
-        uint32_t sigstructLength,const uint8_t* sigstruct,
-        uint32_t attributesLength,const uint8_t* attributes,
-        uint32_t timeout)
+AEMessage* AEGetLaunchTokenRequest::serialize()
 {
-    uint32_t totalSize = measurementLength + sigstructLength + attributesLength;
-    if (measurementLength <= MAX_MEMORY_ALLOCATION && sigstructLength <= MAX_MEMORY_ALLOCATION &&
-            attributesLength <= MAX_MEMORY_ALLOCATION && totalSize <= MAX_MEMORY_ALLOCATION)
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
     {
-         mValidSizeCheck = true;
-    }
-    else
-    {
-         mValidSizeCheck = false;
-        return;
-    }
+        aesm::message::Request::GetLaunchTokenRequest* mutableReq = msg.mutable_getlictokenreq();
+        mutableReq->CopyFrom(*m_request);
 
-    mTimeout = timeout;
-
-    if (measurement != NULL && measurementLength > 0)
-    {
-        mEnclaveMeasurement = new uint8_t[measurementLength];
-        mEnclaveMeasurementLength = measurementLength;
-        memcpy(mEnclaveMeasurement, measurement, measurementLength);
-    }
-
-    if (sigstruct != NULL && sigstructLength > 0)
-    {
-        mSigstruct = new uint8_t[sigstructLength];
-        mSigstructLength = sigstructLength;
-        memcpy(mSigstruct, sigstruct, sigstructLength);
-    }
-
-    if (attributes != NULL && attributesLength > 0)
-    {
-        mSEAttributes = new uint8_t[attributesLength];
-        mSEAttributesLength = attributesLength;
-        memcpy(mSEAttributes, attributes, attributesLength);
-    }
-}
-
-void AEGetLaunchTokenRequest::ReleaseMemory()
-{
-    if (mEnclaveMeasurement != NULL)
-    {
-        delete [] mEnclaveMeasurement;
-        mEnclaveMeasurement = NULL;
-    }
-
-    if (mSigstruct != NULL)
-    {
-        if (mSigstructLength > 0)
-        {
-            memset(mSigstruct, 0, mSigstructLength);
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
         }
-        delete [] mSigstruct;
-        mSigstruct = NULL;
-
     }
-
-    if (mSEAttributes != NULL)
-    {
-        if (mSEAttributesLength > 0)
-        {
-            memset(mSEAttributes, 0, mSEAttributesLength);
-        }
-        delete [] mSEAttributes;
-        mSEAttributes = NULL;
-    }
+    return ae_msg;
 }
 
-AEMessage* AEGetLaunchTokenRequest::serialize(ISerializer* serializer)
-{
-    return serializer->serialize(this);
-}
-
-void AEGetLaunchTokenRequest::inflateValues(uint32_t measurementLength,const uint8_t* measurement,
-        uint32_t sigstructLength,const uint8_t* sigstruct,
-        uint32_t attributesLength,const uint8_t* attributes,
-        uint32_t timeout)
-{
-
-    ReleaseMemory();
-
-    CopyFields(measurementLength, measurement, sigstructLength, sigstruct, attributesLength, attributes, timeout);
-}
 
 bool AEGetLaunchTokenRequest::check()
 {
-    if (mValidSizeCheck == false)
+    if (m_request == NULL)
         return false;
-
-    //memory
-    if (mEnclaveMeasurement == NULL || mSigstruct == NULL || mSEAttributes == NULL)
-        return false;
-    //sizes
-    if (mEnclaveMeasurementLength == 0 || mSigstructLength == 0 || mSEAttributesLength == 0)
-        return false;
-
-    return true;
+    return m_request->IsInitialized();
 }
-
-bool AEGetLaunchTokenRequest::operator==(const AEGetLaunchTokenRequest& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mEnclaveMeasurementLength != other.mEnclaveMeasurementLength ||
-            mSigstructLength != other.mSigstructLength ||
-            mSEAttributesLength != other.mSEAttributesLength ||
-            mTimeout != other.mTimeout)
-        return false;
-
-    if ((mEnclaveMeasurement != other.mEnclaveMeasurement) &&
-            (mEnclaveMeasurement == NULL || other.mEnclaveMeasurement == NULL))
-        return false;
-
-    if ((mSigstruct != other.mSigstruct) &&
-            (mSigstruct == NULL || other.mSigstruct == NULL))
-        return false;
-
-    if ((mSEAttributes != other.mSEAttributes) &&
-            (mSEAttributes == NULL || other.mSEAttributes == NULL))
-        return false;
-
-    if (mEnclaveMeasurement != NULL && memcmp(mEnclaveMeasurement, other.mEnclaveMeasurement, other.mEnclaveMeasurementLength) != 0)
-        return false;
-
-    if (mSigstruct != NULL && memcmp(mSigstruct, other.mSigstruct, other.mSigstructLength) != 0)
-        return false;
-
-    if (mSEAttributes != NULL && memcmp(mSEAttributes, other.mSEAttributes, other.mSEAttributesLength) != 0)
-        return false;
-
-    return true;
-
-}
-
 AEGetLaunchTokenRequest& AEGetLaunchTokenRequest::operator=(const AEGetLaunchTokenRequest& other)
 {
     if (this == &other)
         return *this;
-
-    inflateValues(other.mEnclaveMeasurementLength, other.mEnclaveMeasurement, other.mSigstructLength, other.mSigstruct, other.mSEAttributesLength, other.mSEAttributes, other.mTimeout);
-
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::GetLaunchTokenRequest(*other.m_request);
     return *this;
 }
-
 IAERequest::RequestClass AEGetLaunchTokenRequest::getRequestClass() {
     return LAUNCH_CLASS;
 }
 
+
 IAEResponse* AEGetLaunchTokenRequest::execute(IAESMLogic* aesmLogic) {
-    uint8_t* token;
-    uint32_t tokenSize;
 
-    aesm_error_t result = aesmLogic->getLaunchToken(mEnclaveMeasurement, mEnclaveMeasurementLength, mSigstruct, mSigstructLength, mSEAttributes, mSEAttributesLength, &token, &tokenSize);
+    aesm_error_t result = AESM_UNEXPECTED_ERROR;
+    uint8_t* token = NULL;
+    uint32_t tokenSize = 0;
 
+    if (check())
+    {
+        uint32_t mr_enclave_length = 0;
+        uint8_t* mr_enclave = NULL;
+        uint32_t mr_signer_length = 0;
+        uint8_t* mr_signer = NULL;
+        uint32_t se_attributes_length = 0;
+        uint8_t* se_attributes = NULL;
+
+
+        if (m_request->has_mr_enclave())
+        {
+            mr_enclave_length = (unsigned int)m_request->mr_enclave().size();
+            mr_enclave = (uint8_t*)const_cast<char *>(m_request->mr_enclave().data());
+        }
+        if (m_request->has_mr_signer())
+        {
+            mr_signer_length = (unsigned int)m_request->mr_signer().size();
+            mr_signer = (uint8_t*)const_cast<char *>(m_request->mr_signer().data());
+        }
+        if (m_request->has_se_attributes())
+        {
+            se_attributes_length = (unsigned int)m_request->se_attributes().size();
+            se_attributes = (uint8_t*)const_cast<char *>(m_request->se_attributes().data());
+        }
+
+        result = aesmLogic->getLaunchToken(mr_enclave, mr_enclave_length,
+            mr_signer, mr_signer_length,
+            se_attributes, se_attributes_length,
+            &token, &tokenSize);
+
+    }
     IAEResponse* response = new AEGetLaunchTokenResponse(result, tokenSize, token);
-    
+
     //free the buffer before send
-    delete [] token;
-
+    if (token)
+        delete [] token;
     return response;
-}
-
-void AEGetLaunchTokenRequest::visit(IAERequestVisitor& visitor) 
-{
-    visitor.visitGetLaunchTokenRequest(*this);
 }

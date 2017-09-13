@@ -4,7 +4,7 @@ LIBNAME := libittnotify.a
 
 INCLUDE += -I ../../../include
 
-CFLAGS += $(INCLUDE) -fPIC
+CFLAGS += $(INCLUDE) -fPIC -Wno-strict-prototypes
 
 .PHONY: all
 all: $(LIBNAME)

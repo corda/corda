@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -226,7 +226,7 @@ do {                                                        \
         if (rel_entry_sz == 0)                              \
             return -1;                                      \
         n = total_sz/rel_entry_sz;                          \
-        if (do_relocs((ElfW(Addr))enclave_base, rel_offset, sym_offset, n)) \
+        if (do_relocs((ElfW(Addr))base_addr, rel_offset, sym_offset, n)) \
             return -1;                                      \
     }                                                       \
 } while (0)

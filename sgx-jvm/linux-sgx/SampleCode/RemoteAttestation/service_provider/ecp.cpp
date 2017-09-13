@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -144,8 +144,8 @@ bool derive_key(
     sample_ret = sample_sha256_close(sha_context);
 
     static_assert(sizeof(sample_ec_key_128bit_t)* 2 == sizeof(sample_sha256_hash_t), "structure size mismatch.");
-    memcpy(first_derived_key, &key_material, sizeof(sample_ec_key_128bit_t));
-    memcpy(second_derived_key, (uint8_t*)&key_material + sizeof(sample_ec_key_128bit_t), sizeof(sample_ec_key_128bit_t));
+    memcpy_s(first_derived_key, sizeof(sample_ec_key_128bit_t), &key_material, sizeof(sample_ec_key_128bit_t));
+    memcpy_s(second_derived_key, sizeof(sample_ec_key_128bit_t), (uint8_t*)&key_material + sizeof(sample_ec_key_128bit_t), sizeof(sample_ec_key_128bit_t));
 
     // memset here can be optimized away by compiler, so please use memset_s on
     // windows for production code and similar functions on other OSes.
@@ -233,7 +233,7 @@ bool derive_key(
     /*counter = 0x01 */
     p_derivation_buffer[0] = 0x01;
     /*label*/
-    memcpy(&p_derivation_buffer[1], label, label_length);
+    memcpy_s(&p_derivation_buffer[1], derivation_buffer_length - 1, label, label_length);
     /*output_key_len=0x0080*/
     uint16_t *key_len = (uint16_t *)(&(p_derivation_buffer[derivation_buffer_length - 2]));
     *key_len = 0x0080;

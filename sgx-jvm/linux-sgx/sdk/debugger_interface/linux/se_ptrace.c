@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,6 +49,9 @@
 #include <elf.h>
 #include <assert.h>
 
+#include <signal.h>
+#include <sys/wait.h>
+
 //NOTE: Need align with thread_data_t in RTS.
 #define ELF32_SSA_FS_OFFSET 0x34
 
@@ -71,11 +74,14 @@ typedef enum _direction_t
 
 typedef long int (* ptrace_t)(enum __ptrace_request request, pid_t pid,
                               void *addr, void *data);
+typedef pid_t (*waitpid_t)(pid_t pid, int *status, int options);
 
 static ptrace_t g_sys_ptrace = NULL;
+static waitpid_t g_sys_waitpid = NULL;
 __attribute__((constructor)) void init()
 {
     g_sys_ptrace = (ptrace_t)dlsym(RTLD_NEXT, "ptrace");
+    g_sys_waitpid = (waitpid_t)dlsym(RTLD_NEXT, "waitpid");
 }
 
 #ifdef SE_DEBUG
@@ -394,6 +400,88 @@ static long int get_regs(pid_t pid, void* addr, void* data)
     return ret;
 }
 
+typedef struct _thread_status_t {
+    pid_t pid;
+    int inside_out;
+    int singlestep;
+    struct user_regs_struct aep_regs;
+    struct _thread_status_t *next;
+} thread_status_t;
+
+static thread_status_t * g_thread_status = NULL;
+
+/*
+ *get the thread info by pid
+ *return the status point if the thread info already cached
+ *otherwise return NULL
+ *
+ */
+static thread_status_t * get_thread_status(pid_t pid)
+{
+    thread_status_t * thread_status = g_thread_status;
+
+    while(thread_status)
+    {
+        if(thread_status->pid == pid)
+            break;
+        else
+            thread_status = thread_status->next;
+    }
+
+    return thread_status;
+}
+
+/*
+ *add thread status cache
+ *return the cache point
+ */
+static thread_status_t * add_thread_status(pid_t pid)
+{
+    thread_status_t * thread_status = (thread_status_t *)malloc(sizeof(thread_status_t));
+    if (thread_status == NULL)
+        return NULL;
+
+    memset(thread_status, 0, sizeof(thread_status_t));
+
+    thread_status->pid = pid;
+    thread_status->next = g_thread_status;
+    g_thread_status = thread_status;
+
+    return thread_status;
+}
+/*
+ *remove the thread status cache by pid
+ *
+ */
+static void remove_thread_status(pid_t pid)
+{
+    thread_status_t * thread_status = g_thread_status;
+    thread_status_t * previous_link = NULL;
+
+    while(thread_status)
+    {
+        if(thread_status->pid == pid)
+            break;
+        else
+        {
+            previous_link = thread_status;
+            thread_status = thread_status->next;
+        }
+    }
+
+    if (thread_status != NULL)
+    {
+        if (previous_link == NULL)
+        {
+            g_thread_status = thread_status->next;
+        } else {
+            previous_link->next = thread_status->next;
+        }
+
+        free(thread_status);
+    }
+}
+
 static long int set_regs(pid_t pid, void* addr, void* data)
 {
     int ret = 0;
@@ -417,6 +505,7 @@ static long int set_regs(pid_t pid, void* addr, void* data)
         return g_sys_ptrace(PTRACE_SETREGS, pid, addr, data);
     }
 }
+
 
 static long int get_fpregs(pid_t pid, void* addr, void* data, int extend)
 {
@@ -536,6 +625,18 @@ static long int set_regset(pid_t pid, void* addr, void* data)
     }
 }
 
+static long int do_singlestep(pid_t pid, void* addr, void* data)
+{
+    thread_status_t * thread_status = NULL;
+    if ((thread_status = get_thread_status(pid)) == NULL)
+        thread_status = add_thread_status(pid);
+
+    if (thread_status != NULL)
+	    thread_status->singlestep = 1;
+
+    return g_sys_ptrace(PTRACE_SINGLESTEP, pid, addr, data);
+}
+
 long int ptrace (enum __ptrace_request __request, ...)
 {
     pid_t pid;
@@ -590,6 +691,63 @@ long int ptrace (enum __ptrace_request __request, ...)
     {
         return set_regset(pid, addr, data);
     }
+    else if(__request == PTRACE_SINGLESTEP)
+    {
+        return do_singlestep(pid, addr, data);
+    }
     //For other request just forward it to real ptrace call;
     return g_sys_ptrace(__request, pid, addr, data);
+}
+
+pid_t waitpid(pid_t pid, int *status, int options)
+{
+    pid_t ret_pid = g_sys_waitpid(pid, status, options);
+
+    if (ret_pid == -1 || status == NULL)
+        return ret_pid;
+
+    if (WIFEXITED(*status) || WIFSIGNALED(*status))
+    {
+        remove_thread_status(ret_pid);
+    }
+
+    //if it is a TRAP, and inside enclave, fix the #BP info
+    if(WIFSTOPPED(*status) &&
+            WSTOPSIG(*status) == SIGTRAP)
+    {
+        struct user_regs_struct regs;
+        thread_status_t * thread_status = get_thread_status(ret_pid);
+
+        if(thread_status && thread_status->singlestep == 1)
+        {
+            thread_status->singlestep = 0;
+        }
+        else if(-1 == g_sys_ptrace(PTRACE_GETREGS, ret_pid, 0, &regs))
+        {
+            SE_TRACE(SE_TRACE_WARNING, "unexpected get context failed\n");
+        }
+        else if(is_eresume(ret_pid, &regs))
+        {
+            long tcs = regs.REG(bx);
+            //If it is ERESUME instruction, set the real register value
+            if(-1 != get_enclave_gregs(ret_pid, &regs, tcs))
+            {
+                uint8_t bp = 0;
+                if(!se_read_process_mem(ret_pid, (void *)regs.REG(ip), (void *)&bp, 1, NULL))
+                {
+                    SE_TRACE(SE_TRACE_WARNING, "unexpected read memory failed\n");
+                }
+                else if (bp == 0xcc)
+                {
+                    regs.REG(ip)++;
+                    if ( -1 == set_enclave_gregs(ret_pid, &regs, tcs))
+                    {
+                        SE_TRACE(SE_TRACE_WARNING, "unexpected set registers failed\n");
+                    }
+                }
+            }
+        }
+    }
+
+    return ret_pid;
 }

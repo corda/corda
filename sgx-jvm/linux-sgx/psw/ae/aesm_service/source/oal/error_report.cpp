@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,6 +57,9 @@ void aesm_log_report(int level, const char *format, ...)
        break;
    case AESM_LOG_REPORT_WARNING:
        priority = LOG_WARNING;
+       break;
+   case AESM_LOG_REPORT_INFO:
+       priority = LOG_INFO;
        break;
    default:
       return;//ignore

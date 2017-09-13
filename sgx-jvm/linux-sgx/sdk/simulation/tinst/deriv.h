@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -71,7 +71,7 @@ typedef struct {
 
 /* Derive data for license key */
 typedef struct {
-    uint16_t          key_name;        /* should always be 'SGX_KEYSELECT_EINITOKEN' */
+    uint16_t          key_name;        /* should always be 'SGX_KEYSELECT_EINITTOKEN' */
     sgx_attributes_t  attributes;      /* attributes from SECS */
     se_owner_epoch_t  csr_owner_epoch;
     sgx_cpu_svn_t     cpu_svn;         /* CPUSVN from KEYREQUEST */

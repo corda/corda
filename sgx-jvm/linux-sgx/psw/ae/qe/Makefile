@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,6 +32,8 @@
 TOP_DIR := ../../..
 include ../buildenv.mk
 
+CXXFLAGS  += -Werror
+CFLAGS    += -Werror 
 EXTERNAL_LIB += -L$(LINUX_EXTERNAL_DIR)/epid/ -lepid
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/data/constants/linux \
            -I$(SGX_IPP_INC)/                          \

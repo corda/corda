@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -110,7 +110,7 @@ static ae_error_t le_calc_lic_token(token_t* lictoken)
     memset(&key_request, 0, sizeof(key_request));
 
     //setup key_request parameters to derive launch key
-    key_request.key_name = SGX_KEYSELECT_EINITOKEN;
+    key_request.key_name = SGX_KEYSELECT_EINITTOKEN;
 
     memcpy(&key_request.key_id, &lictoken->key_id,
            sizeof(key_request.key_id));
@@ -140,7 +140,7 @@ static ae_error_t le_calc_lic_token(token_t* lictoken)
     sgx_status_t sgx_ret = sgx_get_key(&key_request,&launch_key);
     if(SGX_SUCCESS != sgx_ret)
     {
-        return LE_GET_EINITOKEN_KEY_ERROR;
+        return LE_GET_EINITTOKEN_KEY_ERROR;
     }
 
     sgx_cmac_state_handle_t p_cmac_handle = NULL;
@@ -587,7 +587,7 @@ uint32_t le_init_white_list_wrapper(
     entry_number = p_wl_cert_chain->wl_cert.entry_number;
     entry_number = _ntohl(entry_number);
     // limits max MRSIGNER entry number in
-    // WL Cert to be <= 512
+    // WL Cert to be <= 2048
     if(entry_number > LE_MAX_MRSIGNER_NUMBER)
     {
         return LE_INVALID_PARAMETER;

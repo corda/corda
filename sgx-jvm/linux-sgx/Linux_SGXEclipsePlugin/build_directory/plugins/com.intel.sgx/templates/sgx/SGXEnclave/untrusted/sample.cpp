@@ -69,8 +69,8 @@ static sgx_errlist_t sgx_errlist[] = {
     },
     {
         SGX_ERROR_NO_DEVICE,
-        "Invalid SGX device.",
-        "Please make sure SGX module is enabled in the BIOS, and install SGX driver afterwards."
+        "Invalid Intel(R) SGX device.",
+        "Please make sure Intel(R) SGX module is enabled in the BIOS, and install Intel(R) SGX driver afterwards."
     },
     {
         SGX_ERROR_MEMORY_MAP_CONFLICT,
@@ -84,7 +84,7 @@ static sgx_errlist_t sgx_errlist[] = {
     },
     {
         SGX_ERROR_DEVICE_BUSY,
-        "SGX device was busy.",
+        "Intel(R) SGX device was busy.",
         NULL
     },
     {

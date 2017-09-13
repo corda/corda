@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,42 +34,40 @@
 #include <IAEResponse.h>
 #include <stdint.h>
 
-class ISerializer;
+namespace aesm
+{
+    namespace message
+    {
+            class Response_GetWhiteListSizeResponse;
+    };
+};
 
 class AEGetWhiteListSizeResponse : public IAEResponse
 {
     public:
         AEGetWhiteListSizeResponse();  //default ... will prepare a response that will later be inflated
 
-        AEGetWhiteListSizeResponse(int errorCode, uint32_t white_list_size);
+        AEGetWhiteListSizeResponse(aesm::message::Response_GetWhiteListSizeResponse& response);
+        AEGetWhiteListSizeResponse(uint32_t errorCode, uint32_t white_list_size);
         AEGetWhiteListSizeResponse(const AEGetWhiteListSizeResponse& other);
 
         ~AEGetWhiteListSizeResponse();
 
         //inflater
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
+        bool inflateWithMessage(AEMessage* message);
 
-        inline uint32_t GetWhiteListSize()              const { return mWhiteListSize;}
+        AEMessage*  serialize();
 
-        AEMessage*  serialize(ISerializer* serializer);
-
-        //this is used to inflate values from a serializer, instead of creating the object directly
-        void inflateValues(int errorCode, uint32_t white_list_size);
-
+        bool GetValues(uint32_t* errorCode, uint32_t* white_list_size) const;
         //operators
-        virtual bool operator==(const AEGetWhiteListSizeResponse &other) const;
         AEGetWhiteListSizeResponse& operator=(const AEGetWhiteListSizeResponse &other);
-
-        void visit(IAEResponseVisitor& visitor);
 
         //checks
         bool check();
 
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode, uint32_t white_list_size);
-
-        uint32_t    mWhiteListSize;
+        aesm::message::Response_GetWhiteListSizeResponse* m_response;
 };
 
 #endif

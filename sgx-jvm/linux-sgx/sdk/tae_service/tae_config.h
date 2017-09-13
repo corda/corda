@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,10 +53,7 @@
 #define SE_DESTROY_MONOTONIC_COUNTER_TIMEOUT_MSEC (SGX_PSE_LATENCY)
 
 #define RETRY_TIMES 2
-#define DEFAULT_VMC_ATTRIBUTE_MASK  0xFFFFFFFFFFFFFFCB
+#define DEFAULT_VMC_ATTRIBUTE_MASK  0xFF0000000000000BULL
 #define DEFAULT_VMC_XFRM_MASK  0x0
 
-#include "service_enclave_mrsigner.hh"
-#include "pse_op_prod_id.hh"
-#include "pse_op_isv_svn_min.hh"
 #endif

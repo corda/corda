@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,13 +80,13 @@ static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream)
             AESM_DBG_ERROR("malloc error in write callback fun");
             return 0;
         }
-        memcpy(p, s->base, s->size);
+        memcpy_s(p, newsize, s->base, s->size);
         free(s->base);
         start = s->size;
         s->base = p;
         s->size = newsize;
     }
-    memcpy(s->base +start, ptr, size*nmemb);
+    memcpy_s(s->base +start, s->size-start, ptr, size*nmemb);
     return nmemb;
 }
 
@@ -138,6 +138,7 @@ static ae_error_t http_network_send_data(CURL *curl, const char *req_msg, uint32
     ae_error_t ae_ret = AE_SUCCESS;
     CURLcode cc=CURLE_OK;
     int num_bytes = 0;
+    long resp_code = 0;
     if(is_ocsp){
         tmp = curl_slist_append(headers, "Accept: application/ocsp-response");
         if(tmp==NULL){
@@ -157,7 +158,7 @@ static ae_error_t http_network_send_data(CURL *curl, const char *req_msg, uint32
     }
     char buf[50];
     num_bytes = snprintf(buf,sizeof(buf), "Content-Length: %u", (unsigned int)msg_size);
-    if(num_bytes<0 || num_bytes>=sizeof(buf)){
+    if(num_bytes<0 || num_bytes>=(int)sizeof(buf)){
          AESM_DBG_ERROR("fail to prepare string Content-Length");
          ae_ret = AE_FAILURE;
          goto fini;
@@ -208,6 +209,18 @@ static ae_error_t http_network_send_data(CURL *curl, const char *req_msg, uint32
         ae_ret = OAL_NETWORK_UNAVAILABLE_ERROR;
         goto fini;
     }
+    // Check HTTP response code
+    // For example, if the remote file does not exist, curl may return CURLE_OK but the http response code 
+    // indicates an error has occured
+    if((cc=curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &resp_code))!=CURLE_OK || resp_code>=400){
+        AESM_DBG_ERROR("Response code error:%d", resp_code);
+        if(malloc_info.base){
+            free(malloc_info.base);
+        }
+        ae_ret = AE_FAILURE;
+        goto fini;
+    }
+
     *resp_msg = malloc_info.base;
     resp_size = malloc_info.size;
     AESM_DBG_TRACE("get response size=%d",resp_size);

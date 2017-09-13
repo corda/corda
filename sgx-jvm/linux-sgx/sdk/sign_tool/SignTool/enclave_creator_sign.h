@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,13 +53,14 @@ public:
     int initialize(sgx_enclave_id_t enclave_id);
     bool use_se_hw() const;
 
-    int get_enclave_info(uint8_t *hash, int size);
+    int get_enclave_info(uint8_t *hash, int size, uint64_t *quota);
 
 private:
     uint8_t m_enclave_hash[SGX_HASH_SIZE];
     IppsHashState  *m_ctx;
     bool m_hash_valid_flag;
     sgx_enclave_id_t m_eid;
+    uint64_t m_quota;
 };
 
 #endif

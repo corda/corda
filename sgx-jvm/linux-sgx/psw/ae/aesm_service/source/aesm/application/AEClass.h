@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -126,6 +126,7 @@ ae_error_t SingletonEnclave<T>::load_enclave()
     }
     if(ret == SGX_ERROR_OUT_OF_EPC){
         AESM_DBG_ERROR("No enough EPC to load AE: %s",enclave_path);
+        AESM_LOG_ERROR("%s %s", g_event_string_table[SGX_EVENT_OUT_OF_EPC], enclave_path);
         return AESM_AE_OUT_OF_EPC;
     }
     if (ret != SGX_SUCCESS){

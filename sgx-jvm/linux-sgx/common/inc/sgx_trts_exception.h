@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -125,7 +125,7 @@ extern "C" {
  *      exception_handler - a pointer to the handler to be called.
  * Return Value
  *      handler - success
- *          NULL - fail
+ *         NULL - fail
 */
 void * SGXAPI sgx_register_exception_handler(int is_first_handler, sgx_exception_handler_t exception_handler);
 

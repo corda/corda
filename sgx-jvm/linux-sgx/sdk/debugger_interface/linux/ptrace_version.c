@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@
 #define SGX_PTRACE_VERSION_STR  __CONCAT("SGX_PTRACE_VERSION_", STRFILEVER)
 
 __attribute__((visibility("default")))
-const char * sgx_ptrace_version = SGX_PTRACE_VERSION_STR;
+char sgx_ptrace_version[] = SGX_PTRACE_VERSION_STR;
 
 
 SGX_ACCESS_VERSION(ptrace, 1)

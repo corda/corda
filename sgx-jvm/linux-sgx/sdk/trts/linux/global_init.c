@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,13 +59,11 @@ static void do_ctors_aux(void)
     /* SGX RTS does not support .ctors currently */
    
     fp_t *p = NULL;
-    uintptr_t init_array_addr;
-    size_t init_array_size;
+    uintptr_t init_array_addr = 0;
+    size_t init_array_size = 0;
     const void *enclave_start = (const void*)&__ImageBase;
 
-    elf_get_init_array(enclave_start, &init_array_addr, &init_array_size);
-    
-    if (init_array_addr == 0 || init_array_size == 0)
+    if (0 != elf_get_init_array(enclave_start, &init_array_addr, &init_array_size)|| init_array_addr == 0 || init_array_size == 0)
         return;
 
     fp_t *fp_start = (fp_t*)(init_array_addr + (uintptr_t)(enclave_start));
@@ -83,13 +81,3 @@ void init_global_object(void)
     do_ctors_aux();
 }
 
-void init_stack_guard(void)
-{
-    thread_data_t *thread_data = get_thread_data();
-    assert(thread_data != NULL);
-
-    if (SGX_SUCCESS != sgx_read_rand(
-                (unsigned char*)&thread_data->stack_guard,
-                sizeof(thread_data->stack_guard)))
-        abort();
-}

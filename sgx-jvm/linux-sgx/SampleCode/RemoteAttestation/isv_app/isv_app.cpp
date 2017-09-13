@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -71,7 +71,7 @@
 
 uint8_t* msg1_samples[] = { msg1_sample1, msg1_sample2 };
 uint8_t* msg2_samples[] = { msg2_sample1, msg2_sample2 };
-uint8_t* msg3_samples[MSG3_BODY_SIZE] = { msg3_sample1, msg3_sample2 };
+uint8_t* msg3_samples[] = { msg3_sample1, msg3_sample2 };
 uint8_t* attestation_msg_samples[] =
     { attestation_msg_sample1, attestation_msg_sample2};
 
@@ -437,8 +437,10 @@ int main(int argc, char* argv[])
                 ra_samp_response_header_t* precomputed_msg2 =
                     (ra_samp_response_header_t *)
                     msg2_samples[GET_VERIFICATION_ARRAY_INDEX()];
-                if(memcmp( precomputed_msg2, p_msg2_full,
-                   sizeof(ra_samp_response_header_t) + p_msg2_full->size))
+                if(MSG2_BODY_SIZE !=
+                    sizeof(ra_samp_response_header_t) + p_msg2_full->size ||
+                    memcmp( precomputed_msg2, p_msg2_full,
+                        sizeof(ra_samp_response_header_t) + p_msg2_full->size))
                 {
                     fprintf(OUTPUT, "\nVerification ERROR. Our precomputed "
                                     "value for MSG2 does NOT match.\n");
@@ -575,7 +577,8 @@ int main(int argc, char* argv[])
                             "result message back\n.");
             if( VERIFICATION_INDEX_IS_VALID() )
             {
-                if(memcmp(p_att_result_msg_full->body,
+                if(ATTESTATION_MSG_BODY_SIZE != p_att_result_msg_full->size ||
+                    memcmp(p_att_result_msg_full->body,
                         attestation_msg_samples[GET_VERIFICATION_ARRAY_INDEX()],
                         p_att_result_msg_full->size) )
                 {
@@ -585,7 +588,7 @@ int main(int argc, char* argv[])
                     fprintf(OUTPUT, "\nEXPECTED ATTESTATION RESULT -");
                     PRINT_BYTE_ARRAY(OUTPUT,
                         attestation_msg_samples[GET_VERIFICATION_ARRAY_INDEX()],
-                        p_att_result_msg_full->size);
+                        ATTESTATION_MSG_BODY_SIZE);
                 }
             }
         }

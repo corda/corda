@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,6 +45,7 @@
 #include "pve_qe_common.h"
 #include "se_ecdsa_verify_internal.h"
 #include "byte_order.h"
+#include "util.h"
 
 /*
  * An internal function used to verify the ECDSA signature inside PvE given hash of message
@@ -138,7 +139,7 @@ static pve_status_t pve_check_ecdsa_signature(const uint8_t *data,
 
     se_ae_ecdsa_hash_t out;
     //get the SHA256 hash value of input data in buffer 'out'
-    static_assert(sizeof(out)==sizeof(sgx_sha256_hash_t), "sgx_sha256_hash_t must have same size as se_ae_ecdsa_hash_t");
+    se_static_assert(sizeof(out)==sizeof(sgx_sha256_hash_t)); /*sgx_sha256_hash_t must have same size as se_ae_ecdsa_hash_t*/
     sgx_status =sgx_sha256_get_hash(sha_state, reinterpret_cast<sgx_sha256_hash_t *>(out.hash));
     if(sgx_status != SGX_SUCCESS){
         ret = sgx_error_to_pve_error(sgx_status);

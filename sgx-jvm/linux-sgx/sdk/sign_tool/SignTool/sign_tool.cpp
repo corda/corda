@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,7 +77,8 @@ typedef enum _command_mode_t
     SIGN = 0,
     GENDATA,
     CATSIG,
-    COMPARE
+    COMPARE,
+    DUMP
 } command_mode_t;
 
 typedef enum _file_path_t
@@ -88,7 +89,8 @@ typedef enum _file_path_t
     OUTPUT,
     SIG,
     UNSIGNED,
-    REVIEW_ENCLAVE
+    REVIEW_ENCLAVE,
+    DUMPFILE
 } file_path_t;
 
 static bool get_time(uint32_t *date)
@@ -133,13 +135,13 @@ static void close_handle(int fd)
 }
 
 
-static bool get_enclave_info(BinParser *parser, bin_fmt_t *bf, uint64_t * meta_offset)
+static bool get_enclave_info(BinParser *parser, bin_fmt_t *bf, uint64_t * meta_offset, bool is_dump_mode = false)
 {
     uint64_t meta_rva = parser->get_metadata_offset();
     const uint8_t *base_addr = parser->get_start_addr();
     metadata_t *metadata = GET_PTR(metadata_t, base_addr, meta_rva);
 
-    if(metadata->magic_num == METADATA_MAGIC)
+    if(metadata->magic_num == METADATA_MAGIC && is_dump_mode == false)
     {
         se_trace(SE_TRACE_ERROR, ENCLAVE_ALREADY_SIGNED_ERROR);
         return false;
@@ -158,6 +160,7 @@ static bool measure_enclave(uint8_t *hash, const char *dllpath, const xml_parame
     assert(hash && dllpath && metadata && bin_fmt && meta_offset);
     bool res = false;
     uint32_t file_size = 0;
+    uint64_t quota = 0;
 
     se_file_handle_t fh = open_file(dllpath);
     if (fh == THE_INVALID_HANDLE)
@@ -234,12 +237,13 @@ static bool measure_enclave(uint8_t *hash, const char *dllpath, const xml_parame
         res = false;
         break;
     case SGX_SUCCESS:
-        ret = dynamic_cast<EnclaveCreatorST*>(get_enclave_creator())->get_enclave_info(hash, SGX_HASH_SIZE);
+        ret = dynamic_cast<EnclaveCreatorST*>(get_enclave_creator())->get_enclave_info(hash, SGX_HASH_SIZE, &quota);
         if(ret != SGX_SUCCESS)
         {
             res = false;
             break;
         }
+        se_trace(SE_TRACE_ERROR, REQUIRED_ENCLAVE_SIZE, quota);
         res = true;
         break;
     default:
@@ -336,8 +340,8 @@ static bool fill_enclave_css(const IppsRSAPublicKeyState *pub_key, const xml_par
     }
     if(para[LAUNCHKEY].value == 1)
     {
-        enclave_css.body.attributes.flags |= SGX_FLAGS_EINITOKEN_KEY;
-        enclave_css.body.attribute_mask.flags |= SGX_FLAGS_EINITOKEN_KEY;
+        enclave_css.body.attributes.flags |= SGX_FLAGS_EINITTOKEN_KEY;
+        enclave_css.body.attribute_mask.flags |= SGX_FLAGS_EINITTOKEN_KEY;
     }
     if(bf == BF_PE64 || bf == BF_ELF64)
     {
@@ -346,7 +350,7 @@ static bool fill_enclave_css(const IppsRSAPublicKeyState *pub_key, const xml_par
     }
     // high 64 bit
     //default setting
-    enclave_css.body.attributes.xfrm = SGX_XFRM_LEGACY;
+    enclave_css.body.attributes.xfrm = SGX_XFRM_LEGACY; // SGX requires SSE and x87, so set legacy bits to be checked
     enclave_css.body.attribute_mask.xfrm = SGX_XFRM_LEGACY | SGX_XFRM_RESERVED; // LEGACY and reserved bits would be checked.
 
     memcpy_s(&enclave_css.body.enclave_hash, sizeof(enclave_css.body.enclave_hash), enclave_hash, SGX_HASH_SIZE);
@@ -371,6 +375,7 @@ static bool fill_enclave_css(const IppsRSAPublicKeyState *pub_key, const xml_par
         if(read_file_to_buf(path[UNSIGNED], buf, fsize) == false)
         {
             se_trace(SE_TRACE_ERROR, READ_FILE_ERROR, path[UNSIGNED]);
+            delete [] buf;
             return false;
         }
         memcpy_s(&enclave_css.header, sizeof(enclave_css.header), buf, sizeof(enclave_css.header));
@@ -679,7 +684,8 @@ static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char
         {"-out", NULL, PAR_REQUIRED},
         {"-sig", NULL, PAR_INVALID},
         {"-unsigned", NULL, PAR_INVALID},
-        {"-review_enclave", NULL, PAR_INVALID}};
+        {"-review_enclave", NULL, PAR_INVALID},
+        {"-dumpfile", NULL, PAR_OPTIONAL}};
     param_struct_t params_gendata[] = {
         {"-enclave", NULL, PAR_REQUIRED},
         {"-config", NULL, PAR_OPTIONAL},
@@ -687,7 +693,8 @@ static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char
         {"-out", NULL, PAR_REQUIRED},
         {"-sig", NULL, PAR_INVALID},
         {"-unsigned", NULL, PAR_INVALID},
-        {"-review_enclave", NULL, PAR_INVALID}};
+        {"-review_enclave", NULL, PAR_INVALID},
+        {"-dumpfile", NULL, PAR_INVALID}};
     param_struct_t params_catsig[] = {
         {"-enclave", NULL, PAR_REQUIRED},
         {"-config", NULL, PAR_OPTIONAL},
@@ -695,7 +702,8 @@ static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char
         {"-out", NULL, PAR_REQUIRED},
         {"-sig", NULL, PAR_REQUIRED},
         {"-unsigned", NULL, PAR_REQUIRED},
-        {"-review_enclave", NULL, PAR_INVALID}};
+        {"-review_enclave", NULL, PAR_INVALID},
+        {"-dumpfile", NULL, PAR_OPTIONAL}};
     param_struct_t params_compare[] = {
         {"-enclave", NULL, PAR_REQUIRED},
         {"-config", NULL, PAR_OPTIONAL},
@@ -703,11 +711,21 @@ static bool cmdline_parse(unsigned int argc, char *argv[], int *mode, const char
         {"-out", NULL, PAR_INVALID},
         {"-sig", NULL, PAR_INVALID},
         {"-unsigned", NULL, PAR_REQUIRED},
-        {"-review_enclave", NULL, PAR_REQUIRED}};
+        {"-review_enclave", NULL, PAR_REQUIRED},
+        {"-dumpfile", NULL, PAR_INVALID}};
+    param_struct_t params_dump[] = {
+        {"-enclave", NULL, PAR_REQUIRED},
+        {"-config", NULL, PAR_INVALID},
+        {"-key", NULL, PAR_INVALID},
+        {"-out", NULL, PAR_INVALID},
+        {"-sig", NULL, PAR_INVALID},
+        {"-unsigned", NULL, PAR_INVALID},
+        {"-review_enclave", NULL, PAR_INVALID},
+        {"-dumpfile", NULL, PAR_REQUIRED}};
 
 
-    const char *mode_m[] ={"sign", "gendata","catsig", "compare"};
-    param_struct_t *params[] = {params_sign, params_gendata, params_catsig, params_compare};
+    const char *mode_m[] ={"sign", "gendata","catsig", "compare", "dump"};
+    param_struct_t *params[] = {params_sign, params_gendata, params_catsig, params_compare, params_dump};
     unsigned int tempidx=0;
     for(; tempidx<sizeof(mode_m)/sizeof(mode_m[0]); tempidx++)
     {
@@ -936,6 +954,7 @@ static bool compare_enclave(const char **path, const xml_parameter_t *para)
     bin_fmt_t bin_fmt1 = BF_UNKNOWN, bin_fmt2 = BF_UNKNOWN;
     uint8_t enclave_hash[SGX_HASH_SIZE] = {0};
     uint8_t *buf = NULL;
+    uint64_t quota = 0;
     CMetadata *meta = NULL;
     metadata_t metadata;
     enclave_diff_info_t enclave_diff_info1, enclave_diff_info2;
@@ -1065,7 +1084,7 @@ static bool compare_enclave(const char **path, const xml_parameter_t *para)
     {
         goto clear_return;
     }
-    ret = dynamic_cast<EnclaveCreatorST*>(get_enclave_creator())->get_enclave_info(enclave_hash, SGX_HASH_SIZE);
+    ret = dynamic_cast<EnclaveCreatorST*>(get_enclave_creator())->get_enclave_info(enclave_hash, SGX_HASH_SIZE, &quota);
     if(ret != SGX_SUCCESS)
     {
         goto clear_return;
@@ -1097,6 +1116,57 @@ clear_return:
     return res;
 }
 
+static bool dump_enclave_metadata(const char *enclave_path, const char *dumpfile_path)
+{
+    assert(enclave_path != NULL && dumpfile_path != NULL);
+    
+    uint64_t meta_offset = 0;
+    bin_fmt_t bin_fmt = BF_UNKNOWN;
+    uint32_t file_size = 0;
+
+    se_file_handle_t fh = open_file(enclave_path);
+    if (fh == THE_INVALID_HANDLE)
+    {
+        se_trace(SE_TRACE_ERROR, OPEN_FILE_ERROR, enclave_path);
+        return false;
+    }
+
+    std::unique_ptr<map_handle_t, void (*)(map_handle_t*)> mh(map_file(fh, &file_size), unmap_file);
+    if (!mh)
+    {
+        close_handle(fh);
+        return false;
+    }
+    // Parse enclave
+    std::unique_ptr<BinParser> parser(binparser::get_parser(mh->base_addr, (size_t)file_size));
+    assert(parser != NULL);
+
+    sgx_status_t status = parser->run_parser();
+    if (status != SGX_SUCCESS)
+    {
+        se_trace(SE_TRACE_ERROR, INVALID_ENCLAVE_ERROR);
+        close_handle(fh);
+        return false;
+
+    }
+    // Collect enclave info
+    if(get_enclave_info(parser.get(), &bin_fmt, &meta_offset, true) == false)
+    {
+        close_handle(fh);
+        return false;
+    }
+    const metadata_t *metadata = GET_PTR(metadata_t, mh->base_addr, meta_offset); 
+    if(print_metadata(dumpfile_path, metadata) == false)
+    {
+        close_handle(fh);
+        remove(dumpfile_path);
+        return false;
+    }
+
+    close_handle(fh);
+    return true;
+}
+
 int main(int argc, char* argv[])
 {
     xml_parameter_t parameter[] = {{"ProdID", 0xFFFF, 0, 0, 0},
@@ -1115,7 +1185,7 @@ int main(int argc, char* argv[])
                                    {"MiscSelect", 0xFFFFFFFF, 0, DEFAULT_MISC_SELECT, 0},
                                    {"MiscMask", 0xFFFFFFFF, 0, DEFAULT_MISC_MASK, 0}};
 
-    const char *path[7] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+    const char *path[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
     uint8_t enclave_hash[SGX_HASH_SIZE] = {0};
     metadata_t metadata;
     int res = -1, mode = -1;
@@ -1129,17 +1199,6 @@ int main(int argc, char* argv[])
     memset(&rsa,      0, sizeof(rsa));
     memset(&metadata, 0, sizeof(metadata));
 
-#ifdef SGX_USE_OPT_LIB
-    //NOTE: 
-    //    We can not use any other Intel IPP function 
-    //    while the function ippInit() continues execution.
-    if(ippInit() != ippStsNoErr)
-    {
-        se_trace(SE_TRACE_ERROR, INIT_IPP_LIBRARY_ERROR);
-        return -1;
-    }
-#endif
-
     //Parse command line
     if(cmdline_parse(argc, argv, &mode, path, &ignore_rel_error) == false)
     {
@@ -1150,7 +1209,40 @@ int main(int argc, char* argv[])
     {
         return 0;
     }
+    else if(mode == COMPARE)
+    {
+        //compare two enclaves
+
+        //Parse the xml file to get the metadata
+        if(parse_metadata_file(path[XML], parameter, (int)parameter_count) == false)
+        {
+            goto clear_return;
+        }
+        if(compare_enclave(path, parameter) == false)
+        {
+            se_trace(SE_TRACE_ERROR, "The two enclaves are not matched\n");
+            return -1;
+        }
+        se_trace(SE_TRACE_ERROR, "The two enclaves are matched\n");
+        return 0;
+    }
+    else if(mode == DUMP)
+    {
+        // dump metadata info
+        if(dump_enclave_metadata(path[DLL], path[DUMPFILE]) == false)
+        {
+            se_trace(SE_TRACE_ERROR, DUMP_METADATA_ERROR, path[DUMPFILE]);
+            return -1;
+        }
+        else
+        {
+            se_trace(SE_TRACE_ERROR, SUCCESS_EXIT);
+            return 0;
+        }
+    }
     
+    //Other modes
+    //
     //Parse the xml file to get the metadata
     if(parse_metadata_file(path[XML], parameter, (int)parameter_count) == false)
     {
@@ -1160,17 +1252,6 @@ int main(int argc, char* argv[])
     if(parse_key_file(path[KEY], &rsa, &key_type) == false && key_type != NO_KEY) 
     {
         goto clear_return;
-    }
-    //compare two enclave
-    if(mode == COMPARE)
-    {
-        if(compare_enclave(path, parameter) == false)
-        {
-            se_trace(SE_TRACE_ERROR, "The two enclaves are not matched\n");
-            return -1;
-        }
-        se_trace(SE_TRACE_ERROR, "The two enclaves are matched\n");
-        return 0;
     }
     if(copy_file(path[DLL], path[OUTPUT]) == false)
     {
@@ -1189,6 +1270,7 @@ int main(int argc, char* argv[])
         se_trace(SE_TRACE_ERROR, OVERALL_ERROR);
         goto clear_return;
     }
+
     //to verify
     if(mode == SIGN || mode == CATSIG)
     {
@@ -1199,12 +1281,22 @@ int main(int argc, char* argv[])
             goto clear_return;
         }
     }
-
+    
+    if(path[DUMPFILE] != NULL)
+    {
+        if(print_metadata(path[DUMPFILE], &metadata) == false)
+        {
+            se_trace(SE_TRACE_ERROR, DUMP_METADATA_ERROR, path[DUMPFILE]);
+            goto clear_return;
+        }
+    }
     se_trace(SE_TRACE_ERROR, SUCCESS_EXIT);
     res = 0;
 
 clear_return:
     if(res == -1 && path[OUTPUT])
         remove(path[OUTPUT]);
+    if(res == -1 && path[DUMPFILE])
+        remove(path[DUMPFILE]);
     return res;
 }

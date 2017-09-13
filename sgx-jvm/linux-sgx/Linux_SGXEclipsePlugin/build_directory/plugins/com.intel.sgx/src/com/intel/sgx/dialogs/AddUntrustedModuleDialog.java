@@ -112,7 +112,7 @@ public class AddUntrustedModuleDialog extends Dialog {
 	@Override
 	protected void configureShell(Shell newShell) {
 		super.configureShell(newShell);
-		newShell.setText("Add SGX Untrusted Module.");
+		newShell.setText("Add Intel(R) SGX Untrusted Module.");
 	}
 	
 	@Override

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -61,10 +61,7 @@ EDGER8R       := $(EDGER8R_DIR)/_build/Edger8r.native
 
 SRC     := $(wildcard *.cpp)
 SRC     += $(TOP_DIR)/common/src/dh.cpp
-C_OBJ   := $(OBJ:.c=.o)
-CXX_OBJ := $(SRC:.cpp=.o)
-
-OBJS := $(CXX_OBJ) $(C_OBJ)
+OBJS := $(sort $(SRC:.cpp=.o))
 
 .PHONY: all
 all: $(TSERVICE_SIM_LIB) | $(BUILD_DIR)
@@ -86,13 +83,8 @@ $(TSERVICE_SIM_LIB): $(TAE_SERVICE_SIM_LIB) $(EC_DH_LIB) $(TSEAL_LIB) $(SE_LIB)
 sgx_tae_service_t.h: $(EDLFILE) $(EDGER8R)
 	$(EDGER8R) --trusted --header-only --search-path $(TOP_DIR)/common/inc $<
 
-$(OBJS): sgx_tae_service_t.h
-
-$(CXX_OBJ): %.o: %.cpp
+$(OBJS): %.o: %.cpp sgx_tae_service_t.h
 	$(CXX) $(CXXFLAGS) -fno-exceptions -fno-rtti $(INCLUDE) $(DEFINES) -c $< -o $@
-
-$(C_OBJ): %.o: %.c
-	$(CC) $(CFLAGS) $(INCLUDE) $(DEFINES) -c $< -o $@
 
 $(EDGER8R):
 	$(MAKE) -C $(EDGER8R_DIR)

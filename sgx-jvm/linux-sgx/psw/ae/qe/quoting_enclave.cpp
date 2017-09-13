@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -158,10 +158,10 @@ static ae_error_t verify_blob_internal(
     // Only 2 combinations are legitimate for the tuple epid_key_version|decryptedtext_length|plaintext_length:
     // EPID_KEY_BLOB_VERSION_SIK|sizeof(se_secret_epid_data_sik_t)|sizeof(se_plaintext_epid_data_sik_t)
     // EPID_KEY_BLOB_VERSION_SDK|sizeof(se_secret_epid_data_sdk_t)|sizeof(se_plaintext_epid_data_sdk_t) 
-    if(plaintext_old_format.epid_key_version == EPID_KEY_BLOB_VERSION_SIK && 
-        (decryptedtext_length!=sizeof(se_secret_epid_data_sik_t)||plaintext_length!=sizeof(se_plaintext_epid_data_sik_t))||
-       plaintext_old_format.epid_key_version == EPID_KEY_BLOB_VERSION_SDK &&
-        (decryptedtext_length!=sizeof(se_secret_epid_data_sdk_t)||plaintext_length!=sizeof(se_plaintext_epid_data_sdk_t))){
+    if((plaintext_old_format.epid_key_version == EPID_KEY_BLOB_VERSION_SIK && 
+        (decryptedtext_length!=sizeof(se_secret_epid_data_sik_t)||plaintext_length!=sizeof(se_plaintext_epid_data_sik_t)))||
+       (plaintext_old_format.epid_key_version == EPID_KEY_BLOB_VERSION_SDK &&
+        (decryptedtext_length!=sizeof(se_secret_epid_data_sdk_t)||plaintext_length!=sizeof(se_plaintext_epid_data_sdk_t)))){
         memset_s(&secret_epid_data, sizeof(secret_epid_data), 0,
             sizeof(secret_epid_data));
         return QE_EPIDBLOB_ERROR;
@@ -331,7 +331,6 @@ uint32_t verify_blob(
  * @param plaintext[in] Reference to the plain text part of EPID blob.
  * @param p_basename[in] The pointer to basename.
  * @param emp_sig_rl_entries[in] The pointer to SIG-RL entries.
- * @param sig_rl_size[in] The size of SIG-RL, in bytes.
  * @param p_sig_rl_header[in] The header of SIG-RL, within EPC.
  * @param p_sig_rl_signature[in] The ecdsa signature of SIG-RL, within EPC.
  * @param p_enclave_report[in] The input isv report.
@@ -347,7 +346,6 @@ static ae_error_t qe_epid_sign(
     const se_plaintext_epid_data_sdk_t& plaintext,
     const sgx_basename_t *p_basename,
     const SigRlEntry *emp_sig_rl_entries,
-    uint32_t sig_rl_size,
     se_sig_rl_t *p_sig_rl_header,
     sgx_ec256_signature_t *p_sig_rl_signature,
     const sgx_report_t *p_enclave_report,
@@ -624,7 +622,6 @@ static ae_error_t qe_epid_sign(
     /* Start process the SIG-RL. */
     if(emp_sig_rl_entries)
     {
-        unsigned int rl_ver = 0;
         unsigned int entry_count = 0;
         unsigned int i = 0;
         RLver_t encrypted_rl_ver = {{0}};
@@ -1118,7 +1115,6 @@ uint32_t get_quote(
                        &basename,
                        emp_sig_rl ? ((const se_sig_rl_t *)emp_sig_rl)->sig_rl.bk
                                     : NULL,
-                       sig_rl_size,
                        &sig_rl_header,
                        &ec_signature,
                        p_enclave_report,

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -34,15 +34,15 @@ include ../../../buildenv.mk
 CXXFLAGS += -Werror
 CFLAGS   += -Werror
 
-CXXFLAGS += $(ADDED_INC)
-CPPFLAGS += -I$(COMMON_DIR)/inc                         \
-            -I$(COMMON_DIR)/inc/internal                \
-            -I$(COMMON_DIR)/inc/internal/linux/         \
-            -I$(LINUX_PSW_DIR)/urts                     \
-            -I$(LINUX_PSW_DIR)/urts/linux               \
-            -I$(LINUX_EXTERNAL_DIR)/tinyxml2            \
-            -I$(SGX_IPP_INC)                            \
-            -I$(LINUX_PSW_DIR)/urts/parser
+INC += $(ADDED_INC)
+INC +=  -I$(COMMON_DIR)/inc                         \
+        -I$(COMMON_DIR)/inc/internal                \
+        -I$(COMMON_DIR)/inc/internal/linux/         \
+        -I$(LINUX_PSW_DIR)/urts                     \
+        -I$(LINUX_PSW_DIR)/urts/linux               \
+        -I$(LINUX_EXTERNAL_DIR)/tinyxml2            \
+        -I$(SGX_IPP_INC)                            \
+        -I$(LINUX_PSW_DIR)/urts/parser
 
 IPP_LIBS := $(LD_IPP)
 IPP_PATH := $(IPP_LIBS_DIR)
@@ -96,10 +96,10 @@ sgx_sign: $(OBJS) enclaveparser libcrypto_px
 endif
 
 $(CPP_OBJS): %.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INC) -c $< -o $@
 
 $(C_OBJS):   %.o: $(DIR2)%.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
 .PHONY: clean
 clean:

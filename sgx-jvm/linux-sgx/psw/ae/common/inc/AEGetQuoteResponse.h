@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,45 +33,40 @@
 
 #include <IAEResponse.h>
 #include <stdint.h>
+namespace aesm
+{
+    namespace message
+    {
+            class Response_GetQuoteResponse;
+    };
+};
 
 class AEGetQuoteResponse : public IAEResponse
 {
     public:
         AEGetQuoteResponse();
-        AEGetQuoteResponse(int errorCode, uint32_t quoteLength, const uint8_t* quote, 
+        AEGetQuoteResponse(aesm::message::Response_GetQuoteResponse& response);
+        AEGetQuoteResponse(uint32_t errorCode, uint32_t quoteLength, const uint8_t* quote, 
                                           uint32_t qeReportLength, const uint8_t* qeReport);
         AEGetQuoteResponse(const AEGetQuoteResponse& other);
 
         ~AEGetQuoteResponse();
 
-        AEMessage* serialize(ISerializer* serializer);
-        bool inflateWithMessage(AEMessage* message, ISerializer* response);
-        void inflateValues(int errorCode, uint32_t quoteLength,const uint8_t* quote, 
-                                          uint32_t qeReportLength, const uint8_t* qeReport);
+        AEMessage* serialize();
+        bool inflateWithMessage(AEMessage* message);
+        bool GetValues(uint32_t* errorCode, uint32_t quoteLength,uint8_t* quote, 
+                                          uint32_t qeReportLength, uint8_t* qeReport) const;
 
 
         //operators
-        bool operator==(const AEGetQuoteResponse& other) const;
         AEGetQuoteResponse& operator=(const AEGetQuoteResponse& other);
-
-        //getters
-        inline uint32_t       GetQuoteLength()      { return mQuoteLength; }
-        inline const uint8_t* GetQuote()            { return mQuote; }
-        inline uint32_t       GetQEReportLength()   { return mQEReportLength; }
-        inline const uint8_t* GetQEReport()         { return mQEReport; }
 
         //checks
         bool check();
-        virtual void visit(IAEResponseVisitor& visitor);
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode, uint32_t quoteLength,const uint8_t* quote, 
-                                          uint32_t qeReportLength, const uint8_t* qeReport);
 
-        uint32_t mQuoteLength;
-        uint8_t* mQuote;
-        uint32_t mQEReportLength;
-        uint8_t* mQEReport;
+        aesm::message::Response_GetQuoteResponse* m_response;
 };
 
 #endif

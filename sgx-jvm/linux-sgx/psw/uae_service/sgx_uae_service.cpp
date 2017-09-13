@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@
 #include <aesm_error.h>
 #include "sgx_uae_service.h"
 #include "uae_service_internal.h"
-#include <Config.h>     /*needed to unify default timeout values */
+#include "config.h"
 
 #include "stdint.h"
 #include "se_sig_rl.h"
@@ -657,6 +657,9 @@ sgx_status_t    oal_map_result(aesm_error_t result)
             break;
         case AESM_BUSY:
             retVal = SGX_ERROR_BUSY;
+            break;
+        case AESM_UNRECOGNIZED_PLATFORM:
+            retVal = SGX_ERROR_UNRECOGNIZED_PLATFORM;
             break;
         case AESM_NETWORK_ERROR:
         case AESM_NETWORK_BUSY_ERROR:

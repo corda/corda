@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,39 +33,40 @@
 
 #include <IAERequest.h>
 
+namespace aesm
+{
+    namespace message
+    {
+        class Request_SGXSwitchExtendedEpidGroupRequest;
+    };
+};
+
 class AESGXSwitchExtendedEpidGroupRequest : public IAERequest
 {
     public:
-        AESGXSwitchExtendedEpidGroupRequest();
+        AESGXSwitchExtendedEpidGroupRequest(const aesm::message::Request_SGXSwitchExtendedEpidGroupRequest& request);
         AESGXSwitchExtendedEpidGroupRequest(uint32_t extendedGroupId, uint32_t timeout);
         AESGXSwitchExtendedEpidGroupRequest(const AESGXSwitchExtendedEpidGroupRequest& other);
         ~AESGXSwitchExtendedEpidGroupRequest();
 
-        AEMessage* serialize(ISerializer* serializer);
-        void inflateValues(uint32_t extendedGroupId, uint32_t timeout);
+        AEMessage* serialize();
 
-        //getters
-        int GetExtendedEpidGroupId() const { return mExtendedEpidGroupId; }
 
         //operators
-        bool operator==(const AESGXSwitchExtendedEpidGroupRequest& other) const;
         AESGXSwitchExtendedEpidGroupRequest& operator=(const AESGXSwitchExtendedEpidGroupRequest& request);
 
         //checks
         bool check();
-        void visit(IAERequestVisitor& visitor);
 
         //hooks
         IAEResponse* execute(IAESMLogic* aesmLogic);
 
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
 
     protected:
         void ReleaseMemory();
-        void CopyFields(uint32_t extendedGroupId, uint32_t timeout);
-
-        uint32_t mExtendedEpidGroupId;
+        aesm::message::Request_SGXSwitchExtendedEpidGroupRequest* m_request;
 };
 
 #endif

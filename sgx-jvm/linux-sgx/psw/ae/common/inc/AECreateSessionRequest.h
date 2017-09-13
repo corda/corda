@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,38 +32,37 @@
 #define __AE_CREATE_SESSION_REQUEST_H
 
 #include <IAERequest.h>
-class AESMLogicWrapper;
+#include <stdint.h>
+namespace aesm
+{
+    namespace message
+    {
+        class Request_CreateSessionRequest;
+    };
+};
 
-class AECreateSessionRequest : public IAERequest
+class AECreateSessionRequest : public IAERequest 
 {
     public:
-        AECreateSessionRequest();
-        AECreateSessionRequest(uint32_t dhMsg1Size, uint32_t timeout = 0);
+        AECreateSessionRequest(const aesm::message::Request_CreateSessionRequest& request);
+        AECreateSessionRequest(uint32_t dhMsg1Size, uint32_t timeout);
         AECreateSessionRequest(const AECreateSessionRequest& other);
         ~AECreateSessionRequest();
 
-        AEMessage* serialize(ISerializer* serializer);
-        void inflateValues(uint32_t dhMsg1Size, uint32_t timeout = 0);
-
-        //getters
-        uint32_t  GetDHMsg1Size() const {return mDHMsg1Size;}
+        AEMessage* serialize();
 
         //operators
-        bool operator==(const AECreateSessionRequest& other) const;
         AECreateSessionRequest& operator=(const AECreateSessionRequest& other);
 
         //checks
         bool check();
         virtual IAEResponse* execute(IAESMLogic*);
-        void visit(IAERequestVisitor& visitor);
 
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
     protected:
         void ReleaseMemory();
-        void CopyFields(uint32_t dhMsg1Size, uint32_t timeout);
-
-        uint32_t    mDHMsg1Size;
+        aesm::message::Request_CreateSessionRequest* m_request;
 };
 
 #endif

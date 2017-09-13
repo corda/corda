@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,10 +34,7 @@
 ICommunicationSocket* NonBlockingUnixSocketFactory::NewCommunicationSocket()
 {
     NonBlockingUnixCommunicationSocket* sock = new NonBlockingUnixCommunicationSocket(mSocketBase);
-    bool initializationSuccessfull = false;
-
-    if (sock != NULL)
-        initializationSuccessfull = sock->init();
+    bool initializationSuccessfull = sock->init();
 
     if (initializationSuccessfull == false)
     {

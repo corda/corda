@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@
 #include <curl/curl.h>
 #include <error_report.h>
 
-#include <Config.h>
+#include <SocketConfig.h>
 
 #include <iostream>
 
@@ -73,8 +73,16 @@ void signal_handler(int sig)
     }
 }
 
-int main() {
-    if(daemon(0, 0) < 0)
+int main(int argc, char *argv[]) {
+    // The only command line option that is supported is --no-daemon.
+    bool noDaemon = argc == 2 && (strcmp(argv[1], "--no-daemon") == 0);
+    if ((argc > 2) || (argc == 2 && !noDaemon)) {
+        AESM_LOG_INIT();
+        AESM_LOG_FATAL("Invalid command line.");
+        AESM_LOG_FINI();
+        exit(1);
+    }
+    if(!noDaemon && daemon(0, 0) < 0)
     {
         AESM_LOG_INIT();
         AESM_LOG_FATAL("Fail to set daemon.");

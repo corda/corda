@@ -95,7 +95,7 @@ public class AddEnclaveFileDialog extends SGXDialogBase {
 	@Override
 	protected void configureShell(Shell newShell) {
 		super.configureShell(newShell);
-		newShell.setText("Add New SGX Enclave Dialog");
+		newShell.setText("Add New Intel(R) SGX Enclave Dialog");
 		newShell.layout();
 	}
 	

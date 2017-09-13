@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,26 +28,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEGetWhiteListResponse.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <limits.h>
+#include <IAEMessage.h>
+
 AEGetWhiteListResponse::AEGetWhiteListResponse()
-:mWhiteListLength(0), mWhiteList(NULL)
+    :m_response(NULL)
 {
 }
 
-AEGetWhiteListResponse::AEGetWhiteListResponse(int errorCode, uint32_t whiteListLength, const uint8_t* whiteList)
-:mWhiteListLength(0), mWhiteList(NULL)
+AEGetWhiteListResponse::AEGetWhiteListResponse(aesm::message::Response::GetWhiteListResponse& response)
+    :m_response(NULL)
 {
-    CopyFields(errorCode, whiteListLength, whiteList);
+    m_response = new aesm::message::Response::GetWhiteListResponse(response);
+}
+
+AEGetWhiteListResponse::AEGetWhiteListResponse(uint32_t errorCode, uint32_t whiteListLength, const uint8_t* whiteList)
+    :m_response(NULL)
+{
+    m_response = new aesm::message::Response::GetWhiteListResponse();
+    m_response->set_errorcode(errorCode);
+    if (whiteListLength!= 0 && whiteList != NULL)
+        m_response->set_white_list(whiteList, whiteListLength);
 }
 
 AEGetWhiteListResponse::AEGetWhiteListResponse(const AEGetWhiteListResponse& other)
-:mWhiteListLength(0), mWhiteList(NULL)
+    :m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mWhiteListLength, other.mWhiteList);
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::GetWhiteListResponse(*other.m_response);
 }
 
 AEGetWhiteListResponse::~AEGetWhiteListResponse()
@@ -57,99 +70,74 @@ AEGetWhiteListResponse::~AEGetWhiteListResponse()
 
 void AEGetWhiteListResponse::ReleaseMemory()
 {
-    if (mWhiteList != NULL)
+   if (m_response != NULL)
     {
-        if (mWhiteListLength > 0)
-            memset(mWhiteList, 0, mWhiteListLength);
-        delete [] mWhiteList;
-        mWhiteList = NULL;
+        delete m_response;
+        m_response = NULL;
     }
-    mErrorCode = SGX_ERROR_UNEXPECTED;
-    mWhiteListLength = 0;
 }
 
-void AEGetWhiteListResponse::CopyFields(int errorCode, uint32_t whiteListLength,const uint8_t* whiteList)
+AEMessage* AEGetWhiteListResponse::serialize()
 {
-    if(whiteListLength <= MAX_MEMORY_ALLOCATION )
+    AEMessage *ae_msg = NULL;
+    aesm::message::Response msg;
+    if (check())
     {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
+        aesm::message::Response::GetWhiteListResponse* mutableResp = msg.mutable_getwhitelistres();
+        mutableResp->CopyFrom(*m_response);
 
-    mErrorCode = errorCode;
-    mWhiteListLength = whiteListLength;
-    if (whiteList != NULL && whiteListLength > 0) {
-        mWhiteList = new uint8_t[whiteListLength];
-        memcpy(mWhiteList, whiteList, whiteListLength);
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
     }
+    return ae_msg;
 }
 
-AEMessage* AEGetWhiteListResponse::serialize(ISerializer* serializer)
+bool AEGetWhiteListResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->serialize(this);
-}
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_getwhitelistres() == false)
+        return false;
 
-bool AEGetWhiteListResponse::inflateWithMessage(AEMessage* message, ISerializer* serializer)
-{
-    return serializer->inflateResponse(message, this);
-}
-
-void AEGetWhiteListResponse::inflateValues(int errorCode, uint32_t whiteListLength,const uint8_t* whiteList)
-{
     ReleaseMemory();
-
-    CopyFields(errorCode, whiteListLength, whiteList);
-}
-
-bool AEGetWhiteListResponse::operator==(const AEGetWhiteListResponse& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mErrorCode != other.mErrorCode ||
-            mWhiteListLength != other.mWhiteListLength)
-        return false;
-
-    if ((mWhiteList != other.mWhiteList) &&
-            (mWhiteList == NULL || other.mWhiteList == NULL))
-        return false;
-
-    if (mWhiteList != NULL && other.mWhiteList != NULL &&
-            memcmp(mWhiteList, other.mWhiteList, other.mWhiteListLength) != 0)
-        return false;
-
+    m_response = new aesm::message::Response::GetWhiteListResponse(msg.getwhitelistres());
     return true;
 }
+
+bool AEGetWhiteListResponse::GetValues(uint32_t* errorCode, uint32_t whiteListLength,uint8_t* whiteList) const
+{
+    if (m_response->has_white_list() && whiteList != NULL)
+    {
+        if (m_response->white_list().size() <= whiteListLength)
+            memcpy(whiteList, m_response->white_list().c_str(), m_response->white_list().size());
+        else
+            return false;
+    }
+
+    *errorCode = m_response->errorcode();
+    return true;
+}
+
 
 AEGetWhiteListResponse& AEGetWhiteListResponse::operator=(const AEGetWhiteListResponse& other)
 {
     if (this == &other)
         return * this;
 
-    inflateValues(other.mErrorCode, other.mWhiteListLength, other.mWhiteList);
-
-    return *this;
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::GetWhiteListResponse(*other.m_response);
+    }    return *this;
 }
 
 bool AEGetWhiteListResponse::check()
 {
-    if (mErrorCode != SGX_SUCCESS)
+    if (m_response == NULL)
         return false;
-
-    if (mValidSizeCheck == false)
-        return false;
-
-    if (mWhiteList == NULL)
-        return false;
-
-    return true;
-}
-
-void AEGetWhiteListResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitGetWhiteListResponse(*this);
+    return m_response->IsInitialized();
 }

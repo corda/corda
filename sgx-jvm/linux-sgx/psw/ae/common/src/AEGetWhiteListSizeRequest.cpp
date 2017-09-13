@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,86 +28,93 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEGetWhiteListSizeRequest.h>
 #include <AEGetWhiteListSizeResponse.h>
 #include <IAESMLogic.h>
 #include <stdlib.h>
-#include <sgx_uae_service.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AEGetWhiteListSizeRequest::AEGetWhiteListSizeRequest(uint32_t timeout) : IAERequest(timeout) {
+AEGetWhiteListSizeRequest::AEGetWhiteListSizeRequest(const aesm::message::Request::GetWhiteListSizeRequest& request) :
+    m_request(NULL)
+{
+    m_request = new aesm::message::Request::GetWhiteListSizeRequest();
+    m_request->CopyFrom(request);
+}
+
+AEGetWhiteListSizeRequest::AEGetWhiteListSizeRequest(uint32_t timeout)
+    :m_request(NULL)
+{
+    m_request->set_timeout(timeout);
 }
 
 AEGetWhiteListSizeRequest::AEGetWhiteListSizeRequest(const AEGetWhiteListSizeRequest& other)
-: IAERequest(other)
+    :m_request(NULL)
 {
-    CopyFields(other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::GetWhiteListSizeRequest(*other.m_request);
 }
 
 AEGetWhiteListSizeRequest::~AEGetWhiteListSizeRequest()
 {
-    ReleaseMemory();
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AEGetWhiteListSizeRequest::ReleaseMemory()
-{
-    //empty for now
-}
+AEMessage* AEGetWhiteListSizeRequest::serialize(){
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
+    {
+        aesm::message::Request::GetWhiteListSizeRequest* mutableReq = msg.mutable_getwhitelistsizereq();
+        mutableReq->CopyFrom(*m_request);
 
-
-void AEGetWhiteListSizeRequest::CopyFields(uint32_t timeout)
-{
-    mTimeout = timeout;
-}
-
-AEMessage* AEGetWhiteListSizeRequest::serialize(ISerializer* serializer){
-    return serializer->serialize(this);
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
 IAERequest::RequestClass AEGetWhiteListSizeRequest::getRequestClass() {
-    return PLATFORM_CLASS;
-}
-
-void AEGetWhiteListSizeRequest::inflateValues(uint32_t timeout)
-{
-    ReleaseMemory();
-
-    CopyFields(timeout);
-}
-
-bool AEGetWhiteListSizeRequest::operator==(const AEGetWhiteListSizeRequest& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mTimeout != other.mTimeout)
-        return false;
-
-    return true;    //no members , default to true
+    return LAUNCH_CLASS;
 }
 
 AEGetWhiteListSizeRequest& AEGetWhiteListSizeRequest::operator=(const AEGetWhiteListSizeRequest& other)
 {
     if (this == &other)
         return *this;
-
-    inflateValues(other.mTimeout);
- 
-    //do nothing - no members
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::GetWhiteListSizeRequest(*other.m_request);
     return *this;
 }
 
-void AEGetWhiteListSizeRequest::visit(IAERequestVisitor& visitor)
+bool AEGetWhiteListSizeRequest::check()
 {
-    visitor.visitGetWhiteListSizeRequest(*this);
+    if (m_request == NULL)
+        return false;
+    return m_request->IsInitialized();
 }
 
 
 IAEResponse* AEGetWhiteListSizeRequest::execute(IAESMLogic* aesmLogic) 
 {
-    uint32_t white_list_size;
+    aesm_error_t result = AESM_UNEXPECTED_ERROR;
+    uint32_t white_list_size = 0;
 
-    aesm_error_t result = aesmLogic->getWhiteListSize(&white_list_size);
+    if (check())
+    {
+        result = aesmLogic->getWhiteListSize(&white_list_size);
+    }
 
     AEGetWhiteListSizeResponse * response = new AEGetWhiteListSizeResponse((uint32_t)result, white_list_size);
 

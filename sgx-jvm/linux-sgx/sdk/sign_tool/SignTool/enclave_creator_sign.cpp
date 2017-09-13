@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,6 +60,7 @@ EnclaveCreatorST::EnclaveCreatorST()
     memset(m_enclave_hash, 0, SGX_HASH_SIZE);
     m_ctx = NULL;
     m_eid = EID;
+    m_quota = 0;
 }
 
 EnclaveCreatorST::~EnclaveCreatorST()
@@ -202,6 +203,8 @@ int EnclaveCreatorST::add_enclave_page(sgx_enclave_id_t enclave_id, void *src, u
             }
         }
     }
+
+    m_quota += SE_PAGE_SIZE;
     return SGX_SUCCESS;
 }
 
@@ -261,7 +264,7 @@ bool EnclaveCreatorST::use_se_hw() const
     return false;
 }
 
-int EnclaveCreatorST::get_enclave_info(uint8_t *hash, int size)
+int EnclaveCreatorST::get_enclave_info(uint8_t *hash, int size, uint64_t *quota)
 {
     if(hash == NULL || size != SGX_HASH_SIZE || m_hash_valid_flag == false)
     {
@@ -272,6 +275,7 @@ int EnclaveCreatorST::get_enclave_info(uint8_t *hash, int size)
     {
         memcpy_s(hash, size, m_enclave_hash, SGX_HASH_SIZE);
     }
+    *quota = m_quota;
     return SGX_SUCCESS;
 }
 

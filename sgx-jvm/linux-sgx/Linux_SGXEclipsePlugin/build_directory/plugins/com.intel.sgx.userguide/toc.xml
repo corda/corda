@@ -24,22 +24,22 @@
     <topic label='Configuring Intel(R) SGX Plug-in' href='html/content.html#Configuring_Intel_Software_Guard_Extensions_Eclipse_Plug-in' />
   </topic>
   <topic label='Command Reference' href='html/content.html#Command_Reference'>
-    <topic label='Adding SGX Nature to a Project' href='html/content.html#Adding_SGX_Nature_to_a_Project'>
-      <topic label='Adding SGX Nature to a non-SGX project' href='html/content.html#Adding_SGX_Nature_to_a_non_SGX_project' />
-      <topic label='Creating a New C/C++ Project with SGX Nature' href='html/content.html#Creating_a_New_C_C_Project_with_SGX_Nature' />
+    <topic label='Adding Intel(R) SGX Nature to a Project' href='html/content.html#Adding_SGX_Nature_to_a_Project'>
+      <topic label='Adding Intel(R) SGX Nature to a non-SGX project' href='html/content.html#Adding_SGX_Nature_to_a_non_SGX_project' />
+      <topic label='Creating a New C/C++ Project with Intel(R) SGX Nature' href='html/content.html#Creating_a_New_C_C_Project_with_SGX_Nature' />
     </topic>
-    <topic label='Adding an SGX Enclave' href='html/content.html#Adding_an_SGX_Enclave' />
-    <topic label='Adding an SGX Trusted Library' href='html/content.html#Adding_an_SGX_Trusted_Library' />
-    <topic label='Adding an SGX Untrusted Module' href='html/content.html#Adding_an_SGX_Untrusted_Module' />
-    <topic label='Updating SGX Enclave Signing Key' href='html/content.html#Updating_SGX_Enclave_Signing_Key' />
+    <topic label='Adding an Intel(R) SGX Enclave' href='html/content.html#Adding_an_SGX_Enclave' />
+    <topic label='Adding an Intel(R) SGX Trusted Library' href='html/content.html#Adding_an_SGX_Trusted_Library' />
+    <topic label='Adding an Intel(R) SGX Untrusted Module' href='html/content.html#Adding_an_SGX_Untrusted_Module' />
+    <topic label='Updating Intel(R) SGX Enclave Signing Key' href='html/content.html#Updating_SGX_Enclave_Signing_Key' />
     <topic label='Updating Enclave Configuration Files' href='html/content.html#Updating_Enclave_Configuration_Files' />
     <topic label='Two Steps Sign Enclave' href='html/content.html#Two_Steps_Sign_Enclave'>
       <topic label='Generate Hash' href='html/content.html#Generate_Hash' />
       <topic label='Generate Signed Enclaves' href='html/content.html#Generate_Signed_Enclaves' />
     </topic>
   </topic>
-  <topic label='Building and Running SGX Code' href='html/content.html#Building_and_Running_SGX_Code'>
-    <topic label='SGX Build Configurations' href='html/content.html#SGX_Build_Configurations' />
+  <topic label='Building and Running Intel(R) SGX Code' href='html/content.html#Building_and_Running_SGX_Code'>
+    <topic label='Intel(R) SGX Build Configurations' href='html/content.html#SGX_Build_Configurations' />
     <topic label='Running Samples Generated for Enclaves' href='html/content.html#Running_Samples_Generated_for_Enclaves' />
   </topic>
 </toc>

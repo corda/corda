@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,11 @@ uint64_t get_xfeature_state()
     // so set the pointers to SYNTHETIC_STATE
     sgx_target_info_t *target_info = (sgx_target_info_t *)SYNTHETIC_STATE;
     sgx_report_data_t *report_data = (sgx_report_data_t *)SYNTHETIC_STATE;
-    uint8_t buffer[sizeof(sgx_report_t) + REPORT_ALIGN_SIZE -1] = {0};
+    uint8_t buffer[sizeof(sgx_report_t) + REPORT_ALIGN_SIZE -1];
+    for(size_t i=0; i< sizeof(sgx_report_t) + REPORT_ALIGN_SIZE -1; i++)
+    {
+        buffer[i] = 0;
+    }
     sgx_report_t *report = (sgx_report_t *)ROUND_TO((size_t)buffer, REPORT_ALIGN_SIZE);
 
     do_ereport(target_info, report_data, report);

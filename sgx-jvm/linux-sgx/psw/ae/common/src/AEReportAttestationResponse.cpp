@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,30 +28,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEReportAttestationResponse.h>
 
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AEReportAttestationResponse::AEReportAttestationResponse() :
-    mUpdateInfoLength(0),
-    mUpdateInfo(NULL)
+AEReportAttestationResponse::AEReportAttestationResponse()
+    :m_response(NULL)
 {
 }
 
-AEReportAttestationResponse::AEReportAttestationResponse(int errorCode, uint32_t updateInfoLength, const uint8_t* updateInfo) : 
-    mUpdateInfoLength(0),
-    mUpdateInfo(NULL)
+AEReportAttestationResponse::AEReportAttestationResponse(aesm::message::Response::ReportAttestationErrorResponse& response)
+    :m_response(NULL)
 {
-    CopyFields(errorCode, updateInfoLength, updateInfo);
+    m_response = new aesm::message::Response::ReportAttestationErrorResponse(response);
 }
 
-AEReportAttestationResponse::AEReportAttestationResponse(const AEReportAttestationResponse& other) : 
-    mUpdateInfoLength(0),
-    mUpdateInfo(NULL)
+AEReportAttestationResponse::AEReportAttestationResponse(uint32_t errorCode, uint32_t updateInfoLength, const uint8_t* updateInfo)
+    :m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mUpdateInfoLength, other.mUpdateInfo);
+    m_response = new aesm::message::Response::ReportAttestationErrorResponse();
+    m_response->set_errorcode(errorCode);
+    if (updateInfoLength!= 0 && updateInfo != NULL)
+        m_response->set_platform_update_info(updateInfo, updateInfoLength);
+}
+
+AEReportAttestationResponse::AEReportAttestationResponse(const AEReportAttestationResponse& other)
+    :m_response(NULL)
+{
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::ReportAttestationErrorResponse(*other.m_response);
 }
 
 AEReportAttestationResponse::~AEReportAttestationResponse()
@@ -61,66 +70,56 @@ AEReportAttestationResponse::~AEReportAttestationResponse()
 
 void AEReportAttestationResponse::ReleaseMemory()
 {
-    if (mUpdateInfo != NULL)
-        delete [] mUpdateInfo;
-    mUpdateInfo = NULL;
-    mUpdateInfoLength = 0;
-    mErrorCode = SGX_ERROR_UNEXPECTED;
-}
-
-void AEReportAttestationResponse::CopyFields(int errorCode, uint32_t updateInfoLength,const uint8_t* updateInfo)
-{
-    if(updateInfoLength <= MAX_MEMORY_ALLOCATION )
+    if (m_response != NULL)
     {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
-
-    mErrorCode = errorCode;
-    mUpdateInfoLength = updateInfoLength;
-    if (updateInfo != NULL && updateInfoLength > 0)
-    {
-        mUpdateInfo = new uint8_t[updateInfoLength];
-        memcpy(mUpdateInfo, updateInfo, updateInfoLength);
+        delete m_response;
+        m_response = NULL;
     }
 }
 
-AEMessage* AEReportAttestationResponse::serialize(ISerializer* serializer)
+AEMessage* AEReportAttestationResponse::serialize()
 {
-    return serializer->serialize(this);
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    if (check())
+    {
+        aesm::message::Response::ReportAttestationErrorResponse* mutableRes = msg.mutable_reporterrres();
+        mutableRes->CopyFrom(*m_response);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-bool AEReportAttestationResponse::inflateWithMessage(AEMessage* message, ISerializer* serializer)
+bool AEReportAttestationResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->inflateResponse(message, this);
-}
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_reporterrres() == false)
+        return false;
 
-void AEReportAttestationResponse::inflateValues(int errorCode, uint32_t updateInfoLength, const uint8_t* updateInfo)
-{
+    //this is an AEReportAttestationResponse
     ReleaseMemory();
-
-    CopyFields(errorCode, updateInfoLength, updateInfo);
+    m_response = new aesm::message::Response::ReportAttestationErrorResponse(msg.reporterrres());
+    return true;
 }
 
-bool AEReportAttestationResponse::operator==(const AEReportAttestationResponse& other) const
+bool AEReportAttestationResponse::GetValues(uint32_t* errorCode, uint32_t updateInfoLength, uint8_t* updateInfo) const
 {
-    if (this == &other)
-        return true;
-
-    if (mUpdateInfoLength != other.mUpdateInfoLength)
-        return false;
-
-    if (mUpdateInfo == NULL && mUpdateInfo != other.mUpdateInfo)
-        return false;
-
-    if (mUpdateInfo != NULL && other.mUpdateInfo != NULL)
-        if (memcmp(mUpdateInfo, other.mUpdateInfo, other.mUpdateInfoLength) != 0)
+    if (m_response->has_platform_update_info() && updateInfo != NULL)
+    {
+        if (m_response->platform_update_info().size() <= updateInfoLength)
+            memcpy(updateInfo, m_response->platform_update_info().c_str(), m_response->platform_update_info().size());
+        else
             return false;
-
+    }
+    *errorCode = m_response->errorcode();
     return true;
 }
 
@@ -129,24 +128,18 @@ AEReportAttestationResponse& AEReportAttestationResponse::operator=(const AERepo
     if (this == &other)
         return *this;
 
-    inflateValues(other.mErrorCode, other.mUpdateInfoLength, other.mUpdateInfo);
-
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::ReportAttestationErrorResponse(*other.m_response);
+    }
     return *this;
 }
 
 //checks
 bool AEReportAttestationResponse::check()
 {
-    if (mValidSizeCheck == false)
+    if (m_response == NULL)
         return false;
-
-    if (mUpdateInfo == NULL)
-        return false;
-
-    return true;
-}
-
-void AEReportAttestationResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitReportAttestationResponse(*this);
+    return m_response->IsInitialized();
 }

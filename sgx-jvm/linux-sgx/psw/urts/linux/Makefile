@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -57,7 +57,7 @@ LDFLAGS := -lwrapper
 LDFLAGS += -Wl,-Bdynamic -lsgx_uae_service
 
 LDFLAGS += -L$(VTUNE_DIR)/sdk/src/ittnotify -littnotify -ldl
-LDFLAGS += -Wl,--version-script=urts.lds
+LDFLAGS += -Wl,--version-script=urts.lds -Wl,--gc-sections
 
 DIR1 := $(LINUX_PSW_DIR)/urts/linux
 DIR2 := $(LINUX_PSW_DIR)/urts
@@ -124,10 +124,6 @@ $(LIBURTS): $(URTS_OBJ) $(LIBWRAPPER) uae_service ittnotify
 	$(CXX) $(CXXFLAGS) -shared -Wl,-soname=$@ $(LIB) -o $@  $(URTS_OBJ) $(LDFLAGS)
 
 $(LIBURTS_DEBUG): $(LIBURTS)
-	((test -f $(LIBURTS_DEBUG)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
 ifndef DEBUG
 	$(CP) $(LIBURTS) $(LIBURTS).orig
 	$(OBJCOPY) --only-keep-debug $(LIBURTS) $(LIBURTS_DEBUG)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,38 +28,44 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEGetQuoteResponse.h>
 
 #include <stdlib.h>
 #include <string.h>
 
+#include <limits.h>
+#include <IAEMessage.h>
+
 AEGetQuoteResponse::AEGetQuoteResponse() :
-    mQuoteLength(0),
-    mQuote(NULL),
-    mQEReportLength(0),
-    mQEReport(NULL)
+    m_response(NULL)
 {
 }
 
-AEGetQuoteResponse::AEGetQuoteResponse(int errorCode, uint32_t quoteLength, const uint8_t* quote,
-                                                      uint32_t qeReportLength, const uint8_t* qeReport) :
-    mQuoteLength(0),
-    mQuote(NULL),
-    mQEReportLength(0),
-    mQEReport(NULL)
+AEGetQuoteResponse::AEGetQuoteResponse(aesm::message::Response::GetQuoteResponse& response) :
+    m_response(NULL)
 {
-    CopyFields(errorCode, quoteLength, quote,qeReportLength, qeReport);
+    m_response = new aesm::message::Response::GetQuoteResponse(response);
+}
+
+AEGetQuoteResponse::AEGetQuoteResponse(uint32_t errorCode, uint32_t quoteLength, const uint8_t* quote,
+                                                      uint32_t qeReportLength, const uint8_t* qeReport) :
+    m_response(NULL)
+{
+    m_response = new aesm::message::Response::GetQuoteResponse();
+    m_response->set_errorcode(errorCode);
+    if (quoteLength!= 0 && quote != NULL)
+        m_response->set_quote(quote, quoteLength);
+    if (qeReportLength!= 0 && qeReport != NULL)
+        m_response->set_qe_report(qeReport, qeReportLength);
 }
 
 //copy constructor
 AEGetQuoteResponse::AEGetQuoteResponse(const AEGetQuoteResponse& other) :
-    mQuoteLength(0),
-    mQuote(NULL),
-    mQEReportLength(0),
-    mQEReport(NULL)
+    m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mQuoteLength, other.mQuote, other.mQEReportLength, other.mQEReport);
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::GetQuoteResponse(*other.m_response);
 }
 
 AEGetQuoteResponse::~AEGetQuoteResponse()
@@ -69,85 +75,63 @@ AEGetQuoteResponse::~AEGetQuoteResponse()
 
 void AEGetQuoteResponse::ReleaseMemory()
 {
-    if (mQuote != NULL)
-        delete [] mQuote;
-    if (mQEReport != NULL)
-        delete [] mQEReport;
-    mQuote = NULL;
-    mQEReport = NULL;
-    mQuoteLength = 0;
-    mQEReportLength = 0;
-    mErrorCode = SGX_ERROR_UNEXPECTED;
-}
-
-void AEGetQuoteResponse::CopyFields(int errorCode, uint32_t quoteLength,const uint8_t* quote,
-                                                   uint32_t qeReportLength, const uint8_t* qeReport)
-{
-    uint32_t totalSize = qeReportLength + quoteLength;
-    
-    if(quoteLength <= MAX_MEMORY_ALLOCATION && qeReportLength <= MAX_MEMORY_ALLOCATION
-        && totalSize <= MAX_MEMORY_ALLOCATION )
+   if (m_response != NULL)
     {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
-
-    mErrorCode = errorCode;
-    mQuoteLength = quoteLength;
-    mQEReportLength = qeReportLength;
-
-    if (quote != NULL && quoteLength > 0)
-    {
-        mQuote = new uint8_t[quoteLength];
-        memcpy(mQuote, quote, quoteLength);
-    }
-    
-    if (qeReport != NULL&& qeReportLength > 0)
-    {
-        mQEReport = new uint8_t[qeReportLength];
-        memcpy(mQEReport, qeReport, qeReportLength);
+        delete m_response;
+        m_response = NULL;
     }
 }
 
-AEMessage* AEGetQuoteResponse::serialize(ISerializer* serializer)
+AEMessage* AEGetQuoteResponse::serialize()
 {
-    return serializer->serialize(this);
+    AEMessage *ae_msg = NULL;
+    aesm::message::Response msg;
+    if (check())
+    {
+        aesm::message::Response::GetQuoteResponse* mutableResp = msg.mutable_getquoteres();
+        mutableResp->CopyFrom(*m_response);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-bool AEGetQuoteResponse::inflateWithMessage(AEMessage* message, ISerializer* serializer)
+bool AEGetQuoteResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->inflateResponse(message, this);
-}
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_getquoteres() == false)
+        return false;
 
-void AEGetQuoteResponse::inflateValues(int errorCode, uint32_t quoteLength, const uint8_t* quote,
-                                                      uint32_t qeReportLength, const uint8_t* qeReport)
-{
     ReleaseMemory();
-
-    CopyFields(errorCode, quoteLength, quote, qeReportLength, qeReport);
+    m_response = new aesm::message::Response::GetQuoteResponse(msg.getquoteres());
+    return true;
 }
 
-bool AEGetQuoteResponse::operator==(const AEGetQuoteResponse& other) const
+bool AEGetQuoteResponse::GetValues(uint32_t* errorCode, uint32_t quoteLength, uint8_t* quote,
+                                                      uint32_t qeReportLength, uint8_t* qeReport) const
 {
-    if (this == &other)
-        return true;
-
-    if (mErrorCode != other.mErrorCode      ||
-        mQuoteLength != other.mQuoteLength  ||
-        mQEReportLength != other.mQEReportLength)
+    if (m_response->has_quote() && quote != NULL)
+    {
+        if (m_response->quote().size() <= quoteLength)
+            memcpy(quote, m_response->quote().c_str(), m_response->quote().size());
+        else
             return false;
+    }
 
-    if (mQuote != NULL && other.mQuote != NULL)
-        if (memcmp(mQuote, other.mQuote, other.mQuoteLength) != 0)
+    if (m_response->has_qe_report() && qeReport != NULL)
+    {
+        if (m_response->qe_report().size() <= qeReportLength)
+            memcpy(qeReport, m_response->qe_report().c_str(), m_response->qe_report().size());
+        else
             return false;
-    if (mQEReport != NULL && other.mQEReport != NULL)
-        if (memcmp(mQEReport, other.mQEReport, other.mQEReportLength) != 0)
-            return false;
-
+    }
+    *errorCode = m_response->errorcode();
     return true;
 }
 
@@ -156,20 +140,16 @@ AEGetQuoteResponse& AEGetQuoteResponse::operator=(const AEGetQuoteResponse& othe
     if (this == &other)
         return *this;
 
-    inflateValues(other.mErrorCode, other.mQuoteLength, other.mQuote, other.mQEReportLength, other.mQEReport);
-
-    return *this;
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::GetQuoteResponse(*other.m_response);
+    }    return *this;
 }
 
 bool AEGetQuoteResponse::check()
 {
-    if (mValidSizeCheck == false)
+    if (m_response == NULL)
         return false;
-
-    return true;
-}
-
-void AEGetQuoteResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitGetQuoteResponse(*this);
+    return m_response->IsInitialized();
 }

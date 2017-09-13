@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,30 +33,36 @@
 
 #include <IAEResponse.h>
 
+namespace aesm
+{
+    namespace message
+    {
+            class Response_CloseSessionResponse;
+    };
+};
 class AECloseSessionResponse : public IAEResponse
 {
     public:
         AECloseSessionResponse();
-        AECloseSessionResponse(int errorCode);
+        AECloseSessionResponse(aesm::message::Response_CloseSessionResponse& response);
+        AECloseSessionResponse(uint32_t errorCode);
         AECloseSessionResponse(const AECloseSessionResponse& other);
         ~AECloseSessionResponse();
 
-        AEMessage* serialize(ISerializer* serializer);
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
-        void inflateValues(int errorCode);
+        AEMessage* serialize();
+        bool inflateWithMessage(AEMessage* message);
 
-        //operators
-        bool operator==(const AECloseSessionResponse& other) const;
+
+        bool GetValues(uint32_t* errorCode) const;        //operators
         AECloseSessionResponse& operator=(const AECloseSessionResponse& other);
 
         //checks
         bool check();
-        virtual void visit(IAEResponseVisitor& visitor);
 
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode);
 
+        aesm::message::Response_CloseSessionResponse* m_response;
 };
 
 #endif

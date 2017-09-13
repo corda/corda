@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -86,7 +86,7 @@ def parse_cmd(argc, argv):
 ################################################################################
 def copy_folder_unrecursively(src_dir, dest_dir):
 	if os.path.isdir(src_dir) == True :
-		print "Warning: The src is a fold ......"
+		print "Warning: The src is a folder ......"
 		return False
 		
 	#print "copy" + src_dir + "->" + dest_dir
@@ -162,23 +162,27 @@ def copy_txt_files(local_path):
 		#print "copy folder from " + src + " to " + dest
 
 		if os.path.exists(src) == True:
-			#check whether the src is a fold or file
+			#check whether the src is a folder or file
 			if os.path.isdir(src) == False :
 				#the src is a file
 				if os.path.exists(os.path.dirname(dest)) == False:
 					os.makedirs(os.path.dirname(dest))
 				ret = copy_folder_unrecursively(src, dest)
 				if ret == False:
-					break
+					exit(1)
 				
 			else:
-				#the src is a fold
+				#the src is a folder
 				copy_folder_recursively(src, dest)
 		else:
 			#although the src file isn't exist, create the dest folder
 			if os.path.exists(os.path.dirname(dest)) == False:
 				os.makedirs(os.path.dirname(dest))
-			print "Error !!!: src folder not exist" + src
+			if os.path.isdir(src) == False :
+				print "Error !!!: src file not exist " + src
+			else:
+				print "Error !!!: src folder not exist " + src
+			exit(1)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -421,7 +421,7 @@ CEnclave* CEnclavePool::remove_enclave(const sgx_enclave_id_t enclave_id, sgx_st
     if(NULL == enclave)
     {
         status = SGX_ERROR_INVALID_ENCLAVE_ID;
-        SE_TRACE(SE_TRACE_WARNING, "remove an unkonwn enclave\n");
+        SE_TRACE(SE_TRACE_WARNING, "remove an unknown enclave\n");
         se_mutex_unlock(&m_enclave_mutex);
         return enclave;
     }

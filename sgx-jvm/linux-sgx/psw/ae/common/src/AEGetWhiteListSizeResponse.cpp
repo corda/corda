@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,27 +28,40 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
+
 #include <AEGetWhiteListSizeResponse.h>
 
 #include <stdlib.h>
 #include <string.h>
 
-AEGetWhiteListSizeResponse::AEGetWhiteListSizeResponse() :
-    mWhiteListSize(-1)
+#include <limits.h>
+#include <IAEMessage.h>
+
+AEGetWhiteListSizeResponse::AEGetWhiteListSizeResponse()
+    :m_response(NULL)
 {
 }
 
-AEGetWhiteListSizeResponse::AEGetWhiteListSizeResponse(int errorCode, uint32_t white_list_size) :
-    mWhiteListSize(-1)
+AEGetWhiteListSizeResponse::AEGetWhiteListSizeResponse(aesm::message::Response::GetWhiteListSizeResponse& response)
+    :m_response(NULL)
 {
-    CopyFields(errorCode, white_list_size);
+    m_response = new aesm::message::Response::GetWhiteListSizeResponse(response);
 }
 
-AEGetWhiteListSizeResponse::AEGetWhiteListSizeResponse(const AEGetWhiteListSizeResponse& other) :
-    mWhiteListSize(-1)
+AEGetWhiteListSizeResponse::AEGetWhiteListSizeResponse(uint32_t errorCode, uint32_t white_list_size)
+    :m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mWhiteListSize);
+    m_response = new aesm::message::Response::GetWhiteListSizeResponse();
+    m_response->set_errorcode(errorCode);
+    m_response->set_white_list_size(white_list_size);
+}
+
+AEGetWhiteListSizeResponse::AEGetWhiteListSizeResponse(const AEGetWhiteListSizeResponse& other)
+    :m_response(NULL)
+{
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::GetWhiteListSizeResponse(*other.m_response);
 }
 
 AEGetWhiteListSizeResponse::~AEGetWhiteListSizeResponse()
@@ -58,40 +71,49 @@ AEGetWhiteListSizeResponse::~AEGetWhiteListSizeResponse()
 
 void AEGetWhiteListSizeResponse::ReleaseMemory()
 {
-    mErrorCode = SGX_ERROR_UNEXPECTED;
+   if (m_response != NULL)
+    {
+        delete m_response;
+        m_response = NULL;
+    }
 }
 
-void AEGetWhiteListSizeResponse::CopyFields(int errorCode, uint32_t white_list_size)
+
+AEMessage* AEGetWhiteListSizeResponse::serialize()
 {
-    mErrorCode = errorCode;
-    mWhiteListSize = white_list_size;
+    AEMessage *ae_msg = NULL;
+    aesm::message::Response msg;
+    if (check())
+    {
+        aesm::message::Response::GetWhiteListSizeResponse* mutableResp = msg.mutable_getwhitelistsizeres();
+        mutableResp->CopyFrom(*m_response);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-
-AEMessage* AEGetWhiteListSizeResponse::serialize(ISerializer* serializer)
+bool AEGetWhiteListSizeResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->serialize(this);
-}
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_getwhitelistsizeres() == false)
+        return false;
 
-bool AEGetWhiteListSizeResponse::inflateWithMessage(AEMessage* message, ISerializer *serializer)
-{
-    return serializer->inflateResponse(message, this);
-}
-
-void AEGetWhiteListSizeResponse::inflateValues(int errorCode, uint32_t white_list_size)
-{
     ReleaseMemory();
-
-    CopyFields(errorCode, white_list_size);
+    m_response = new aesm::message::Response::GetWhiteListSizeResponse(msg.getwhitelistsizeres());
+    return true;
 }
 
-bool AEGetWhiteListSizeResponse::operator==(const AEGetWhiteListSizeResponse &other) const
+bool AEGetWhiteListSizeResponse::GetValues(uint32_t* errorCode, uint32_t* white_list_size) const
 {
-    if (this == &other)
-            return true;
-
-    if (mWhiteListSize!= other.mWhiteListSize)
-            return false;
+    *white_list_size = m_response->white_list_size();
+    *errorCode = m_response->errorcode();
     return true;
 }
 
@@ -100,27 +122,16 @@ AEGetWhiteListSizeResponse & AEGetWhiteListSizeResponse::operator=(const AEGetWh
     if (this == &other)
         return *this;
 
-    inflateValues(other.mErrorCode, other.mWhiteListSize);
-
-    return *this;
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::GetWhiteListSizeResponse(*other.m_response);
+    }    return *this;
 }
 
 bool AEGetWhiteListSizeResponse::check()
 {
-    // no MAC to check at this point, but do some generic parameter check
-
-    //impose a limit of 1MB for these messages. If larger then a transmission, or unmarshalling error may have occured
-    //also a big value here might be an attack
-
-    //first, fail if errorCode is not 0
-    if (mErrorCode != SGX_SUCCESS)
+    if (m_response == NULL)
         return false;
-
-    return true;
+    return m_response->IsInitialized();
 }
-
-void AEGetWhiteListSizeResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitGetWhiteListSizeResponse(*this);
-}
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,8 @@ sgx_status_t sgx_seal_data_iv(const uint32_t additional_MACtext_length,
 
     // Parameter checking performed in sgx_seal_data
 
-    // Get the seal key
+    // Generate the seal key
+    // The random p_key_request->key_id guarantees the generated seal key is random
     sgx_key_128bit_t seal_key;
     memset(&seal_key, 0, sizeof(sgx_key_128bit_t));
     err = sgx_get_key(p_key_request, &seal_key);
@@ -73,6 +74,7 @@ sgx_status_t sgx_seal_data_iv(const uint32_t additional_MACtext_length,
         return err;
     }
 
+    // Encrypt the content with the random seal key and the static payload_iv
     err = sgx_rijndael128GCM_encrypt(&seal_key, p_text2encrypt, text2encrypt_length,
         reinterpret_cast<uint8_t *>(&(p_sealed_data->aes_data.payload)), p_payload_iv,
         SGX_SEAL_IV_SIZE, p_additional_MACtext, additional_MACtext_length,

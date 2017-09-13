@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,83 +33,12 @@
 
 #include <ISerializer.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wconversion"
-#include <messages.pb.h>
-#pragma GCC diagnostic pop
-
-class IAERequest;
-class IAEResponse;
-
 
 class ProtobufSerializer : public ISerializer{
     public:
         ~ProtobufSerializer() {}
 
-        //request serializers
-        AEMessage* serialize(AEInitQuoteRequest* request);
-        AEMessage* serialize(AEGetQuoteRequest* request);
-        AEMessage* serialize(AEGetLaunchTokenRequest* request);
-        AEMessage* serialize(AECreateSessionRequest* request);
-        AEMessage* serialize(AEInvokeServiceRequest* request);
-        AEMessage* serialize(AEExchangeReportRequest* request);
-        AEMessage* serialize(AECloseSessionRequest* request);
-        AEMessage* serialize(AEGetPsCapRequest* request);
-        AEMessage* serialize(AEReportAttestationRequest* request);
-        AEMessage* serialize(AEGetWhiteListSizeRequest* request);
-        AEMessage* serialize(AEGetWhiteListRequest* request);
-        AEMessage* serialize(AESGXGetExtendedEpidGroupIdRequest* request);
-        AEMessage* serialize(AESGXSwitchExtendedEpidGroupRequest* request);
-
-        //response serializers
-        AEMessage* serialize(AEInitQuoteResponse* response);
-        AEMessage* serialize(AEGetQuoteResponse* response);
-        AEMessage* serialize(AEGetLaunchTokenResponse* response);
-        AEMessage* serialize(AECreateSessionResponse* response);
-        AEMessage* serialize(AEInvokeServiceResponse* response);
-        AEMessage* serialize(AEExchangeReportResponse* response);
-        AEMessage* serialize(AECloseSessionResponse* response);
-        AEMessage* serialize(AEGetPsCapResponse* response);
-        AEMessage* serialize(AEReportAttestationResponse* response);
-        AEMessage* serialize(AEGetWhiteListSizeResponse* response);
-        AEMessage* serialize(AEGetWhiteListResponse* response);
-        AEMessage* serialize(AESGXGetExtendedEpidGroupIdResponse* response);
-        AEMessage* serialize(AESGXSwitchExtendedEpidGroupResponse* response);
-
-        //base inflate request
         IAERequest* inflateRequest(AEMessage* message);
-
-        //response inflaters
-        bool inflateResponse(AEMessage* message, AEInitQuoteResponse* response);
-        bool inflateResponse(AEMessage* message, AEGetQuoteResponse* response);
-        bool inflateResponse(AEMessage* message, AEGetLaunchTokenResponse* response);
-        bool inflateResponse(AEMessage* message, AECreateSessionResponse* response);
-        bool inflateResponse(AEMessage* message, AEInvokeServiceResponse* response);
-        bool inflateResponse(AEMessage* message, AEExchangeReportResponse* response);
-        bool inflateResponse(AEMessage* message, AECloseSessionResponse* response);
-        bool inflateResponse(AEMessage* message, AEGetPsCapResponse* response);
-        bool inflateResponse(AEMessage* message, AEReportAttestationResponse* response);
-        bool inflateResponse(AEMessage* message, AEGetWhiteListSizeResponse* response);
-        bool inflateResponse(AEMessage* message, AEGetWhiteListResponse *response);
-        bool inflateResponse(AEMessage* message, AESGXGetExtendedEpidGroupIdResponse* response);
-        bool inflateResponse(AEMessage* message, AESGXSwitchExtendedEpidGroupResponse* response);
-
-    private:
-        //request inflaters
-        IAERequest* inflateInitQuoteRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateGetQuoteRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateCloseSessionRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateCreateSessionRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateExchangeReportRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateGetLaunchTokenRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateInvokeServiceRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateGetPsCapRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateReportAttestationErrorRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateGetWhiteListSizeRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateGetWhiteListRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateSGXGetExtendedEpidGroupIdRequest(aesm::message::Request* reqMsg);
-        IAERequest* inflateSGXSwitchExtendedEpidGroupRequest(aesm::message::Request* reqMsg);
 };
 
 #endif

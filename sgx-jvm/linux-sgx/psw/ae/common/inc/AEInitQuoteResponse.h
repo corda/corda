@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,53 +33,45 @@
 
 #include <IAEResponse.h>
 #include <stdint.h>
-
-class ISerializer;
+namespace aesm
+{
+    namespace message
+    {
+            class Response_InitQuoteResponse;
+    };
+};
 
 class AEInitQuoteResponse : public IAEResponse
 {
     public:
         AEInitQuoteResponse();  //default ... will prepare a response that will later be inflated
 
-        AEInitQuoteResponse(int errorCode, uint32_t gidLength, const uint8_t* gid,
+        AEInitQuoteResponse(aesm::message::Response_InitQuoteResponse& response);
+        AEInitQuoteResponse(uint32_t errorCode, uint32_t gidLength, const uint8_t* gid,
                 uint32_t targetInfoLength, const uint8_t* targetInfo);
         AEInitQuoteResponse(const AEInitQuoteResponse& other);
 
         ~AEInitQuoteResponse();
 
         //inflater
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
+        bool inflateWithMessage(AEMessage* message);
 
-        inline const uint8_t* GetGID()              const { return mGID;}
-        inline uint32_t GetGIDLength()        const { return mGIDLength; }
-        inline const uint8_t* GetTargetInfo()       const { return mTargetInfo;}
-        inline uint32_t GetTargetInfoLength() const { return mTargetInfoLength; }
+        AEMessage*  serialize();
 
-        AEMessage*  serialize(ISerializer* serializer);
-
-        //this is used to inflate values from a serializer, instead of creating the object directly
-        void inflateValues(int errorCode, uint32_t gidLength, const uint8_t* gid,
-                uint32_t targetInfoLength, const uint8_t* targetInfo);
+        bool GetValues(uint32_t* errorCode, uint32_t gidLength, uint8_t* gid,
+                uint32_t targetInfoLength, uint8_t* targetInfo) const;
 
 
         //operators
-        virtual bool operator==(const AEInitQuoteResponse &other) const;
         AEInitQuoteResponse& operator=(const AEInitQuoteResponse &other);
 
         //checks
         bool check();
-        virtual void visit(IAEResponseVisitor& visitor);
 
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode, uint32_t gidLength,const uint8_t* gid,
-                uint32_t targetInfoLength,const uint8_t* targetInfo);
 
-        uint32_t    mGIDLength;
-        uint32_t    mTargetInfoLength;
-
-        uint8_t*    mTargetInfo;
-        uint8_t*    mGID;
+        aesm::message::Response_InitQuoteResponse* m_response;
 };
 
 #endif

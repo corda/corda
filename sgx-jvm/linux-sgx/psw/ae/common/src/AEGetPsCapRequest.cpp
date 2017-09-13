@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,90 +28,97 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEGetPsCapRequest.h>
 #include <AEGetPsCapResponse.h>
 #include <IAESMLogic.h>
 
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-#include <sgx_uae_service.h>
+AEGetPsCapRequest::AEGetPsCapRequest(const aesm::message::Request::GetPsCapRequest& request) :
+    m_request(NULL)
+{
+    m_request = new aesm::message::Request::GetPsCapRequest();
+    m_request->CopyFrom(request);
+}
 
-AEGetPsCapRequest::AEGetPsCapRequest(uint32_t timeout) : IAERequest(timeout) {
+AEGetPsCapRequest::AEGetPsCapRequest(uint32_t timeout) 
+    :m_request(NULL)
+{
+    m_request = new aesm::message::Request::GetPsCapRequest();
+    m_request->set_timeout(timeout);
 }
 
 AEGetPsCapRequest::AEGetPsCapRequest(const AEGetPsCapRequest& other)
-: IAERequest(other)
+    :m_request(NULL)
 {
-    CopyFields(other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::GetPsCapRequest(*other.m_request);
 }
 
 AEGetPsCapRequest::~AEGetPsCapRequest()
 {
-    ReleaseMemory();
-}
-
-void AEGetPsCapRequest::ReleaseMemory()
-{
-    //empty for now
+    if (m_request != NULL)
+        delete m_request;
 }
 
 
-void AEGetPsCapRequest::CopyFields(uint32_t timeout)
-{
-    mTimeout = timeout;
-}
+AEMessage* AEGetPsCapRequest::serialize(){
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
+    {
+        aesm::message::Request::GetPsCapRequest* mutableReq = msg.mutable_getpscapreq();
+        mutableReq->CopyFrom(*m_request);
 
-AEMessage* AEGetPsCapRequest::serialize(ISerializer* serializer){
-    return serializer->serialize(this);
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
 IAERequest::RequestClass AEGetPsCapRequest::getRequestClass() {
     return PLATFORM_CLASS;
 }
 
-void AEGetPsCapRequest::inflateValues(uint32_t timeout)
+bool AEGetPsCapRequest::check()
 {
-    ReleaseMemory();
-
-    CopyFields(timeout);
-}
-
-bool AEGetPsCapRequest::operator==(const AEGetPsCapRequest& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mTimeout != other.mTimeout)
+    if (m_request == NULL)
         return false;
-
-    return true;    //no members , default to true
+    return m_request->IsInitialized();
 }
 
 AEGetPsCapRequest& AEGetPsCapRequest::operator=(const AEGetPsCapRequest& other)
 {
     if (this == &other)
         return *this;
-
-    inflateValues(other.mTimeout);
- 
-    //do nothing - no members
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::GetPsCapRequest(*other.m_request);
     return *this;
 }
 
-void AEGetPsCapRequest::visit(IAERequestVisitor& visitor)
-{
-    visitor.visitGetPsCapRequest(*this);
-}
-
-
 IAEResponse* AEGetPsCapRequest::execute(IAESMLogic* aesmLogic) 
 {
-    uint64_t ps_cap;
+    aesm_error_t result = AESM_UNEXPECTED_ERROR;
+    uint64_t ps_cap = 0;
 
-    aesm_error_t result = aesmLogic->getPsCap(&ps_cap);
+    if (check())
+    {
+        result = aesmLogic->getPsCap(&ps_cap);
+    }
 
-    AEGetPsCapResponse * response = new AEGetPsCapResponse((uint32_t)result, ps_cap);
+    AEGetPsCapResponse * response = new AEGetPsCapResponse(result, ps_cap);
 
     return response;
 }

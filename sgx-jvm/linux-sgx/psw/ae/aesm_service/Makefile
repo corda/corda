@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -58,20 +58,26 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/le/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/network/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/oal/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/protobuf/
+INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/pse_op/
+INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/pse_pr/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/pve/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/qe/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/pce/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/storage/
+INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/upse/
+INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/upse/BackendInterface/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/data/constants/linux 
-INCLUDE += -I$(LINUX_PSW_DIR)/ae/pve
 
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/inc                        \
            -I$(LINUX_PSW_DIR)/ae/inc/internal               \
            -I$(LINUX_PSW_DIR)/ae/common
 
-INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/epid_provision 
+INCLUDE += -I$(LINUX_PSW_DIR)/ae/pve                        \
+           -I$(LINUX_PSW_DIR)/ae/pse/pse_op
 
-INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid                        
+INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid                            \
+           -I$(LINUX_EXTERNAL_DIR)/sqlite/src                      \
+           -I$(LINUX_EXTERNAL_DIR)/DALSdk/JHI/linux
 
 INCLUDE += -I$(SGX_IPP_INC) \
            -I$(LINUX_EXTERNAL_DIR)/       \
@@ -82,8 +88,27 @@ INCLUDE += -I$(SGX_IPP_INC) \
 
 EDGER8R  := $(LINUX_SDK_DIR)/edger8r/linux/_build/Edger8r.native
 
+
 # Disable cxx11 abi
 CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
+
+SQLITECFLAGS := -fPIC -Wall -Wno-unused-const-variable -Werror
+ifeq ($(CC_BELOW_4_9), 1)
+	SQLITECFLAGS += -fstack-protector
+else
+	SQLITECFLAGS += -fstack-protector-strong
+endif
+
+ifdef DEBUG
+	SQLITECFLAGS += -ggdb -DDEBUG -UNDEBUG
+else
+	SQLITECFLAGS += -O2 -UDEBUG -DNDEBUG
+endif
+ifeq ($(ARCH), x86)
+	SQLITECFLAGS += -m32
+else
+	SQLITECFLAGS += -m64
+endif
 
 ifdef PROFILE
         CXXFLAGS += -D_PROFILE_
@@ -121,8 +146,9 @@ EXTERNAL_LIB += -L$(LINUX_SE_WRAPPER) -lwrapper -lrt
 EXTERNAL_LIB += -L$(RDRAND_LIBDIR) -lrdrand
 EXTERNAL_LIB += -L$(VTUNE_LIBDIR) -littnotify
 
-vpath %.cpp $(COMMON_DIR)/src ./source/epid_provision $(LINUX_PSW_DIR)/ae/common  $(AESM_APPLICATION) $(AESM_EXTENSION) $(AESM_SRC_DIR) $(IPC_COMMON_PROTO_DIR) $(TOP_DIR)/sdk/tseal $(IPC_COMMON_SRC_DIR) 
+vpath %.cpp $(COMMON_DIR)/src ./source/epid_provision  ./source/upse ./source/upse/BackendInterface $(LINUX_PSW_DIR)/ae/common  $(AESM_APPLICATION) $(AESM_EXTENSION) $(AESM_SRC_DIR) $(IPC_COMMON_PROTO_DIR) $(TOP_DIR)/sdk/tseal $(IPC_COMMON_SRC_DIR) 
 vpath %.cc $(IPC_COMMON_PROTO_DIR)
+vpath %.c  $(LINUX_EXTERNAL_DIR)/sqlite/src
 vpath %.c $(TOP_DIR)/sdk/tlibc/string
 
 COMMON_SRC := ./source/le/LEClass.cpp                  \
@@ -143,6 +169,9 @@ COMMON_SRC := ./source/le/LEClass.cpp                  \
               event_strings.cpp 
 
 COMMON_SRC += ./source/qe/QEClass.cpp                  \
+              ./source/pse_op/PSEClass.cpp             \
+              ./source/pse_pr/PSEPRClass.cpp           \
+              ./source/pse_op/PSDAService.cpp          \
               ./source/pve/PVEClass.cpp                \
               ./source/pce/PCEClass.cpp                \
               aesm_encode.cpp              \
@@ -156,6 +185,8 @@ COMMON_SRC += ./source/qe/QEClass.cpp                  \
               type_length_value.cpp \
               ./source/qe/qe_logic.cpp \
               ./source/pve/pve_logic.cpp \
+              ./source/pse_op/pse_op_logic.cpp \
+              ./source/pse_op/aesm_pse_status.cpp \
               platform_info_logic.cpp \
               platform_info_facility.cpp \
               pve_pub_key.cpp \
@@ -163,6 +194,24 @@ COMMON_SRC += ./source/qe/QEClass.cpp                  \
               ./source/network/network_encoding_wrapper.cpp \
               endpoint_select_info.cpp \
               aesm_ecdsa.cpp \
+              ./source/pse_op/pse_op_psda_ocall.cpp \
+              ./source/pse_op/pse_op_vmc_sqlite_ocall.cpp \
+              upse.cpp  \
+              upse_iclsInit.cpp \
+              helper.cpp \
+              sigma_helper.cpp \
+              interface_ocsp.cpp \
+              u_certificate_provisioning.cpp \
+              uecall_bridge.cpp \
+              u_long_term_pairing.cpp \
+              CertificateProvisioningProtocol.cpp \
+              pse_crypto_helper.cpp \
+              pse_provisioning_msg1.cpp \
+              pse_provisioning_msg2.cpp \
+              pse_provisioning_msg3.cpp \
+              pse_provisioning_msg4.cpp \
+              interface_psda.cpp \
+              pse_pr_common.cpp  \
               se_sig_rl.cpp \
               aesm_long_lived_thread.cpp
 
@@ -215,16 +264,21 @@ AESM_SRC  := AESMLogicWrapper.cpp  \
              aesm_config.cpp 
 
 AESM_SRC  += aesm_http_msg.cpp 
+AESM_SRC  += source/pse_op/jhi_proxy.cpp
 
-CSRC       := $(wildcard *.c)
+CSRC       := $(sort $(wildcard *.c))
 
 MEMCMPSRC  := consttime_memequal.c
+
+SQLITESRC  := sqlite3.c
 
 OBJ        := $(IPC_SRC:.cpp=.o) \
               $(CSRC:.c=.o) \
               $(MEMCMPSRC:.c=.o) \
               $(AESM_SRC:.cpp=.o) \
               $(PROTOBUF_SRC:.cc=.o)
+
+OBJ        += $(SQLITESRC:.c=.o)
 
 LDUFLAGS := -pthread -L$(BUILD_DIR) $(URTSLIB)
 
@@ -241,35 +295,33 @@ endif
 
 copy_data_file:
 	@$(MKDIR) -p data
+	@$(CP) $(LINUX_PSW_DIR)/ae/pse/pse_op/vmc_db_generator/prebuild_pse_vmc.db data
 	@$(CP) $(WHITE_LIST_FILE) data/white_list_cert_to_be_verify.bin
-
 
 sgx_tcrypto:
 	$(MAKE) -C $(TCRYPTO_LIBDIR)
 
 $(LIBNAME): $(COMMON_OBJ)
 	$(AR) rcs $@ $^
-	
 
-ProtobufSerializer.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
+$(IPC_SRC:.cpp=.o) : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
 CAESMServer.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
 %.o :%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
 messages.pb.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
 	$(CXX) $(filter-out -Wshadow, $(CXXFLAGS)) $(INCLUDE) -c $< -o $@
-	
+
 consttime_memequal.o :consttime_memequal.c
 	$(CC) $(filter-out -O2,$(CFLAGS)) -fPIC -O1 $(INCLUDE) -c $< -o $@
+
+sqlite3.o :sqlite3.c
+	$(CC) $(SQLITECFLAGS) $(INCLUDE) -c $< -o $@
 
 $(APPNAME): $(OBJ) $(LIBNAME) sgx_tcrypto -lrdrand urts
 	$(CXX) $(CXXFLAGS) $(OBJ) $(LIBNAME) $(LDUFLAGS) $(EXTERNAL_LIB)   -o $@ -ldl
 
 $(APPNAME_DEBUG): $(APPNAME)
-	((test -f $(APPNAME_DEBUG)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
 ifndef DEBUG
 	$(CP) $(APPNAME) $(APPNAME).orig
 	$(OBJCOPY) --only-keep-debug $(APPNAME) $(APPNAME_DEBUG)
@@ -281,6 +333,7 @@ endif
 ./source/le/LEClass.o: ${AESM_EXTENSION}/launch_enclave_u.c
 ./source/pve/PVEClass.o: ${AESM_EXTENSION}/provision_enclave_u.c
 ./source/qe/QEClass.o: ${AESM_EXTENSION}/quoting_enclave_u.c
+./source/pse_op/PSEClass.o: ${AESM_EXTENSION}/pse_op_u.c
 ./source/pce/PCEClass.o: ${AESM_EXTENSION}/pce_u.c
 uecall_bridge.o: ${AESM_EXTENSION}/pse_pr_u.c
 
@@ -301,6 +354,9 @@ ${AESM_EXTENSION}/provision_enclave_u.c: ${LINUX_PSW_DIR}/ae/pve/provision_encla
 	@$(EDGER8R) --untrusted --untrusted-dir ${AESM_EXTENSION} $<
 
 ${AESM_EXTENSION}/quoting_enclave_u.c: ${LINUX_PSW_DIR}/ae/qe/quoting_enclave.edl
+	@$(EDGER8R) --untrusted --untrusted-dir ${AESM_EXTENSION} $<
+
+${AESM_EXTENSION}/pse_op_u.c: ${LINUX_PSW_DIR}/ae/pse/pse_op/pse_op.edl
 	@$(EDGER8R) --untrusted --untrusted-dir ${AESM_EXTENSION} $<
 
 ${AESM_EXTENSION}/pse_pr_u.c:  ${LINUX_PSW_DIR}/ae/pse/pse_pr/pse_pr.edl
@@ -328,11 +384,13 @@ clean:
 	@$(RM) $(LIBNAME)
 	$(MAKE) -C $(IPC_COMMON_PROTO_DIR) clean
 	@$(RM) source/le/*.o
+	@$(RM) source/pse_op/*.o
 	@$(RM) source/pve/*.o
 	@$(RM) source/pce/*.o
 	@$(RM) source/network/*.o
 	@$(RM) source/oal/*.o
 	@$(RM) source/qe/*.o
+	@$(RM) source/pse_pr/*.o
 	@$(RM) source/storage/*.o
 	@$(RM) $(AESM_EXTENSION)/*_u.c $(AESM_EXTENSION)/*_u.h
 ifeq ($(RDRAND_MAKEFILE), $(wildcard $(RDRAND_MAKEFILE)))

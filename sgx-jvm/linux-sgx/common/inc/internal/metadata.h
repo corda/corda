@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,10 @@
 
  /* version of metadata */
 #define MAJOR_VERSION 1         /* MAJOR_VERSION should not larger than 0ffffffff */
-#define MINOR_VERSION 3         /* MINOR_VERSION should not larger than 0ffffffff */
+#define MINOR_VERSION 4         /* MINOR_VERSION should not larger than 0ffffffff */
+
+#define SGX_1_5_MAJOR_VERSION 1         //MAJOR_VERSION should not larger than 0ffffffff
+#define SGX_1_5_MINOR_VERSION 3         //MINOR_VERSION should not larger than 0ffffffff
 
 #define META_DATA_MAKE_VERSION(major, minor) (((uint64_t)major)<<32 | minor)
 

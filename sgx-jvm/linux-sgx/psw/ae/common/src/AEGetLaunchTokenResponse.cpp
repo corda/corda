@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,30 +28,38 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
 #include <AEGetLaunchTokenResponse.h>
 
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
 AEGetLaunchTokenResponse::AEGetLaunchTokenResponse() :
-    mTokenLength(0),
-    mToken(NULL)
+    m_response(NULL)
 {
 }
 
-AEGetLaunchTokenResponse::AEGetLaunchTokenResponse(int errorCode, uint32_t tokenLength, const uint8_t* token) : 
-    mTokenLength(0),
-    mToken(NULL)
+AEGetLaunchTokenResponse::AEGetLaunchTokenResponse(aesm::message::Response::GetLaunchTokenResponse& response) :
+    m_response(NULL)
 {
-    CopyFields(errorCode, tokenLength, token);
+    m_response = new aesm::message::Response::GetLaunchTokenResponse(response);
+}
+
+AEGetLaunchTokenResponse::AEGetLaunchTokenResponse(uint32_t errorCode, uint32_t tokenLength, const uint8_t* token) : 
+    m_response(NULL)
+{
+    m_response = new aesm::message::Response::GetLaunchTokenResponse();
+    m_response->set_errorcode(errorCode);
+    if (tokenLength!= 0 && token != NULL)
+        m_response->set_token(token, tokenLength);
 }
 
 AEGetLaunchTokenResponse::AEGetLaunchTokenResponse(const AEGetLaunchTokenResponse& other) : 
-    mTokenLength(0),
-    mToken(NULL)
+    m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mTokenLength, other.mToken);
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::GetLaunchTokenResponse(*other.m_response);
 }
 
 AEGetLaunchTokenResponse::~AEGetLaunchTokenResponse()
@@ -59,41 +67,53 @@ AEGetLaunchTokenResponse::~AEGetLaunchTokenResponse()
     ReleaseMemory();
 }
 
-AEMessage* AEGetLaunchTokenResponse::serialize(ISerializer* serializer)
+AEMessage* AEGetLaunchTokenResponse::serialize()
 {
-    return serializer->serialize(this);
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    if (check())
+    {
+        aesm::message::Response::GetLaunchTokenResponse* mutableRes = msg.mutable_getlictokenres();
+        mutableRes->CopyFrom(*m_response);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-bool AEGetLaunchTokenResponse::inflateWithMessage(AEMessage* message, ISerializer* serializer)
+bool AEGetLaunchTokenResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->inflateResponse(message, this);
-}
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_getlictokenres() == false)
+        return false;
 
-void AEGetLaunchTokenResponse::inflateValues(int errorCode, uint32_t tokenLength,const uint8_t* token)
-{
+    //this is an AEGetLaunchTokenResponse
     ReleaseMemory();
-
-    CopyFields(errorCode, tokenLength, token);
-}
-
-        //operators
-bool AEGetLaunchTokenResponse::operator==(const AEGetLaunchTokenResponse& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mTokenLength != other.mTokenLength)
-        return false;
-
-    if (mToken == NULL && mToken != other.mToken)
-        return false;
-
-    if (mToken != NULL && other.mToken != NULL)
-        if (memcmp(mToken, other.mToken, other.mTokenLength) != 0)
-            return false;
-
+    m_response = new aesm::message::Response::GetLaunchTokenResponse(msg.getlictokenres());
     return true;
 }
+
+bool AEGetLaunchTokenResponse::GetValues(uint32_t* result, uint8_t* token, uint32_t tokenLength) const
+{
+    if (m_response->has_token() && token != NULL)
+    {
+        if (m_response->token().size() <= tokenLength)
+            memcpy(token, m_response->token().c_str(), m_response->token().size());
+        else
+            return false;
+    }
+    *result = m_response->errorcode(); 
+    return true;
+
+}
+        //operators
 
 AEGetLaunchTokenResponse& AEGetLaunchTokenResponse::operator=(const AEGetLaunchTokenResponse& other)
 {
@@ -101,60 +121,27 @@ AEGetLaunchTokenResponse& AEGetLaunchTokenResponse::operator=(const AEGetLaunchT
         return *this;
 
     ReleaseMemory();
-
-    CopyFields(other.mErrorCode, other.mTokenLength, other.mToken);
-
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::GetLaunchTokenResponse(*other.m_response);
+    }
     return *this;
 }
 
         //checks
 bool AEGetLaunchTokenResponse::check()
 {
-    if (mErrorCode != SGX_SUCCESS)
+    if (m_response == NULL)
         return false;
-
-    //simple size check
-    if (mValidSizeCheck == false)
-        return false;
-
-    if (mToken == NULL)
-        return false;
-
-    return true;
+    return m_response->IsInitialized();
 }
 
 void AEGetLaunchTokenResponse::ReleaseMemory()
 {
-    if (mToken != NULL)
-        delete [] mToken;
-    mToken = NULL;
-    mTokenLength = 0;
-    mErrorCode = SGX_ERROR_UNEXPECTED;
-}
-
-void AEGetLaunchTokenResponse::CopyFields(int errorCode, uint32_t tokenLength,const uint8_t* token)
-{   
-    if(tokenLength <= MAX_MEMORY_ALLOCATION)
+   if (m_response != NULL)
     {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
-
-    mErrorCode = errorCode;
-    mTokenLength = tokenLength;
-
-    if (token != NULL && tokenLength > 0)
-    {
-        mToken = new uint8_t[tokenLength];
-        memcpy(mToken, token, tokenLength);
+        delete m_response;
+        m_response = NULL;
     }
 }
 
-void AEGetLaunchTokenResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitGetLaunchTokenResponse(*this);
-}

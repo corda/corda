@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,35 +34,35 @@
 #include <IAEResponse.h>
 #include <stdint.h>
 
+namespace aesm
+{
+    namespace message
+    {
+            class Response_InvokeServiceResponse;
+    };
+};
+
 class AEInvokeServiceResponse : public IAEResponse
 {
     public:
         AEInvokeServiceResponse();
-        AEInvokeServiceResponse(int errorCode, uint32_t pseMessageLength, const uint8_t* pseMessage);
+        AEInvokeServiceResponse(aesm::message::Response_InvokeServiceResponse& response);
+        AEInvokeServiceResponse(uint32_t errorCode, uint32_t pseMessageLength, const uint8_t* pseMessage);
         AEInvokeServiceResponse(const AEInvokeServiceResponse& other);
         ~AEInvokeServiceResponse();
 
-        AEMessage* serialize(ISerializer* serializer);
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
-        void inflateValues(int errorCode, uint32_t pseMessageLength,const uint8_t* pseMessage);
-
-        //getters
-        inline uint32_t       GetPSEMessageLength() const { return mPSEMessageLength; }
-        inline const uint8_t* GetPSEMessage()       const { return mPSEMessage; }
-
+        AEMessage* serialize();
+        bool inflateWithMessage(AEMessage* message);
+        bool GetValues(uint32_t* errorCode, uint32_t pseMessageLength, uint8_t* pseMessage) const;
         //operators
-        bool operator==(const AEInvokeServiceResponse& other) const;
+
         AEInvokeServiceResponse& operator=(const AEInvokeServiceResponse& other);
 
         //checks
         bool check();
-        virtual void visit(IAEResponseVisitor& visitor);
 
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode, uint32_t pseMessageLength,const uint8_t* pseMessage);
-
-        uint32_t mPSEMessageLength;
-        uint8_t* mPSEMessage;
+        aesm::message::Response_InvokeServiceResponse* m_response;
 };
 #endif

@@ -46,7 +46,7 @@ public class SGXPreferencePage
 	public SGXPreferencePage() {
 		super(GRID);
 		setPreferenceStore(Activator.getDefault().getPreferenceStore());
-		setDescription("SGX Preferences");
+		setDescription("Intel(R) SGX Preferences");
 	}
 	
 	/**
@@ -59,12 +59,12 @@ public class SGXPreferencePage
 	@Override
     protected void createFieldEditors() {
         sgxSdkDirectoryEditor = new SGXSdkDirectoryFieldEditor(PreferenceConstants.SDK_PATH,
-        		"&SGX SDK Directory:", getFieldEditorParent());
+        		"&Intel(R) SGX SDK Directory:", getFieldEditorParent());
         addField(sgxSdkDirectoryEditor);
     }
 
 	/*
-	 * Validates whether the path entered in the SGX SDK Preferences points to the SGX SDK or not.
+	 * Validates whether the path entered in the Intel(R) SGX SDK Preferences points to the Intel(R) SGX SDK or not.
 	 */
     private static class SGXSdkDirectoryFieldEditor extends DirectoryFieldEditor {
         public SGXSdkDirectoryFieldEditor(String name, String labelText, Composite parent) {
@@ -75,13 +75,13 @@ public class SGXPreferencePage
         @Override
         protected boolean doCheckState() {
             if (!super.doCheckState()) {
-                setErrorMessage("SGX Preferences: Not a Valid directory");
+                setErrorMessage("Intel(R) SGX Preferences: Not a Valid directory");
                 return false;
             }
 
             String dirname = getTextControl().getText().trim();
             if (!dirname.isEmpty() && !SdkPathVariableProvider.isValidSGXSdkLocation(dirname)) {
-                setErrorMessage("SGX SDK: Not a Valid SGX SDK directory");
+                setErrorMessage("Intel(R) SGX SDK: Not a Valid SGX SDK directory");
                 return false;
             }
             return true;

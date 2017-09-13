@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,6 +46,7 @@
 #include "sgx_tcrypto.h"
 #include <stdlib.h>
 #include "byte_order.h"
+#include "util.h"
 
 
 //Function to get provisioning key using the provided PSVN
@@ -95,9 +96,10 @@ pve_status_t get_ppid(ppid_t* ppid)
 
     uint8_t content[16];
     memset(&content, 0, sizeof(content));
+    
     //generate the mac as PPID
-    static_assert(sizeof(sgx_cmac_128bit_key_t) == sizeof(sgx_key_128bit_t), "size of sgx_cmac_128bit_key_t and sgx_key_128bit_t should be same");
-    static_assert(sizeof(sgx_cmac_128bit_tag_t) == sizeof(ppid_t), "size of sgx_cmac_128bit_tag_t and ppit_t should be same");
+    se_static_assert(sizeof(sgx_cmac_128bit_key_t) == sizeof(sgx_key_128bit_t)); /*size of sgx_cmac_128bit_key_t and sgx_key_128bit_t should be same*/
+    se_static_assert(sizeof(sgx_cmac_128bit_tag_t) == sizeof(ppid_t)); /*size of sgx_cmac_128bit_tag_t and ppit_t should be same*/
     if((sgx_status=sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(&key_tmp),  
         content, sizeof(content), reinterpret_cast<sgx_cmac_128bit_tag_t *>(ppid)))!=SGX_SUCCESS){
             status = sgx_error_to_pve_error(sgx_status);
@@ -141,8 +143,8 @@ pve_status_t get_pwk2(
     content[OFF_BYTE_0X80] = 0x80; //fill 0x80 in byte offset 31
 
     //get the cmac of provision key as PWK2
-    static_assert(sizeof(sgx_cmac_128bit_key_t)==sizeof(key_tmp), "size of sgx_cmac_128bit_key_t should be same as sgx_key_128bit_t");
-    static_assert(sizeof(sgx_cmac_128bit_tag_t)==sizeof(sgx_key_128bit_t),"size of sgx_cmac_128bit_tag_t should be same as sgx_key_128bit_t");
+    se_static_assert(sizeof(sgx_cmac_128bit_key_t)==sizeof(key_tmp)); /*size of sgx_cmac_128bit_key_t should be same as sgx_key_128bit_t*/
+    se_static_assert(sizeof(sgx_cmac_128bit_tag_t)==sizeof(sgx_key_128bit_t)); /*size of sgx_cmac_128bit_tag_t should be same as sgx_key_128bit_t*/
     if((sgx_status = sgx_rijndael128_cmac_msg(reinterpret_cast<const sgx_cmac_128bit_key_t *>(&key_tmp), 
         reinterpret_cast<const uint8_t *>(content), sizeof(content),
         reinterpret_cast<sgx_cmac_128bit_tag_t *>(wrap_key)))!=SGX_SUCCESS){

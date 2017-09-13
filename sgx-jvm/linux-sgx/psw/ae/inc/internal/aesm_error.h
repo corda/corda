@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,8 +66,8 @@ typedef enum _aesm_error_t
     AESM_SERVICE_NOT_AVAILABLE                    = 27,
     AESM_KDF_MISMATCH                             = 28,
     AESM_OUT_OF_EPC                               = 29,
-    AESM_SERVICE_UNAVAILABLE                      = 30
-
+    AESM_SERVICE_UNAVAILABLE                      = 30,
+    AESM_UNRECOGNIZED_PLATFORM                    = 31,
 } aesm_error_t;
 #endif
 

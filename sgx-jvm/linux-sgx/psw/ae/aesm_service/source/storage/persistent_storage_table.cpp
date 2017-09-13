@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,11 @@
 
 //The ordering of the array must be same as the enumerartion aesm_data_id_t
 static const persistent_storage_info_t psinfos[]={
-    {FT_ENCLAVE_NAME, AESM_LOCATION_EXE_FOLDER, AESM_FILE_ACCESS_PATH_ONLY, "le"},//LE_ENCLAVE_FID
+#ifdef REF_LE
+    { FT_ENCLAVE_NAME, AESM_LOCATION_EXE_FOLDER, AESM_FILE_ACCESS_PATH_ONLY, "ref_le" },//LE_ENCLAVE_FID
+#else
+    { FT_ENCLAVE_NAME, AESM_LOCATION_EXE_FOLDER, AESM_FILE_ACCESS_PATH_ONLY, "le" },//LE_ENCLAVE_FID
+#endif // REF_LE
     {FT_ENCLAVE_NAME, AESM_LOCATION_EXE_FOLDER, AESM_FILE_ACCESS_PATH_ONLY, "qe"},//QE_ENCLAVE_FID
     {FT_ENCLAVE_NAME, AESM_LOCATION_EXE_FOLDER, AESM_FILE_ACCESS_PATH_ONLY, "pve"},//PVE_ENCLAVE_FID
     {FT_ENCLAVE_NAME, AESM_LOCATION_EXE_FOLDER, AESM_FILE_ACCESS_PATH_ONLY, "pse_op"},//PSE_OP_ENCLAVE_FID
@@ -59,7 +63,11 @@ static const persistent_storage_info_t psinfos[]={
 #ifdef _PROFILE_
     {FT_PERSISTENT_STORAGE, AESM_LOCATION_DATA, AESM_FILE_ACCESS_ALL, "perf_time.csv"}, //AESM_PERF_DATA_FID
 #endif
+#ifdef REF_LE
+    { FT_PERSISTENT_STORAGE, AESM_LOCATION_DATA, AESM_FILE_ACCESS_ALL, "ref_white_list.bin" },//AESM_WHITE_LIST_CERT_FID
+#else
     {FT_PERSISTENT_STORAGE, AESM_LOCATION_DATA, AESM_FILE_ACCESS_ALL, "white_list_cert.bin"},//AESM_WHITE_LIST_CERT_FID
+#endif // REF_LE
     {FT_PERSISTENT_STORAGE, AESM_LOCATION_DATA, AESM_FILE_ACCESS_ALL, "white_list_cert_to_be_verify.bin"},//AESM_WHITE_LIST_CERT_TO_BE_VERIFY_FID
     {FT_PERSISTENT_STORAGE, AESM_LOCATION_DATA, AESM_FILE_ACCESS_ALL, "OcspResponseVLR.dat"}, //PSE_PR_OCSPRESP_FID
     {FT_PERSISTENT_STORAGE, AESM_LOCATION_DATA, AESM_FILE_ACCESS_ALL, "LTPairing.blob"}, //PSE_PR_LT_PAIRING_FID

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,9 +40,6 @@
 #include "sgx_spinlock.h"
 #include "global_init.h"
 #include "trts_internal.h"
-
-#  include "linux/elf_parser.h"
-#  define GET_TLS_INFO  elf_tls_info
 
 // is_ecall_allowed()
 // check the index in the dynamic entry table
@@ -136,37 +133,7 @@ static sgx_status_t trts_ecall(uint32_t ordinal, void *ms)
     return status;
 }
 
-extern "C" void  init_stack_guard();
-static sgx_status_t do_init_thread(void *tcs)
-{
-    thread_data_t *thread_data = GET_PTR(thread_data_t, tcs, g_global_data.td_template.self_addr);
-    memcpy_s(thread_data, SE_PAGE_SIZE, const_cast<thread_data_t *>(&g_global_data.td_template), sizeof(thread_data_t));
-    thread_data->last_sp += (size_t)tcs;
-    thread_data->self_addr += (size_t)tcs;
-    thread_data->stack_base_addr += (size_t)tcs;
-    thread_data->stack_limit_addr += (size_t)tcs;
-    thread_data->first_ssa_gpr += (size_t)tcs;
-    thread_data->tls_array += (size_t)tcs;
-    thread_data->tls_addr += (size_t)tcs;
-    
-    thread_data->last_sp -= (size_t)STATIC_STACK_SIZE;
-    thread_data->stack_base_addr -= (size_t)STATIC_STACK_SIZE;
-
-    uintptr_t tls_addr = 0;
-    size_t tdata_size = 0;
-
-    if(0 != GET_TLS_INFO(&__ImageBase, &tls_addr, &tdata_size))
-    {
-        return SGX_ERROR_UNEXPECTED;
-    }
-    if(tls_addr)
-    {
-        memset((void *)TRIM_TO_PAGE(thread_data->tls_addr), 0, ROUND_TO_PAGE(thread_data->self_addr - thread_data->tls_addr));
-        memcpy_s((void *)(thread_data->tls_addr), thread_data->self_addr - thread_data->tls_addr, (void *)tls_addr, tdata_size);
-    }
-    init_stack_guard();
-    return SGX_SUCCESS;
-}
+extern "C" sgx_status_t do_init_thread(void *tcs);
 sgx_status_t do_ecall(int index, void *ms, void *tcs)
 {
     sgx_status_t status = SGX_ERROR_UNEXPECTED;

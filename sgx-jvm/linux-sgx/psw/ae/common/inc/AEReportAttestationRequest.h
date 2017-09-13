@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,46 +33,39 @@
 
 #include <IAERequest.h>
 
+namespace aesm
+{
+    namespace message
+    {
+        class Request_ReportAttestationErrorRequest;
+    };
+};
+
+
 class AEReportAttestationRequest : public IAERequest
 {
     public:
-        AEReportAttestationRequest();
+        AEReportAttestationRequest(const aesm::message::Request_ReportAttestationErrorRequest& request);
         AEReportAttestationRequest(uint32_t platformInfoLength, const uint8_t* platformInfo, uint32_t attestation_error_code, uint32_t updateInfoLength, uint32_t timeout = 0);
         AEReportAttestationRequest(const AEReportAttestationRequest& other);
         ~AEReportAttestationRequest();
 
-        AEMessage* serialize(ISerializer* serializer);
-        void inflateValues(uint32_t platformInfoLength, const uint8_t* platformInfo, uint32_t attestation_error_code, uint32_t updateInfoLength, uint32_t timeout = 0);
-
-        //getters
-        inline uint32_t GetAttestationErrorCode() const { return mAttestationErrorCode; }
-        inline uint32_t GetPlatformInfoLength() const { return mPlatformInfoLength;}
-        inline const uint8_t* GetPlatformInfo() const { return mPlatformInfo;}
-        inline uint32_t GetUpdateInfoLength() const { return mUpdateInfoLength;}
+        AEMessage* serialize();
 
         //operators
-        bool operator==(const AEReportAttestationRequest& other) const;
         AEReportAttestationRequest& operator=(const AEReportAttestationRequest& request);
 
         //checks
         bool check();
 
         //hooks
-        IAEResponse* execute(IAESMLogic* aesmLogic);
+        virtual IAEResponse* execute(IAESMLogic* aesmLogic);
 
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
-        void visit(IAERequestVisitor& visitor);
-
     protected:
         void ReleaseMemory();
-        void CopyFields(uint32_t platformInfoLength, const uint8_t* platformInfo, uint32_t attestation_error_code, uint32_t updateInfoLength, uint32_t timeout);
-
-        uint32_t    mAttestationErrorCode;
-
-        uint32_t    mPlatformInfoLength;
-        uint8_t*    mPlatformInfo;
-        uint32_t    mUpdateInfoLength;
+        aesm::message::Request_ReportAttestationErrorRequest* m_request;
 };
 
 #endif

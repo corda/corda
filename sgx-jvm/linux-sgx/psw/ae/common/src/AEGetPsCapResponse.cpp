@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,27 +28,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
+
 #include <AEGetPsCapResponse.h>
 
-#include <stdlib.h>
+
 #include <string.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AEGetPsCapResponse::AEGetPsCapResponse() :
-    mPsCap(-1)
+AEGetPsCapResponse::AEGetPsCapResponse()
+    :m_response(NULL)
 {
 }
 
-AEGetPsCapResponse::AEGetPsCapResponse(int errorCode, uint64_t ps_cap) :
-    mPsCap(-1)
+AEGetPsCapResponse::AEGetPsCapResponse(aesm::message::Response::GetPsCapResponse& response) :
+    m_response(NULL)
 {
-    CopyFields(errorCode, ps_cap);
+    m_response = new aesm::message::Response::GetPsCapResponse(response);
 }
 
-AEGetPsCapResponse::AEGetPsCapResponse(const AEGetPsCapResponse& other) :
-    mPsCap(-1)
+AEGetPsCapResponse::AEGetPsCapResponse(uint32_t errorCode, uint64_t ps_cap) :
+    m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mPsCap);
+    m_response = new aesm::message::Response::GetPsCapResponse();
+    m_response->set_errorcode(errorCode);
+    m_response->set_ps_cap(ps_cap);}
+
+AEGetPsCapResponse::AEGetPsCapResponse(const AEGetPsCapResponse& other)
+    :m_response(NULL)
+{
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::GetPsCapResponse(*other.m_response);
 }
 
 AEGetPsCapResponse::~AEGetPsCapResponse()
@@ -58,40 +70,51 @@ AEGetPsCapResponse::~AEGetPsCapResponse()
 
 void AEGetPsCapResponse::ReleaseMemory()
 {
-    mErrorCode = SGX_ERROR_UNEXPECTED;
+   if (m_response != NULL)
+    {
+        delete m_response;
+        m_response = NULL;
+    }
 }
 
-void AEGetPsCapResponse::CopyFields(int errorCode, uint64_t ps_cap)
+AEMessage* AEGetPsCapResponse::serialize()
 {
-    mErrorCode = errorCode;
-    mPsCap = ps_cap;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    if (check())
+    {
+        aesm::message::Response::GetPsCapResponse* mutableRes = msg.mutable_getpscapres();
+        mutableRes->CopyFrom(*m_response);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-
-AEMessage* AEGetPsCapResponse::serialize(ISerializer* serializer)
+bool AEGetPsCapResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->serialize(this);
-}
+    aesm::message::Response msg;
+    if (!msg.ParseFromArray(message->data, message->size))
+        return false;
+    if (msg.has_getpscapres() == false)
+        return false;
 
-bool AEGetPsCapResponse::inflateWithMessage(AEMessage* message, ISerializer *serializer)
-{
-    return serializer->inflateResponse(message, this);
-}
-
-void AEGetPsCapResponse::inflateValues(int errorCode, uint64_t ps_cap)
-{
+    //this is an AEGetPsCapResponse
     ReleaseMemory();
-
-    CopyFields(errorCode, ps_cap);
+    m_response = new aesm::message::Response::GetPsCapResponse(msg.getpscapres());
+    return true;
 }
 
-bool AEGetPsCapResponse::operator==(const AEGetPsCapResponse &other) const
+bool AEGetPsCapResponse::GetValues(uint32_t* errorCode, uint64_t* ps_cap) const
 {
-    if (this == &other)
-            return true;
-
-    if (mPsCap!= other.mPsCap)
-            return false;
+    *ps_cap = m_response->ps_cap();
+    *errorCode = m_response->errorcode();
     return true;
 }
 
@@ -100,27 +123,18 @@ AEGetPsCapResponse & AEGetPsCapResponse::operator=(const AEGetPsCapResponse &oth
     if (this == &other)
         return *this;
 
-    inflateValues(other.mErrorCode, other.mPsCap);
-
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::GetPsCapResponse(*other.m_response);
+    }
     return *this;
 }
 
 bool AEGetPsCapResponse::check()
 {
-    // no MAC to check at this point, but do some generic parameter check
-
-    //impose a limit of 1MB for these messages. If larger then a transmission, or unmarshalling error may have occured
-    //also a big value here might be an attack
-
-    //first, fail if errorCode is not 0
-    if (mErrorCode != SGX_SUCCESS)
+    if (m_response == NULL)
         return false;
-
-    return true;
-}
-
-void AEGetPsCapResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitGetPsCapResponse(*this);
+    return m_response->IsInitialized();
 }
 

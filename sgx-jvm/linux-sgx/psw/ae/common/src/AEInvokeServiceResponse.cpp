@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,27 +28,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEInvokeServiceResponse.h>
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
     AEInvokeServiceResponse::AEInvokeServiceResponse()
-:mPSEMessageLength(0), mPSEMessage(NULL)
+    :m_response(NULL)
 {
 }
 
-    AEInvokeServiceResponse::AEInvokeServiceResponse(int errorCode, uint32_t pseMessageLength, const uint8_t* pseMessage)
-:mPSEMessageLength(0), mPSEMessage(NULL)
+AEInvokeServiceResponse::AEInvokeServiceResponse(aesm::message::Response::InvokeServiceResponse& response)
+    :m_response(NULL)
 {
-    CopyFields(errorCode, pseMessageLength, pseMessage);
+    m_response = new aesm::message::Response::InvokeServiceResponse(response);
 }
 
-    AEInvokeServiceResponse::AEInvokeServiceResponse(const AEInvokeServiceResponse& other)
-:mPSEMessageLength(0), mPSEMessage(NULL)
+AEInvokeServiceResponse::AEInvokeServiceResponse(uint32_t errorCode, uint32_t pseMessageLength, const uint8_t* pseMessage)
+    :m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mPSEMessageLength, other.mPSEMessage);
+    m_response = new aesm::message::Response::InvokeServiceResponse();
+    m_response->set_errorcode(errorCode);
+    if (pseMessageLength!= 0 && pseMessage != NULL)
+        m_response->set_pse_message(pseMessage, pseMessageLength);
+}
+
+AEInvokeServiceResponse::AEInvokeServiceResponse(const AEInvokeServiceResponse& other)
+    :m_response(NULL)
+{
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::InvokeServiceResponse(*other.m_response);
 }
 
 AEInvokeServiceResponse::~AEInvokeServiceResponse()
@@ -58,71 +70,56 @@ AEInvokeServiceResponse::~AEInvokeServiceResponse()
 
 void AEInvokeServiceResponse::ReleaseMemory()
 {
-    if (mPSEMessage != NULL)
+    if (m_response != NULL)
     {
-        if (mPSEMessageLength > 0)
-            memset(mPSEMessage, 0, mPSEMessageLength);
-        delete [] mPSEMessage;
-        mPSEMessage = NULL;
+        delete m_response;
+        m_response = NULL;
     }
-    mErrorCode = SGX_ERROR_UNEXPECTED;
-    mPSEMessageLength = 0;
 }
 
-void AEInvokeServiceResponse::CopyFields(int errorCode, uint32_t pseMessageLength,const uint8_t* pseMessage)
+AEMessage* AEInvokeServiceResponse::serialize()
 {
-    if(pseMessageLength <= MAX_MEMORY_ALLOCATION )
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    if (check())
     {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
+        aesm::message::Response::InvokeServiceResponse* mutableRes = msg.mutable_invokeserviceres();
+        mutableRes->CopyFrom(*m_response);
 
-    mErrorCode = errorCode;
-    mPSEMessageLength = pseMessageLength;
-    if (pseMessage != NULL && pseMessageLength > 0) {
-        mPSEMessage = new uint8_t[pseMessageLength];
-        memcpy(mPSEMessage, pseMessage, pseMessageLength);
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
     }
+    return ae_msg;
 }
 
-AEMessage* AEInvokeServiceResponse::serialize(ISerializer* serializer)
+bool AEInvokeServiceResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->serialize(this);
-}
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_invokeserviceres() == false)
+        return false;
 
-bool AEInvokeServiceResponse::inflateWithMessage(AEMessage* message, ISerializer* serializer)
-{
-    return serializer->inflateResponse(message, this);
-}
-
-void AEInvokeServiceResponse::inflateValues(int errorCode, uint32_t pseMessageLength,const uint8_t* pseMessage)
-{
+    //this is an AEInvokeServiceResponse
     ReleaseMemory();
-
-    CopyFields(errorCode, pseMessageLength, pseMessage);
+    m_response = new aesm::message::Response::InvokeServiceResponse(msg.invokeserviceres());
+    return true;
 }
 
-bool AEInvokeServiceResponse::operator==(const AEInvokeServiceResponse& other) const
+bool AEInvokeServiceResponse::GetValues(uint32_t* errorCode, uint32_t pseMessageLength,uint8_t* pseMessage) const
 {
-    if (this == &other)
-        return true;
-
-    if (mErrorCode != other.mErrorCode ||
-            mPSEMessageLength != other.mPSEMessageLength)
-        return false;
-
-    if ((mPSEMessage != other.mPSEMessage) &&
-            (mPSEMessage == NULL || other.mPSEMessage == NULL))
-        return false;
-
-    if (mPSEMessage != NULL && other.mPSEMessage != NULL &&
-            memcmp(mPSEMessage, other.mPSEMessage, other.mPSEMessageLength) != 0)
-        return false;
-
+    if (m_response->has_pse_message() && pseMessage != NULL)
+    {
+        if (m_response->pse_message().size() <= pseMessageLength)
+            memcpy(pseMessage, m_response->pse_message().c_str(), m_response->pse_message().size());
+        else
+            return false;
+    }
+    *errorCode = m_response->errorcode(); 
     return true;
 }
 
@@ -131,26 +128,17 @@ AEInvokeServiceResponse& AEInvokeServiceResponse::operator=(const AEInvokeServic
     if (this == &other)
         return * this;
 
-    inflateValues(other.mErrorCode, other.mPSEMessageLength, other.mPSEMessage);
-
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::InvokeServiceResponse(*other.m_response);
+    }
     return *this;
 }
 
 bool AEInvokeServiceResponse::check()
 {
-    if (mErrorCode != SGX_SUCCESS)
+    if (m_response == NULL)
         return false;
-
-    if (mValidSizeCheck == false)
-        return false;
-
-    if (mPSEMessage == NULL)
-        return false;
-
-    return true;
-}
-
-void AEInvokeServiceResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitInvokeServiceResponse(*this);
+    return m_response->IsInitialized();
 }

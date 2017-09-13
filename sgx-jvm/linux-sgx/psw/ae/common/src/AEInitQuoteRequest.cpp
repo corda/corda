@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,95 +28,103 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEInitQuoteRequest.h>
 #include <AEInitQuoteResponse.h>
 #include <IAESMLogic.h>
 
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-#include <sgx_uae_service.h>
 
-AEInitQuoteRequest::AEInitQuoteRequest(uint32_t timeout)
+AEInitQuoteRequest::AEInitQuoteRequest(const aesm::message::Request::InitQuoteRequest& request) :
+    m_request(NULL)
 {
-    inflateValues(timeout);
+    m_request = new aesm::message::Request::InitQuoteRequest();
+    m_request->CopyFrom(request);
+}
+AEInitQuoteRequest::AEInitQuoteRequest(uint32_t timeout):
+        m_request(NULL)
+{
+    m_request = new aesm::message::Request::InitQuoteRequest();
+    m_request->set_timeout(timeout);
 }
 
-AEInitQuoteRequest::AEInitQuoteRequest(const AEInitQuoteRequest& other)
-:IAERequest(other)
+AEInitQuoteRequest::AEInitQuoteRequest(const AEInitQuoteRequest& other) :
+    IAERequest(other), m_request(NULL)
 {
-    CopyFields(other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::InitQuoteRequest(*other.m_request);
 }
 
 AEInitQuoteRequest::~AEInitQuoteRequest()
 {
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AEInitQuoteRequest::ReleaseMemory()
+
+AEMessage* AEInitQuoteRequest::serialize()
 {
-    //empty for now
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
+    {
+        aesm::message::Request::InitQuoteRequest* mutableReq = msg.mutable_initquotereq();
+        mutableReq->CopyFrom(*m_request);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-void AEInitQuoteRequest::CopyFields(uint32_t timeout)
+bool AEInitQuoteRequest::check()
 {
-    mTimeout = timeout;
-}
-
-AEMessage* AEInitQuoteRequest::serialize(ISerializer* serializer){
-    return serializer->serialize(this);
+    if (m_request == NULL)
+        return false;
+    return m_request->IsInitialized();
 }
 
 IAERequest::RequestClass AEInitQuoteRequest::getRequestClass() {
     return QUOTING_CLASS;
 }
 
-void AEInitQuoteRequest::inflateValues(uint32_t timeout)
-{
-    ReleaseMemory();
-
-    CopyFields(timeout);
-}
-
-bool AEInitQuoteRequest::operator==(const AEInitQuoteRequest& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mTimeout != other.mTimeout)
-        return false;
-
-    return true;    //no members , default to true
-}
-
 AEInitQuoteRequest& AEInitQuoteRequest::operator=(const AEInitQuoteRequest& other)
 {
     if (this == &other)
         return *this;
-
-    inflateValues(other.mTimeout); 
-
-    //do nothing - no members
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::InitQuoteRequest(*other.m_request);
     return *this;
 }
 
-void AEInitQuoteRequest::visit(IAERequestVisitor& visitor)
+
+IAEResponse* AEInitQuoteRequest::execute(IAESMLogic* aesmLogic)
 {
-    visitor.visitInitQuoteRequest(*this);
-}
-
-
-IAEResponse* AEInitQuoteRequest::execute(IAESMLogic* aesmLogic) {
-    uint8_t* target_info = new uint8_t[sizeof(sgx_target_info_t)];
-    uint8_t* gid = new uint8_t[sizeof(sgx_epid_group_id_t)];
-    uint32_t target_info_length=sizeof(sgx_target_info_t);
-    uint32_t gid_length=sizeof(sgx_epid_group_id_t);
-
-    aesm_error_t result= aesmLogic->initQuote(target_info,target_info_length,gid, gid_length);
-
-    AEInitQuoteResponse * response = new AEInitQuoteResponse((uint32_t)result, gid_length, gid, target_info_length, target_info);
-
-    delete [] target_info;
-    delete [] gid;
-
+    aesm_error_t result = AESM_UNEXPECTED_ERROR;
+    uint8_t* target_info = NULL;
+    uint8_t* gid = NULL;
+    uint32_t target_info_length = 0;
+    uint32_t gid_length = 0;
+    if (check())
+    {
+         result= aesmLogic->initQuote(&target_info,&target_info_length, &gid, &gid_length);
+    }
+    IAEResponse* response = new AEInitQuoteResponse(result, gid_length, gid, target_info_length, target_info);
+    if (target_info)
+        delete[] target_info;
+    if (gid)
+        delete[] gid;
     return response;
 }

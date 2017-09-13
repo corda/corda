@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -52,6 +52,12 @@ clean:
 	@$(MAKE) -C psw/                                clean
 	@$(RM)   -r $(ROOT_DIR)/build
 	@$(RM)   -r linux/installer/bin/sgx_linux*.bin
+	@$(RM)   -rf linux/installer/common/psw/output
+	@$(RM)   -rf linux/installer/common/psw/gen_source.py
+	@$(RM)   -rf linux/installer/common/sdk/output
+	@$(RM)   -rf linux/installer/common/sdk/pkgconfig/x64
+	@$(RM)   -rf linux/installer/common/sdk/pkgconfig/x86
+	@$(RM)   -rf linux/installer/common/sdk/gen_source.py
 
 rebuild:
 	$(MAKE) clean

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -112,7 +112,7 @@ sgx_status_t do_oret(void *ms)
     thread_data_t *thread_data = get_thread_data();
     uintptr_t last_sp = thread_data->last_sp;
     ocall_context_t *context = reinterpret_cast<ocall_context_t*>(thread_data->last_sp);
-    if(0 == last_sp)
+    if(0 == last_sp || last_sp <= (uintptr_t)&context)
     {
         return SGX_ERROR_UNEXPECTED;
     }
@@ -120,24 +120,22 @@ sgx_status_t do_oret(void *ms)
     // 30 is an estimated value: 8 for enclave_entry and 22 for do_ocall.
     if(last_sp > thread_data->stack_base_addr - 30 * sizeof(size_t))
     {
-        goto invalid_ocall_frame;
+        return SGX_ERROR_UNEXPECTED;
     }
     if(context->ocall_flag != OCALL_FLAG)
     {
-        goto invalid_ocall_frame;
+        return SGX_ERROR_UNEXPECTED;
     }
-    if(context->pre_last_sp > thread_data->stack_base_addr)
+    if(context->pre_last_sp > thread_data->stack_base_addr
+       || context->pre_last_sp <= (uintptr_t)context)
     {
-        goto invalid_ocall_frame;
+        return SGX_ERROR_UNEXPECTED;
     }
-    if(context->pre_last_sp <= (uintptr_t)&context)
-    {
-        goto invalid_ocall_frame;
-    }
+
     thread_data->last_sp = context->pre_last_sp;
     asm_oret(last_sp, ms);
-
-invalid_ocall_frame:
+    
+    // Should not come here
     return SGX_ERROR_UNEXPECTED;
 }
 

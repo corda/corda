@@ -1,4 +1,4 @@
-######## SGX SDK Settings ########
+######## Intel(R) SGX SDK Settings ########
 SGX_SDK ?= $(SdkPathFromPlugin)
 SGX_MODE ?= SIM
 SGX_ARCH ?= x64
@@ -45,7 +45,7 @@ Crypto_Library_Name := sgx_tcrypto
 
 $(EnclaveName)_Cpp_Files := static_trusted/$(enclaveName).cpp 
 $(EnclaveName)_C_Files := 
-$(EnclaveName)_Include_Paths := -IInclude -I$(EnclaveName) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport
+$(EnclaveName)_Include_Paths := -IInclude -I$(EnclaveName) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
 
 Flags_Just_For_C := -Wno-implicit-function-declaration -std=c11
 Common_C_Cpp_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $($(EnclaveName)_Include_Paths) -fno-builtin-printf -I.
@@ -56,7 +56,7 @@ $(EnclaveName)_Cpp_Flags := $($(EnclaveName)_Cpp_Flags)  -fno-builtin-printf
 
 $(EnclaveName)_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
+	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
 	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
 	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
 	-Wl,--defsym,__ImageBase=0 \

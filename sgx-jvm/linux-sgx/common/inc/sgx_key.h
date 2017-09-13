@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@
 #include "sgx_attributes.h"
 
 /* Key Name */
-#define SGX_KEYSELECT_EINITOKEN        0x0000
+#define SGX_KEYSELECT_EINITTOKEN       0x0000
 #define SGX_KEYSELECT_PROVISION        0x0001
 #define SGX_KEYSELECT_PROVISION_SEAL   0x0002
 #define SGX_KEYSELECT_REPORT           0x0003

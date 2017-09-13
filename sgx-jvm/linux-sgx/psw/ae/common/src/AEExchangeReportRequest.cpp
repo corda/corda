@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,129 +28,89 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEExchangeReportRequest.h>
 #include <AEExchangeReportResponse.h>
 #include <IAESMLogic.h>
 
-#include <string.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
 
-AEExchangeReportRequest::AEExchangeReportRequest()
-:mSessionId(0), mDHMsg2Length(0), mDHMsg2(NULL), mDHMsg3Length(0)
+AEExchangeReportRequest::AEExchangeReportRequest(const aesm::message::Request::ExchangeReportRequest& request)
+    :m_request(NULL)
 {
+    m_request = new aesm::message::Request::ExchangeReportRequest();
+    m_request->CopyFrom(request);
 }
 
 AEExchangeReportRequest::AEExchangeReportRequest(uint32_t sessionId, uint32_t dhMsg2Length, const uint8_t* dhMsg2, uint32_t dhMsg3Length, uint32_t timeout)
-:mSessionId(0), mDHMsg2Length(0), mDHMsg2(NULL), mDHMsg3Length(0)
+:m_request(NULL)
 {
-    CopyFields(sessionId, dhMsg2Length, dhMsg2, dhMsg3Length, timeout);
+    m_request = new aesm::message::Request::ExchangeReportRequest();
+    if (dhMsg2Length != 0 && dhMsg2 != NULL)
+    {
+        m_request->set_se_dh_msg2(dhMsg2, dhMsg2Length);
+    }
+
+    m_request->set_session_id(sessionId);
+    m_request->set_se_dh_msg3_size(dhMsg3Length);
+    m_request->set_timeout(timeout);
 }
 
 AEExchangeReportRequest::AEExchangeReportRequest(const AEExchangeReportRequest& other)
-:IAERequest(other), mSessionId(0), mDHMsg2Length(0), mDHMsg2(NULL), mDHMsg3Length(0)
+    :m_request(NULL)
 {
-    CopyFields(other.mSessionId, other.mDHMsg2Length, other.mDHMsg2, other.mDHMsg3Length, other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::ExchangeReportRequest(*other.m_request);
 }
 
 AEExchangeReportRequest::~AEExchangeReportRequest()
 {
-    ReleaseMemory();
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AEExchangeReportRequest::ReleaseMemory()
+
+AEMessage* AEExchangeReportRequest::serialize()
 {
-    if (mDHMsg2 != NULL)
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
     {
-        if (mDHMsg2Length > 0)
-            memset(mDHMsg2, 0, mDHMsg2Length);
-        delete [] mDHMsg2;
-        mDHMsg2 = NULL;
+        aesm::message::Request::ExchangeReportRequest* mutableReq = msg.mutable_exchangereportreq();
+        mutableReq->CopyFrom(*m_request);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
     }
-    mDHMsg2Length = 0;
-    mDHMsg3Length = 0;
-    mSessionId = 0;
-    mTimeout = 0;
-}
-
-void AEExchangeReportRequest::CopyFields(uint32_t sessionId, uint32_t dhMsg2Length, const uint8_t* dhMsg2, uint32_t dhMsg3Length, uint32_t timeout)
-{
-    if(dhMsg2Length <= MAX_MEMORY_ALLOCATION && mDHMsg3Length <= MAX_MEMORY_ALLOCATION)
-    {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
-
-    mSessionId = sessionId;
-    mDHMsg2Length = dhMsg2Length;
-    mDHMsg3Length = dhMsg3Length;
-
-    mTimeout = timeout;
-
-    if (dhMsg2 != NULL && dhMsg2Length > 0) {
-        mDHMsg2 = new uint8_t[dhMsg2Length];
-        memcpy(mDHMsg2, dhMsg2, dhMsg2Length);
-    }
-
-}
-
-AEMessage* AEExchangeReportRequest::serialize(ISerializer* serializer)
-{
-    return serializer->serialize(this);
-}
-
-void AEExchangeReportRequest::inflateValues(uint32_t sessionId, uint32_t dhMsg2Length, const uint8_t* dhMsg2, uint32_t dhMsg3Length, uint32_t timeout)
-{
-    ReleaseMemory();
-
-    CopyFields(sessionId, dhMsg2Length, dhMsg2, dhMsg3Length, timeout);
-}
-
-bool AEExchangeReportRequest::operator==(const AEExchangeReportRequest& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mSessionId != other.mSessionId ||
-        mDHMsg2Length != other.mDHMsg2Length ||
-        mDHMsg3Length != other.mDHMsg3Length ||
-        mTimeout != other.mTimeout)
-        return false;
-
-    if ((mDHMsg2 != other.mDHMsg2) &&
-            (mDHMsg2 == NULL || other.mDHMsg2 == NULL))
-        return false;
-
-    if (mDHMsg2 != NULL && other.mDHMsg2 != NULL && memcmp(mDHMsg2, other.mDHMsg2, other.mDHMsg2Length) != 0)
-        return false;
-
-    return true;
+    return ae_msg;
 }
 
 AEExchangeReportRequest& AEExchangeReportRequest::operator=(const AEExchangeReportRequest& other)
 {
     if (this == &other)
         return *this;
-
-    inflateValues(other.mSessionId, other.mDHMsg2Length, other.mDHMsg2, other.mDHMsg3Length, other.mTimeout);
-
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::ExchangeReportRequest(*other.m_request);
     return *this;
 }
 
 bool AEExchangeReportRequest::check()
 {
-    if(mValidSizeCheck == false)
+    if (m_request == NULL)
         return false;
-
-    if (mDHMsg2 == NULL)
-        return false;
-
-    return true;
+    return m_request->IsInitialized();
 }
 
 IAERequest::RequestClass AEExchangeReportRequest::getRequestClass() {
@@ -158,30 +118,31 @@ IAERequest::RequestClass AEExchangeReportRequest::getRequestClass() {
 }
 
 IAEResponse* AEExchangeReportRequest::execute(IAESMLogic* aesmLogic) {
+
     aesm_error_t ret = AESM_UNEXPECTED_ERROR;
+    uint32_t dh_msg3_size = 0;
     uint8_t* dh_msg3 = NULL;
-
-    if (check() == false)
+    if (check())
     {
-        ret = AESM_PARAMETER_ERROR;
-    }
-    else
-    {
-        dh_msg3 = new uint8_t[mDHMsg3Length];
-        ret = aesmLogic->exchangeReport(mSessionId, mDHMsg2, mDHMsg2Length, dh_msg3, mDHMsg3Length);
-    }
+        uint32_t dh_msg2_length = 0;
+        uint8_t* dh_msg2 = NULL;
 
-    IAEResponse* ae_res = new AEExchangeReportResponse(ret, mDHMsg3Length, dh_msg3);
+        if (m_request->has_se_dh_msg2())
+        {
+            dh_msg2_length = (unsigned int)m_request->se_dh_msg2().size();
+            dh_msg2 = (uint8_t*)const_cast<char *>(m_request->se_dh_msg2().data());
+        }
 
-    if (dh_msg3) 
-    {
-        delete [] dh_msg3;
+        dh_msg3_size = m_request->se_dh_msg3_size();
+        ret = aesmLogic->exchangeReport(m_request->session_id(), dh_msg2, dh_msg2_length, &dh_msg3, dh_msg3_size);
     }
 
-    return ae_res;
-}
+    IAEResponse* response = new AEExchangeReportResponse(ret, dh_msg3_size, dh_msg3);
 
-void AEExchangeReportRequest::visit(IAERequestVisitor& visitor)
-{
-    visitor.visitExchangeReportRequest(*this);
+    if (dh_msg3)
+    {
+        delete[] dh_msg3;
+    }
+
+    return response;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,6 +68,14 @@ typedef struct _ps_sec_prop_desc
     uint8_t  sgx_ps_sec_prop_desc[256];
 } sgx_ps_sec_prop_desc_t;
 
+typedef struct _ps_sec_prop_desc_ex
+{
+    sgx_ps_sec_prop_desc_t  ps_sec_prop_desc;
+    sgx_measurement_t pse_mrsigner;
+    sgx_prod_id_t pse_prod_id;
+    sgx_isv_svn_t pse_isv_svn;
+} sgx_ps_sec_prop_desc_ex_t;
+
 #pragma pack(pop)
 
 /* create a session, call it before using Platform Service */
@@ -78,6 +86,9 @@ sgx_status_t SGXAPI sgx_close_pse_session(void);
 
 /* get a data structure describing the Security Property of the Platform Service */
 sgx_status_t SGXAPI sgx_get_ps_sec_prop(sgx_ps_sec_prop_desc_t* security_property);
+
+/* get a data structure describing the Security Property of the Platform Service */
+sgx_status_t SGXAPI sgx_get_ps_sec_prop_ex(sgx_ps_sec_prop_desc_ex_t* security_property);
 
 /* provides the trusted platform current time */
 sgx_status_t SGXAPI sgx_get_trusted_time(

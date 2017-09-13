@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -185,6 +185,11 @@ ae_error_t aesm_join_thread(aesm_thread_t h, ae_error_t *thread_ret)
 {
     void *ret_value;
     AESM_DBG_TRACE("start to join thread %p",h);
+    if (h == NULL)
+    {
+        AESM_DBG_ERROR("Thread handle is NULL.");
+        return OAL_THREAD_ERROR;
+    }
     if(0!=pthread_join(h->hthread, &ret_value)){
         AESM_DBG_ERROR("fail to join thread %p",h);
         return OAL_THREAD_ERROR;
@@ -209,6 +214,10 @@ ae_error_t aesm_join_thread(aesm_thread_t h, ae_error_t *thread_ret)
 
 ae_error_t aesm_free_thread(aesm_thread_t h)
 { 
+    if (h == NULL){
+        return AE_SUCCESS;
+    }
+
     AESM_DBG_TRACE("start to free thread %p",h);
     if(pthread_mutex_lock(&h->mutex)!=0){
         AESM_DBG_ERROR("fail to lock thread %p",h);
@@ -248,6 +257,11 @@ ae_error_t aesm_free_thread(aesm_thread_t h)
 ae_error_t aesm_wait_thread(aesm_thread_t h, ae_error_t *thread_ret, unsigned long milisecond)
 {
     AESM_DBG_TRACE("start to wait thread %p for %d ms",h,milisecond);
+    if (h == NULL)
+    {
+        AESM_DBG_ERROR("Thread handle is NULL.");
+        return OAL_THREAD_ERROR;
+    }
     if(pthread_mutex_lock(&h->mutex)!=0){
         AESM_DBG_TRACE("Fail to hold lock of thread %p",h);
         return OAL_THREAD_ERROR;

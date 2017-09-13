@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,143 +28,88 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEReportAttestationRequest.h>
 #include <AEReportAttestationResponse.h>
 #include <IAESMLogic.h>
 
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AEReportAttestationRequest::AEReportAttestationRequest()
-:mAttestationErrorCode(-1),
-mPlatformInfoLength(0),
-mPlatformInfo(NULL),
-mUpdateInfoLength(0)
+AEReportAttestationRequest::AEReportAttestationRequest(const aesm::message::Request::ReportAttestationErrorRequest& request) :
+    m_request(NULL)
 {
+    m_request = new aesm::message::Request::ReportAttestationErrorRequest();
+    m_request->CopyFrom(request);
 }
 
 AEReportAttestationRequest::AEReportAttestationRequest(uint32_t platformInfoLength, const uint8_t* platformInfo, uint32_t attestation_error_code, uint32_t updateInfoLength, uint32_t timeout)
-:mAttestationErrorCode(-1),
-mPlatformInfoLength(0),
-mPlatformInfo(NULL),
-mUpdateInfoLength(0)
-
+    :m_request(NULL)
 {
-    CopyFields(platformInfoLength, platformInfo, attestation_error_code, updateInfoLength, timeout);
+    m_request = new aesm::message::Request::ReportAttestationErrorRequest();
+
+    if (platformInfoLength !=0 && platformInfo != NULL)
+    {
+        m_request->set_platform_info(platformInfo, platformInfoLength);
+    }
+    m_request->set_attestation_error_code(attestation_error_code);
+    m_request->set_update_info_size(updateInfoLength);
+    m_request->set_timeout(timeout);
 }
 
 AEReportAttestationRequest::AEReportAttestationRequest(const AEReportAttestationRequest& other)
-:IAERequest(other),
-mAttestationErrorCode(-1),
-mPlatformInfoLength(0),
-mPlatformInfo(NULL),
-mUpdateInfoLength(0)
+    : m_request(NULL)
 {
-    CopyFields(other.mPlatformInfoLength, other.mPlatformInfo, other.mAttestationErrorCode, other.mUpdateInfoLength, other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::ReportAttestationErrorRequest(*other.m_request);
 }
 
 AEReportAttestationRequest::~AEReportAttestationRequest()
 {
-    ReleaseMemory();
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AEReportAttestationRequest::ReleaseMemory()
+AEMessage* AEReportAttestationRequest::serialize()
 {
-    if (mPlatformInfo != NULL)
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
     {
-        if (mPlatformInfoLength > 0)
-        {
-            memset(mPlatformInfo, 0, mPlatformInfoLength);
+        aesm::message::Request::ReportAttestationErrorRequest* mutableReq = msg.mutable_reporterrreq();
+        mutableReq->CopyFrom(*m_request);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
         }
-        delete [] mPlatformInfo;
-        mPlatformInfo = NULL;
     }
-}
-
-void AEReportAttestationRequest::CopyFields(uint32_t platformInfoLength, const uint8_t* platformInfo, uint32_t attestation_error_code, uint32_t updateInfoLength, uint32_t timeout)
-{
-    if (platformInfoLength <= MAX_MEMORY_ALLOCATION )
-    {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
-    
-    if (platformInfo != NULL && platformInfoLength > 0)
-    {
-        mPlatformInfo = new uint8_t[platformInfoLength];
-        mPlatformInfoLength = platformInfoLength;
-        memcpy(mPlatformInfo, platformInfo, platformInfoLength);
-    }
-    mAttestationErrorCode = attestation_error_code;
-    mUpdateInfoLength = updateInfoLength;
-    mTimeout = timeout;
-}
-
-AEMessage* AEReportAttestationRequest::serialize(ISerializer* serializer)
-{
-    return serializer->serialize(this);
-}
-
-void AEReportAttestationRequest::inflateValues(uint32_t platformInfoLength, const uint8_t* platformInfo, uint32_t attestation_error_code, uint32_t updateInfoLength, uint32_t timeout)
-{
-    ReleaseMemory();
-
-    CopyFields(platformInfoLength, platformInfo, attestation_error_code, updateInfoLength, timeout);
-}
-
-bool AEReportAttestationRequest::operator==(const AEReportAttestationRequest& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mPlatformInfoLength != other.mPlatformInfoLength ||
-            mTimeout != other.mTimeout)
-        return false;
-
-    if (mAttestationErrorCode != other.mAttestationErrorCode)
-        return false;
-
-    if (mUpdateInfoLength!= other.mUpdateInfoLength)
-        return false;
-
-
-    if (mPlatformInfo == other.mPlatformInfo)
-        return true;
-
-    if (mPlatformInfo == NULL)
-        return false; //only mPlatformInfo in NULL, because mPlatformInfo != other.mPlatformInfo
-
-    if (other.mPlatformInfo == NULL)
-        return false; //only other.mPlatformInfo in NULL, because mPlatformInfo != other.mPlatformInfo
-
-    if (memcmp(mPlatformInfo, other.mPlatformInfo, other.mPlatformInfoLength) != 0)
-        return false;
-
-    return true;
+    return ae_msg;
 }
 
 AEReportAttestationRequest& AEReportAttestationRequest::operator=(const AEReportAttestationRequest& other)
 {
     if (this == &other)
         return *this;
-
-    ReleaseMemory();
-
-    CopyFields(other.mPlatformInfoLength, other.mPlatformInfo, other.mAttestationErrorCode, other.mUpdateInfoLength, other.mTimeout);
-
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::ReportAttestationErrorRequest(*other.m_request);
     return *this;
 }
 
 bool AEReportAttestationRequest::check()
 {
-    if (mValidSizeCheck == false)
-        return false;        
-    return true;
+    if (m_request == NULL)
+        return false;
+    return m_request->IsInitialized();
 }
 
 IAERequest::RequestClass AEReportAttestationRequest::getRequestClass()
@@ -174,20 +119,29 @@ IAERequest::RequestClass AEReportAttestationRequest::getRequestClass()
 
 IAEResponse* AEReportAttestationRequest::execute(IAESMLogic* aesmLogic)
 {
-    aesm_error_t result; 
-    uint8_t* update_info = new uint8_t[mUpdateInfoLength];
-    memset(update_info,0, mUpdateInfoLength);
-    result = aesmLogic->reportAttestationStatus(mPlatformInfo, mPlatformInfoLength,
-            mAttestationErrorCode,
-            update_info, mUpdateInfoLength);
-    
-    IAEResponse* response = new AEReportAttestationResponse(result, mUpdateInfoLength, update_info);
-    delete []update_info;
+    aesm_error_t result = AESM_UNEXPECTED_ERROR;
+    uint8_t* update_info = NULL;
+    uint32_t update_info_size = 0;
+    if (check())
+    {
+
+        uint32_t platform_info_length = 0;
+        uint8_t* platform_info = NULL;
+        if (m_request->has_platform_info())
+        {
+            platform_info_length = (unsigned int)m_request->platform_info().size();
+            platform_info = (uint8_t*)const_cast<char *>(m_request->platform_info().data());
+        }
+
+        uint32_t errorCode = m_request->attestation_error_code();
+
+        update_info_size = m_request->update_info_size();
+        result = aesmLogic->reportAttestationStatus(platform_info, platform_info_length,
+            errorCode,
+            &update_info, update_info_size);
+    }
+    IAEResponse* response = new AEReportAttestationResponse(result, update_info_size, update_info);
+    if (update_info)
+        delete[]update_info;
     return response;
 }
-
-void AEReportAttestationRequest::visit(IAERequestVisitor& visitor) 
-{
-    visitor.visitReportAttestationRequest(*this);
-}
-

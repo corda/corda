@@ -110,17 +110,29 @@ typedef __uintmax_t     uintmax_t;
 #define INT8_MIN        (-0x7f - 1)
 #define INT16_MIN       (-0x7fff - 1)
 #define INT32_MIN       (-0x7fffffff - 1)
+#ifdef __x86_64__
+#define INT64_MIN       (-0x7fffffffffffffffL - 1)
+#else
 #define INT64_MIN       (-0x7fffffffffffffffLL - 1)
+#endif
 
 #define INT8_MAX        0x7f
 #define INT16_MAX       0x7fff
 #define INT32_MAX       0x7fffffff
+#ifdef __x86_64__
+#define INT64_MAX       0x7fffffffffffffffL
+#else
 #define INT64_MAX       0x7fffffffffffffffLL
+#endif
 
 #define UINT8_MAX       0xff
 #define UINT16_MAX      0xffff
 #define UINT32_MAX      0xffffffffU
+#ifdef __x86_64__
+#define UINT64_MAX      0xffffffffffffffffUL
+#else
 #define UINT64_MAX      0xffffffffffffffffULL
+#endif
 
 /* 7.18.2.2 Limits of minimum-width integer types */
 #define INT_LEAST8_MIN      INT8_MIN

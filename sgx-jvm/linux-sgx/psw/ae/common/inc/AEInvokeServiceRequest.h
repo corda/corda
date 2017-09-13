@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,41 +34,37 @@
 #include <IAERequest.h>
 #include <stdint.h>
 
+namespace aesm
+{
+    namespace message
+    {
+        class Request_InvokeServiceRequest;
+    };
+};
+
 class AEInvokeServiceRequest : public IAERequest
 {
     public:
-        AEInvokeServiceRequest();
+        AEInvokeServiceRequest(const aesm::message::Request_InvokeServiceRequest& request);
         AEInvokeServiceRequest(uint32_t pseMessageLength, const uint8_t* pseMessage, uint32_t pseResponseSize, uint32_t timeout = 0);
         AEInvokeServiceRequest(const AEInvokeServiceRequest& other);
         ~AEInvokeServiceRequest();
 
-        AEMessage* serialize(ISerializer* serializer);
-        void inflateValues(uint32_t pseMessageLength, const uint8_t* pseMessage, uint32_t pseResponseSize, uint32_t timeout = 0);
-
-        //getters
-        inline uint32_t       GetPSEMessageLength() const { return mPSEMessageLength; }
-        inline const uint8_t* GetPSEMessage()       const { return mPSEMessage; }
-        inline uint32_t       GetResponseSize()     const { return mResponseSize; }
+        AEMessage* serialize();
 
         //operators
-        bool operator==(const AEInvokeServiceRequest& other) const;
+
         AEInvokeServiceRequest& operator=(const AEInvokeServiceRequest& other);
 
         //checks
         bool check();
         virtual IAEResponse* execute(IAESMLogic*);
-        void visit(IAERequestVisitor& visitor);
 
-
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
     protected:
         void ReleaseMemory();
-        void CopyFields(uint32_t pseMessageLength, const uint8_t* pseMessage, uint32_t pseResponseSize, uint32_t timeout);
-
-        uint32_t mPSEMessageLength;
-        uint8_t* mPSEMessage;
-        uint32_t mResponseSize;
+        aesm::message::Request_InvokeServiceRequest* m_request;
 };
 
 #endif

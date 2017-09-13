@@ -1,0 +1,12 @@
+<EnclaveConfiguration>
+    <IntelSigned>1</IntelSigned>
+    <ProvisionKey>0</ProvisionKey>
+    <LaunchKey>0</LaunchKey>
+    <ProdID>0x2</ProdID>
+    <ISVSVN>4</ISVSVN>
+    <TCSNum>1</TCSNum>
+    <TCSPolicy>1</TCSPolicy>
+    <StackMaxSize>0x10000</StackMaxSize>
+    <HeapMaxSize>0x100000</HeapMaxSize>
+    <DisableDebug>1</DisableDebug>
+</EnclaveConfiguration>

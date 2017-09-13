@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +47,8 @@
 
 # define SGX_DLLIMPORT
 # define SGX_UBRIDGE(attr, fname, args...) attr fname args
+
+# define SGX_DEPRECATED __attribute__((deprecated))
 
 
 #define SGX_NOCONVENTION /* Empty.  No calling convention specified. */

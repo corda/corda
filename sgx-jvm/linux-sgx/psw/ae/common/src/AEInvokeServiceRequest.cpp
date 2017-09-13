@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,124 +28,85 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEInvokeServiceRequest.h>
 #include <AEInvokeServiceResponse.h>
 #include <IAESMLogic.h>
 
 #include <stdlib.h>
-#include <string.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-    AEInvokeServiceRequest::AEInvokeServiceRequest()
-:mPSEMessageLength(0), mPSEMessage(NULL), mResponseSize(0)
+AEInvokeServiceRequest::AEInvokeServiceRequest(const aesm::message::Request::InvokeServiceRequest& request) :
+    m_request(NULL)
 {
+    m_request = new aesm::message::Request::InvokeServiceRequest();
+    m_request->CopyFrom(request);
 }
 
-    AEInvokeServiceRequest::AEInvokeServiceRequest(uint32_t pseMessageLength, const uint8_t* pseMessage, uint32_t pseResponseSize, uint32_t timeout)
-:mPSEMessageLength(0), mPSEMessage(NULL), mResponseSize(0)
+AEInvokeServiceRequest::AEInvokeServiceRequest(uint32_t pseMessageLength, const uint8_t* pseMessage, uint32_t pseResponseSize, uint32_t timeout)
+    :m_request(NULL)
 {
-    CopyFields(pseMessageLength, pseMessage, pseResponseSize, timeout);
+    m_request = new aesm::message::Request::InvokeServiceRequest();
+
+    if (pseMessageLength !=0 && pseMessage != NULL)
+        m_request->set_pse_message(pseMessage, pseMessageLength);
+    m_request->set_pse_resp_size(pseResponseSize);
+    m_request->set_timeout(timeout);
 }
 
-    AEInvokeServiceRequest::AEInvokeServiceRequest(const AEInvokeServiceRequest& other)
-:IAERequest(other), mPSEMessageLength(0), mPSEMessage(NULL), mResponseSize(0)
+AEInvokeServiceRequest::AEInvokeServiceRequest(const AEInvokeServiceRequest& other)
+    : m_request(NULL)
 {
-    CopyFields(other.mPSEMessageLength, other.mPSEMessage, other.mResponseSize, other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::InvokeServiceRequest(*other.m_request);
 }
 
 AEInvokeServiceRequest::~AEInvokeServiceRequest()
 {
-    ReleaseMemory();
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AEInvokeServiceRequest::ReleaseMemory()
+AEMessage* AEInvokeServiceRequest::serialize()
 {
-    if (mPSEMessage != NULL)
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
     {
-        if (mPSEMessageLength > 0)
-            memset(mPSEMessage, 0, mPSEMessageLength);
-        delete [] mPSEMessage;
-        mPSEMessage = NULL;
+        aesm::message::Request::InvokeServiceRequest* mutableReq = msg.mutable_invokeservicereq();
+        mutableReq->CopyFrom(*m_request);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
     }
-    mPSEMessageLength = 0;
-    mResponseSize = 0;
-    mTimeout = 0;
+    return ae_msg;
 }
 
-void AEInvokeServiceRequest::CopyFields(uint32_t pseMessageLength, const uint8_t* pseMessage, uint32_t pseResponseSize, uint32_t timeout)
-{
-    if(pseMessageLength <= MAX_MEMORY_ALLOCATION && pseResponseSize <= MAX_MEMORY_ALLOCATION)
-    {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
-
-    mPSEMessageLength = pseMessageLength;
-    if (pseMessage != NULL && pseMessageLength > 0)
-    {
-        mPSEMessage = new uint8_t[pseMessageLength];
-        memcpy(mPSEMessage, pseMessage, pseMessageLength);
-    }
-
-    mTimeout = timeout;
-    mResponseSize = pseResponseSize;
-}
-
-AEMessage* AEInvokeServiceRequest::serialize(ISerializer* serializer)
-{
-    return serializer->serialize(this);
-}
-
-void AEInvokeServiceRequest::inflateValues(uint32_t pseMessageLength, const uint8_t* pseMessage, uint32_t pseResponseSize, uint32_t timeout)
-{
-    ReleaseMemory();
-
-    CopyFields(pseMessageLength, pseMessage, pseResponseSize, timeout);
-}
-
-bool AEInvokeServiceRequest::operator==(const AEInvokeServiceRequest& other) const
-{
-    if (this == & other)
-        return true;
-
-    if (mPSEMessageLength != other.mPSEMessageLength ||
-            mResponseSize != other.mResponseSize ||
-            mTimeout != other.mTimeout)
-        return false;
-
-    if ((mPSEMessage != other.mPSEMessage) &&
-            (mPSEMessage == NULL || other.mPSEMessage == NULL))
-        return false;
-
-    if (mPSEMessage != NULL && other.mPSEMessage != NULL && memcmp(mPSEMessage, other.mPSEMessage, other.mPSEMessageLength) != 0)
-        return false;
-    //NOTE: timeout discarded from test
-    return true;
-}
 
 AEInvokeServiceRequest& AEInvokeServiceRequest::operator=(const AEInvokeServiceRequest& other)
 {
     if (this == &other)
-        return * this;
-
-    CopyFields(other.mPSEMessageLength, other.mPSEMessage, other.mResponseSize, other.mTimeout);
-
+        return *this;
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::InvokeServiceRequest(*other.m_request);
     return *this;
 }
 
 bool AEInvokeServiceRequest::check()
 {
-    if(mValidSizeCheck == false)
+    if (m_request == NULL)
         return false;
-
-    if (mPSEMessage == NULL)
-        return false;
-
-    return true;
+    return m_request->IsInitialized();
 }
 
 IAERequest::RequestClass AEInvokeServiceRequest::getRequestClass() {
@@ -155,28 +116,27 @@ IAERequest::RequestClass AEInvokeServiceRequest::getRequestClass() {
 IAEResponse* AEInvokeServiceRequest::execute(IAESMLogic* aesmLogic) {
     aesm_error_t ret = AESM_UNEXPECTED_ERROR;
     uint8_t* response = NULL;
+    uint32_t response_size = 0;
 
-    if (check() == false)   
+    if (check())
     {
-        ret = AESM_PARAMETER_ERROR;
-    }
-    else
-    {
-        response = new uint8_t[mResponseSize];
-    }
-    if (response != NULL)
-    {
-        ret = aesmLogic->invokeService(mPSEMessage, mPSEMessageLength, response, mResponseSize);
+
+        uint32_t pse_message_length = 0;
+        uint8_t* pse_message = NULL;
+
+        if (m_request->has_pse_message())
+        {
+            pse_message_length = (unsigned int)m_request->pse_message().size();
+            pse_message = (uint8_t*)const_cast<char *>(m_request->pse_message().data());
+        }
+
+        response_size = m_request->pse_resp_size();
+        ret = aesmLogic->invokeService(pse_message, pse_message_length, &response, response_size);
     }
 
-    IAEResponse* ae_res= new AEInvokeServiceResponse(ret, mResponseSize, response);
-
-    delete [] response;
+    IAEResponse* ae_res = new AEInvokeServiceResponse(ret, response_size, response);
+    if (response)
+        delete[] response;
 
     return ae_res;
-}
-
-void AEInvokeServiceRequest::visit(IAERequestVisitor& visitor)
-{
-    visitor.visitInvokeServiceRequest(*this);
 }

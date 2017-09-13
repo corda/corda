@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,27 +28,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEExchangeReportResponse.h>
 
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
 AEExchangeReportResponse::AEExchangeReportResponse()
-:mDHMsg3Length(0), mDHMsg3(NULL)
+    :m_response(NULL)
 {
 }
 
-AEExchangeReportResponse::AEExchangeReportResponse(int errorCode, uint32_t dhMsg3Length, const uint8_t* dhMsg3)
-:mDHMsg3Length(0), mDHMsg3(NULL)
+AEExchangeReportResponse::AEExchangeReportResponse(aesm::message::Response::ExchangeReportResponse& response) :
+    m_response(NULL)
 {
-    CopyFields(errorCode, dhMsg3Length, dhMsg3);
+    m_response = new aesm::message::Response::ExchangeReportResponse(response);
+}
+
+AEExchangeReportResponse::AEExchangeReportResponse(uint32_t errorCode, uint32_t dhMsg3Length, const uint8_t* dhMsg3)
+    :m_response(NULL)
+{
+    m_response = new aesm::message::Response::ExchangeReportResponse();
+    m_response->set_errorcode(errorCode);
+    if (dhMsg3Length!= 0 && dhMsg3 != NULL)
+        m_response->set_se_dh_msg3(dhMsg3, dhMsg3Length);
 }
 
 AEExchangeReportResponse::AEExchangeReportResponse(const AEExchangeReportResponse& other)
-:mDHMsg3Length(0), mDHMsg3(NULL)
+    :m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mDHMsg3Length, other.mDHMsg3);
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::ExchangeReportResponse(*other.m_response);
 }
 
 AEExchangeReportResponse::~AEExchangeReportResponse()
@@ -58,72 +70,60 @@ AEExchangeReportResponse::~AEExchangeReportResponse()
 
 void AEExchangeReportResponse::ReleaseMemory()
 {
-    if (mDHMsg3 != NULL)
+   if (m_response != NULL)
     {
-        if (mDHMsg3Length > 0)
-            memset(mDHMsg3, 0, mDHMsg3Length);
-        delete [] mDHMsg3;
-        mDHMsg3 = NULL;
+        delete m_response;
+        m_response = NULL;
     }
-    mDHMsg3Length = 0;
-    mErrorCode = SGX_ERROR_UNEXPECTED;
 }
 
-void AEExchangeReportResponse::CopyFields(int errorCode, uint32_t dhMsg3Length,const uint8_t* dhMsg3)
+AEMessage* AEExchangeReportResponse::serialize()
 {
-    if(dhMsg3Length <= MAX_MEMORY_ALLOCATION)
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    if (check())
     {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
+        aesm::message::Response::ExchangeReportResponse* mutableRes = msg.mutable_exchangereportres();
+        mutableRes->CopyFrom(*m_response);
 
-    mErrorCode = errorCode;
-    mDHMsg3Length = dhMsg3Length;
-    if (dhMsg3 != NULL && dhMsg3Length > 0) {
-        mDHMsg3 = new uint8_t[dhMsg3Length];
-        memcpy(mDHMsg3, dhMsg3, dhMsg3Length);
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
     }
+    return ae_msg;
 }
 
-AEMessage* AEExchangeReportResponse::serialize(ISerializer* serializer)
+bool AEExchangeReportResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->serialize(this);
-}
+    aesm::message::Response msg;
+    if (!msg.ParseFromArray(message->data, message->size))
+        return false;
+    if (msg.has_exchangereportres() == false)
+        return false;
 
-bool AEExchangeReportResponse::inflateWithMessage(AEMessage* message, ISerializer* serializer)
-{
-    return serializer->inflateResponse(message, this);
-}
-
-void AEExchangeReportResponse::inflateValues(int errorCode, uint32_t dhMsg3Length,const uint8_t* dhMsg3)
-{
+    //this is an AEExchangeReportResponse
     ReleaseMemory();
-
-    CopyFields(errorCode, dhMsg3Length, dhMsg3);
-}
-
-bool AEExchangeReportResponse::operator==(const AEExchangeReportResponse& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mErrorCode != other.mErrorCode ||
-        mDHMsg3Length != other.mDHMsg3Length)
-        return false;
-
-    if ((mDHMsg3 != other.mDHMsg3) &&
-        (mDHMsg3 == NULL || other.mDHMsg3 == NULL))
-        return false;
-
-    if (mDHMsg3 != NULL && other.mDHMsg3 != NULL && memcmp(mDHMsg3, other.mDHMsg3, other.mDHMsg3Length) != 0)
-        return false;
-
+    m_response = new aesm::message::Response::ExchangeReportResponse(msg.exchangereportres());
     return true;
 }
+
+bool AEExchangeReportResponse::GetValues(uint32_t* errorCode, uint32_t dhMsg3Length, uint8_t* dhMsg3) const
+{
+    if (m_response->has_se_dh_msg3() && dhMsg3 != NULL)
+    {
+        if (m_response->se_dh_msg3().size() <= dhMsg3Length)
+            memcpy(dhMsg3, m_response->se_dh_msg3().c_str(), m_response->se_dh_msg3().size());
+        else
+            return false;
+    }
+    *errorCode = m_response->errorcode();
+    return true;
+}
+
 
 AEExchangeReportResponse& AEExchangeReportResponse::operator=(const AEExchangeReportResponse& other)
 {
@@ -131,27 +131,17 @@ AEExchangeReportResponse& AEExchangeReportResponse::operator=(const AEExchangeRe
         return *this;
 
     ReleaseMemory();
-
-    CopyFields(other.mErrorCode, other.mDHMsg3Length, other.mDHMsg3);
-
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::ExchangeReportResponse(*other.m_response);
+    }
     return *this;
 }
 
 bool AEExchangeReportResponse::check()
 {
-    if (mErrorCode != SGX_SUCCESS)
+    if (m_response == NULL)
         return false;
-
-    if (mValidSizeCheck == false)
-        return false;
-
-    if (mDHMsg3 == NULL)
-        return false;
-
-    return true;
+    return m_response->IsInitialized();
 }
 
-void AEExchangeReportResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitExchangeReportResponse(*this);
-}

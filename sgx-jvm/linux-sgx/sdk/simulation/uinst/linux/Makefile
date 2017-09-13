@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@ CPPFLAGS += -I..                     \
             -I$(COMMON_DIR)/inc/internal
 
 SOURCE := $(wildcard *.c)
-OBJECT := $(SOURCE:.c=.o)
+OBJECT := $(sort $(SOURCE:.c=.o))
 
 .PHONY: all
 all: $(OBJECT)

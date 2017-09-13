@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,8 @@
 #include "sgx_defs.h"
 #include "sgx_ecp_types.h"
 #include "sgx_dh.h"
- 
+#include "arch.h"
+
 #pragma pack(push, 1)
  
 typedef enum _sgx_dh_session_state_t
@@ -75,7 +76,7 @@ typedef struct _sgx_internal_dh_session_t{
     };
 } sgx_internal_dh_session_t;
 
-static_assert(sizeof(sgx_internal_dh_session_t) == SGX_DH_SESSION_DATA_SIZE, "size mismatch on sgx_internal_dh_session_t and sgx_dh_session_t");
+se_static_assert(sizeof(sgx_internal_dh_session_t) == SGX_DH_SESSION_DATA_SIZE); /*size mismatch on sgx_internal_dh_session_t and sgx_dh_session_t*/
 
 #pragma pack(pop)
 

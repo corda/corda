@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,6 +65,7 @@
 #define stack_limit_addr    (SE_WORDSIZE * 3)
 #define first_ssa_gpr       (SE_WORDSIZE * 4)
 #define self_addr           0
+#define stack_guard         (SE_WORDSIZE * 5)
 
 /* SSA GPR */
 #define ssa_sp_t            32

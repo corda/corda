@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,14 +38,14 @@
 
 typedef uintptr_t sgx_thread_t;
 
-typedef struct sgx_thread_queue
+typedef struct _sgx_thread_queue_t
 {
     sgx_thread_t        m_first;  /* first element */
     sgx_thread_t        m_last;   /* last element */
 } sgx_thread_queue_t;
 
 /* Mutex */
-typedef struct sgx_thread_mutex
+typedef struct _sgx_thread_mutex_t
 {
     size_t              m_refcount;
     uint32_t            m_control;
@@ -65,13 +65,13 @@ typedef struct sgx_thread_mutex
 #define SGX_THREAD_MUTEX_INITIALIZER \
             SGX_THREAD_NONRECURSIVE_MUTEX_INITIALIZER
 
-typedef struct sgx_thread_mutex_attr
+typedef struct _sgx_thread_mutex_attr_t
 {
     unsigned char       m_dummy;  /* for C syntax check */
 } sgx_thread_mutexattr_t;
 
 /* Condition Variable */
-typedef struct sgx_thread_cond
+typedef struct _sgx_thread_cond_t
 {
     volatile uint32_t   m_lock;   /* use sgx_spinlock_t */
     sgx_thread_queue_t  m_queue;
@@ -79,7 +79,7 @@ typedef struct sgx_thread_cond
 
 #define SGX_THREAD_COND_INITIALIZER  {0, {SGX_THREAD_T_NULL, SGX_THREAD_T_NULL}}
 
-typedef struct sgx_thread_cond_attr
+typedef struct _sgx_thread_cond_attr_t
 {
     unsigned char       m_dummy;  /* for C syntax check */
 } sgx_thread_condattr_t;

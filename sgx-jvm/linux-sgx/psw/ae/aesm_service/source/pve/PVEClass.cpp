@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,9 +56,10 @@ uint32_t CPVEClass::gen_prov_msg1_data(
 {
     uint32_t ret = AE_SUCCESS;
     sgx_status_t status = SGX_SUCCESS;
-    extended_epid_group_blob_t xegb={0};
+    extended_epid_group_blob_t xegb;
     int retry = 0;
     AESM_PROFILE_FUN;
+    memset(&xegb, 0, sizeof(xegb));
     if(m_enclave_id==0){
         AESM_DBG_ERROR("call gen_prov_msg1_data without loading PvE");
         return AE_FAILURE;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,8 +82,8 @@ pve_status_t gen_epid_priv_f(
     uint8_t f_temp_buf[PRIV_F_RAND_SIZE]; //buffer to hold random bits, it has 96 more bits than f or p
     uint64_t lower_bound = PRIV_F_LOWER_BOUND;
     uint64_t diff = 2*lower_bound-1;
-    static_assert(sizeof(FpElemStr)%4==0, "sizeof FpElemStr should be multiple of 4");
-    static_assert(PRIV_F_RAND_SIZE%4==0, "the number of bytes of random number should be multiple of 4");
+    se_static_assert(sizeof(FpElemStr)%4==0); /*sizeof FpElemStr should be multiple of 4*/
+    se_static_assert(PRIV_F_RAND_SIZE%4==0); /*the number of bytes of random number should be multiple of 4*/
     //First create the mod P which is in little endian
     ipp_status = newBN(NULL, sizeof(FpElemStr), &p_BN);//initialize integer buffer
     IPP_ERROR_BREAK(ipp_status);

@@ -12,23 +12,23 @@
 <!--                                                                       -->
 <feature
       id="com.intel.sgx.feature"
-      label="Software Guard Extensions Plugin"
+      label="Intel(R) Software Guard Extensions Plugin"
       version="1.0.1.qualifier"
       provider-name="INTEL">
 
    <description url="http://fso-dev-machine.ed.intel.com">
-      The Software Guard Extensions Plug-in enables Independent Service
+      The Intel(R) Software Guard Extensions Plug-in enables Independent Service
 Vendors in developing Linux applications
-with Software Guard Extensions. The Plug-in extends the C/C++ Development
+with Intel(R) Software Guard Extensions. The Plug-in extends the C/C++ Development
 tools Plug-in to allow ISVs develop secure extensions in C or
 C++. The Plug-in also allows conversion of an Linux Application
 project into an Linux Application project with Software Guard
 Extensions.
-Using the Plug-in features and SGX Plug-in Menu options, a developer
+Using the Plug-in features and Intel(R) SGX Plug-in Menu options, a developer
 can modify the Signing keys and Enclave Configuration for an
-Enclave project and can add enclaves inside a project with SGX Nature.
+Enclave project and can add enclaves inside a project with Intel(R) SGX Nature.
 Once development is complete, the developer can build the Enclave
-and the Linux project using the SGX SDK for Linux with Release/Debug Configurations in Simulation/Hardware
+and the Linux project using the Intel(R) SGX SDK for Linux with Release/Debug Configurations in Simulation/Hardware
 mode and Hardware Prerelease mode.
    </description>
 
@@ -110,7 +110,7 @@ This Agreement is governed by the laws of the State of New York and the intellec
    </license>
 
    <url>
-      <update label="Software Guard Extensions Eclipse Plug-in" url="http://fso-dev-machine.rd.intel.com/sgx"/>
+      <update label="Intel(R) Software Guard Extensions Eclipse Plug-in" url="http://fso-dev-machine.rd.intel.com/sgx"/>
    </url>
 
    <requires>

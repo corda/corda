@@ -8,7 +8,7 @@ The project demonstrates:
 ------------------------------------
 How to Build/Execute the Sample Code
 ------------------------------------
-1. Install Intel(R) SGX SDK for Linux* OS
+1. Install Intel(R) Software Guard Extensions (Intel(R) SGX) SDK for Linux* OS
 2. Build the project with the prepared Makefile:
     a. Hardware Mode, Debug build:
         $ make

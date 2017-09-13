@@ -1,5 +1,5 @@
 (*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1146,12 +1146,12 @@ let gen_func_tbridge (fd: Ast.func_decl) (dummy_var: string) =
       in
         sprintf "%s%s%s\t%s\n\t%s\n%s" func_open local_vars dummy_var check_pms invoke_func func_close
     else
-      sprintf "%s\t%s\n%s\n%s%s%s\n%s\t%s\n%s\n%s\n%s"
+      sprintf "%s%s\t%s\n%s\n%s%s\n%s\t%s\n%s\n%s\n%s"
         func_open
+        (mk_check_pms fd.Ast.fname)
         declare_ms_ptr
         local_vars
         (gen_check_tbridge_length_overflow fd.Ast.plist)
-        (mk_check_pms fd.Ast.fname)
         (gen_check_tbridge_ptr_parms fd.Ast.plist)
         (gen_parm_ptr_direction_pre fd.Ast.plist)
         (if fd.Ast.rtype <> Ast.Void then update_retval else invoke_func)

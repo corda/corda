@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -83,7 +83,7 @@ bool CSelector::select(int fd_term)
 
     int rc = (int) TEMP_FAILURE_RETRY(::select(max_sd + 1, &m_workingSet, NULL, NULL, NULL));
     if (rc < 0) {
-        throw "Select failed"; /* TODO throw a specific exception */
+        throw "Select failed"; 
     }
 
     if (fd_term != -1 && FD_ISSET(fd_term, &m_workingSet))

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -218,7 +218,8 @@ ae_error_t get_pce_priv_key(
 
     ipp_status = ippsAdd_BN(bn_o, bn_one, bn_o);//added by 1
     IPP_ERROR_TRANS(ipp_status);
-    static_assert(sizeof(sgx_nistp256_r_m1)==sizeof(sgx_ec256_private_t), "Unmatched size");
+
+    se_static_assert(sizeof(sgx_nistp256_r_m1)==sizeof(sgx_ec256_private_t)); /*Unmatched size*/
     ipp_status = ippsGetOctString_BN(reinterpret_cast<Ipp8u *>(wrap_key), sizeof(sgx_nistp256_r_m1), bn_o);//output data in bigendian order
     IPP_ERROR_TRANS(ipp_status);
 ret_point:

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,37 +34,35 @@
 #include <IAEResponse.h>
 #include <stdint.h>
 
+namespace aesm
+{
+    namespace message
+    {
+            class Response_CreateSessionResponse;
+    };
+};
+
 class AECreateSessionResponse : public IAEResponse
 {
     public:
         AECreateSessionResponse();
-        AECreateSessionResponse(int errorCode, uint32_t sessionId, uint32_t dhMsg1Length, const uint8_t* dhMsg1);
+        AECreateSessionResponse(aesm::message::Response_CreateSessionResponse& response);
+        AECreateSessionResponse(uint32_t errorCode, uint32_t sessionId, uint32_t dhMsg1Length, const uint8_t* dhMsg1);
         AECreateSessionResponse(const AECreateSessionResponse& other);
         ~AECreateSessionResponse();
 
-        AEMessage* serialize(ISerializer* serializer);
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
-        void inflateValues(int errorCode, uint32_t sessionId, uint32_t dhMsg1Length, const uint8_t* dhMsg1);
-
-        inline int              GetSessionId()    const { return mSessionId; }
-        inline uint32_t         GetDHMsg1Length() const { return mDHMsg1Length; }
-        inline const uint8_t*   GetDHMsg1()       const { return mDHMsg1; }
-
+        AEMessage* serialize();
+        bool inflateWithMessage(AEMessage* message);
+        bool GetValues(uint32_t* errorCode, uint32_t* sessionId, uint32_t dhMsg1Length, uint8_t* dhMsg1) const;
         //operators
-        bool operator==(const AECreateSessionResponse& other) const;
         AECreateSessionResponse& operator=(const AECreateSessionResponse& other);
 
         //checks
         bool check();
-        virtual void visit(IAEResponseVisitor& visitor);
 
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode, uint32_t sessionId, uint32_t dhMsg1Length, const uint8_t* dhMsg1);
-
-        uint32_t mSessionId;
-        uint32_t mDHMsg1Length;
-        uint8_t* mDHMsg1;
+        aesm::message::Response_CreateSessionResponse* m_response;
 };
 
 #endif

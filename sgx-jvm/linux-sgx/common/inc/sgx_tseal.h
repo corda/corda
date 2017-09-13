@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -85,10 +85,12 @@ extern "C" {
      *
      * Return Value:
      *      uint32_t - The number of bytes in the optional additional MAC buffer
+     *      If the function fails, the return value is UINT32_MAX
     */
     uint32_t sgx_get_add_mac_txt_len(const sgx_sealed_data_t* p_sealed_data);
 
     /* sgx_get_encrypt_txt_len
+     * Purpose: This function is used to determine how much memory to allocate for the decrypted data returned by the sgx_unseal_data function
      *
      * Parameter:
      *      p_sealed_data - [IN] Pointer to the sgx_sealed_data_t structure which was populated by the sgx_seal_data function

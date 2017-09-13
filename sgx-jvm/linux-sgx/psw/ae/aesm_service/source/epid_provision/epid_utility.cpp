@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,7 +63,7 @@ ae_error_t check_endpoint_pg_stauts(const provision_response_header_t *msg_heade
     case GRS_INTEGRITY_CHECK_FAIL:
         return PVE_INTEGRITY_CHECK_ERROR;
     case GRS_INCOMPATIBLE_VERSION://Backend report that PSW has used too old protocol, we need update PSW software
-        return PSW_UPDATED_REQUIRED;
+        return PSW_UPDATE_REQUIRED;
     case GRS_INCORRECT_SYNTAX:
         return PVE_MSG_ERROR;
     case GRS_OK:
@@ -83,7 +83,7 @@ ae_error_t check_epid_pve_pg_status_before_mac_verification(const  provision_res
     case GRS_INTEGRITY_CHECK_FAIL:
         return PVE_INTEGRITY_CHECK_ERROR;
     case GRS_INCOMPATIBLE_VERSION://Backend report that PSW has used too old protocol, we need update PSW software, no MAC provided
-        return PSW_UPDATED_REQUIRED;
+        return PSW_UPDATE_REQUIRED;
     case GRS_INCORRECT_SYNTAX:
         return PVE_MSG_ERROR;
     case GRS_OK:
@@ -106,6 +106,7 @@ ae_error_t check_epid_pve_pg_status_after_mac_verification(const  provision_resp
             return PVE_SERVER_REPORTED_ERROR;
         return AE_SUCCESS;
     case GRS_PROTOCOL_ERROR:
+        AESM_LOG_INFO_ADMIN("%s (%d)", g_admin_event_string_table[SGX_ADMIN_EVENT_EPID_PROV_BACKEND_PROTOCOL_ERROR], (int)pstatus);
         AESM_DBG_INFO("Server reported protocol error %d", (int)pstatus);
         switch(pstatus){
         case SE_PRS_STATUS_INTEGRITY_FAILED:

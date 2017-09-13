@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,7 @@
 #include "pve_qe_common.h"
 #include <string.h>
 #include <stdlib.h>
+#include "util.h"
 
  /**
   * File: provision_msg4.cpp 
@@ -226,9 +227,9 @@ pve_status_t proc_prov_msg4_data(const proc_prov_msg4_input_t *msg4_input,
     memcpy(&device_id_in_aad->psvn, &msg4_input->equivalent_psvn, sizeof(psvn_t));
     memset(&device_id_in_aad->ppid, 0 ,sizeof(ppid_t));
 
-    static_assert(sizeof(sgx_aes_gcm_128bit_key_t)==sizeof(pwk2), "SK_SIZE should be same as that of sgx_aes_gcm_128bit_key_t");
-    static_assert(sizeof(sgx_aes_gcm_128bit_tag_t)==sizeof(msg4_input->member_credential_mac), "member_credential_mac size should be same as that of sgx_aes_gcm_128bit_tag_t");
-    static_assert(HARD_CODED_EPID_MEMBER_WITH_ESCROW_TLV_SIZE == MEMBERSHIP_CREDENTIAL_TLV_TOTAL_SIZE,"hardcoded size should be matched");
+    se_static_assert(sizeof(sgx_aes_gcm_128bit_key_t)==sizeof(pwk2)); /*SK_SIZE should be same as that of sgx_aes_gcm_128bit_key_t*/
+    se_static_assert(sizeof(sgx_aes_gcm_128bit_tag_t)==sizeof(msg4_input->member_credential_mac)); /*member_credential_mac size should be same as that of sgx_aes_gcm_128bit_tag_t*/
+    se_static_assert(HARD_CODED_EPID_MEMBER_WITH_ESCROW_TLV_SIZE == MEMBERSHIP_CREDENTIAL_TLV_TOTAL_SIZE); /*hardcoded size should be matched*/
 
     sgx_status = sgx_rijndael128GCM_decrypt(reinterpret_cast<sgx_aes_gcm_128bit_key_t *>(&pwk2),
         msg4_input->encrypted_member_credential,static_cast<uint32_t>(HARD_CODED_EPID_MEMBER_WITH_ESCROW_TLV_SIZE), member_escrow_tlv_buf,
@@ -246,7 +247,7 @@ pve_status_t proc_prov_msg4_data(const proc_prov_msg4_input_t *msg4_input,
         goto ret_point;
     }
 
-    static_assert(sizeof(membership_credential_with_escrow_t)+MEMBERSHIP_CREDENTIAL_TLV_HEADER_SIZE==MEMBERSHIP_CREDENTIAL_TLV_TOTAL_SIZE,"invalid hard-coded value");
+    se_static_assert(sizeof(membership_credential_with_escrow_t)+MEMBERSHIP_CREDENTIAL_TLV_HEADER_SIZE==MEMBERSHIP_CREDENTIAL_TLV_TOTAL_SIZE); /*invalid hard-coded value*/
     ret = proc_prov_msg4_membercredential(mce, msg4_input, prv_key);//decrypt and generate epid private key
     if(PVEC_SUCCESS!=ret){
         goto ret_point;

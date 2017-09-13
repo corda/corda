@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -101,32 +101,39 @@ static sgx_status_t get_metadata(BinParser *parser, const int debug, metadata_t 
     uint64_t meta_rva = parser->get_metadata_offset();
     const uint8_t *base_addr = parser->get_start_addr();
 
-    uint64_t meta_block_size = parser->get_metadata_block_size();
-    uint64_t version = META_DATA_MAKE_VERSION(MAJOR_VERSION,MINOR_VERSION );
+    uint64_t supported_metadata_version_list[] = {
+        META_DATA_MAKE_VERSION(MAJOR_VERSION,MINOR_VERSION ), 
+        META_DATA_MAKE_VERSION(SGX_1_5_MAJOR_VERSION,SGX_1_5_MINOR_VERSION )
+    };
+
+    uint32_t loop_idx;
 
     //scan multiple metadata list in sgx_metadata section
-    do{
-        *metadata = GET_PTR(metadata_t, base_addr, meta_rva);
+    for (loop_idx = 0; loop_idx < (uint32_t)(sizeof(supported_metadata_version_list)/sizeof(supported_metadata_version_list[0])); loop_idx ++)
+    {
+        meta_rva = parser->get_metadata_offset();
+        //scan multiple metadata list in sgx_metadata section
+        do {
+            *metadata = GET_PTR(metadata_t, base_addr, meta_rva);
+            if((*metadata)->magic_num != METADATA_MAGIC)
+                break;
+            //check metadata version
+            if(supported_metadata_version_list[loop_idx] == (*metadata)->version)
+                goto find_metadata;  //find metadata
 
-        if((*metadata)->magic_num != METADATA_MAGIC)
-            return SGX_ERROR_INVALID_METADATA;
-        //check metadata version
-        if(version == (*metadata)->version)
-            break;
+            if(0 == (*metadata)->size)
+            {
+                SE_TRACE(SE_TRACE_ERROR, "ERROR: metadata's size can't be zero.\n");
+                return SGX_ERROR_INVALID_METADATA;
+            }
+            meta_rva += (*metadata)->size; /*goto next metadata offset*/
+        }while(1);
+    }
 
-        if(0 == (*metadata)->size)
-        {
-            SE_TRACE(SE_TRACE_ERROR, "ERROR: metadata's size can't be zero.\n");
-            return SGX_ERROR_INVALID_METADATA;
-        }
-        meta_rva += (*metadata)->size; /*goto next metadata offset*/
-        if(meta_rva - (parser->get_metadata_offset()) >= meta_block_size)
-        {
-            SE_TRACE(SE_TRACE_ERROR, "ERROR: Exceed metadata block bound.\n");
-            return SGX_ERROR_INVALID_METADATA;
-        }
-    }while(1);
+    if(loop_idx >= (uint32_t)(sizeof(supported_metadata_version_list)/sizeof(supported_metadata_version_list[0])))
+        return SGX_ERROR_INVALID_METADATA;
 
+find_metadata:
     return (sgx_status_t)get_enclave_creator()->get_misc_attr(sgx_misc_attr, *metadata, NULL, debug);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,27 +28,40 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AECreateSessionResponse.h>
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
 AECreateSessionResponse::AECreateSessionResponse()
-:mSessionId(0), mDHMsg1Length(0), mDHMsg1(NULL)
+    :m_response(NULL)
 {
 }
 
-AECreateSessionResponse::AECreateSessionResponse(int errorCode, uint32_t sessionId, uint32_t dhMsg1Length, const uint8_t* dhMsg1)
-:mSessionId(0), mDHMsg1Length(0), mDHMsg1(NULL)
+AECreateSessionResponse::AECreateSessionResponse(aesm::message::Response::CreateSessionResponse& response) :
+    m_response(NULL)
 {
-    CopyFields(errorCode, sessionId, dhMsg1Length, dhMsg1);
+    m_response = new aesm::message::Response::CreateSessionResponse(response);
+}
+
+AECreateSessionResponse::AECreateSessionResponse(uint32_t errorCode, uint32_t sessionId, uint32_t dhMsg1Length, const uint8_t* dhMsg1)
+    :m_response(NULL)
+{
+    m_response = new aesm::message::Response::CreateSessionResponse();
+    m_response->set_errorcode(errorCode);
+    m_response->set_session_id(sessionId);
+    if (dhMsg1Length!= 0 && dhMsg1 != NULL)
+        m_response->set_se_dh_msg1(dhMsg1, dhMsg1Length);
 }
 
 AECreateSessionResponse::AECreateSessionResponse(const AECreateSessionResponse& other)
-:mSessionId(0), mDHMsg1Length(0), mDHMsg1(NULL)
+    :m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mSessionId, other.mDHMsg1Length, other.mDHMsg1);
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::CreateSessionResponse(*other.m_response);
 }
 
 AECreateSessionResponse::~AECreateSessionResponse()
@@ -58,77 +71,57 @@ AECreateSessionResponse::~AECreateSessionResponse()
 
 void AECreateSessionResponse::ReleaseMemory()
 {
-    if (mDHMsg1 != NULL)
+   if (m_response != NULL)
     {
-        if (mDHMsg1Length > 0)
-            memset(mDHMsg1, 0, mDHMsg1Length);
-        delete [] mDHMsg1;
-        mDHMsg1 = NULL;
+        delete m_response;
+        m_response = NULL;
     }
-    mErrorCode = SGX_ERROR_UNEXPECTED;
-    mDHMsg1Length = 0;
-    mSessionId = 0;
 }
 
-void AECreateSessionResponse::CopyFields(int errorCode, uint32_t sessionId, uint32_t dhMsg1Length, const uint8_t* dhMsg1)
+AEMessage* AECreateSessionResponse::serialize()
 {
-    if(dhMsg1Length <= MAX_MEMORY_ALLOCATION)
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    if (check())
     {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
+        aesm::message::Response::CreateSessionResponse* mutableRes = msg.mutable_createsessionres();
+        mutableRes->CopyFrom(*m_response);
 
-
-    mErrorCode = errorCode;
-    mSessionId = sessionId;
-    mDHMsg1Length = dhMsg1Length;
-
-    if (dhMsg1 != NULL && dhMsg1Length > 0) {
-        mDHMsg1 = new uint8_t[dhMsg1Length];
-        memcpy(mDHMsg1, dhMsg1, dhMsg1Length);
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
     }
+    return ae_msg;
 }
 
-AEMessage* AECreateSessionResponse::serialize(ISerializer* serializer)
+bool AECreateSessionResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->serialize(this);
-}
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_createsessionres() == false)
+        return false;
 
-bool AECreateSessionResponse::inflateWithMessage(AEMessage* message, ISerializer* serializer)
-{
-    return serializer->inflateResponse(message, this);
-}
-
-void AECreateSessionResponse::inflateValues(int errorCode, uint32_t sessionId, uint32_t dhMsg1Length, const uint8_t* dhMsg1)
-{
+    //this is an AECreateSessionResponse
     ReleaseMemory();
-    
-    CopyFields(errorCode, sessionId, dhMsg1Length, dhMsg1);
+    m_response = new aesm::message::Response::CreateSessionResponse(msg.createsessionres());
+    return true;
 }
 
-bool AECreateSessionResponse::operator==(const AECreateSessionResponse& other) const
+bool AECreateSessionResponse::GetValues(uint32_t* errorCode, uint32_t* sessionId, uint32_t dhMsg1Length, uint8_t* dhMsg1) const
 {
-    if (this == &other)
-        return true;
-
-    if (mErrorCode != other.mErrorCode ||
-            mSessionId != other.mSessionId ||
-            mDHMsg1Length != other.mDHMsg1Length)
-        return false;
-
-    if ((mDHMsg1 != other.mDHMsg1) &&
-            (mDHMsg1 == NULL || other.mDHMsg1 == NULL))
-        return false;
-
-    if (mDHMsg1 != NULL && other.mDHMsg1 != NULL && memcmp(mDHMsg1, other.mDHMsg1, other.mDHMsg1Length) != 0)
-        return false;
-
-
-
+    if (m_response->has_se_dh_msg1() && dhMsg1 != NULL)
+    {
+        if (m_response->se_dh_msg1().size() <= dhMsg1Length)
+            memcpy(dhMsg1, m_response->se_dh_msg1().c_str(), m_response->se_dh_msg1().size());
+        else
+            return false;
+    }
+    *sessionId = m_response->session_id(); 
+    *errorCode = m_response->errorcode();
     return true;
 }
 
@@ -137,26 +130,18 @@ AECreateSessionResponse& AECreateSessionResponse::operator=(const AECreateSessio
     if (this == & other)
         return *this;
 
-    inflateValues(other.mErrorCode, other.mSessionId, other.mDHMsg1Length, other.mDHMsg1);
-
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::CreateSessionResponse(*other.m_response);
+    }
     return *this;
 }
 
 bool AECreateSessionResponse::check()
 {
-    if (mErrorCode != SGX_SUCCESS )
+    if (m_response == NULL)
         return false;
-
-    if (mValidSizeCheck == false)
-        return false;
-    
-    if (mDHMsg1 == NULL)
-        return false;
-
-    return true;
+    return m_response->IsInitialized();
 }
 
-void AECreateSessionResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitCreateSessionResponse(*this);
-}

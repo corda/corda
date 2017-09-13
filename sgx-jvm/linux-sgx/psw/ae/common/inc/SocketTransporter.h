@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,12 +41,13 @@
 class ISerializer;
 class ICommunicationSocket;
 
+
 class SocketTransporter : public ITransporter{
     public:
         SocketTransporter(ISocketFactory* socketFactory, ISerializer* serializer);
         ~SocketTransporter();
 
-        uae_oal_status_t transact(IAERequest* request, IAEResponse* response);
+        uae_oal_status_t transact(IAERequest* request, IAEResponse* response, uint32_t timeout = 0);
 
         IAERequest* receiveRequest(ICommunicationSocket* sock);// throw(SockDisconnectedException);
         uae_oal_status_t sendResponse(IAEResponse* response, ICommunicationSocket* sock);

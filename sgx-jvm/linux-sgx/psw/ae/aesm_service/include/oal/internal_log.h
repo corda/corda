@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,8 +62,8 @@ extern "C" {
 #else
 #define AESM_DBG_FATAL(args...)
 #define AESM_DBG_ERROR(args...)
-#define AESM_DBG_WARN(args...) 
-#define AESM_DBG_INFO(args...) 
+#define AESM_DBG_WARN(args...)
+#define AESM_DBG_INFO(args...)
 #define AESM_DBG_DEBUG(args...)
 #define AESM_DBG_TRACE(args...)
 #define AESM_SET_DBG_LEVEL(level)
@@ -75,13 +75,12 @@ extern "C" {
 #define SGX_DBGPRINT_PRINT_TWO_STRINGS(x,y)                 AESM_DBG_WARN("%s %s",x, y)
 #define SGX_DBGPRINT_PRINT_TWO_STRINGS_ONE_INT(x,y,z)       AESM_DBG_WARN("%s %s %d", x,y,z)
 #define SGX_DBGPRINT_PRINT_FIVE_STRINGS(a,b,c,d,e)          AESM_DBG_WARN("%s %s %s %s %s",a,b,c,d,e)
-#define SGX_DBGPRINT_PRINT_UNICODE_STRING_LTP(x)            AESM_DBG_WARN("%s", x)
 #define SGX_DBGPRINT_PRINT_ANSI_STRING(x)                   AESM_DBG_WARN("%s",x)
 #define SGX_DBGPRINT_PRINT_STRING_LTP(x)                    AESM_DBG_WARN("%s",x)
 #define SGX_DBGPRINT_PRINT_STRING(x)                        AESM_DBG_WARN("%s",x)
 
-#define SGX_DBGPRINT_ONE_STRING_ONE_INT_CERT(x,y)			AESM_DBG_WARN("cert: %s %d", x, y)
-#define SGX_DBGPRINT_ONE_STRING_ONE_INT_OCSP(x,y)			AESM_DBG_WARN("OCSP: %s %d", x, y)
+#define SGX_DBGPRINT_ONE_STRING_ONE_INT_CERT(x,y)           AESM_DBG_WARN("cert: %s %d", x, y)
+#define SGX_DBGPRINT_ONE_STRING_ONE_INT_OCSP(x,y)           AESM_DBG_WARN("OCSP: %s %d", x, y)
 
 #define SGX_DBGPRINT_ONE_STRING_TWO_INTS_EPH(x,y,z)
 #define SGX_DBGPRINT_ONE_STRING_TWO_INTS_CREATE_SESSION(x,y,z)

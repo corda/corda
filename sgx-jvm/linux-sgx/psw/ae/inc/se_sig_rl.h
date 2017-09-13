@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,6 +63,7 @@ typedef struct _se_ae_ecdsa_hash_t {
 uint64_t se_get_sig_rl_size(const se_sig_rl_t *p_sig_rl);
 
 #ifndef _SGX_UAE_SERVICE_H_
+sgx_status_t sgx_calc_quote_size(const uint8_t *sig_rl, uint32_t sig_rl_size, uint32_t* p_quote_size);
 sgx_status_t sgx_get_quote_size(const uint8_t *sig_rl, uint32_t* p_quote_size);
 #endif
 

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,32 +29,23 @@
 #
 #
 
-parent-dir = $(patsubst %/,%,$(dir $(1:%/=%)))
-my-dir     = $(call parent-dir,$(lastword $(MAKEFILE_LIST)))
-################################################################################
+TOP_DIR = ../../../..
+include $(TOP_DIR)/buildenv.mk
 
-LOCAL_PATH  := $(call my-dir)
-BASE_DIR    := $(LOCAL_PATH)/../../../..
-ANDROID_DIR := $(BASE_DIR)/android
-include $(BASE_DIR)/buildenv.mk
-PROTOC      := protoc
-################################################################################
+RPC_PROTO := messages.proto
+RPC_PB_H  := messages.pb.h
+RPC_PB_C  := messages.pb.cc
 
-proto_sources              := messages.proto
-proto_sources_fullpath     := $(addprefix $(LOCAL_PATH)/, $(proto_sources))
-proto_generated_cc_sources := $(patsubst %.proto,%.pb.cc,$(proto_sources_fullpath))
-proto_generated_headers    := $(patsubst %.pb.cc,%.pb.h, $(proto_generated_cc_sources))
+PROTOC    := protoc
 
 .PHONY: all clean
 
-all: $(proto_generated_headers)
+all: $(RPC_PB_C) 
 
-$(proto_generated_headers):    %.pb.h:  %.pb.cc
+$(RPC_PB_C): $(RPC_PROTO)
+	$(PROTOC)  $^ --cpp_out=.
 
-$(proto_generated_cc_sources): PRIVATE_PROTO_OUT_DIR  := $(LOCAL_PATH)
-$(proto_generated_cc_sources): PRIVATE_PROTO_PATH_DIR := $(LOCAL_PATH)
-$(proto_generated_cc_sources): %.pb.cc: %.proto
-	$(PROTOC) --cpp_out=$(PRIVATE_PROTO_OUT_DIR) --proto_path=$(PRIVATE_PROTO_PATH_DIR) $^
+CLEANFILES = $(RPC_PB_H) $(RPC_PB_C)
 
-clean::
-	rm -f $(proto_generated_cc_sources) $(proto_generated_headers)
+clean: 
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -587,6 +587,7 @@ sgx_status_t sgx_ra_init_ex(
         if (g_kdf_cookie == 0)
         {
             g_kdf_cookie = rand;
+            memset_s(&rand, sizeof(rand), 0, sizeof(rand));
         }
         sgx_spin_unlock(&g_ra_db_lock);
     }

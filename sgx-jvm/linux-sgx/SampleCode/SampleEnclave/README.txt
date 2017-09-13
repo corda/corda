@@ -2,7 +2,7 @@
 Purpose of SampleEnclave
 ------------------------
 The project demonstrates several fundamental usages of Intel(R) Software Guard 
-Extensions (SGX) SDK:
+Extensions (Intel(R) SGX) SDK:
 - Initializing and destroying an enclave
 - Creating ECALLs or OCALLs
 - Calling trusted libraries inside the enclave

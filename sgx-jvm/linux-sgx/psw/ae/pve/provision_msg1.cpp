@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,7 +88,7 @@ pve_status_t gen_prov_msg1_data(const sgx_target_info_t& pce_target_info,
         ret = PVEC_PEK_SIGN_ERROR; //use a special error code to indicate PEK Signature error
         goto ret_point;
     }
-    static_assert(sizeof(report_data)>=sizeof(sgx_sha256_hash_t),"hash size is too large to be hold by report");
+    se_static_assert(sizeof(report_data)>=sizeof(sgx_sha256_hash_t)); /*hash size is too large to be hold by report*/
 
 
     //report_data = SHA256(crypto_suite||public_key)||0-padding

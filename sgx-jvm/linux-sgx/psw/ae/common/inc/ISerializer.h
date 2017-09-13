@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,98 +33,14 @@
 
 struct AEMessage;
 
-class AEInitQuoteRequest;
-class AEInitQuoteResponse;
-
-class AEGetQuoteRequest;
-class AEGetQuoteResponse;
-
-class AEGetLaunchTokenRequest;
-class AEGetLaunchTokenResponse;
-
-class AECreateSessionRequest;
-class AECreateSessionResponse;
-
-class AEInvokeServiceRequest;
-class AEInvokeServiceResponse;
-
-class AEExchangeReportRequest;
-class AEExchangeReportResponse;
-
-class AECloseSessionRequest;
-class AECloseSessionResponse;
-
-class AEGetPsCapRequest;
-class AEGetPsCapResponse;
-
-class AEReportAttestationRequest;
-class AEReportAttestationResponse;
-
-class AEGetWhiteListSizeRequest;
-class AEGetWhiteListSizeResponse;
- 
-class AEGetWhiteListRequest;
-class AEGetWhiteListResponse;
-
-class AESGXGetExtendedEpidGroupIdRequest;
-class AESGXGetExtendedEpidGroupIdResponse;
-
-class AESGXSwitchExtendedEpidGroupRequest;
-class AESGXSwitchExtendedEpidGroupResponse;
-
-
 class IAERequest;
 class IAEResponse;
 
 class ISerializer{
     public:
-        //request serializers
-        virtual AEMessage* serialize(AEInitQuoteRequest*       request) = 0;
-        virtual AEMessage* serialize(AEGetQuoteRequest*        request) = 0;
-        virtual AEMessage* serialize(AEGetLaunchTokenRequest* request) = 0;
-        virtual AEMessage* serialize(AECreateSessionRequest*   request) = 0;
-        virtual AEMessage* serialize(AEInvokeServiceRequest*   request) = 0;
-        virtual AEMessage* serialize(AEExchangeReportRequest*  request) = 0;
-        virtual AEMessage* serialize(AECloseSessionRequest*    request) = 0;
-        virtual AEMessage* serialize(AEGetPsCapRequest*        request) = 0;
-        virtual AEMessage* serialize(AEReportAttestationRequest* request) = 0;
-        virtual AEMessage* serialize(AEGetWhiteListRequest* request) = 0;
-        virtual AEMessage* serialize(AEGetWhiteListSizeRequest* request) = 0;
-        virtual AEMessage* serialize(AESGXGetExtendedEpidGroupIdRequest* request) = 0;
-        virtual AEMessage* serialize(AESGXSwitchExtendedEpidGroupRequest* request) = 0;
-
-        //response serializers
-        virtual AEMessage* serialize(AEInitQuoteResponse*       response)  = 0;
-        virtual AEMessage* serialize(AEGetQuoteResponse*        response) = 0;
-        virtual AEMessage* serialize(AEGetLaunchTokenResponse* response) = 0;
-        virtual AEMessage* serialize(AECreateSessionResponse*   response) = 0;
-        virtual AEMessage* serialize(AEInvokeServiceResponse*   response) = 0;
-        virtual AEMessage* serialize(AEExchangeReportResponse*  response) = 0;
-        virtual AEMessage* serialize(AECloseSessionResponse*    response) = 0;
-        virtual AEMessage* serialize(AEGetPsCapResponse*        response) = 0;
-        virtual AEMessage* serialize(AEReportAttestationResponse* response) = 0;
-        virtual AEMessage* serialize(AEGetWhiteListSizeResponse* response) = 0;
-        virtual AEMessage* serialize(AEGetWhiteListResponse*     response) = 0;
-        virtual AEMessage* serialize(AESGXGetExtendedEpidGroupIdResponse* response) = 0;
-        virtual AEMessage* serialize(AESGXSwitchExtendedEpidGroupResponse* response) = 0;
 
         //request inflater -> will inflate request objects by unmarshaling communication level data (this will be used by server)
         virtual IAERequest* inflateRequest(AEMessage* message) = 0;
-
-        //response inflater -> will inflate response objects with data by unmarshaling communication level data
-        virtual bool inflateResponse(AEMessage* message, AEInitQuoteResponse*       response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AEGetQuoteResponse*        response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AEGetLaunchTokenResponse* response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AECreateSessionResponse*   response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AEInvokeServiceResponse*   response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AEExchangeReportResponse*  response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AECloseSessionResponse*    response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AEGetPsCapResponse*        response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AEReportAttestationResponse* response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AEGetWhiteListSizeResponse* response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AEGetWhiteListResponse* response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AESGXGetExtendedEpidGroupIdResponse* response) = 0;
-        virtual bool inflateResponse(AEMessage* message, AESGXSwitchExtendedEpidGroupResponse* response) = 0;
 
         virtual ~ISerializer() {}
 };

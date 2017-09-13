@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,36 +34,36 @@
 #include <IAEResponse.h>
 #include <stdint.h>
 
+namespace aesm
+{
+    namespace message
+    {
+            class Response_ExchangeReportResponse;
+    };
+};
+
 class AEExchangeReportResponse : public IAEResponse
 {
     public:
         AEExchangeReportResponse();
-        AEExchangeReportResponse(int errorCode, uint32_t dhMsg3Length, const uint8_t* dhMsg3);
+        AEExchangeReportResponse(aesm::message::Response_ExchangeReportResponse& response);
+        AEExchangeReportResponse(uint32_t errorCode, uint32_t dhMsg3Length, const uint8_t* dhMsg3);
         AEExchangeReportResponse(const AEExchangeReportResponse& other);
         ~AEExchangeReportResponse();
 
-        AEMessage* serialize(ISerializer* serializer);
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
-        void inflateValues(int errorCode, uint32_t dhMsg3Length, const uint8_t* dhMsg3);
-
-        //getters
-        uint32_t       GetDHMsg3Length() const { return mDHMsg3Length; }
-        const uint8_t* GetDHMsg3()       const { return mDHMsg3; }
+        AEMessage* serialize();
+        bool inflateWithMessage(AEMessage* message);
+        bool GetValues(uint32_t* errorCode, uint32_t dhMsg3Length, uint8_t* dhMsg3) const;
 
         //operators
-        bool operator==(const AEExchangeReportResponse& other) const;
         AEExchangeReportResponse& operator=(const AEExchangeReportResponse& other);
 
-        //checkers
+        //checks
         bool check();
-        virtual void visit(IAEResponseVisitor& visitor);
 
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode, uint32_t dhMsg3Length, const uint8_t* dhMsg3);
-
-        uint32_t    mDHMsg3Length;
-        uint8_t*    mDHMsg3;
+        aesm::message::Response_ExchangeReportResponse* m_response;
 };
 
 #endif

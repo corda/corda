@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,15 +33,33 @@
 #include <unistd.h>
 
 #include "LEClass.h"
-#include "Config.h"
+#include "sgx_quote.h"
 
-aesm_error_t AESMLogicWrapper::initQuote(uint8_t    *target_info,
-                                uint32_t   target_info_length,
-                                uint8_t    *gid,
-                                uint32_t   gid_length)
+aesm_error_t AESMLogicWrapper::initQuote(uint8_t** target_info,
+                uint32_t* target_info_length,
+                uint8_t** gid,
+                uint32_t* gid_length)
 {
-     return AESMLogic::init_quote(target_info, target_info_length,
-                     gid, gid_length);
+    uint8_t *output_target_info = new uint8_t[sizeof(sgx_target_info_t)]();
+    uint8_t *output_gid = new uint8_t[sizeof(sgx_epid_group_id_t)]();
+    uint32_t output_target_info_length=sizeof(sgx_target_info_t);
+    uint32_t output_gid_length=sizeof(sgx_epid_group_id_t);
+    aesm_error_t result = AESMLogic::init_quote(output_target_info, output_target_info_length,
+                     output_gid, output_gid_length);
+    if(result == AESM_SUCCESS)
+    {
+        *target_info = output_target_info;
+        *target_info_length = output_target_info_length;
+
+        *gid = output_gid;
+        *gid_length = output_gid_length;
+    }
+    else
+    {
+        delete [] output_target_info;
+        delete [] output_gid;
+    }
+    return result;
 }
 
 aesm_error_t AESMLogicWrapper::getQuote(uint32_t reportLength, const uint8_t* report,
@@ -49,18 +67,39 @@ aesm_error_t AESMLogicWrapper::getQuote(uint32_t reportLength, const uint8_t* re
                                uint32_t spidLength, const uint8_t* spid,
                                uint32_t nonceLength, const uint8_t* nonce,
                                uint32_t sig_rlLength, const uint8_t* sig_rl,
-                               uint32_t bufferSize, uint8_t* quote,
-                               uint32_t qe_reportSize, uint8_t* qe_report)
+                               uint32_t bufferSize, uint8_t** quote,
+                               bool b_qe_report, uint32_t* qe_reportSize, uint8_t** qe_report)
 {
-   
-    return AESMLogic::get_quote(report, reportLength,
+    uint8_t *output_quote = new uint8_t[bufferSize]();
+    uint8_t *output_qe_report = NULL;
+    uint32_t output_qe_reportSize = 0;
+    if (b_qe_report)
+    {
+        output_qe_report = new uint8_t[sizeof(sgx_report_t)]();
+        output_qe_reportSize = sizeof(sgx_report_t);
+
+    } 
+    aesm_error_t result = AESMLogic::get_quote(report, reportLength,
                         quoteType,
                         spid, spidLength,
                         nonce, nonceLength,
                         sig_rl, sig_rlLength,
-                        qe_report, qe_reportSize,
-                        quote, bufferSize);
+                        output_qe_report, output_qe_reportSize,
+                        output_quote, bufferSize);
+    if(result == AESM_SUCCESS)
+    {
+        *quote = output_quote;
 
+        *qe_report = output_qe_report;
+        *qe_reportSize = output_qe_reportSize;
+    }
+    else
+    {
+        delete [] output_quote;
+        if (output_qe_report)
+            delete [] output_qe_report;
+    }
+    return result;
 }
 
 aesm_error_t AESMLogicWrapper::closeSession(uint32_t sessionId)
@@ -69,25 +108,43 @@ aesm_error_t AESMLogicWrapper::closeSession(uint32_t sessionId)
 }
 
 aesm_error_t AESMLogicWrapper::createSession(uint32_t *session_id,
-                                      uint8_t *se_dh_msg1,
+                                      uint8_t **se_dh_msg1,
                                       uint32_t se_dh_msg1_size)
 {
-   
-    return AESMLogic::create_session(session_id, se_dh_msg1, se_dh_msg1_size);
-    
+    uint8_t *output_se_dh_msg1 = new uint8_t[se_dh_msg1_size]();
+    aesm_error_t result = AESMLogic::create_session(session_id, output_se_dh_msg1, se_dh_msg1_size);
+    if(result == AESM_SUCCESS)
+    {
+        *se_dh_msg1 = output_se_dh_msg1;
+    }
+    else
+    {
+        delete [] output_se_dh_msg1;
+    }
+    return result;
 }
 
 aesm_error_t AESMLogicWrapper::exchangeReport(uint32_t session_id,
                                        const uint8_t* se_dh_msg2,
                                        uint32_t se_dh_msg2_size,
-                                       uint8_t* se_dh_msg3,
+                                       uint8_t** se_dh_msg3,
                                        uint32_t se_dh_msg3_size )
 {
-    return AESMLogic::exchange_report(session_id, 
+    uint8_t *output_se_dh_msg3 = new uint8_t[se_dh_msg3_size]();
+    aesm_error_t result =  AESMLogic::exchange_report(session_id, 
                                   se_dh_msg2,
                                   se_dh_msg2_size,
-                                  se_dh_msg3,
+                                  output_se_dh_msg3,
                                   se_dh_msg3_size);
+    if(result == AESM_SUCCESS)
+    {
+        *se_dh_msg3 = output_se_dh_msg3;
+    }
+    else
+    {
+        delete [] output_se_dh_msg3;
+    }
+    return result;
 }
 
 aesm_error_t AESMLogicWrapper::getLaunchToken(const uint8_t  *measurement,
@@ -99,29 +156,48 @@ aesm_error_t AESMLogicWrapper::getLaunchToken(const uint8_t  *measurement,
                                       uint8_t  **launch_token,
                                       uint32_t *launch_token_size)
 {
-    *launch_token_size = sizeof(token_t);
-    *launch_token      = new uint8_t[*launch_token_size];
+    uint32_t output_launch_token_size = sizeof(token_t);
+    uint8_t *output_launch_token      = new uint8_t[sizeof(token_t)]();
 
-    return AESMLogic::get_launch_token(measurement,
+    aesm_error_t result = AESMLogic::get_launch_token(measurement,
                                     measurement_size,
                                     mrsigner,
                                     mrsigner_size,
                                     se_attributes,
                                     se_attributes_size,
-                                    *launch_token,
-                                    *launch_token_size);
-    
+                                    output_launch_token,
+                                    output_launch_token_size);
+    if(result == AESM_SUCCESS)
+    {
+        *launch_token = output_launch_token;
+        *launch_token_size = output_launch_token_size;
+    }
+    else
+    {
+        delete [] output_launch_token;
+    }
+    return result;
 }
 
 aesm_error_t AESMLogicWrapper::invokeService(const uint8_t  *pse_message_req,
                                       uint32_t pse_message_req_size,
-                                      uint8_t  *pse_message_resp,
+                                      uint8_t  **pse_message_resp,
                                       uint32_t pse_message_resp_size)
 {
-    return AESMLogic::invoke_service(pse_message_req,
+    uint8_t* output_pse_message_resp = new uint8_t[pse_message_resp_size]();
+    aesm_error_t result = AESMLogic::invoke_service(pse_message_req,
                                  pse_message_req_size,
-                                 pse_message_resp,
+                                 output_pse_message_resp,
                                  pse_message_resp_size);
+    if (result == AESM_SUCCESS)
+    {
+        *pse_message_resp = output_pse_message_resp;
+    }
+    else
+    {
+        delete[] output_pse_message_resp;
+    }
+    return result;
 }
 
 aesm_error_t AESMLogicWrapper::getPsCap(uint64_t* ps_cap)
@@ -131,12 +207,24 @@ aesm_error_t AESMLogicWrapper::getPsCap(uint64_t* ps_cap)
 
 aesm_error_t AESMLogicWrapper::reportAttestationStatus(uint8_t* platform_info, uint32_t platform_info_size,
         uint32_t attestation_error_code,
-        uint8_t* update_info, uint32_t update_info_size)
+        uint8_t** update_info, uint32_t update_info_size)
 
 {
-    return AESMLogic::report_attestation_status(platform_info,platform_info_size, 
+    uint8_t* output_update_info = new uint8_t[update_info_size]();
+    aesm_error_t result = AESMLogic::report_attestation_status(platform_info,platform_info_size,
             attestation_error_code,
-            update_info, update_info_size);
+            output_update_info, update_info_size);
+
+    //update_info is valid when result is AESM_UPDATE_AVAILABLE
+    if (result == AESM_SUCCESS || result == AESM_UPDATE_AVAILABLE)
+    {
+        *update_info = output_update_info;
+    }
+    else
+    {
+        delete[] output_update_info;
+    }
+    return result;
 }
 
 aesm_error_t AESMLogicWrapper::getWhiteListSize(uint32_t* white_list_size)
@@ -144,10 +232,20 @@ aesm_error_t AESMLogicWrapper::getWhiteListSize(uint32_t* white_list_size)
     return AESMLogic::get_white_list_size(white_list_size);
 }
 
-aesm_error_t AESMLogicWrapper::getWhiteList(uint8_t *white_list,
+aesm_error_t AESMLogicWrapper::getWhiteList(uint8_t **white_list,
                                       uint32_t white_list_size)
 {
-    return AESMLogic::get_white_list(white_list, white_list_size);    
+    uint8_t* output_white_list = new uint8_t[white_list_size]();
+    aesm_error_t result = AESMLogic::get_white_list(output_white_list, white_list_size);
+    if (result == AESM_SUCCESS)
+    {
+        *white_list = output_white_list;
+    }
+    else
+    {
+        delete[] output_white_list;
+    }
+    return result;
 }
 
 aesm_error_t AESMLogicWrapper::sgxGetExtendedEpidGroupId(uint32_t* x_group_id)

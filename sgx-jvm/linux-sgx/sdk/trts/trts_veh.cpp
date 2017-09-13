@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,6 +45,7 @@
 #include "thread_data.h"
 #include "global_data.h"
 #include "trts_internal.h"
+#include "trts_util.h"
 
 typedef struct _handler_node_t
 {
@@ -59,19 +60,6 @@ static uintptr_t g_veh_cookie = 0;
 #define ENC_VEH_POINTER(x)  (uintptr_t)(x) ^ g_veh_cookie
 #define DEC_VEH_POINTER(x)  (sgx_exception_handler_t)((x) ^ g_veh_cookie)
 
-static bool is_stack_addr(void *address, size_t size)
-{
-    thread_data_t *thread_data = get_thread_data();
-    size_t stack_base = thread_data->stack_base_addr;
-    size_t stack_limit  = thread_data->stack_limit_addr;
-    size_t addr = (size_t) address;
-    return (addr <= (addr + size)) && (stack_base >= (addr + size)) && (stack_limit <= addr);
-}
-static bool is_valid_sp(uintptr_t sp)
-{
-    return ( !(sp & (sizeof(uintptr_t) - 1))   // sp is expected to be 4/8 bytes aligned
-           && is_stack_addr((void*)sp, 0) );   // sp points to the top/bottom of stack are accepted
-}
 
 // sgx_register_exception_handler()
 //      register a custom exception handler

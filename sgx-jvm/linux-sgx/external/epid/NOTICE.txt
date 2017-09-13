@@ -1,4 +1,4 @@
-Intel(R) EPID SDK
+Intel(R) Enhanced Privacy ID (Intel(R) EPID) SDK
 Copyright 2016 Intel Corporation
 
 ==========

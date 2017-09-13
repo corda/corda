@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,45 +34,43 @@
 #include <IAEResponse.h>
 #include <stdint.h>
 
-class ISerializer;
+namespace aesm
+{
+    namespace message
+    {
+            class Response_GetWhiteListResponse;
+    };
+};
+
 
 class AEGetWhiteListResponse : public IAEResponse
 {
     public:
         AEGetWhiteListResponse();  //default ... will prepare a response that will later be inflated
 
-        AEGetWhiteListResponse(int errorCode, uint32_t whiteListLength, const uint8_t * whiteList);
+        AEGetWhiteListResponse(aesm::message::Response_GetWhiteListResponse& response);
+
+        AEGetWhiteListResponse(uint32_t errorCode, uint32_t whiteListLength, const uint8_t * whiteList);
         AEGetWhiteListResponse(const AEGetWhiteListResponse& other);
 
         ~AEGetWhiteListResponse();
 
         //inflater
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
+        bool inflateWithMessage(AEMessage* message);
 
         //getters
-        inline uint32_t       GetWhiteListLength() const { return mWhiteListLength; }
-        inline const uint8_t* GetWhiteList()       const { return mWhiteList; }
+        AEMessage*  serialize();
 
-        AEMessage*  serialize(ISerializer* serializer);
-
-        //this is used to inflate values from a serializer, instead of creating the object directly
-        void inflateValues(int errorCode, uint32_t whiteListLength, const uint8_t * whiteList);
-
+        bool GetValues(uint32_t* errorCode, uint32_t whiteListLength, uint8_t * whiteList) const;
         //operators
-        virtual bool operator==(const AEGetWhiteListResponse &other) const;
         AEGetWhiteListResponse& operator=(const AEGetWhiteListResponse &other);
-
-        void visit(IAEResponseVisitor& visitor);
 
         //checks
         bool check();
 
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode, uint32_t whiteListLength, const uint8_t * whiteList);
-
-        uint32_t mWhiteListLength;
-        uint8_t * mWhiteList;
+        aesm::message::Response_GetWhiteListResponse* m_response;
 };
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,12 @@
  */
 
 
-
 #include "QEClass.h"
 #include "LEClass.h"
+#include "PSEClass.h"
 #include "PVEClass.h"
 #include "PCEClass.h"
+#include "PSEPRClass.h"
 
 #include "arch.h"
 #include "sgx_report.h"
@@ -46,17 +47,20 @@
 #include "oal/oal.h"
 #include "oal/aesm_thread.h"
 #include "aesm_encode.h"
+#include "pairing_blob.h"
 #include "aesm_epid_blob.h"
 #include "aesm_xegd_blob.h"
 #include "aesm_logic.h"
 #include "pve_logic.h"
 #include "qe_logic.h"
+#include "pse_op_logic.h"
 #include "platform_info_logic.h"
 #include "prov_msg_size.h"
 #include "se_sig_rl.h"
 #include "se_quote_internal.h"
 #include "endpoint_select_info.h"
 #include "se_wrapper.h"
+#include "PSDAService.h"
 #include "ippcp.h"
 #include "ippcore.h"
 #include <time.h>
@@ -64,9 +68,12 @@
 #include "ippcp.h"
 #include "ippcore.h"
 #include "prof_fun.h"
+#include "upse/helper.h"
 #include "aesm_long_lived_thread.h"
 #include "sgx_profile.h"
 #include "service_enclave_mrsigner.hh"
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #define CHECK_SERVICE_STATUS     if (!is_service_running()) return AESM_SERVICE_STOPPED;
 #define CHECK_SGX_STATUS         if (g_sgx_device_status != SGX_ENABLED) return AESM_SGX_DEVICE_NOT_AVAILABLE;
@@ -81,6 +88,8 @@ bool AESMLogic::_is_pce_psvn_set;
 psvn_t AESMLogic::_qe_psvn;
 psvn_t AESMLogic::_pce_psvn;
 psvn_t AESMLogic::_pse_psvn;
+aesm_thread_t AESMLogic::qe_thread = NULL;
+aesm_thread_t AESMLogic::pse_thread = NULL;
 
 uint32_t AESMLogic::active_extended_epid_group_id;
 
@@ -96,7 +105,7 @@ static ae_error_t read_global_extended_epid_group_id(uint32_t *xeg_id)
         return OAL_CONFIG_FILE_ERROR;
     }
     ae_ret = OAL_CONFIG_FILE_ERROR;
-    if(fscanf(f, "%u", xeg_id)==1){
+    if(fscanf(f, "%" SCNu32, xeg_id)==1){
         ae_ret = AE_SUCCESS;
     }
     fclose(f);
@@ -114,7 +123,7 @@ static ae_error_t set_global_extended_epid_group_id(uint32_t xeg_id)
         return OAL_CONFIG_FILE_ERROR;
     }
     ae_ret = OAL_CONFIG_FILE_ERROR;
-    if(fprintf(f, "%u", xeg_id)>0){
+    if(fprintf(f, "%" PRIu32, xeg_id)>0){
         ae_ret = AE_SUCCESS;
     }
     fclose(f);
@@ -130,7 +139,6 @@ static ae_error_t thread_to_load_qe(aesm_thread_arg_type_t arg)
 {
     epid_blob_with_cur_psvn_t epid_data;
     ae_error_t ae_ret = AE_FAILURE;
-    uint32_t epid_xeid = 0;
     UNUSED(arg);
     AESM_DBG_TRACE("start to load qe");
     memset(&epid_data, 0, sizeof(epid_data));
@@ -156,9 +164,9 @@ static ae_error_t thread_to_load_qe(aesm_thread_arg_type_t arg)
             if(AE_SUCCESS != ae_ret)
             {
                 AESM_DBG_WARN("Failed to verify EPID blob: %d", ae_ret);
-                // The EPID blob is invalid.
                 EPIDBlob::instance().remove();
             }else{
+                uint32_t epid_xeid;
                 // Check whether EPID blob XEGDID is aligned with active extended group id if it exists.
                 if ((EPIDBlob::instance().get_extended_epid_group_id(&epid_xeid) == AE_SUCCESS) && (epid_xeid == AESMLogic::get_active_extended_epid_group_id())) {
                     AESM_DBG_TRACE("EPID blob Verified");
@@ -174,16 +182,8 @@ static ae_error_t thread_to_load_qe(aesm_thread_arg_type_t arg)
                     }
                 }
                 else { // XEGDID is NOT aligned
-                    AESM_DBG_TRACE("XEGDID mismatch in EPIDBlob, loading PCE ...");
+                    AESM_DBG_TRACE("XEGDID mismatch in EPIDBlob, remove it...");
                     EPIDBlob::instance().remove();
-                    ae_ret = CPCEClass::instance().load_enclave();
-                    if (AE_SUCCESS != ae_ret)
-                    {
-                        AESM_DBG_WARN("fail to load PCE: %d", ae_ret);
-                    }
-                    else{
-                        AESM_DBG_TRACE("PCE loaded successfully");
-                    }
                 }
             }
         }
@@ -191,6 +191,17 @@ static ae_error_t thread_to_load_qe(aesm_thread_arg_type_t arg)
         AESM_DBG_TRACE("Fail to read EPID Blob");
     }
     AESM_DBG_TRACE("QE Thread finished succ");
+    return AE_SUCCESS;
+}
+
+static ae_error_t thread_to_init_pse(aesm_thread_arg_type_t arg)
+{
+    UNUSED(arg);
+    AESM_DBG_INFO("start to init_ps");
+    AESMLogicLock lock(AESMLogic::_pse_mutex);
+    ae_error_t psError = CPSEClass::instance().init_ps();
+    UNUSED(psError);// To ignore the error that the symbol not used in release mode
+    AESM_DBG_INFO("init_ps return ( ae %d)", psError);
     return AE_SUCCESS;
 }
 
@@ -205,22 +216,20 @@ ae_error_t AESMLogic::service_start()
     ippInit();
 #endif
     AESM_DBG_INFO("aesm service is starting");
-
-    //Try to read current active extended epid group id
+    // Try to read active extended epid group id from data file
     ae_ret = read_global_extended_epid_group_id(&AESMLogic::active_extended_epid_group_id);
     if (AE_SUCCESS != ae_ret){
         AESM_DBG_INFO("Fail to read extended epid group id, default extended epid group used");
-        AESMLogic::active_extended_epid_group_id = DEFAULT_EGID; //use default extended epid group id 0 if it is not available from data file
-
+        AESMLogic::active_extended_epid_group_id = DEFAULT_EGID; // Use default extended epid group id 0 if it is not available from data file
     }
     else{
         AESM_DBG_INFO("active extended group id %d used", AESMLogic::active_extended_epid_group_id);
     }
-    extended_epid_group_blob_t xegb;
-    aesm_server_url_infos_t urls;
     if (AE_SUCCESS != (XEGDBlob::verify_xegd_by_xgid(active_extended_epid_group_id)) ||
-        AE_SUCCESS != (EndpointSelectionInfo::verify_file_by_xgid(active_extended_epid_group_id))){//try to load XEGD and URL file to make sure it is valid
-        AESMLogic::active_extended_epid_group_id = DEFAULT_EGID;//If the active extended epid group id read from data file is not valid, switch to default extended epid group id
+        AE_SUCCESS != (EndpointSelectionInfo::verify_file_by_xgid(active_extended_epid_group_id))){// Try to load XEGD and URL file to make sure it is valid
+        AESM_LOG_WARN_ADMIN("%s", g_admin_event_string_table[SGX_ADMIN_EVENT_PCD_NOT_AVAILABLE]);
+        AESM_LOG_WARN("%s: original extended epid group id = %d", g_event_string_table[SGX_EVENT_PCD_NOT_AVAILABLE], AESMLogic::active_extended_epid_group_id);
+        AESMLogic::active_extended_epid_group_id = DEFAULT_EGID;// If the active extended epid group id read from data file is not valid, switch to default extended epid group id
     }
 
     ae_ret = CLEClass::instance().load_enclave();
@@ -228,19 +237,18 @@ ae_error_t AESMLogic::service_start()
     {
         AESM_DBG_INFO("fail to load LE: %d", ae_ret);
         AESM_LOG_FATAL("%s", g_event_string_table[SGX_EVENT_SERVICE_UNAVAILABLE]);
-
         return ae_ret;
     }
 
-    aesm_thread_t qe_thread=NULL;
     ae_error_t aesm_ret1 = aesm_create_thread(thread_to_load_qe, 0,&qe_thread);
+    ae_error_t aesm_ret2 = aesm_create_thread(thread_to_init_pse, 0, &pse_thread);
     if(AE_SUCCESS != aesm_ret1 ){
-        AESM_DBG_WARN("Fail to create thread to preload QE:%d",aesm_ret1);
-    }else{
-        (void)aesm_free_thread(qe_thread);//release thread handle to free memory
+        AESM_DBG_WARN("Fail to create thread to preload QE:(ae %d)",aesm_ret1);
     }
- 
-    start_white_list_thread();       
+    if(AE_SUCCESS != aesm_ret2 ){
+        AESM_DBG_WARN("Fail to create thread to init PSE:( ae %d)",aesm_ret2);
+    }
+    start_white_list_thread();
     AESM_DBG_TRACE("aesm service is started");
 
     return AE_SUCCESS;
@@ -248,12 +256,31 @@ ae_error_t AESMLogic::service_start()
 
 void AESMLogic::service_stop()
 {
-    stop_all_long_lived_threads();//waiting for pending threads util timeout
+    ae_error_t ae_ret, thread_ret;
+    // Waiting for QE and PSE thread
+    ae_ret = aesm_wait_thread(qe_thread, &thread_ret, AESM_STOP_TIMEOUT);
+    if (ae_ret != AE_SUCCESS || thread_ret != AE_SUCCESS)
+    {
+        AESM_DBG_INFO("aesm_wait_thread failed(qe_thread):(ae %d) (%d)", ae_ret, thread_ret);
+    }
+    (void)aesm_free_thread(qe_thread);//release thread handle to free memory
+    ae_ret = aesm_wait_thread(pse_thread, &thread_ret, AESM_STOP_TIMEOUT);
+    if (ae_ret != AE_SUCCESS || thread_ret != AE_SUCCESS)
+    {
+        AESM_DBG_INFO("aesm_wait_thread failed(pse_thread):(ae %d) (%d)", ae_ret, thread_ret);
+    }
+    (void)aesm_free_thread(pse_thread);//release thread handle to free memory
+
+    //waiting for pending threads util timeout
+    stop_all_long_lived_threads(0);//waiting for pending threads util timeout
     CPVEClass::instance().unload_enclave();
     CPCEClass::instance().unload_enclave();
+    CPSEClass::instance().unload_enclave();
     CQEClass::instance().unload_enclave();
     CLEClass::instance().unload_enclave();
-    stop_all_long_lived_threads();
+    CPSEPRClass::instance().unload_enclave();
+    AESM_DBG_INFO("start to stop psda service");
+    PSDAService::instance().stop_service();
     AESM_DBG_INFO("aesm service down");
     AESM_LOG_FINI();
 
@@ -288,25 +315,38 @@ aesm_error_t AESMLogic::white_list_register(
         const uint8_t *white_list_cert, uint32_t white_list_cert_size)
 {
     AESM_DBG_INFO("enter function");
+    AESM_LOG_INFO_ADMIN("%s", g_admin_event_string_table[SGX_ADMIN_EVENT_WL_UPDATE_START]);
     CHECK_SERVICE_STATUS;
     AESMLogicLock lock(_le_mutex);
     CHECK_SERVICE_STATUS;
     ae_error_t ret_le = AE_SUCCESS;
+    aesm_error_t ret = AESM_UNEXPECTED_ERROR;
     if (NULL == white_list_cert||0==white_list_cert_size){
         AESM_DBG_TRACE("Invalid parameter");
+        AESM_LOG_ERROR_ADMIN("%s", g_admin_event_string_table[SGX_ADMIN_EVENT_WL_UPDATE_FAIL]);
         return AESM_PARAMETER_ERROR;
     }
     ae_error_t ae_ret = CLEClass::instance().load_enclave();
-    if(ae_ret == AE_SERVER_NOT_AVAILABLE)
+    if (AE_FAILED(ae_ret))
     {
-        AESM_DBG_WARN("LE not loaded due to AE_SERVER_NOT_AVAILABLE, possible SGX Env Not Ready");
-        ret_le = save_unverified_white_list(white_list_cert, white_list_cert_size);
+        switch (ae_ret)
+        {
+        case AE_SERVER_NOT_AVAILABLE:
+            AESM_DBG_WARN("LE not loaded due to AE_SERVER_NOT_AVAILABLE, possible SGX Env Not Ready");
+            ret_le = save_unverified_white_list(white_list_cert, white_list_cert_size);
+            break;
+        case AESM_AE_OUT_OF_EPC:
+            AESM_DBG_WARN("LE not loaded due to out of EPC");
+            ret = AESM_OUT_OF_EPC;
+            goto exit;
+        default:
+            AESM_DBG_ERROR("LE not loaded:(ae%d)", ae_ret);
+            ret = AESM_UNEXPECTED_ERROR;
+            goto exit;
+        }
     }
-    else if(AE_FAILED(ae_ret))
+    else
     {
-        AESM_DBG_ERROR("LE not loaded:%d", ae_ret);
-        return AESM_UNEXPECTED_ERROR;
-    }else{
         ret_le = static_cast<ae_error_t>(CLEClass::instance().white_list_register(
             white_list_cert, white_list_cert_size));
     }
@@ -314,17 +354,29 @@ aesm_error_t AESMLogic::white_list_register(
     switch (ret_le)
     {
     case AE_SUCCESS:
-        return AESM_SUCCESS;
+        ret = AESM_SUCCESS;
+        break;
     case LE_INVALID_PARAMETER:
         AESM_DBG_TRACE("Invalid parameter");
-        return AESM_PARAMETER_ERROR;
-    case LE_INVALID_ATTRIBUTE:
-        AESM_DBG_TRACE("Launch token error");
-        return AESM_GET_LICENSETOKEN_ERROR;
+        ret = AESM_PARAMETER_ERROR;
+        break;
     default:
-        AESM_DBG_WARN("unexpeted error %d", ret_le);
-        return AESM_UNEXPECTED_ERROR;
+        AESM_DBG_WARN("unexpeted error (ae %d)", ret_le);
+        ret = AESM_UNEXPECTED_ERROR;
+        break;
     }
+
+exit:
+    // Always log success or failure to the Admin log before returning
+    if (AE_FAILED(ae_ret) || AE_FAILED(ret_le)) {
+            AESM_LOG_ERROR_ADMIN("%s", g_admin_event_string_table[SGX_ADMIN_EVENT_WL_UPDATE_FAIL]);
+    } else {
+            const wl_cert_chain_t* wl = reinterpret_cast<const wl_cert_chain_t*>(white_list_cert);
+            AESM_LOG_INFO_ADMIN("%s for Version: %d", g_admin_event_string_table[SGX_ADMIN_EVENT_WL_UPDATE_SUCCESS],
+                _ntohl(wl->wl_cert.wl_version));
+    }
+
+    return ret;
 }
 
 aesm_error_t AESMLogic::get_launch_token(
@@ -334,7 +386,6 @@ aesm_error_t AESMLogic::get_launch_token(
     uint8_t * lictoken, uint32_t lictoken_size)
 {
     AESM_DBG_INFO("enter function");
-
     CHECK_SERVICE_STATUS;
     AESMLogicLock lock(_le_mutex);
     CHECK_SERVICE_STATUS;
@@ -345,12 +396,12 @@ aesm_error_t AESMLogic::get_launch_token(
         NULL == se_attributes ||
         NULL == lictoken)
     {
-        //sizes are checked in CLEClass::get_launch_token()
+        // Sizes are checked in CLEClass::get_launch_token()
         AESM_DBG_TRACE("Invalid parameter");
         return AESM_PARAMETER_ERROR;
     }
     ae_error_t ae_ret = CLEClass::instance().load_enclave();
-    if(ae_ret == AESM_AE_NO_DEVICE)
+    if(ae_ret == AE_SERVER_NOT_AVAILABLE)
     {
         AESM_LOG_ERROR("%s", g_event_string_table[SGX_EVENT_SERVICE_UNAVAILABLE]);
         AESM_DBG_FATAL("LE not loaded due to AE_SERVER_NOT_AVAILABLE, possible SGX Env Not Ready");
@@ -358,7 +409,7 @@ aesm_error_t AESMLogic::get_launch_token(
     }
     else if(ae_ret == AESM_AE_OUT_OF_EPC)
     {
-        AESM_DBG_WARN("LE not loaded due to out of EPC", ae_ret);
+        AESM_DBG_ERROR("LE not loaded due to out of EPC");
         return AESM_OUT_OF_EPC;
     }
     else if(AE_FAILED(ae_ret))
@@ -387,7 +438,7 @@ aesm_error_t AESMLogic::get_launch_token(
         AESM_DBG_TRACE("LE whitelist uninitialized error");
         return AESM_UNEXPECTED_ERROR;
     default:
-        AESM_DBG_WARN("unexpeted error %d", ret_le);
+        AESM_DBG_WARN("unexpeted error (ae %d)", ret_le);
         return AESM_UNEXPECTED_ERROR;
     }
 }
@@ -406,7 +457,7 @@ ae_error_t AESMLogic::get_qe_isv_svn(uint16_t& isv_svn)
     if(!_is_qe_psvn_set){
         ae_error_t ae_err = CQEClass::instance().load_enclave();
         if(AE_SUCCESS != ae_err){
-            AESM_DBG_ERROR("Fail to load QE Enclave:%d",ae_err);
+            AESM_DBG_ERROR("Fail to load QE Enclave:(ae %d)",ae_err);
             return ae_err;
         }
     }
@@ -418,13 +469,12 @@ ae_error_t AESMLogic::get_qe_isv_svn(uint16_t& isv_svn)
     return AE_SUCCESS;
 }
 
-
 ae_error_t AESMLogic::get_pce_isv_svn(uint16_t& isv_svn)
 {
     if(!_is_pce_psvn_set){
         ae_error_t ae_err = CPCEClass::instance().load_enclave();
         if(AE_SUCCESS != ae_err){
-            AESM_DBG_ERROR("Fail to load PCE Enclave:%d",ae_err);
+            AESM_DBG_ERROR("Fail to load PCE Enclave:(ae %d)",ae_err);
             return ae_err;
         }
     }
@@ -438,7 +488,24 @@ ae_error_t AESMLogic::get_pce_isv_svn(uint16_t& isv_svn)
 
 ae_error_t AESMLogic::get_pse_isv_svn(uint16_t& isv_svn)
 {
-    return AE_FAILURE;
+    ae_error_t retVal = AE_SUCCESS;
+    if(!_is_pse_psvn_set){
+        ae_error_t ae_err = CPSEClass::instance().load_enclave();
+        if(AE_SUCCESS != ae_err){
+            AESM_DBG_ERROR("Fail to load PSEOP Enclave:(ae %d)",ae_err);
+            retVal = ae_err;
+        }
+    }
+    if (AE_SUCCESS == retVal) {
+        assert(_is_pse_psvn_set);
+        if(0!=memcpy_s(&isv_svn, sizeof(isv_svn), &_pse_psvn.isv_svn, sizeof(_pse_psvn.isv_svn))){
+            AESM_DBG_ERROR("memcpy failed");
+            retVal = AE_FAILURE;
+        }
+    }
+    SGX_DBGPRINT_ONE_STRING_TWO_INTS_CREATE_SESSION(__FUNCTION__" returning ", retVal, isv_svn);
+
+    return retVal;
 }
 
 ae_error_t AESMLogic::get_qe_cpu_svn(sgx_cpu_svn_t& cpu_svn)
@@ -446,7 +513,7 @@ ae_error_t AESMLogic::get_qe_cpu_svn(sgx_cpu_svn_t& cpu_svn)
     if(!_is_qe_psvn_set){
         ae_error_t ae_err = CQEClass::instance().load_enclave();
         if(AE_SUCCESS != ae_err){
-            AESM_DBG_ERROR("Fail to load QE Enclave:%d",ae_err);
+            AESM_DBG_ERROR("Fail to load QE Enclave:( ae %d)",ae_err);
             return ae_err;
         }
     }
@@ -514,7 +581,7 @@ ae_error_t AESMLogic::set_psvn(uint16_t prod_id, uint16_t isv_svn, sgx_cpu_svn_t
                 }
                 AESM_DBG_TRACE("get PSE isv_svn=%d", (int)isv_svn);
                 _is_pse_psvn_set = true;
-               return AE_SUCCESS;
+                return AE_SUCCESS;
             }
         }
     }
@@ -576,7 +643,7 @@ sgx_status_t AESMLogic::get_launch_token(const enclave_css_t* signature,
         AESM_DBG_TRACE("LE whitelist uninitialized error");
         return SGX_ERROR_UNEXPECTED;
     default:
-        AESM_DBG_WARN("unexpeted error %d", ret_le);
+        AESM_DBG_WARN("unexpected error (ae%d)", ret_le);
         return SGX_ERROR_UNEXPECTED;
     }
 
@@ -587,18 +654,60 @@ sgx_status_t AESMLogic::get_launch_token(const enclave_css_t* signature,
         //QE or PSE has been changed, but AESM doesn't restart. Will not provide service.
         return SGX_ERROR_SERVICE_UNAVAILABLE;
     }else if(AE_SUCCESS != ret_le) {
-        AESM_DBG_ERROR("fail to save psvn:%d", ret_le);
+        AESM_DBG_ERROR("fail to save psvn:(ae%d)", ret_le);
         return SGX_ERROR_UNEXPECTED;
     }
 
     return SGX_SUCCESS;
 }
 
+#define CHECK_LONG_TERM_PAIRING_STATUS \
+    if(!query_pse_thread_status()){\
+        return AESM_BUSY; \
+    }
+
 aesm_error_t AESMLogic::create_session(
     uint32_t* session_id,
     uint8_t* se_dh_msg1, uint32_t se_dh_msg1_size)
 {
-    return AESM_SERVICE_UNAVAILABLE;
+
+    AESM_DBG_INFO("AESMLogic::create_session");
+    CHECK_SERVICE_STATUS;
+    AESMLogicLock lock(_pse_mutex);
+    CHECK_SERVICE_STATUS;
+    CHECK_LONG_TERM_PAIRING_STATUS;
+    ae_error_t psStatus;
+    // If PSDA not loaded or CSE not provisioned
+    if (CPSEClass::instance().get_status() == PSE_STATUS_INIT ||
+        CPSEClass::instance().get_status() == PSE_STATUS_UNAVAILABLE )
+    {
+        AESM_DBG_ERROR("unexpected status PSE_STATUS_INIT : PSDA not loaded or CSE not provisioned.");
+        return AESM_PSDA_UNAVAILABLE;
+    }
+    else
+        psStatus = PlatformInfoLogic::create_session_pre_internal();
+    if (OAL_THREAD_TIMEOUT_ERROR == psStatus){
+        AESM_DBG_INFO("AESM is busy in intializing for pse");
+        return AESM_BUSY;
+    }
+    if (PVE_PROV_ATTEST_KEY_NOT_FOUND == psStatus) {
+        AESM_DBG_INFO("Key not found reported by Provisioning backend");
+        return AESM_UNRECOGNIZED_PLATFORM;
+    }
+    if(OAL_PROXY_SETTING_ASSIST == psStatus){
+        AESM_DBG_INFO("Proxy assist required in initializing for pse");
+        return AESM_PROXY_SETTING_ASSIST;
+    }
+    if(PSW_UPDATE_REQUIRED == psStatus){
+        AESM_DBG_INFO("PSW software update required");
+        return AESM_UPDATE_AVAILABLE;
+    }
+    if(AESM_AE_OUT_OF_EPC == psStatus)
+        return AESM_OUT_OF_EPC;   
+    if (AE_SUCCESS != psStatus) {
+        AESM_DBG_ERROR("psStatus = 0x%X in create_session", psStatus);
+    }
+    return PSEOPAESMLogic::create_session(session_id, se_dh_msg1, se_dh_msg1_size);
 }
 
 aesm_error_t AESMLogic::exchange_report(
@@ -606,26 +715,57 @@ aesm_error_t AESMLogic::exchange_report(
     const uint8_t* se_dh_msg2, uint32_t se_dh_msg2_size,
     uint8_t* se_dh_msg3, uint32_t se_dh_msg3_size)
 {
-    return AESM_SERVICE_UNAVAILABLE;
+
+    AESM_DBG_INFO("AESMLogic::exchange_report");
+    CHECK_SERVICE_STATUS;
+    AESMLogicLock lock(_pse_mutex);
+    CHECK_SERVICE_STATUS;
+    CHECK_LONG_TERM_PAIRING_STATUS;
+
+    return PSEOPAESMLogic::exchange_report(session_id,
+                                se_dh_msg2,
+                                se_dh_msg2_size,
+                                se_dh_msg3,
+                                se_dh_msg3_size);
 }
 
 aesm_error_t AESMLogic::close_session(
     uint32_t session_id)
 {
-    return AESM_SERVICE_UNAVAILABLE; 
+
+    AESM_DBG_INFO("AESMLogic::close_session");
+    CHECK_SERVICE_STATUS;
+    AESMLogicLock lock(_pse_mutex);
+    CHECK_SERVICE_STATUS;
+
+    return PSEOPAESMLogic::close_session(session_id);
 }
 
 aesm_error_t AESMLogic::invoke_service(
     const uint8_t* pse_message_req, uint32_t pse_message_req_size,
     uint8_t* pse_message_resp, uint32_t pse_message_resp_size)
 {
-    return AESM_SERVICE_UNAVAILABLE;;
+
+    AESM_DBG_INFO("AESMLogic::invoke_service");
+    CHECK_SERVICE_STATUS;
+    AESMLogicLock lock(_pse_mutex);
+    CHECK_SERVICE_STATUS;
+    CHECK_LONG_TERM_PAIRING_STATUS;
+    return PSEOPAESMLogic::invoke_service(pse_message_req,
+                                        pse_message_req_size,
+                                        pse_message_resp,
+                                        pse_message_resp_size);
 }
 
 aesm_error_t AESMLogic::get_ps_cap(
     uint64_t* ps_cap)
 {
-    return AESM_PSDA_UNAVAILABLE;
+    AESM_DBG_INFO("AESMLogic::get_ps_cap");
+    CHECK_SERVICE_STATUS;
+    AESMLogicLock lock(_pse_mutex);
+    CHECK_SERVICE_STATUS;
+
+    return PSEOPAESMLogic::get_ps_cap(ps_cap);
 }
 
 #define CHECK_EPID_PROVISIONG_STATUS \
@@ -735,16 +875,6 @@ uint32_t AESMLogic::endpoint_selection(endpoint_selection_infos_t& es_info)
 }
 
 
-aesm_error_t AESMLogic::report_attestation_status(
-        uint8_t* platform_info, uint32_t platform_info_size,
-        uint32_t attestation_status,
-        uint8_t* update_info, uint32_t update_info_size)
-{
-    AESM_DBG_INFO("report_attestation_status");
-    AESMLogicLock lock(_pse_mutex);
-    return PlatformInfoLogic::report_attestation_status(platform_info, platform_info_size, attestation_status, update_info, update_info_size);
-}
-
 uint32_t AESMLogic::is_gid_matching_result_in_epid_blob(const GroupId& gid)
 {
     AESMLogicLock lock(_qe_pve_mutex);
@@ -759,6 +889,18 @@ uint32_t AESMLogic::is_gid_matching_result_in_epid_blob(const GroupId& gid)
         return GIDMT_UNMATCHED;
     }
     return GIDMT_MATCHED;
+}
+
+aesm_error_t AESMLogic::report_attestation_status(
+        uint8_t* platform_info, uint32_t platform_info_size,
+        uint32_t attestation_status,
+        uint8_t* update_info, uint32_t update_info_size)
+{
+
+    AESM_DBG_INFO("report_attestation_status");
+    AESMLogicLock lock(_pse_mutex);
+    CHECK_LONG_TERM_PAIRING_STATUS;
+    return PlatformInfoLogic::report_attestation_status(platform_info, platform_info_size, attestation_status, update_info, update_info_size);
 }
 
 ae_error_t AESMLogic::get_white_list_size_without_lock(uint32_t *white_list_cert_size)
@@ -838,8 +980,6 @@ aesm_error_t AESMLogic::switch_extended_epid_group(
 {
     AESM_DBG_INFO("AESMLogic::switch_extended_epid_group");
     ae_error_t ae_ret;
-    extended_epid_group_blob_t xegb;
-    aesm_server_url_infos_t urls;
     if ((ae_ret = XEGDBlob::verify_xegd_by_xgid(extended_epid_group_id)) != AE_SUCCESS ||
         (ae_ret = EndpointSelectionInfo::verify_file_by_xgid(extended_epid_group_id)) != AE_SUCCESS){
         AESM_DBG_INFO("Fail to switch to extended epid group to %d due to XEGD blob for URL blob not available", extended_epid_group_id);

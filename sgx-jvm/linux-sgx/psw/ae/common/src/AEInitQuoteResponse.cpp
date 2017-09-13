@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,39 +28,44 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AEInitQuoteResponse.h>
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
 AEInitQuoteResponse::AEInitQuoteResponse() :
-    mGIDLength(0),
-    mTargetInfoLength(0),
-    mTargetInfo(NULL),
-    mGID(NULL)
+    m_response(NULL)
 {
 }
 
-AEInitQuoteResponse::AEInitQuoteResponse(int errorCode, uint32_t gidLength, const uint8_t* gid,
-                            uint32_t targetInfoLength, const uint8_t* targetInfo) :
-    mGIDLength(0),
-    mTargetInfoLength(0),
-    mTargetInfo(NULL),
-    mGID(NULL)
+AEInitQuoteResponse::AEInitQuoteResponse(aesm::message::Response::InitQuoteResponse& response) :
+    m_response(NULL)
 {
-    CopyFields(errorCode, gidLength, gid, targetInfoLength, targetInfo);
+    m_response = new aesm::message::Response::InitQuoteResponse(response);
+}
+
+AEInitQuoteResponse::AEInitQuoteResponse(uint32_t errorCode, uint32_t gidLength, const uint8_t* gid,
+                            uint32_t targetInfoLength, const uint8_t* targetInfo) :
+    m_response(NULL)
+{
+
+    m_response = new aesm::message::Response::InitQuoteResponse();
+    m_response->set_errorcode(errorCode);
+    if (gidLength!= 0 && gid != NULL)
+        m_response->set_gid(gid, gidLength);
+    if (targetInfoLength!= 0 && targetInfo != NULL)
+        m_response->set_targetinfo(targetInfo, targetInfoLength);
 }
 
 AEInitQuoteResponse::AEInitQuoteResponse(const AEInitQuoteResponse& other) :
-    mGIDLength(0),
-    mTargetInfoLength(0),
-    mTargetInfo(NULL),
-    mGID(NULL)
+    m_response(NULL)
 {
-    CopyFields(other.mErrorCode, other.mGIDLength, other.mGID, other.mTargetInfoLength, other.mTargetInfo);
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::InitQuoteResponse(*other.m_response);
 }
-
 AEInitQuoteResponse::~AEInitQuoteResponse()
 {
     ReleaseMemory();
@@ -68,89 +73,65 @@ AEInitQuoteResponse::~AEInitQuoteResponse()
 
 void AEInitQuoteResponse::ReleaseMemory()
 {
-    if (mGID != NULL){
-        delete [] mGID;
-        mGID = NULL;
-        mGIDLength = 0;
-    }
-
-    if (mTargetInfo != NULL)
+    if (m_response != NULL)
     {
-        delete [] mTargetInfo;
-        mTargetInfo = NULL;
-        mTargetInfoLength = 0;
+        delete m_response;
+        m_response = NULL;
     }
-
-    mErrorCode = SGX_ERROR_UNEXPECTED;
-}
-
-void AEInitQuoteResponse::CopyFields(int errorCode, uint32_t gidLength, const uint8_t* gid,
-                            uint32_t targetInfoLength, const uint8_t* targetInfo)
-{
-    uint32_t totalSize = gidLength + targetInfoLength;
-    
-    if(gidLength <= MAX_MEMORY_ALLOCATION && targetInfoLength <= MAX_MEMORY_ALLOCATION
-        && totalSize <= MAX_MEMORY_ALLOCATION )
-    {
-        mValidSizeCheck = true;
-    }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
-
-    mErrorCode = errorCode;
-
-    mGIDLength = gidLength;
-
-    if (gid == NULL)
-        mGID = NULL;
-    else
-    {
-        mGID = new uint8_t[mGIDLength];
-        memcpy(mGID, gid, mGIDLength);
-    }
-
-    mTargetInfoLength = targetInfoLength;
-    mTargetInfo = new uint8_t[mTargetInfoLength];
-    memcpy(mTargetInfo, targetInfo, mTargetInfoLength);
 }
 
 
-AEMessage* AEInitQuoteResponse::serialize(ISerializer* serializer)
+AEMessage* AEInitQuoteResponse::serialize()
 {
-    return serializer->serialize(this);
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    if (check())
+    {
+        aesm::message::Response::InitQuoteResponse* mutableRes = msg.mutable_initquoteres();
+        mutableRes->CopyFrom(*m_response);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-bool AEInitQuoteResponse::inflateWithMessage(AEMessage* message, ISerializer *serializer)
+bool AEInitQuoteResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->inflateResponse(message, this);
-}
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_initquoteres() == false)
+        return false;
 
-void AEInitQuoteResponse::inflateValues(int errorCode, uint32_t gidLength, const uint8_t* gid,
-                            uint32_t targetInfoLength, const uint8_t* targetInfo)
-{
+    //this is an AEGetLaunchTokenResponse
     ReleaseMemory();
-
-    CopyFields(errorCode, gidLength, gid, targetInfoLength, targetInfo);
+    m_response = new aesm::message::Response::InitQuoteResponse(msg.initquoteres());
+    return true;
 }
 
-bool AEInitQuoteResponse::operator==(const AEInitQuoteResponse &other) const
+bool AEInitQuoteResponse::GetValues(uint32_t* errorCode, uint32_t gidLength, uint8_t* gid,
+                            uint32_t targetInfoLength, uint8_t* targetInfo) const
 {
-    if (this == &other)
-            return true;
-
-    if (mTargetInfoLength != other.mTargetInfoLength ||
-        mGIDLength        != other.mGIDLength)
+    if (m_response->has_gid() && gid != NULL)
+    {
+        if (m_response->gid().size() <= gidLength)
+            memcpy(gid, m_response->gid().c_str(), m_response->gid().size());
+        else
             return false;
-
-    if (memcmp(mGID, other.mGID, mGIDLength) != 0)
-        return false;
-
-    if (memcmp(mTargetInfo, other.mTargetInfo, mTargetInfoLength) != 0)
-        return false;
-
+    }
+    if (m_response->has_targetinfo() && targetInfo != NULL)
+    {
+        if (m_response->targetinfo().size() <= targetInfoLength)
+            memcpy(targetInfo, m_response->targetinfo().c_str(), m_response->targetinfo().size());
+        else
+            return false;
+    }
+    *errorCode = m_response->errorcode(); 
     return true;
 }
 
@@ -159,33 +140,17 @@ AEInitQuoteResponse & AEInitQuoteResponse::operator=(const AEInitQuoteResponse &
     if (this == &other)
         return *this;
 
-    inflateValues(other.mErrorCode, other.mGIDLength, other.mGID, other.mTargetInfoLength, other.mTargetInfo);
-
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::InitQuoteResponse(*other.m_response);
+    }
     return *this;
 }
 
 bool AEInitQuoteResponse::check()
 {
-    // no MAC to check at this point, but do some generic parameter check
-
-    //first, fail if errorCode is not 0
-    if (mErrorCode != SGX_SUCCESS)
+    if (m_response == NULL)
         return false;
-
-    if (mValidSizeCheck == false)
-        return false;
-    
-     //check memory allocation fail in this object
-    if (mTargetInfoLength > 0 && mTargetInfo == NULL)
-        return false;
-
-    if (mGIDLength > 0 && mGID == NULL)
-        return false;
-
-    return true;
-}
-
-void AEInitQuoteResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitInitQuoteResponse(*this);
+    return m_response->IsInitialized();
 }

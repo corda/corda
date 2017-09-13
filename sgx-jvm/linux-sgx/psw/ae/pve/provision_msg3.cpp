@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "pek_pub_key.h"
+#include "util.h"
 
  /**
   * File: provision_msg3.cpp 
@@ -243,7 +244,7 @@ static pve_status_t proc_msg3_state_init(prov_msg3_parm_t *parm, const sgx_key_1
         ret = se_read_rand_error_to_pve_error(se_ret);
         goto ret_point;
     }
-    static_assert(SK_SIZE==sizeof(sgx_cmac_128bit_tag_t), "size of sgx_cmac_128bit_tag_t should same as value of SK_SIZE");
+    se_static_assert(SK_SIZE==sizeof(sgx_cmac_128bit_tag_t)); /*size of sgx_cmac_128bit_tag_t should same as value of SK_SIZE*/
 
     //initialize state for piece-meal encryption of field of ProvMsg3
     ret = pve_aes_gcm_encrypt_init((const uint8_t *)pwk2,  parm->iv, IV_SIZE,//pwk2 as the key 
@@ -307,8 +308,8 @@ static pve_status_t gen_msg3_join_proof_escrow_data(const proc_prov_msg2_blob_in
         goto ret_point;
     }
 
-    static_assert(sizeof(psk)==sizeof(sgx_aes_gcm_128bit_key_t), "sizeof sgx_aes_gcm_128bit_key_t tshould be same as size of psk");
-    static_assert(sizeof(sgx_aes_gcm_128bit_tag_t)==sizeof(join_proof.escrow.mac), "sizeof sgx_aes_gcm_128bit_tag_t should be same as MAC_SIZE");
+    se_static_assert(sizeof(psk)==sizeof(sgx_aes_gcm_128bit_key_t)); /*sizeof sgx_aes_gcm_128bit_key_t tshould be same as size of psk*/
+    se_static_assert(sizeof(sgx_aes_gcm_128bit_tag_t)==sizeof(join_proof.escrow.mac)); /*sizeof sgx_aes_gcm_128bit_tag_t should be same as MAC_SIZE*/
     sgx_status = sgx_rijndael128GCM_encrypt(reinterpret_cast<const sgx_aes_gcm_128bit_key_t *>(&psk),
         reinterpret_cast<uint8_t *>(f), sizeof(*f), reinterpret_cast<uint8_t *>(&join_proof.escrow.f),
         join_proof.escrow.iv, IV_SIZE, NULL, 0, 
@@ -363,8 +364,8 @@ pve_status_t gen_prov_msg3_data(const proc_prov_msg2_blob_input_t *msg2_blob_inp
     uint8_t le_n[sizeof(pek.n)];
     device_id_t *device_id_in_aad= (device_id_t *)(aad+sizeof(GroupId));
     join_proof_with_escrow_t* join_proof_with_escrow=reinterpret_cast<join_proof_with_escrow_t *>(temp_buf+JOIN_PROOF_TLV_HEADER_SIZE);
-    static_assert(sizeof(join_proof_with_escrow_t)+JOIN_PROOF_TLV_HEADER_SIZE==JOIN_PROOF_TLV_TOTAL_SIZE,"unmatched hardcoded size");
-    static_assert(sizeof(sgx_key_128bit_t)==PWK2_TLV_TOTAL_SIZE-PWK2_TLV_HEADER_SIZE,"unmatched PWK2 size");
+    se_static_assert(sizeof(join_proof_with_escrow_t)+JOIN_PROOF_TLV_HEADER_SIZE==JOIN_PROOF_TLV_TOTAL_SIZE); /*unmatched hardcoded size*/
+    se_static_assert(sizeof(sgx_key_128bit_t)==PWK2_TLV_TOTAL_SIZE-PWK2_TLV_HEADER_SIZE); /*unmatched PWK2 size*/
     memset(temp_buf, 0 ,sizeof(temp_buf));
     memset(aad, 0, sizeof(aad));
     memset(pwk2, 0, sizeof(sgx_key_128bit_t));
@@ -408,8 +409,8 @@ pve_status_t gen_prov_msg3_data(const proc_prov_msg2_blob_input_t *msg2_blob_inp
         goto ret_point;
 
     memcpy(aad+sizeof(GroupId)+sizeof(device_id_t), msg2_blob_input->challenge_nonce, CHALLENGE_NONCE_SIZE);
-    static_assert(sizeof(sgx_aes_gcm_128bit_key_t)==SK_SIZE, "sizeof sgx_aes_gcm_128bit_key_t should be same as TCB size");
-    static_assert(sizeof(sgx_aes_gcm_128bit_tag_t)==MAC_SIZE, "sizeof sgx_aes_gcm_128bit_tag_t should be same as MAC_SIZE");
+    se_static_assert(sizeof(sgx_aes_gcm_128bit_key_t)==SK_SIZE); /*sizeof sgx_aes_gcm_128bit_key_t should be same as TCB size*/
+    se_static_assert(sizeof(sgx_aes_gcm_128bit_tag_t)==MAC_SIZE); /*sizeof sgx_aes_gcm_128bit_tag_t should be same as MAC_SIZE*/
     sgx_status = sgx_rijndael128GCM_encrypt(reinterpret_cast<const sgx_aes_gcm_128bit_key_t *>(pwk2),
         data_to_encrypt, size_to_encrypt, msg3_output->field1_data,
         msg3_output->field1_iv, IV_SIZE, aad, static_cast<uint32_t>(sizeof(GroupId)+sizeof(device_id_t)+CHALLENGE_NONCE_SIZE),
@@ -438,9 +439,9 @@ pve_status_t gen_prov_msg3_data(const proc_prov_msg2_blob_input_t *msg2_blob_inp
     }
 
     le_e = lv_ntohl(pek.e);
-    static_assert(sizeof(pek.n)==sizeof(le_n), "unmatched size of pek.n");
+    se_static_assert(sizeof(pek.n)==sizeof(le_n));  /*unmatched size of pek.n*/
     //endian swap
-    for(i=0;i<sizeof(pek.n)/sizeof(pek.n[0]);i++){
+    for(i=0;i<(int)(sizeof(pek.n)/sizeof(pek.n[0]));i++){
         le_n[i]=pek.n[sizeof(pek.n)/sizeof(pek.n[0])-i-1];
     }
 
@@ -484,8 +485,8 @@ pve_status_t gen_prov_msg3_data(const proc_prov_msg2_blob_input_t *msg2_blob_inp
     pdata += NONCE_2_SIZE;
     memcpy(pdata, msg3_output->encrypted_pwk2, PEK_MOD_SIZE);
     pdata += PEK_MOD_SIZE;
-    static_assert(sizeof(report_data) >= sizeof(sgx_sha256_hash_t), "report data is no large enough");
-    sgx_status = sgx_sha256_msg(report_data_payload, pdata - &report_data_payload[0], reinterpret_cast<sgx_sha256_hash_t *>(&report_data));
+    se_static_assert(sizeof(report_data) >= sizeof(sgx_sha256_hash_t)); /*report data is no large enough*/
+    sgx_status = sgx_sha256_msg(report_data_payload, (uint32_t)(pdata - &report_data_payload[0]), reinterpret_cast<sgx_sha256_hash_t *>(&report_data));
     if (SGX_SUCCESS != sgx_status){
         ret = sgx_error_to_pve_error(sgx_status);
         goto ret_point;

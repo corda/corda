@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,45 @@ uint64_t se_get_sig_rl_size(const se_sig_rl_t *p_sig_rl)
   return(sizeof(se_sig_rl_t) - sizeof(p_sig_rl->sig_rl.bk[0])
          + n2 * sizeof(p_sig_rl->sig_rl.bk[0]) + 2 * SE_ECDSA_SIGN_SIZE);
 }
+
+
+sgx_status_t sgx_calc_quote_size(const uint8_t *sig_rl, uint32_t sig_rl_size, uint32_t* p_quote_size)
+{
+    if (!p_quote_size)
+        return SGX_ERROR_INVALID_PARAMETER;
+    uint64_t quote_size = 0;
+    uint64_t sign_size = 0;
+    uint64_t n2 = 0;
+    const se_sig_rl_t *p_sig_rl = reinterpret_cast<const se_sig_rl_t *>(sig_rl);
+
+    if (sig_rl)
+    {
+        if (sig_rl_size < sizeof(se_sig_rl_t) ||
+            se_get_sig_rl_size(p_sig_rl) != sig_rl_size)
+        {
+            return SGX_ERROR_INVALID_PARAMETER;
+        }
+        if (p_sig_rl->protocol_version != SE_EPID_SIG_RL_VERSION
+            || p_sig_rl->epid_identifier != SE_EPID_SIG_RL_ID)
+        {
+            return SGX_ERROR_INVALID_PARAMETER;
+        }
+    }
+    else if (sig_rl_size != 0)
+        return SGX_ERROR_INVALID_PARAMETER;
+
+    n2 = (sig_rl) ? lv_ntohl(p_sig_rl->sig_rl.n2) : 0;
+    sign_size = sizeof(EpidSignature) - sizeof(NrProof) + n2 * sizeof(NrProof);
+    quote_size = SE_QUOTE_LENGTH_WITHOUT_SIG + sign_size;
+    if (quote_size >= 1ull << 32)
+    {
+        return SGX_ERROR_INVALID_PARAMETER;
+    }
+    *p_quote_size = static_cast<uint32_t>(quote_size);
+    return SGX_SUCCESS;
+}
+
+
 
 sgx_status_t sgx_get_quote_size(const uint8_t *sig_rl, uint32_t* p_quote_size)
 {

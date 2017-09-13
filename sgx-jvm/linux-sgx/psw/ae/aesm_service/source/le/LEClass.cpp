@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,10 +39,19 @@
 #include "service_enclave_mrsigner.hh"
 #include "aesm_long_lived_thread.h"
 
-extern "C" sgx_status_t sgx_create_le(const char *file_name, const char *prd_css_file_name, const int debug, sgx_launch_token_t *launch_token, int *launch_token_updated, sgx_enclave_id_t *enclave_id, sgx_misc_attribute_t *misc_attr, int *production_loaded);
+
+#ifdef REF_LE
+#include "ref_le_u.h"
+#include "ref_le_u.c"
+
+#else
 
 #include "launch_enclave_u.h"
 #include "launch_enclave_u.c"
+
+extern "C" sgx_status_t sgx_create_le(const char *file_name, const char *prd_css_file_name, const int debug, sgx_launch_token_t *launch_token, int *launch_token_updated, sgx_enclave_id_t *enclave_id, sgx_misc_attribute_t *misc_attr, int *production_loaded);
+#endif
+
 
 int CLEClass::white_list_register(
     const uint8_t *white_list_cert,
@@ -53,24 +62,50 @@ int CLEClass::white_list_register(
     int retry = 0;
     uint32_t status = 0;
     AESMLogicLock locker(AESMLogic::_le_mutex);
-    const wl_cert_chain_t *wl_cert_chain = reinterpret_cast<const wl_cert_chain_t *>(white_list_cert);
-    if (white_list_cert_size < sizeof(wl_cert_chain_t)){
-        return LE_INVALID_PARAMETER;
-    }
 
     assert(m_enclave_id);
+#ifdef REF_LE
 
+    if (white_list_cert_size < sizeof(ref_le_white_list_t))
+    {
+        AESM_DBG_WARN("white list size is smaller than the expected minimum");
+        return AE_INVALID_PARAMETER;
+    }
+    
+    ref_le_white_list_t *p_white_list = (ref_le_white_list_t*)white_list_cert;
+    uint32_t entries_count = _ntohs(p_white_list->entries_count);
+    uint32_t white_list_size = REF_LE_WL_SIZE(entries_count);
+    if ((white_list_size + sizeof(sgx_rsa3072_signature_t)) > white_list_cert_size)
+    {
+        AESM_DBG_WARN("white list size for %d recornds - expected: %d + %d = %d, actual: %d", entries_count,
+            white_list_size, sizeof(sgx_rsa3072_signature_t), white_list_size + sizeof(sgx_rsa3072_signature_t), white_list_cert_size);
+        return AE_INVALID_PARAMETER;
+    }
+
+    sgx_rsa3072_signature_t* p_white_list_sig = (sgx_rsa3072_signature_t*)((uint64_t)white_list_cert + white_list_size);
+
+    ret = ref_le_init_white_list(m_enclave_id, (int*)&status, p_white_list, white_list_size, p_white_list_sig);
+#else
+    if (white_list_cert_size < sizeof(wl_cert_chain_t)) {
+        return LE_INVALID_PARAMETER;
+    }
+ 
     ret = le_init_white_list_wrapper(m_enclave_id, &status,
-                                       const_cast<uint8_t*>(white_list_cert),
-                                       white_list_cert_size);
+        const_cast<uint8_t*>(white_list_cert),
+        white_list_cert_size);
+#endif // REF_LE
     for(; ret == SGX_ERROR_ENCLAVE_LOST && retry < AESM_RETRY_COUNT; retry++)
     {
         unload_enclave();
         if(AE_SUCCESS != load_enclave_only())
             return AE_FAILURE;
+#ifdef REF_LE
+        ret = ref_le_init_white_list(m_enclave_id, (int*)&status, p_white_list, white_list_size, p_white_list_sig);
+#else
         ret = le_init_white_list_wrapper(m_enclave_id, &status,
-                                          const_cast<uint8_t*>(white_list_cert),
-                                       white_list_cert_size);
+            const_cast<uint8_t*>(white_list_cert),
+            white_list_cert_size);
+#endif // REF_LE
     }
 
     if(SGX_SUCCESS!=ret)
@@ -100,6 +135,8 @@ void CLEClass::load_white_cert_list()
 #define UPDATE_DURATION (24*3600)
 ae_error_t CLEClass::update_white_list_by_url()
 {
+    // on reference LE we don't support equiring white list from URL
+#ifndef REF_LE
     static time_t last_updated_time = 0;
     int i = 0;
     ae_error_t ret = AE_FAILURE;
@@ -107,10 +144,11 @@ ae_error_t CLEClass::update_white_list_by_url()
     if (last_updated_time + UPDATE_DURATION > cur_time){
         return LE_WHITE_LIST_QUERY_BUSY;
     }
+    AESM_LOG_INFO_ADMIN("%s", g_admin_event_string_table[SGX_ADMIN_EVENT_WL_UPDATE_START]);
     for (i = 0; i < 2; i++){//at most retry once if network error
         uint8_t *resp_buf = NULL;
         uint32_t resp_size = 0;
-        const char *url = EndpointSelectionInfo::instance().get_server_url(SGX_WHITE_LIST_FILE); 
+        const char *url = EndpointSelectionInfo::instance().get_server_url(SGX_WHITE_LIST_FILE);
         if (NULL == url){
             return OAL_CONFIG_FILE_ERROR;
         }
@@ -125,7 +163,13 @@ ae_error_t CLEClass::update_white_list_by_url()
                 ret = (ae_error_t)instance().white_list_register(resp_buf, resp_size, true);
                 if (AE_SUCCESS == ret&&resp_size >= sizeof(wl_cert_chain_t)){
                     const wl_cert_chain_t* wl = reinterpret_cast<const wl_cert_chain_t*>(resp_buf);
-                    AESM_DBG_INFO("White list update request successful for Version: %d", _ntohl(wl->wl_cert.wl_version));
+                    AESM_LOG_INFO_ADMIN("%s for Version: %d", g_admin_event_string_table[SGX_ADMIN_EVENT_WL_UPDATE_SUCCESS],
+                        _ntohl(wl->wl_cert.wl_version));
+                }
+                else if (LE_INVALID_PARAMETER == ret || LE_INVALID_PRIVILEGE_ERROR ==ret){
+                    AESM_LOG_WARN_ADMIN("%s", g_admin_event_string_table[SGX_ADMIN_EVENT_WL_UPDATE_FAIL]);
+                }else{
+                    ret = AE_FAILURE;//Internal error, maybe LE not consistent with AESM?
                 }
             }
             last_updated_time = cur_time;
@@ -133,7 +177,13 @@ ae_error_t CLEClass::update_white_list_by_url()
         }
         break;
     }
+    if (OAL_NETWORK_UNAVAILABLE_ERROR == ret){
+        AESM_LOG_WARN_ADMIN("%s", g_admin_event_string_table[SGX_ADMIN_EVENT_WL_UPDATE_NETWORK_FAIL]);
+    }
     return ret;
+#else
+    return AE_SUCCESS;
+#endif
 }
 
 ae_error_t CLEClass::load_verified_white_cert_list()
@@ -224,17 +274,23 @@ ae_error_t CLEClass::load_enclave_only()
         return ae_err;
     }
     int launch_token_update;
-#ifdef AESM_SIM
+
+    // in the ref LE we do not support loading non-production signed LE, as it should used with LCP a developer may
+    // load a non-production launch enclave by setting the non-production provider to the IA32_SGXLEPUBKEYHASH0..3 MSRs.
+#if defined(AESM_SIM) || defined(REF_LE)
     UNUSED(p_prod_css_path);
     UNUSED(production_le_loaded);
     ret = sgx_create_enclave(enclave_path, get_debug_flag(), &m_launch_token,
         &launch_token_update, &m_enclave_id,
-        &m_attributes);//simulation  mode has no sgx_create_le function. Use sgx_create_enclave 
+        &m_attributes);//simulation or ref_le mode has no sgx_create_le function. Use sgx_create_enclave 
     if(ret != SGX_SUCCESS){
         AESM_DBG_ERROR("Fail to load LE");
         return AE_FAILURE;
     }
-    return AE_SUCCESS;
+#ifdef REF_LE
+    AESM_DBG_DEBUG("ref_le loaded succesfully");
+#endif
+    m_ufd = false;
 #else
     ret = sgx_create_le(enclave_path, p_prod_css_path, get_debug_flag(), &m_launch_token,
         &launch_token_update, &m_enclave_id,
@@ -258,8 +314,9 @@ ae_error_t CLEClass::load_enclave_only()
         m_ufd = true;
         AESM_DBG_INFO("Debug signed LE loaded");
     }
-    return AE_SUCCESS;
 #endif
+
+    return AE_SUCCESS;
 }
 
 ae_error_t CLEClass::load_enclave()
@@ -318,12 +375,18 @@ int CLEClass::get_launch_token(
     AESM_DBG_INFO("try to load Enclave with mrsigner:%s , attr %llx, xfrm %llx", mrsigner_info, attr->flags, attr->xfrm);
 #endif
 
+    // the interface of the get token API is identical, only the name is different
+#ifdef REF_LE
+#define le_get_launch_token_wrapper ref_le_get_launch_token
+#endif // REF_LE
+
     //get launch token by ecall into LE
     ret = le_get_launch_token_wrapper(m_enclave_id, &status,
                                        reinterpret_cast<sgx_measurement_t*>(mrenclave),
                                        &mrsigner,
                                        reinterpret_cast<sgx_attributes_t*>(se_attributes),
                                        reinterpret_cast<token_t*>(lictoken));
+
     for(; ret == SGX_ERROR_ENCLAVE_LOST && retry < AESM_RETRY_COUNT; retry++)
     {
         unload_enclave();
@@ -335,6 +398,7 @@ int CLEClass::get_launch_token(
                                           reinterpret_cast<sgx_attributes_t*>(se_attributes),
                                           reinterpret_cast<token_t*>(lictoken));
     }
+    AESM_DBG_INFO("token request returned with ret = %d, status = %d", ret, status);
 
     if(SGX_SUCCESS!=ret)
         return sgx_error_to_ae_error(ret);

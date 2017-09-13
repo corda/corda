@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,42 +34,42 @@
 #include <IAEResponse.h>
 #include <stdint.h>
 
-class ISerializer;
+
+namespace aesm
+{
+    namespace message
+    {
+            class Response_GetPsCapResponse;
+    };
+};
 
 class AEGetPsCapResponse : public IAEResponse
 {
     public:
         AEGetPsCapResponse();  //default ... will prepare a response that will later be inflated
+        AEGetPsCapResponse(aesm::message::Response_GetPsCapResponse& response);
 
-        AEGetPsCapResponse(int errorCode, uint64_t ps_cap);
+        AEGetPsCapResponse(uint32_t errorCode, uint64_t ps_cap);
         AEGetPsCapResponse(const AEGetPsCapResponse& other);
 
         ~AEGetPsCapResponse();
 
         //inflater
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
+        bool inflateWithMessage(AEMessage* message);
 
-        inline uint64_t GetPsCap()              const { return mPsCap;}
 
-        AEMessage*  serialize(ISerializer* serializer);
+        AEMessage*  serialize();
 
-        //this is used to inflate values from a serializer, instead of creating the object directly
-        void inflateValues(int errorCode, uint64_t ps_cap);
-
+        bool GetValues(uint32_t* errorCode, uint64_t* ps_cap) const;
         //operators
-        virtual bool operator==(const AEGetPsCapResponse &other) const;
         AEGetPsCapResponse& operator=(const AEGetPsCapResponse &other);
-
-        void visit(IAEResponseVisitor& visitor);
 
         //checks
         bool check();
 
     protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode, uint64_t ps_cap);
-
-        uint64_t    mPsCap;
+        aesm::message::Response_GetPsCapResponse* m_response;
 };
 
 #endif

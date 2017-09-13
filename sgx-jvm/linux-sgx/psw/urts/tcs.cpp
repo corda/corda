@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -150,11 +150,14 @@ int CTrustThreadPool::bind_thread(const se_thread_id_t thread_id,  CTrustThread 
 
 CTrustThread * CTrustThreadPool::get_bound_thread(const se_thread_id_t thread_id)
 {
-    CTrustThread *trust_thread = NULL;
+    CTrustThread *trust_thread = nullptr;
 
-    Node<se_thread_id_t, CTrustThread*>* it = m_thread_list->Find(thread_id);
-    if(it != NULL)
-        trust_thread = it->value;
+    if (m_thread_list)
+    {
+        auto it = m_thread_list->Find(thread_id);
+        if (it)
+            trust_thread = it->value;
+    }
 
     return trust_thread;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,6 +78,17 @@ DECLARE_LOCAL_FUNC get_thread_data
     READ_TD_DATA self_addr 
     ret
 
+/* 
+ * ---------------------------------------------------------------------
+ * Function: sys_word_t get_stack_guard(void);
+ *
+ *     Get the value of stack_guard
+ * ---------------------------------------------------------------------
+ */
+DECLARE_LOCAL_FUNC get_stack_guard 
+    READ_TD_DATA stack_guard 
+    ret
+    
 /* 
  * ---------------------------------------------------------------------
  * Function: enclave_entry

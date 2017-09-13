@@ -1,0 +1,131 @@
+/*
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+#ifndef __LIBCPP_SGX
+#define __LIBCPP_SGX
+
+/*
+ * libc++ configuration file specific to SGX SDK
+ * It is internal libc++ header - DO NOT include it directly 
+ */
+
+#ifndef UNREFERENCED_PARAMETER
+#    define UNREFERENCED_PARAMETER(P) (P)
+#endif //UNREFERENCED_PARAMETER
+
+// SECTION 1: NEW DEFINES SPECIFIC TO SGX
+
+#define _LIBCPP_SGX_CONFIG
+
+/* No I/O operations that involve OCALLs allowed */
+#define _LIBCPP_SGX_NO_IOSTREAMS
+
+// Define to replace usage of __cplusplus 
+// The compiler sets this to latest standard it supports although we want code using
+// this to conform to C++11 not C++14 or later.
+// More specific we should not compile code under __cplusplus > 201103L.
+// Code under __cplusplus >= 201103L is fine.
+#define sgx__cplusplus 201103L
+// We need to make sure that where __cplusplus is used in defines it always goes to path for 
+// #define __cplusplus 201103L because it might be defined to something higher.
+
+// Set SGX specific endianess below
+#include <sys/endian.h>
+#ifdef _LIBCPP_LITTLE_ENDIAN
+#undef _LIBCPP_LITTLE_ENDIAN
+#endif // _LIBCPP_LITTLE_ENDIAN
+#ifdef _LIBCPP_BIG_ENDIAN
+#undef _LIBCPP_BIG_ENDIAN
+#endif //_LIBCPP_BIG_ENDIAN
+#if _BYTE_ORDER == _LITTLE_ENDIAN
+#    define _LIBCPP_LITTLE_ENDIAN 1
+#    define _LIBCPP_BIG_ENDIAN    0
+#else  // _BYTE_ORDER == _LITTLE_ENDIAN
+#    define _LIBCPP_LITTLE_ENDIAN 0
+#    define _LIBCPP_BIG_ENDIAN    1
+#endif  // _BYTE_ORDER == _LITTLE_ENDIAN
+
+// Use sgx assert
+#include <assert.h>
+#if defined(_LIBCPP_ASSERT)
+#undef _LIBCPP_ASSERT
+#endif // _LIBCPP_ASSERT
+#define _LIBCPP_ASSERT(x, m)  (assert(x))
+
+// RTTI comes from cpprt. Undefine NO_RTTI
+#if defined(_LIBCPP_NO_RTTI)
+#undef _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
+
+#if defined(__GNUC__)
+
+/////////////
+// SECTION 2: UNDEF VARIOUS LIBC++ DEFINES FOR SUPPORTED FEATURES
+/////////////
+#undef _LIBCPP_USING_DEV_RANDOM
+#define _LIBCPP_USING_SGX_RANDOM
+#undef _LIBCPP_NO_EXCEPTIONS
+#undef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#undef _LIBCPP_HAS_NO_CONSTEXPR
+#undef _LIBCPP_HAS_NO_UNICODE_CHARS
+#undef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#undef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#undef _LIBCPP_HAS_NO_VARIADICS
+#undef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#undef _LIBCPP_HAS_NO_VARIABLE_TEMPLATES        // Will be set
+#undef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#undef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+//#undef _LIBCPP_DEBUG // TBD. Debug without I/O?
+#undef _LIBCPP_HAS_QUICK_EXIT
+#undef _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS // Not used
+
+// Current goal is to support C++11 so define the version accordingly.
+// Libc++ also supports 14 and beyond. 
+#define _LIBCPP_STD_VER 11
+
+/////////////
+// SECTION 3: DEFINE VARIOUS LIBC++ DEFINES TO CUSTOMIZE USAGE FOR SGX
+/////////////
+#define _LIBCPP_HAS_NO_THREADS
+#define _LIBCPP_HAS_NO_STDIN
+#define _LIBCPP_HAS_NO_STDOUT
+#define _LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE
+#undef _LIBCPP_SGX_HAS_NO_THREADS
+#undef _LIBCPP_SGX_HAS_NO_ATOMIC
+
+/////////////
+// SECTION 4: SGX specific defines which replace __has_feature(cxx_something)
+/////////////
+#define _LIBCPP_SGX_HAS_CXX_ATOMIC //__has_feature(cxx_atomic)
+#endif
+
+#endif  // _LIBCPP_SGX

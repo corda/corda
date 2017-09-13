@@ -1,0 +1,91 @@
+############################################################################
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+############################################################################
+Import('*')
+env.PartName('common-testhelper')
+
+src_files = Pattern(src_dir='.',
+                    includes=['*-testhelper.cc'],
+                    excludes=[],
+                    recursive=False).files()
+inc_files = Pattern(src_dir='.',
+                    includes=['*-testhelper.h'],
+                    excludes=[],
+                    recursive=False).files()
+epid11_src_files = Pattern(src_dir='1.1',
+                           includes=['*-testhelper.cc'],
+                           excludes=[],
+                           recursive=False).files()
+epid11_inc_files = Pattern(src_dir='1.1',
+                           includes=['*-testhelper.h'],
+                           excludes=[],
+                           recursive=False).files()
+test_data_files = Pattern(src_dir='testdata',
+                          includes=['*'],
+                          excludes=[],
+                          recursive=True)
+epid11_test_data_files = Pattern(src_dir='1.1/testdata',
+                                 includes=['*'],
+                                 excludes=[],
+                                 recursive=True)
+
+# unit tests
+utest_files = Pattern(src_dir='.',
+                      includes=['*-test.cc'],
+                      excludes=[],
+                      recursive=True).files()
+
+if 'install_package' in env['MODE']:
+    env.InstallTopLevel(src_files, sub_dir='epid/${PART_SHORT_NAME}')
+    env.InstallTopLevel(inc_files, sub_dir='epid/${PART_SHORT_NAME}')
+    env.InstallTopLevel(utest_files,
+                        sub_dir='epid/${PART_SHORT_NAME}/unittests')
+    env.InstallTopLevel(test_data_files,
+                        sub_dir='epid/${PART_SHORT_NAME}/testdata')
+
+    env.InstallTopLevel(epid11_src_files, sub_dir='epid/${PART_SHORT_NAME}/1.1')
+    env.InstallTopLevel(epid11_inc_files, sub_dir='epid/${PART_SHORT_NAME}/1.1')
+    env.InstallTopLevel(epid11_test_data_files,
+                        sub_dir='epid/${PART_SHORT_NAME}/1.1/testdata')
+
+    parts_file = ['common-testhelper.parts']
+    env.InstallTopLevel(parts_file, sub_dir='epid/${PART_SHORT_NAME}')
+    makefile = ['Makefile']
+    env.InstallTopLevel(makefile, sub_dir='epid/${PART_SHORT_NAME}')
+else:
+    env.DependsOn([
+        Component('common'),
+    ])
+
+    env.Append(CPPPATH='#')
+
+    testenv = env.Clone()
+
+    outputs = env.Library('${PART_NAME}', src_files + epid11_src_files)
+    env.Sdk(outputs)
+
+    testenv['UNIT_TEST_TARGET_NAME'] = "${PART_NAME}-${UNIT_TEST_TARGET}"
+    testenv.UnitTest("utest",
+                     utest_files,
+                     command_args=[
+                         '--gtest_color=yes',
+                         '--gtest_print_time=1',
+                         '--gtest_output=xml',
+                         '--gtest_filter=**',
+                     ],
+                     make_pdb=(env.isConfigBasedOn('debug')),
+                     depends=[Component('gtest'),
+                              Component('common-testhelper')],
+                     INSTALL_BIN='${INSTALL_TEST_BIN}')

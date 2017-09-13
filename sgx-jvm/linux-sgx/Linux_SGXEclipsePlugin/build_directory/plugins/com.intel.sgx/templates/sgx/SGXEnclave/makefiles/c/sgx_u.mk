@@ -1,4 +1,4 @@
-######## SGX SDK Settings ########
+######## Intel(R) SGX SDK Settings ########
 SGX_SDK ?= $(SdkPathFromPlugin)
 SGX_MODE ?= SIM
 SGX_ARCH ?= x64

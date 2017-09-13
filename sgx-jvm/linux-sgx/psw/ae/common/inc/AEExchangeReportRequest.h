@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,42 +34,36 @@
 #include <IAERequest.h>
 #include <stdint.h>
 
+namespace aesm
+{
+    namespace message
+    {
+        class Request_ExchangeReportRequest;
+    };
+};
+
 class AEExchangeReportRequest : public IAERequest
 {
     public:
-        AEExchangeReportRequest();
+        AEExchangeReportRequest(const aesm::message::Request_ExchangeReportRequest& request);
         AEExchangeReportRequest(uint32_t sessionId, uint32_t dhMsg2Length, const uint8_t* dhMsg2, uint32_t dhMsg3Length, uint32_t timeout=0);
         AEExchangeReportRequest(const AEExchangeReportRequest& other);
         ~AEExchangeReportRequest();
 
-        AEMessage* serialize(ISerializer* serializer);
-        void inflateValues(uint32_t sessionId, uint32_t dhMsg2Length, const uint8_t* dhMsg2, uint32_t dhMsg3Length, uint32_t timeout=0);
-
-        //getters
-        uint32_t       GetSessionId()    const { return mSessionId; }
-        uint32_t       GetDHMsg2Length() const { return mDHMsg2Length; }
-        uint32_t       GetDHMsg3Length()   const { return mDHMsg3Length; } 
-        const uint8_t* GetDHMsg2()       const { return mDHMsg2; }
+        AEMessage* serialize();
 
         //operators
-        bool operator==(const AEExchangeReportRequest& other) const;
         AEExchangeReportRequest& operator=(const AEExchangeReportRequest& other);
 
         //checkers
         bool check();
         IAEResponse* execute(IAESMLogic* aesmLogic);
-        void visit(IAERequestVisitor& visitor);
 
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
-    protected:
-        void ReleaseMemory();
-        void CopyFields(uint32_t sessionId, uint32_t dhMsg2Length, const uint8_t* dhMsg2, uint32_t dhMsg3Length, uint32_t timeout);
 
-        uint32_t mSessionId;
-        uint32_t    mDHMsg2Length;
-        uint8_t*    mDHMsg2;
-        uint32_t    mDHMsg3Length;
+    protected:
+        aesm::message::Request_ExchangeReportRequest* m_request;
 };
 
 #endif

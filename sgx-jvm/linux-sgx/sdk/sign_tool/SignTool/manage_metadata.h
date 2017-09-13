@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,6 +78,7 @@ typedef struct _xml_parameter_t
 
 bool parse_metadata_file(const char *xmlpath, xml_parameter_t *parameter, int parameter_count);
 bool update_metadata(const char *path, const metadata_t *metadata, uint64_t meta_offset);
+bool print_metadata(const char *path, const metadata_t *metadata);
 
 class CMetadata: private Uncopyable
 {

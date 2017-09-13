@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,86 +28,97 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AESGXGetExtendedEpidGroupIdRequest.h>
 #include <AESGXGetExtendedEpidGroupIdResponse.h>
 #include <IAESMLogic.h>
 #include <stdlib.h>
-#include <sgx_uae_service.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AESGXGetExtendedEpidGroupIdRequest::AESGXGetExtendedEpidGroupIdRequest(uint32_t timeout) : IAERequest(timeout) {
+AESGXGetExtendedEpidGroupIdRequest::AESGXGetExtendedEpidGroupIdRequest(const aesm::message::Request::SGXGetExtendedEpidGroupIdRequest& request) :
+    m_request(NULL)
+{
+    m_request = new aesm::message::Request::SGXGetExtendedEpidGroupIdRequest();
+    m_request->CopyFrom(request);
+}
+
+AESGXGetExtendedEpidGroupIdRequest::AESGXGetExtendedEpidGroupIdRequest(uint32_t timeout)
+    :m_request(NULL)
+{
+    m_request = new aesm::message::Request::SGXGetExtendedEpidGroupIdRequest();
+    m_request->set_timeout(timeout);
 }
 
 AESGXGetExtendedEpidGroupIdRequest::AESGXGetExtendedEpidGroupIdRequest(const AESGXGetExtendedEpidGroupIdRequest& other)
-: IAERequest(other)
+    : m_request(NULL)
 {
-    CopyFields(other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::SGXGetExtendedEpidGroupIdRequest(*other.m_request);
 }
 
 AESGXGetExtendedEpidGroupIdRequest::~AESGXGetExtendedEpidGroupIdRequest()
 {
-    ReleaseMemory();
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AESGXGetExtendedEpidGroupIdRequest::ReleaseMemory()
+
+
+AEMessage* AESGXGetExtendedEpidGroupIdRequest::serialize()
 {
-    //empty for now
-}
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
+    {
+        aesm::message::Request::SGXGetExtendedEpidGroupIdRequest* mutableReq = msg.mutable_sgxgetextendedepidgroupidreq();
+        mutableReq->CopyFrom(*m_request);
 
-
-void AESGXGetExtendedEpidGroupIdRequest::CopyFields(uint32_t timeout)
-{
-    mTimeout = timeout;
-}
-
-AEMessage* AESGXGetExtendedEpidGroupIdRequest::serialize(ISerializer* serializer){
-    return serializer->serialize(this);
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
 IAERequest::RequestClass AESGXGetExtendedEpidGroupIdRequest::getRequestClass() {
-    return PLATFORM_CLASS;
+    return QUOTING_CLASS;
 }
 
-void AESGXGetExtendedEpidGroupIdRequest::inflateValues(uint32_t timeout)
-{
-    ReleaseMemory();
-
-    CopyFields(timeout);
-}
-
-bool AESGXGetExtendedEpidGroupIdRequest::operator==(const AESGXGetExtendedEpidGroupIdRequest& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mTimeout != other.mTimeout)
-        return false;
-
-    return true;    //no members , default to true
-}
 
 AESGXGetExtendedEpidGroupIdRequest& AESGXGetExtendedEpidGroupIdRequest::operator=(const AESGXGetExtendedEpidGroupIdRequest& other)
 {
     if (this == &other)
         return *this;
-
-    inflateValues(other.mTimeout);
- 
-    //do nothing - no members
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::SGXGetExtendedEpidGroupIdRequest(*other.m_request);
     return *this;
 }
 
-void AESGXGetExtendedEpidGroupIdRequest::visit(IAERequestVisitor& visitor)
+bool AESGXGetExtendedEpidGroupIdRequest::check()
 {
-    visitor.visitSGXGetExtendedEpidGroupIdRequest(*this);
+    if (m_request == NULL)
+        return false;
+    return m_request->IsInitialized();
 }
 
-
-IAEResponse* AESGXGetExtendedEpidGroupIdRequest::execute(IAESMLogic* aesmLogic) 
+IAEResponse* AESGXGetExtendedEpidGroupIdRequest::execute(IAESMLogic* aesmLogic)
 {
-    uint32_t extended_group_id;
+    aesm_error_t result = AESM_UNEXPECTED_ERROR;
+    uint32_t extended_group_id = 0;
 
-    aesm_error_t result = aesmLogic->sgxGetExtendedEpidGroupId(&extended_group_id);
+    if (check())
+    {
+        result = aesmLogic->sgxGetExtendedEpidGroupId(&extended_group_id);
+    }
 
     AESGXGetExtendedEpidGroupIdResponse * response = new AESGXGetExtendedEpidGroupIdResponse((uint32_t)result, extended_group_id);
 

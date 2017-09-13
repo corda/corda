@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -40,7 +40,9 @@ CXXFLAGS += $(ENCLAVE_CXXFLAGS) \
             -fno-exceptions \
             -fno-rtti
 
-OBJS := init_enclave.o   \
+TCXXFLAGS := $(filter-out -fstack-protector-strong, $(CXXFLAGS))
+
+OBJS1 := init_enclave.o  \
         trts.o           \
         trts_ecall.o     \
         trts_ocall.o     \
@@ -50,11 +52,17 @@ OBJS := init_enclave.o   \
         init_optimized_lib.o \
         trts_version.o
 
+OBJS2 := trts_nsp.o
+
+OBJS := $(OBJS1) $(OBJS2)
 
 all: $(OBJS) elf_parser
 
-$(OBJS): %.o: %.cpp
-	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
+$(OBJS1): %.o: %.cpp
+	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) -fPIC $< -o $@
+
+$(OBJS2): %.o: %.cpp
+	$(CXX) -c $(TCXXFLAGS) $(CPPFLAGS) -fPIC $< -o $@
 
 .PHONY: elf_parser
 elf_parser:

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,6 @@
 #include "se_trace.h"
 #include "se_memcpy.h"
 #include "global_data.h"
-
-#define META_SECTION_ALIGNMENT    1  /*metadata section no alignment*/
 
 namespace {
 /** the callback function to filter a section.
@@ -388,22 +386,17 @@ bool get_meta_property(const uint8_t *start_addr, const ElfW(Ehdr) *elf_hdr, uin
      * |  metadata       |
      */
 
-    if (shdr->sh_addralign != META_SECTION_ALIGNMENT)
-    {
-        se_trace(SE_TRACE_ERROR, "ERROR: The '.note.sgxmeta' section must be 4byte aligned\n");
-        return false;
-    }
-
     const ElfW(Note) *note = GET_PTR(ElfW(Note), start_addr, shdr->sh_offset);
     assert(note != NULL);
 
-    if (shdr->sh_size != ROUND_TO(sizeof(ElfW(Note)) + note->namesz + note->descsz, META_SECTION_ALIGNMENT))
+    if (shdr->sh_size != ROUND_TO(sizeof(ElfW(Note)) + note->namesz + note->descsz, shdr->sh_addralign ))
     {
         se_trace(SE_TRACE_ERROR, "ERROR: The '.note.sgxmeta' section size is not correct.\n");
         return false;
     }
-
-    if (memcmp(GET_PTR(void, start_addr, shdr->sh_offset + sizeof(ElfW(Note))), "sgx_metadata", note->namesz))
+    
+    const char * meta_name = "sgx_metadata";
+    if (note->namesz != (strlen(meta_name)+1) || memcmp(GET_PTR(void, start_addr, shdr->sh_offset + sizeof(ElfW(Note))), meta_name, note->namesz))
     {
         se_trace(SE_TRACE_ERROR, "ERROR: The note in the '.note.sgxmeta' section must be named as \"sgx_metadata\"\n");
         return false;

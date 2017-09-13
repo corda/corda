@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 #include "manage_metadata.h"
 #include "se_trace.h"
 #include "util_st.h"
-#include  "section.h"
+#include "section.h"
 #include "se_page_attr.h"
 #include "elf_util.h"
 
@@ -51,6 +51,8 @@
 #include <errno.h>
 #include <assert.h>
 #include <iostream>
+#include <iomanip>
+#include <fstream>
 
 using namespace tinyxml2;
 
@@ -126,6 +128,10 @@ bool parse_metadata_file(const char *xmlpath, xml_parameter_t *parameter, int pa
         if(doc.ErrorID() == XML_ERROR_FILE_COULD_NOT_BE_OPENED)
         {
             se_trace(SE_TRACE_ERROR, OPEN_FILE_ERROR, xmlpath);
+        }
+        else if(doc.ErrorID() == XML_ERROR_FILE_NOT_FOUND)
+        {
+            se_trace(SE_TRACE_ERROR, XML_NOT_FOUND_ERROR, xmlpath);
         }
         else
         {
@@ -626,13 +632,6 @@ uint64_t CMetadata::calculate_sections_size()
     uint64_t size = (NULL == last_section) ? (0) : (last_section->get_rva() + last_section->virtual_size());
     size = ROUND_TO_PAGE(size);
     
-    
-    
-    if(last_section != NULL && size < ROUND_TO_PAGE(last_section->get_rva() + ROUND_TO_PAGE(last_section->virtual_size())))
-    {
-        size += SE_PAGE_SIZE;
-    }    
-
     return size;
 }
 
@@ -665,3 +664,72 @@ bool update_metadata(const char *path, const metadata_t *metadata, uint64_t meta
         reinterpret_cast<uint8_t *>(const_cast<metadata_t *>( metadata)), metadata->size, (long)meta_offset);
 }
 
+#define PRINT_ELEMENT(stream, structure, element) \
+    do {                                          \
+        (stream) << #structure << "->" << #element << ": " << std::hex << "0x" << structure->element << std::endl; \
+    }while(0)
+
+#define PRINT_ARRAY(stream, structure, array, size) \
+    do{  \
+        (stream) << #structure << "->" << #array << ":" << std::hex; \
+        for(size_t i = 0; i < size; i++) \
+        { \
+            if (i % 16 == 0) (stream) << std::endl; \
+            (stream) << "0x" << std::setfill('0') << std::setw(2) << (uint32_t)(structure)->array[i] << " "; \
+        } \
+        (stream) << std::endl; \
+    }while(0)
+
+bool print_metadata(const char *path, const metadata_t *metadata)
+{
+    assert(path != NULL && metadata != NULL);
+
+    std::ofstream meta_ofs(path, std::ofstream::out | std::ofstream::trunc);
+    if (!meta_ofs.good())
+    {
+        se_trace(SE_TRACE_ERROR, OPEN_FILE_ERROR, path);
+        return false;
+    }
+
+    PRINT_ELEMENT(meta_ofs, metadata, magic_num);
+    PRINT_ELEMENT(meta_ofs, metadata, version);
+    PRINT_ELEMENT(meta_ofs, metadata, size);
+    PRINT_ELEMENT(meta_ofs, metadata, tcs_policy);
+    PRINT_ELEMENT(meta_ofs, metadata, ssa_frame_size);
+    PRINT_ELEMENT(meta_ofs, metadata, max_save_buffer_size);
+    PRINT_ELEMENT(meta_ofs, metadata, desired_misc_select);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_size);
+    PRINT_ELEMENT(meta_ofs, metadata, attributes.flags);
+    PRINT_ELEMENT(meta_ofs, metadata, attributes.xfrm);
+
+    // css.header
+    PRINT_ARRAY(meta_ofs, metadata, enclave_css.header.header, 12);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.header.type);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.header.module_vendor);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.header.date);
+    PRINT_ARRAY(meta_ofs, metadata, enclave_css.header.header2, 16);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.header.hw_version);
+
+    // css.key
+    PRINT_ARRAY(meta_ofs, metadata, enclave_css.key.modulus, SE_KEY_SIZE);
+    PRINT_ARRAY(meta_ofs, metadata, enclave_css.key.exponent, SE_EXPONENT_SIZE);
+    PRINT_ARRAY(meta_ofs, metadata, enclave_css.key.signature, SE_KEY_SIZE);
+    
+    // css.body
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.body.misc_select);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.body.misc_mask);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.body.attributes.flags);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.body.attributes.xfrm);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.body.attribute_mask.flags);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.body.attribute_mask.xfrm);
+    PRINT_ARRAY(meta_ofs, metadata, enclave_css.body.enclave_hash.m, SGX_HASH_SIZE);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.body.isv_prod_id);
+    PRINT_ELEMENT(meta_ofs, metadata, enclave_css.body.isv_svn);
+
+    // css.buffer
+    PRINT_ARRAY(meta_ofs, metadata, enclave_css.buffer.q1, SE_KEY_SIZE); 
+    PRINT_ARRAY(meta_ofs, metadata, enclave_css.buffer.q2, SE_KEY_SIZE);
+
+    meta_ofs.close();
+    return true;
+}

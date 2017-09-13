@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,37 +33,38 @@
 
 #include <IAEResponse.h>
 #include <stdint.h>
+namespace aesm
+{
+    namespace message
+    {
+            class Response_GetLaunchTokenResponse;
+    };
+};
 
 class AEGetLaunchTokenResponse : public IAEResponse
 {
     public:
         AEGetLaunchTokenResponse();
-        AEGetLaunchTokenResponse(int errorCode, uint32_t tokenLength, const uint8_t* token);
+        AEGetLaunchTokenResponse(aesm::message::Response_GetLaunchTokenResponse& response);
+        AEGetLaunchTokenResponse(uint32_t errorCode, uint32_t tokenLength, const uint8_t* token);
         AEGetLaunchTokenResponse(const AEGetLaunchTokenResponse& other);
 
         ~AEGetLaunchTokenResponse();
 
-        AEMessage* serialize(ISerializer* serializer);
-        bool inflateWithMessage(AEMessage* message, ISerializer* serializer);
-        void inflateValues(int errorCode, uint32_t tokenLength,const uint8_t* token);
+        AEMessage* serialize();
+        bool inflateWithMessage(AEMessage* message);
 
-        //inlines
-        int             GetTokenLength() const { return mTokenLength; }
-        const uint8_t*  GetToken()       const { return mToken; }
+        bool GetValues(uint32_t* result, uint8_t* token, uint32_t tokenLength) const;
 
         //operators
-        bool operator==(const AEGetLaunchTokenResponse& other) const;
         AEGetLaunchTokenResponse& operator=(const AEGetLaunchTokenResponse& other);
 
         //checks
         bool check();
-        virtual void visit(IAEResponseVisitor& visitor);
  protected:
         void ReleaseMemory();
-        void CopyFields(int errorCode, uint32_t tokenLength,const uint8_t* token);
 
-        uint32_t    mTokenLength;
-        uint8_t*    mToken;
+        aesm::message::Response_GetLaunchTokenResponse* m_response;
 };
 
 #endif

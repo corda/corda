@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -57,7 +57,7 @@ INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid     \
            -I$(IPC_COMMON_PROTO_DIR) \
            -I$(LINUX_PSW_DIR)/ae/aesm_service/source
 
-CXXFLAGS += -fPIC -Werror -DPROTOBUF_INLINE_NOT_IN_HEADERS=0
+CXXFLAGS += -fPIC -Werror -g -DPROTOBUF_INLINE_NOT_IN_HEADERS=0
 PROTPBUF_CXXFLAGS := -fstack-protector -fPIC -Wall -Werror
 ifdef DEBUG
 	PROTPBUF_CXXFLAGS += -ggdb -DDEBUG -UNDEBUG
@@ -70,7 +70,6 @@ else
 	PROTPBUF_CXXFLAGS += -m64
 endif
 PROTPBUF_CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
-
 
 EXTERNAL_LIB += -lprotobuf 
  
@@ -114,8 +113,7 @@ IPC_SRC  := AECloseSessionRequest.cpp    \
 PROTOBUF_SRC  :=  messages.pb.cc
 
 
-SRC :=       AEInternalServicesProvider.cpp \
-             AEServicesImpl.cpp \
+SRC :=       AEServicesImpl.cpp \
              AEServicesProvider.cpp \
              tae_ocall_api.cpp \
              uae_api.cpp \
@@ -127,38 +125,38 @@ SRC :=       AEInternalServicesProvider.cpp \
 OBJ := $(SRC:.cpp=.o) $(IPC_SRC:.cpp=.o)  $(PROTOBUF_SRC:.cc=.o) 
 
 LDUFLAGS:= -pthread -L$(BUILD_DIR)
-LDUFLAGS += -Wl,--version-script=uae_service.lds
+LDUFLAGS += -Wl,--version-script=uae_service.lds -Wl,--gc-sections
 
-DLLNAME  = libsgx_uae_service.so
-DLLNAME_DEBUG  = libsgx_uae_service.so.debug
+LIBNAME  = libsgx_uae_service.so
+LIBNAME_DEBUG  = libsgx_uae_service.so.debug
 
 
 .PHONY: all
-all:  install_dll
+all:  install_lib
  
 
-.PHONY: install_dll
-install_dll: $(DLLNAME) $(DLLNAME_DEBUG) | $(BUILD_DIR)
-	@$(CP) $(DLLNAME) $|
+.PHONY: install_lib
+install_lib: $(LIBNAME) $(LIBNAME_DEBUG) | $(BUILD_DIR)
+	@$(CP) $(LIBNAME) $|
 ifndef DEBUG
-	@$(CP) $(DLLNAME_DEBUG) $|
+	@$(CP) $(LIBNAME_DEBUG) $|
 endif
 
-$(DLLNAME): $(OBJ)
+$(LIBNAME): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -shared $(LDUFLAGS) $(EXTERNAL_LIB) -o $@
-$(DLLNAME_DEBUG): $(DLLNAME)
-	((test -f $(DLLNAME_DEBUG)) || $(MAKE) separate_debug_info)
+$(LIBNAME_DEBUG): $(LIBNAME)
+	((test -f $(LIBNAME_DEBUG)) || $(MAKE) separate_debug_info)
 
 .PHONY: separate_debug_info
 separate_debug_info:
 ifndef DEBUG
-	$(CP) $(DLLNAME) $(DLLNAME).orig
-	$(OBJCOPY) --only-keep-debug $(DLLNAME) $(DLLNAME_DEBUG)
-	$(STRIP) -g $(DLLNAME)
-	$(OBJCOPY) --add-gnu-debuglink=$(DLLNAME_DEBUG) $(DLLNAME)
+	$(CP) $(LIBNAME) $(LIBNAME).orig
+	$(OBJCOPY) --only-keep-debug $(LIBNAME) $(LIBNAME_DEBUG)
+	$(STRIP) -g $(LIBNAME)
+	$(OBJCOPY) --add-gnu-debuglink=$(LIBNAME_DEBUG) $(LIBNAME)
 endif
 
-ProtobufSerializer.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
+$(IPC_SRC:.cpp=.o) : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
 AEServicesImpl.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
 
 messages.pb.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
@@ -175,9 +173,9 @@ $(IPC_COMMON_PROTO_DIR)/messages.pb.cc: $(IPC_COMMON_PROTO_DIR)/messages.proto
 .PHONY: clean
 clean:
 	$(MAKE) -C $(IPC_COMMON_PROTO_DIR) clean
-	@$(RM) $(OBJ) $(DLLNAME).orig
-	@$(RM) $(DLLNAME) $(BUILD_DIR)/$(DLLNAME) 
-	@$(RM) $(DLLNAME_DEBUG) $(BUILD_DIR)/$(DLLNAME_DEBUG)
+	@$(RM) $(OBJ) $(LIBNAME).orig
+	@$(RM) $(LIBNAME) $(BUILD_DIR)/$(LIBNAME) 
+	@$(RM) $(LIBNAME_DEBUG) $(BUILD_DIR)/$(LIBNAME_DEBUG)
 
 .PHONY: rebuild
 rebuild:

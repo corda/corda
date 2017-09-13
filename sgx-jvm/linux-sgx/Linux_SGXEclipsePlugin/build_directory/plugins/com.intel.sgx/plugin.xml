@@ -12,20 +12,20 @@
 <!--                                                                       -->
 <?eclipse version="3.4"?>
 <plugin>
-  <extension id="com.intel.sgx.sgxbuilderdefinitions" name="Software Guard Extensions Builder Definition"
+  <extension id="com.intel.sgx.sgxbuilderdefinitions" name="Intel(R) Software Guard Extensions Builder Definition"
 	     point="org.eclipse.cdt.managedbuilder.core.buildDefinitions">
     <toolChain configurationEnvironmentSupplier="com.linux.ide.eclipse.ndk.internal.build.NdkEnvSupplier"
-	       id="com.intel.sgx.SGXtoolChain" isAbstract="false" name="SGX GCC"
+	       id="com.intel.sgx.SGXtoolChain" isAbstract="false" name="Intel(R) SGX"
 	       supportsManagedBuild="false">
       <builder cleanBuildTarget="clean" command="make"
 	       commandLauncher="com.intel.sgx.build.SGXSDKCommandLauncher" id="com.intel.sgx.sgxbuilder"
 	       isAbstract="false" isVariableCaseSensitive="false"
-	       name="Software Guard Extensions Linux Builder">
+	       name="Intel(R) Software Guard Extensions Linux Builder">
       </builder>
       <targetPlatform binaryParser="org.eclipse.cdt.core.ELF"
 		      id="com.intel.sgx.targetEnclave" isAbstract="false">
       </targetPlatform>
-      <tool id="com.intel.sgx.compiler" isAbstract="false" name="SGX GCC Compiler"
+      <tool id="com.intel.sgx.compiler" isAbstract="false" name="Intel(R) SGX"
 	    natureFilter="both">
 	<option browseType="directory" id="com.intel.sgx.option.includePath"
 		isAbstract="false" resourceFilter="all" valueType="includePath">
@@ -39,97 +39,97 @@
 
 
 
-    <configuration id="com.intel.sgx.configuration.Sim.Debug" name="SGX Simulation Debug">
+    <configuration id="com.intel.sgx.configuration.Sim.Debug" name="Intel(R) SGX Simulation Debug">
          <toolChain id="com.intel.sgx.toolChain.Sim.Debug" isAbstract="false"
-		     name="SGX GCC" superClass="com.intel.sgx.SGXtoolChain">
+		     name="Intel(R) SGX" superClass="com.intel.sgx.SGXtoolChain">
              <builder arguments="SGX_DEBUG=1 SGX_MODE=SIM -f sgx/Makefile" command="make"
 		         id="com.intel.sgx.builder2" isAbstract="false"
-        		 isVariableCaseSensitive="false" name="Software Guard Extensions Linux Builder"
+        		 isVariableCaseSensitive="false" name="Intel(R) Software Guard Extensions Linux Builder"
 		         superClass="com.intel.sgx.sgxbuilder">
         	</builder>
           </toolChain>
     </configuration>
 
-    <configuration id="com.intel.sgx.configuration.HW.Debug" name="SGX Hardware Debug">
+    <configuration id="com.intel.sgx.configuration.HW.Debug" name="Intel(R) SGX Hardware Debug">
          <toolChain id="com.intel.sgx.toolChain.HW.Debug" isAbstract="false"
-		     name="SGX GCC" superClass="com.intel.sgx.SGXtoolChain">
+		     name="Intel(R) SGX" superClass="com.intel.sgx.SGXtoolChain">
         	<builder arguments="SGX_DEBUG=1 SGX_MODE=HW -f sgx/Makefile" command="make"
 	        	 id="com.intel.sgx.builder1" isAbstract="false"
-		         isVariableCaseSensitive="false" name="Software Guard Extensions Linux Builder"
+		         isVariableCaseSensitive="false" name="Intel(R) Software Guard Extensions Linux Builder"
         		 superClass="com.intel.sgx.sgxbuilder">
 	        </builder>
          </toolChain>
     </configuration>
 
-   <configuration id="com.intel.sgx.configuration.Sim.Release" name="SGX Simulation">
+   <configuration id="com.intel.sgx.configuration.Sim.Release" name="Intel(R) SGX Simulation">
         <toolChain id="com.intel.sgx.toolChain.Sim.Release" isAbstract="false"
-   	     name="SGX GCC" superClass="com.intel.sgx.SGXtoolChain">
+   	     name="Intel(R) SGX" superClass="com.intel.sgx.SGXtoolChain">
             <builder arguments="SGX_DEBUG=0 SGX_MODE=SIM -f sgx/Makefile" command="make"
    	         id="com.intel.sgx.builder3" isAbstract="false"
-       		 isVariableCaseSensitive="false" name="Software Guard Extensions Linux Builder"
+       		 isVariableCaseSensitive="false" name="Intel(R) Software Guard Extensions Linux Builder"
    	         superClass="com.intel.sgx.sgxbuilder">
        	</builder>
          </toolChain>
    </configuration>
                                                                                                
-   <configuration id="com.intel.sgx.configuration.HW.Prerelease" name="SGX Hardware Prerelease">
+   <configuration id="com.intel.sgx.configuration.HW.Prerelease" name="Intel(R) SGX Hardware Prerelease">
         <toolChain id="com.intel.sgx.toolChain.HW.Prerelease" isAbstract="false"
-   	     name="SGX GCC" superClass="com.intel.sgx.SGXtoolChain">
+   	     name="Intel(R) SGX" superClass="com.intel.sgx.SGXtoolChain">
        	<builder arguments="SGX_PRERELEASE=1 SGX_MODE=HW -f sgx/Makefile" command="make"
            	 id="com.intel.sgx.builder5" isAbstract="false"
-   	         isVariableCaseSensitive="false" name="Software Guard Extensions Linux Builder"
+   	         isVariableCaseSensitive="false" name="Intel(R) Software Guard Extensions Linux Builder"
        		 superClass="com.intel.sgx.sgxbuilder">
            </builder>
         </toolChain>
    </configuration>
 
-   <configuration id="com.intel.sgx.configuration.HW.Release" name="SGX Hardware Release">
+   <configuration id="com.intel.sgx.configuration.HW.Release" name="Intel(R) SGX Hardware Release">
         <toolChain id="com.intel.sgx.toolChain.HW.Release" isAbstract="false"
-   	     name="SGX GCC" superClass="com.intel.sgx.SGXtoolChain">
+   	     name="Intel(R) SGX" superClass="com.intel.sgx.SGXtoolChain">
        	<builder arguments="SGX_DEBUG=0 SGX_MODE=HW -f sgx/Makefile" command="make"
            	 id="com.intel.sgx.builder6" isAbstract="false"
-   	         isVariableCaseSensitive="false" name="Software Guard Extensions Linux Builder"
+   	         isVariableCaseSensitive="false" name="Intel(R) Software Guard Extensions Linux Builder"
        		 superClass="com.intel.sgx.sgxbuilder">
            </builder>
         </toolChain>
    </configuration>
 
 </extension>
-<extension id="com.intel.sgx.SGXPerProjectProfile" name="SGX Per Project Profile"
+<extension id="com.intel.sgx.SGXPerProjectProfile" name="Intel(R) SGX Per Project Profile"
 	   point="org.eclipse.cdt.make.core.ScannerConfigurationDiscoveryProfile">
   <scannerInfoCollector
       class="com.intel.sgx.discovery.SGXSDKScannerInfoCollector" scope="project">
   </scannerInfoCollector>
 </extension>
-<extension id="com.intel.sgx.commands" name="SGX Commands"
+<extension id="com.intel.sgx.commands" name="Intel(R) SGX Commands"
 	   point="org.eclipse.ui.commands">
-  <category id="com.intel.sgx.category.enclaveIF" name="SGX Untrusted Enclave Interface">
+  <category id="com.intel.sgx.category.enclaveIF" name="Intel(R) SGX Untrusted Enclave Interface">
   </category>
-  <category id="com.intel.sgx.category.trustedIF" name="SGX Trusted Enclave Interface">
+  <category id="com.intel.sgx.category.trustedIF" name="Intel(R) SGX Trusted Enclave Interface">
   </category>
   <command categoryId="com.intel.sgx.category.enclaveIF" id="com.intel.sgx.command.addEnclave"
-	   name="Add SGX Enclave">
+	   name="Add Intel(R) SGX Enclave">
     <commandParameter id="com.intel.sgx.commandParameter3"
 		      name="name" optional="true">
     </commandParameter>
   </command>
   <command categoryId="com.intel.sgx.category.enclaveIF" id="com.intel.sgx.command.addTrustedStaticLib"
-	   name="Add SGX Trusted Static Library">
+	   name="Add Intel(R) SGX Trusted Static Library">
     <commandParameter id="com.intel.sgx.commandParameter3"
 		      name="name" optional="true">
     </commandParameter>
   </command>
   <command categoryId="com.intel.sgx.category.enclaveIF" id="com.intel.sgx.command.removeEnclave"
-	   name="Remove SGX Enclave">
+	   name="Remove Intel(R) SGX Enclave">
   </command>
   <command categoryId="com.intel.sgx.category.enclaveIF" id="com.intel.sgx.command.addUntrustedModule"
-	   name="Add SGX Untrusted Module">
+	   name="Add Intel(R) SGX Untrusted Module">
   </command>
   <command categoryId="com.intel.sgx.category.enclaveIF" id="com.intel.sgx.command.addSGXNature"
-	   name="Add SGX Nature">
+	   name="Add Intel(R) SGX Nature">
   </command>
   <command categoryId="com.intel.sgx.category.enclaveIF" id="com.intel.sgx.command.updateSigningKey"
-	   name="Update SGX Enclave Signing Key">
+	   name="Update Intel(R) SGX Enclave Signing Key">
   </command>
   <command categoryId="com.intel.sgx.category.enclaveIF"
 	   id="com.intel.sgx.command.enclaveConfigHandler" name="Update Config">
@@ -144,7 +144,7 @@
 <extension point="org.eclipse.ui.menus">
   <menuContribution allPopups="false"
 		    locationURI="popup:org.eclipse.ui.popup.any?after=additions">
-    <menu label="Software Guard Extension Tools">
+    <menu label="Intel(R) Software Guard Extensions Tools">
       	<visibleWhen checkEnabled="false">
 	  <with variable="selection">
 	    <test property="com.intel.sgx.testers.sgxNatureAdded"
@@ -281,7 +281,7 @@
       </menu>
 
     </menu>
-    <menu label="Software Guard Extension Options">
+    <menu label="Intel(R) Software Guard Extensions Options">
       <visibleWhen checkEnabled="false">
 	<with variable="selection">
 	  <iterate ifEmpty="false" operator="or">
@@ -367,7 +367,7 @@
 </extension>
 <extension point="org.eclipse.ui.preferencePages">
   <page class="com.intel.sgx.preferences.SGXPreferencePage" id="com.intel.sgx.preferences.SGXPreferencePage"
-	name="SGX Preferences">
+	name="Intel(R) SGX Preferences">
   </page>
 </extension>
 <extension point="org.eclipse.core.runtime.preferences">
@@ -677,7 +677,7 @@
 
 
   <template id="com.intel.sgx.AddSGXNature" location="templates/SGXtemplates/common/addnaturetemplate.xml"
-	    projectType="Software Guard Extensions Project">
+	    projectType="Intel(R) Software Guard Extensions Project">
   </template>
 
   <template id="com.intel.sgx.SGXEnclaveConfig" location="templates/SGXtemplates/configtemplate.xml"
@@ -715,19 +715,19 @@
 	    natures="org.eclipse.cdt.core.cnature">
   </provider>
 </extension>
-<extension id="sgxnature" name="SGX Nature"
+<extension id="sgxnature" name="Intel(R) SGX Nature"
 	   point="org.eclipse.core.resources.natures">
   <runtime>
     <run class="com.intel.sgx.natures.SGXNature" />
   </runtime>
 </extension>
-<extension id="sgxccnature" name="SGX CCNature"
+<extension id="sgxccnature" name="Intel(R) SGX CCNature"
 	   point="org.eclipse.core.resources.natures">
   <runtime>
     <run class="com.intel.sgx.natures.SGXCCNature" />
   </runtime>
 </extension>
-<extension id="sgxstaticccnature" name="SGX StaticCCNature"
+<extension id="sgxstaticccnature" name="Intel(R) SGX StaticCCNature"
 	   point="org.eclipse.core.resources.natures">
   <runtime>
     <run class="com.intel.sgx.natures.SGXStaticCCNature" />
@@ -748,7 +748,7 @@
   <category
       id = "com.intel.sgx.wizzards"
 
-name="C/C++ projects with SGX Enabled">
+name="C/C++ projects with Intel(R) SGX Enabled">
   </category>
 
   <wizard
@@ -762,7 +762,7 @@ name="C/C++ projects with SGX Enabled">
       name="C Project"
       project="true">
     <description>
-      An C project, with SGX Commands and Configurations
+      An C project, with Intel(R) SGX Commands and Configurations
     </description>
   </wizard>
 
@@ -777,7 +777,7 @@ name="C/C++ projects with SGX Enabled">
       name="C++ Project"
       project="true">
     <description>
-      An C++ project, with SGX Commands and Configurations
+      An C++ project, with Intel(R) SGX Commands and Configurations
     </description>
   </wizard>
   

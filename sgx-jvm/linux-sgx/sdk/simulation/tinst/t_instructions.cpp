@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -177,8 +177,8 @@ static int _EGETKEY(sgx_key_request_t* kr, sgx_key_128bit_t okey)
         memcpy(&dd.ddrk.key_id, &kr->key_id, sizeof(sgx_key_id_t));
         break;
 
-    case SGX_KEYSELECT_EINITOKEN:
-        check_attr_flag(cur_secs, SGX_FLAGS_EINITOKEN_KEY);
+    case SGX_KEYSELECT_EINITTOKEN:
+        check_attr_flag(cur_secs, SGX_FLAGS_EINITTOKEN_KEY);
         check_isv_svn(kr, cur_secs);
         check_cpu_svn(kr);
 

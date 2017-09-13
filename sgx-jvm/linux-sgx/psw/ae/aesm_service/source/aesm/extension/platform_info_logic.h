@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,18 +42,35 @@ struct update_pse_thread_func_arg;
 /*File to declare PlatformInfoLogic Class which is platform independent*/
 class PlatformInfoLogic{
 public:
+    static ae_error_t update_pse_thread_func(const platform_info_blob_wrapper_t* p_platform_info, uint32_t attestation_status);
     static aesm_error_t report_attestation_status(
         uint8_t* platform_info, uint32_t platform_info_size,
         uint32_t attestation_status,
         uint8_t* update_info, uint32_t update_info_size);
+    static ae_error_t check_ltp_thread_func(bool& is_new_pairing);//call get_long_term_pairing_thread_status().start_check_ltp(is_new_pairing) to invoke the function with time_out
+    static ae_error_t create_session_pre_internal(void);
     static ae_error_t need_epid_provisioning(const platform_info_blob_wrapper_t* p_platform_info_blob);
+    static ae_error_t need_pse_cert_provisioning();
+    static ae_error_t attestation_failure_in_pse_cert_provisioning(const platform_info_blob_wrapper_t* p_platform_info_blob);
+    static ae_error_t pse_cert_provisioning_helper(const platform_info_blob_wrapper_t* p_platform_info_blob);
+    static ae_error_t need_long_term_pairing(const platform_info_blob_wrapper_t* platformInfoBlobWrapper);
+    
+    static uint32_t latest_psda_svn(const platform_info_blob_wrapper_t* p_platform_info_blob);    
+    static uint16_t latest_pse_svn(const platform_info_blob_wrapper_t* p_platform_info_blob);
+
+    static bool cse_gid_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
     static bool sgx_gid_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
     static bool cpu_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
     static bool qe_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
     static bool pce_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
+    static bool pse_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
+    static bool psda_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
+    static bool ps_collectively_not_uptodate(const platform_info_blob_wrapper_t* p_platform_info_blob);
+    static bool old_epid11_rls(const platform_info_blob_wrapper_t* p_platform_info_blob);
     static bool performance_rekey_available(const platform_info_blob_wrapper_t* p_platform_info_blob);
 private:
     static ae_error_t get_sgx_epid_group_flags(const platform_info_blob_wrapper_t* p_platform_info_blob, uint8_t* flags);
+    static ae_error_t get_pse_evaluation_flags(const platform_info_blob_wrapper_t* p_platform_info_blob, uint16_t* flags);
     static ae_error_t get_sgx_tcb_evaluation_flags(const platform_info_blob_wrapper_t* p_platform_info_blob, uint16_t* flags);
 
 };

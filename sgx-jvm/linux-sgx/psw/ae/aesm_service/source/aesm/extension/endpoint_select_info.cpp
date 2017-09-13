@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -93,8 +93,8 @@ static ae_error_t ipp_error_to_ae_error(IppStatus ipp_status)
 static bool is_valid_server_url_infos(const aesm_server_url_infos_t& server_urls)
 {
     if(server_urls.aesm_data_type!=AESM_DATA_SERVER_URL_INFOS||
-        server_urls.aesm_data_version!=AESM_DATA_SERVER_URL_VERSION&&
-        server_urls.aesm_data_version != AESM_DATA_SERVER_URL_VERSION_1)//still support version 1 since the first 3 urls in version 1 is still same as the urls in version 2
+        (server_urls.aesm_data_version!=AESM_DATA_SERVER_URL_VERSION&&
+        server_urls.aesm_data_version != AESM_DATA_SERVER_URL_VERSION_1))//still support version 1 since the first 3 urls in version 1 is still same as the urls in version 2
         return false;
     if(strnlen(server_urls.endpoint_url,MAX_PATH)>=MAX_PATH)
         return false;
@@ -203,8 +203,9 @@ ae_error_t EndpointSelectionInfo::verify_signature(const endpoint_selection_info
     IppStatus ipp_status = ippStsNoErr;
     uint8_t msg_buf[XID_SIZE + sizeof(ttl) + MAX_PATH];
     uint32_t buf_size = 0;
-    extended_epid_group_blob_t xegb={0};
+    extended_epid_group_blob_t xegb;
 
+    memset(&xegb, 0, sizeof(xegb));
     if (AE_SUCCESS != (ae_err=XEGDBlob::instance().read(xegb))){
         return ae_err;
     }
@@ -412,5 +413,9 @@ void EndpointSelectionInfo::get_proxy(uint32_t& proxy_type, char proxy_url[MAX_P
          _is_white_list_url_valid=true;
     }
     proxy_type = _config_urls.proxy_type;
-    strcpy(proxy_url, _config_urls.aesm_proxy);
+    strcpy_s(proxy_url, MAX_PATH, _config_urls.aesm_proxy);
+}
+const char *EndpointSelectionInfo::get_pse_provisioning_url(const endpoint_selection_infos_t& es_info)
+{
+    return es_info.provision_url;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,6 +74,21 @@ sgx_status_t SGXAPI sgx_init_quote(
 
 
 /*
+ * Function used to calculate quote size.
+ *
+ * @param p_sig_rl[in] OPTIONAL Signature Revocation List.
+ * @param sig_rl_size[in] Signature Revocation List size, in bytes.
+ * @param p_quote_size[out] Quote size, in bytes.
+ * @return If quote size is calculated,return SGX_SUCCESS, otherwise return
+ *            SGX_ERROR_INVALID_PARAMETER to indicate special error condition.
+ */
+sgx_status_t SGXAPI sgx_calc_quote_size(
+    const uint8_t *p_sig_rl,
+    uint32_t sig_rl_size,
+    uint32_t* p_quote_size);
+
+/*
+ * [DEPRECATED] Use sgx_calc_quote_size function instead of this one
  * Function used to get quote size.
  *
  * @param p_sig_rl[in] OPTIONAL Signature Revocation List.
@@ -81,6 +96,7 @@ sgx_status_t SGXAPI sgx_init_quote(
  * @return If quote size is calculated,return SGX_SCCUESS, otherwise return
  *            SGX_ERROR_INVALID_PARAMETER to indicate special error condition.
  */
+SGX_DEPRECATED
 sgx_status_t SGXAPI sgx_get_quote_size(
     const uint8_t *p_sig_rl,
     uint32_t* p_quote_size);

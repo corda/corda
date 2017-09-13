@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
  *
  */
 
-void Java_com_voidel_security_sgx_uae_SGX_1AEServices_initializeNativeAEServices(){}
 void sgx_get_quote(){}
 void sgx_get_quote_size(){}
 void sgx_init_quote(){}
@@ -44,3 +43,4 @@ void exchange_report_ocall(){}
 void invoke_service_ocall(){}
 void sgx_report_attestation_status(){}
 void sgx_get_ps_cap(){}
+void sgx_calc_quote_size(){}

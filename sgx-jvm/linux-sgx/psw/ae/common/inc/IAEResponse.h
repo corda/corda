@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,73 +31,20 @@
 #ifndef __AE_RESPONSE_H
 #define __AE_RESPONSE_H
 
-#include <stdio.h>
 #include <stdint.h>
-#include <sgx_error.h>
-#include <Config.h>
+class AEMessage;
 
 
-struct AEMessage;
-class ISerializer;
+class IAEResponse {
+public:
+    IAEResponse() {}
+    inline virtual ~IAEResponse() {}
+    virtual AEMessage*  serialize() = 0;
+    virtual bool        inflateWithMessage(AEMessage* message) = 0;
 
-class AECloseSessionResponse;
-class AEExchangeReportResponse;
-class AEInvokeServiceResponse;
-class AECreateSessionResponse;
-class AEReportAttestationResponse;
-class AEGetLaunchTokenResponse;
-class AEGetQuoteResponse;
-class AEInitQuoteResponse;
-class AEGetPsCapResponse;
-class AEGetWhiteListSizeResponse;
-class AEGetWhiteListResponse;
-class AESGXGetExtendedEpidGroupIdResponse;
-class AESGXSwitchExtendedEpidGroupResponse;
-
-#include <iostream>
-
-class IAEResponseVisitor
-{
- public:
-  virtual void visitInitQuoteResponse(AEInitQuoteResponse&) = 0;
-  virtual void visitGetQuoteResponse(AEGetQuoteResponse&) = 0;
-  virtual void visitGetLaunchTokenResponse(AEGetLaunchTokenResponse&) = 0;
-  virtual void visitReportAttestationResponse(AEReportAttestationResponse&) = 0;
-  virtual void visitCreateSessionResponse(AECreateSessionResponse&) = 0;
-  virtual void visitInvokeServiceResponse(AEInvokeServiceResponse&) = 0;
-  virtual void visitExchangeReportResponse(AEExchangeReportResponse&) = 0;
-  virtual void visitCloseSessionResponse(AECloseSessionResponse&) = 0;
-  virtual void visitGetPsCapResponse(AEGetPsCapResponse&) = 0;
-  virtual void visitGetWhiteListSizeResponse(AEGetWhiteListSizeResponse&) = 0;
-  virtual void visitGetWhiteListResponse(AEGetWhiteListResponse&) = 0;
-  virtual void visitSGXGetExtendedEpidGroupIdResponse(AESGXGetExtendedEpidGroupIdResponse&) = 0;
-  virtual void visitSGXSwitchExtendedEpidGroupResponse(AESGXSwitchExtendedEpidGroupResponse&) = 0;
-
-  virtual ~IAEResponseVisitor() {};
-};
-
-class IAEResponse{
-    public:
-        IAEResponse() : mErrorCode(SGX_ERROR_UNEXPECTED),mValidSizeCheck(false) {}
-        inline virtual ~IAEResponse() {}
-        virtual AEMessage*  serialize(ISerializer* serializer) =0;
-        virtual bool        inflateWithMessage(AEMessage* message, ISerializer* serializer) =0;
-
-        //operators
-        virtual bool operator==(const IAEResponse& other) const {return this == &other;}
-
-        //this method is added especially for future compatibility (may be used to check thigs like the message MAC)
-        virtual bool check() {return false;} //although only some responses will need more complex logic here, this will default to
-        //invalid. Validity needs to be explicitly declared in children :)
-
-        inline int      GetErrorCode()        const { return mErrorCode; }
-        inline void     SetErrorCode(uint32_t error) { mErrorCode = error; }
-
-        virtual void visit(IAEResponseVisitor& visitor) = 0;
-
-    protected:
-        uint32_t    mErrorCode;
-        bool mValidSizeCheck;
+    //this method is added especially for future compatibility (may be used to check things like the message MAC)
+    virtual bool check() { return false; } //although only some responses will need more complex logic here, this will default to
+    //invalid. Validity needs to be explicitly declared in children :)
 
 };
 

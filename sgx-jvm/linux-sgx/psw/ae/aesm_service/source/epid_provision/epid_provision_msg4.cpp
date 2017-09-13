@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -203,7 +203,7 @@ uint32_t CPVEClass::proc_prov_msg4(
             ret = AE_FAILURE;
             break;
         }
-        sgx_status_t sgx_status = sgx_rijndael128GCM_decrypt(reinterpret_cast<const sgx_aes_gcm_128bit_key_t *>(local_ek2),
+        sgx_status = sgx_rijndael128GCM_decrypt(reinterpret_cast<const sgx_aes_gcm_128bit_key_t *>(local_ek2),
             field1.msg_buf, field1.msg_size, decoded_msg4,
             reinterpret_cast<uint8_t *>(block_cipher_tlv_get_iv(MSG4_TOP_FIELD_DATA)), IV_SIZE,
             aad, sizeof(aad),

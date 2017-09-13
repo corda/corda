@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ CPPFLAGS := -I$(COMMON_DIR)/inc           \
 SRCS := $(wildcard ./*.cpp)
 SRCS += $(SIM_DIR)/urtssim/cpusvn_util.cpp
 
-OBJS := $(SRCS:.cpp=.o)
+OBJS := $(sort $(SRCS:.cpp=.o))
 
 WRAPPER_LIB_DIR := $(COMMON_DIR)/se_wrapper
 LDFLAGS := -L$(WRAPPER_LIB_DIR)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,7 +46,7 @@ static const uint8_t BASE_REPORT_KEY[] = {
 };
 
 // The built-in EINIT token key in simulation mode
-static const uint8_t BASE_EINITOKEN_KEY[] = {
+static const uint8_t BASE_EINITTOKEN_KEY[] = {
     0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,
     0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,
 };
@@ -70,8 +70,8 @@ const uint8_t* get_base_key(uint16_t key_name)
         return BASE_SEAL_KEY;
     case SGX_KEYSELECT_REPORT:
         return BASE_REPORT_KEY;
-    case SGX_KEYSELECT_EINITOKEN:
-        return BASE_EINITOKEN_KEY;
+    case SGX_KEYSELECT_EINITTOKEN:
+        return BASE_EINITTOKEN_KEY;
     case SGX_KEYSELECT_PROVISION:
         return BASE_PROVISION_KEY;
     case SGX_KEYSELECT_PROVISION_SEAL:

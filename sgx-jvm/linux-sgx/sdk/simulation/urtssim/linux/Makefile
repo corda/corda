@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -134,10 +134,6 @@ $(LIBURTSSIM_SHARED): simasm uinst driver_api wrapper uae_service_sim $(OBJ) $(O
 endif
 
 $(LIBURTSSIM_DEBUG): $(LIBURTSSIM_SHARED)
-	((test -f $(LIBURTSSIM_DEBUG)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
 ifndef DEBUG
 	$(CP) $(LIBURTSSIM_SHARED) $(LIBURTSSIM_SHARED).orig
 	$(OBJCOPY) --only-keep-debug $(LIBURTSSIM_SHARED) $(LIBURTSSIM_DEBUG)

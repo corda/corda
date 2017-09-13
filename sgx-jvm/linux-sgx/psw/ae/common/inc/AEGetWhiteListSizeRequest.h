@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,31 +32,35 @@
 #define __AE_GET_WHITE_LIST_SIZE_REQUEST_H
 
 #include <IAERequest.h>
-class IAESMLogic;
+
+namespace aesm
+{
+    namespace message
+    {
+        class Request_GetWhiteListSizeRequest;
+    };
+};
 
 class AEGetWhiteListSizeRequest : public IAERequest{
     public:
+        AEGetWhiteListSizeRequest(const aesm::message::Request_GetWhiteListSizeRequest& request);
         AEGetWhiteListSizeRequest(uint32_t timeout = 0);
         AEGetWhiteListSizeRequest(const AEGetWhiteListSizeRequest& other);
         ~AEGetWhiteListSizeRequest();
 
-        void ReleaseMemory();
-
-        AEMessage*  serialize(ISerializer* serializer);
-
-        //inflater -> empty for now ... but soon
-        void inflateValues(uint32_t timeout = 0);
-
+        AEMessage*  serialize();
         //checks
-        bool check() {return true;} // no special check for this object. Maybe later
+        bool check();
         virtual IAEResponse* execute(IAESMLogic*);
 
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
-        bool operator==(const AEGetWhiteListSizeRequest& other) const;
         AEGetWhiteListSizeRequest& operator=(const AEGetWhiteListSizeRequest& other);
-        void visit(IAERequestVisitor& visitor);
-        void CopyFields(uint32_t timeout);
+
+    protected:
+        //release all members
+        void ReleaseMemory();
+        aesm::message::Request_GetWhiteListSizeRequest* m_request;
 };
 
 #endif

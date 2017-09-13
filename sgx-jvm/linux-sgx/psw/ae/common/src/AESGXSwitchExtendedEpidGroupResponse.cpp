@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,24 +28,36 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
 #include <AESGXSwitchExtendedEpidGroupResponse.h>
 
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
 AESGXSwitchExtendedEpidGroupResponse::AESGXSwitchExtendedEpidGroupResponse()
+    :m_response(NULL)
 {
 }
 
-AESGXSwitchExtendedEpidGroupResponse::AESGXSwitchExtendedEpidGroupResponse(int errorCode)
+AESGXSwitchExtendedEpidGroupResponse::AESGXSwitchExtendedEpidGroupResponse(aesm::message::Response::SGXSwitchExtendedEpidGroupResponse& response)
+    :m_response(NULL)
 {
-    CopyFields(errorCode);
+    m_response = new aesm::message::Response::SGXSwitchExtendedEpidGroupResponse(response);
+}
+
+AESGXSwitchExtendedEpidGroupResponse::AESGXSwitchExtendedEpidGroupResponse(uint32_t errorCode)
+    :m_response(NULL)
+{
+    m_response = new aesm::message::Response::SGXSwitchExtendedEpidGroupResponse();
+    m_response->set_errorcode(errorCode);
 }
 
 AESGXSwitchExtendedEpidGroupResponse::AESGXSwitchExtendedEpidGroupResponse(const AESGXSwitchExtendedEpidGroupResponse& other)
+    :m_response(NULL)
 {
-    CopyFields(other.mErrorCode);
+    if (other.m_response != NULL)
+        m_response = new aesm::message::Response::SGXSwitchExtendedEpidGroupResponse(*other.m_response);
 }
 
 AESGXSwitchExtendedEpidGroupResponse::~AESGXSwitchExtendedEpidGroupResponse()
@@ -55,38 +67,50 @@ AESGXSwitchExtendedEpidGroupResponse::~AESGXSwitchExtendedEpidGroupResponse()
 
 void AESGXSwitchExtendedEpidGroupResponse::ReleaseMemory()
 {
+    if (m_response != NULL)
+    {
+        delete m_response;
+        m_response = NULL;
+    }
 }
 
-void AESGXSwitchExtendedEpidGroupResponse::CopyFields(int errorCode)
+
+AEMessage* AESGXSwitchExtendedEpidGroupResponse::serialize()
 {
-    mErrorCode = errorCode;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    if (check())
+    {
+        aesm::message::Response::SGXSwitchExtendedEpidGroupResponse* mutableRes = msg.mutable_sgxswitchextendedepidgroupres();
+        mutableRes->CopyFrom(*m_response);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-AEMessage* AESGXSwitchExtendedEpidGroupResponse::serialize(ISerializer* serializer)
+bool AESGXSwitchExtendedEpidGroupResponse::inflateWithMessage(AEMessage* message)
 {
-    return serializer->serialize(this);
-}
-
-bool AESGXSwitchExtendedEpidGroupResponse::inflateWithMessage(AEMessage* message, ISerializer* serializer)
-{
-    return serializer->inflateResponse(message, this);
-}
-
-void AESGXSwitchExtendedEpidGroupResponse::inflateValues(int errorCode)
-{
-    ReleaseMemory();
-
-    CopyFields(errorCode);
-}
-
-bool AESGXSwitchExtendedEpidGroupResponse::operator==(const AESGXSwitchExtendedEpidGroupResponse& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mErrorCode != other.mErrorCode)
+    aesm::message::Response msg;
+    msg.ParseFromArray(message->data, message->size);
+    if (msg.has_sgxswitchextendedepidgroupres() == false)
         return false;
 
+    //this is an AESGXSwitchExtendedEpidGroupResponse
+    ReleaseMemory();
+    m_response = new aesm::message::Response::SGXSwitchExtendedEpidGroupResponse(msg.sgxswitchextendedepidgroupres());
+    return true;
+}
+
+bool AESGXSwitchExtendedEpidGroupResponse::GetValues(uint32_t* errorCode) const
+{
+    *errorCode = m_response->errorcode();
     return true;
 }
 
@@ -95,19 +119,17 @@ AESGXSwitchExtendedEpidGroupResponse& AESGXSwitchExtendedEpidGroupResponse::oper
     if (this == &other)
         return *this;
 
-    inflateValues(other.mErrorCode);
-
+    ReleaseMemory();
+    if (other.m_response != NULL)
+    {
+        m_response = new aesm::message::Response::SGXSwitchExtendedEpidGroupResponse(*other.m_response);
+    }
     return *this;
 }
 
 bool AESGXSwitchExtendedEpidGroupResponse::check()
 {
-    if (mErrorCode != SGX_SUCCESS)
+    if (m_response == NULL)
         return false;
-    return true;
-}
-
-void AESGXSwitchExtendedEpidGroupResponse::visit(IAEResponseVisitor& visitor)
-{
-    visitor.visitSGXSwitchExtendedEpidGroupResponse(*this);
+    return m_response->IsInitialized();
 }

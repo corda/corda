@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,80 +33,78 @@
 #include <AECloseSessionResponse.h>
 #include <IAESMLogic.h>
 
-#include <string.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AECloseSessionRequest::AECloseSessionRequest()
-:mSessionId(0) 
+AECloseSessionRequest::AECloseSessionRequest(const aesm::message::Request::CloseSessionRequest& request)
+    :m_request(NULL)
 {
+    m_request = new aesm::message::Request::CloseSessionRequest();
+    m_request->CopyFrom(request);
 }
 
 AECloseSessionRequest::AECloseSessionRequest(uint32_t sessionId, uint32_t timeout)
-:mSessionId(0)
+    :m_request(NULL)
 
 {
-    CopyFields(sessionId, timeout);
+    m_request = new aesm::message::Request::CloseSessionRequest();
+    m_request->set_session_id(sessionId);
+    m_request->set_timeout(timeout);
 }
 
 AECloseSessionRequest::AECloseSessionRequest(const AECloseSessionRequest& other)
-:IAERequest(other), mSessionId(0)
+    :m_request(NULL)
 {
-    CopyFields(other.mSessionId, other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::CloseSessionRequest(*other.m_request);
 }
 
 AECloseSessionRequest::~AECloseSessionRequest()
 {
-    ReleaseMemory();
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AECloseSessionRequest::ReleaseMemory()
+AEMessage* AECloseSessionRequest::serialize()
 {
-    mSessionId = 0;
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
+    {
+        aesm::message::Request::CloseSessionRequest* mutableReq = msg.mutable_closesessionreq();
+        mutableReq->CopyFrom(*m_request);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
+    }
+    return ae_msg;
 }
 
-void AECloseSessionRequest::CopyFields(uint32_t sessionId, uint32_t timeout)
-{
-    mSessionId = sessionId;
-    mTimeout = timeout;
-}
-
-AEMessage* AECloseSessionRequest::serialize(ISerializer* serializer)
-{
-    return serializer->serialize(this);
-}
-
-void AECloseSessionRequest::inflateValues(uint32_t sessionId, uint32_t timeout)
-{
-    ReleaseMemory();
-    
-    CopyFields(sessionId, timeout);
-}
-
-bool AECloseSessionRequest::operator==(const AECloseSessionRequest& other) const
-{
-    if (this == &other)
-        return true;
-
-    if (mSessionId != other.mSessionId ||
-        mTimeout != other.mTimeout)
-        return false;
-
-    return true;
-}
 
 AECloseSessionRequest& AECloseSessionRequest::operator=(const AECloseSessionRequest& other)
 {
     if (this == &other)
         return *this;
-
-    inflateValues(other.mSessionId, other.mTimeout);
-
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::CloseSessionRequest(*other.m_request);
     return *this;
 }
 
 bool AECloseSessionRequest::check()
 {
-    return true;
+    if (m_request == NULL)
+        return false;
+    return m_request->IsInitialized();
 }
 
 IAERequest::RequestClass AECloseSessionRequest::getRequestClass()
@@ -116,13 +114,13 @@ IAERequest::RequestClass AECloseSessionRequest::getRequestClass()
 
 IAEResponse* AECloseSessionRequest::execute(IAESMLogic* aesmLogic)
 {
-    aesm_error_t result; 
-    result = aesmLogic->closeSession(mSessionId);
-    
-    return new AECloseSessionResponse(result);
-}
 
-void AECloseSessionRequest::visit(IAERequestVisitor& visitor)
-{
-    visitor.visitCloseSessionRequest(*this);
+    IAEResponse* response = NULL;
+    if (check())
+    {
+
+        aesm_error_t result = aesmLogic->closeSession(m_request->session_id());
+        response = new AECloseSessionResponse(result);
+    }
+    return response;
 }

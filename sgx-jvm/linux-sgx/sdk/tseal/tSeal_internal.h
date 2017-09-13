@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,10 +36,18 @@
 #include <stdint.h>
 #include "sgx_tseal.h"
 
-/* set MISCMASK.exinfo_bit = 0 for data migration to the enclave 
-   built with the SDK that supports exinfo bit */
-#define SGX_MISCSEL_EXINFO     0x00000001  /* report #PF and #GP inside enclave */
-#define TSEAL_DEFAULT_MISCMASK (~SGX_MISCSEL_EXINFO)
+/* Set the bits which have no security implications to 0 for sealed data migration */
+/* Bits which have no security implications in attributes.flags:
+ *    Reserved bit[55:6]  - 0xFFFFFFFFFFFFC0ULL
+ *    SGX_FLAGS_MODE64BIT
+ *    SGX_FLAGS_PROVISION_KEY
+ *    SGX_FLAGS_EINITTOKEN_KEY */
+#define FLAGS_NON_SECURITY_BITS     (0xFFFFFFFFFFFFC0ULL | SGX_FLAGS_MODE64BIT | SGX_FLAGS_PROVISION_KEY| SGX_FLAGS_EINITTOKEN_KEY)
+#define TSEAL_DEFAULT_FLAGSMASK     (~FLAGS_NON_SECURITY_BITS)
+
+#define MISC_NON_SECURITY_BITS      0x0FFFFFFF  /* bit[27:0]: have no security implications */
+#define TSEAL_DEFAULT_MISCMASK      (~MISC_NON_SECURITY_BITS)
+
 
 #ifdef __cplusplus
 extern "C" {

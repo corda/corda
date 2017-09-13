@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@ extern "C" sgx_status_t sgx_seal_data(const uint32_t additional_MACtext_length,
 {
     sgx_status_t err = SGX_ERROR_UNEXPECTED;
     sgx_attributes_t attribute_mask;
-    attribute_mask.flags = SGX_FLAGS_RESERVED | SGX_FLAGS_INITTED | SGX_FLAGS_DEBUG;
+    attribute_mask.flags = TSEAL_DEFAULT_FLAGSMASK;
     attribute_mask.xfrm = 0x0;
 
     err = sgx_seal_data_ex(SGX_KEYPOLICY_MRSIGNER, attribute_mask, TSEAL_DEFAULT_MISCMASK, additional_MACtext_length,

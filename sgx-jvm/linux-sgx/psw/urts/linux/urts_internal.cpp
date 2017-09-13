@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,7 +47,7 @@ extern "C" sgx_status_t sgx_create_le(const char* file_name, const char* prd_css
 {
     sgx_status_t ret = SGX_SUCCESS;
 
-    //Only true or flase is valid
+    //Only true or false is valid
     if(TRUE != debug &&  FALSE != debug)
         return SGX_ERROR_INVALID_PARAMETER;
 

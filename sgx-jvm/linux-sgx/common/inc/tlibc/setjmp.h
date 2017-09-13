@@ -40,11 +40,11 @@
 #define _SETJMP_H_
 
 #ifndef _JB_ATTRIBUTES
-#define _JB_ATTRIBUTES	/**/
+#define _JB_ATTRIBUTES /**/
 #else
 #endif
 #ifndef _BSD_JBSLOT_T_
-#define	_BSD_JBSLOT_T_	long
+#define _BSD_JBSLOT_T_ long
 #endif
 
 #define _JBLEN 8 
@@ -55,9 +55,10 @@ typedef _BSD_JBSLOT_T_ jmp_buf[_JBLEN] _JB_ATTRIBUTES;
 #define __returns_twice __attribute__((__returns_twice__))
 #define __dead 
 
+
 __BEGIN_DECLS
-int	_setjmp(jmp_buf) __returns_twice;
-void	_longjmp(jmp_buf, int) __dead;
+int setjmp(jmp_buf) __returns_twice;
+void longjmp(jmp_buf, int) __dead;
 __END_DECLS
 
 #endif /* !_SETJMP_H_ */

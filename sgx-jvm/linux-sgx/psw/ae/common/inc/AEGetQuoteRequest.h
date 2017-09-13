@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,12 +33,18 @@
 
 #include  <IAERequest.h>
 #include <stdint.h>
-class IAESMLogic;
 
+namespace aesm
+{
+    namespace message
+    {
+        class Request_GetQuoteRequest;
+    };
+};
 class AEGetQuoteRequest : public IAERequest
 {
     public:
-        AEGetQuoteRequest();
+        AEGetQuoteRequest(const aesm::message::Request_GetQuoteRequest& request);
         AEGetQuoteRequest(uint32_t reportLength, const uint8_t* report,
                                      uint32_t quoteType,
                                      uint32_t spidLength, const uint8_t* spid,
@@ -51,71 +57,21 @@ class AEGetQuoteRequest : public IAERequest
 
         ~AEGetQuoteRequest();
 
-        AEMessage*  serialize(ISerializer* serializer);
-        void        inflateValues(uint32_t reportLength, const uint8_t* report,
-                                     uint32_t quoteType,
-                                     uint32_t spidLength, const uint8_t* spid,
-                                     uint32_t nonceLength, const uint8_t* nonce,
-                                     uint32_t sig_rlLength, const uint8_t* sig_rl,
-                                     uint32_t bufferSize,
-                                     bool qe_report,
-                                     uint32_t timeout = 0);
-
-        inline const uint8_t*   GetReport()       const { return mReport; }
-        inline uint32_t         GetReportLength() const { return mReportLength; }
-        inline uint32_t         GetQuoteType()    const { return mQuoteType; }
-        inline uint32_t         GetSPIDLength()   const { return mSPIDLength; }
-        inline const uint8_t*   GetSPID()         const { return mSPID; }
-        inline uint32_t         GetNonceLength()  const { return mNonceLength; }
-        inline const uint8_t*   GetNonce()        const { return mNonce; }
-        inline const uint8_t*   GetSigRL()        const { return mSigRL; }
-        inline uint32_t         GetSigRLLength()  const { return mSigRLLength; }
-        inline uint32_t         GetBufferSize()   const { return mBufferSize; }
-        inline bool             GetQEReport()     const { return mQEReport; }        
-
+        AEMessage*  serialize();
         //operators
-        virtual bool operator==(const AEGetQuoteRequest& other) const;
         AEGetQuoteRequest& operator=(const AEGetQuoteRequest& other);
 
         //checks
         bool check();
         virtual IAEResponse* execute(IAESMLogic*);
 
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
-
-        void visit(IAERequestVisitor& visitor);
 
     protected:
 
         void ReleaseMemory();
-        void CopyFields(uint32_t reportLength, const uint8_t* report,
-                                     uint32_t quoteType,
-                                     uint32_t spidLength, const uint8_t* spid,
-                                     uint32_t nonceLength, const uint8_t* nonce,
-                                     uint32_t sig_rlLength, const uint8_t* sig_rl,
-                                     uint32_t bufferSize,
-                                     bool qe_report,
-                                     uint32_t timeout);
-
-        uint32_t mReportLength;
-        uint8_t* mReport;
-
-        uint32_t mQuoteType;
-
-        uint32_t mSPIDLength;
-        uint8_t* mSPID;
-
-        uint32_t mNonceLength;
-        uint8_t* mNonce;
-
-        uint32_t mSigRLLength;
-        uint8_t* mSigRL;
-
-        uint32_t mBufferSize;
-        bool     mQEReport;
-
+        aesm::message::Request_GetQuoteRequest* m_request;
 };
-
 
 #endif

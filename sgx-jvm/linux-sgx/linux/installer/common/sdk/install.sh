@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@ set -e
 SCRIPT_DIR=$(dirname "$0")
 source ${SCRIPT_DIR}/installConfig
 
-# Generate the script to preload SGX ptrace library for gdb
+# Generate the script to preload Intel(R) SGX ptrace library for gdb
 SDK_DST_PATH=${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}
 SDK_LIB_PATH=${SDK_DST_PATH}/${LIB_DIR}
 
@@ -51,7 +51,7 @@ generate_gdb_script()
     cat > $GDB_SCRIPT <<EOF
 #!/usr/bin/env bash
 #
-#  Copyright (c) 2011-2015, Intel Corporation.
+#  Copyright (c) 2011-2017, Intel Corporation.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -69,8 +69,19 @@ shopt -s expand_aliases
 
 GDB_SGX_PLUGIN_PATH=$SDK_LIB_PATH/gdb-sgx-plugin
 SGX_LIBRARY_PATH=$SDK_LIB_PATH
+
+if [ -f /usr/local/bin/gdb ]
+then
+    GDB=/usr/local/bin/gdb
+elif [ -f /usr/bin/gdb ]
+then
+    GDB=/usr/bin/gdb
+else
+    GDB=gdb
+fi
+
 export PYTHONPATH=\$GDB_SGX_PLUGIN_PATH
-LD_PRELOAD=\$SGX_LIBRARY_PATH/libsgx_ptrace.so /usr/bin/gdb -iex "directory \$GDB_SGX_PLUGIN_PATH" -iex "source \$GDB_SGX_PLUGIN_PATH/gdb_sgx_plugin.py" -iex "set environment LD_PRELOAD" -iex "add-auto-load-safe-path /usr/lib" "\$@"
+LD_PRELOAD=\$SGX_LIBRARY_PATH/libsgx_ptrace.so \$GDB -iex "directory \$GDB_SGX_PLUGIN_PATH" -iex "source \$GDB_SGX_PLUGIN_PATH/gdb_sgx_plugin.py" -iex "set environment LD_PRELOAD" -iex "add-auto-load-safe-path /usr/lib" "\$@"
 EOF
 
     chmod +x $GDB_SCRIPT
@@ -119,6 +130,8 @@ if [ \$? -ne 0 ]; then
     echo "Superuser privilege is required."
     exit 1
 fi
+
+echo "Intel(R) SGX SDK uninstalled."
 
 EOF
 }

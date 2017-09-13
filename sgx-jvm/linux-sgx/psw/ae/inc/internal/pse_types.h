@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -101,7 +101,7 @@ typedef struct _pse_dh_msg3_t
 #define MC_POLICY_ENCLAVE 0x2
 
 #define PAYLOAD_IV_SIZE   12
-typedef struct _pse_msssage_t
+typedef struct _pse_message_t
 {
     uint32_t session_id;
     uint32_t exp_resp_size;                      /* 0: response message*/
@@ -145,6 +145,8 @@ typedef enum _pse_op_error_t
     OP_ERROR_DATABASE_FATAL,                    /*  Fatal error returned when opening VMC DB, Should re-initialize DB  */
     OP_ERROR_SQLITE_NOT_FOUND,                  /*  Record not found. */
     OP_ERROR_CACHE_MISS,                        /*  The related nodes of a leaf node are not cached */
+    OP_ERROR_KDF_MISMATCH,                      /*  Key derivation function doesn't match during exchange report */
+    OP_ERROR_LTPB_SEALING_OUT_OF_DATE,          /*  The ISV SVN in the LTP blob doesn't match PSE ISV SVN */
 }pse_op_error_t;
 
 typedef enum _pse_service_resp_status_t

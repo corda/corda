@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,96 +28,83 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <ISerializer.h>
+
 #include <AECreateSessionRequest.h>
 #include <AECreateSessionResponse.h>
 #include <IAESMLogic.h>
 
 #include <stdlib.h>
+#include <limits.h>
+#include <IAEMessage.h>
 
-AECreateSessionRequest::AECreateSessionRequest()
-:mDHMsg1Size(0)
+AECreateSessionRequest::AECreateSessionRequest(const aesm::message::Request::CreateSessionRequest& request)
+    :m_request(NULL)
 {
+    m_request = new aesm::message::Request::CreateSessionRequest();
+    m_request->CopyFrom(request);
 }
 
 AECreateSessionRequest::AECreateSessionRequest(uint32_t dhMsg1Size, uint32_t timeout)
-:mDHMsg1Size(0)
+    :m_request(NULL)
 {
-    CopyFields(dhMsg1Size, timeout);
+    m_request = new aesm::message::Request::CreateSessionRequest();
+    m_request->set_dh_msg1_size(dhMsg1Size);
+    m_request->set_timeout(timeout);
 }
 
 AECreateSessionRequest::AECreateSessionRequest(const AECreateSessionRequest& other)
-:IAERequest(other), mDHMsg1Size(0)
+    :m_request(NULL)
 {
-    CopyFields(other.mDHMsg1Size, other.mTimeout);
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::CreateSessionRequest(*other.m_request);
 }
 
 AECreateSessionRequest::~AECreateSessionRequest()
 {
-    ReleaseMemory();
+    if (m_request != NULL)
+        delete m_request;
 }
 
-void AECreateSessionRequest::ReleaseMemory()
-{
-    //none for now
-}
 
-void AECreateSessionRequest::CopyFields(uint32_t dhMsg1Size, uint32_t timeout)
+
+AEMessage* AECreateSessionRequest::serialize()
 {
-    if(dhMsg1Size <= MAX_MEMORY_ALLOCATION)
+    AEMessage *ae_msg = NULL;
+    aesm::message::Request msg;
+    if (check())
     {
-        mValidSizeCheck = true;
+        aesm::message::Request::CreateSessionRequest* mutableReq = msg.mutable_createsessionreq();
+        mutableReq->CopyFrom(*m_request);
+
+        if (msg.ByteSize() <= INT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int)msg.ByteSize();
+            ae_msg->data = new char[ae_msg->size];
+            msg.SerializeToArray(ae_msg->data, ae_msg->size);
+        }
     }
-    else
-    {
-        mValidSizeCheck = false;
-        return;
-    }
-
-    mDHMsg1Size = dhMsg1Size;
-    mTimeout = timeout;
-}
-
-AEMessage* AECreateSessionRequest::serialize(ISerializer* serializer)
-{
-    return serializer->serialize(this);
-}
-
-void AECreateSessionRequest::inflateValues(uint32_t dhMsg1Size, uint32_t timeout)
-{
-    ReleaseMemory();
-
-    CopyFields(dhMsg1Size, timeout);
-}
-
-bool AECreateSessionRequest::operator==(const AECreateSessionRequest& other) const
-{
-    if (this == &other)
-        return true;
-    
-    if (mDHMsg1Size != other.mDHMsg1Size ||
-        mTimeout != other.mTimeout)
-        return false;
-
-    return true;
+    return ae_msg;
 }
 
 AECreateSessionRequest& AECreateSessionRequest::operator=(const AECreateSessionRequest& other)
 {
     if (this == &other)
         return *this;
-
-    inflateValues(other.mDHMsg1Size, mTimeout);
-
+    if (m_request != NULL)
+    {
+        delete m_request;
+        m_request = NULL;
+    }
+    if (other.m_request != NULL)
+        m_request = new aesm::message::Request::CreateSessionRequest(*other.m_request);
     return *this;
 }
 
 bool AECreateSessionRequest::check()
 {
-    if (mValidSizeCheck == false)
-        return false; 
- 
-    return true;
+    if (m_request == NULL)
+        return false;
+    return m_request->IsInitialized();
 }
 
 IAERequest::RequestClass AECreateSessionRequest::getRequestClass() {
@@ -125,16 +112,20 @@ IAERequest::RequestClass AECreateSessionRequest::getRequestClass() {
 }
 
 IAEResponse* AECreateSessionRequest::execute(IAESMLogic* aesmLogic) {
-    uint8_t* dh_msg1 = new uint8_t[mDHMsg1Size];
+    aesm_error_t result = AESM_UNEXPECTED_ERROR;
     uint32_t sid = 0;
-    
-    aesm_error_t result = aesmLogic->createSession(&sid, dh_msg1, mDHMsg1Size);
+    uint8_t* dh_msg1 = NULL;
+    uint32_t dh_msg1_size = 0;
+    if (check())
+    {
+        dh_msg1_size = m_request->dh_msg1_size();
+        result = aesmLogic->createSession(&sid, &dh_msg1, dh_msg1_size);
 
-    AECreateSessionResponse* sessionResponse = new AECreateSessionResponse(result, sid, mDHMsg1Size, dh_msg1);
-    delete [] dh_msg1;
-    return sessionResponse;
-}
+    }
+    AECreateSessionResponse* response = new AECreateSessionResponse(result, sid, dh_msg1_size, dh_msg1);
 
-void AECreateSessionRequest::visit(IAERequestVisitor& visitor) {
-    visitor.visitCreateSessionRequest(*this);
+    //free the buffer before send
+    if (dh_msg1)
+        delete[] dh_msg1;
+    return response;
 }

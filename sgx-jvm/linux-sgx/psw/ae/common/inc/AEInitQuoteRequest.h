@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,35 +32,37 @@
 #define __AE_INIT_QUOTE_REQUEST_H
 
 #include <IAERequest.h>
-class IAESMLogic;
+namespace aesm
+{
+    namespace message
+    {
+        class Request_InitQuoteRequest;
+    };
+};
+
 
 class AEInitQuoteRequest : public IAERequest{
     public:
+        AEInitQuoteRequest(const aesm::message::Request_InitQuoteRequest& request);
         AEInitQuoteRequest(uint32_t timeout = 0);
         AEInitQuoteRequest(const AEInitQuoteRequest& other);
         ~AEInitQuoteRequest();
 
-        void CopyFields(uint32_t timeout); 
-        void ReleaseMemory();    
-
-        AEMessage*  serialize(ISerializer* serializer);
-
-        //inflater -> empty for now ... but soon
-        void inflateValues(uint32_t timeout = 0); 
-
+        AEMessage*  serialize();
         //checks
-        bool check() {return true;} // no special check for this object. Maybe later
+        bool check();
         virtual IAEResponse* execute(IAESMLogic*);
 
-        //used to determin in which queue to be placed
+        //used to determine in which queue to be placed
         virtual RequestClass getRequestClass();
 
-        bool operator==(const AEInitQuoteRequest& other) const;
         AEInitQuoteRequest& operator=(const AEInitQuoteRequest& other);
 
-        void visit(IAERequestVisitor& visitor);
+
+    protected:
+        //release all members
+        void ReleaseMemory();
+        aesm::message::Request_InitQuoteRequest* m_request;
 };
-
-
 
 #endif

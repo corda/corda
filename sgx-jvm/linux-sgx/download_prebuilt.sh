@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,37 +32,36 @@
 
 
 top_dir=`dirname $0`
-#out_dir=$top_dir/psw/ae/data/prebuilt
 out_dir=$top_dir
-optlib_name=optimized_libs-1.7.100.35958.tar
-ae_file_name=prebuilt-ae-1.7.100.35958.tar
-server_url_path=https://download.01.org/intel-sgx/linux-1.7/
+optlib_name=optimized_libs-1.9.100.39124.tar
+ae_file_name=prebuilt-ae-1.9.100.39124.tar
+server_url_path=https://download.01.org/intel-sgx/linux-1.9/
 server_optlib_url=$server_url_path/$optlib_name
 server_ae_url=$server_url_path/$ae_file_name
-optlib_md5=d873e20155fceb870c2e14771cc2258a
-ae_md5=ca7cf31f1e9fee06feea44732cfbc908
+optlib_sha256=239cae39f87934d56c4eb919a4702c6ac82c19957b9a8d56c02b10eb4e27f573
+ae_sha256=c2f86a1e8483b91c5517c99d196599492f3106d4b2f9f7523fd9eaf59b9ed37b
 rm -rf $out_dir/$optlib_name
 wget $server_optlib_url -P $out_dir 
 if [ $? -ne 0 ]; then
     echo "Fail to download file $server_optlib_url"
     exit -1
 fi
-md5sum $out_dir/$optlib_name > check_sum.txt
-grep $optlib_md5 check_sum.txt
+sha256sum $out_dir/$optlib_name > check_sum.txt
+grep $optlib_sha256 check_sum.txt
 if [ $? -ne 0 ]; then 
     echo "File $server_optlib_url checksum failure"
     exit -1
 fi
 rm -rf $out_dir/$ae_file_name
-wget $server_ae_url -P $out_dir 
+wget $server_ae_url -P $out_dir
 if [ $? -ne 0 ]; then
     echo "Fail to download file $server_ae_url"
     exit -1
 fi
-md5sum $out_dir/$ae_file_name > check_sum.txt
-grep $ae_md5 check_sum.txt
+sha256sum $out_dir/$ae_file_name > check_sum.txt
+grep $ae_sha256 check_sum.txt
 if [ $? -ne 0 ]; then
-    echo "File $server_optlib_url checksum failure"
+    echo "File $server_ae_url checksum failure"
     exit -1
 fi
 

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -68,7 +68,7 @@ vpath %.c   $(COMMON_DIR)/src
 CPP_SRC := $(wildcard *.cpp ../*.cpp) se_sig_rl.cpp cpusvn_util.cpp sgx_read_rand.cpp
 C_SRC   := se_trace.c se_thread.c
 
-OBJ := $(CPP_SRC:.cpp=.o) \
+OBJ := $(sort $(CPP_SRC:.cpp=.o)) \
        $(C_SRC:.c=.o)
 
 DLLNAME = libsgx_uae_service_sim.so
@@ -95,10 +95,6 @@ $(DLLNAME): $(OBJ) -lrdrand -lcrypto_px
 endif
 
 $(DLLNAME_DEBUG): $(DLLNAME)
-	((test -f $(DLLNAME_DEBUG)) || $(MAKE) separate_debug_info)
-
-.PHONY: separate_debug_info
-separate_debug_info:
 ifndef DEBUG
 	$(CP) $(DLLNAME) $(DLLNAME).orig
 	$(OBJCOPY) --only-keep-debug $(DLLNAME) $(DLLNAME_DEBUG)

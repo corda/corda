@@ -423,10 +423,9 @@ NO_MALLINFO                default: 0
   of dealing with mismatches between system declarations and
   those in this file.
 
-MALLINFO_FIELD_TYPE        default: size_t
-  The type of the fields in the mallinfo struct. This was originally
-  defined as "int" in SVID etc, but is more usefully defined as
-  size_t. The value is used only if  HAVE_USR_INCLUDE_MALLOC_H is not set
+MALLINFO_FIELD_TYPE        default: int
+  The type of the fields in the mallinfo struct. The value is used
+  only if  HAVE_USR_INCLUDE_MALLOC_H is not set
 
 NO_MALLOC_STATS            default: 0
   If defined, don't compile "malloc_stats". This avoids calls to

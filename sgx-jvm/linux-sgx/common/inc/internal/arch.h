@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,13 +44,10 @@
 
 #pragma pack(push, 1)
 
-#if !defined(__cplusplus) || defined(__INTEL_COMPILER) || (defined(SE_GNU) && !defined(__GXX_EXPERIMENTAL_CXX0X__))
+#define STATIC_ASSERT_UNUSED_ATTRIBUTE __attribute__((unused))
 #define _ASSERT_CONCAT(a, b) a##b
 #define ASSERT_CONCAT(a, b) _ASSERT_CONCAT(a, b)
-#define se_static_assert(e) typedef char ASSERT_CONCAT(assert_line, __LINE__)[(e)?1:-1]
-#else
-#define se_static_assert(e) static_assert(e,#e)
-#endif
+#define se_static_assert(e) typedef char ASSERT_CONCAT(assert_line, __LINE__)[(e)?1:-1] STATIC_ASSERT_UNUSED_ATTRIBUTE
 
 se_static_assert(sizeof(sgx_key_request_t) == 512);
 se_static_assert(sizeof(sgx_target_info_t) == 512);

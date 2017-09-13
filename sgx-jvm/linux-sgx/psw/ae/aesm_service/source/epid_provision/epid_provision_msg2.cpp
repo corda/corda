@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -356,7 +356,7 @@ uint32_t CPVEClass::proc_prov_msg2(
             break;
         }
         //decrypt ProvMsg2 by EK2
-        sgx_status_t sgx_status = sgx_rijndael128GCM_decrypt(&ek2,
+        sgx_status = sgx_rijndael128GCM_decrypt(&ek2,
             field1.msg_buf, field1.msg_size, decoded_msg2,
             reinterpret_cast<uint8_t *>(block_cipher_tlv_get_iv(MSG2_TOP_FIELD_DATA)), IV_SIZE,
             aad, static_cast<uint32_t>(aad_size), reinterpret_cast<const sgx_aes_gcm_128bit_tag_t *>(MSG2_TOP_FIELD_MAC.payload));
@@ -382,7 +382,8 @@ uint32_t CPVEClass::proc_prov_msg2(
             AESM_DBG_ERROR("Fail to decode field1 of ProvMsg2:(ae%d)",ret);
             break;
         }
-        proc_prov_msg2_blob_input_t msg2_blob_input={0};
+        proc_prov_msg2_blob_input_t msg2_blob_input;
+        memset(&msg2_blob_input, 0, sizeof(msg2_blob_input));
         ret = CPCEClass::instance().load_enclave();//Load PCE enclave now
         if( ret != AE_SUCCESS){
             AESM_DBG_ERROR("Fail to load PCE enclave:(ae%d)\n",ret);
@@ -460,7 +461,8 @@ uint32_t CPVEClass::proc_prov_msg2(
             break;
         }
         uint8_t ecdsa_sign[64];
-        psvn_t psvn={0};
+        psvn_t psvn;
+        memset(&psvn, 0, sizeof(psvn));
         if(0!=memcpy_s(&psvn.cpu_svn,sizeof(psvn.cpu_svn), &msg2_blob_input.equiv_pi.cpu_svn, sizeof(msg2_blob_input.equiv_pi.cpu_svn))||
             0!=memcpy_s(&psvn.isv_svn, sizeof(psvn.isv_svn), &msg2_blob_input.equiv_pi.pce_svn, sizeof(msg2_blob_input.equiv_pi.pce_svn))){
                 ret = PVE_UNEXPECTED_ERROR;

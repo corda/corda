@@ -12,11 +12,11 @@ Changes:
     * Disable features rely on I/O operations
     * Disable wchar support
     * Define _NOTHREADS, _STLP_NO_THREADS, _STLP_USE_NEWALLOC, _STLP_NO_EXTENSIONS by default
-    * Use SGX C++ runtime library instead
+    * Use Intel(R) Software Guard Extensions (Intel(R) SGX) C++ runtime library instead
     * Disable unsupported data types and interfaces in _cstdio.h, _cstdlib.h, _ctime.h, _cwchar.h, etc.
     * Add using _STLP_VENDOR_EXCEPT_STD::bad_alloc
     * Let _STLP_THROW_BAD_ALLOC call _STLP_ABORT() directly, do not use puts() and exit(1)
     * Do not use puts() in _STLP_THROW_MSG()
-    * Use SGX spinlock instead
-    * Add _sgx.h for SGX configurations
+    * Use Intel(R) SGX spinlock instead
+    * Add _sgx.h for Intel(R) SGX configurations
     * Do not include Windows/Linux system headers directly
