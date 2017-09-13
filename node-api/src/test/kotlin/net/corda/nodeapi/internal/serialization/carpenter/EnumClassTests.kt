@@ -12,7 +12,7 @@ class EnumClassTests : AmqpCarpenterBase() {
 
         val schema = EnumSchema("gen.enum", enumConstants)
 
-        cc.build(schema)
+        assertTrue(cc.build(schema).isEnum)
     }
 
     @Test

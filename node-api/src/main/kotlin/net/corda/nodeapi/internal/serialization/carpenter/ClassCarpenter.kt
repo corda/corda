@@ -30,10 +30,10 @@ class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread
  */
 private const val TARGET_VERSION = V1_8
 
-private const val jlEnum = "java/lang/Enum"
-private const val jlString = "java/lang/String"
-private const val jlObject = "java/lang/Object"
-private const val jlClass = "java/lang/Class"
+private val jlEnum get() = Type.getInternalName(Enum::class.java)
+private val jlString get() = Type.getInternalName(String::class.java)
+private val jlObject get() = Type.getInternalName(Object::class.java)
+private val jlClass get() = Type.getInternalName(Class::class.java)
 
 /**
  * A class carpenter generates JVM bytecodes for a class given a schema and then loads it into a sub-classloader.
@@ -131,6 +131,8 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             cw.apply {
                 visit(TARGET_VERSION, ACC_PUBLIC + ACC_FINAL + ACC_SUPER + ACC_ENUM, schema.jvmName,
                         "L$jlEnum<L${schema.jvmName};>;", jlEnum, null)
+
+                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
                 generateFields(schema)
                 generateStaticEnumConstructor(schema)
                 generateEnumConstructor()

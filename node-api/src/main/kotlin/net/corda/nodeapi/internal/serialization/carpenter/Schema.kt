@@ -93,7 +93,7 @@ class EnumSchema(
 }
 
 /**
- * Factory object used by the serialiser when build [Schema]s based
+ * Factory object used by the serialiser when building [Schema]s based
  * on an AMQP schema
  */
 object CarpenterSchemaFactory {
