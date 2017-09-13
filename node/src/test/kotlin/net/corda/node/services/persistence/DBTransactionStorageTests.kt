@@ -43,10 +43,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
 
-        val transactionSchema = MappedSchema(schemaFamily = javaClass, version = 1,
-                mappedTypes = listOf(DBTransactionStorage.DBTransaction::class.java))
-
-        val createSchemaService = { NodeSchemaService(setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, transactionSchema)) }
+        val createSchemaService = { NodeSchemaService() }
 
         database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), createSchemaService, ::makeTestIdentityService)
 

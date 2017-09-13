@@ -24,6 +24,7 @@ import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
@@ -73,7 +74,6 @@ import rx.Observable
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.CertificateFactory
@@ -214,6 +214,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             installCordaServices()
             registerCordappFlows()
             _services.rpcFlows += cordappLoader.findRPCFlows()
+            registerCustomSchemas(cordappLoader.findCustomSchemas())
 
             runOnStop += network::stop
         }
@@ -655,7 +656,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val monitoringService = MonitoringService(MetricRegistry())
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
+        override val schemaService by lazy { NodeSchemaService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(this) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
@@ -701,6 +702,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
         override fun jdbcSession(): Connection = database.createSession()
+    }
+
+    fun registerCustomSchemas(schemas: Set<MappedSchema>) {
+        database.hibernateConfig.schemaService.registerCustomSchemas(schemas)
     }
 
 }

@@ -7,6 +7,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
@@ -33,6 +34,8 @@ class FxTransactionBuildTutorialTest {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
+        nodeA.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.registerCustomSchemas(setOf(CashSchemaV1))
         nodeB.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
     }
 
