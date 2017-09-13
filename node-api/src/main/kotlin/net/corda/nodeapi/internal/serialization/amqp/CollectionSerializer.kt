@@ -61,13 +61,13 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
 
     private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())
 
-    override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend(declaredType.typeName) {
+    override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({declaredType.typeName}) {
         if (output.writeTypeNotations(typeNotation)) {
             output.requireSerializer(declaredType.actualTypeArguments[0])
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend(declaredType.typeName) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend({declaredType.typeName}) {
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             withList {
@@ -78,7 +78,7 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend(declaredType.typeName)  {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend({declaredType.typeName})  {
         // TODO: Can we verify the entries in the list?
         concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, schema, declaredType.actualTypeArguments[0]) })
     }

@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
-import net.corda.core.internal.declaredField
 import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.codec.Data
 import java.beans.IndexedPropertyDescriptor
@@ -245,11 +244,11 @@ internal enum class CommonPropertyNames {
  * Since there might be a chain of nested calls it is useful to record which part of teh graph caused an issue.
  * Path information is added to the message of teh exception being thrown.
  */
-internal inline fun <T> ifThrowsAppend(strToAppend: String, block: () -> T): T {
+internal inline fun <T> ifThrowsAppend(strToAppendFn: () -> String, block: () -> T): T {
     try {
         return block()
     } catch (th: Throwable) {
-        th.setMessage("$strToAppend -> " + th.message)
+        th.setMessage("${strToAppendFn()} -> " + th.message)
         throw th
     }
 }
