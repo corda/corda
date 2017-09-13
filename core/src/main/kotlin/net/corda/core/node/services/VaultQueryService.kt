@@ -1,11 +1,16 @@
 package net.corda.core.node.services
 
+import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowException
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
+import java.util.*
 
 interface VaultQueryService {
 
@@ -95,6 +100,27 @@ interface VaultQueryService {
     fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return _trackBy(criteria, paging, sorting, contractType)
     }
+
+    /**
+     * Helper function to combine using [VaultQueryService] calls to determine spendable states and soft locking them.
+     * Currently performance will be worse than for the hand optimised version in `Cash.unconsumedCashStatesForSpending`
+     * However, this is fully generic and can operate with custom [FungibleAsset] states.
+     * @param lockId The [FlowLogic.runId.uuid] of the current flow used to soft lock the states.
+     * @param eligibleStatesQuery A custom query object that selects down to the appropriate subset of all states of the
+     * [contractType]. e.g. by selecting on account, issuer, etc. The query is internally augmented with the UNCONSUMED,
+     * soft lock and contract type requirements.
+     * @param amount The required amount of the asset, but with the issuer stripped off.
+     * It is assumed that compatible issuer states will be filtered out by the [eligibleStatesQuery].
+     * @param contractType class type of the result set.
+     * @return Returns a locked subset of the [eligibleStatesQuery] sufficient to satisfy the requested amount,
+     * or else an empty list and no change in the stored lock states when their are insufficient resources available.
+     */
+    @Suspendable
+    @Throws(StatesNotAvailableException::class)
+    fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
+                                                                         eligibleStatesQuery: QueryCriteria,
+                                                                         amount: Amount<U>,
+                                                                         contractType: Class<out T>): List<StateAndRef<T>>
 }
 
 inline fun <reified T : ContractState> VaultQueryService.queryBy(): Vault.Page<T> {

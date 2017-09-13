@@ -46,7 +46,7 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
 
     val fullCriteria = fungibleCriteria.and(vaultCriteria).and(cashCriteria)
 
-    val eligibleStates = serviceHub.vaultService.tryLockFungibleStatesForSpending<Cash.State, Currency>(lockId, fullCriteria, amountRequired.withoutIssuer(), Cash.State::class.java)
+    val eligibleStates = serviceHub.vaultQueryService.tryLockFungibleStatesForSpending<Cash.State, Currency>(lockId, fullCriteria, amountRequired.withoutIssuer(), Cash.State::class.java)
 
     check(eligibleStates.isNotEmpty()) { "Insufficient funds" }
     val amount = eligibleStates.fold(0L) { tot, x -> tot + x.state.data.amount.quantity }

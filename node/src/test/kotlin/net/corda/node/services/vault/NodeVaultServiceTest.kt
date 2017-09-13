@@ -66,7 +66,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     }
 
     @Suspendable
-    private fun VaultService.unconsumedCashStatesForSpending(amount: Amount<Currency>,
+    private fun VaultQueryService.unconsumedCashStatesForSpending(amount: Amount<Currency>,
                                                              onlyFromIssuerParties: Set<AbstractParty>? = null,
                                                              notary: Party? = null,
                                                              lockId: UUID = UUID.randomUUID(),
@@ -320,7 +320,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val unconsumedStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(unconsumedStates).hasSize(1)
 
-            val spendableStatesUSD = vaultSvc.unconsumedCashStatesForSpending(100.DOLLARS)
+            val spendableStatesUSD = vaultQuery.unconsumedCashStatesForSpending(100.DOLLARS)
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(1)
             assertThat(spendableStatesUSD[0].state.data.amount.quantity).isEqualTo(100L * 100)
@@ -336,7 +336,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)))
         }
         database.transaction {
-            val spendableStatesUSD = vaultSvc.unconsumedCashStatesForSpending(200.DOLLARS,
+            val spendableStatesUSD = vaultQuery.unconsumedCashStatesForSpending(200.DOLLARS,
                     onlyFromIssuerParties = setOf(DUMMY_CASH_ISSUER.party, BOC))
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(2)
@@ -358,7 +358,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val unconsumedStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(unconsumedStates).hasSize(4)
 
-            val spendableStatesUSD = vaultSvc.unconsumedCashStatesForSpending(200.DOLLARS,
+            val spendableStatesUSD = vaultQuery.unconsumedCashStatesForSpending(200.DOLLARS,
                     onlyFromIssuerParties = setOf(BOC), withIssuerRefs = setOf(OpaqueBytes.of(1), OpaqueBytes.of(2)))
             assertThat(spendableStatesUSD).hasSize(2)
             assertThat(spendableStatesUSD[0].state.data.amount.token.issuer.party).isEqualTo(BOC)
@@ -377,7 +377,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val unconsumedStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(unconsumedStates).hasSize(1)
 
-            val spendableStatesUSD = vaultSvc.unconsumedCashStatesForSpending(110.DOLLARS)
+            val spendableStatesUSD = vaultQuery.unconsumedCashStatesForSpending(110.DOLLARS)
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(0)
             val criteriaLocked = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.LOCKED_ONLY))
@@ -394,7 +394,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val unconsumedStates = vaultQuery.queryBy<Cash.State>().states
             assertThat(unconsumedStates).hasSize(2)
 
-            val spendableStatesUSD = vaultSvc.unconsumedCashStatesForSpending(1.DOLLARS)
+            val spendableStatesUSD = vaultQuery.unconsumedCashStatesForSpending(1.DOLLARS)
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(1)
             assertThat(spendableStatesUSD[0].state.data.amount.quantity).isGreaterThanOrEqualTo(100L)
@@ -418,7 +418,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             var lockedCount = 0
             for (i in 1..5) {
                 val lockId = UUID.randomUUID()
-                val spendableStatesUSD = vaultSvc.unconsumedCashStatesForSpending(20.DOLLARS, lockId = lockId)
+                val spendableStatesUSD = vaultQuery.unconsumedCashStatesForSpending(20.DOLLARS, lockId = lockId)
                 spendableStatesUSD.forEach(::println)
                 assertThat(spendableStatesUSD.size <= unlockedStates)
                 unlockedStates -= spendableStatesUSD.size

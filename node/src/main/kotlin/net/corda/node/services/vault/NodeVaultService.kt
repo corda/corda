@@ -1,6 +1,5 @@
 package net.corda.node.services.vault
 
-import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -11,11 +10,6 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.vault.IQueryCriteriaParser
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
-import net.corda.core.node.services.vault.SortAttribute
-import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -34,7 +28,6 @@ import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
-import javax.persistence.criteria.Predicate
 
 /**
  * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
@@ -333,45 +326,6 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             }
         }
     }
-
-    @Suspendable
-    @Throws(StatesNotAvailableException::class)
-    override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
-                                                                                  eligibleStatesQuery: QueryCriteria,
-                                                                                  amount: Amount<U>,
-                                                                                  contractType: Class<out T>): List<StateAndRef<T>> {
-        if (amount.quantity == 0L) {
-            return emptyList()
-        }
-
-        // Enrich QueryCriteria with additional default attributes (such as soft locks)
-        val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
-        val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
-        val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
-                contractStateTypes = setOf(contractType),
-                softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)))
-        val results = services.vaultQueryService.queryBy(contractType, enrichedCriteria.and(eligibleStatesQuery), sorter)
-
-        var claimedAmount = 0L
-        val claimedStates = mutableListOf<StateAndRef<T>>()
-        for (state in results.states) {
-            val issuedAssetToken = state.state.data.amount.token
-            if (issuedAssetToken.product == amount.token) {
-                claimedStates += state
-                claimedAmount += state.state.data.amount.quantity
-                if (claimedAmount > amount.quantity) {
-                    break
-                }
-            }
-        }
-        if (claimedStates.isEmpty() || claimedAmount < amount.quantity) {
-            return emptyList()
-        }
-        softLockReserve(lockId, claimedStates.map { it.ref }.toNonEmptySet())
-        return claimedStates
-    }
-
-
 
     @VisibleForTesting
     internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
