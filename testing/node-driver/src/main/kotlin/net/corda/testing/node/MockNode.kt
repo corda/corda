@@ -233,7 +233,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         // Allow unit tests to modify the plugin list before the node start,
         // so they don't have to ServiceLoad test plugins into all unit tests.
-        val testPluginRegistries = super.pluginRegistries.toMutableList()
+        val testPluginRegistries by lazy { super.pluginRegistries.toMutableList() }
         override val pluginRegistries: List<CordaPluginRegistry>
             get() = testPluginRegistries
 
