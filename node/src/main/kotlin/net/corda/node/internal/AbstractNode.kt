@@ -218,7 +218,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
 
     private fun installCordaServices() {
-        cordappLoader.cordapps.flatMap { it.services }.forEach {
+        cordappProvider.cordapps.flatMap { it.services }.forEach {
             try {
                 installCordaService(it)
             } catch (e: NoSuchMethodException) {

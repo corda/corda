@@ -1,6 +1,5 @@
 package net.corda.node.cordapp
 
-import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProvider
 import net.corda.testing.node.MockAttachmentStorage
@@ -20,5 +19,18 @@ class CordappProviderTests {
 
         Assert.assertTrue(maybeAttachmentId.isPresent)
         Assert.assertNotNull(attachmentStore.openAttachment(maybeAttachmentId.get()))
+    }
+
+    @Test
+    fun `empty jar is not loaded into the attachment store`() {
+        val attachmentStore = MockAttachmentStorage()
+        val isolatedJAR = this::class.java.getResource("empty.jar")!!
+        val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
+        val provider = CordappProvider(attachmentStore, loader)
+
+        provider.start()
+        val maybeAttachmentId = provider.getCordappAttachmentId(provider.cordapps.first())
+
+        Assert.assertFalse(maybeAttachmentId.isPresent)
     }
 }
