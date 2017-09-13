@@ -6,6 +6,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
+import net.corda.node.internal.StartedNode
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -17,9 +18,9 @@ import kotlin.test.assertFailsWith
 
 class CashIssueFlowTests {
     private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
-    private lateinit var bankOfCordaNode: MockNode
+    private lateinit var bankOfCordaNode: StartedNode<MockNode>
     private lateinit var bankOfCorda: Party
-    private lateinit var notaryNode: MockNode
+    private lateinit var notaryNode: StartedNode<MockNode>
     private lateinit var notary: Party
 
     @Before

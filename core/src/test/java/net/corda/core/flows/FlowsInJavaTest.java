@@ -3,6 +3,7 @@ package net.corda.core.flows;
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
+import net.corda.node.internal.StartedNode;
 import net.corda.testing.node.MockNetwork;
 import org.junit.After;
 import org.junit.Before;
@@ -17,8 +18,8 @@ import static org.junit.Assert.fail;
 public class FlowsInJavaTest {
 
     private final MockNetwork mockNet = new MockNetwork();
-    private MockNetwork.MockNode node1;
-    private MockNetwork.MockNode node2;
+    private StartedNode<MockNetwork.MockNode> node1;
+    private StartedNode<MockNetwork.MockNode> node2;
 
     @Before
     public void setUp() throws Exception {
@@ -27,7 +28,7 @@ public class FlowsInJavaTest {
         node2 = someNodes.getPartyNodes().get(1);
         mockNet.runNetwork();
         // Ensure registration was successful
-        node1.getNodeReadyFuture().get();
+        node1.getInternals().getNodeReadyFuture().get();
     }
 
     @After
@@ -37,7 +38,7 @@ public class FlowsInJavaTest {
 
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
-        node2.registerInitiatedFlow(SendHelloAndThenReceive.class);
+        node2.getInternals().registerInitiatedFlow(SendHelloAndThenReceive.class);
         Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(node2.getInfo().getLegalIdentity())).getResultFuture();
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");

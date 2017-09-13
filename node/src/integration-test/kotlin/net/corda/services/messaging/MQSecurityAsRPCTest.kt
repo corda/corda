@@ -12,7 +12,7 @@ import org.junit.Test
  */
 class MQSecurityAsRPCTest : MQSecurityTest() {
     override fun createAttacker(): SimpleMQClient {
-        return clientTo(alice.configuration.rpcAddress!!)
+        return clientTo(alice.internals.configuration.rpcAddress!!)
     }
 
     @Test
@@ -30,7 +30,7 @@ class MQSecurityAsRPCTest : MQSecurityTest() {
     @Test
     fun `login to a ssl port as a RPC user`() {
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            loginToRPC(alice.configuration.p2pAddress, extraRPCUsers[0], configureTestSSL())
+            loginToRPC(alice.internals.configuration.p2pAddress, extraRPCUsers[0], configureTestSSL())
         }
     }
 }

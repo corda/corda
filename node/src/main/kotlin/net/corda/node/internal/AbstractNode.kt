@@ -46,12 +46,9 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.sendRequest
-import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.*
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
-import net.corda.node.services.network.NodeRegistration
-import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -105,6 +102,18 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                             val advertisedServices: Set<ServiceInfo>,
                             val platformClock: Clock,
                             @VisibleForTesting val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+    private class StartedNodeImpl<out N : AbstractNode>(
+            override val internals: N,
+            override val services: ServiceHubInternalImpl,
+            override val info: NodeInfo,
+            override val checkpointStorage: CheckpointStorage,
+            override val smm: StateMachineManager,
+            override val attachments: NodeAttachmentService,
+            override val inNodeNetworkMapService: NetworkMapService,
+            override val network: MessagingService,
+            override val database: CordaPersistence,
+            override val rpcOps: CordaRPCOps) : StartedNode<N>
+
     // TODO: Persist this, as well as whether the node is registered.
     /**
      * Sequence number of changes sent to the network map service, when registering/de-registering this node.
@@ -123,17 +132,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
     protected val partyKeys = mutableSetOf<KeyPair>()
 
-    val services: ServiceHubInternal get() = _services
-
+    protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
-    lateinit var info: NodeInfo
-    lateinit var checkpointStorage: CheckpointStorage
-    lateinit var smm: StateMachineManager
-    lateinit var attachments: NodeAttachmentService
-    var inNodeNetworkMapService: NetworkMapService? = null
-    lateinit var network: MessagingService
+    protected lateinit var info: NodeInfo
+    protected lateinit var checkpointStorage: CheckpointStorage
+    protected lateinit var smm: StateMachineManager
+    protected lateinit var attachments: NodeAttachmentService
+    protected lateinit var inNodeNetworkMapService: NetworkMapService
+    protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
-    lateinit var database: CordaPersistence
+    protected lateinit var database: CordaPersistence
     protected var dbCloser: (() -> Any?)? = null
 
     protected val _nodeReadyFuture = openFuture<Unit>()
@@ -161,17 +169,17 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         cordappLoader.cordapps.flatMap { it.plugins } + DefaultWhitelist()
     }
 
-    /** Set to true once [start] has been successfully called. */
-    @Volatile
-    var started = false
-        private set
+    /** Set to non-null once [start] has been successfully called. */
+    open val started get() = _started
+    @Volatile private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open val rpcOps: CordaRPCOps by lazy { CordaRPCOpsImpl(services, smm, database) }   // Lazy to avoid init ordering issue with the SMM.
+    open fun makeRPCOps(): CordaRPCOps {
+        return CordaRPCOpsImpl(services, smm, database)
+    }
 
-    open fun start() {
-        require(!started) { "Node has already been started" }
-
+    open fun start(): StartedNode<AbstractNode> {
+        require(started == null) { "Node has already been started" }
         if (configuration.devMode) {
             log.warn("Corda node is running in dev mode.")
             configuration.configureWithDevSSLCertificate()
@@ -181,7 +189,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         log.info("Node starting up ...")
 
         // Do all of this in a database transaction so anything that might need a connection has one.
-        initialiseDatabasePersistence {
+        val startedImpl = initialiseDatabasePersistence {
             val tokenizableServices = makeServices()
 
             smm = StateMachineManager(services,
@@ -203,6 +211,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             makeVaultObservers()
 
+            val rpcOps = makeRPCOps()
             startMessagingService(rpcOps)
             installCoreFlows()
 
@@ -212,16 +221,19 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             registerCustomSchemas(cordappLoader.cordapps.flatMap { it.customSchemas }.toSet())
 
             runOnStop += network::stop
+            StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, inNodeNetworkMapService, network, database, rpcOps)
         }
         // If we successfully  loaded network data from database, we set this future to Unit.
         _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
-        database.transaction {
-            smm.start()
-            // Shut down the SMM so no Fibers are scheduled.
-            runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
-            _services.schedulerService.start()
+        return startedImpl.apply {
+            database.transaction {
+                smm.start()
+                // Shut down the SMM so no Fibers are scheduled.
+                runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
+                services.schedulerService.start()
+            }
+            _started = this
         }
-        started = true
     }
 
     private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
@@ -410,7 +422,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(msg: String) : Exception(msg)
 
-    protected open fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
+    protected open fun <T> initialiseDatabasePersistence(insideTransaction: () -> T): T {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
             this.database = configureDatabase(props, configuration.database, { _services.schemaService }, createIdentityService = { _services.identityService })
@@ -422,7 +434,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 dbCloser = it
                 runOnStop += it
             }
-            database.transaction {
+            return database.transaction {
                 insideTransaction()
             }
         } else {
@@ -432,7 +444,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeAdvertisedServices(tokenizableServices: MutableList<Any>) {
         val serviceTypes = info.advertisedServices.map { it.info.type }
-        if (NetworkMapService.type in serviceTypes) makeNetworkMapService()
+        inNodeNetworkMapService = if (NetworkMapService.type in serviceTypes) makeNetworkMapService() else NullNetworkMapService
         val notaryServiceType = serviceTypes.singleOrNull { it.isNotary() }
         if (notaryServiceType != null) {
             val service = makeCoreNotaryService(notaryServiceType)
@@ -453,7 +465,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun registerWithNetworkMapIfConfigured(): CordaFuture<Unit> {
         services.networkMapCache.addNode(info)
         // In the unit test environment, we may sometimes run without any network map service
-        return if (networkMapAddress == null && inNodeNetworkMapService == null) {
+        return if (networkMapAddress == null && inNodeNetworkMapService == NullNetworkMapService) {
             services.networkMapCache.runWithoutMapService()
             noNetworkMapConfigured()  // TODO This method isn't needed as runWithoutMapService sets the Future in the cache
         } else {
@@ -514,8 +526,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return PersistentKeyManagementService(identityService, partyKeys)
     }
 
-    open protected fun makeNetworkMapService() {
-        inNodeNetworkMapService = PersistentNetworkMapService(services, configuration.minimumPlatformVersion)
+    open protected fun makeNetworkMapService(): NetworkMapService {
+        return PersistentNetworkMapService(services, configuration.minimumPlatformVersion)
     }
 
     open protected fun makeCoreNotaryService(type: ServiceType): NotaryService? {

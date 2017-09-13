@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence
+import net.corda.node.internal.StartedNode
 import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
@@ -31,8 +32,8 @@ import kotlin.test.assertNull
 
 class ResolveTransactionsFlowTest {
     lateinit var mockNet: MockNetwork
-    lateinit var a: MockNetwork.MockNode
-    lateinit var b: MockNetwork.MockNode
+    lateinit var a: StartedNode<MockNetwork.MockNode>
+    lateinit var b: StartedNode<MockNetwork.MockNode>
     lateinit var notary: Party
     val megaCorpServices = MockServices(MEGA_CORP_KEY)
     val notaryServices = MockServices(DUMMY_NOTARY_KEY)
@@ -43,8 +44,8 @@ class ResolveTransactionsFlowTest {
         val nodes = mockNet.createSomeNodes()
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
-        a.registerInitiatedFlow(TestResponseFlow::class.java)
-        b.registerInitiatedFlow(TestResponseFlow::class.java)
+        a.internals.registerInitiatedFlow(TestResponseFlow::class.java)
+        b.internals.registerInitiatedFlow(TestResponseFlow::class.java)
         notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
     }

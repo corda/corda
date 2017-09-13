@@ -14,7 +14,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -149,7 +149,7 @@ class P2PMessagingTest : NodeBasedTest() {
         // Wait until the first request is received
         crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
         // Stop alice's node after we ensured that the first request was delivered and ignored.
-        alice.stop()
+        alice.dispose()
         val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
         assertThat(numberOfRequestsReceived).isGreaterThanOrEqualTo(1)
 
@@ -174,7 +174,7 @@ class P2PMessagingTest : NodeBasedTest() {
      * either ignore them or respond, depending on the value of [CrashingNodes.ignoreRequests], initially set to true.
      * This may be used to simulate scenarios where nodes receive request messages but crash before sending back a response.
      */
-    private fun simulateCrashingNodes(distributedServiceNodes: List<Node>, dummyTopic: String, responseMessage: String): CrashingNodes {
+    private fun simulateCrashingNodes(distributedServiceNodes: List<StartedNode<*>>, dummyTopic: String, responseMessage: String): CrashingNodes {
         val crashingNodes = CrashingNodes(
                 requestsReceived = AtomicInteger(0),
                 firstRequestReceived = CountDownLatch(1),
@@ -203,7 +203,7 @@ class P2PMessagingTest : NodeBasedTest() {
         return crashingNodes
     }
 
-    private fun assertAllNodesAreUsed(participatingServiceNodes: List<Node>, serviceName: CordaX500Name, originatingNode: Node) {
+    private fun assertAllNodesAreUsed(participatingServiceNodes: List<StartedNode<*>>, serviceName: CordaX500Name, originatingNode: StartedNode<*>) {
         // Setup each node in the distributed service to return back it's NodeInfo so that we can know which node is being used
         participatingServiceNodes.forEach { node ->
             node.respondWith(node.info)
@@ -221,10 +221,10 @@ class P2PMessagingTest : NodeBasedTest() {
                 break
             }
         }
-        assertThat(participatingNodes).containsOnlyElementsOf(participatingServiceNodes.map(Node::info))
+        assertThat(participatingNodes).containsOnlyElementsOf(participatingServiceNodes.map(StartedNode<*>::info))
     }
 
-    private fun Node.respondWith(message: Any) {
+    private fun StartedNode<*>.respondWith(message: Any) {
         network.addMessageHandler(javaClass.name) { netMessage, _ ->
             val request = netMessage.data.deserialize<TestRequest>()
             val response = network.createMessage(javaClass.name, request.sessionID, message.serialize().bytes)
@@ -232,7 +232,7 @@ class P2PMessagingTest : NodeBasedTest() {
         }
     }
 
-    private fun Node.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
+    private fun StartedNode<*>.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
         val request = TestRequest(replyTo = network.myAddress)
         return network.sendRequest<Any>(javaClass.name, request, target)
     }

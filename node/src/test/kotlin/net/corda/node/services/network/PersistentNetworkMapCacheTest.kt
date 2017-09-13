@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.CHARLIE
@@ -28,11 +29,11 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     @Before
     fun start() {
         val nodes = startNodesWithPort(partiesList)
-        nodes.forEach { it.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
+        nodes.forEach { it.internals.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
         nodes.forEach {
             infos.add(it.info)
             addressesMap[it.info.legalIdentity.name] = it.info.addresses[0]
-            it.stop() // We want them to communicate with NetworkMapService to save data to cache.
+            it.dispose() // We want them to communicate with NetworkMapService to save data to cache.
         }
     }
 
@@ -63,7 +64,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
         val partyNodes = alice.services.networkMapCache.partyNodes
         assert(NetworkMapService.type !in alice.info.advertisedServices.map { it.info.type })
-        assertEquals(null, alice.inNodeNetworkMapService)
+        assertEquals(NullNetworkMapService, alice.inNodeNetworkMapService)
         assertEquals(infos.size, partyNodes.size)
         assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
     }
@@ -72,7 +73,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     fun `start 2 nodes without pointing at NetworkMapService and communicate with each other`() {
         val parties = partiesList.subList(1, partiesList.size)
         val nodes = startNodesWithPort(parties, noNetworkMap = true)
-        assert(nodes.all { it.inNodeNetworkMapService == null })
+        assert(nodes.all { it.inNodeNetworkMapService == NullNetworkMapService })
         assert(nodes.all { NetworkMapService.type !in it.info.advertisedServices.map { it.info.type } })
         nodes.forEach {
             val partyNodes = it.services.networkMapCache.partyNodes
@@ -86,7 +87,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     fun `start 2 nodes pointing at NetworkMapService but don't start network map node`() {
         val parties = partiesList.subList(1, partiesList.size)
         val nodes = startNodesWithPort(parties, noNetworkMap = false)
-        assert(nodes.all { it.inNodeNetworkMapService == null })
+        assert(nodes.all { it.inNodeNetworkMapService == NullNetworkMapService })
         assert(nodes.all { NetworkMapService.type !in it.info.advertisedServices.map { it.info.type } })
         nodes.forEach {
             val partyNodes = it.services.networkMapCache.partyNodes
@@ -123,13 +124,13 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         }
         // Start Network Map and see that charlie node appears in caches.
         val nms = startNodesWithPort(listOf(DUMMY_NOTARY), noNetworkMap = false)[0]
-        nms.startupComplete.get()
-        assert(nms.inNodeNetworkMapService != null)
+        nms.internals.startupComplete.get()
+        assert(nms.inNodeNetworkMapService != NullNetworkMapService)
         assert(infos.any {it.legalIdentity == nms.info.legalIdentity})
         otherNodes.forEach {
             assert(nms.info.legalIdentity in it.services.networkMapCache.partyNodes.map { it.legalIdentity })
         }
-        charlie.nodeReadyFuture.get() // Finish registration.
+        charlie.internals.nodeReadyFuture.get() // Finish registration.
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
         val cacheA = otherNodes[0].services.networkMapCache.partyNodes
         val cacheB = otherNodes[1].services.networkMapCache.partyNodes
@@ -142,7 +143,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
     // HELPERS
     // Helper function to restart nodes with the same host and port.
-    private fun startNodesWithPort(nodesToStart: List<Party>, noNetworkMap: Boolean = false): List<Node> {
+    private fun startNodesWithPort(nodesToStart: List<Party>, noNetworkMap: Boolean = false): List<StartedNode<Node>> {
         return nodesToStart.map { party ->
             val configOverrides = addressesMap[party.name]?.let { mapOf("p2pAddress" to it.toString()) } ?: emptyMap()
             if (party == DUMMY_NOTARY) {
@@ -158,10 +159,10 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     }
 
     // Check that nodes are functional, communicate each with each.
-    private fun checkConnectivity(nodes: List<Node>) {
+    private fun checkConnectivity(nodes: List<StartedNode<*>>) {
         nodes.forEach { node1 ->
             nodes.forEach { node2 ->
-                node2.registerInitiatedFlow(SendBackFlow::class.java)
+                node2.internals.registerInitiatedFlow(SendBackFlow::class.java)
                 val resultFuture = node1.services.startFlow(SendFlow(node2.info.legalIdentity)).resultFuture
                 assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")
             }
