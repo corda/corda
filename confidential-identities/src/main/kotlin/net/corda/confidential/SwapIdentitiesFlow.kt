@@ -99,10 +99,12 @@ class SwapIdentitiesFlow(private val otherParty: Party,
 
     object NonceVerifier : UntrustworthyData.Validator<ByteArray, ByteArray> {
         override fun validate(data: ByteArray): ByteArray {
-            if (data.size == NONCE_SIZE_BYTES)
-                return data
-            else
+            if (data.size != NONCE_SIZE_BYTES)
                 throw SwapIdentitiesException("Nonce must be $NONCE_SIZE_BYTES bytes.")
+            val zeroByte = 0.toByte()
+            if (data.all { it == zeroByte })
+                throw SwapIdentitiesException("Nonce must not be all zeroes.")
+            return data
         }
     }
 }
