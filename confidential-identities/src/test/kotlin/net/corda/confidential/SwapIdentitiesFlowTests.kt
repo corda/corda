@@ -7,14 +7,11 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
-<<<<<<< 569d542154a9ef3376a24fd048174641e6b57cf3:confidential-identities/src/test/kotlin/net/corda/confidential/SwapIdentitiesFlowTests.kt
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
-=======
 import net.corda.testing.*
->>>>>>> Add nonce XOR:core/src/test/kotlin/net/corda/core/flows/SwapIdentitiesFlowTests.kt
 import net.corda.testing.node.MockNetwork
 import org.junit.Test
 import java.util.*
@@ -64,7 +61,11 @@ class SwapIdentitiesFlowTests {
         val identity = SerializedBytes<PartyAndCertificate>(ByteArray(SwapIdentitiesFlow.NONCE_SIZE_BYTES) { 0 }.apply(fixedRand::nextBytes))
         val aliceNonce = ByteArray(SwapIdentitiesFlow.NONCE_SIZE_BYTES) { 0 }.apply(fixedRand::nextBytes)
         val bobNonce = ByteArray(SwapIdentitiesFlow.NONCE_SIZE_BYTES) { 0 }.apply(fixedRand::nextBytes)
-        val sigData = SwapIdentitiesFlow.buildDataToSign(identity, aliceNonce, bobNonce)
+        val validNonces = TreeSet(SwapIdentitiesFlow.ArrayComparator).apply {
+            add(aliceNonce)
+            add(bobNonce)
+        }
+        val sigData = SwapIdentitiesFlow.buildDataToSign(identity, validNonces)
         assertTrue { arrayContains(sigData, identity.bytes) }
         assertFalse { arrayContains(sigData, aliceNonce) }
         assertFalse { arrayContains(sigData, bobNonce) }
@@ -100,17 +101,21 @@ class SwapIdentitiesFlowTests {
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
-        val bob: Party = bobNode.services.myInfo.legalIdentity
+        val bob: Party = bobNode.services.myInfo.chooseIdentity()
         val aliceNonce = ByteArray(SwapIdentitiesFlow.NONCE_SIZE_BYTES) { 0 }.apply(fixedRand::nextBytes)
         val bobNonce = ByteArray(SwapIdentitiesFlow.NONCE_SIZE_BYTES) { 0 }.apply(fixedRand::nextBytes)
+        val validNonces = TreeSet(SwapIdentitiesFlow.ArrayComparator).apply {
+            add(aliceNonce)
+            add(bobNonce)
+        }
         val notBob = notaryNode.database.transaction {
-            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.legalIdentityAndCert, false)
+            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)
         }
         val notBobBytes = SerializedBytes<PartyAndCertificate>(notBob.serialize().bytes)
-        val sigData = SwapIdentitiesFlow.buildDataToSign(notBobBytes, aliceNonce, bobNonce)
+        val sigData = SwapIdentitiesFlow.buildDataToSign(notBobBytes, validNonces)
         val signature = notaryNode.services.keyManagementService.sign(sigData, notBob.owningKey)
         assertFailsWith<SwapIdentitiesException>("Certificate subject must match counterparty's well known identity.") {
-            SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBobBytes, aliceNonce, bobNonce, signature.withoutKey())
+            SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBobBytes, validNonces, signature.withoutKey())
         }
 
         mockNet.stopNodes()
@@ -129,45 +134,53 @@ class SwapIdentitiesFlowTests {
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
-        val bob: Party = bobNode.services.myInfo.legalIdentity
+        val bob: Party = bobNode.services.myInfo.chooseIdentity()
         val aliceNonce = ByteArray(SwapIdentitiesFlow.NONCE_SIZE_BYTES) { 0 }.apply(fixedRand::nextBytes)
         val bobNonce = ByteArray(SwapIdentitiesFlow.NONCE_SIZE_BYTES) { 0 }.apply(fixedRand::nextBytes)
         val wrongNonce = ByteArray(SwapIdentitiesFlow.NONCE_SIZE_BYTES) { 0 }.apply(fixedRand::nextBytes)
+        val validNonces = TreeSet(SwapIdentitiesFlow.ArrayComparator).apply {
+            add(aliceNonce)
+            add(bobNonce)
+        }
+        val invalidNonces = TreeSet(SwapIdentitiesFlow.ArrayComparator).apply {
+            add(aliceNonce)
+            add(wrongNonce)
+        }
         // Check that the right signing key but the wrong nonce is rejected
         bobNode.database.transaction {
-            bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.legalIdentityAndCert, false)
+            bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.chooseIdentityAndCert(), false)
         }.let { anonymousBob ->
             val anonymousBobBytes = SerializedBytes<PartyAndCertificate>(anonymousBob.serialize().bytes)
-            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousBobBytes, aliceNonce, wrongNonce)
+            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousBobBytes, invalidNonces)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, aliceNonce, bobNonce, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, validNonces, signature.withoutKey())
             }
         }
         // Check that the wrong signature with the correct nonce is rejected
         notaryNode.database.transaction {
-            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.legalIdentityAndCert, false)
+            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)
         }.let { anonymousNotary ->
             val anonymousNotaryBytes = SerializedBytes<PartyAndCertificate>(anonymousNotary.serialize().bytes)
-            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotaryBytes, aliceNonce, bobNonce)
+            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotaryBytes, validNonces)
             val signature = notaryNode.services.keyManagementService.sign(sigData, anonymousNotary.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotaryBytes, aliceNonce, bobNonce, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotaryBytes, validNonces, signature.withoutKey())
             }
         }
         // Check that the right signing key, right nonce but wrong identity is rejected
         val anonymousAlice = aliceNode.database.transaction {
-            aliceNode.services.keyManagementService.freshKeyAndCert(aliceNode.services.myInfo.legalIdentityAndCert, false)
+            aliceNode.services.keyManagementService.freshKeyAndCert(aliceNode.services.myInfo.chooseIdentityAndCert(), false)
         }
         bobNode.database.transaction {
-            bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.legalIdentityAndCert, false)
+            bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.chooseIdentityAndCert(), false)
         }.let { anonymousBob ->
             val anonymousAliceBytes = SerializedBytes<PartyAndCertificate>(anonymousAlice.serialize().bytes)
             val anonymousBobBytes = SerializedBytes<PartyAndCertificate>(anonymousBob.serialize().bytes)
-            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAliceBytes, aliceNonce, bobNonce)
+            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAliceBytes, validNonces)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, aliceNonce, bobNonce, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, validNonces, signature.withoutKey())
             }
         }
 

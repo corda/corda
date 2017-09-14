@@ -1,12 +1,13 @@
 package net.corda.confidential
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.secureRandomBytes
+import net.corda.core.crypto.sha256
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.secureRandomBytes
-import net.corda.core.flows.FlowException
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -18,9 +19,10 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
+import org.bouncycastle.util.Arrays
 import java.io.ByteArrayOutputStream
 import java.security.SignatureException
-import kotlin.experimental.xor
+import java.util.*
 
 /**
  * Very basic flow which generates new confidential identities for parties in a transaction and exchanges the transaction
@@ -41,15 +43,14 @@ class SwapIdentitiesFlow(private val otherParty: Party,
 
         fun tracker() = ProgressTracker(AWAITING_KEY)
         fun buildDataToSign(identity: SerializedBytes<PartyAndCertificate>,
-                            ourNonce: ByteArray,
-                            theirNonce: ByteArray): ByteArray {
-            val xoredNonce = ByteArray(NONCE_SIZE_BYTES)
-            for (idx in 0 until NONCE_SIZE_BYTES) {
-                xoredNonce[idx] = ourNonce[idx] xor theirNonce[idx]
-            }
+                            nonces: SortedSet<ByteArray>): ByteArray {
+            val nonceBuffer = ByteArrayOutputStream(1024)
+            nonces.forEach(nonceBuffer::write)
+            val hashedNonce = nonceBuffer.toByteArray().sha256()
+
             val buffer = ByteArrayOutputStream(1024)
             buffer.write(identity.bytes)
-            buffer.write(xoredNonce)
+            buffer.write(hashedNonce.bytes)
             return buffer.toByteArray()
         }
 
@@ -57,8 +58,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
         fun validateAndRegisterIdentity(identityService: IdentityService,
                                         otherSide: Party,
                                         anonymousOtherSideBytes: SerializedBytes<PartyAndCertificate>,
-                                        ourNonce: ByteArray,
-                                        theirNonce: ByteArray,
+                                        nonces: SortedSet<ByteArray>,
                                         sigBytes: DigitalSignature): PartyAndCertificate {
             val anonymousOtherSide: PartyAndCertificate = anonymousOtherSideBytes.deserialize()
             if (anonymousOtherSide.name != otherSide.name) {
@@ -66,7 +66,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
             }
             val signature = DigitalSignature.WithKey(anonymousOtherSide.owningKey, sigBytes.bytes)
             try {
-                signature.verify(buildDataToSign(anonymousOtherSideBytes, ourNonce, theirNonce))
+                signature.verify(buildDataToSign(anonymousOtherSideBytes, nonces))
             } catch(ex: SignatureException) {
                 throw SwapIdentitiesException("Signature does not match the given identity and nonce.", ex)
             }
@@ -75,6 +75,10 @@ class SwapIdentitiesFlow(private val otherParty: Party,
             identityService.verifyAndRegisterIdentity(anonymousOtherSide)
             return anonymousOtherSide
         }
+    }
+
+    object ArrayComparator : Comparator<ByteArray> {
+        override fun compare(o1: ByteArray?, o2: ByteArray?): Int = Arrays.compareUnsigned(o1, o2)
     }
 
     @Suspendable
@@ -91,12 +95,16 @@ class SwapIdentitiesFlow(private val otherParty: Party,
             val otherSession = initiateFlow(otherParty)
             val ourNonce = secureRandomBytes(NONCE_SIZE_BYTES)
             val theirNonce = otherSession.sendAndReceive<ByteArray>(ourNonce).unwrap(NonceVerifier)
-            val data = buildDataToSign(serializedIdentity, ourNonce, theirNonce)
+            val nonces = TreeSet(ArrayComparator).apply {
+                add(ourNonce)
+                add(theirNonce)
+            }
+            val data = buildDataToSign(serializedIdentity, nonces)
             val ourSig: DigitalSignature.WithKey = serviceHub.keyManagementService.sign(data, legalIdentityAnonymous.owningKey)
             val ourIdentWithSig = IdentityWithSignature(serializedIdentity, ourSig.withoutKey())
             val anonymousOtherSide = otherSession.sendAndReceive<IdentityWithSignature>(ourIdentWithSig)
                     .unwrap { (confidentialIdentityBytes, theirSigBytes) ->
-                        validateAndRegisterIdentity(serviceHub.identityService, otherParty, confidentialIdentityBytes, ourNonce, theirNonce, theirSigBytes)
+                        validateAndRegisterIdentity(serviceHub.identityService, otherParty, confidentialIdentityBytes, nonces, theirSigBytes)
                     }
             identities.put(ourIdentity, legalIdentityAnonymous.party.anonymise())
             identities.put(otherParty, anonymousOtherSide.party.anonymise())
