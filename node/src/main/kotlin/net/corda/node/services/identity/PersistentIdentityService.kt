@@ -4,11 +4,10 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
-import net.corda.core.internal.toX509CertHolder
+import net.corda.core.internal.cert
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.cert
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
@@ -91,7 +90,6 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     )
 
     override val caCertStore: CertStore
-    override val trustRootHolder = trustRoot.toX509CertHolder()
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
 
     private val keyToParties = createPKMap()

@@ -2,7 +2,6 @@ package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
-import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -14,7 +13,6 @@ import java.security.cert.*
  */
 interface IdentityService {
     val trustRoot: X509Certificate
-    val trustRootHolder: X509CertificateHolder
     val trustAnchor: TrustAnchor
     val caCertStore: CertStore
 

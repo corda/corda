@@ -5,7 +5,6 @@ import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.x500Name
-import net.corda.core.utilities.cert
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.ASN1EncodableVector
@@ -247,7 +246,8 @@ object X509Utilities {
     internal fun createCertificate(certificateType: CertificateType,
                                    issuer: X500Name,
                                    issuerSigner: ContentSigner,
-                                   subject: CordaX500Name, subjectPublicKey: PublicKey,
+                                   subject: CordaX500Name,
+                                   subjectPublicKey: PublicKey,
                                    validityWindow: Pair<Date, Date>,
                                    nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val builder = createCertificate(certificateType, issuer, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)

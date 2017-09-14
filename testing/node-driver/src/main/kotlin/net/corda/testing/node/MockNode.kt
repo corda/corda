@@ -7,6 +7,7 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
@@ -18,7 +19,9 @@ import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.*
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
@@ -170,7 +173,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun makeIdentityService(trustRoot: X509Certificate,
                                          clientCa: CertificateAndKeyPair?,
                                          legalIdentity: PartyAndCertificate): IdentityService {
-            val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
+            val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate, clientCa?.certificate?.cert)
                     .filterNotNull()
                     .toTypedArray()
             val identityService = PersistentIdentityService(setOf(legalIdentity),
@@ -414,7 +417,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return when (msgRecipient) {
             is SingleMessageRecipient -> nodes.single { it.started!!.network.myAddress == msgRecipient }
             is InMemoryMessagingNetwork.ServiceHandle -> {
-                nodes.filter { it.advertisedServices.any { it == msgRecipient.service.info } }.firstOrNull()
+                nodes.firstOrNull { it.advertisedServices.any { it == msgRecipient.service.info } }
                         ?: throw IllegalArgumentException("Couldn't find node advertising service with info: ${msgRecipient.service.info} ")
             }
             else -> throw IllegalArgumentException("Method not implemented for different type of message recipients")

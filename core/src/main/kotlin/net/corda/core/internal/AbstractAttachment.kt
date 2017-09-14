@@ -10,6 +10,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.CodeSigner
+import java.security.cert.X509Certificate
 import java.util.jar.JarInputStream
 
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
@@ -44,7 +45,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
             }
         }
         (attachmentSigners ?: emptySet<CodeSigner>()).map {
-            Party(it.signerCertPath.certificates[0].toX509CertHolder())
+            Party(it.signerCertPath.certificates[0] as X509Certificate)
         }.sortedBy { it.name.toString() } // Determinism.
     }
 

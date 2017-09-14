@@ -3,6 +3,7 @@ package net.corda.core.internal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -15,6 +16,8 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
+import java.security.cert.Certificate
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
@@ -167,8 +170,8 @@ fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T 
     }
 }
 
-fun java.security.cert.Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
-fun javax.security.cert.Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
+fun Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
+val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
 fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {

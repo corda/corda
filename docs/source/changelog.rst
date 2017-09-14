@@ -150,6 +150,8 @@ UNRELEASED
 
 * Removed ``PluginServiceHub``. Replace with ``ServiceHub`` for ``@CordaService`` constructors.
 
+* ``X509CertificateHolder`` has been removed from the public API, replaced by ``java.security.X509Certificate``.
+
 Milestone 14
 ------------
 
