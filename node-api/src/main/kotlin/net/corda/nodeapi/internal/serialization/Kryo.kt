@@ -13,7 +13,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
-import net.corda.core.serialization.AttachmentsClassLoader
+import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes

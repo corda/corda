@@ -1,7 +1,8 @@
-package net.corda.core.serialization
+package net.corda.nodeapi.internal
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FileNotFoundException

@@ -6,7 +6,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
-import net.corda.core.serialization.AttachmentsClassLoader
+import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext

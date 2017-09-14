@@ -16,6 +16,7 @@ import net.corda.core.internal.LazyPool
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.nodeapi.internal.AttachmentsClassLoader
 import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 import java.util.*
