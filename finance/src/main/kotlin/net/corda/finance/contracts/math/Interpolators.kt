@@ -29,7 +29,7 @@ class LinearInterpolator(private val xs: DoubleArray, private val ys: DoubleArra
 
         require(x > x0) { "Can't interpolate below $x0" }
 
-        for (i in 1..xs.size - 1) {
+        for (i in 1 until xs.size) {
             if (xs[i] == x) return xs[i]
             else if (xs[i] > x) return interpolateBetween(x, xs[i - 1], xs[i], ys[i - 1], ys[i])
         }
@@ -78,15 +78,15 @@ class CubicSplineInterpolator(private val xs: DoubleArray, private val ys: Doubl
         val h = DoubleArray(n)
         val g = DoubleArray(n)
 
-        for (i in 0..n - 1)
+        for (i in 0 until n)
             h[i] = xs[i + 1] - xs[i]
-        for (i in 1..n - 1)
+        for (i in 1 until n)
             g[i] = 3 / h[i] * (ys[i + 1] - ys[i]) - 3 / h[i - 1] * (ys[i] - ys[i - 1])
 
         // Solve tridiagonal linear system (using Crout Factorization)
         val m = DoubleArray(n)
         val z = DoubleArray(n)
-        for (i in 1..n - 1) {
+        for (i in 1 until n) {
             val l = 2 * (xs[i + 1] - xs[i - 1]) - h[i - 1] * m[i - 1]
             m[i] = h[i] / l
             z[i] = (g[i] - h[i - 1] * z[i - 1]) / l
@@ -98,7 +98,7 @@ class CubicSplineInterpolator(private val xs: DoubleArray, private val ys: Doubl
         }
 
         val segmentMap = TreeMap<Double, Polynomial>()
-        for (i in 0..n - 1) {
+        for (i in 0 until n) {
             val coefficients = doubleArrayOf(ys[i], b[i], c[i], d[i])
             segmentMap.put(xs[i], Polynomial(coefficients))
         }

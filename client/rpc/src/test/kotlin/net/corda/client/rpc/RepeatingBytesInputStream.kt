@@ -14,11 +14,11 @@ class RepeatingBytesInputStream(val bytesToRepeat: ByteArray, val numberOfBytes:
         }
     }
     override fun read(byteArray: ByteArray, offset: Int, length: Int): Int {
-        val until = Math.min(Math.min(offset + length, byteArray.size), offset + bytesLeft)
-        for (i in offset .. until - 1) {
+        val lastIdx = Math.min(Math.min(offset + length, byteArray.size), offset + bytesLeft)
+        for (i in offset until lastIdx) {
             byteArray[i] = bytesToRepeat[(numberOfBytes - bytesLeft + i - offset) % bytesToRepeat.size]
         }
-        val bytesRead = until - offset
+        val bytesRead = lastIdx - offset
         bytesLeft -= bytesRead
         return if (bytesRead == 0 && bytesLeft == 0) -1 else bytesRead
     }
