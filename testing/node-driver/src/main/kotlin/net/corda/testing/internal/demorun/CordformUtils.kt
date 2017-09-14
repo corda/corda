@@ -1,4 +1,6 @@
-package net.corda.demorun.util
+@file:JvmName("CordformUtils")
+
+package net.corda.testing.internal.demorun
 
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
@@ -6,7 +8,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.User
-import org.bouncycastle.asn1.x500.X500Name
 
 fun CordformDefinition.node(configure: CordformNode.() -> Unit) {
     addNode { cordformNode -> cordformNode.configure() }

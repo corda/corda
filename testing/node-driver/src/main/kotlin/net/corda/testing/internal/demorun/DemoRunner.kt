@@ -1,4 +1,6 @@
-package net.corda.demorun
+@file:JvmName("DemoRunner")
+
+package net.corda.testing.internal.demorun
 
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
@@ -6,7 +8,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.testing.driver.NetworkMapStartStrategy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
-import javax.security.auth.x500.X500Principal
 
 fun CordformDefinition.clean() {
     System.err.println("Deleting: $driverDirectory")
