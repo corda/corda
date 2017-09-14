@@ -44,9 +44,9 @@ data class CarpenterMetaSchema(
     fun isEmpty() = carpenterSchemas.isEmpty()
     fun isNotEmpty() = carpenterSchemas.isNotEmpty()
 
-    // we could make this an abstract method on TypeNotation but hat
+    // We could make this an abstract method on TypeNotation but that
     // would mean the amqp package being "more" infected with carpenter
-    // specific bits
+    // specific bits.
     fun buildFor(target: TypeNotation, cl: ClassLoader) = when (target) {
         is RestrictedType -> target.carpenterSchema(this)
         is CompositeType -> target.carpenterSchema(cl, this, false)

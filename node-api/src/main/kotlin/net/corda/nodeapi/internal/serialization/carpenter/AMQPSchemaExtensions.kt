@@ -26,7 +26,6 @@ private fun CompositeType.validatePropertyTypes(classloader: ClassLoader) {
 
 fun AMQPField.typeAsString() = if (type == "*") requires[0] else type
 
-
 /**
  * based upon this AMQP schema either
  *  a) add the corresponding carpenter schema to the [carpenterSchemas] param
@@ -85,8 +84,8 @@ fun CompositeType.carpenterSchema(classloader: ClassLoader,
     }
 }
 
-// this is potentially problematic as we're assuming the only type of restriction we will be
-// carpenting is an enum, but actually trying to split out RestrictedType into something
+// This is potentially problematic as we're assuming the only type of restriction we will be
+// carpenting for, an enum, but actually trying to split out RestrictedType into something
 // more polymorphic is hard. Additionally, to conform to AMQP we're really serialising
 // this as a list so...
 fun RestrictedType.carpenterSchema(carpenterSchemas: CarpenterMetaSchema) {
