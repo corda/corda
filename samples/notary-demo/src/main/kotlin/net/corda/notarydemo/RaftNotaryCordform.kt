@@ -11,7 +11,7 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
-import net.corda.testing.internal.*
+import net.corda.testing.internal.demorun.*
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
 
