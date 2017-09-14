@@ -3,13 +3,12 @@ package net.corda.node.services.identity
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
+import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.cert
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.subject
 import net.corda.core.utilities.trace
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -39,7 +38,6 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
      * Certificate store for certificate authority and intermediary certificates.
      */
     override val caCertStore: CertStore
-    override val trustRootHolder = trustRoot.toX509CertHolder()
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val principalToParties = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
@@ -61,7 +59,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
-            log.error("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subject}.")
+            log.error("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
             log.error("Certificate path :")
             identity.certPath.certificates.reversed().forEachIndexed { index, certificate ->
                 val space = (0 until index).map { "   " }.joinToString("")

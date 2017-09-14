@@ -2,7 +2,7 @@ package net.corda.node.utilities.registration
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
-import net.corda.core.utilities.cert
+import net.corda.core.internal.cert
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.*

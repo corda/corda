@@ -8,6 +8,7 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
+import net.corda.core.internal.toX509CertHolder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
@@ -742,7 +743,7 @@ class SerializationOutputTests {
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
 
-        val obj = BOB_IDENTITY.certificate
+        val obj = BOB_IDENTITY.certificate.toX509CertHolder()
         serdes(obj, factory, factory2)
     }
 

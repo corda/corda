@@ -4,10 +4,8 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.utilities.OpaqueBytes
-import org.bouncycastle.cert.X509CertificateHolder
 import java.security.PublicKey
 import java.security.cert.X509Certificate
-import javax.security.auth.x500.X500Principal
 
 /**
  * The [Party] class represents an entity on the network, which is typically identified by a legal [name] and public key
@@ -29,8 +27,8 @@ import javax.security.auth.x500.X500Principal
  * @see CompositeKey
  */
 class Party(val name: CordaX500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
-    constructor(certificate: X509Certificate) : this(CordaX500Name.build(certificate.subjectX500Principal), Crypto.toSupportedPublicKey(certificate.publicKey))
-    constructor(certificate: X509CertificateHolder) : this(CordaX500Name.build(X500Principal(certificate.subject.encoded)), Crypto.toSupportedPublicKey(certificate.subjectPublicKeyInfo))
+    constructor(certificate: X509Certificate)
+            : this(CordaX500Name.build(certificate.subjectX500Principal), Crypto.toSupportedPublicKey(certificate.publicKey))
     override fun nameOrNull(): CordaX500Name = name
     fun anonymise(): AnonymousParty = AnonymousParty(owningKey)
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)

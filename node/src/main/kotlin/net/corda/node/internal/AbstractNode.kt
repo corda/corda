@@ -29,7 +29,6 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.cert
 import net.corda.core.utilities.debug
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
@@ -546,7 +545,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun makeIdentityService(trustRoot: X509Certificate,
                                            clientCa: CertificateAndKeyPair?,
                                            legalIdentity: PartyAndCertificate): IdentityService {
-        val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
+        val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate, clientCa?.certificate?.cert)
                 .filterNotNull()
                 .toTypedArray()
         val service = PersistentIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
@@ -631,11 +630,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        val nodeCertificate: X509Certificate = if (certificates[0] is X509Certificate)
-            certificates[0] as X509Certificate
-        else
-            throw ConfigurationException("Node certificate must be an X.509 certificate")
-        val subject: CordaX500Name? = CordaX500Name.build(nodeCertificate.subjectX500Principal)
+        val nodeCert = certificates[0] as? X509Certificate ?: throw ConfigurationException("Node certificate must be an X.509 certificate")
+        val subject = CordaX500Name.build(nodeCert.subjectX500Principal)
         if (subject != name)
             throw ConfigurationException("The name for $id doesn't match what's in the key store: $name vs $subject")
 

@@ -2,9 +2,8 @@ package net.corda.core.crypto
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.toTypedArray
-import net.corda.core.utilities.cert
+import net.corda.core.internal.cert
 import net.corda.node.utilities.*
-import net.corda.testing.getX500Name
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree

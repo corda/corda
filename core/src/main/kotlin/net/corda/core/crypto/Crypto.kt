@@ -22,7 +22,6 @@ import org.bouncycastle.asn1.sec.SECObjectIdentifiers
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
@@ -920,8 +919,7 @@ object Crypto {
     }
 
     /**
-     * Convert a public key to a supported implementation. This method is usually required to retrieve a key from an
-     * [X509CertificateHolder].
+     * Convert a public key to a supported implementation.
      *
      * @param key a public key.
      * @return a supported implementation of the input public key.

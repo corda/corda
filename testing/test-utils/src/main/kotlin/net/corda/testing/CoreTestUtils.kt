@@ -9,6 +9,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.cert
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.*
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
