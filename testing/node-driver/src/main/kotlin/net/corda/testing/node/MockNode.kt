@@ -378,8 +378,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      */
     fun registerIdentities(){
         nodes.forEach { itNode ->
-            itNode.database.transaction {
-                nodes.map { it.info.legalIdentitiesAndCerts.first() }.map(itNode.services.identityService::verifyAndRegisterIdentity)
+            itNode.started!!.database.transaction {
+                nodes.map { it.started!!.info.legalIdentitiesAndCerts.first() }.map(itNode.started!!.services.identityService::verifyAndRegisterIdentity)
             }
         }
     }
