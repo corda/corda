@@ -134,5 +134,4 @@ class EnumField : Field(Enum::class.java) {
 object FieldFactory {
     fun newInstance(mandatory: Boolean, name: String, field: Class<out Any?>) =
             if (mandatory) NonNullableField(name, field) else NullableField(name, field)
-
 }

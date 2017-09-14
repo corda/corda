@@ -29,7 +29,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("int", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
@@ -60,7 +60,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assert(obj.envelope.schema.types[0] is CompositeType)
 
         val amqpSchema = obj.envelope.schema.types[0] as CompositeType
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
@@ -95,7 +95,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("long", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
@@ -130,7 +130,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("short", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
@@ -165,7 +165,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("double", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
@@ -200,7 +200,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("float", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
