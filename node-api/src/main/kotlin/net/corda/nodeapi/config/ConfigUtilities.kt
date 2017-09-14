@@ -6,7 +6,6 @@ import com.typesafe.config.ConfigUtil
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.parseNetworkHostAndPort
 import org.slf4j.LoggerFactory
 import java.net.Proxy
 import java.net.URL
@@ -69,7 +68,7 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         Boolean::class -> getBoolean(path)
         LocalDate::class -> LocalDate.parse(getString(path))
         Instant::class -> Instant.parse(getString(path))
-        NetworkHostAndPort::class -> getString(path).parseNetworkHostAndPort()
+        NetworkHostAndPort::class -> NetworkHostAndPort.parse(getString(path))
         Path::class -> Paths.get(getString(path))
         URL::class -> URL(getString(path))
         Properties::class -> getConfig(path).toProperties()
@@ -97,7 +96,7 @@ private fun Config.getCollectionValue(path: String, type: KType): Collection<Any
         Boolean::class -> getBooleanList(path)
         LocalDate::class -> getStringList(path).map(LocalDate::parse)
         Instant::class -> getStringList(path).map(Instant::parse)
-        NetworkHostAndPort::class -> getStringList(path).map { it.parseNetworkHostAndPort() }
+        NetworkHostAndPort::class -> getStringList(path).map(NetworkHostAndPort.Companion::parse)
         Path::class -> getStringList(path).map { Paths.get(it) }
         URL::class -> getStringList(path).map(::URL)
         CordaX500Name::class -> getStringList(path).map(CordaX500Name.Companion::parse)

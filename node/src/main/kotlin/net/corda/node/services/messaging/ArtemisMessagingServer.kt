@@ -119,7 +119,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private val nodeRunsNetworkMapService = config.networkMapService == null
 
     init {
-        config.baseDirectory.expectedOnDefaultFileSystem()
+        config.baseDirectory.requireOnDefaultFileSystem()
     }
 
     /**

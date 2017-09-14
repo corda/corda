@@ -1,3 +1,5 @@
+@file:JvmName("AMQPSerializationScheme")
+
 package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.node.CordaPluginRegistry

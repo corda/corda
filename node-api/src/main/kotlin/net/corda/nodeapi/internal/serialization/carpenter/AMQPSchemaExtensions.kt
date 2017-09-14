@@ -1,3 +1,5 @@
+@file:JvmName("AMQPSchemaExtensions")
+
 package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
@@ -5,7 +7,7 @@ import net.corda.nodeapi.internal.serialization.amqp.RestrictedType
 import net.corda.nodeapi.internal.serialization.amqp.Field as AMQPField
 import net.corda.nodeapi.internal.serialization.amqp.Schema as AMQPSchema
 
-fun AMQPSchema.carpenterSchema(classloader: ClassLoader) : CarpenterMetaSchema {
+fun AMQPSchema.carpenterSchema(classloader: ClassLoader): CarpenterMetaSchema {
     val rtn = CarpenterMetaSchema.newInstance()
 
     types.filterIsInstance<CompositeType>().forEach {
