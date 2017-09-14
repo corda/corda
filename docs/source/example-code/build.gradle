@@ -34,6 +34,8 @@ dependencies {
     cordaCompile project(':client:jfx')
     cordaCompile project(':node-driver')
     testCompile project(':verifier')
+    
+    testCompile "net.corda:corda-test-utils:$corda_release_version"
 
     compile "org.graphstream:gs-core:1.3"
     compile("org.graphstream:gs-ui:1.3") {
