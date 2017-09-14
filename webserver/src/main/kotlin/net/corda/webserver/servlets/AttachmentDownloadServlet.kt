@@ -1,8 +1,8 @@
 package net.corda.webserver.servlets
 
+import net.corda.core.internal.extractFile
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.utilities.extractFile
 import net.corda.core.utilities.loggerFor
 import java.io.FileNotFoundException
 import java.io.IOException
