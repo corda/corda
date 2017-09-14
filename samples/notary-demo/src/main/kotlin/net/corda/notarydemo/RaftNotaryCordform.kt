@@ -62,6 +62,6 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it.x500Principal) }, advertisedService.type.id, clusterName)
+        ServiceIdentityGenerator.generateToDisk(notaryNames.map(CordaX500Name::toString).map(context::baseDirectory), advertisedService.type.id, clusterName)
     }
 }

@@ -65,6 +65,6 @@ object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", not
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it.x500Principal) }, advertisedService.type.id, clusterName, minCorrectReplicas(clusterSize))
+        ServiceIdentityGenerator.generateToDisk(notaryNames.map(CordaX500Name::toString).map(context::baseDirectory), advertisedService.type.id, clusterName, minCorrectReplicas(clusterSize))
     }
 }

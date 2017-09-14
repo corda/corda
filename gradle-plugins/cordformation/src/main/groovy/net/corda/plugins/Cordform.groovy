@@ -120,8 +120,8 @@ class Cordform extends DefaultTask {
                 }
             }
             cd.setup new CordformContext() {
-                Path baseDirectory(X500Principal nodeName) {
-                    project.projectDir.toPath().resolve(getNodeByName(nodeName.toString()).nodeDir.toPath())
+                Path baseDirectory(String nodeName) {
+                    project.projectDir.toPath().resolve(getNodeByName(nodeName).nodeDir.toPath())
                 }
             }
         } else {

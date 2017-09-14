@@ -38,7 +38,6 @@ import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
@@ -56,7 +55,6 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
-import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
 
 
@@ -682,7 +680,7 @@ class DriverDSL(
             override fun getConfig() = configOf("p2pAddress" to p2pAddress.toString())
         }))
         val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory(name.x500Principal),
+                baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
                 configOverrides = configOf(
                         "myLegalName" to name.toString(),
@@ -707,7 +705,7 @@ class DriverDSL(
             val name = CordaX500Name.parse(node.name)
 
             val config = ConfigHelper.loadConfig(
-                    baseDirectory = baseDirectory(name.x500Principal),
+                    baseDirectory = baseDirectory(name),
                     allowMissingConfig = true,
                     configOverrides = node.config + mapOf(
                             "extraAdvertisedServiceIds" to node.advertisedServices,
@@ -729,7 +727,7 @@ class DriverDSL(
             startInSameProcess: Boolean?
     ): CordaFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (0 until clusterSize).map { CordaX500Name(organisation = "Notary Service $it", locality = "Zurich", country = "CH") }
-        val paths = nodeNames.map { baseDirectory(it.x500Principal) }
+        val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
@@ -800,13 +798,13 @@ class DriverDSL(
 
     }
 
-    override fun baseDirectory(nodeName: X500Principal): Path = baseDirectory(CordaX500Name.build(X500Name.getInstance(nodeName.encoded)))
+    override fun baseDirectory(nodeName: String): Path = baseDirectory(CordaX500Name.parse(nodeName))
 
     override fun startDedicatedNetworkMapService(startInProcess: Boolean?): CordaFuture<NodeHandle> {
         val webAddress = portAllocation.nextHostAndPort()
         val networkMapLegalName = networkMapStartStrategy.legalName
         val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory(networkMapLegalName.x500Principal),
+                baseDirectory = baseDirectory(networkMapLegalName),
                 allowMissingConfig = true,
                 configOverrides = configOf(
                         "myLegalName" to networkMapLegalName.toString(),
