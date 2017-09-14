@@ -18,7 +18,7 @@ fun CordformDefinition.clean() {
 fun CordformDefinition.runNodes() = driver(
         isDebug = true,
         driverDirectory = driverDirectory,
-        networkMapStartStrategy = NetworkMapStartStrategy.Nominated(CordaX500Name.build(networkMapNodeName)),
+        networkMapStartStrategy = NetworkMapStartStrategy.Nominated(CordaX500Name.parse(networkMapNodeName)),
         portAllocation = PortAllocation.Incremental(10001)
 ) {
     setup(this)

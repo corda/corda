@@ -4,12 +4,12 @@ import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import org.apache.tools.ant.filters.FixCrLfFilter
+import org.bouncycastle.asn1.x500.X500Name
 import org.gradle.api.DefaultTask
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.TaskAction
 import java.nio.file.Path
 import java.nio.file.Paths
-import javax.security.auth.x500.X500Principal;
 
 /**
  * Creates nodes based on the configuration of this task in the gradle configuration DSL.

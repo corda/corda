@@ -20,7 +20,7 @@ internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { C
 
 private val notaryNames = createNotaryNames(3)
 
-object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0].x500Principal) {
+object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0].toString()) {
     private val clusterName = CordaX500Name(organisation = "Raft", locality = "Zurich", country = "CH")
     private val advertisedService = ServiceInfo(RaftValidatingNotaryService.type, clusterName)
 
