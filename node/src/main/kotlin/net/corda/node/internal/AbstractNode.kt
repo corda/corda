@@ -141,7 +141,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected lateinit var database: CordaPersistence
-    protected var dbCloser: (() -> Any?)? = null
     lateinit var cordappProvider: CordappProvider
 
     protected val _nodeReadyFuture = openFuture<Unit>()
@@ -431,10 +430,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             database.transaction {
                 log.info("Connected to ${database.dataSource.connection.metaData.databaseProductName} database.")
             }
-            this.database::close.let {
-                dbCloser = it
-                runOnStop += it
-            }
+            runOnStop += database::close
             return database.transaction {
                 insideTransaction()
             }
