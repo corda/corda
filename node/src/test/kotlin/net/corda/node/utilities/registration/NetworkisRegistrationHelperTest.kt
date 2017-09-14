@@ -6,10 +6,7 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.exists
-import net.corda.core.internal.toTypedArray
-import net.corda.core.internal.toX509CertHolder
-import net.corda.core.internal.cert
+import net.corda.core.internal.*
 import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.getX509Certificate
 import net.corda.node.utilities.loadKeyStore
@@ -82,8 +79,10 @@ class NetworkRegistrationHelperTest {
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_TLS))
             val certificateChain = getCertificateChain(X509Utilities.CORDA_CLIENT_TLS)
             assertEquals(4, certificateChain.size)
-            assertEquals(listOf(getX500Name(O = "R3 Ltd", L = "London", C = "GB")) + identities, certificateChain.map { it.toX509CertHolder().subject })
-            assertEquals(getX500Name(O = "R3 Ltd", L = "London", C = "GB"), getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject)
+            assertEquals(listOf(CordaX500Name(organisation = "R3 Ltd", locality = "London", country = "GB").x500Name) + identities.map { it.x500Name },
+                    certificateChain.map { it.toX509CertHolder().subject })
+            assertEquals(CordaX500Name(organisation = "R3 Ltd", locality = "London", country = "GB").x500Principal,
+                    getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal)
         }
 
         trustStore.run {

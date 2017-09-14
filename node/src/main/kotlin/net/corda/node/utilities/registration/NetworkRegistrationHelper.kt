@@ -1,8 +1,8 @@
 package net.corda.node.utilities.registration
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.core.internal.cert
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.*
@@ -85,7 +85,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             println("Generating SSL certificate for node messaging service.")
             val sslKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val caCert = caKeyStore.getX509Certificate(CORDA_CLIENT_CA).toX509CertHolder()
-            val sslCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, keyPair, CordaX500Name.build(caCert.subject).copy(commonName = null), sslKey.public)
+            val sslCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, keyPair, CordaX500Name.build(caCert.cert.subjectX500Principal).copy(commonName = null), sslKey.public)
             val sslKeyStore = loadOrCreateKeyStore(config.sslKeystore, keystorePassword)
             sslKeyStore.addOrReplaceKey(CORDA_CLIENT_TLS, sslKey.private, privateKeyPassword.toCharArray(),
                     arrayOf(sslCert.cert, *certificates))
