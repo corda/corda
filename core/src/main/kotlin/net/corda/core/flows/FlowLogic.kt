@@ -113,7 +113,11 @@ abstract class FlowLogic<out T> {
      */
     @Deprecated("Use FlowSession.sendAndReceiveWithRetry()", level = DeprecationLevel.WARNING)
     internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(R::class.java, otherParty, payload, flowUsedForSessions, true)
+        return stateMachine.sendAndReceive(R::class.java, otherParty, payload, flowUsedForSessions, retrySend = true)
+    }
+    @Suspendable
+    internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
+        return stateMachine.sendAndReceive(receiveType, counterparty, payload, flowUsedForSessions, retrySend = true)
     }
 
     /**
