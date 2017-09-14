@@ -18,7 +18,7 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
  */
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
-    override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
+    override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
 
     companion object {
         // NB: Order matters in this map, the most specific classes should be listed at the end
@@ -29,7 +29,11 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
                 NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) },
                 // concrete classes for user convenience
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
-                TreeMap::class.java to { map -> TreeMap(map) }
+                TreeMap::class.java to { map -> TreeMap(map) },
+                EnumMap::class.java to { map ->
+                    @Suppress("UNCHECKED_CAST")
+                    EnumMap(map as Map<EnumJustUsedForCasting, Any>)
+                }
         ))
 
         private fun findConcreteType(clazz: Class<*>): MapCreationFunction {
@@ -95,6 +99,10 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
     private fun readEntry(schema: Schema, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) =
             input.readObjectOrNull(entry.key, schema, declaredType.actualTypeArguments[0]) to
                     input.readObjectOrNull(entry.value, schema, declaredType.actualTypeArguments[1])
+
+    // Cannot use * as a bound for EnumMap and EnumSet since * is not an enum.  So, we use a sample enum instead.
+    // We don't actually care about the type, we just need to make the compiler happier.
+    internal enum class EnumJustUsedForCasting { NOT_USED }
 }
 
 internal fun Class<*>.checkSupportedMapType() {
