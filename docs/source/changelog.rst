@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
+* Added ability to configure what notary to use for a specific state type.
+
 * Adding enum support to the class carpenter
 
 * ``ContractState::contract`` has been moved ``TransactionState::contract`` and it's type has changed to ``String`` in order to

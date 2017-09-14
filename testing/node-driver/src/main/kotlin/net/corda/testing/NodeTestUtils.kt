@@ -8,6 +8,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryRule
 import net.corda.node.services.config.VerifierType
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -68,5 +69,6 @@ fun testNodeConfiguration(
     whenever(nc.certificateChainCheckPolicies).thenReturn(emptyList())
     whenever(nc.verifierType).thenReturn(VerifierType.InMemory)
     whenever(nc.messageRedeliveryDelaySeconds).thenReturn(5)
+    whenever(nc.notaryRules).thenReturn(listOf(NotaryRule("*", DUMMY_NOTARY.name)))
     return nc
 }

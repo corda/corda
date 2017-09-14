@@ -3,6 +3,7 @@ package net.corda.node.services.config
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -34,6 +35,7 @@ class FullNodeConfigurationTest {
                 notaryNodeAddress = null,
                 notaryClusterAddresses = emptyList(),
                 certificateChainCheckPolicies = emptyList(),
+                notaryRules = listOf(NotaryRule("*", DUMMY_NOTARY.name)),
                 devMode = true)
 
         fun configWithRPCUsername(username: String) {

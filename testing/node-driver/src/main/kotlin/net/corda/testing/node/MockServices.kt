@@ -2,6 +2,7 @@ package net.corda.testing.node
 
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
@@ -169,6 +170,8 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T = throw IllegalArgumentException("${type.name} not found")
 
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()
+
+    override fun getNotaryForState(type: Class<*>): Party = throw UnsupportedOperationException()
 }
 
 class MockKeyManagementService(val identityService: IdentityService,

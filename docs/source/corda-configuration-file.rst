@@ -142,3 +142,8 @@ path to the node's base directory.
 
 :certificateSigningService: Certificate Signing Server address. It is used by the certificate signing request utility to
     obtain SSL certificate. (See :doc:`permissioning` for more information.)
+
+:notaryRules: A list of rules that specify what notary to use for different state types. Each rule consists of:
+        :pattern: a pattern to match the canonical class name of state. A wildcard ``*`` will match any string.
+        :name: an `X500Name` that corresponds to a notary service name on the network
+    Given a canonical name of a state class, rules are examined in order until the first pattern that matches is found.

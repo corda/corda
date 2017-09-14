@@ -37,6 +37,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val bftSMaRt: BFTSMaRtConfiguration
     val notaryNodeAddress: NetworkHostAndPort?
     val notaryClusterAddresses: List<NetworkHostAndPort>
+    val notaryRules: List<NotaryRule>
 }
 
 data class FullNodeConfiguration(
@@ -66,6 +67,8 @@ data class FullNodeConfiguration(
         override val notaryNodeAddress: NetworkHostAndPort?,
         override val notaryClusterAddresses: List<NetworkHostAndPort>,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
+        override val notaryRules: List<NotaryRule>,
+
         override val devMode: Boolean = false,
         val useTestClock: Boolean = false,
         val detectPublicIp: Boolean = true
@@ -79,6 +82,10 @@ data class FullNodeConfiguration(
         rpcUsers.forEach {
             require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }
         }
+        
+        // TODO: validate notary rule patterns:
+        // - must have at least one pattern
+        // - patterns can't contain invalid characters
     }
 
     fun calculateServices(): Set<ServiceInfo> {
@@ -90,6 +97,9 @@ data class FullNodeConfiguration(
         return advertisedServices
     }
 }
+
+/** Specifies a rule for allocating a notary for state types that match the [pattern] */
+data class NotaryRule(val pattern: String, val name: CordaX500Name)
 
 enum class VerifierType {
     InMemory,
