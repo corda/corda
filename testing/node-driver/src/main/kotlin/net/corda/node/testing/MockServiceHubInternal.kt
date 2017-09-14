@@ -4,10 +4,12 @@ import com.codahale.metrics.MetricRegistry
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.StateLoader
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.NonEmptySet
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
@@ -43,8 +45,9 @@ open class MockServiceHubInternal(
         val overrideClock: Clock? = NodeClock(),
         val schemas: SchemaService? = NodeSchemaService(),
         val customContractUpgradeService: ContractUpgradeService? = null,
-        val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2)
-) : ServiceHubInternal {
+        val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2),
+        protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
+) : ServiceHubInternal, StateLoader by stateLoader {
     override val vaultQueryService: VaultQueryService
         get() = customVaultQuery ?: throw UnsupportedOperationException()
     override val transactionVerifierService: TransactionVerifierService

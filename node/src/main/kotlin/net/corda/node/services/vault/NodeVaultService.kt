@@ -7,15 +7,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.tee
-import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.vault.IQueryCriteriaParser
+import net.corda.core.node.StateLoader
+import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
-import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -32,9 +28,9 @@ import net.corda.node.utilities.wrapWithDatabaseTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.time.Clock
 import java.time.Instant
 import java.util.*
-import javax.persistence.criteria.Predicate
 
 /**
  * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
@@ -46,7 +42,7 @@ import javax.persistence.criteria.Predicate
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService(private val clock: Clock, private val keyManagementService: KeyManagementService, private val stateLoader: StateLoader) : SingletonSerializeAsToken(), VaultServiceInternal {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -77,7 +73,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = services.clock.instant())
+                        recordedTime = clock.instant())
                 state.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(state)
             }
@@ -85,11 +81,11 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
                     stateStatus = Vault.StateStatus.CONSUMED
-                    consumedTime = services.clock.instant()
+                    consumedTime = clock.instant()
                     // remove lock (if held)
                     if (lockId != null) {
                         lockId = null
-                        lockUpdateTime = services.clock.instant()
+                        lockUpdateTime = clock.instant()
                         log.trace("Releasing soft lock on consumed state: $stateRef")
                     }
                     session.save(state)
@@ -147,7 +143,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     private fun notifyRegular(txns: Iterable<WireTransaction>) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
-            val myKeys = services.keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
+            val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val ourNewStates = tx.outputs.
                     filter { isRelevant(it.data, myKeys.toSet()) }.
                     map { tx.outRef<ContractState>(it.data) }
@@ -173,8 +169,8 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             // We need to resolve the full transaction here because outputs are calculated from inputs
             // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
             // input positions
-            val ltx = tx.resolve(services, emptyList())
-            val myKeys = services.keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
+            val ltx = tx.resolve(stateLoader, emptyList())
+            val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
                     filter { (_, output) -> isRelevant(output.data, myKeys.toSet()) }.
@@ -248,7 +244,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     @Throws(StatesNotAvailableException::class)
     override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
-        val softLockTimestamp = services.clock.instant()
+        val softLockTimestamp = clock.instant()
         try {
             val session = DatabaseTransactionManager.current().session
             val criteriaBuilder = session.criteriaBuilder
@@ -294,7 +290,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     }
 
     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
-        val softLockTimestamp = services.clock.instant()
+        val softLockTimestamp = clock.instant()
         val session = DatabaseTransactionManager.current().session
         val criteriaBuilder = session.criteriaBuilder
         if (stateRefs == null) {
@@ -334,6 +330,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         }
     }
 
+    lateinit override var vaultQueryService: VaultQueryService
     @Suspendable
     @Throws(StatesNotAvailableException::class)
     override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
@@ -350,7 +347,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
                 contractStateTypes = setOf(contractType),
                 softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)))
-        val results = services.vaultQueryService.queryBy(contractType, enrichedCriteria.and(eligibleStatesQuery), sorter)
+        val results = vaultQueryService.queryBy(contractType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
         var claimedAmount = 0L
         val claimedStates = mutableListOf<StateAndRef<T>>()

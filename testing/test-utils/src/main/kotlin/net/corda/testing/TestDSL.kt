@@ -6,6 +6,7 @@ import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -70,7 +71,7 @@ data class TestTransactionDSLInterpreter private constructor(
             transactionBuilder: TransactionBuilder
     ) : this(ledgerInterpreter, transactionBuilder, HashMap())
 
-    val services = object : ServiceHub by ledgerInterpreter.services {
+    val services = object : ServicesForResolution by ledgerInterpreter.services {
         override fun loadState(stateRef: StateRef) = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
     }
 

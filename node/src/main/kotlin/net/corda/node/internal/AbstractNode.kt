@@ -5,6 +5,10 @@ import com.google.common.collect.Lists
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.*
 import net.corda.core.flows.*
 import net.corda.core.flows.ContractUpgradeFlow.Acceptor
@@ -18,6 +22,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.*
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceEntry
@@ -349,7 +354,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
-        _services = ServiceHubInternalImpl()
+        _services = ServiceHubInternalImpl(makeTransactionStorage())
         attachments = NodeAttachmentService(services.monitoringService.metrics)
         cordappProvider = CordappProvider(attachments, makeCordappLoader())
         val legalIdentity = obtainIdentity()
@@ -661,17 +666,18 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
-    private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
-
+    private inner class ServiceHubInternalImpl(
+            override val validatedTransactions: WritableTransactionStorage,
+            private val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
+    ) : ServiceHubInternal, SingletonSerializeAsToken(), StateLoader by stateLoader {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val monitoringService = MonitoringService(MetricRegistry())
-        override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val schemaService by lazy { NodeSchemaService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
-        override val vaultService by lazy { NodeVaultService(this) }
+        override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
         override val vaultQueryService by lazy {
             HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
@@ -721,4 +727,19 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         database.hibernateConfig.schemaService.registerCustomSchemas(schemas)
     }
 
+}
+
+class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : StateLoader {
+    /**
+     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
+     *
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     */
+    @Throws(TransactionResolutionException::class)
+    override fun loadState(stateRef: StateRef): TransactionState<*> {
+        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
+        return if (stx.isNotaryChangeTransaction()) {
+            stx.resolveNotaryChangeTransaction(this).outputs[stateRef.index]
+        } else stx.tx.outputs[stateRef.index]
+    }
 }

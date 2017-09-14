@@ -9,7 +9,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
-import net.corda.core.transactions.CoreTransaction
 import net.corda.core.utilities.NonEmptySet
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -245,6 +244,9 @@ interface VaultService {
 
 }
 
+interface VaultServiceInternal : VaultService {
+    var vaultQueryService: VaultQueryService
+}
 
 class StatesNotAvailableException(override val message: String?, override val cause: Throwable? = null) : FlowException(message, cause) {
     override fun toString() = "Soft locking error: $message"
