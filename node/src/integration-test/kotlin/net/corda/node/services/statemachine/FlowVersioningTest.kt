@@ -34,14 +34,14 @@ class FlowVersioningTest : NodeBasedTest() {
             val alicePlatformVersionAccordingToBob = receive<Int>(initiatedParty).unwrap { it }
             return Pair(
                     alicePlatformVersionAccordingToBob,
-                    getFlowContext(initiatedParty).flowVersion
+                    getFlowInfo(initiatedParty).flowVersion
             )
         }
     }
 
     private class PretendInitiatedCoreFlow(val initiatingParty: Party) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() = send(initiatingParty, getFlowContext(initiatingParty).flowVersion)
+        override fun call() = send(initiatingParty, getFlowInfo(initiatingParty).flowVersion)
     }
 
 }

@@ -11,12 +11,9 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.abbreviate
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.staticField
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
@@ -86,7 +83,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         get() = _resultFuture ?: openFuture<R>().also { _resultFuture = it }
 
     // This state IS serialised, as we need it to know what the fiber is waiting for.
-    internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()
+    internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSessionInternal>()
     internal var waitingForResponse: WaitingRequest? = null
     internal var hasSoftLockedStates: Boolean = false
         set(value) {
@@ -158,7 +155,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun getFlowContext(otherParty: Party, sessionFlow: FlowLogic<*>): FlowContext {
+    override fun initiateFlow(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession {
+        return FlowSession(otherParty, this, sessionFlow)
+    }
+
+    @Suspendable
+    override fun getFlowInfo(otherParty: Party, sessionFlow: FlowLogic<*>): FlowInfo {
         val state = getConfirmedSession(otherParty, sessionFlow).state as FlowSessionState.Initiated
         return state.context
     }
@@ -279,20 +281,20 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * This method will suspend the state machine and wait for incoming session init response from other party.
      */
     @Suspendable
-    private fun FlowSession.waitForConfirmation() {
+    private fun FlowSessionInternal.waitForConfirmation() {
         val (peerParty, sessionInitResponse) = receiveInternal<SessionInitResponse>(this, null)
         if (sessionInitResponse is SessionConfirm) {
             state = FlowSessionState.Initiated(
                     peerParty,
                     sessionInitResponse.initiatedSessionId,
-                    FlowContext(sessionInitResponse.flowVersion, sessionInitResponse.appName))
+                    FlowInfo(sessionInitResponse.flowVersion, sessionInitResponse.appName))
         } else {
             sessionInitResponse as SessionReject
             throw UnexpectedFlowEndException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
         }
     }
 
-    private fun createSessionData(session: FlowSession, payload: Any): SessionData {
+    private fun createSessionData(session: FlowSessionInternal, payload: Any): SessionData {
         val sessionState = session.state
         val peerSessionId = when (sessionState) {
             is FlowSessionState.Initiating -> throw IllegalStateException("We've somehow held onto an unconfirmed session: $session")
@@ -302,23 +304,23 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    private fun sendInternal(session: FlowSession, message: SessionMessage) = suspend(SendOnly(session, message))
+    private fun sendInternal(session: FlowSessionInternal, message: SessionMessage) = suspend(SendOnly(session, message))
 
     private inline fun <reified M : ExistingSessionMessage> receiveInternal(
-            session: FlowSession,
+            session: FlowSessionInternal,
             userReceiveType: Class<*>?): ReceivedSessionMessage<M> {
         return waitForMessage(ReceiveOnly(session, M::class.java, userReceiveType))
     }
 
     private inline fun <reified M : ExistingSessionMessage> sendAndReceiveInternal(
-            session: FlowSession,
+            session: FlowSessionInternal,
             message: SessionMessage,
             userReceiveType: Class<*>?): ReceivedSessionMessage<M> {
         return waitForMessage(SendAndReceive(session, message, M::class.java, userReceiveType))
     }
 
     @Suspendable
-    private fun getConfirmedSessionIfPresent(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession? {
+    private fun getConfirmedSessionIfPresent(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSessionInternal? {
         return openSessions[Pair(sessionFlow, otherParty)]?.apply {
             if (state is FlowSessionState.Initiating) {
                 // Session still initiating, wait for the confirmation
@@ -328,7 +330,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    private fun getConfirmedSession(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession {
+    private fun getConfirmedSession(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSessionInternal {
         return getConfirmedSessionIfPresent(otherParty, sessionFlow) ?:
                 startNewSession(otherParty, sessionFlow, null, waitForConfirmation = true)
     }
@@ -344,9 +346,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                                 sessionFlow: FlowLogic<*>,
                                 firstPayload: Any?,
                                 waitForConfirmation: Boolean,
-                                retryable: Boolean = false): FlowSession {
+                                retryable: Boolean = false): FlowSessionInternal {
         logger.trace { "Initiating a new session with $otherParty" }
-        val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), retryable)
+        val session = FlowSessionInternal(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), retryable)
         openSessions[Pair(sessionFlow, otherParty)] = session
         val (version, initiatingFlowClass) = sessionFlow.javaClass.flowVersionAndInitiatingClass
         val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, sessionFlow.javaClass.appName, firstPayload)
@@ -403,7 +405,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
-    private fun FlowSession.erroredEnd(end: ErrorSessionEnd): Nothing {
+    private fun FlowSessionInternal.erroredEnd(end: ErrorSessionEnd): Nothing {
         if (end.errorResponse != null) {
             @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
             (end.errorResponse as java.lang.Throwable).fillInStackTrace()

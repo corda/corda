@@ -53,15 +53,19 @@ abstract class FlowLogic<out T> {
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
+    @Suspendable
+    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, flowUsedForSessions)
+
     /**
-     * Returns a [FlowContext] object describing the flow [otherParty] is using. With [FlowContext.flowVersion] it
+     * Returns a [FlowInfo] object describing the flow [otherParty] is using. With [FlowInfo.flowVersion] it
      * provides the necessary information needed for the evolution of flows and enabling backwards compatibility.
      *
      * This method can be called before any send or receive has been done with [otherParty]. In such a case this will force
      * them to start their flow.
      */
+    @Deprecated("Use FlowSession.getFlowContext()", level = DeprecationLevel.WARNING)
     @Suspendable
-    fun getFlowContext(otherParty: Party): FlowContext = stateMachine.getFlowContext(otherParty, flowUsedForSessions)
+    fun getFlowInfo(otherParty: Party): FlowInfo = stateMachine.getFlowInfo(otherParty, flowUsedForSessions)
 
     /**
      * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
@@ -76,6 +80,7 @@ abstract class FlowLogic<out T> {
      *
      * @returns an [UntrustworthyData] wrapper around the received object.
      */
+    @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
     inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<R> {
         return sendAndReceive(R::class.java, otherParty, payload)
     }
@@ -91,6 +96,7 @@ abstract class FlowLogic<out T> {
      *
      * @returns an [UntrustworthyData] wrapper around the received object.
      */
+    @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
     @Suspendable
     open fun <R : Any> sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
         return stateMachine.sendAndReceive(receiveType, otherParty, payload, flowUsedForSessions)
@@ -105,6 +111,7 @@ abstract class FlowLogic<out T> {
      * oracle services. If one or more nodes in the service cluster go down mid-session, the message will be redelivered
      * to a different one, so there is no need to wait until the initial node comes back up to obtain a response.
      */
+    @Deprecated("Use FlowSession.sendAndReceiveWithRetry()", level = DeprecationLevel.WARNING)
     internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any): UntrustworthyData<R> {
         return stateMachine.sendAndReceive(R::class.java, otherParty, payload, flowUsedForSessions, true)
     }
@@ -116,6 +123,7 @@ abstract class FlowLogic<out T> {
      * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
      * corrupted data in order to exploit your code.
      */
+    @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
     inline fun <reified R : Any> receive(otherParty: Party): UntrustworthyData<R> = receive(R::class.java, otherParty)
 
     /**
@@ -127,6 +135,7 @@ abstract class FlowLogic<out T> {
      *
      * @returns an [UntrustworthyData] wrapper around the received object.
      */
+    @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
     @Suspendable
     open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party): UntrustworthyData<R> {
         return stateMachine.receive(receiveType, otherParty, flowUsedForSessions)
@@ -139,6 +148,7 @@ abstract class FlowLogic<out T> {
      * is offline then message delivery will be retried until it comes back or until the message is older than the
      * network's event horizon time.
      */
+    @Deprecated("Use FlowSession.send()", level = DeprecationLevel.WARNING)
     @Suspendable
     open fun send(otherParty: Party, payload: Any) = stateMachine.send(otherParty, payload, flowUsedForSessions)
 
@@ -294,7 +304,7 @@ abstract class FlowLogic<out T> {
  * Version and name of the CorDapp hosting the other side of the flow.
  */
 @CordaSerializable
-data class FlowContext(
+data class FlowInfo(
         /**
          * The integer flow version the other side is using.
          * @see InitiatingFlow

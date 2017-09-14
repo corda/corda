@@ -692,7 +692,7 @@ class FlowFrameworkTests {
                 node1 sent sessionInit(SendFlow::class, flowVersion = 1, payload = "Old initiating") to node2,
                 node2 sent sessionConfirm(flowVersion = 2) to node1
         )
-        assertThat(initiatingFlow.getFlowContext(node2.info.legalIdentity).flowVersion).isEqualTo(2)
+        assertThat(initiatingFlow.getFlowInfo(node2.info.legalIdentity).flowVersion).isEqualTo(2)
     }
 
     @Test
@@ -976,7 +976,7 @@ class FlowFrameworkTests {
         @Suspendable
         override fun call(): Pair<Any, Int> {
             val received = receive<Any>(otherParty).unwrap { it }
-            val otherFlowVersion = getFlowContext(otherParty).flowVersion
+            val otherFlowVersion = getFlowInfo(otherParty).flowVersion
             return Pair(received, otherFlowVersion)
         }
     }

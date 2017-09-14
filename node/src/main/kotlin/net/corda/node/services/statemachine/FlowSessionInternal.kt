@@ -1,6 +1,6 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.flows.FlowContext
+import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.node.services.statemachine.FlowSessionState.Initiated
@@ -12,7 +12,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * is received. Note that this requires the party on the other end to be a distributed service and run an idempotent flow
  * that only sends back a single [SessionData] message before termination.
  */
-class FlowSession(
+// TODO rename this
+class FlowSessionInternal(
         val flow: FlowLogic<*>,
         val ourSessionId: Long,
         val initiatingParty: Party?,
@@ -42,7 +43,7 @@ sealed class FlowSessionState {
         override val sendToParty: Party get() = otherParty
     }
 
-    data class Initiated(val peerParty: Party, val peerSessionId: Long, val context: FlowContext) : FlowSessionState() {
+    data class Initiated(val peerParty: Party, val peerSessionId: Long, val context: FlowInfo) : FlowSessionState() {
         override val sendToParty: Party get() = peerParty
     }
 }
