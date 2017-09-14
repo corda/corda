@@ -1,15 +1,15 @@
 package net.corda.node.internal
 
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.Party
+import net.corda.core.flows.FlowSession
 
 sealed class InitiatedFlowFactory<out F : FlowLogic<*>> {
-    protected abstract val factory: (Party) -> F
-    fun createFlow(otherParty: Party): F = factory(otherParty)
+    protected abstract val factory: (FlowSession) -> F
+    fun createFlow(initiatingFlowSession: FlowSession): F = factory(initiatingFlowSession)
 
-    data class Core<out F : FlowLogic<*>>(override val factory: (Party) -> F) : InitiatedFlowFactory<F>()
+    data class Core<out F : FlowLogic<*>>(override val factory: (FlowSession) -> F) : InitiatedFlowFactory<F>()
     data class CorDapp<out F : FlowLogic<*>>(val flowVersion: Int,
                                              val appName: String,
-                                             override val factory: (Party) -> F) : InitiatedFlowFactory<F>()
+                                             override val factory: (FlowSession) -> F) : InitiatedFlowFactory<F>()
 }
 

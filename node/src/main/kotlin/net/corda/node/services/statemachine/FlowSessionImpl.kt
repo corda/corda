@@ -9,10 +9,11 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.utilities.UntrustworthyData
 
 class FlowSessionImpl(
-        override val counterparty: Party,
-        private val stateMachine: FlowStateMachine<*>,
-        private val sessionFlow: FlowLogic<*>
+        override val counterparty: Party
 ) : FlowSession() {
+
+    internal lateinit var stateMachine: FlowStateMachine<*>
+    internal lateinit var sessionFlow: FlowLogic<*>
 
     @Suspendable
     override fun getCounterpartyFlowInfo(): FlowInfo {

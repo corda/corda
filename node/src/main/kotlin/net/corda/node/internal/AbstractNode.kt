@@ -294,14 +294,35 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return registerInitiatedFlowInternal(initiatedFlowClass, track = true)
     }
 
+    // TODO remove once not needed
+    private fun deprecatedFlowConstructorMessage(flowClass: Class<*>): String {
+        return "Installing flow factory for $flowClass accepting a ${Party::class.java.simpleName}, which is deprecated. " +
+                "It should accept a ${FlowSession::class.java.simpleName} instead"
+    }
+
     private fun <F : FlowLogic<*>> registerInitiatedFlowInternal(initiatedFlow: Class<F>, track: Boolean): Observable<F> {
-        val ctor = initiatedFlow.getDeclaredConstructor(Party::class.java).apply { isAccessible = true }
+        val constructors = initiatedFlow.declaredConstructors.associateBy { it.parameterTypes.toList() }
+        val flowSessionCtor = constructors[listOf(FlowSession::class.java)]?.apply { isAccessible = true }
+        val ctor: (FlowSession) -> F = if (flowSessionCtor == null) {
+            // Try to fallback to a Party constructor
+            val partyCtor = constructors[listOf(Party::class.java)]?.apply { isAccessible = true }
+            if (partyCtor == null) {
+                throw IllegalArgumentException("$initiatedFlow must have a constructor accepting a ${FlowSession::class.java.name}")
+            } else {
+                log.warn(deprecatedFlowConstructorMessage(initiatedFlow))
+            }
+            @Suppress("UNCHECKED_CAST")
+            { flowSession: FlowSession -> partyCtor.newInstance(flowSession.counterparty) as F }
+        } else {
+            @Suppress("UNCHECKED_CAST")
+            { flowSession: FlowSession -> flowSessionCtor.newInstance(flowSession) as F }
+        }
         val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
         val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
         require(classWithAnnotation == initiatingFlow) {
             "${InitiatedBy::class.java.name} must point to ${classWithAnnotation.name} and not ${initiatingFlow.name}"
         }
-        val flowFactory = InitiatedFlowFactory.CorDapp(version, initiatedFlow.appName, { ctor.newInstance(it) })
+        val flowFactory = InitiatedFlowFactory.CorDapp(version, initiatedFlow.appName, ctor)
         val observable = internalRegisterFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
         log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
         return observable
@@ -327,14 +348,22 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * compatibility [flowFactory] provides a second parameter which is the platform version of the initiating party.
      * @suppress
      */
+    @Deprecated("Use installCoreFlowExpectingFlowSession() instead")
     @VisibleForTesting
     fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party) -> FlowLogic<*>) {
+        log.warn(deprecatedFlowConstructorMessage(clientFlowClass.java))
+        installCoreFlowExpectingFlowSession(clientFlowClass, { flowSession -> flowFactory(flowSession.counterparty) })
+    }
+
+    @VisibleForTesting
+    fun installCoreFlowExpectingFlowSession(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (FlowSession) -> FlowLogic<*>) {
         require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
         flowFactories[clientFlowClass.java] = InitiatedFlowFactory.Core(flowFactory)
         log.debug { "Installed core flow ${clientFlowClass.java.name}" }
     }
+
 
     private fun installCoreFlows() {
         installCoreFlow(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)

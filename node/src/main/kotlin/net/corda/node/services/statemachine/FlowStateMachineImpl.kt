@@ -156,7 +156,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun initiateFlow(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession {
-        return FlowSessionImpl(otherParty, this, sessionFlow)
+        val flowSession = FlowSessionImpl(otherParty)
+        flowSession.stateMachine = this
+        flowSession.sessionFlow = sessionFlow
+        return flowSession
     }
 
     @Suspendable

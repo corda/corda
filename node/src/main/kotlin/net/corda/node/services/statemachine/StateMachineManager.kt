@@ -355,7 +355,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         val (session, initiatedFlowFactory) = try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionInit)
-            val flow = initiatedFlowFactory.createFlow(sender)
+            val flowSession = FlowSessionImpl(sender)
+            val flow = initiatedFlowFactory.createFlow(flowSession)
             val senderFlowVersion = when (initiatedFlowFactory) {
                 is InitiatedFlowFactory.Core -> receivedMessage.platformVersion  // The flow version for the core flows is the platform version
                 is InitiatedFlowFactory.CorDapp -> sessionInit.flowVersion
@@ -370,6 +371,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             }
             openSessions[session.ourSessionId] = session
             val fiber = createFiber(flow, FlowInitiator.Peer(sender))
+            flowSession.sessionFlow = flow
+            flowSession.stateMachine = fiber
             fiber.openSessions[Pair(flow, sender)] = session
             updateCheckpoint(fiber)
             session to initiatedFlowFactory

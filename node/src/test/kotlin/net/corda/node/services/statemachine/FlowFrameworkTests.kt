@@ -756,10 +756,19 @@ class FlowFrameworkTests {
         return smm.findStateMachines(P::class.java).single()
     }
 
+    @Deprecated("Use registerFlowFactoryExpectingFlowSession() instead")
     private inline fun <reified P : FlowLogic<*>> StartedNode<*>.registerFlowFactory(
             initiatingFlowClass: KClass<out FlowLogic<*>>,
             initiatedFlowVersion: Int = 1,
             noinline flowFactory: (Party) -> P): CordaFuture<P>
+    {
+        return registerFlowFactoryExpectingFlowSession(initiatingFlowClass, initiatedFlowVersion, { flowFactory(it.counterparty) })
+    }
+
+    private inline fun <reified P : FlowLogic<*>> StartedNode<*>.registerFlowFactoryExpectingFlowSession(
+            initiatingFlowClass: KClass<out FlowLogic<*>>,
+            initiatedFlowVersion: Int = 1,
+            noinline flowFactory: (FlowSession) -> P): CordaFuture<P>
     {
         val observable = internals.internalRegisterFlowFactory(
                 initiatingFlowClass.java,
