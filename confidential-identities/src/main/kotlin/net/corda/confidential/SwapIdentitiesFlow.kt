@@ -44,7 +44,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
                             ourNonce: ByteArray,
                             theirNonce: ByteArray): ByteArray {
             val xoredNonce = ByteArray(NONCE_SIZE_BYTES)
-            for (idx in 0..(NONCE_SIZE_BYTES - 1)) {
+            for (idx in 0 until NONCE_SIZE_BYTES) {
                 xoredNonce[idx] = ourNonce[idx] xor theirNonce[idx]
             }
             val buffer = ByteArrayOutputStream(1024)
