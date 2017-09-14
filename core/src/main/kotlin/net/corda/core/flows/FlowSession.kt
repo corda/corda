@@ -5,14 +5,13 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
 
 /**
- *
  * To port existing flows:
  *
- * Look for Deprecated usages of send/receive/sendAndReceive.
+ * Look for [Deprecated] usages of send/receive/sendAndReceive/getFlowInfo.
  *
  * If it's an InitiatingFlow:
  *
- *   Look the send/receive that kicks off the counter flow. Insert a
+ *   Look for the send/receive that kicks off the counter flow. Insert a
  *
  *     val session = initiateFlow(party)
  *
@@ -27,7 +26,7 @@ import net.corda.core.utilities.UntrustworthyData
  *   Change the constructor to take an initiatingSession: FlowSession instead of a counterparty: Party
  *   Then look for usages of the deprecated functions and change them to use the FlowSession
  *   For example:
- *     send(party, something)
+ *     send(counterparty, something)
  *   will become
  *     initiatingSession.send(something)
  */
