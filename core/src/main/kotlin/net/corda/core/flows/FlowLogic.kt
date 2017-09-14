@@ -63,7 +63,7 @@ abstract class FlowLogic<out T> {
      * This method can be called before any send or receive has been done with [otherParty]. In such a case this will force
      * them to start their flow.
      */
-    @Deprecated("Use FlowSession.getFlowContext()", level = DeprecationLevel.WARNING)
+    @Deprecated("Use FlowSession.getFlowInfo()", level = DeprecationLevel.WARNING)
     @Suspendable
     fun getFlowInfo(otherParty: Party): FlowInfo = stateMachine.getFlowInfo(otherParty, flowUsedForSessions)
 
