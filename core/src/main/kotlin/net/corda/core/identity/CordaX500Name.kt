@@ -2,13 +2,15 @@ package net.corda.core.identity
 
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.countryCodes
+import net.corda.core.internal.x500Name
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
+import java.security.Principal
+import javax.security.auth.x500.X500Principal
 
 /**
  * X.500 distinguished name data type customised to how Corda uses names. This restricts the attributes to those Corda
@@ -33,7 +35,7 @@ data class CordaX500Name(val commonName: String?,
                          val locality: String,
                          val state: String?,
                          val country: String) {
-    constructor(commonName: String, organisation: String, locality: String, country: String) : this(commonName = commonName, organisationUnit = null, organisation = organisation, locality = locality, state = null,  country = country)
+    constructor(commonName: String, organisation: String, locality: String, country: String) : this(commonName = commonName, organisationUnit = null, organisation = organisation, locality = locality, state = null, country = country)
     /**
      * @param organisation name of the organisation.
      * @param locality locality of the organisation, typically nearest major city.
@@ -56,11 +58,15 @@ data class CordaX500Name(val commonName: String?,
         require(locality.length < MAX_LENGTH_LOCALITY) { "Locality attribute (L) must contain less then $MAX_LENGTH_LOCALITY characters." }
 
         state?.let { require(it.length < MAX_LENGTH_STATE) { "State attribute (ST) must contain less then $MAX_LENGTH_STATE characters." } }
-        organisationUnit?.let { require(it.length < MAX_LENGTH_ORGANISATION_UNIT) {
-            "Organisation Unit attribute (OU) must contain less then $MAX_LENGTH_ORGANISATION_UNIT characters." }
+        organisationUnit?.let {
+            require(it.length < MAX_LENGTH_ORGANISATION_UNIT) {
+                "Organisation Unit attribute (OU) must contain less then $MAX_LENGTH_ORGANISATION_UNIT characters."
+            }
         }
-        commonName?.let { require(it.length < MAX_LENGTH_COMMON_NAME) {
-            "Common Name attribute (CN) must contain less then $MAX_LENGTH_COMMON_NAME characters." }
+        commonName?.let {
+            require(it.length < MAX_LENGTH_COMMON_NAME) {
+                "Common Name attribute (CN) must contain less then $MAX_LENGTH_COMMON_NAME characters."
+            }
         }
     }
 
@@ -74,7 +80,8 @@ data class CordaX500Name(val commonName: String?,
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
 
         @JvmStatic
-        fun build(x500Name: X500Name) : CordaX500Name {
+        fun build(principal: X500Principal) : CordaX500Name {
+            val x500Name = X500Name.getInstance(principal.encoded)
             val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = x500Name.rdNs
                     .flatMap { it.typesAndValues.asList() }
                     .groupBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
@@ -99,31 +106,26 @@ data class CordaX500Name(val commonName: String?,
             val C = attrsMap[BCStyle.C]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
             return CordaX500Name(CN, OU, O, L, ST, C)
         }
+
         @JvmStatic
-        fun parse(name: String) : CordaX500Name = build(X500Name(name))
+        fun parse(name: String) : CordaX500Name = build(X500Principal(name))
     }
 
     @Transient
     private var x500Cache: X500Name? = null
 
-    override fun toString(): String = x500Name.toString()
-
-    /**
-     * Return the underlying X.500 name from this Corda-safe X.500 name. These are guaranteed to have a consistent
-     * ordering, such that their `toString()` function returns the same value every time for the same [CordaX500Name].
-     */
-    val x500Name: X500Name
+    val x500Principal: X500Principal
         get() {
             if (x500Cache == null) {
-                x500Cache = X500NameBuilder(BCStyle.INSTANCE).apply {
-                    addRDN(BCStyle.C, country)
-                    state?.let { addRDN(BCStyle.ST, it) }
-                    addRDN(BCStyle.L, locality)
-                    addRDN(BCStyle.O, organisation)
-                    organisationUnit?.let { addRDN(BCStyle.OU, it) }
-                    commonName?.let { addRDN(BCStyle.CN, it) }
-                }.build()
+                x500Cache = this.x500Name
             }
-            return x500Cache!!
+            return X500Principal(x500Cache!!.encoded)
         }
+
+    override fun toString(): String {
+        if (x500Cache == null) {
+            x500Cache = this.x500Name
+        }
+        return x500Cache.toString()
+    }
 }

@@ -153,7 +153,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected val myLegalName: CordaX500Name by lazy {
         val cert = loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_CA)
-        CordaX500Name.build(cert.subject).copy(commonName = null)
+        CordaX500Name.build(cert.subjectX500Principal).copy(commonName = null)
     }
 
     open val pluginRegistries: List<CordaPluginRegistry> by lazy {
@@ -631,7 +631,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        val subject = CordaX500Name.build(certificates[0].toX509CertHolder().subject)
+        val nodeCertificate: X509Certificate = if (certificates[0] is X509Certificate)
+            certificates[0] as X509Certificate
+        else
+            throw ConfigurationException("Node certificate must be an X.509 certificate")
+        val subject: CordaX500Name? = CordaX500Name.build(nodeCertificate.subjectX500Principal)
         if (subject != name)
             throw ConfigurationException("The name for $id doesn't match what's in the key store: $name vs $subject")
 
@@ -681,7 +685,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val trustStore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
             val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
             makeIdentityService(
-                    trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).cert,
+                    trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA),
                     caKeyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
                     info.legalIdentityAndCert)
         }

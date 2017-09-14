@@ -30,7 +30,8 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `incorrect legal name for the network map service config`() {
-        val incorrectNetworkMapName = getX500Name(O = "NetworkMap-${random63BitValue()}", L = "London", C = "GB")
+        val incorrectNetworkMapName = CordaX500Name(organisation = "NetworkMap-${random63BitValue()}",
+                locality = "London", country = "GB")
         val node = startNode(BOB.name, configOverrides = mapOf(
                 "networkMapService" to mapOf(
                         "address" to networkMapNode.internals.configuration.p2pAddress.toString(),
@@ -57,7 +58,7 @@ class P2PSecurityTest : NodeBasedTest() {
     private fun startSimpleNode(legalName: CordaX500Name,
                                 trustRoot: X509Certificate): SimpleNode {
         val config = testNodeConfiguration(
-                baseDirectory = baseDirectory(legalName.x500Name),
+                baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName).also {
             whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
         }

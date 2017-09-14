@@ -7,14 +7,15 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.core.utilities.cert
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.testing.*
 import org.junit.Test
 import java.security.cert.CertificateFactory
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -86,7 +87,7 @@ class InMemoryIdentityServiceTests {
     fun `assert unknown anonymous key is unrecognised`() {
         withTestSerialization {
             val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Name, rootKey)
+            val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
             val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
             // TODO: Generate certificate with an EdDSA key rather than ECDSA
@@ -151,7 +152,7 @@ class InMemoryIdentityServiceTests {
 
             assertFailsWith<IllegalArgumentException> {
                 val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
-                val subject = CordaX500Name.build(trustRoot.certificate.subject)
+                val subject = CordaX500Name.build(X500Principal(trustRoot.certificate.subject.encoded))
                 service.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
             }
         }
@@ -162,7 +163,7 @@ class InMemoryIdentityServiceTests {
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
-        val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name.x500Name, txKey.public)
+        val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name, txKey.public)
         val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
     }

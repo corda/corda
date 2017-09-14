@@ -65,7 +65,7 @@ val DUMMY_REGULATOR: Party get() = Party(CordaX500Name(organisation = "Regulator
 val DUMMY_CA_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(110)) }
 val DUMMY_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
-    val cert = X509Utilities.createSelfSignedCACertificate(getX500Name(CN = "Dummy CA", OU = "Corda", O = "R3 Ltd", L = "London", C = "GB"), DUMMY_CA_KEY)
+    val cert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Dummy CA", organisationUnit = "Corda", organisation = "R3 Ltd", locality = "London", state = null, country = "GB"), DUMMY_CA_KEY)
     CertificateAndKeyPair(cert, DUMMY_CA_KEY)
 }
 

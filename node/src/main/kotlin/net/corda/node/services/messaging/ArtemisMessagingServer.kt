@@ -11,7 +11,6 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
@@ -57,6 +56,7 @@ import java.math.BigInteger
 import java.security.KeyStore
 import java.security.KeyStoreException
 import java.security.Principal
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledExecutorService
@@ -71,8 +71,8 @@ import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.RE
 import javax.security.auth.login.FailedLoginException
 import javax.security.auth.login.LoginException
 import javax.security.auth.spi.LoginModule
+import javax.security.auth.x500.X500Principal
 import javax.security.cert.CertificateException
-import javax.security.cert.X509Certificate
 
 // TODO: Verify that nobody can connect to us and fiddle with our config over the socket due to the secman.
 // TODO: Implement a discovery engine that can trigger builds of new connections when another node registers? (later)
@@ -506,13 +506,12 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
                 // Make sure certificate has the same name.
-                val peerCertificate = session.peerCertificateChain[0].toX509CertHolder()
-                val peerCertificateName = CordaX500Name.build(peerCertificate.subject)
+                val peerCertificateName = CordaX500Name.build(X500Principal(session.peerCertificateChain[0].subjectDN.name))
                 require(peerCertificateName == expectedLegalName) {
                     "Peer has wrong subject name in the certificate - expected $expectedLegalName but got $peerCertificateName. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
-                X509Utilities.validateCertificateChain(session.localCertificates.last().toX509CertHolder(), *session.peerCertificates)
+                X509Utilities.validateCertificateChain(session.localCertificates.last() as java.security.cert.X509Certificate, *session.peerCertificates)
                 server.onTcpConnection(peerLegalName)
             } catch (e: IllegalArgumentException) {
                 connection.close()
@@ -528,7 +527,7 @@ sealed class CertificateChainCheckPolicy {
 
     @FunctionalInterface
     interface Check {
-        fun checkCertificateChain(theirChain: Array<X509Certificate>)
+        fun checkCertificateChain(theirChain: Array<javax.security.cert.X509Certificate>)
     }
 
     abstract fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check
@@ -536,7 +535,7 @@ sealed class CertificateChainCheckPolicy {
     object Any : CertificateChainCheckPolicy() {
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
             return object : Check {
-                override fun checkCertificateChain(theirChain: Array<X509Certificate>) {
+                override fun checkCertificateChain(theirChain: Array<javax.security.cert.X509Certificate>) {
                 }
             }
         }
@@ -546,7 +545,7 @@ sealed class CertificateChainCheckPolicy {
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
             val rootPublicKey = trustStore.getCertificate(CORDA_ROOT_CA).publicKey
             return object : Check {
-                override fun checkCertificateChain(theirChain: Array<X509Certificate>) {
+                override fun checkCertificateChain(theirChain: Array<javax.security.cert.X509Certificate>) {
                     val theirRoot = theirChain.last().publicKey
                     if (rootPublicKey != theirRoot) {
                         throw CertificateException("Root certificate mismatch, their root = $theirRoot")
@@ -560,7 +559,7 @@ sealed class CertificateChainCheckPolicy {
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
             val ourPublicKey = keyStore.getCertificate(CORDA_CLIENT_TLS).publicKey
             return object : Check {
-                override fun checkCertificateChain(theirChain: Array<X509Certificate>) {
+                override fun checkCertificateChain(theirChain: Array<javax.security.cert.X509Certificate>) {
                     val theirLeaf = theirChain.first().publicKey
                     if (ourPublicKey != theirLeaf) {
                         throw CertificateException("Leaf certificate mismatch, their leaf = $theirLeaf")
@@ -574,7 +573,7 @@ sealed class CertificateChainCheckPolicy {
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
             val trustedPublicKeys = trustedAliases.map { trustStore.getCertificate(it).publicKey }.toSet()
             return object : Check {
-                override fun checkCertificateChain(theirChain: Array<X509Certificate>) {
+                override fun checkCertificateChain(theirChain: Array<javax.security.cert.X509Certificate>) {
                     if (!theirChain.any { it.publicKey in trustedPublicKeys }) {
                         throw CertificateException("Their certificate chain contained none of the trusted ones")
                     }
@@ -664,19 +663,19 @@ class NodeLoginModule : LoginModule {
         }
     }
 
-    private fun authenticateNode(certificates: Array<X509Certificate>): String {
+    private fun authenticateNode(certificates: Array<javax.security.cert.X509Certificate>): String {
         nodeCertCheck.checkCertificateChain(certificates)
         principals += RolePrincipal(NODE_ROLE)
         return certificates.first().subjectDN.name
     }
 
-    private fun authenticateVerifier(certificates: Array<X509Certificate>): String {
+    private fun authenticateVerifier(certificates: Array<javax.security.cert.X509Certificate>): String {
         verifierCertCheck.checkCertificateChain(certificates)
         principals += RolePrincipal(VERIFIER_ROLE)
         return certificates.first().subjectDN.name
     }
 
-    private fun authenticatePeer(certificates: Array<X509Certificate>): String {
+    private fun authenticatePeer(certificates: Array<javax.security.cert.X509Certificate>): String {
         peerCertCheck.checkCertificateChain(certificates)
         principals += RolePrincipal(PEER_ROLE)
         return certificates.first().subjectDN.name
@@ -694,7 +693,7 @@ class NodeLoginModule : LoginModule {
         return username
     }
 
-    private fun determineUserRole(certificates: Array<X509Certificate>?, username: String): String? {
+    private fun determineUserRole(certificates: Array<javax.security.cert.X509Certificate>?, username: String): String? {
         fun requireTls() = require(certificates != null) { "No TLS?" }
         return when (username) {
             PEER_USER -> {

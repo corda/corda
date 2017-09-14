@@ -8,9 +8,9 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.core.utilities.cert
 import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.X509Utilities
@@ -20,6 +20,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.cert.CertificateFactory
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -131,7 +132,7 @@ class PersistentIdentityServiceTests {
     fun `assert unknown anonymous key is unrecognised`() {
         withTestSerialization {
             val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Name, rootKey)
+            val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
             val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME)
             val identity = Party(rootCert)
             val txIdentity = AnonymousParty(txKey.public)
@@ -213,7 +214,7 @@ class PersistentIdentityServiceTests {
             assertFailsWith<IllegalArgumentException> {
                 val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
                 database.transaction {
-                    val subject = CordaX500Name.build(trustRoot.certificate.subject)
+                    val subject = CordaX500Name.build(X500Principal(trustRoot.certificate.subject.encoded))
                     identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
                 }
             }
@@ -261,7 +262,7 @@ class PersistentIdentityServiceTests {
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
-        val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name.x500Name, txKey.public)
+        val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name, txKey.public)
         val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
     }

@@ -164,8 +164,8 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         val results = LinkedHashSet<Party>()
         for ((x500name, partyId) in principalToParties.allPersisted()) {
             val party = keyToParties[partyId]!!.party
-            for (rdn in x500name.x500Name.rdNs) {
-                val component = rdn.first.value.toString()
+            val components = listOf(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country).filterNotNull()
+            components.forEach { component ->
                 if (exactMatch && component == query) {
                     results += party
                 } else if (!exactMatch) {

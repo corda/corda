@@ -106,8 +106,8 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         val results = LinkedHashSet<Party>()
         for ((x500name, partyAndCertificate) in principalToParties) {
             val party = partyAndCertificate.party
-            for (rdn in x500name.x500Name.rdNs) {
-                val component = rdn.first.value.toString()
+            val components = listOf(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country).filterNotNull()
+            components.forEach { component ->
                 if (exactMatch && component == query) {
                     results += party
                 } else if (!exactMatch) {
