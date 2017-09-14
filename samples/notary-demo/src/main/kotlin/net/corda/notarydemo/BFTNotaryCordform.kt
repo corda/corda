@@ -22,7 +22,7 @@ fun main(args: Array<String>) = BFTNotaryCordform.runNodes()
 private val clusterSize = 4 // Minimum size that tolerates a faulty replica.
 private val notaryNames = createNotaryNames(clusterSize)
 
-object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0].x500Name) {
+object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0].toString()) {
     private val clusterName = CordaX500Name(organisation = "BFT", locality = "Zurich", country = "CH")
     private val advertisedService = ServiceInfo(BFTNonValidatingNotaryService.type, clusterName)
 
@@ -65,6 +65,6 @@ object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", not
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it.x500Name) }, advertisedService.type.id, clusterName, minCorrectReplicas(clusterSize))
+        ServiceIdentityGenerator.generateToDisk(notaryNames.map(CordaX500Name::toString).map(context::baseDirectory), advertisedService.type.id, clusterName, minCorrectReplicas(clusterSize))
     }
 }

@@ -9,6 +9,7 @@ import org.bouncycastle.asn1.x500.AttributeTypeAndValue
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
+import javax.security.auth.x500.X500Principal
 
 /**
  * X.500 distinguished name data type customised to how Corda uses names. This restricts the attributes to those Corda
@@ -100,6 +101,8 @@ data class CordaX500Name(val commonName: String?,
             return CordaX500Name(CN, OU, O, L, ST, C)
         }
         @JvmStatic
+        fun build(x500Principal: X500Principal) = build(X500Name.getInstance(x500Principal.encoded))
+        @JvmStatic
         fun parse(name: String) : CordaX500Name = build(X500Name(name))
     }
 
@@ -125,5 +128,10 @@ data class CordaX500Name(val commonName: String?,
                 }.build()
             }
             return x500Cache!!
+        }
+
+    val x500Principal: X500Principal
+        get() {
+            return X500Principal(x500Name.encoded)
         }
 }
