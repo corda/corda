@@ -9,6 +9,10 @@ UNRELEASED
 * ``ContractState::contract`` has been moved ``TransactionState::contract`` and it's type has changed to ``String`` in order to
   support dynamic classloading of contract and contract constraints.
 
+* CorDapps that contain contracts are now automatically loaded into the attachment storage - for CorDapp developers this
+  now means that contracts should be stored in separate JARs to flows, services and utilities to avoid large JARs being
+  auto imported to the attachment store.
+
 * About half of the code in test-utils has been moved to a new module ``node-driver``,
   and the test scope modules are now located in a ``testing`` directory.
 
@@ -141,6 +145,8 @@ UNRELEASED
 .. warning:: Renamed configuration property key `basedir` to `baseDirectory`. This will require updating existing configuration files.
 
 * Removed deprecated parts of the API.
+
+* Removed ``PluginServiceHub``. Replace with ``ServiceHub`` for ``@CordaService`` constructors.
 
 Milestone 14
 ------------

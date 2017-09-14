@@ -468,7 +468,8 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
     }
 }
 
-private fun isCollectionOrMap(type: Class<*>) = Collection::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)
+private fun isCollectionOrMap(type: Class<*>) = (Collection::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)) &&
+        !EnumSet::class.java.isAssignableFrom(type)
 
 private fun fingerprintForObject(type: Type, contextType: Type?, alreadySeen: MutableSet<Type>, hasher: Hasher, factory: SerializerFactory): Hasher {
     // Hash the class + properties + interfaces

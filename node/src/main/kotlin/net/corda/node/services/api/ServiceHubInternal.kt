@@ -1,17 +1,17 @@
 package net.corda.node.services.api
 
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
@@ -65,7 +65,7 @@ sealed class NetworkCacheError : Exception() {
     class DeregistrationFailed : NetworkCacheError()
 }
 
-interface ServiceHubInternal : PluginServiceHub {
+interface ServiceHubInternal : ServiceHub {
     companion object {
         private val log = loggerFor<ServiceHubInternal>()
     }

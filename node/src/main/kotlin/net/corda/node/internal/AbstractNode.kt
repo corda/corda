@@ -23,6 +23,10 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
+import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceEntry
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.schemas.MappedSchema
@@ -34,6 +38,7 @@ import net.corda.core.utilities.cert
 import net.corda.core.utilities.debug
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.cordapp.CordappProvider
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.node.services.SwapIdentitiesHandler
@@ -143,6 +148,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected val runOnStop = ArrayList<() -> Any?>()
     protected lateinit var database: CordaPersistence
     protected var dbCloser: (() -> Any?)? = null
+    lateinit var cordappProvider: CordappProvider
 
     protected val _nodeReadyFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service
@@ -155,18 +161,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         CordaX500Name.build(cert.subject).copy(commonName = null)
     }
 
-    private val cordappLoader: CordappLoader by lazy {
-        val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
-        if (scanPackage != null) {
-            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createDevMode(scanPackage)
-        } else {
-            CordappLoader.createDefault(configuration.baseDirectory)
-        }
-    }
-
     open val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        cordappLoader.cordapps.flatMap { it.plugins } + DefaultWhitelist()
+        cordappProvider.cordapps.flatMap { it.plugins } + DefaultWhitelist()
     }
 
     /** Set to non-null once [start] has been successfully called. */
@@ -217,8 +213,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             installCordaServices()
             registerCordappFlows()
-            _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-            registerCustomSchemas(cordappLoader.cordapps.flatMap { it.customSchemas }.toSet())
+            _services.rpcFlows += cordappProvider.cordapps.flatMap { it.rpcFlows }
+            registerCustomSchemas(cordappProvider.cordapps.flatMap { it.customSchemas }.toSet())
 
             runOnStop += network::stop
             StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, inNodeNetworkMapService, network, database, rpcOps)
@@ -239,12 +235,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
 
     private fun installCordaServices() {
-        cordappLoader.cordapps.flatMap { it.services }.forEach {
+        cordappProvider.cordapps.flatMap { it.services }.forEach {
             try {
                 installCordaService(it)
             } catch (e: NoSuchMethodException) {
-                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter " +
-                        "of type ${PluginServiceHub::class.java.name}")
+                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
+                        ServiceHub::class.java.name)
             } catch (e: ServiceInstantiationException) {
                 log.error("Corda service ${it.name} failed to instantiate", e.cause)
             } catch (e: Exception) {
@@ -259,7 +255,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
-        val constructor = serviceClass.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
+        val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
         val service = try {
             constructor.newInstance(services)
         } catch (e: InvocationTargetException) {
@@ -281,7 +277,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun registerCordappFlows() {
-        cordappLoader.cordapps.flatMap { it.initiatedFlows }
+        cordappProvider.cordapps.flatMap { it.initiatedFlows }
                 .forEach {
                     try {
                         registerInitiatedFlowInternal(it, track = false)
@@ -360,6 +356,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         checkpointStorage = DBCheckpointStorage()
         _services = ServiceHubInternalImpl(makeTransactionStorage())
         attachments = NodeAttachmentService(services.monitoringService.metrics)
+        cordappProvider = CordappProvider(attachments, makeCordappLoader())
         val legalIdentity = obtainIdentity()
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
@@ -368,6 +365,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 services.keyManagementService, services.identityService, platformClock, services.schedulerService)
         makeAdvertisedServices(tokenizableServices)
         return tokenizableServices
+    }
+
+    private fun makeCordappLoader(): CordappLoader {
+        val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
+        return if (scanPackage != null) {
+            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
+            CordappLoader.createDevMode(scanPackage)
+        } else {
+            CordappLoader.createDefault(configuration.baseDirectory)
+        }
     }
 
     protected open fun makeTransactionStorage(): WritableTransactionStorage = DBTransactionStorage()

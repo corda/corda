@@ -29,12 +29,7 @@ shutdown handler during initialisation, which will be called in reverse
 order to the start registration sequence when the ``Node.stop`` 
 is called. 
 
-As well as the standard services trusted CorDapp plugins may register 
-custom services. These plugin services are passed a reference to the 
-``PluginServiceHub`` which allows some more powerful functions e.g. 
-starting flows. 
-
-For unit testing a number of non-persistent, memory only services are 
+For unit testing a number of non-persistent, memory only services are
 defined in the ``:node`` and ``:test-utils`` projects. The 
 ``:test-utils`` project also provides an in-memory networking simulation 
 to allow unit testing of flows and service functions. 

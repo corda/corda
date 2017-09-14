@@ -86,7 +86,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                     if (pos == typeStart) {
                         skippingWhitespace = false
                         if (params[pos].isWhitespace()) {
-                            typeStart = pos++
+                            typeStart = ++pos
                         } else if (!needAType) {
                             throw NotSerializableException("Not expecting a type")
                         } else if (params[pos] == '?') {

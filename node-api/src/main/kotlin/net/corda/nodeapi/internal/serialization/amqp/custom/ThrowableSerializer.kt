@@ -13,6 +13,8 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
         private val logger = loggerFor<ThrowableSerializer>()
     }
 
+    override val revealSubclassesInSchema: Boolean = true
+
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(StackTraceElementSerializer(factory))
 
     override fun toProxy(obj: Throwable): ThrowableProxy {

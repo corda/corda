@@ -6,7 +6,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.StateLoader
-import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
@@ -51,7 +51,7 @@ open class MockServices @JvmOverloads constructor(
         vararg val keys: KeyPair,
         override val validatedTransactions: MockTransactionStorage = MockTransactionStorage(),
         protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
-) : PluginServiceHub, StateLoader by stateLoader {
+) : ServiceHub, StateLoader by stateLoader {
 
     companion object {
 
