@@ -7,8 +7,6 @@ import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import org.bouncycastle.asn1.x500.X500Name
-import java.nio.file.FileSystems
-import java.nio.file.Path
 
 sealed class ConnectionDirection {
     data class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
@@ -54,8 +52,8 @@ class ArtemisTcpTransport {
             )
 
             if (config != null && enableSSL) {
-                config.sslKeystore.expectedOnDefaultFileSystem()
-                config.trustStoreFile.expectedOnDefaultFileSystem()
+                config.sslKeystore.requireOnDefaultFileSystem()
+                config.trustStoreFile.requireOnDefaultFileSystem()
                 val tlsOptions = mapOf(
                         // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
                         // and AES encryption
@@ -80,8 +78,4 @@ class ArtemisTcpTransport {
             return TransportConfiguration(factoryName, options)
         }
     }
-}
-
-fun Path.expectedOnDefaultFileSystem() {
-    require(fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
 }
