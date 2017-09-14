@@ -23,17 +23,17 @@ class SwapIdentitiesHandler(val otherSideSession: FlowSession, val revocationEna
 
     @Suspendable
     override fun call() {
-        val revocationEnabled = false
         val ourNonce = secureRandomBytes(SwapIdentitiesFlow.NONCE_SIZE_BYTES)
         val theirNonce = otherSideSession.sendAndReceive<ByteArray>(ourNonce).unwrap(SwapIdentitiesFlow.NonceVerifier)
+        val revocationEnabled = false
         progressTracker.currentStep = SENDING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, revocationEnabled)
         val serializedIdentity = SerializedBytes<PartyAndCertificate>(legalIdentityAnonymous.serialize().bytes)
-        val data = SwapIdentitiesFlow.buildDataToSign(serializedIdentity, theirNonce)
+        val data = SwapIdentitiesFlow.buildDataToSign(serializedIdentity, ourNonce, theirNonce)
         val ourSig = serviceHub.keyManagementService.sign(data, legalIdentityAnonymous.owningKey)
         otherSideSession.sendAndReceive<SwapIdentitiesFlow.IdentityWithSignature>(SwapIdentitiesFlow.IdentityWithSignature(serializedIdentity, ourSig.withoutKey()))
                 .unwrap { (confidentialIdentity, theirSigBytes) ->
-                    SwapIdentitiesFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSideSession.counterparty, confidentialIdentity, ourNonce, theirSigBytes)
+                    SwapIdentitiesFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSideSession.counterparty, confidentialIdentity, ourNonce, theirNonce, theirSigBytes)
                 }
     }
 }
