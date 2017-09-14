@@ -30,9 +30,10 @@ class SwapIdentitiesHandler(val otherSideSession: FlowSession, val revocationEna
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, revocationEnabled)
         val serializedIdentity = SerializedBytes<PartyAndCertificate>(legalIdentityAnonymous.serialize().bytes)
         val data = SwapIdentitiesFlow.buildDataToSign(serializedIdentity, theirNonce)
-        val ourSig: DigitalSignature = serviceHub.keyManagementService.sign(data, legalIdentityAnonymous.owningKey)
-        otherSideSession.sendAndReceive<SwapIdentitiesFlow.IdentityWithSignature>(SwapIdentitiesFlow.IdentityWithSignature(serializedIdentity, ourSig.bytes)).unwrap { (confidentialIdentity, theirSigBytes) ->
-            SwapIdentitiesFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSideSession.counterparty, confidentialIdentity, ourNonce, theirSigBytes)
-        }
+        val ourSig = serviceHub.keyManagementService.sign(data, legalIdentityAnonymous.owningKey)
+        otherSideSession.sendAndReceive<SwapIdentitiesFlow.IdentityWithSignature>(SwapIdentitiesFlow.IdentityWithSignature(serializedIdentity, ourSig.withoutKey()))
+                .unwrap { (confidentialIdentity, theirSigBytes) ->
+                    SwapIdentitiesFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSideSession.counterparty, confidentialIdentity, ourNonce, theirSigBytes)
+                }
     }
 }

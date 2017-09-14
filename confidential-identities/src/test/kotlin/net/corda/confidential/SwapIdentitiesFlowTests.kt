@@ -75,7 +75,7 @@ class SwapIdentitiesFlowTests {
         val sigData = SwapIdentitiesFlow.buildDataToSign(notBobBytes, nonce)
         val signature = notaryNode.services.keyManagementService.sign(sigData, notBob.owningKey)
         assertFailsWith<SwapIdentitiesException>("Certificate subject must match counterparty's well known identity.") {
-            SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBobBytes, nonce, signature.bytes)
+            SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBobBytes, nonce, signature.withoutKey())
         }
 
         mockNet.stopNodes()
@@ -105,7 +105,7 @@ class SwapIdentitiesFlowTests {
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousBobBytes, wrongNonce)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.bytes)
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.withoutKey())
             }
         }
         // Check that the wrong signature with the correct nonce is rejected
@@ -116,7 +116,7 @@ class SwapIdentitiesFlowTests {
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotaryBytes, nonce)
             val signature = notaryNode.services.keyManagementService.sign(sigData, anonymousNotary.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotaryBytes, nonce, signature.bytes)
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotaryBytes, nonce, signature.withoutKey())
             }
         }
         // Check that the right signing key, right nonce but wrong identity is rejected
@@ -131,7 +131,7 @@ class SwapIdentitiesFlowTests {
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAliceBytes, nonce)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.bytes)
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.withoutKey())
             }
         }
 
