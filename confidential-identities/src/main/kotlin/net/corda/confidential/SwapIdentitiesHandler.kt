@@ -25,10 +25,7 @@ class SwapIdentitiesHandler(val otherSideSession: FlowSession, val revocationEna
     override fun call() {
         val revocationEnabled = false
         val ourNonce = secureRandomBytes(SwapIdentitiesFlow.NONCE_SIZE_BYTES)
-        val theirNonce = otherSideSession.sendAndReceive<ByteArray>(ourNonce).unwrap { nonce ->
-            require(nonce.size == SwapIdentitiesFlow.NONCE_SIZE_BYTES)
-            nonce
-        }
+        val theirNonce = otherSideSession.sendAndReceive<ByteArray>(ourNonce).unwrap(SwapIdentitiesFlow.NonceVerifier)
         progressTracker.currentStep = SENDING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, revocationEnabled)
         val serializedIdentity = SerializedBytes<PartyAndCertificate>(legalIdentityAnonymous.serialize().bytes)

@@ -73,7 +73,7 @@ class SwapIdentitiesFlowTests {
         val notBobBytes = SerializedBytes<PartyAndCertificate>(notBob.serialize().bytes)
         val sigData = SwapIdentitiesFlow.buildDataToSign(notBobBytes, nonce)
         val signature = notaryNode.services.keyManagementService.sign(sigData, notBob.owningKey)
-        assertFailsWith<IllegalArgumentException>("Certificate subject must match counterparty's well known identity") {
+        assertFailsWith<SwapIdentitiesException>("Certificate subject must match counterparty's well known identity.") {
             SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBobBytes, nonce, signature.bytes)
         }
 
@@ -102,7 +102,7 @@ class SwapIdentitiesFlowTests {
             val anonymousBobBytes = SerializedBytes<PartyAndCertificate>(anonymousBob.serialize().bytes)
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousBobBytes, wrongNonce)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
-            assertFailsWith<IllegalArgumentException>("Signature does not match the given identity and nonce") {
+            assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
                 SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.bytes)
             }
         }
@@ -113,7 +113,7 @@ class SwapIdentitiesFlowTests {
             val anonymousNotaryBytes = SerializedBytes<PartyAndCertificate>(anonymousNotary.serialize().bytes)
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotaryBytes, nonce)
             val signature = notaryNode.services.keyManagementService.sign(sigData, anonymousNotary.owningKey)
-            assertFailsWith<IllegalArgumentException>("Signature does not match the given identity and nonce") {
+            assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce") {
                 SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotaryBytes, nonce, signature.bytes)
             }
         }
@@ -128,7 +128,7 @@ class SwapIdentitiesFlowTests {
             val anonymousBobBytes = SerializedBytes<PartyAndCertificate>(anonymousBob.serialize().bytes)
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAliceBytes, nonce)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
-            assertFailsWith<IllegalArgumentException>("Signature does not match the given identity and nonce") {
+            assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
                 SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, nonce, signature.bytes)
             }
         }
