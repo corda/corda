@@ -22,22 +22,19 @@ import net.corda.nodeapi.internal.serialization.amqp.TypeNotation
  * in turn look up all of those classes in the [dependsOn] list, remove their dependency on the newly created class,
  * and if that list is reduced to zero know we can now generate a [Schema] for them and carpent them up
  */
-data class CarpenterSchemas (
+data class CarpenterSchemas(
         val carpenterSchemas: MutableList<Schema>,
         val dependencies: MutableMap<String, Pair<TypeNotation, MutableList<String>>>,
         val dependsOn: MutableMap<String, MutableList<String>>) {
     companion object CarpenterSchemaConstructor {
         fun newInstance(): CarpenterSchemas {
-            return CarpenterSchemas(
-                    mutableListOf<Schema>(),
-                    mutableMapOf<String, Pair<TypeNotation, MutableList<String>>>(),
-                    mutableMapOf<String, MutableList<String>>())
+            return CarpenterSchemas(mutableListOf(), mutableMapOf(), mutableMapOf())
         }
     }
 
     fun addDepPair(type: TypeNotation, dependant: String, dependee: String) {
-        dependsOn.computeIfAbsent(dependee, { mutableListOf<String>() }).add(dependant)
-        dependencies.computeIfAbsent(dependant, { Pair(type, mutableListOf<String>()) }).second.add(dependee)
+        dependsOn.computeIfAbsent(dependee, { mutableListOf() }).add(dependant)
+        dependencies.computeIfAbsent(dependant, { Pair(type, mutableListOf()) }).second.add(dependee)
     }
 
     val size
@@ -56,23 +53,23 @@ data class CarpenterSchemas (
  * @property cc a reference to the actual class carpenter we're using to constuct classes
  * @property objects a list of carpented classes loaded into the carpenters class loader
  */
-abstract class MetaCarpenterBase (val schemas : CarpenterSchemas, val cc : ClassCarpenter = ClassCarpenter()) {
+abstract class MetaCarpenterBase(val schemas: CarpenterSchemas, val cc: ClassCarpenter = ClassCarpenter()) {
     val objects = mutableMapOf<String, Class<*>>()
 
     fun step(newObject: Schema) {
-        objects[newObject.name] = cc.build (newObject)
+        objects[newObject.name] = cc.build(newObject)
 
         // go over the list of everything that had a dependency on the newly
         // carpented class existing and remove it from their dependency list, If that
         // list is now empty we have no impediment to carpenting that class up
         schemas.dependsOn.remove(newObject.name)?.forEach { dependent ->
-            assert (newObject.name in schemas.dependencies[dependent]!!.second)
+            assert(newObject.name in schemas.dependencies[dependent]!!.second)
 
             schemas.dependencies[dependent]?.second?.remove(newObject.name)
 
             // we're out of blockers so  we can now create the type
-            if (schemas.dependencies[dependent]?.second?.isEmpty() ?: false) {
-                (schemas.dependencies.remove (dependent)?.first as CompositeType).carpenterSchema (
+            if (schemas.dependencies[dependent]?.second?.isEmpty() == true) {
+                (schemas.dependencies.remove(dependent)?.first as CompositeType).carpenterSchema(
                         classloader = cc.classloader,
                         carpenterSchemas = schemas)
             }
@@ -81,25 +78,25 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas, val cc : Class
 
     abstract fun build()
 
-    val classloader : ClassLoader
-            get() = cc.classloader
+    val classloader: ClassLoader
+        get() = cc.classloader
 }
 
-class MetaCarpenter(schemas : CarpenterSchemas,
-                    cc : ClassCarpenter = ClassCarpenter()) : MetaCarpenterBase(schemas, cc) {
+class MetaCarpenter(schemas: CarpenterSchemas,
+                    cc: ClassCarpenter = ClassCarpenter()) : MetaCarpenterBase(schemas, cc) {
     override fun build() {
         while (schemas.carpenterSchemas.isNotEmpty()) {
             val newObject = schemas.carpenterSchemas.removeAt(0)
-            step (newObject)
+            step(newObject)
         }
     }
 }
 
-class TestMetaCarpenter(schemas : CarpenterSchemas,
-                        cc : ClassCarpenter = ClassCarpenter()) : MetaCarpenterBase(schemas, cc) {
+class TestMetaCarpenter(schemas: CarpenterSchemas,
+                        cc: ClassCarpenter = ClassCarpenter()) : MetaCarpenterBase(schemas, cc) {
     override fun build() {
         if (schemas.carpenterSchemas.isEmpty()) return
-        step (schemas.carpenterSchemas.removeAt(0))
+        step(schemas.carpenterSchemas.removeAt(0))
     }
 }
 

@@ -6,6 +6,8 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Adding enum support to the class carpenter
+
 * ``ContractState::contract`` has been moved ``TransactionState::contract`` and it's type has changed to ``String`` in order to
   support dynamic classloading of contract and contract constraints.
 
