@@ -211,8 +211,7 @@ done:
    :end-before: DOCEND 3
 
 The Corda node scans for any class with this annotation and initialises them. The only requirement is that the class provide
-a constructor with a single parameter of type ``PluginServiceHub```. In our example the oracle class has two constructors.
-The second is used for testing.
+a constructor with a single parameter of type ``ServiceHub``.
 
 .. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
    :language: kotlin

@@ -10,7 +10,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
-import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -82,7 +82,7 @@ object NodeInterestRates {
     @ThreadSafe
     // DOCSTART 3
     @CordaService
-    class Oracle(private val services: PluginServiceHub) : SingletonSerializeAsToken() {
+    class Oracle(private val services: ServiceHub) : SingletonSerializeAsToken() {
         private val mutex = ThreadBox(InnerState())
 
         init {

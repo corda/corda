@@ -146,6 +146,8 @@ UNRELEASED
 
 * Removed deprecated parts of the API.
 
+* Removed ``PluginServiceHub``. Replace with ``ServiceHub`` for ``@CordaService`` constructors.
+
 Milestone 14
 ------------
 

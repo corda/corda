@@ -5,7 +5,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
@@ -45,7 +45,7 @@ import java.util.*
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices(vararg val keys: KeyPair) : PluginServiceHub {
+open class MockServices(vararg val keys: KeyPair) : ServiceHub {
 
     companion object {
 

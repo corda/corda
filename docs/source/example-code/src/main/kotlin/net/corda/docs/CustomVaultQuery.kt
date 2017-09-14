@@ -7,7 +7,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -26,7 +26,7 @@ import java.util.*
 object CustomVaultQuery {
 
     @CordaService
-    class Service(val services: PluginServiceHub) : SingletonSerializeAsToken() {
+    class Service(val services: ServiceHub) : SingletonSerializeAsToken() {
         private companion object {
             val log = loggerFor<Service>()
         }

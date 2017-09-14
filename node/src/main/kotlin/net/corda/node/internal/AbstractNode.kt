@@ -20,8 +20,8 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceEntry
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.schemas.MappedSchema
@@ -234,8 +234,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             try {
                 installCordaService(it)
             } catch (e: NoSuchMethodException) {
-                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter " +
-                        "of type ${PluginServiceHub::class.java.name}")
+                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
+                        ServiceHub::class.java.name)
             } catch (e: ServiceInstantiationException) {
                 log.error("Corda service ${it.name} failed to instantiate", e.cause)
             } catch (e: Exception) {
@@ -250,7 +250,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
-        val constructor = serviceClass.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
+        val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
         val service = try {
             constructor.newInstance(services)
         } catch (e: InvocationTargetException) {
