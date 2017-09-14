@@ -5,9 +5,13 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
-import net.corda.nodeapi.AttachmentClassLoaderTests
+import net.corda.nodeapi.AttachmentsClassLoaderTests
+import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.testing.node.MockAttachmentStorage
 import org.junit.Rule
 import org.junit.Test
@@ -156,7 +160,7 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(DefaultSerializable::class.java)
     }
 
-    private fun importJar(storage: AttachmentStorage) = AttachmentClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
+    private fun importJar(storage: AttachmentStorage) = AttachmentsClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
 
     @Test(expected = KryoException::class)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
