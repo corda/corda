@@ -65,9 +65,8 @@ class SwapIdentitiesFlow(private val otherParty: Party,
                 throw SwapIdentitiesException("Certificate subject must match counterparty's well known identity.")
             }
             val signature = DigitalSignature.WithKey(anonymousOtherSide.owningKey, sigBytes.bytes)
-            val sigWithKey = DigitalSignature.WithKey(anonymousOtherSide.owningKey, signature.bytes)
             try {
-                sigWithKey.verify(buildDataToSign(anonymousOtherSideBytes, ourNonce, theirNonce))
+                signature.verify(buildDataToSign(anonymousOtherSideBytes, ourNonce, theirNonce))
             } catch(ex: SignatureException) {
                 throw SwapIdentitiesException("Signature does not match the given identity and nonce.", ex)
             }
