@@ -9,13 +9,12 @@ import net.corda.core.internal.stream
 import net.corda.core.internal.toTypedArray
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.demorun.runNodes
-import net.corda.demorun.util.*
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
+import net.corda.testing.internal.*
 
 fun main(args: Array<String>) = BFTNotaryCordform.runNodes()
 
