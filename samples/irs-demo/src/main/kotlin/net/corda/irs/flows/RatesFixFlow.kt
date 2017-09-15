@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -56,14 +57,15 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     @Suspendable
     override fun call(): TransactionSignature {
         progressTracker.currentStep = progressTracker.steps[1]
-        val fix = subFlow(FixQueryFlow(fixOf, oracle))
+        val oracleSession = initiateFlow(oracle)
+        val fix = subFlow(FixQueryFlow(fixOf, oracleSession))
         progressTracker.currentStep = WORKING
         checkFixIsNearExpected(fix)
         tx.addCommand(fix, oracle.owningKey)
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
         val mtx = tx.toWireTransaction().buildFilteredTransaction(Predicate { filtering(it) })
-        return subFlow(FixSignFlow(tx, oracle, mtx))
+        return subFlow(FixSignFlow(tx, oracleSession, mtx))
     }
     // DOCEND 2
 
@@ -94,11 +96,11 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
 
     // DOCSTART 1
     @InitiatingFlow
-    class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
+    class FixQueryFlow(val fixOf: FixOf, val oracleSession: FlowSession) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
             // TODO: add deadline to receive
-            val resp = sendAndReceive<ArrayList<Fix>>(oracle, QueryRequest(listOf(fixOf)))
+            val resp = oracleSession.sendAndReceive<ArrayList<Fix>>(QueryRequest(listOf(fixOf)))
 
             return resp.unwrap {
                 val fix = it.first()
@@ -110,13 +112,13 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     }
 
     @InitiatingFlow
-    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
+    class FixSignFlow(val tx: TransactionBuilder, val oracleSession: FlowSession,
                       val partialMerkleTx: FilteredTransaction) : FlowLogic<TransactionSignature>() {
         @Suspendable
         override fun call(): TransactionSignature {
-            val resp = sendAndReceive<TransactionSignature>(oracle, SignRequest(partialMerkleTx))
+            val resp = oracleSession.sendAndReceive<TransactionSignature>(SignRequest(partialMerkleTx))
             return resp.unwrap { sig ->
-                check(oracle.owningKey.isFulfilledBy(listOf(sig.by)))
+                check(oracleSession.counterparty.owningKey.isFulfilledBy(listOf(sig.by)))
                 tx.toWireTransaction().checkSignature(sig)
                 sig
             }
