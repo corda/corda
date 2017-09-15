@@ -268,7 +268,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun handleCustomNotaryService(service: NotaryService) {
         runOnStop += service::stop
         service.start()
-        installCoreFlowExpectingFlowSession(NotaryFlow.Client::class, service::createServiceFlow)
+        installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
     }
 
     private fun registerCordappFlows() {
@@ -348,15 +348,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * compatibility [flowFactory] provides a second parameter which is the platform version of the initiating party.
      * @suppress
      */
-    @Deprecated("Use installCoreFlowExpectingFlowSession() instead")
     @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party) -> FlowLogic<*>) {
-        log.warn(deprecatedFlowConstructorMessage(clientFlowClass.java))
-        installCoreFlowExpectingFlowSession(clientFlowClass, { flowSession -> flowFactory(flowSession.counterparty) })
-    }
-
-    @VisibleForTesting
-    fun installCoreFlowExpectingFlowSession(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (FlowSession) -> FlowLogic<*>) {
+    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (FlowSession) -> FlowLogic<*>) {
         require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
@@ -366,9 +359,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
 
     private fun installCoreFlows() {
-        installCoreFlowExpectingFlowSession(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
-        installCoreFlowExpectingFlowSession(NotaryChangeFlow::class, ::NotaryChangeHandler)
-        installCoreFlowExpectingFlowSession(ContractUpgradeFlow.Initiator::class, ::Acceptor)
+        installCoreFlow(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
+        installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
+        installCoreFlow(ContractUpgradeFlow.Initiator::class, ::Acceptor)
         installCoreFlow(SwapIdentitiesFlow::class, ::SwapIdentitiesHandler)
     }
 
@@ -486,7 +479,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     runOnStop += this::stop
                     start()
                 }
-                installCoreFlowExpectingFlowSession(NotaryFlow.Client::class, service::createServiceFlow)
+                installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
             } else {
                 log.info("Notary type ${notaryServiceType.id} does not match any built-in notary types. " +
                         "It is expected to be loaded via a CorDapp")

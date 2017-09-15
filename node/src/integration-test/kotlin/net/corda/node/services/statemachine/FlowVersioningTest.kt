@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
@@ -40,9 +41,9 @@ class FlowVersioningTest : NodeBasedTest() {
         }
     }
 
-    private class PretendInitiatedCoreFlow(val initiatingParty: Party) : FlowLogic<Unit>() {
+    private class PretendInitiatedCoreFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() = send(initiatingParty, getFlowInfo(initiatingParty).flowVersion)
+        override fun call() = otherSideSession.send(otherSideSession.getCounterpartyFlowInfo().flowVersion)
     }
 
 }
