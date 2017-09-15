@@ -2,7 +2,6 @@ package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.Amount.Companion.sumOrThrow
-import net.corda.core.contracts.Amount.Companion.zero
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
@@ -45,6 +44,8 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          * @param amount How much currency to send.
          * @param to a key of the recipient.
          * @param acceptableStates a list of acceptable input states to use.
+         * @param payChangeTo party to pay any change to; this is normally a confidential identity of the calling
+         * party.
          * @param deriveState a function to derive an output state based on an input state, amount for the output
          * and public key to pay to.
          * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
@@ -58,9 +59,10 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
                                                          amount: Amount<T>,
                                                          to: AbstractParty,
                                                          acceptableStates: List<StateAndRef<S>>,
+                                                         payChangeTo: AbstractParty,
                                                          deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
                                                          generateMoveCommand: () -> CommandData): Pair<TransactionBuilder, List<PublicKey>> {
-            return generateSpend(tx, listOf(PartyAndAmount(to, amount)), acceptableStates, deriveState, generateMoveCommand)
+            return generateSpend(tx, listOf(PartyAndAmount(to, amount)), acceptableStates, payChangeTo, deriveState, generateMoveCommand)
         }
 
         /**
@@ -76,6 +78,8 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          * @param amount How much currency to send.
          * @param to a key of the recipient.
          * @param acceptableStates a list of acceptable input states to use.
+         * @param payChangeTo party to pay any change to; this is normally a confidential identity of the calling
+         * party.
          * @param deriveState a function to derive an output state based on an input state, amount for the output
          * and public key to pay to.
          * @param T A type representing a token
@@ -90,6 +94,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
         fun <S : FungibleAsset<T>, T: Any> generateSpend(tx: TransactionBuilder,
                                                          payments: List<PartyAndAmount<T>>,
                                                          acceptableStates: List<StateAndRef<S>>,
+                                                         payChangeTo: AbstractParty,
                                                          deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
                                                          generateMoveCommand: () -> CommandData): Pair<TransactionBuilder, List<PublicKey>> {
             // Discussion
@@ -133,7 +138,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
             // how much we've gathered for each issuer: this map will keep track of how much we've used from each
             // as we work our way through the payments.
             val statesGroupedByIssuer = gathered.groupBy { it.state.data.amount.token }
-            val remainingFromEachIssuer= statesGroupedByIssuer
+            val remainingFromEachIssuer = statesGroupedByIssuer
                     .mapValues {
                         it.value.map {
                             it.state.data.amount
@@ -141,7 +146,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
                     }.toList().toMutableList()
             val outputStates = mutableListOf<TransactionState<S>>()
             for ((party, paymentAmount) in payments) {
-                var remainingToPay= paymentAmount.quantity
+                var remainingToPay = paymentAmount.quantity
                 while (remainingToPay > 0) {
                     val (token, remainingFromCurrentIssuer) = remainingFromEachIssuer.last()
                     val templateState = statesGroupedByIssuer[token]!!.first().state
@@ -171,10 +176,9 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
             }
 
             // Whatever values we have left over for each issuer must become change outputs.
-            val myself = gathered.first().state.data.owner
             for ((token, amount) in remainingFromEachIssuer) {
                 val templateState = statesGroupedByIssuer[token]!!.first().state
-                outputStates += deriveState(templateState, amount, myself)
+                outputStates += deriveState(templateState, amount, payChangeTo)
             }
 
             for (state in gathered) tx.addInputState(state)
