@@ -8,17 +8,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 
-// TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
-//       includes us in any outside that list. Potentially just if it includes any outside that list at all.
-// TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
-//       cash without from unknown parties?
-class NotifyTransactionHandler(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        subFlow(ReceiveTransactionFlow(otherSideSession))
-    }
-}
-
 class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacementFlow.Acceptor<Party>(otherSideSession) {
     /**
      * Check the notary change proposal.

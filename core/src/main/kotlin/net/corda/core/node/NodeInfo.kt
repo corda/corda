@@ -44,6 +44,9 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
         val nodeOwnerLocation = legalIdentitiesAndCerts.first().name.locality
         return nodeOwnerLocation.let { CityDatabase[it] }
     }
-    val legalIdentities: List<Party>
-        get() = legalIdentitiesAndCerts.map { it.party }
+
+    val legalIdentities: List<Party> get() = legalIdentitiesAndCerts.map { it.party }
+
+    /** Returns true iff [party] is one of the legal identities of this node. */
+    fun isLegalIdentity(party: Party): Boolean = legalIdentitiesAndCerts.any { it.party == party }
 }
