@@ -259,8 +259,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             if (type != BFTNonValidatingNotaryService.type) return super.makeCoreNotaryService(type)
             return BFTNonValidatingNotaryService(services, object : BFTSMaRt.Cluster {
                 override fun waitUntilAllReplicasHaveInitialized() {
-                    val clusterNodes = mockNet.nodes.filter {
-                        services.notaryIdentityKey in it.info.legalIdentitiesAndCerts.map { it.owningKey }
+                    val clusterNodes = mockNet.nodes.filter { node ->
+                        services.myInfo.legalIdentities.any { it.owningKey in node.started!!.info.serviceIdentities(BFTNonValidatingNotaryService.type).map { it.owningKey } }
                     }
                     if (clusterNodes.size != configuration.notaryClusterAddresses.size) {
                         throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")

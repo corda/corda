@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -139,9 +140,11 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
             return try {
                 val id = ftx.id
                 val inputs = ftx.inputs
+                val notary = ftx.filteredLeaves.notary
 
                 validateTimeWindow(ftx.timeWindow)
-                commitInputStates(inputs, id, callerIdentity)
+                if (notary == null || notary !in services.myInfo.legalIdentities) throw NotaryException(NotaryError.WrongNotary)
+                commitInputStates(inputs, id, callerIdentity, notary.owningKey)
                 log.debug { "Inputs committed successfully, signing $id" }
                 BFTSMaRt.ReplicaResponse.Signature(sign(ftx))
             } catch (e: NotaryException) {

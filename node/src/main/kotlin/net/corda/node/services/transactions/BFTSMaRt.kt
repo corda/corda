@@ -36,6 +36,7 @@ import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import java.nio.file.Path
+import java.security.PublicKey
 import java.util.*
 
 /**
@@ -219,7 +220,7 @@ object BFTSMaRt {
          */
         abstract fun executeCommand(command: ByteArray): ByteArray?
 
-        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
+        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, notaryIdentityKey: PublicKey) {
             log.debug { "Attempting to commit inputs for transaction: $txId" }
             val conflicts = mutableMapOf<StateRef, UniquenessProvider.ConsumingTx>()
             services.database.transaction {
@@ -236,7 +237,7 @@ object BFTSMaRt {
                     log.debug { "Conflict detected – the following inputs have already been committed: ${conflicts.keys.joinToString()}" }
                     val conflict = UniquenessProvider.Conflict(conflicts)
                     val conflictData = conflict.serialize()
-                    val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
+                    val signedConflict = SignedData(conflictData, sign(conflictData.bytes, notaryIdentityKey))
                     throw NotaryException(NotaryError.Conflict(txId, signedConflict))
                 }
             }
@@ -247,12 +248,12 @@ object BFTSMaRt {
                 throw NotaryException(NotaryError.TimeWindowInvalid)
         }
 
-        protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
-            return services.database.transaction { services.keyManagementService.sign(bytes, services.notaryIdentityKey) }
+        protected fun sign(bytes: ByteArray, notaryIdentityKey: PublicKey): DigitalSignature.WithKey {
+            return services.database.transaction { services.keyManagementService.sign(bytes, notaryIdentityKey) }
         }
 
         protected fun sign(filteredTransaction: FilteredTransaction): TransactionSignature {
-            return services.database.transaction { services.createSignature(filteredTransaction, services.notaryIdentityKey) }
+            return services.database.transaction { services.createSignature(filteredTransaction, filteredTransaction.filteredLeaves.notary!!.owningKey) }
         }
 
         // TODO:

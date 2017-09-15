@@ -35,9 +35,10 @@ class MyValidatingNotaryFlow(otherSide: Party, service: MyCustomValidatingNotary
     override fun receiveAndVerifyTx(): TransactionParts {
         try {
             val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false))
+            checkNotary(stx.notary)
             checkSignatures(stx)
             val wtx = stx.tx
-            return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow)
+            return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow, wtx.notary)
         } catch (e: Exception) {
             throw when (e) {
                 is TransactionVerificationException,
@@ -49,7 +50,7 @@ class MyValidatingNotaryFlow(otherSide: Party, service: MyCustomValidatingNotary
 
     private fun checkSignatures(stx: SignedTransaction) {
         try {
-            stx.verifySignaturesExcept(serviceHub.notaryIdentityKey)
+            stx.verifySignaturesExcept(stx.notary!!.owningKey)
         } catch (e: SignatureException) {
             throw NotaryException(NotaryError.TransactionInvalid(e))
         }

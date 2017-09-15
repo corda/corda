@@ -13,6 +13,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
+import java.security.PublicKey
 
 abstract class NotaryService : SingletonSerializeAsToken() {
     abstract val services: ServiceHub
@@ -47,7 +48,7 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
      * A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
      * this method does not throw an exception when input states are present multiple times within the transaction.
      */
-    fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party) {
+    fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, notaryIdentityKey: PublicKey) {
         try {
             uniquenessProvider.commit(inputs, txId, caller)
         } catch (e: UniquenessException) {
@@ -58,23 +59,23 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
             if (conflicts.isNotEmpty()) {
                 // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
                 log.warn("Notary conflicts for $txId: $conflicts")
-                throw notaryException(txId, e)
+                throw notaryException(txId, e, notaryIdentityKey)
             }
         }
     }
 
-    private fun notaryException(txId: SecureHash, e: UniquenessException): NotaryException {
+    private fun notaryException(txId: SecureHash, e: UniquenessException, notaryIdentityKey: PublicKey): NotaryException {
         val conflictData = e.error.serialize()
-        val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
+        val signedConflict = SignedData(conflictData, sign(conflictData.bytes, notaryIdentityKey))
         return NotaryException(NotaryError.Conflict(txId, signedConflict))
     }
 
-    fun sign(bits: ByteArray): DigitalSignature.WithKey {
-        return services.keyManagementService.sign(bits, services.notaryIdentityKey)
+    fun sign(bits: ByteArray, notaryIdentityKey: PublicKey): DigitalSignature.WithKey {
+        return services.keyManagementService.sign(bits, notaryIdentityKey)
     }
 
-    fun sign(txId: SecureHash): TransactionSignature {
-        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(services.notaryIdentityKey).schemeNumberID))
-        return services.keyManagementService.sign(signableData, services.notaryIdentityKey)
+    fun sign(txId: SecureHash, notaryIdentityKey: PublicKey): TransactionSignature {
+        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
+        return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
 }
