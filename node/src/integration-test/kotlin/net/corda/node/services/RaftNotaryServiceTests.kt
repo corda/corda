@@ -27,7 +27,6 @@ import kotlin.test.assertFailsWith
 class RaftNotaryServiceTests : NodeBasedTest() {
     private val notaryName = CordaX500Name(organisation = "RAFT Notary Service", locality = "London", country = "GB")
 
-    @Ignore
     @Test
     fun `detect double spend`() {
         val (bankA) = listOf(

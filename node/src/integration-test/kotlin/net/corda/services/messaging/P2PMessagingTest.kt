@@ -8,6 +8,7 @@ import net.corda.core.internal.elapsedTime
 import net.corda.core.internal.times
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -18,7 +19,6 @@ import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.nodeapi.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
@@ -69,15 +69,16 @@ class P2PMessagingTest : NodeBasedTest() {
                 RaftValidatingNotaryService.type.id,
                 DISTRIBUTED_SERVICE_NAME)
 
+        val distributedService = ServiceInfo(RaftValidatingNotaryService.type, DISTRIBUTED_SERVICE_NAME)
         val notaryClusterAddress = freeLocalHostAndPort()
         startNetworkMapNode(
                 DUMMY_MAP.name,
-                advertisedServices = setOf(ServiceInfo(RaftValidatingNotaryService.type, DUMMY_MAP.name.copy(commonName = "DistributedService"))),
+                advertisedServices = setOf(distributedService),
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         val (serviceNode2, alice) = listOf(
                 startNode(
                         SERVICE_2_NAME,
-                        advertisedServices = setOf(ServiceInfo(RaftValidatingNotaryService.type, SERVICE_2_NAME.copy(commonName = "DistributedService"))),
+                        advertisedServices = setOf(distributedService),
                         configOverrides = mapOf(
                                 "notaryNodeAddress" to freeLocalHostAndPort().toString(),
                                 "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),

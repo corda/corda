@@ -55,12 +55,11 @@ class BFTNotaryServiceTests {
                 replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
                 serviceType.id,
                 clusterName)
-        val bftNotaryService = ServiceInfo(serviceType)
+        val bftNotaryService = ServiceInfo(serviceType, clusterName)
         val notaryClusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
         replicaIds.forEach { replicaId ->
             mockNet.createNode(
                     node.network.myAddress,
-                    legalName = clusterName.copy(organisation = clusterName.organisation + replicaId),
                     advertisedServices = bftNotaryService,
                     configOverrides = {
                         whenever(it.bftSMaRt).thenReturn(BFTSMaRtConfiguration(replicaId, false, exposeRaces))

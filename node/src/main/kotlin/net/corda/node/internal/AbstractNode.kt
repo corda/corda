@@ -13,10 +13,12 @@ import net.corda.core.flows.ContractUpgradeFlow.Acceptor
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.toX509CertHolder
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -73,7 +75,6 @@ import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.PublicKey
@@ -641,32 +642,23 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // TODO: Integrate with Key management service?
         val privateKeyAlias = "$id-private-key"
-        val compositeKeyAlias = "$id-composite-key"
 
         if (!keyStore.containsAlias(privateKeyAlias)) {
-            val privKeyFile = configuration.baseDirectory / privateKeyAlias
-            val pubIdentityFile = configuration.baseDirectory / "$id-public"
-            val compositeKeyFile = configuration.baseDirectory / compositeKeyAlias
             // TODO: Remove use of [ServiceIdentityGenerator.generateToDisk].
-            // Get keys from key file.
-            // TODO: this is here to smooth out the key storage transition, remove this migration in future release.
-            if (privKeyFile.exists()) {
-                migrateKeysFromFile(keyStore, name, pubIdentityFile, privKeyFile, compositeKeyFile, privateKeyAlias, compositeKeyAlias)
-            } else {
                 log.info("$privateKeyAlias not found in key store ${configuration.nodeKeystore}, generating fresh key!")
                 keyStore.signAndSaveNewKeyPair(name, privateKeyAlias, generateKeyPair())
-            }
         }
 
         val (x509Cert, keys) = keyStore.certificateAndKeyPair(privateKeyAlias)
 
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
+        val compositeKeyAlias = "$id-composite-key"
         val certificates = if (keyStore.containsAlias(compositeKeyAlias)) {
             // Use composite key instead if it exists
             val certificate = keyStore.getCertificate(compositeKeyAlias)
             // We have to create the certificate chain for the composite key manually, this is because in order to store
             // the chain in key store we need a private key, however there is no corresponding private key for the composite key.
-            Lists.asList(certificate, keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA))
+            Lists.asList(certificate, keyStore.getCertificateChain(privateKeyAlias).drop(1).toTypedArray())
         } else {
             keyStore.getCertificateChain(privateKeyAlias).let {
                 check(it[0].toX509CertHolder() == x509Cert) { "Certificates from key store do not line up!" }
@@ -681,22 +673,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         partyKeys += keys
         return PartyAndCertificate(CertificateFactory.getInstance("X509").generateCertPath(certificates))
-    }
-
-    private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: CordaX500Name,
-                                    pubKeyFile: Path, privKeyFile: Path, compositeKeyFile:Path,
-                                    privateKeyAlias: String, compositeKeyAlias: String) {
-        log.info("Migrating $privateKeyAlias from file to key store...")
-        // Check that the identity in the config file matches the identity file we have stored to disk.
-        // Load the private key.
-        val publicKey = Crypto.decodePublicKey(pubKeyFile.readAll())
-        val privateKey = Crypto.decodePrivateKey(privKeyFile.readAll())
-        keyStore.signAndSaveNewKeyPair(serviceName, privateKeyAlias, KeyPair(publicKey, privateKey))
-        // Store composite key separately.
-        if (compositeKeyFile.exists()) {
-            keyStore.savePublicKey(serviceName, compositeKeyAlias, Crypto.decodePublicKey(compositeKeyFile.readAll()))
-        }
-        log.info("Finish migrating $privateKeyAlias from file to keystore.")
     }
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
