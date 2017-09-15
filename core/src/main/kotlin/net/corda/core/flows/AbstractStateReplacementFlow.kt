@@ -152,7 +152,7 @@ abstract class AbstractStateReplacementFlow {
         override fun call(): Void? {
             progressTracker.currentStep = VERIFYING
             // We expect stx to have insufficient signatures here
-            val stx = subFlow(ReceiveTransactionFlow(initiatingSession, checkSufficientSignatures = false))
+            val stx = subFlow(ReceiveTransactionFlow(initiatingSession, checkSufficientSignatures = false, recordTransactions = false))
             checkMySignatureRequired(stx)
             val maybeProposal: UntrustworthyData<Proposal<T>> = initiatingSession.receive()
             maybeProposal.unwrap {

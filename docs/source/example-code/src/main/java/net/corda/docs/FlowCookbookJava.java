@@ -415,9 +415,9 @@ public class FlowCookbookJava {
 
             // We can receive the transaction using ``ReceiveTransactionFlow``,
             // which will automatically download all the dependencies and verify
-            // the transaction
+            // the transaction and then record in our vault
             // DOCSTART 13
-            SignedTransaction verifiedTransaction = subFlow(new ReceiveTransactionFlow(counterparty));
+            SignedTransaction verifiedTransaction = subFlow(new ReceiveTransactionFlow(counterpartySession));
             // DOCEND 13
 
             // We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies.
@@ -425,7 +425,7 @@ public class FlowCookbookJava {
             subFlow(new SendStateAndRefFlow(counterpartySession, dummyStates));
 
             // On the receive side ...
-            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterparty));
+            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterpartySession));
             // DOCEND 14
 
             try {

@@ -195,11 +195,11 @@ class ForeignExchangeFlow(val tradeId: String,
 }
 
 @InitiatedBy(ForeignExchangeFlow::class)
-class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
+class ForeignExchangeRemoteFlow(private val source: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         // Initial receive from remote party
-        val request = receive<FxRequest>(source).unwrap {
+        val request = source.receive<FxRequest>().unwrap {
             // We would need to check that this is a known trade ID here!
             // Also that the amounts and source are correct with the trade details.
             // In a production system there would be other Corda contracts tracking
@@ -209,7 +209,7 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
             require(serviceHub.myInfo.chooseIdentity() == it.owner) {
                 "Request does not include the correct counterparty"
             }
-            require(source == it.counterparty) {
+            require(source.counterparty == it.counterparty) {
                 "Request does not include the correct counterparty"
             }
             it // return validated request
@@ -226,16 +226,11 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
         val ourKey = serviceHub.keyManagementService.filterMyKeys(ourInputState.flatMap { it.state.data.participants }.map { it.owningKey }).single()
         // SendStateAndRefFlow allows otherSideSession to access our transaction data to resolve the transaction.
         subFlow(SendStateAndRefFlow(source, ourInputState))
-        send(source, ourOutputState)
-        val proposedTrade = subFlow(ReceiveTransactionFlow(source, checkSufficientSignatures = false)).let {
+        source.send(ourOutputState)
+        val proposedTrade = subFlow(ReceiveTransactionFlow(source, checkSufficientSignatures = false, recordTransactions = false)).let {
             val wtx = it.tx
             // check all signatures are present except our own and the notary
             it.verifySignaturesExcept(ourKey, wtx.notary!!.owningKey)
-
-            // This verifies that the transaction is contract-valid, even though it is missing signatures.
-            // In a full solution there would be states tracking the trade request which
-            // would be included in the transaction and enforce the amounts and tradeId
-            wtx.toLedgerTransaction(serviceHub).verify()
             it // return the SignedTransaction
         }
 
@@ -243,7 +238,7 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
         val ourSignature = serviceHub.createSignature(proposedTrade, ourKey)
 
         // send the other side our signature.
-        send(source, ourSignature)
+        source.send(ourSignature)
         // N.B. The FinalityProtocol will be responsible for Notarising the SignedTransaction
         // and broadcasting the result to us.
     }

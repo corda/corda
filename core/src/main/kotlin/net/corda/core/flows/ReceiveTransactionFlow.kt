@@ -2,7 +2,6 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.identity.Party
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
@@ -15,15 +14,21 @@ import java.security.SignatureException
  * and perform the resolution back-and-forth required to check the dependencies and download any missing attachments.
  * The flow will return the [SignedTransaction] after it is resolved and then verified using [SignedTransaction.verify].
  */
-class ReceiveTransactionFlow
-@JvmOverloads
-constructor(private val initiatingSession: FlowSession, private val checkSufficientSignatures: Boolean = true) : FlowLogic<SignedTransaction>() {
+class ReceiveTransactionFlow(private val initiatingSession: FlowSession,
+                             private val checkSufficientSignatures: Boolean,
+                             private val recordTransactions: Boolean) : FlowLogic<SignedTransaction>() {
+    constructor(initiatingSession: FlowSession) : this(initiatingSession, true, true)
+
     @Suspendable
-    @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
+    @Throws(SignatureException::class,
+            AttachmentResolutionException::class,
+            TransactionResolutionException::class,
+            TransactionVerificationException::class)
     override fun call(): SignedTransaction {
         return initiatingSession.receive<SignedTransaction>().unwrap {
             subFlow(ResolveTransactionsFlow(it, initiatingSession))
             it.verify(serviceHub, checkSufficientSignatures)
+            if (recordTransactions) serviceHub.recordTransactions(it)
             it
         }
     }
