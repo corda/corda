@@ -2,8 +2,8 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -15,10 +15,10 @@ import net.corda.core.utilities.unwrap
  */
 @StartableByRPC
 @InitiatingFlow
-class SwapIdentitiesFlow(val otherSide: Party,
+class SwapIdentitiesFlow(val otherParty: Party,
                          val revocationEnabled: Boolean,
                          override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
-    constructor(otherSide: Party) : this(otherSide, false, tracker())
+    constructor(otherParty: Party) : this(otherParty, false, tracker())
 
     companion object {
         object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
@@ -39,15 +39,16 @@ class SwapIdentitiesFlow(val otherSide: Party,
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled)
 
         // Special case that if we're both parties, a single identity is generated
+        val otherSession = initiateFlow(otherParty)
         val identities = LinkedHashMap<Party, AnonymousParty>()
-        if (otherSide in serviceHub.myInfo.legalIdentities) {
-            identities.put(otherSide, legalIdentityAnonymous.party.anonymise())
+        if (otherSession.counterparty in serviceHub.myInfo.legalIdentities) {
+            identities.put(otherSession.counterparty, legalIdentityAnonymous.party.anonymise())
         } else {
-            val anonymousOtherSide = sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->
-                validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
+            val anonymousOtherSide = otherSession.sendAndReceive<PartyAndCertificate>(legalIdentityAnonymous).unwrap { confidentialIdentity ->
+                validateAndRegisterIdentity(serviceHub.identityService, otherSession.counterparty, confidentialIdentity)
             }
             identities.put(ourIdentity.party, legalIdentityAnonymous.party.anonymise())
-            identities.put(otherSide, anonymousOtherSide.party.anonymise())
+            identities.put(otherSession.counterparty, anonymousOtherSide.party.anonymise())
         }
         return identities
     }

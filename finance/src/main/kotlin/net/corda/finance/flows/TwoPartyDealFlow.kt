@@ -49,26 +49,26 @@ object TwoPartyDealFlow {
 
         abstract val payload: Any
         abstract val notaryNode: NodeInfo
-        abstract val otherParty: Party
+        abstract val otherSession: FlowSession
 
         @Suspendable override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
-            val txIdentities = subFlow(SwapIdentitiesFlow(otherParty))
+            val txIdentities = subFlow(SwapIdentitiesFlow(otherSession.counterparty))
             val anonymousMe = txIdentities.get(ourIdentity.party) ?: ourIdentity.party.anonymise()
-            val anonymousCounterparty = txIdentities.get(otherParty) ?: otherParty.anonymise()
+            val anonymousCounterparty = txIdentities.get(otherSession.counterparty) ?: otherSession.counterparty.anonymise()
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
             val hello = Handshake(payload, anonymousMe, anonymousCounterparty)
             // Wait for the FinalityFlow to finish on the other side and return the tx when it's available.
-            send(otherParty, hello)
+            otherSession.send(hello)
 
-            val signTransactionFlow = object : SignTransactionFlow(otherParty) {
+            val signTransactionFlow = object : SignTransactionFlow(otherSession) {
                 override fun checkTransaction(stx: SignedTransaction) = checkProposal(stx)
             }
 
             subFlow(signTransactionFlow)
 
-            val txHash = receive<SecureHash>(otherParty).unwrap { it }
+            val txHash = otherSession.receive<SecureHash>().unwrap { it }
 
             return waitForLedgerCommit(txHash)
         }
@@ -93,7 +93,7 @@ object TwoPartyDealFlow {
             fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING, COPYING_TO_REGULATOR, COPYING_TO_COUNTERPARTY)
         }
 
-        abstract val otherParty: Party
+        abstract val otherSession: FlowSession
 
         @Suspendable
         override fun call(): SignedTransaction {
@@ -118,7 +118,7 @@ object TwoPartyDealFlow {
             logger.trace { "Got signatures from other party, verifying ... " }
 
             progressTracker.currentStep = RECORDING
-            val ftx = subFlow(FinalityFlow(stx, setOf(otherParty, ourIdentity.party))).single()
+            val ftx = subFlow(FinalityFlow(stx, setOf(otherSession.counterparty, ourIdentity.party))).single()
 
             logger.trace { "Recorded transaction." }
 
@@ -133,7 +133,7 @@ object TwoPartyDealFlow {
             progressTracker.currentStep = COPYING_TO_COUNTERPARTY
             // Send the final transaction hash back to the other party.
             // We need this so we don't break the IRS demo and the SIMM Demo.
-            send(otherParty, ftx.id)
+            otherSession.send(ftx.id)
 
             return ftx
         }
@@ -142,14 +142,14 @@ object TwoPartyDealFlow {
         private fun receiveAndValidateHandshake(): Handshake<U> {
             progressTracker.currentStep = RECEIVING
             // Wait for a trade request to come in on our pre-provided session ID.
-            val handshake = receive<Handshake<U>>(otherParty)
+            val handshake = otherSession.receive<Handshake<U>>()
 
             progressTracker.currentStep = VERIFYING
             return handshake.unwrap {
                 // Verify the transaction identities represent the correct parties
                 val wellKnownOtherParty = serviceHub.identityService.partyFromAnonymous(it.primaryIdentity)
                 val wellKnownMe = serviceHub.identityService.partyFromAnonymous(it.secondaryIdentity)
-                require(wellKnownOtherParty == otherParty)
+                require(wellKnownOtherParty == otherSession.counterparty)
                 require(wellKnownMe == ourIdentity.party)
                 validateHandshake(it)
             }
@@ -165,7 +165,7 @@ object TwoPartyDealFlow {
     /**
      * One side of the flow for inserting a pre-agreed deal.
      */
-    open class Instigator(override val otherParty: Party,
+    open class Instigator(override val otherSession: FlowSession,
                           override val payload: AutoOffer,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
         override val notaryNode: NodeInfo get() =
@@ -179,7 +179,7 @@ object TwoPartyDealFlow {
     /**
      * One side of the flow for inserting a pre-agreed deal.
      */
-    open class Acceptor(override val otherParty: Party,
+    open class Acceptor(override val otherSession: FlowSession,
                         override val progressTracker: ProgressTracker = Secondary.tracker()) : Secondary<AutoOffer>() {
 
         override fun validateHandshake(handshake: Handshake<AutoOffer>): Handshake<AutoOffer> {
