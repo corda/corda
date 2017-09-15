@@ -160,7 +160,8 @@ public class FlowCookbookJava {
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
             // DOCSTART 4
-            send(counterparty, new Object());
+            FlowSession counterpartySession = initiateFlow(counterparty);
+            counterpartySession.send(new Object());
             // DOCEND 4
 
             // We can wait to receive arbitrary data of a specific type from a
@@ -183,7 +184,7 @@ public class FlowCookbookJava {
             // be what it appears to be! We must unwrap the
             // ``UntrustworthyData`` using a lambda.
             // DOCSTART 5
-            UntrustworthyData<Integer> packet1 = receive(Integer.class, counterparty);
+            UntrustworthyData<Integer> packet1 = counterpartySession.receive(Integer.class);
             Integer integer = packet1.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -197,7 +198,7 @@ public class FlowCookbookJava {
             // data sent doesn't need to match the type of the data received
             // back.
             // DOCSTART 7
-            UntrustworthyData<Boolean> packet2 = sendAndReceive(Boolean.class, counterparty, "You can send and receive any class!");
+            UntrustworthyData<Boolean> packet2 = counterpartySession.sendAndReceive(Boolean.class, "You can send and receive any class!");
             Boolean bool = packet2.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -210,8 +211,9 @@ public class FlowCookbookJava {
             // counterpartySession. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
             // DOCSTART 6
-            send(regulator, new Object());
-            UntrustworthyData<Object> packet3 = receive(Object.class, regulator);
+            FlowSession regulatorSession = initiateFlow(regulator);
+            regulatorSession.send(new Object());
+            UntrustworthyData<Object> packet3 = regulatorSession.receive(Object.class);
             // DOCEND 6
 
             /*------------------------------------
@@ -401,7 +403,6 @@ public class FlowCookbookJava {
             // for data request until the transaction is resolved and verified
             // on the other side:
             // DOCSTART 12
-            FlowSession counterpartySession = initiateFlow(counterparty);
             subFlow(new SendTransactionFlow(counterpartySession, twiceSignedTx));
 
             // Optional request verification to further restrict data access.
