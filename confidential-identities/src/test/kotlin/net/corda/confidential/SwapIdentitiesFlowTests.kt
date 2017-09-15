@@ -74,9 +74,9 @@ class SwapIdentitiesFlowTests {
     private fun arrayContains(outerArray: ByteArray, innerArray: ByteArray): Boolean {
         val searchSpace = outerArray.size - innerArray.size
         if (searchSpace >= 0) {
-            for (outerIdx in 0..(searchSpace - 1)) {
+            for (outerIdx in 0 until searchSpace) {
                 var matchedIdx = 0
-                for (innerIdx in 0..(innerArray.size - 1)) {
+                for (innerIdx in 0 until innerArray.size) {
                     if (outerArray[outerIdx + innerIdx] != innerArray[innerIdx])
                         break
                     matchedIdx = innerIdx
