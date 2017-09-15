@@ -25,12 +25,11 @@ object IRSTradeFlow {
         override fun call(): SignedTransaction {
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
-            val myIdentity = serviceHub.myInfo.legalIdentity
             val (buyer, seller) =
-                    if (swap.buyer.second == myIdentity.owningKey) {
-                        Pair(myIdentity, otherParty)
+                    if (swap.buyer.second == ourIdentity.owningKey) {
+                        Pair(ourIdentity.party, otherParty)
                     } else {
-                        Pair(otherParty, myIdentity)
+                        Pair(otherParty, ourIdentity.party)
                     }
             val offer = IRSState(swap, buyer, seller)
 

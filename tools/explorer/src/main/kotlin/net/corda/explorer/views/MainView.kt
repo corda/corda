@@ -50,7 +50,7 @@ class MainView : View() {
 
     init {
         // Header
-        userButton.textProperty().bind(myIdentity.map { it?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) } })
+        userButton.textProperty().bind(myIdentity.map { it?.let { PartyNameFormatter.short.format(it.name) } })
         exit.setOnAction {
             (root.scene.window as Stage).fireEvent(WindowEvent(root.scene.window, WindowEvent.WINDOW_CLOSE_REQUEST))
         }

@@ -45,7 +45,7 @@ class BankOfCordaRPCClientTest {
             val anonymous = true
             bocProxy.startFlow(::CashIssueAndPaymentFlow,
                     1000.DOLLARS, BIG_CORP_PARTY_REF,
-                    nodeBigCorporation.nodeInfo.legalIdentity,
+                    nodeBigCorporation.nodeInfo.chooseIdentity(),
                     anonymous,
                     nodeBankOfCorda.nodeInfo.notaryIdentity).returnValue.getOrThrow()
 

@@ -15,6 +15,7 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.performance.div
@@ -116,7 +117,7 @@ class NodePerformanceTests {
                 doneFutures.transpose().get()
                 println("STARTING PAYMENT")
                 startPublishingFixedRateInjector(metricRegistry, 8, 5.minutes, 100L / TimeUnit.SECONDS) {
-                    connection.proxy.startFlow(::CashPaymentFlow, 1.DOLLARS, a.nodeInfo.legalIdentity).returnValue.get()
+                    connection.proxy.startFlow(::CashPaymentFlow, 1.DOLLARS, a.nodeInfo.chooseIdentity()).returnValue.get()
                 }
             }
 

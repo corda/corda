@@ -5,6 +5,7 @@ import com.google.common.hash.HashingInputStream
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
@@ -56,6 +57,7 @@ class StandaloneCordaRPClientTest {
     private lateinit var rpcProxy: CordaRPCOps
     private lateinit var connection: CordaRPCConnection
     private lateinit var notaryNode: NodeInfo
+    private lateinit var notaryNodeIdentity: Party
 
     private val notaryConfig = NodeConfig(
             legalName = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"),
@@ -74,6 +76,7 @@ class StandaloneCordaRPClientTest {
         connection = notary.connect()
         rpcProxy = connection.proxy
         notaryNode = fetchNotaryIdentity()
+        notaryNodeIdentity = rpcProxy.nodeInfo().legalIdentitiesAndCerts.first().party
     }
 
     @After
@@ -110,7 +113,7 @@ class StandaloneCordaRPClientTest {
 
     @Test
     fun `test starting flow`() {
-        rpcProxy.startFlow(::CashIssueFlow, 127.POUNDS, OpaqueBytes.of(0), notaryNode.notaryIdentity)
+        rpcProxy.startFlow(::CashIssueFlow, 127.POUNDS, OpaqueBytes.of(0), notaryNodeIdentity)
             .returnValue.getOrThrow(timeout)
     }
 
@@ -118,7 +121,7 @@ class StandaloneCordaRPClientTest {
     fun `test starting tracked flow`() {
         var trackCount = 0
         val handle = rpcProxy.startTrackedFlow(
-            ::CashIssueFlow, 429.DOLLARS, OpaqueBytes.of(0), notaryNode.notaryIdentity
+            ::CashIssueFlow, 429.DOLLARS, OpaqueBytes.of(0), notaryNodeIdentity
         )
         val updateLatch = CountDownLatch(1)
         handle.progress.subscribe { msg ->
@@ -133,7 +136,7 @@ class StandaloneCordaRPClientTest {
 
     @Test
     fun `test network map`() {
-        assertEquals(notaryConfig.legalName, notaryNode.legalIdentity.name)
+        assertEquals(notaryConfig.legalName, notaryNodeIdentity.name)
     }
 
     @Test
@@ -152,7 +155,7 @@ class StandaloneCordaRPClientTest {
         }
 
         // Now issue some cash
-        rpcProxy.startFlow(::CashIssueFlow, 513.SWISS_FRANCS, OpaqueBytes.of(0), notaryNode.notaryIdentity)
+        rpcProxy.startFlow(::CashIssueFlow, 513.SWISS_FRANCS, OpaqueBytes.of(0), notaryNodeIdentity)
             .returnValue.getOrThrow(timeout)
         updateLatch.await()
         assertEquals(1, updateCount.get())
@@ -170,7 +173,7 @@ class StandaloneCordaRPClientTest {
         }
 
         // Now issue some cash
-        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNode.notaryIdentity)
+        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNodeIdentity)
                 .returnValue.getOrThrow(timeout)
         updateLatch.await()
 
@@ -184,7 +187,7 @@ class StandaloneCordaRPClientTest {
     @Test
     fun `test vault query by`() {
         // Now issue some cash
-        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNode.notaryIdentity)
+        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNodeIdentity)
                 .returnValue.getOrThrow(timeout)
 
         val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
@@ -195,7 +198,7 @@ class StandaloneCordaRPClientTest {
         assertEquals(1, queryResults.totalStatesAvailable)
         assertEquals(queryResults.states.first().state.data.amount.quantity, 629.POUNDS.quantity)
 
-        rpcProxy.startFlow(::CashPaymentFlow, 100.POUNDS, notaryNode.legalIdentity).returnValue.getOrThrow()
+        rpcProxy.startFlow(::CashPaymentFlow, 100.POUNDS, notaryNodeIdentity).returnValue.getOrThrow()
 
         val moreResults = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting)
         assertEquals(3, moreResults.totalStatesAvailable)   // 629 - 100 + 100
@@ -213,7 +216,7 @@ class StandaloneCordaRPClientTest {
         println(startCash)
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
-        val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 629.DOLLARS, OpaqueBytes.of(0), notaryNode.legalIdentity)
+        val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 629.DOLLARS, OpaqueBytes.of(0), notaryNodeIdentity)
         println("Started issuing cash, waiting on result")
         flowHandle.returnValue.get()
 

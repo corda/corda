@@ -63,9 +63,8 @@ class Network : CordaView() {
     private val notaryComponents = notaries.map { it.render() }
     private val notaryButtons = notaryComponents.map { it.button }
     private val peerComponents = peers.map { it.render() }
-    private val peerButtons = peerComponents.filtered { it.nodeInfo != myIdentity.value }.map { it.button }
+    private val peerButtons = peerComponents.filtered { myIdentity.value !in it.nodeInfo.legalIdentitiesAndCerts.map { it.party } }.map { it.button }
     private val allComponents = FXCollections.observableArrayList(notaryComponents, peerComponents).concatenate()
-    private val allComponentMap = allComponents.associateBy { it.nodeInfo.legalIdentity }
     private val mapLabels = allComponents.map { it.label }
 
     private data class MapViewComponents(val nodeInfo: NodeInfo, val button: Button, val label: Label)
@@ -88,15 +87,18 @@ class Network : CordaView() {
 
     private fun NodeInfo.renderButton(mapLabel: Label): Button {
         val node = this
+        val identities = node.legalIdentitiesAndCerts.sortedBy { it.owningKey.toBase58String() }
         return button {
             useMaxWidth = true
             graphic = vbox {
-                label(PartyNameFormatter.short.format(node.legalIdentity.name)) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
-                gridpane {
+                label(PartyNameFormatter.short.format(identities[0].name)) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
+                gridpane { // TODO We lose node's main identity for display.
                     hgap = 5.0
                     vgap = 5.0
-                    row("Pub Key :") {
-                        copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())).apply { minWidth = 400.0 }
+                    for (identity in identities) {
+                        row(PartyNameFormatter.short.format(identity.name)) {
+                            copyableLabel(SimpleObjectProperty(identity.owningKey.toBase58String())).apply { minWidth = 400.0 }
+                        }
                     }
                     row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
                     node.getWorldMapLocation()?.apply { row("Location :") { label(this@apply.description) } }
@@ -110,7 +112,8 @@ class Network : CordaView() {
 
     private fun NodeInfo.render(): MapViewComponents {
         val node = this
-        val mapLabel = label(PartyNameFormatter.short.format(node.legalIdentity.name))
+        val identities = node.legalIdentitiesAndCerts.sortedBy { it.owningKey.toBase58String() }
+        val mapLabel = label(PartyNameFormatter.short.format(identities[0].name)) // We choose the first one for the name of the node on the map.
         mapPane.add(mapLabel)
         // applyCss: This method does not normally need to be invoked directly but may be used in conjunction with Parent.layout()
         // to size a Node before the next pulse, or if the Scene is not in a Stage.
@@ -131,7 +134,7 @@ class Network : CordaView() {
         }
 
         val button = node.renderButton(mapLabel)
-        if (node == myIdentity.value) {
+        if (myIdentity.value in node.legalIdentitiesAndCerts.map { it.party }) {
             // It has to be a copy if we want to have notary both in notaries list and in identity (if we are looking at that particular notary node).
             myIdentityPane.apply { center = node.renderButton(mapLabel) }
             myLabel = mapLabel
@@ -211,11 +214,11 @@ class Network : CordaView() {
 
     private fun List<ContractState>.getParties() = map { it.participants.map { it.owningKey.toKnownParty() } }.flatten()
 
-    private fun fireBulletBetweenNodes(senderNode: Party, destNode: Party, startType: String, endType: String) {
-        val senderNodeComp = allComponentMap[senderNode] ?: return
-        val destNodeComp = allComponentMap[destNode] ?: return
-        val sender = senderNodeComp.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
-        val receiver = destNodeComp.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
+    private fun fireBulletBetweenNodes(senderParty: Party, destParty: Party, startType: String, endType: String) {
+        val senderNode = allComponents.firstOrNull { senderParty in it.nodeInfo.legalIdentities } ?: return
+        val destNode = allComponents.firstOrNull { destParty in it.nodeInfo.legalIdentities } ?: return
+        val sender = senderNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
+        val receiver = destNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
         val bullet = Circle(3.0)
         bullet.styleClass += "bullet"
         bullet.styleClass += "connection-$startType-to-$endType"

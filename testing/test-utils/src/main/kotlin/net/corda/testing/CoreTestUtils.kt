@@ -10,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.*
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
@@ -82,7 +83,7 @@ val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, AL
 val DUMMY_CASH_ISSUER_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_CASH_ISSUER.party as Party)
 
 val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)
-val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptySet(), DUMMY_CA.certificate.cert)
+val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptySet(), DEV_CA.certificate.cert)
 
 val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)
 
@@ -127,7 +128,7 @@ fun configureTestSSL(legalName: CordaX500Name = MEGA_CORP.name): SSLConfiguratio
     }
 }
 
-fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DEV_CA): PartyAndCertificate {
     val certFactory = CertificateFactory.getInstance("X509")
     val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
     val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
@@ -137,7 +138,7 @@ fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = 
 /**
  * Build a test party with a nonsense certificate authority for testing purposes.
  */
-fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DEV_CA): PartyAndCertificate {
     return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
 }
 
@@ -152,3 +153,10 @@ inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) 
 } else {
     loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason" )
 }
+
+/**
+ * Until we have proper handling of multiple identities per node, for tests we use the first identity as special one.
+ * TODO: Should be removed after multiple identities are introduced.
+ */
+fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
+fun NodeInfo.chooseIdentity(): Party = legalIdentitiesAndCerts.first().party

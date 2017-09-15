@@ -28,6 +28,7 @@ import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.IntegrationTestCategory
+import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import org.apache.commons.io.IOUtils
@@ -80,7 +81,7 @@ class IRSDemoTest : IntegrationTestCategory {
             val numBDeals = getTradeCount(nodeBApi)
 
             runUploadRates(controllerAddr)
-            runTrade(nodeAApi, controller.nodeInfo.legalIdentity)
+            runTrade(nodeAApi, controller.nodeInfo.chooseIdentity())
 
             assertThat(getTradeCount(nodeAApi)).isEqualTo(numADeals + 1)
             assertThat(getTradeCount(nodeBApi)).isEqualTo(numBDeals + 1)

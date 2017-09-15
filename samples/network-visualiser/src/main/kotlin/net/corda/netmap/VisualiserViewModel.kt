@@ -11,6 +11,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ScreenCoordinate
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.simulation.IRSSimulation
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import java.util.*
 
@@ -86,7 +87,7 @@ class VisualiserViewModel {
         try {
             return node.place.coordinate.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
         } catch(e: Exception) {
-            throw Exception("Cannot project ${node.started!!.info.legalIdentity}", e)
+            throw Exception("Cannot project ${node.started!!.info.chooseIdentity()}", e)
         }
     }
 

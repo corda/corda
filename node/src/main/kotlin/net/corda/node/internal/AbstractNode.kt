@@ -133,6 +133,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
+    lateinit var legalIdentity: PartyAndCertificate
     protected lateinit var info: NodeInfo
     protected lateinit var checkpointStorage: CheckpointStorage
     protected lateinit var smm: StateMachineManager
@@ -379,7 +380,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         _services = ServiceHubInternalImpl()
         attachments = NodeAttachmentService(services.monitoringService.metrics)
         cordappProvider = CordappProvider(attachments, makeCordappLoader())
-        val legalIdentity = obtainIdentity()
+        legalIdentity = obtainIdentity()
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
 
@@ -409,9 +410,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeInfo(legalIdentity: PartyAndCertificate): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
-        val allIdentities = advertisedServiceEntries.map { it.identity }.toSet() // TODO Add node's legalIdentity (after services removal).
+        val allIdentitiesList = mutableListOf(legalIdentity)
+        allIdentitiesList.addAll(advertisedServiceEntries.map { it.identity }) // TODO Will we keep service identities here, for example notaries?
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, platformClock.instant().toEpochMilli())
+        return NodeInfo(addresses, allIdentitiesList, platformVersion, advertisedServiceEntries, platformClock.instant().toEpochMilli())
     }
 
     /**
@@ -516,7 +518,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             "Initial network map address must indicate a node that provides a network map service"
         }
         val address: SingleMessageRecipient = networkMapAddress ?:
-                network.getAddressOfParty(PartyInfo.Node(info)) as SingleMessageRecipient
+                network.getAddressOfParty(PartyInfo.SingleNode(services.myInfo.legalIdentitiesAndCerts.first().party, info.addresses)) as SingleMessageRecipient
         // Register for updates, even if we're the one running the network map.
         return sendNetworkMapRegistration(address).flatMap { (error) ->
             check(error == null) { "Unable to register with the network map service: $error" }
@@ -530,7 +532,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val instant = platformClock.instant()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, info.serial, ADD, expires)
-        val request = RegistrationRequest(reg.toWire(services.keyManagementService, info.legalIdentityAndCert.owningKey), network.myAddress)
+        val request = RegistrationRequest(reg.toWire(services.keyManagementService, info.legalIdentitiesAndCerts.first().owningKey), network.myAddress)
         return network.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
     }
 
@@ -573,12 +575,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate, clientCa?.certificate?.cert)
                 .filterNotNull()
                 .toTypedArray()
-        val service = PersistentIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
-        services.networkMapCache.partyNodes.forEach { service.verifyAndRegisterIdentity(it.legalIdentityAndCert) }
+        val service = PersistentIdentityService(info.legalIdentitiesAndCerts.toSet(), trustRoot = trustRoot, caCertificates = *caCertificates)
+        services.networkMapCache.partyNodes.forEach { it.legalIdentitiesAndCerts.forEach { service.verifyAndRegisterIdentity(it) } }
         services.networkMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
-                service.verifyAndRegisterIdentity(mapChange.node.legalIdentityAndCert)
+                mapChange.node.legalIdentitiesAndCerts.forEach {
+                    service.verifyAndRegisterIdentity(it)
+                }
             }
         }
         return service
@@ -708,7 +712,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             makeIdentityService(
                     trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA),
                     caKeyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
-                    info.legalIdentityAndCert)
+                    legalIdentity)
         }
         override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
         override val networkService: MessagingService get() = network
@@ -722,8 +726,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
         }
 
-        override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
-            return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
+        override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate?): FlowStateMachineImpl<T> {
+            check(me == null || me in myInfo.legalIdentitiesAndCerts) { "Attempt to start a flow with legal identity not belonging to this node." }
+            return serverThread.fetchFrom { smm.add(logic, flowInitiator, me) }
         }
 
         override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {

@@ -25,6 +25,7 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.testing.chooseIdentity
 import net.corda.testing.configureTestSSL
 import net.corda.testing.messaging.SimpleMQClient
 import net.corda.testing.node.NodeBasedTest
@@ -86,7 +87,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     @Test
     fun `create queue for peer which has not been communicated with`() {
         val bob = startNode(BOB.name).getOrThrow()
-        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.legalIdentity.owningKey.toBase58String()}")
+        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.chooseIdentity().owningKey.toBase58String()}")
     }
 
     @Test
@@ -219,7 +220,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     private fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode(BOB.name).getOrThrow()
         bob.internals.registerInitiatedFlow(ReceiveFlow::class.java)
-        val bobParty = bob.info.legalIdentity
+        val bobParty = bob.info.chooseIdentity()
         // Perform a protocol exchange to force the peer queue to be created
         alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()
         return bobParty

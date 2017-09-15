@@ -16,6 +16,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -72,7 +73,7 @@ class AttachmentTests {
 
         // Get node one to run a flow to fetch it and insert it.
         mockNet.runNetwork()
-        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.legalIdentity)
+        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.chooseIdentity())
         mockNet.runNetwork()
         assertEquals(0, f1.resultFuture.getOrThrow().fromDisk.size)
 
@@ -86,7 +87,7 @@ class AttachmentTests {
         // Shut down node zero and ensure node one can still resolve the attachment.
         n0.dispose()
 
-        val response: FetchDataFlow.Result<Attachment> = n1.startAttachmentFlow(setOf(id), n0.info.legalIdentity).resultFuture.getOrThrow()
+        val response: FetchDataFlow.Result<Attachment> = n1.startAttachmentFlow(setOf(id), n0.info.chooseIdentity()).resultFuture.getOrThrow()
         assertEquals(attachment, response.fromDisk[0])
     }
 
@@ -106,7 +107,7 @@ class AttachmentTests {
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
         mockNet.runNetwork()
-        val f1 = n1.startAttachmentFlow(setOf(hash), n0.info.legalIdentity)
+        val f1 = n1.startAttachmentFlow(setOf(hash), n0.info.chooseIdentity())
         mockNet.runNetwork()
         val e = assertFailsWith<FetchDataFlow.HashNotFound> { f1.resultFuture.getOrThrow() }
         assertEquals(hash, e.requested)
@@ -151,7 +152,7 @@ class AttachmentTests {
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         mockNet.runNetwork()
-        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.legalIdentity)
+        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.chooseIdentity())
         mockNet.runNetwork()
         assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { f1.resultFuture.getOrThrow() }
     }

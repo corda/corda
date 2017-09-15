@@ -7,6 +7,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.internal.StartedNode
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -31,7 +32,7 @@ class CashExitFlowTests {
         notaryNode = nodes.notaryNode
         bankOfCordaNode = nodes.partyNodes[0]
         notary = notaryNode.info.notaryIdentity
-        bankOfCorda = bankOfCordaNode.info.legalIdentity
+        bankOfCorda = bankOfCordaNode.info.chooseIdentity()
 
         mockNet.runNetwork()
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture

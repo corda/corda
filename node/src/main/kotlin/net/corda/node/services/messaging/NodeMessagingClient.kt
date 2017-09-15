@@ -169,7 +169,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
      * Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.
      */
     override val myAddress: SingleMessageRecipient = if (myIdentity != null) {
-        NodeAddress.asPeer(myIdentity, advertisedAddress)
+        NodeAddress.asSingleNode(myIdentity, advertisedAddress)
     } else {
         NetworkMapAddress(advertisedAddress)
     }
@@ -622,10 +622,13 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
     }
 
+    // TODO Rethink PartyInfo idea and merging PeerAddress/ServiceAddress (the only difference is that Service address doesn't hold host and port)
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
         return when (partyInfo) {
-            is PartyInfo.Node -> getArtemisPeerAddress(partyInfo.node)
-            is PartyInfo.Service -> ServiceAddress(partyInfo.service.identity.owningKey)
+            is PartyInfo.SingleNode -> {
+                getArtemisPeerAddress(partyInfo.party, partyInfo.addresses.first(), config.networkMapService?.legalName)
+            }
+            is PartyInfo.DistributedNode -> ServiceAddress(partyInfo.party.owningKey)
         }
     }
 }

@@ -29,10 +29,10 @@ class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMap
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
 
     init {
-        val mockNodeA = NodeInfo(listOf(BANK_C_ADDR), BANK_C, NonEmptySet.of(BANK_C), 1, serial = 1L)
-        val mockNodeB = NodeInfo(listOf(BANK_D_ADDR), BANK_D, NonEmptySet.of(BANK_D), 1, serial = 1L)
-        registeredNodes[mockNodeA.legalIdentity.owningKey] = mockNodeA
-        registeredNodes[mockNodeB.legalIdentity.owningKey] = mockNodeB
+        val mockNodeA = NodeInfo(listOf(BANK_C_ADDR), listOf(BANK_C), 1, serial = 1L)
+        val mockNodeB = NodeInfo(listOf(BANK_D_ADDR), listOf(BANK_D), 1, serial = 1L)
+        partyNodes.add(mockNodeA)
+        partyNodes.add(mockNodeB)
         runWithoutMapService()
     }
 
@@ -42,7 +42,9 @@ class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMap
      */
     @VisibleForTesting
     fun addRegistration(node: NodeInfo) {
-        registeredNodes[node.legalIdentity.owningKey] = node
+        val previousIndex = partyNodes.indexOfFirst { it.legalIdentitiesAndCerts == node.legalIdentitiesAndCerts }
+        if (previousIndex != -1) partyNodes[previousIndex] = node
+        else partyNodes.add(node)
     }
 
     /**
@@ -51,6 +53,6 @@ class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMap
      */
     @VisibleForTesting
     fun deleteRegistration(legalIdentity: Party): Boolean {
-        return registeredNodes.remove(legalIdentity.owningKey) != null
+        return partyNodes.removeIf { legalIdentity.owningKey in it.legalIdentitiesAndCerts.map { it.owningKey }}
     }
 }

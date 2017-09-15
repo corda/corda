@@ -88,7 +88,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                             advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
                             configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
-        check(_networkMapNode == null || _networkMapNode!!.info.legalIdentity.name == legalName)
+        check(_networkMapNode == null || _networkMapNode!!.info.legalIdentitiesAndCerts.first().name == legalName)
         return startNodeInternal(legalName, platformVersion, advertisedServices + ServiceInfo(NetworkMapService.type), rpcUsers, configOverrides).apply {
             _networkMapNode = this
         }
@@ -107,14 +107,14 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
             mapOf(
                     "networkMapService" to mapOf(
                             "address" to "localhost:10000",
-                            "legalName" to networkMapNode.info.legalIdentity.name.toString()
+                            "legalName" to networkMapNode.info.legalIdentitiesAndCerts.first().name.toString()
                     )
             )
         } else {
             mapOf(
                     "networkMapService" to mapOf(
                             "address" to networkMapNode.internals.configuration.p2pAddress.toString(),
-                            "legalName" to networkMapNode.info.legalIdentity.name.toString()
+                            "legalName" to networkMapNode.info.legalIdentitiesAndCerts.first().name.toString()
                     )
             )
         }
@@ -136,19 +136,20 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 serviceType.id,
                 notaryName)
 
-        val serviceInfo = ServiceInfo(serviceType, notaryName)
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
+        val masterNode = CordaX500Name(organisation = "${notaryName.organisation}-0", locality = notaryName.locality, country = notaryName.country)
         val masterNodeFuture = startNode(
-                CordaX500Name(organisation = "${notaryName.organisation}-0", locality = notaryName.locality, country = notaryName.country),
-                advertisedServices = setOf(serviceInfo),
+                masterNode,
+                advertisedServices = setOf(ServiceInfo(serviceType, masterNode.copy(commonName = serviceType.id))),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
                         "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else "")))
 
         val remainingNodesFutures = (1 until clusterSize).map {
+            val nodeName = CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country)
             startNode(
-                    CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country),
-                    advertisedServices = setOf(serviceInfo),
+                    nodeName,
+                    advertisedServices = setOf(ServiceInfo(serviceType, nodeName.copy(commonName = serviceType.id))),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
                             "notaryClusterAddresses" to listOf(nodeAddresses[0]),

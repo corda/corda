@@ -9,6 +9,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -21,7 +22,7 @@ class FlowVersioningTest : NodeBasedTest() {
                 startNode(BOB.name, platformVersion = 3)).transpose().getOrThrow()
         bob.internals.installCoreFlow(PretendInitiatingCoreFlow::class, ::PretendInitiatedCoreFlow)
         val (alicePlatformVersionAccordingToBob, bobPlatformVersionAccordingToAlice) = alice.services.startFlow(
-                PretendInitiatingCoreFlow(bob.info.legalIdentity)).resultFuture.getOrThrow()
+                PretendInitiatingCoreFlow(bob.info.chooseIdentity())).resultFuture.getOrThrow()
         assertThat(alicePlatformVersionAccordingToBob).isEqualTo(2)
         assertThat(bobPlatformVersionAccordingToAlice).isEqualTo(3)
     }

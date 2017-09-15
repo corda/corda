@@ -39,7 +39,7 @@ object IdentitySyncFlow {
             val identities: Set<AbstractParty> = states.flatMap { it.participants }.toSet()
             // Filter participants down to the set of those not in the network map (are not well known)
             val confidentialIdentities = identities
-                    .filter { serviceHub.networkMapCache.getNodeByLegalIdentityKey(it.owningKey) == null }
+                    .filter { serviceHub.networkMapCache.getNodesByLegalIdentityKey(it.owningKey).isEmpty() }
                     .toList()
             val identityCertificates: Map<AbstractParty, PartyAndCertificate?> = identities
                     .map { Pair(it, serviceHub.identityService.certificateFromKey(it.owningKey)) }.toMap()
