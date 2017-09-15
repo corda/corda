@@ -134,7 +134,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
     }
 
     private fun findPlugins(cordappJarPath: URL): List<CordaPluginRegistry> {
-        return ServiceLoader.load(CordaPluginRegistry::class.java, URLClassLoader(arrayOf(cordappJarPath), null)).toList()
+        return ServiceLoader.load(CordaPluginRegistry::class.java, URLClassLoader(arrayOf(cordappJarPath), appClassLoader)).toList().filter {
+            cordappJarPath == it.javaClass.protectionDomain.codeSource.location
+        }
     }
 
     private fun findCustomSchemas(scanResult: ScanResult): Set<MappedSchema> {
