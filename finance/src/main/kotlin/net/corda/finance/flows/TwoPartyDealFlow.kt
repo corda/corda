@@ -54,7 +54,7 @@ object TwoPartyDealFlow {
         @Suspendable override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
             val txIdentities = subFlow(SwapIdentitiesFlow(otherParty))
-            val anonymousMe = txIdentities.get(serviceHub.myInfo.legalIdentity) ?: serviceHub.myInfo.legalIdentity.anonymise()
+            val anonymousMe = txIdentities.get(ourIdentity.party) ?: ourIdentity.party.anonymise()
             val anonymousCounterparty = txIdentities.get(otherParty) ?: otherParty.anonymise()
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
@@ -118,7 +118,7 @@ object TwoPartyDealFlow {
             logger.trace { "Got signatures from other party, verifying ... " }
 
             progressTracker.currentStep = RECORDING
-            val ftx = subFlow(FinalityFlow(stx, setOf(otherParty, serviceHub.myInfo.legalIdentity))).single()
+            val ftx = subFlow(FinalityFlow(stx, setOf(otherParty, ourIdentity.party))).single()
 
             logger.trace { "Recorded transaction." }
 
@@ -150,7 +150,7 @@ object TwoPartyDealFlow {
                 val wellKnownOtherParty = serviceHub.identityService.partyFromAnonymous(it.primaryIdentity)
                 val wellKnownMe = serviceHub.identityService.partyFromAnonymous(it.secondaryIdentity)
                 require(wellKnownOtherParty == otherParty)
-                require(wellKnownMe == serviceHub.myInfo.legalIdentity)
+                require(wellKnownMe == ourIdentity.party)
                 validateHandshake(it)
             }
         }
@@ -197,7 +197,7 @@ object TwoPartyDealFlow {
             // We set the transaction's time-window: it may be that none of the contracts need this!
             // But it can't hurt to have one.
             ptx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
-            return Triple(ptx, arrayListOf(deal.participants.single { it == serviceHub.myInfo.legalIdentity as AbstractParty }.owningKey), emptyList())
+            return Triple(ptx, arrayListOf(deal.participants.single { it == ourIdentity.party as AbstractParty }.owningKey), emptyList())
         }
     }
 }

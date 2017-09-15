@@ -16,7 +16,6 @@ import net.corda.node.utilities.X509Utilities
 import net.corda.testing.*
 import org.junit.Test
 import java.security.cert.CertificateFactory
-import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -27,7 +26,7 @@ import kotlin.test.assertNull
 class InMemoryIdentityServiceTests {
     @Test
     fun `get all identities`() {
-        val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
+        val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         // Nothing registered, so empty set
         assertNull(service.getAllIdentities().firstOrNull())
 
@@ -45,7 +44,7 @@ class InMemoryIdentityServiceTests {
 
     @Test
     fun `get identity by key`() {
-        val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
+        val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         assertNull(service.partyFromKey(ALICE_PUBKEY))
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)
         assertEquals(ALICE, service.partyFromKey(ALICE_PUBKEY))
@@ -54,14 +53,13 @@ class InMemoryIdentityServiceTests {
 
     @Test
     fun `get identity by name with no registered identities`() {
-        val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
+        val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         assertNull(service.partyFromX500Name(ALICE.name))
     }
 
     @Test
     fun `get identity by substring match`() {
-        val trustRoot = DUMMY_CA
-        val service = InMemoryIdentityService(trustRoot = trustRoot.certificate)
+        val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)
         service.verifyAndRegisterIdentity(BOB_IDENTITY)
         val alicente = getTestPartyAndCertificate(CordaX500Name(organisation = "Alicente Worldwide", locality = "London", country = "GB"), generateKeyPair().public)
@@ -73,7 +71,7 @@ class InMemoryIdentityServiceTests {
 
     @Test
     fun `get identity by name`() {
-        val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
+        val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         val identities = listOf("Org A", "Org B", "Org C")
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
         assertNull(service.partyFromX500Name(identities.first().name))
@@ -90,7 +88,7 @@ class InMemoryIdentityServiceTests {
             val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
             val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
+            val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
             // TODO: Generate certificate with an EdDSA key rather than ECDSA
             val identity = Party(rootCert.cert)
             val txIdentity = AnonymousParty(txKey.public)
@@ -107,12 +105,11 @@ class InMemoryIdentityServiceTests {
      */
     @Test
     fun `get anonymous identity by key`() {
-        val trustRoot = DUMMY_CA
-        val (alice, aliceTxIdentity) = createParty(ALICE.name, trustRoot)
-        val (_, bobTxIdentity) = createParty(ALICE.name, trustRoot)
+        val (alice, aliceTxIdentity) = createParty(ALICE.name, DEV_CA)
+        val (_, bobTxIdentity) = createParty(ALICE.name, DEV_CA)
 
         // Now we have identities, construct the service and let it know about both
-        val service = InMemoryIdentityService(setOf(alice), emptySet(), trustRoot.certificate.cert)
+        val service = InMemoryIdentityService(setOf(alice), emptySet(), DEV_TRUST_ROOT)
         service.verifyAndRegisterIdentity(aliceTxIdentity)
 
         var actual = service.certificateFromKey(aliceTxIdentity.party.owningKey)
@@ -131,12 +128,11 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `assert ownership`() {
         withTestSerialization {
-            val trustRoot = DUMMY_CA
-            val (alice, anonymousAlice) = createParty(ALICE.name, trustRoot)
-            val (bob, anonymousBob) = createParty(BOB.name, trustRoot)
+            val (alice, anonymousAlice) = createParty(ALICE.name, DEV_CA)
+            val (bob, anonymousBob) = createParty(BOB.name, DEV_CA)
 
             // Now we have identities, construct the service and let it know about both
-            val service = InMemoryIdentityService(setOf(alice, bob), emptySet(), trustRoot.certificate.cert)
+            val service = InMemoryIdentityService(setOf(alice, bob), emptySet(), DEV_TRUST_ROOT)
 
             service.verifyAndRegisterIdentity(anonymousAlice)
             service.verifyAndRegisterIdentity(anonymousBob)
@@ -152,8 +148,8 @@ class InMemoryIdentityServiceTests {
             }
 
             assertFailsWith<IllegalArgumentException> {
-                val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
-                val subject = CordaX500Name.build(X500Principal(trustRoot.certificate.subject.encoded))
+                val owningKey = Crypto.decodePublicKey(DEV_CA.certificate.subjectPublicKeyInfo.encoded)
+                val subject = CordaX500Name.build(DEV_CA.certificate.cert.subjectX500Principal)
                 service.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
             }
         }
@@ -175,7 +171,7 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `deanonymising a well known identity`() {
         val expected = ALICE
-        val actual = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate).partyFromAnonymous(expected)
+        val actual = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT).partyFromAnonymous(expected)
         assertEquals(expected, actual)
     }
 }

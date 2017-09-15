@@ -14,6 +14,7 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.CHARLIE
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -32,7 +33,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         nodes.forEach { it.internals.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
         nodes.forEach {
             infos.add(it.info)
-            addressesMap[it.info.legalIdentity.name] = it.info.addresses[0]
+            addressesMap[it.info.chooseIdentity().name] = it.info.addresses[0]
             it.dispose() // We want them to communicate with NetworkMapService to save data to cache.
         }
     }
@@ -42,10 +43,10 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
         val netCache = alice.services.networkMapCache as PersistentNetworkMapCache
         alice.database.transaction {
-            val res = netCache.getNodeByLegalIdentity(alice.info.legalIdentity)
+            val res = netCache.getNodeByLegalIdentity(alice.info.chooseIdentity())
             assertEquals(alice.info, res)
             val res2 = netCache.getNodeByLegalName(DUMMY_NOTARY.name)
-            assertEquals(infos.filter { it.legalIdentity.name == DUMMY_NOTARY.name }.singleOrNull(), res2)
+            assertEquals(infos.filter { DUMMY_NOTARY.name in it.legalIdentitiesAndCerts.map { it.name } }.singleOrNull(), res2)
         }
     }
 
@@ -66,7 +67,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         assert(NetworkMapService.type !in alice.info.advertisedServices.map { it.info.type })
         assertEquals(NullNetworkMapService, alice.inNodeNetworkMapService)
         assertEquals(infos.size, partyNodes.size)
-        assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
+        assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
     }
 
     @Test
@@ -78,7 +79,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         nodes.forEach {
             val partyNodes = it.services.networkMapCache.partyNodes
             assertEquals(infos.size, partyNodes.size)
-            assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
+            assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
         }
         checkConnectivity(nodes)
     }
@@ -92,7 +93,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         nodes.forEach {
             val partyNodes = it.services.networkMapCache.partyNodes
             assertEquals(infos.size, partyNodes.size)
-            assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
+            assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
         }
         checkConnectivity(nodes)
     }
@@ -115,20 +116,20 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         // Start 2 nodes pointing at network map, but don't start network map service.
         val otherNodes = startNodesWithPort(parties, noNetworkMap = false)
         otherNodes.forEach { node ->
-            assert(infos.any { it.legalIdentity == node.info.legalIdentity })
+            assert(infos.any { it.legalIdentitiesAndCerts.toSet() == node.info.legalIdentitiesAndCerts.toSet() })
         }
         // Start node that is not in databases of other nodes. Point to NMS. Which has't started yet.
         val charlie = startNodesWithPort(listOf(CHARLIE), noNetworkMap = false)[0]
         otherNodes.forEach {
-            assert(charlie.info.legalIdentity !in it.services.networkMapCache.partyNodes.map { it.legalIdentity })
+            assert(charlie.info.chooseIdentity() !in it.services.networkMapCache.partyNodes.flatMap { it.legalIdentities })
         }
         // Start Network Map and see that charlie node appears in caches.
         val nms = startNodesWithPort(listOf(DUMMY_NOTARY), noNetworkMap = false)[0]
         nms.internals.startupComplete.get()
         assert(nms.inNodeNetworkMapService != NullNetworkMapService)
-        assert(infos.any {it.legalIdentity == nms.info.legalIdentity})
+        assert(infos.any { it.legalIdentities.toSet() == nms.info.legalIdentities.toSet() })
         otherNodes.forEach {
-            assert(nms.info.legalIdentity in it.services.networkMapCache.partyNodes.map { it.legalIdentity })
+            assert(nms.info.chooseIdentity() in it.services.networkMapCache.partyNodes.map { it.chooseIdentity() })
         }
         charlie.internals.nodeReadyFuture.get() // Finish registration.
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
@@ -136,7 +137,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val cacheB = otherNodes[1].services.networkMapCache.partyNodes
         val cacheC = charlie.services.networkMapCache.partyNodes
         assertEquals(4, cacheC.size) // Charlie fetched data from NetworkMap
-        assert(charlie.info.legalIdentity in cacheB.map { it.legalIdentity }) // Other nodes also fetched data from Network Map with node C.
+        assert(charlie.info.chooseIdentity() in cacheB.map { it.chooseIdentity() }) // Other nodes also fetched data from Network Map with node C.
         assertEquals(cacheA.toSet(), cacheB.toSet())
         assertEquals(cacheA.toSet(), cacheC.toSet())
     }
@@ -163,7 +164,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         nodes.forEach { node1 ->
             nodes.forEach { node2 ->
                 node2.internals.registerInitiatedFlow(SendBackFlow::class.java)
-                val resultFuture = node1.services.startFlow(SendFlow(node2.info.legalIdentity)).resultFuture
+                val resultFuture = node1.services.startFlow(SendFlow(node2.info.chooseIdentity())).resultFuture
                 assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")
             }
         }

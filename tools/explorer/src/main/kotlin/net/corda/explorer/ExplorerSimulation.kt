@@ -94,7 +94,7 @@ class ExplorerSimulation(val options: OptionSet) {
             issuerNodeUSD = issuerUSD.get()
 
             arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
-                println("${it.nodeInfo.legalIdentity} started on ${it.configuration.rpcAddress}")
+                println("${it.nodeInfo.legalIdentities.first()} started on ${it.configuration.rpcAddress}")
             }
 
             when {
@@ -127,10 +127,10 @@ class ExplorerSimulation(val options: OptionSet) {
         RPCConnections.addAll(listOf(aliceConnection, bobConnection, issuerGBPConnection, issuerUSDConnection))
         issuers.putAll(mapOf(USD to issuerRPCUSD, GBP to issuerRPCGBP))
 
-        parties.addAll(listOf(aliceNode.nodeInfo.legalIdentity to aliceRPC,
-                bobNode.nodeInfo.legalIdentity to bobRPC,
-                issuerNodeGBP.nodeInfo.legalIdentity to issuerRPCGBP,
-                issuerNodeUSD.nodeInfo.legalIdentity to issuerRPCUSD))
+        parties.addAll(listOf(aliceNode.nodeInfo.legalIdentities.first() to aliceRPC,
+                bobNode.nodeInfo.legalIdentities.first() to bobRPC,
+                issuerNodeGBP.nodeInfo.legalIdentities.first() to issuerRPCGBP,
+                issuerNodeUSD.nodeInfo.legalIdentities.first() to issuerRPCUSD))
     }
 
     private fun startSimulation(eventGenerator: EventGenerator, maxIterations: Int) {

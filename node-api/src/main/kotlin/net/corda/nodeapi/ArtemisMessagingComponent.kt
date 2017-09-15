@@ -1,11 +1,11 @@
 package net.corda.nodeapi
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.toBase58String
+import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.internal.read
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -29,8 +29,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         const val PEER_USER = "SystemUsers/Peer"
 
         const val INTERNAL_PREFIX = "internal."
-        const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers."
-        const val SERVICES_PREFIX = "${INTERNAL_PREFIX}services."
+        const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers." //TODO Come up with better name for common peers/services queue
         const val IP_REQUEST_PREFIX = "ip."
         const val P2P_QUEUE = "p2p.inbound"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
@@ -64,12 +63,8 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     @CordaSerializable
     data class NodeAddress(override val queueName: String, override val hostAndPort: NetworkHostAndPort) : ArtemisPeerAddress {
         companion object {
-            fun asPeer(peerIdentity: PublicKey, hostAndPort: NetworkHostAndPort): NodeAddress {
+            fun asSingleNode(peerIdentity: PublicKey, hostAndPort: NetworkHostAndPort): NodeAddress {
                 return NodeAddress("$PEERS_PREFIX${peerIdentity.toBase58String()}", hostAndPort)
-            }
-
-            fun asService(serviceIdentity: PublicKey, hostAndPort: NetworkHostAndPort): NodeAddress {
-                return NodeAddress("$SERVICES_PREFIX${serviceIdentity.toBase58String()}", hostAndPort)
             }
         }
     }
@@ -84,7 +79,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
      * @param identity The service identity's owning key.
      */
     data class ServiceAddress(val identity: PublicKey) : ArtemisAddress, MessageRecipientGroup {
-        override val queueName: String = "$SERVICES_PREFIX${identity.toBase58String()}"
+        override val queueName: String = "$PEERS_PREFIX${identity.toBase58String()}"
     }
 
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
@@ -106,11 +101,12 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         }
     }
 
-    fun getArtemisPeerAddress(nodeInfo: NodeInfo): ArtemisPeerAddress {
-        return if (nodeInfo.advertisedServices.any { it.info.type == ServiceType.networkMap }) {
-            NetworkMapAddress(nodeInfo.addresses.first())
+    // Used for bridges creation.
+    fun getArtemisPeerAddress(party: Party, address: NetworkHostAndPort, netMapName: CordaX500Name? = null): ArtemisPeerAddress {
+        return if (party.name == netMapName) {
+            NetworkMapAddress(address)
         } else {
-            NodeAddress.asPeer(nodeInfo.legalIdentity.owningKey, nodeInfo.addresses.first())
+            NodeAddress.asSingleNode(party.owningKey, address) // It also takes care of services nodes treated as peer nodes
         }
     }
 }

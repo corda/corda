@@ -56,7 +56,7 @@ interface CordaRPCOps : RPCOps {
      * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
      * to be present.
      */
-    override val protocolVersion: Int get() = nodeIdentity().platformVersion
+    override val protocolVersion: Int get() = nodeInfo().platformVersion
 
     /**
      * Returns a list of currently in-progress state machine infos.
@@ -208,9 +208,9 @@ interface CordaRPCOps : RPCOps {
     fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
 
     /**
-     * Returns Node's identity, assuming this will not change while the node is running.
+     * Returns Node's NodeInfo, assuming this will not change while the node is running.
      */
-    fun nodeIdentity(): NodeInfo
+    fun nodeInfo(): NodeInfo
 
     /*
      * Add note(s) to an existing Vault transaction

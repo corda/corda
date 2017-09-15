@@ -134,15 +134,14 @@ public class FlowCookbookJava {
             // We may also need to identify a specific counterparty.
             // Again, we do so using the network map.
             // DOCSTART 2
-            Party namedCounterparty = getServiceHub().getNetworkMapCache().getNodeByLegalName(new CordaX500Name("NodeA", "London", "UK")).getLegalIdentity();
-            Party keyedCounterparty = getServiceHub().getNetworkMapCache().getNodeByLegalIdentityKey(dummyPubKey).getLegalIdentity();
-            Party firstCounterparty = getServiceHub().getNetworkMapCache().getPartyNodes().get(0).getLegalIdentity();
+            Party namedCounterparty = getServiceHub().getIdentityService().partyFromX500Name(new CordaX500Name("NodeA", "London", "UK"));
+            Party keyedCounterparty = getServiceHub().getIdentityService().partyFromKey(dummyPubKey);
             // DOCEND 2
 
             // Finally, we can use the map to identify nodes providing a
             // specific service (e.g. a regulator or an oracle).
             // DOCSTART 3
-            Party regulator = getServiceHub().getNetworkMapCache().getNodesWithService(ServiceType.Companion.getRegulator()).get(0).getLegalIdentity();
+            Party regulator = getServiceHub().getNetworkMapCache().getPeersWithService(ServiceType.Companion.getRegulator()).get(0).getIdentity().getParty();
             // DOCEND 3
 
             /*------------------------------
@@ -267,7 +266,7 @@ public class FlowCookbookJava {
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
             DummyContract.Commands.Create commandData = new DummyContract.Commands.Create();
-            PublicKey ourPubKey = getServiceHub().getLegalIdentityKey();
+            PublicKey ourPubKey = getServiceHub().getMyInfo().getLegalIdentitiesAndCerts().get(0).getOwningKey();
             PublicKey counterpartyPubKey = counterparty.getOwningKey();
             List<PublicKey> requiredSigners = ImmutableList.of(ourPubKey, counterpartyPubKey);
             Command<DummyContract.Commands.Create> ourCommand = new Command<>(commandData, requiredSigners);

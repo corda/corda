@@ -38,7 +38,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
 
         generate = { _, parallelism ->
             val generateIssue = Generator.pickOne(simpleNodes).flatMap { node ->
-                generateIssue(1000, USD, notary.info.notaryIdentity, listOf(node.info.legalIdentity)).map {
+                generateIssue(1000, USD, notary.info.notaryIdentity, listOf(node.mainIdentity)).map {
                     SelfIssueCommand(it, node)
                 }
             }
@@ -54,7 +54,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
 
         interpret = { state, (request, node) ->
             val vaults = state.copyVaults()
-            val issuer = node.info.legalIdentity
+            val issuer = node.mainIdentity
             vaults.put(issuer, (vaults[issuer] ?: 0L) + request.amount.quantity)
             SelfIssueState(vaults)
         },
@@ -75,7 +75,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
                 vault.forEach {
                     val state = it.state.data
                     val issuer = state.amount.token.issuer.party
-                    if (issuer == connection.info.legalIdentity as AbstractParty) {
+                    if (issuer == connection.mainIdentity as AbstractParty) {
                         selfIssueVaults.put(issuer, (selfIssueVaults[issuer] ?: 0L) + state.amount.quantity)
                     }
                 }

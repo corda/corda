@@ -3,12 +3,14 @@ package net.corda.testing.node
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
@@ -131,7 +133,9 @@ class InMemoryMessagingNetwork(
             : MessagingServiceBuilder<InMemoryMessaging> {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
-        return Builder(manuallyPumped, peerHandle, advertisedServices.map(::ServiceHandle), executor, database = database)
+        advertisedServices.forEach { if(it.identity.owningKey !is CompositeKey) peersMapping[it.identity.name] = peerHandle }
+        val serviceHandles = advertisedServices.map { ServiceHandle(it.identity.party) }
+        return Builder(manuallyPumped, peerHandle, serviceHandles, executor, database = database)
     }
 
     interface LatencyCalculator {
@@ -206,8 +210,8 @@ class InMemoryMessagingNetwork(
     }
 
     @CordaSerializable
-    data class ServiceHandle(val service: ServiceEntry) : MessageRecipientGroup {
-        override fun toString() = "Service($service)"
+    data class ServiceHandle(val party: Party) : MessageRecipientGroup {
+        override fun toString() = "Service($party)"
     }
 
     /**
@@ -331,8 +335,8 @@ class InMemoryMessagingNetwork(
 
         override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
             return when (partyInfo) {
-                is PartyInfo.Node -> peersMapping[partyInfo.party.name] ?: throw IllegalArgumentException("No MockNode for party ${partyInfo.party.name}")
-                is PartyInfo.Service -> ServiceHandle(partyInfo.service)
+                is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name] ?: throw IllegalArgumentException("No MockNode for party ${partyInfo.party.name}")
+                is PartyInfo.DistributedNode -> ServiceHandle(partyInfo.party)
             }
         }
 

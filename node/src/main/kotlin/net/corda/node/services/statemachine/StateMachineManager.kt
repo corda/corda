@@ -14,6 +14,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
@@ -288,7 +289,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun onSessionMessage(message: ReceivedMessage) {
         val sessionMessage = message.data.deserialize<SessionMessage>()
-        val sender = serviceHub.networkMapCache.getNodeByLegalName(message.peer)?.legalIdentity
+        val sender = serviceHub.networkMapCache.getPeerByLegalName(message.peer)
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender)
@@ -370,7 +371,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
             }
             openSessions[session.ourSessionId] = session
-            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
+            val meIdentity = sessionInit.otherIdentity ?: serviceHub.myInfo.legalIdentitiesAndCerts.first()
+            val fiber = createFiber(flow, FlowInitiator.Peer(sender), meIdentity)
             flowSession.sessionFlow = flow
             flowSession.stateMachine = fiber
             fiber.openSessions[Pair(flow, sender)] = session
@@ -425,9 +427,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
+    private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate): FlowStateMachineImpl<T> {
         val id = StateMachineRunId.createRandom()
-        return FlowStateMachineImpl(id, logic, scheduler, flowInitiator).apply { initFiber(this) }
+        return FlowStateMachineImpl(id, logic, scheduler, flowInitiator, me).apply { initFiber(this) }
     }
 
     private fun initFiber(fiber: FlowStateMachineImpl<*>) {
@@ -512,11 +514,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      *
      * Note that you must be on the [executor] thread.
      */
-    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
+    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate?): FlowStateMachineImpl<T> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         val fiber = database.transaction {
-            val fiber = createFiber(logic, flowInitiator)
+            val fiber = createFiber(logic, flowInitiator, me ?: serviceHub.myInfo.legalIdentitiesAndCerts.first())
             updateCheckpoint(fiber)
             fiber
         }

@@ -20,6 +20,7 @@ import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.testing.chooseIdentity
 import java.util.*
 
 // DOCSTART CustomVaultQuery
@@ -139,7 +140,7 @@ object TopupIssuerFlow {
             val issueTx = subFlow(issueCashFlow)
             // NOTE: issueCashFlow performs a Broadcast (which stores a local copy of the txn to the ledger)
             // short-circuit when issuing to self
-            if (issueTo == serviceHub.myInfo.legalIdentity)
+            if (issueTo == serviceHub.myInfo.chooseIdentity())
                 return issueTx
             // now invoke Cash subflow to Move issued assetType to issue requester
             progressTracker.currentStep = TRANSFERRING

@@ -17,6 +17,7 @@ import net.corda.node.services.issueInvalidState
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
@@ -56,7 +57,7 @@ class ValidatingNotaryServiceTests {
             val inputState = issueInvalidState(clientNode, notaryNode.info.notaryIdentity)
             val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
                     .addInputState(inputState)
-                    .addCommand(dummyCommand(clientNode.services.legalIdentityKey))
+                    .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -97,7 +98,7 @@ class ValidatingNotaryServiceTests {
     }
 
     fun issueState(node: StartedNode<*>): StateAndRef<*> {
-        val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.legalIdentity.ref(0))
+        val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.chooseIdentity().ref(0))
         val signedByNode = node.services.signInitialTransaction(tx)
         val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
         node.services.recordTransactions(stx)

@@ -67,7 +67,7 @@ class IntegrationTestingTutorial {
             (1..10).map { i ->
                 aliceProxy.startFlow(::CashPaymentFlow,
                         i.DOLLARS,
-                        bob.nodeInfo.legalIdentity,
+                        bob.nodeInfo.chooseIdentity(),
                         true
                 ).returnValue
             }.transpose().getOrThrow()
@@ -89,7 +89,7 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1..10) {
-                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
+                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.chooseIdentity()).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

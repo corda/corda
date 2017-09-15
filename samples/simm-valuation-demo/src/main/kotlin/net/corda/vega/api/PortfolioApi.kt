@@ -34,7 +34,7 @@ import javax.ws.rs.core.Response
 
 @Path("simmvaluationdemo")
 class PortfolioApi(val rpc: CordaRPCOps) {
-    private val ownParty: Party get() = rpc.nodeIdentity().legalIdentity
+    private val ownParty: Party get() = rpc.nodeInfo().legalIdentitiesAndCerts.first().party
     private val portfolioUtils = PortfolioApiUtils(ownParty)
 
     private inline fun <reified T : DealState> dealsWith(party: AbstractParty): List<StateAndRef<T>> {
@@ -256,12 +256,14 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         val parties = rpc.networkMapSnapshot()
         val counterParties = parties.filterNot {
             it.advertisedServices.any { it.info.type in setOf(ServiceType.networkMap, ServiceType.notary) }
-                    || it.legalIdentity == ownParty
+                    || ownParty in it.legalIdentitiesAndCerts.map { it.party }
         }
 
         return AvailableParties(
                 self = ApiParty(ownParty.owningKey.toBase58String(), ownParty.name),
-                counterparties = counterParties.map { ApiParty(it.legalIdentity.owningKey.toBase58String(), it.legalIdentity.name) })
+                // TODO It will show all identities including service identities.
+                counterparties = counterParties.flatMap { it.legalIdentitiesAndCerts.map { ApiParty(it.owningKey.toBase58String(), it.name) }}
+        )
     }
 
     data class ValuationCreationParams(val valuationDate: LocalDate)

@@ -11,7 +11,7 @@ import org.bouncycastle.asn1.x500.X500Name
 sealed class ConnectionDirection {
     data class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
     data class Outbound(
-            val expectedCommonName: CordaX500Name? = null,
+            val expectedCommonNames: Set<CordaX500Name> = emptySet(), // TODO SNI? Or we need a notion of node's network identity?
             val connectorFactoryClassName: String = NettyConnectorFactory::class.java.name
     ) : ConnectionDirection()
 }
@@ -67,7 +67,7 @@ class ArtemisTcpTransport {
                         TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                         TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
                         TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true,
-                        VERIFY_PEER_LEGAL_NAME to (direction as? ConnectionDirection.Outbound)?.expectedCommonName
+                        VERIFY_PEER_LEGAL_NAME to (direction as? ConnectionDirection.Outbound)?.expectedCommonNames
                 )
                 options.putAll(tlsOptions)
             }

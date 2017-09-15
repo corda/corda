@@ -2,11 +2,11 @@ package net.corda.node.services
 
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
@@ -29,7 +29,7 @@ class DistributedServiceTests : DriverBasedTest() {
     lateinit var notaries: List<NodeHandle.OutOfProcess>
     lateinit var aliceProxy: CordaRPCOps
     lateinit var raftNotaryIdentity: Party
-    lateinit var notaryStateMachines: Observable<Pair<NodeInfo, StateMachineUpdate>>
+    lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
 
     override fun setup() = driver {
         // Start Alice and 3 notaries in a RAFT cluster
@@ -51,8 +51,13 @@ class DistributedServiceTests : DriverBasedTest() {
         raftNotaryIdentity = notaryIdentity
         notaries = notaryNodes.map { it as NodeHandle.OutOfProcess }
 
+        val notariesIdentities = notaries.fold(HashSet<PartyAndCertificate>()) {
+            acc, elem -> acc.addAll(elem.nodeInfo.legalIdentitiesAndCerts)
+            acc
+        }
         assertEquals(notaries.size, clusterSize)
-        assertEquals(notaries.size, notaries.map { it.nodeInfo.legalIdentity }.toSet().size)
+        // Check that each notary has different identity as a node.
+        assertEquals(notaries.size, notariesIdentities.size - notaries[0].nodeInfo.advertisedServices.size)
 
         // Connect to Alice and the notaries
         fun connectRpc(node: NodeHandle): CordaRPCOps {
@@ -62,7 +67,7 @@ class DistributedServiceTests : DriverBasedTest() {
         aliceProxy = connectRpc(alice)
         val rpcClientsToNotaries = notaries.map(::connectRpc)
         notaryStateMachines = Observable.from(rpcClientsToNotaries.map { proxy ->
-            proxy.stateMachinesFeed().updates.map { Pair(proxy.nodeIdentity(), it) }
+            proxy.stateMachinesFeed().updates.map { Pair(proxy.nodeInfo().chooseIdentity(), it) }
         }).flatMap { it.onErrorResumeNext(Observable.empty()) }.bufferUntilSubscribed()
 
         runTest()
@@ -82,10 +87,10 @@ class DistributedServiceTests : DriverBasedTest() {
         // The state machines added in the notaries should map one-to-one to notarisation requests
         val notarisationsPerNotary = HashMap<Party, Int>()
         notaryStateMachines.expectEvents(isStrict = false) {
-            replicate<Pair<NodeInfo, StateMachineUpdate>>(50) {
+            replicate<Pair<Party, StateMachineUpdate>>(50) {
                 expect(match = { it.second is StateMachineUpdate.Added }) { (notary, update) ->
                     update as StateMachineUpdate.Added
-                    notarisationsPerNotary.compute(notary.legalIdentity) { _, number -> number?.plus(1) ?: 1 }
+                    notarisationsPerNotary.compute(notary) { _, number -> number?.plus(1) ?: 1 }
                 }
             }
         }
@@ -120,10 +125,10 @@ class DistributedServiceTests : DriverBasedTest() {
 
         val notarisationsPerNotary = HashMap<Party, Int>()
         notaryStateMachines.expectEvents(isStrict = false) {
-            replicate<Pair<NodeInfo, StateMachineUpdate>>(30) {
+            replicate<Pair<Party, StateMachineUpdate>>(30) {
                 expect(match = { it.second is StateMachineUpdate.Added }) { (notary, update) ->
                     update as StateMachineUpdate.Added
-                    notarisationsPerNotary.compute(notary.legalIdentity) { _, number -> number?.plus(1) ?: 1 }
+                    notarisationsPerNotary.compute(notary) { _, number -> number?.plus(1) ?: 1 }
                 }
             }
         }
@@ -137,6 +142,6 @@ class DistributedServiceTests : DriverBasedTest() {
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.chooseIdentity()).returnValue.getOrThrow()
     }
 }

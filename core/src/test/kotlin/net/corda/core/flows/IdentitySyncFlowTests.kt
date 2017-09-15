@@ -12,6 +12,7 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -39,8 +40,8 @@ class IdentitySyncFlowTests {
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
-        val alice: Party = aliceNode.services.myInfo.legalIdentity
-        val bob: Party = bobNode.services.myInfo.legalIdentity
+        val alice: Party = aliceNode.services.myInfo.chooseIdentity()
+        val bob: Party = bobNode.services.myInfo.chooseIdentity()
         bobNode.internals.registerInitiatedFlow(Receive::class.java)
 
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
