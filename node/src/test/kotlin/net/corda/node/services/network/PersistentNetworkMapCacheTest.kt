@@ -60,7 +60,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     @Test
     fun `restart node with DB map cache and no network map`() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
-        val partyNodes = alice.services.networkMapCache.allNodeInfos()
+        val partyNodes = alice.services.networkMapCache.allNodes
         assertEquals(NullNetworkMapService, alice.inNodeNetworkMapService)
         assertEquals(infos.size, partyNodes.size)
         assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
@@ -72,7 +72,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val nodes = startNodesWithPort(parties, noNetworkMap = true)
         assertTrue(nodes.all { it.inNodeNetworkMapService == NullNetworkMapService })
         nodes.forEach {
-            val partyNodes = it.services.networkMapCache.allNodeInfos()
+            val partyNodes = it.services.networkMapCache.allNodes
             assertEquals(infos.size, partyNodes.size)
             assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
         }
@@ -85,7 +85,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val nodes = startNodesWithPort(parties, noNetworkMap = false)
         assertTrue(nodes.all { it.inNodeNetworkMapService == NullNetworkMapService })
         nodes.forEach {
-            val partyNodes = it.services.networkMapCache.allNodeInfos()
+            val partyNodes = it.services.networkMapCache.allNodes
             assertEquals(infos.size, partyNodes.size)
             assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
         }
@@ -123,13 +123,13 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         assertTrue(nms.inNodeNetworkMapService != NullNetworkMapService)
         assertTrue(infos.any { it.legalIdentities.toSet() == nms.info.legalIdentities.toSet() })
         otherNodes.forEach {
-            assertTrue(nms.info.chooseIdentity() in it.services.networkMapCache.allNodeInfos().map { it.chooseIdentity() })
+            assertTrue(nms.info.chooseIdentity() in it.services.networkMapCache.allNodes.map { it.chooseIdentity() })
         }
         charlie.internals.nodeReadyFuture.get() // Finish registration.
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
-        val cacheA = otherNodes[0].services.networkMapCache.allNodeInfos()
-        val cacheB = otherNodes[1].services.networkMapCache.allNodeInfos()
-        val cacheC = charlie.services.networkMapCache.allNodeInfos()
+        val cacheA = otherNodes[0].services.networkMapCache.allNodes
+        val cacheB = otherNodes[1].services.networkMapCache.allNodes
+        val cacheC = charlie.services.networkMapCache.allNodes
         assertEquals(4, cacheC.size) // Charlie fetched data from NetworkMap
         assertThat(cacheB).contains(charlie.info)
         assertEquals(cacheA.toSet(), cacheB.toSet())

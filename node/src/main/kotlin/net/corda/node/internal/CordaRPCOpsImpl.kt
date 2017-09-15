@@ -206,7 +206,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? {
+    override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
         return database.transaction {
             services.networkMapCache.getNodeByLegalIdentity(party)
         }

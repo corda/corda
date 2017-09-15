@@ -178,7 +178,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .toTypedArray()
             val identityService = PersistentIdentityService(info.legalIdentitiesAndCerts,
                     trustRoot = trustRoot, caCertificates = *caCertificates)
-            services.networkMapCache.allNodeInfos().forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
+            services.networkMapCache.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
             services.networkMapCache.changed.subscribe { mapChange ->
                 // TODO how should we handle network map removal
                 if (mapChange is NetworkMapCache.MapChange.Added) {
