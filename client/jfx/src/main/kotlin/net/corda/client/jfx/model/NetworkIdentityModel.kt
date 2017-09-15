@@ -34,11 +34,11 @@ class NetworkIdentityModel {
     private val identityCache = CacheBuilder.newBuilder()
             .build<PublicKey, ObservableValue<NodeInfo?>>(CacheLoader.from {
                 publicKey ->
-                publicKey?.let { rpcProxy.map { it?.nodeIdentityFromParty(AnonymousParty(publicKey)) } }
+                publicKey?.let { rpcProxy.map { it?.nodeInfoFromParty(AnonymousParty(publicKey)) } }
             })
 
     val notaries: ObservableList<PartyAndCertificate> = FXCollections.observableList(rpcProxy.value?.notaryIdentities())
-    val notaryNodes: ObservableList<NodeInfo> = FXCollections.observableList(notaries.map { rpcProxy.value?.nodeIdentityFromParty(it.party) })
+    val notaryNodes: ObservableList<NodeInfo> = FXCollections.observableList(notaries.map { rpcProxy.value?.nodeInfoFromParty(it.party) })
     val parties: ObservableList<NodeInfo> = networkIdentities.filtered { it.legalIdentitiesAndCerts.all { it !in notaries } }
     val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }
 

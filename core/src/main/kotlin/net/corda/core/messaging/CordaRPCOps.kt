@@ -290,11 +290,11 @@ interface CordaRPCOps : RPCOps {
     fun registeredFlows(): List<String>
 
     /**
-     * Returns a node's identity from the network map cache, where known.
+     * Returns a node's info from the network map cache, where known.
      *
      * @return the node info if available.
      */
-    fun nodeIdentityFromParty(party: AbstractParty): NodeInfo?
+    fun nodeInfoFromParty(party: AbstractParty): NodeInfo?
 
     /**
      * Clear all network map data from local node cache.

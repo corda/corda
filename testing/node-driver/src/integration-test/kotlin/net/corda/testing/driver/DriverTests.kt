@@ -10,7 +10,6 @@ import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.node.internal.NodeStartup
-import net.corda.node.services.api.RegulatorService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
@@ -42,7 +41,7 @@ class DriverTests {
     fun `simple node startup and shutdown`() {
         val handles = driver {
             val notary = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-            val regulator = startNode(providedName = DUMMY_REGULATOR.name, advertisedServices = setOf(ServiceInfo(RegulatorService.type)))
+            val regulator = startNode(providedName = DUMMY_REGULATOR.name)
             listOf(nodeMustBeUp(notary), nodeMustBeUp(regulator))
         }
         handles.map { nodeMustBeDown(it) }

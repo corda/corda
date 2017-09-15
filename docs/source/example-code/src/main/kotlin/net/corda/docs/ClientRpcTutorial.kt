@@ -112,7 +112,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
         sum + state.state.data.amount.quantity
     }
     val issueRef = OpaqueBytes.of(0)
-    val notary = proxy.notaryIdentities().randomOrNull()?.party ?: throw IllegalStateException("No notary in network.")
+    val notary = proxy.notaryIdentities().first().party
     val me = proxy.nodeInfo().legalIdentities.first()
     while (true) {
         Thread.sleep(1000)

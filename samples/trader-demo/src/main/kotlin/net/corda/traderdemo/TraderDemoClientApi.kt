@@ -46,7 +46,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         val ref = OpaqueBytes.of(1)
         val buyer = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
         val seller = rpc.partyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
-        val notaryIdentity = rpc.notaryIdentities().single { it.name.toString().contains("simple") }.party // TODO that is hack with notary simple, should be changed after introducing network parameters
+        val notaryIdentity = rpc.notaryIdentities().first().party
 
         val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
         rpc.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(1), notaryIdentity).returnValue.getOrThrow()

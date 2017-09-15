@@ -392,7 +392,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
                 services, this)
-        makeOtherServices(tokenizableServices)
+        makeNetworkServices(tokenizableServices)
         return tokenizableServices
     }
 
@@ -481,7 +481,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeOtherServices(tokenizableServices: MutableList<Any>) {
+    private fun makeNetworkServices(tokenizableServices: MutableList<Any>) {
         val serviceTypes = advertisedServices.map { it.type }
         inNodeNetworkMapService = if (NetworkMapService.type in serviceTypes) makeNetworkMapService() else NullNetworkMapService
         val notaryServiceType = serviceTypes.singleOrNull { it.isNotary() }

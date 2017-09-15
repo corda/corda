@@ -128,11 +128,9 @@ object TwoPartyDealFlow {
 
             progressTracker.currentStep = COPYING_TO_REGULATOR
 
-            if (regulators.isNotEmpty()) {
-                // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
-                // just for demo purposes.
-                regulators.forEach { send(it, ftx) }
-            }
+            // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
+            // just for demo purposes.
+            regulators.forEach { send(it, ftx) }
 
             progressTracker.currentStep = COPYING_TO_COUNTERPARTY
             // Send the final transaction hash back to the other party.

@@ -54,7 +54,7 @@ class BootTests {
         }
     }
 
-    // TODO rewrite it to fail on too many services
+    // TODO rewrite it
 //    @Test
     fun `node quits on failure to register with network map`() {
         val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.regulator.getSubType("$it")) }.toSet()

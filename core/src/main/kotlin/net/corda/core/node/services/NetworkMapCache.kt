@@ -32,7 +32,7 @@ interface NetworkMapCache {
         data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
     }
 
-    /** A list of parties that run as a notary service */
+    /** A list of notary services available on the network */
     // TODO this list will be taken from NetworkParameters distributed by NetworkMap.
     val notaryIdentities: List<PartyAndCertificate>
     /** Tracks changes to the network map cache */
