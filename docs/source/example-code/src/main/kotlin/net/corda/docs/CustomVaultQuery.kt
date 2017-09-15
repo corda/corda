@@ -2,10 +2,7 @@ package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -86,12 +83,12 @@ object TopupIssuerFlow {
         @Throws(CashException::class)
         override fun call(): List<AbstractCashFlow.Result> {
             val topupRequest = TopupRequest(issueToParty, issueToPartyRef, notaryParty)
-            return sendAndReceive<List<AbstractCashFlow.Result>>(issuerBankParty, topupRequest).unwrap { it }
+            return initiateFlow(issuerBankParty).sendAndReceive<List<AbstractCashFlow.Result>>(topupRequest).unwrap { it }
         }
     }
 
     @InitiatedBy(TopupIssuanceRequester::class)
-    class TopupIssuer(val otherParty: Party) : FlowLogic<List<SignedTransaction>>() {
+    class TopupIssuer(val otherPartySession: FlowSession) : FlowLogic<List<SignedTransaction>>() {
         companion object {
             object AWAITING_REQUEST : ProgressTracker.Step("Awaiting issuance request")
             object ISSUING : ProgressTracker.Step("Issuing asset")
@@ -108,7 +105,7 @@ object TopupIssuerFlow {
         @Throws(CashException::class)
         override fun call(): List<SignedTransaction> {
             progressTracker.currentStep = AWAITING_REQUEST
-            val topupRequest = receive<TopupRequest>(otherParty).unwrap {
+            val topupRequest = otherPartySession.receive<TopupRequest>().unwrap {
                 it
             }
 
@@ -123,7 +120,7 @@ object TopupIssuerFlow {
                 return@map txn.stx
             }
 
-            send(otherParty, txns)
+            otherPartySession.send(txns)
             return txns
         }
         // DOCEND TopupIssuer
