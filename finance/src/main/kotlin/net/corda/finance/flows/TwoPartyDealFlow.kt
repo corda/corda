@@ -174,8 +174,7 @@ object TwoPartyDealFlow {
     open class Instigator(override val otherParty: Party,
                           override val payload: AutoOffer,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
-        override val notaryParty: Party get() = serviceHub.networkMapCache.notaryIdentities.singleOrNull { it.party == payload.notary }?.party ?:
-                throw IllegalStateException("Couldn't find notary ${payload.notary} in NetworkMapCache")
+        override val notaryParty: Party get() = payload.notary
 
         @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
             // Add some constraints here.

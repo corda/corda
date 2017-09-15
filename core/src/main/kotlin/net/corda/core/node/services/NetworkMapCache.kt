@@ -55,7 +55,6 @@ interface NetworkMapCache {
      * @return the node for the identity, or null if the node could not be found. This does not necessarily mean there is
      * no node for the party, only that this cache is unaware of it.
      */
-    // TODO remove that from API
     fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 
     /** Look up the node info for a legal name. */
@@ -68,13 +67,14 @@ interface NetworkMapCache {
         it.legalIdentitiesAndCerts.singleOrNull { it.name == principal }?.party
     }
 
-    fun allNodeInfos(): List<NodeInfo>
+    val allNodes: List<NodeInfo>
+
     /**
+     * Look up the node infos for a specific peer key.
      * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
      * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
      * the identity of the *whole group*.
      */
-    /** Look up the node infos for a specific peer key. */
     fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo>
 
     /** Returns information about the party, which may be a specific node or a service */
@@ -90,7 +90,7 @@ interface NetworkMapCache {
     fun getAnyNotary(): Party? = notaryIdentities.randomOrNull()?.party
 
     /** Checks whether a given party is an advertised notary identity */
-    fun isNotary(party: Party): Boolean = party in notaryIdentities.map { it.party }
+    fun isNotary(party: Party): Boolean = notaryIdentities.any { party == it.party }
 
     /**
      * Clear all network map data from local node cache.

@@ -69,9 +69,9 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override val nodeReady: CordaFuture<Void?> get() = _registrationFuture
     private var _loadDBSuccess: Boolean = false
     override val loadDBSuccess get() = _loadDBSuccess
-    // From the NetworkMapService redesign doc: Remove the concept of network services.
-    // As a temporary hack, just assume for now that every network has a notary service named "Notary Service" that can be looked up in the map.
-    // This should eliminate the only required usage of services.
+    // TODO From the NetworkMapService redesign doc: Remove the concept of network services.
+    //  As a temporary hack, just assume for now that every network has a notary service named "Notary Service" that can be looked up in the map.
+    //  This should eliminate the only required usage of services.
     override val notaryIdentities: List<PartyAndCertificate> get() = partyNodes.filter { it.legalIdentitiesAndCerts.any { it.name.toString().contains("notary", true) }}.map { it.legalIdentitiesAndCerts[1] }
 
     init {
@@ -198,7 +198,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         }
     }
 
-    override fun allNodeInfos(): List<NodeInfo> = serviceHub.database.transaction {
+    override val allNodes: List<NodeInfo> get () = serviceHub.database.transaction {
         createSession {
             getAllInfos(it).map { it.toNodeInfo() }
         }

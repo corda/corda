@@ -163,7 +163,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     !mockNet.threadPerNode,
                     id,
                     serverThread,
-                    getNotaryEntry(),
+                    getNotaryIdentity(),
                     myLegalName,
                     database)
                     .start()
@@ -202,8 +202,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return InMemoryNetworkMapService(services, platformVersion)
         }
 
-        override fun getNotaryEntry(): PartyAndCertificate? {
-            val defaultIdentity = super.getNotaryEntry()
+        override fun getNotaryIdentity(): PartyAndCertificate? {
+            val defaultIdentity = super.getNotaryIdentity()
             val override = overrideServices?.filter { it.key.type.isNotary() }?.entries?.singleOrNull()
             return if (override == null || defaultIdentity == null)
                 defaultIdentity
