@@ -79,7 +79,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          * @param to a key of the recipient.
          * @param acceptableStates a list of acceptable input states to use.
          * @param payChangeTo party to pay any change to; this is normally a confidential identity of the calling
-         * party.
+         * party. We use a new confidential identity here so that the recipient is not identifiable.
          * @param deriveState a function to derive an output state based on an input state, amount for the output
          * and public key to pay to.
          * @param T A type representing a token
