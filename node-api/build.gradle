@@ -13,6 +13,7 @@ buildscript {
 
 dependencies {
     compile project(":core")
+    compile project(":confidential-identities");
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"

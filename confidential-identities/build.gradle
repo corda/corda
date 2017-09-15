@@ -1,0 +1,79 @@
+apply plugin: 'kotlin'
+apply plugin: CanonicalizerPlugin
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Corda Confidential Identities'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+dependencies {
+    // Note the :confidential-identities module is a CorDapp in its own right
+    // and CorDapps using :confidential-identities features should use 'cordapp' not 'compile' linkage.
+    cordaCompile project(':core')
+
+    testCompile "junit:junit:$junit_version"
+
+    // Guava: Google test library (collections test suite)
+    testCompile "com.google.guava:guava-testlib:$guava_version"
+
+    // Bring in the MockNode infrastructure for writing protocol unit tests.
+    testCompile project(":node")
+    testCompile project(":node-driver")
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    // Quasar, for suspendable fibres.
+    compileOnly "co.paralleluniverse:quasar-core:$quasar_version:jdk8"
+
+    // Log4J: logging framework (ONLY explicitly referenced by net.corda.core.utilities.Logging.kt)
+    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
+
+    // SLF4J: commons-logging bindings for a SLF4J back end
+    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
+    compile "org.slf4j:slf4j-api:$slf4j_version"
+
+    // AssertJ: for fluent assertions for testing
+    testCompile "org.assertj:assertj-core:${assertj_version}"
+
+    // Guava: Google utilities library.
+    testCompile "com.google.guava:guava:$guava_version"
+}
+
+// TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
+task copyQuasarJar(type: Copy) {
+    from configurations.quasar
+    into "$project.rootProject.projectDir/lib"
+    rename { filename -> "quasar.jar"}
+}
+
+jar.finalizedBy(copyQuasarJar)
+
+configurations {
+    testArtifacts.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+artifacts {
+    testArtifacts testJar
+}
+
+jar {
+    baseName 'corda-confidential-identities'
+}
+
+publish {
+    name jar.baseName
+}
