@@ -3,8 +3,8 @@ package net.corda.vega.flows
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.AbstractStateReplacementFlow
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.StateReplacementException
-import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.seconds
 import net.corda.vega.contracts.RevisionedState
@@ -31,7 +31,7 @@ object StateRevisionFlow {
         }
     }
 
-    open class Receiver<in T>(otherParty: Party) : AbstractStateReplacementFlow.Acceptor<T>(otherParty) {
+    open class Receiver<in T>(initiatingSession: FlowSession) : AbstractStateReplacementFlow.Acceptor<T>(initiatingSession) {
         override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<T>) {
             val proposedTx = stx.tx
             val state = proposal.stateRef

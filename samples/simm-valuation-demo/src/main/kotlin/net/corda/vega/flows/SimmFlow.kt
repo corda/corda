@@ -21,7 +21,10 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow
 import net.corda.vega.analytics.*
-import net.corda.vega.contracts.*
+import net.corda.vega.contracts.IRSState
+import net.corda.vega.contracts.PortfolioState
+import net.corda.vega.contracts.PortfolioValuation
+import net.corda.vega.contracts.RevisionedState
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import java.time.LocalDate
@@ -54,6 +57,7 @@ object SimmFlow {
         : FlowLogic<RevisionedState<PortfolioState.Update>>() {
         constructor(otherParty: Party, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
         lateinit var notary: Party
+        lateinit var otherPartySession: FlowSession
 
         @Suspendable
         override fun call(): RevisionedState<PortfolioState.Update> {
@@ -65,6 +69,7 @@ object SimmFlow {
             val trades = serviceHub.vaultQueryService.queryBy<IRSState>(criteria).states
 
             val portfolio = Portfolio(trades, valuationDate)
+            otherPartySession = initiateFlow(otherParty)
             if (existing == null) {
                 agreePortfolio(portfolio)
             } else {
@@ -83,15 +88,15 @@ object SimmFlow {
             val parties = Pair(ourIdentity.party, otherParty)
             val portfolioState = PortfolioState(portfolio.refs, parties, valuationDate)
 
-            send(otherParty, OfferMessage(notary, portfolioState, existing?.ref, valuationDate))
+            otherPartySession.send(OfferMessage(notary, portfolioState, existing?.ref, valuationDate))
             logger.info("Awaiting two party deal acceptor")
-            subFlow(TwoPartyDealFlow.Acceptor(otherParty))
+            subFlow(TwoPartyDealFlow.Acceptor(otherPartySession))
         }
 
         @Suspendable
         private fun updatePortfolio(portfolio: Portfolio, stateAndRef: StateAndRef<PortfolioState>) {
             // Receive is a hack to ensure other side is ready
-            sendAndReceive<Ack>(otherParty, OfferMessage(notary, stateAndRef.state.data, existing?.ref, valuationDate))
+            otherPartySession.sendAndReceive<Ack>(OfferMessage(notary, stateAndRef.state.data, existing?.ref, valuationDate))
             logger.info("Updating portfolio")
             val update = PortfolioState.Update(portfolio = portfolio.refs)
             subFlow(StateRevisionFlow.Requester(stateAndRef, update))
@@ -162,7 +167,7 @@ object SimmFlow {
         // TODO: In the real world, this would be tolerance aware for different types
         @Suspendable
         private inline fun <reified T : Any> agree(data: T): Boolean {
-            val valid = receive<T>(otherParty).unwrap {
+            val valid = otherPartySession.receive<T>().unwrap {
                 logger.trace("Comparing --> $it")
                 logger.trace("with -------> $data")
                 if (it is InitialMarginTriple && data is InitialMarginTriple) {
@@ -172,7 +177,7 @@ object SimmFlow {
                 }
             }
             logger.trace("valid is $valid")
-            send(otherParty, valid)
+            otherPartySession.send(valid)
             return valid
         }
     }
@@ -181,16 +186,16 @@ object SimmFlow {
      * Receives and validates a portfolio and comes to consensus over the portfolio initial margin using SIMM.
      */
     @InitiatedBy(Requester::class)
-    class Receiver(val replyToParty: Party) : FlowLogic<Unit>() {
+    class Receiver(val replyToSession: FlowSession) : FlowLogic<Unit>() {
         lateinit var offer: OfferMessage
 
         @Suspendable
         override fun call() {
-            val criteria = LinearStateQueryCriteria(participants = listOf(replyToParty))
+            val criteria = LinearStateQueryCriteria(participants = listOf(replyToSession.counterparty))
             val trades = serviceHub.vaultQueryService.queryBy<IRSState>(criteria).states
             val portfolio = Portfolio(trades)
             logger.info("SimmFlow receiver started")
-            offer = receive<OfferMessage>(replyToParty).unwrap { it }
+            offer = replyToSession.receive<OfferMessage>().unwrap { it }
             if (offer.stateRef == null) {
                 agreePortfolio(portfolio)
             } else {
@@ -202,8 +207,8 @@ object SimmFlow {
 
         @Suspendable
         private fun agree(data: Any): Boolean {
-            send(replyToParty, data)
-            return receive<Boolean>(replyToParty).unwrap { it }
+            replyToSession.send(data)
+            return replyToSession.receive<Boolean>().unwrap { it }
         }
 
         /**
@@ -284,17 +289,17 @@ object SimmFlow {
             require(offer.dealBeingOffered.portfolio == portfolio.refs)
 
             val seller = TwoPartyDealFlow.Instigator(
-                    replyToParty,
+                    replyToSession,
                     TwoPartyDealFlow.AutoOffer(offer.notary, offer.dealBeingOffered))
-            logger.info("Starting two party deal initiator with: ${replyToParty.name}")
+            logger.info("Starting two party deal initiator with: ${replyToSession.counterparty.name}")
             return subFlow(seller)
         }
 
         @Suspendable
         private fun updatePortfolio(portfolio: Portfolio) {
             logger.info("Handshake finished, awaiting Simm update")
-            send(replyToParty, Ack) // Hack to state that this party is ready.
-            subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {
+            replyToSession.send(Ack) // Hack to state that this party is ready.
+            subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToSession) {
                 override fun verifyProposal(stx:SignedTransaction, proposal: Proposal<PortfolioState.Update>) {
                     super.verifyProposal(stx, proposal)
                     if (proposal.modification.portfolio != portfolio.refs) throw StateReplacementException()
@@ -307,7 +312,7 @@ object SimmFlow {
             val portfolio = serviceHub.vaultQueryService.queryBy<IRSState>(VaultQueryCriteria(stateRefs = stateRef.state.data.portfolio)).states.toPortfolio()
             val valuer = serviceHub.identityService.partyFromAnonymous(stateRef.state.data.valuer) ?: throw IllegalStateException("Unknown valuer party ${stateRef.state.data.valuer}")
             val valuation = agreeValuation(portfolio, offer.valuationDate, valuer)
-            subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {
+            subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToSession) {
                 override fun verifyProposal(stx: SignedTransaction, proposal: Proposal<PortfolioState.Update>) {
                     super.verifyProposal(stx, proposal)
                     if (proposal.modification.valuation != valuation) throw StateReplacementException()
