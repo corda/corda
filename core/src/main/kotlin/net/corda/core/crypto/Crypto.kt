@@ -5,10 +5,7 @@ import net.corda.core.crypto.composite.CompositeSignature
 import net.corda.core.crypto.provider.CordaObjectIdentifier
 import net.corda.core.crypto.provider.CordaSecurityProvider
 import net.corda.core.serialization.serialize
-import net.i2p.crypto.eddsa.EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
+import net.i2p.crypto.eddsa.*
 import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
@@ -46,6 +43,8 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.*
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -205,6 +204,8 @@ object Crypto {
 
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
         putAll(EdDSASecurityProvider())
+        // Override the normal EdDSA engine with one which can handle X509 keys
+        put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", KludgeEdDSAEngine::class.qualifiedName)
         addKeyInfoConverter(EDDSA_ED25519_SHA512.signatureOID.algorithm, KeyInfoConverter(EDDSA_ED25519_SHA512))
     }
 
