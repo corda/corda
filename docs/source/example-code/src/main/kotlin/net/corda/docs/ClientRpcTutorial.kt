@@ -1,6 +1,7 @@
 package net.corda.docs
 
 import net.corda.core.contracts.Amount
+import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -111,8 +112,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
         sum + state.state.data.amount.quantity
     }
     val issueRef = OpaqueBytes.of(0)
-    val parties = proxy.networkMapSnapshot()
-    val notary = parties.first { it.advertisedServices.any { it.info.type.isNotary() } }.notaryIdentity
+    val notary = proxy.notaryIdentities().randomOrNull()?.party ?: throw IllegalStateException("No notary in network.")
     val me = proxy.nodeInfo().legalIdentities.first()
     while (true) {
         Thread.sleep(1000)

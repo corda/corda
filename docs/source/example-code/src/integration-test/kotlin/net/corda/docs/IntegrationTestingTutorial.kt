@@ -56,11 +56,12 @@ class IntegrationTestingTutorial {
 
             // START 4
             val issueRef = OpaqueBytes.of(0)
+            val notaryParty = aliceProxy.notaryIdentities().first().party
             (1..10).map { i ->
                 aliceProxy.startFlow(::CashIssueFlow,
                         i.DOLLARS,
                         issueRef,
-                        notary.nodeInfo.notaryIdentity
+                        notaryParty
                 ).returnValue
             }.transpose().getOrThrow()
             // We wait for all of the issuances to run before we start making payments

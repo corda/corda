@@ -31,9 +31,9 @@ class FinalityFlowTests {
         val nodes = mockNet.createSomeNodes(2)
         nodeA = nodes.partyNodes[0]
         nodeB = nodes.partyNodes[1]
-        notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
         nodeA.internals.ensureRegistered()
+        notary = nodeA.services.networkMapCache.notaryIdentities.first().party
     }
 
     @After

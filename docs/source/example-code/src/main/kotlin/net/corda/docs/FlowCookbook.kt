@@ -109,7 +109,7 @@ object FlowCookbook {
             // Unlike the first two methods, ``getNotaryNodes`` returns a
             // ``List<NodeInfo>``. We have to extract the notary identity of
             // the node we want.
-            val firstNotary: Party = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
+            val firstNotary: Party = serviceHub.networkMapCache.notaryIdentities[0].party
             // DOCEND 1
 
             // We may also need to identify a specific counterparty. We
@@ -118,12 +118,6 @@ object FlowCookbook {
             val namedCounterparty: Party? = serviceHub.identityService.partyFromX500Name(CordaX500Name(organisation = "NodeA", locality = "London", country = "UK"))
             val keyedCounterparty: Party? = serviceHub.identityService.partyFromKey(dummyPubKey)
             // DOCEND 2
-
-            // Finally, we can use the map to identify nodes providing a
-            // specific service (e.g. a regulator or an oracle).
-            // DOCSTART 3
-            val regulator: Party = serviceHub.networkMapCache.getPeersWithService(ServiceType.regulator)[0].identity.party
-            // DOCEND 3
 
             /**-----------------------------
              * SENDING AND RECEIVING DATA *
@@ -191,8 +185,10 @@ object FlowCookbook {
             // counterparty. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
             // DOCSTART 6
-            send(regulator, Any())
-            val packet3: UntrustworthyData<Any> = receive<Any>(regulator)
+            if (namedCounterparty != null) {
+                send(namedCounterparty, Any())
+                val packet3: UntrustworthyData<Any> = receive<Any>(namedCounterparty)
+            }
             // DOCEND 6
 
             /**-----------------------------------
@@ -498,10 +494,12 @@ object FlowCookbook {
             // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
-            // DOCSTART 10
-            val additionalParties: Set<Party> = setOf(regulator)
-            val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).single()
-            // DOCEND 10
+            if (namedCounterparty != null) {
+                // DOCSTART 10
+                val additionalParties: Set<Party> = setOf(namedCounterparty)
+                val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).single()
+                // DOCEND 10
+            }
         }
     }
 

@@ -163,7 +163,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     !mockNet.threadPerNode,
                     id,
                     serverThread,
-                    makeServiceEntries(),
+                    getNotaryEntry(),
                     myLegalName,
                     database)
                     .start()
@@ -202,20 +202,14 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return InMemoryNetworkMapService(services, platformVersion)
         }
 
-        override fun makeServiceEntries(): List<ServiceEntry> {
-            val defaultEntries = super.makeServiceEntries()
-            return if (overrideServices == null) {
-                defaultEntries
-            } else {
-                defaultEntries.map {
-                    val override = overrideServices[it.info]
-                    if (override != null) {
-                        // TODO: Store the key
-                        ServiceEntry(it.info, getTestPartyAndCertificate(it.identity.name, override.public))
-                    } else {
-                        it
-                    }
-                }
+        override fun getNotaryEntry(): PartyAndCertificate? {
+            val defaultIdentity = super.getNotaryEntry()
+            val override = overrideServices?.filter { it.key.type.isNotary() }?.entries?.singleOrNull()
+            return if (override == null || defaultIdentity == null)
+                defaultIdentity
+            else {
+                myNotaryIdentity = getTestPartyAndCertificate(defaultIdentity.name, override.value.public)
+                myNotaryIdentity
             }
         }
 
@@ -264,7 +258,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return BFTNonValidatingNotaryService(services, object : BFTSMaRt.Cluster {
                 override fun waitUntilAllReplicasHaveInitialized() {
                     val clusterNodes = mockNet.nodes.filter {
-                        services.notaryIdentityKey in it.started!!.info.serviceIdentities(BFTNonValidatingNotaryService.type).map { it.owningKey }
+                        services.notaryIdentityKey in it.info.legalIdentitiesAndCerts.map { it.owningKey }
                     }
                     if (clusterNodes.size != configuration.notaryClusterAddresses.size) {
                         throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")

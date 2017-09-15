@@ -40,7 +40,7 @@ class SellerFlow(private val otherParty: Party,
     override fun call(): SignedTransaction {
         progressTracker.currentStep = SELF_ISSUING
 
-        val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
+        val notary: Party = serviceHub.networkMapCache.notaryIdentities[0].party
         val cpOwner = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
         val commercialPaper = serviceHub.vaultQueryService.queryBy(CommercialPaper.State::class.java).states.first()
 

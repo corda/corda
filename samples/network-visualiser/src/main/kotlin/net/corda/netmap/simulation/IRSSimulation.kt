@@ -160,7 +160,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val instigator = StartDealFlow(
                 node2.info.chooseIdentity(),
-                AutoOffer(notary.info.notaryIdentity, irs))
+                AutoOffer(notary.services.notaryIdentity.party, irs)) // TODO Pass notary as parameter to Simulation.
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
         return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose { instigatorTxFuture.toCompletableFuture() }

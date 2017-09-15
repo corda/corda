@@ -114,6 +114,10 @@ class CordaRPCOpsImpl(
         return services.myInfo
     }
 
+    override fun notaryIdentities(): List<PartyAndCertificate> {
+        return services.networkMapCache.notaryIdentities
+    }
+
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
         return database.transaction {
             services.vaultService.addNoteToTransaction(txnId, txnNote)

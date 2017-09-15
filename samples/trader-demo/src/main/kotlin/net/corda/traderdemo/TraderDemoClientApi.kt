@@ -46,12 +46,10 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         val ref = OpaqueBytes.of(1)
         val buyer = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
         val seller = rpc.partyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
-        val notaryLegalIdentity = rpc.partyFromX500Name(DUMMY_NOTARY.name)
-                ?: throw IllegalStateException("Unable to locate ${DUMMY_NOTARY.name} in Network Map Service")
-        val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
-                ?: throw IllegalStateException("Unable to locate notary node in network map cache")
+        val notaryIdentity = rpc.notaryIdentities().single { it.name.toString().contains("simple") }.party // TODO that is hack with notary simple, should be changed after introducing network parameters
+
         val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
-        rpc.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
+        rpc.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(1), notaryIdentity).returnValue.getOrThrow()
         // Pay random amounts of currency up to the requested amount
         amounts.forEach { pennies ->
             // TODO This can't be done in parallel, perhaps due to soft-locking issues?
@@ -71,7 +69,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         }
 
         // The line below blocks and waits for the future to resolve.
-        rpc.startFlow(::CommercialPaperIssueFlow, amount, ref, seller, notaryNode.notaryIdentity).returnValue.getOrThrow()
+        rpc.startFlow(::CommercialPaperIssueFlow, amount, ref, seller, notaryIdentity).returnValue.getOrThrow()
         println("Commercial paper issued to seller")
     }
 

@@ -39,8 +39,8 @@ class CollectSignaturesFlowTests {
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
         c = nodes.partyNodes[2]
-        notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
+        notary = a.services.networkMapCache.notaryIdentities.first().party
         a.internals.ensureRegistered()
     }
 
@@ -86,7 +86,7 @@ class CollectSignaturesFlowTests {
             @Suspendable
             override fun call(): SignedTransaction {
                 val state = receive<DummyContract.MultiOwnerState>(otherParty).unwrap { it }
-                val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
+                val notary = serviceHub.networkMapCache.notaryIdentities.single().party
 
                 val myInputKeys = state.participants.map { it.owningKey }
                 val myKeys = myInputKeys + (identities[ourIdentity] ?: ourIdentity).owningKey
@@ -107,7 +107,7 @@ class CollectSignaturesFlowTests {
         class Initiator(val state: DummyContract.MultiOwnerState) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
-                val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
+                val notary = serviceHub.networkMapCache.notaryIdentities.single().party
                 val myInputKeys = state.participants.map { it.owningKey }
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)

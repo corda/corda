@@ -59,7 +59,6 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     //  next PR that gets rid of services. These maps are used only for queries by service.
     protected val registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
     override val partyNodes: MutableList<NodeInfo> get() = registeredNodes.map { it.value }.toMutableList()
-    override val networkMapNodes: List<NodeInfo> get() = getNodesWithService(NetworkMapService.type)
     private val _changed = PublishSubject.create<MapChange>()
     // We use assignment here so that multiple subscribers share the same wrapped Observable.
     override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
@@ -80,8 +79,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
             return PartyInfo.SingleNode(party, nodes[0].addresses)
         }
         for (node in nodes) {
-            for (service in node.advertisedServices) {
-                if (service.identity.party == party) {
+            for (identity in node.legalIdentities) {
+                if (identity == party) {
                     return PartyInfo.DistributedNode(party)
                 }
             }
@@ -322,7 +321,6 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                 legalIdentitiesAndCerts = nodeInfo.legalIdentitiesAndCerts.mapIndexed { idx, elem ->
                     NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0) },
                 platformVersion = nodeInfo.platformVersion,
-                advertisedServices = nodeInfo.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it.serialize().bytes) },
                 serial = nodeInfo.serial
         )
     }

@@ -34,7 +34,6 @@ class RaftNotaryServiceTests : NodeBasedTest() {
                 startNode(DUMMY_BANK_A.name),
                 startNotaryCluster(notaryName, 3).map { it.first() }
         ).transpose().getOrThrow()
-
         val notaryParty = bankA.services.networkMapCache.getNotary(notaryName)!!
 
         val inputState = issueState(bankA, notaryParty)

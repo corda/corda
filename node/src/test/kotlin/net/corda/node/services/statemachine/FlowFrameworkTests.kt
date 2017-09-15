@@ -72,6 +72,8 @@ class FlowFrameworkTests {
     private lateinit var node2: StartedNode<MockNode>
     private lateinit var notary1: StartedNode<MockNode>
     private lateinit var notary2: StartedNode<MockNode>
+    private lateinit var notary1Identity: Party
+    private lateinit var notary2Identity: Party
 
     @Before
     fun start() {
@@ -95,6 +97,8 @@ class FlowFrameworkTests {
 
         // We don't create a network map, so manually handle registrations
         mockNet.registerIdentities()
+        notary1Identity = node1.services.networkMapCache.notaryIdentities[0].party
+        notary2Identity = node1.services.networkMapCache.notaryIdentities[1].party
     }
 
     @After
@@ -333,11 +337,11 @@ class FlowFrameworkTests {
 
     @Test
     fun `different notaries are picked when addressing shared notary identity`() {
-        assertEquals(notary1.info.notaryIdentity, notary2.info.notaryIdentity)
+        assertEquals(notary1Identity, notary2Identity)
         node1.services.startFlow(CashIssueFlow(
                 2000.DOLLARS,
                 OpaqueBytes.of(0x01),
-                notary1.info.notaryIdentity)).resultFuture.getOrThrow()
+                notary1Identity)).resultFuture.getOrThrow()
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1..3) {
             val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.chooseIdentity()))
@@ -345,11 +349,11 @@ class FlowFrameworkTests {
             flow.resultFuture.getOrThrow()
         }
         val endpoint = mockNet.messagingNetwork.endpoint(notary1.network.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
-        val party1Info = notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!
+        val party1Info = notary1.services.networkMapCache.getPartyInfo(notary1Identity)!!
         assertTrue(party1Info is PartyInfo.DistributedNode)
-        val notary1Address: MessageRecipients = endpoint.getAddressOfParty(notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!)
+        val notary1Address: MessageRecipients = endpoint.getAddressOfParty(notary1.services.networkMapCache.getPartyInfo(notary1Identity)!!)
         assertThat(notary1Address).isInstanceOf(InMemoryMessagingNetwork.ServiceHandle::class.java)
-        assertEquals(notary1Address, endpoint.getAddressOfParty(notary2.services.networkMapCache.getPartyInfo(notary2.info.notaryIdentity)!!))
+        assertEquals(notary1Address, endpoint.getAddressOfParty(notary2.services.networkMapCache.getPartyInfo(notary2Identity)!!))
         receivedSessionMessages.expectEvents(isStrict = false) {
             sequence(
                     // First Pay
@@ -598,7 +602,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `wait for transaction`() {
-        val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
+        val ptx = TransactionBuilder(notary = notary1Identity)
                 .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
                 .addCommand(dummyCommand(node1.info.chooseIdentity().owningKey))
         val stx = node1.services.signInitialTransaction(ptx)
@@ -613,7 +617,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `committer throws exception before calling the finality flow`() {
-        val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
+        val ptx = TransactionBuilder(notary = notary1Identity)
                 .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
                 .addCommand(dummyCommand())
         val stx = node1.services.signInitialTransaction(ptx)
@@ -630,7 +634,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
-        val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
+        val ptx = TransactionBuilder(notary = notary1Identity)
                 .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
                 .addCommand(dummyCommand(node1.info.chooseIdentity().owningKey))
         val stx = node1.services.signInitialTransaction(ptx)

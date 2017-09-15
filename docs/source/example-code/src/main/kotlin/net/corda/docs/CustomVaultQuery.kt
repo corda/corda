@@ -132,7 +132,7 @@ object TopupIssuerFlow {
                                 issueTo: Party,
                                 issuerPartyRef: OpaqueBytes): AbstractCashFlow.Result {
             // TODO: pass notary in as request parameter
-            val notaryParty = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
+            val notaryParty = serviceHub.networkMapCache.notaryIdentities[0].party
             // invoke Cash subflow to issue Asset
             progressTracker.currentStep = ISSUING
             val issueCashFlow = CashIssueFlow(amount, issuerPartyRef, notaryParty)

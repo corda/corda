@@ -23,15 +23,11 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
                     /** Non-empty list of all the identities, plus certificates, that belong to this node. */
                     val legalIdentitiesAndCerts: List<PartyAndCertificate>,
                     val platformVersion: Int,
-                    val advertisedServices: List<ServiceEntry> = emptyList(),
                     val serial: Long
 ) {
     init {
         require(legalIdentitiesAndCerts.isNotEmpty()) { "Node should have at least one legal identity" }
     }
-
-    // TODO This part will be removed with services removal.
-    val notaryIdentity: Party get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
 
     @Transient private var _legalIdentities: List<Party>? = null
     val legalIdentities: List<Party> get() {
@@ -40,8 +36,4 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
 
     /** Returns true if [party] is one of the identities of this node, else false. */
     fun isLegalIdentity(party: Party): Boolean = party in legalIdentities
-
-    fun serviceIdentities(type: ServiceType): List<Party> {
-        return advertisedServices.mapNotNull { if (it.info.type.isSubTypeOf(type)) it.identity.party else null }
-    }
 }

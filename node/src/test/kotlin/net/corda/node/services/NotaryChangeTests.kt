@@ -59,7 +59,7 @@ class NotaryChangeTests {
     @Test
     fun `should change notary for a state with single participant`() {
         val state = issueState(clientNodeA, oldNotaryNode)
-        val newNotary = newNotaryNode.info.notaryIdentity
+        val newNotary = newNotaryNode.services.notaryIdentity.party
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
 
@@ -72,7 +72,7 @@ class NotaryChangeTests {
     @Test
     fun `should change notary for a state with multiple participants`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
-        val newNotary = newNotaryNode.info.notaryIdentity
+        val newNotary = newNotaryNode.services.notaryIdentity.party
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
 
@@ -104,7 +104,7 @@ class NotaryChangeTests {
         val issueTx = issueEncumberedState(clientNodeA, oldNotaryNode)
 
         val state = StateAndRef(issueTx.outputs.first(), StateRef(issueTx.id, 0))
-        val newNotary = newNotaryNode.info.notaryIdentity
+        val newNotary = newNotaryNode.services.notaryIdentity.party
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
         mockNet.runNetwork()
@@ -135,7 +135,7 @@ class NotaryChangeTests {
 
     private fun issueEncumberedState(node: StartedNode<*>, notaryNode: StartedNode<*>): WireTransaction {
         val owner = node.info.chooseIdentity().ref(0)
-        val notary = notaryNode.info.notaryIdentity
+        val notary = notaryNode.services.notaryIdentity.party
 
         val stateA = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
         val stateB = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
@@ -162,7 +162,7 @@ class NotaryChangeTests {
 }
 
 fun issueState(node: StartedNode<*>, notaryNode: StartedNode<*>): StateAndRef<*> {
-    val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.chooseIdentity().ref(0))
+    val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.services.notaryIdentity.party, node.info.chooseIdentity().ref(0))
     val signedByNode = node.services.signInitialTransaction(tx)
     val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
     node.services.recordTransactions(stx)
@@ -171,8 +171,8 @@ fun issueState(node: StartedNode<*>, notaryNode: StartedNode<*>): StateAndRef<*>
 
 fun issueMultiPartyState(nodeA: StartedNode<*>, nodeB: StartedNode<*>, notaryNode: StartedNode<*>): StateAndRef<DummyContract.MultiOwnerState> {
     val state = TransactionState(DummyContract.MultiOwnerState(0,
-            listOf(nodeA.info.chooseIdentity(), nodeB.info.chooseIdentity())), DUMMY_PROGRAM_ID, notaryNode.info.notaryIdentity)
-    val tx = TransactionBuilder(notary = notaryNode.info.notaryIdentity).withItems(state, dummyCommand())
+            listOf(nodeA.info.chooseIdentity(), nodeB.info.chooseIdentity())), DUMMY_PROGRAM_ID, notaryNode.services.notaryIdentity.party)
+    val tx = TransactionBuilder(notary = notaryNode.services.notaryIdentity.party).withItems(state, dummyCommand())
     val signedByA = nodeA.services.signInitialTransaction(tx)
     val signedByAB = nodeB.services.addSignature(signedByA)
     val stx = notaryNode.services.addSignature(signedByAB, notaryNode.services.notaryIdentityKey)

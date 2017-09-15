@@ -29,10 +29,10 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
 
         // Receive the offered amount and automatically agree to it (in reality this would be a longer negotiation)
         val amount = receive<Amount<Currency>>(otherParty).unwrap { it }
-        val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
+        val notary: Party = serviceHub.networkMapCache.notaryIdentities[0].party
         val buyer = TwoPartyTradeFlow.Buyer(
                 otherParty,
-                notary.notaryIdentity,
+                notary,
                 amount,
                 CommercialPaper.State::class.java)
 

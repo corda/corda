@@ -74,8 +74,7 @@ private class BankOfCordaDriver {
                                 advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
                         val bankOfCorda = startNode(
                                 providedName = BOC.name,
-                                rpcUsers = listOf(bankUser),
-                                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
+                                rpcUsers = listOf(bankUser))
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                         waitForAllNodesToFinish()

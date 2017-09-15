@@ -156,6 +156,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
         val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
         return NodeInfo(emptyList(), listOf(identity), 1,  serial = 1L)
     }
+    override val notaryIdentity: PartyAndCertificate get()  = throw UnsupportedOperationException()
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
     lateinit var hibernatePersister: HibernateObserver

@@ -31,7 +31,7 @@ with this basic skeleton:
               val nodes = mockNet.createSomeNodes()
               a = nodes.partyNodes[0]
               b = nodes.partyNodes[1]
-              notary = nodes.notaryNode.info.notaryIdentity
+              notary = nodes.notaryNode.services.notaryIdentity.party
               mockNet.runNetwork()
           }
 

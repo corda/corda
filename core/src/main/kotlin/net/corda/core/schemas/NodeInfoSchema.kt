@@ -39,10 +39,6 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "platform_version")
             val platformVersion: Int,
 
-            @Column(name = "advertised_services")
-            @ElementCollection
-            var advertisedServices: List<DBServiceEntry> = emptyList(),
-
             /**
              * serial is an increasing value which represents the version of [NodeInfo].
              * Not expected to be sequential, but later versions of the registration must have higher values
@@ -56,9 +52,6 @@ object NodeInfoSchemaV1 : MappedSchema(
                     this.addresses.map { it.toHostAndPort() },
                     (this.legalIdentitiesAndCerts.filter { it.isMain } + this.legalIdentitiesAndCerts.filter { !it.isMain }).map { it.toLegalIdentityAndCert() },
                     this.platformVersion,
-                    this.advertisedServices.map {
-                        it.serviceEntry?.deserialize<ServiceEntry>() ?: throw IllegalStateException("Service entry shouldn't be null")
-                    },
                     this.serial
             )
         }

@@ -42,14 +42,12 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
                     ?: throw Exception("Unable to locate ${params.issueToPartyName} in Network Map Service")
             val notaryLegalIdentity = rpc.partyFromX500Name(params.notaryName)
                     ?: throw IllegalStateException("Unable to locate ${params.notaryName} in Network Map Service")
-            val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
-                    ?: throw IllegalStateException("Unable to locate notary node in network map cache")
 
             val amount = Amount(params.amount, Currency.getInstance(params.currency))
             val anonymous = true
             val issuerBankPartyRef = OpaqueBytes.of(params.issuerBankPartyRef.toByte())
 
-            return rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, anonymous, notaryNode.notaryIdentity)
+            return rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, anonymous, notaryLegalIdentity)
                     .returnValue.getOrThrow().stx
         }
     }

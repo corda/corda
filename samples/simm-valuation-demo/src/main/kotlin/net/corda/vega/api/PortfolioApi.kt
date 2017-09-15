@@ -254,11 +254,8 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     @Produces(MediaType.APPLICATION_JSON)
     fun getWhoAmI(): AvailableParties {
         val parties = rpc.networkMapSnapshot()
-        val counterParties = parties.filterNot {
-            it.advertisedServices.any { it.info.type in setOf(ServiceType.networkMap, ServiceType.notary) }
-                    || ownParty in it.legalIdentitiesAndCerts.map { it.party }
-        }
-
+        val notaries = rpc.notaryIdentities()
+        val counterParties = parties.filterNot { it.legalIdentitiesAndCerts.any { it in notaries } } // TODO We are not able to filter by network map node now
         return AvailableParties(
                 self = ApiParty(ownParty.owningKey.toBase58String(), ownParty.name),
                 // TODO It will show all identities including service identities.

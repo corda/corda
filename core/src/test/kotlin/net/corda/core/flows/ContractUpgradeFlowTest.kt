@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -41,7 +42,7 @@ class ContractUpgradeFlowTest {
     lateinit var mockNet: MockNetwork
     lateinit var a: StartedNode<MockNetwork.MockNode>
     lateinit var b: StartedNode<MockNetwork.MockNode>
-    lateinit var notary: Party
+    lateinit var notary: PartyAndCertificate
 
     @Before
     fun setup() {
@@ -54,14 +55,12 @@ class ContractUpgradeFlowTest {
         mockNet.runNetwork()
         a.internals.ensureRegistered()
 
-        notary = nodes.notaryNode.info.notaryIdentity
-
-        val nodeIdentity = nodes.notaryNode.info.legalIdentitiesAndCerts.single { it.party == nodes.notaryNode.info.notaryIdentity }
+        notary = a.services.networkMapCache.notaryIdentities.first()
         a.database.transaction {
-            a.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
+            a.services.identityService.verifyAndRegisterIdentity(notary)
         }
         b.database.transaction {
-            b.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
+            b.services.identityService.verifyAndRegisterIdentity(notary)
         }
 
     }
@@ -74,7 +73,7 @@ class ContractUpgradeFlowTest {
     @Test
     fun `2 parties contract upgrade`() {
         // Create dummy contract.
-        val twoPartyDummyContract = DummyContract.generateInitial(0, notary, a.info.chooseIdentity().ref(1), b.info.chooseIdentity().ref(1))
+        val twoPartyDummyContract = DummyContract.generateInitial(0, notary.party, a.info.chooseIdentity().ref(1), b.info.chooseIdentity().ref(1))
         val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)
         val stx = b.services.addSignature(signedByA)
 
@@ -144,7 +143,7 @@ class ContractUpgradeFlowTest {
     fun `2 parties contract upgrade using RPC`() {
         rpcDriver(initialiseSerialization = false) {
             // Create dummy contract.
-            val twoPartyDummyContract = DummyContract.generateInitial(0, notary, a.info.chooseIdentity().ref(1), b.info.chooseIdentity().ref(1))
+            val twoPartyDummyContract = DummyContract.generateInitial(0, notary.party, a.info.chooseIdentity().ref(1), b.info.chooseIdentity().ref(1))
             val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)
             val stx = b.services.addSignature(signedByA)
 
@@ -220,7 +219,7 @@ class ContractUpgradeFlowTest {
     fun `upgrade Cash to v2`() {
         // Create some cash.
         val chosenIdentity = a.info.chooseIdentity()
-        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
+        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary.party)).resultFuture
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx
         val anonymisedRecipient = result.get().recipient!!

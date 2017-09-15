@@ -47,7 +47,8 @@ class IdentitySyncFlowTests {
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
-        val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notaryNode.services.myInfo.notaryIdentity))
+        val notary = aliceNode.services.networkMapCache.notaryIdentities.first().party
+        val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary))
         val issueTx = issueFlow.resultFuture.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         assertNull(bobNode.database.transaction { bobNode.services.identityService.partyFromAnonymous(confidentialIdentity) })

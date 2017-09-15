@@ -47,8 +47,8 @@ class ResolveTransactionsFlowTest {
         b = nodes.partyNodes[1]
         a.internals.registerInitiatedFlow(TestResponseFlow::class.java)
         b.internals.registerInitiatedFlow(TestResponseFlow::class.java)
-        notary = nodes.notaryNode.info.notaryIdentity
         mockNet.runNetwork()
+        notary = a.services.networkMapCache.notaryIdentities.first().party
     }
 
     @After

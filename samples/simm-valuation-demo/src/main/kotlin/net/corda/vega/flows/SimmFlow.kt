@@ -61,8 +61,8 @@ object SimmFlow {
         @Suspendable
         override fun call(): RevisionedState<PortfolioState.Update> {
             logger.debug("Calling from: $ourIdentity. Sending to: $otherParty")
-            require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
-            notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
+            require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
+            notary = serviceHub.networkMapCache.notaryIdentities.first().party
 
             val criteria = LinearStateQueryCriteria(participants = listOf(otherParty))
             val trades = serviceHub.vaultQueryService.queryBy<IRSState>(criteria).states

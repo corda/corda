@@ -100,8 +100,8 @@ object FixingFlow {
             StateAndRef(state, payload.ref)
         }
 
-        override val notaryNode: NodeInfo get() {
-            return serviceHub.networkMapCache.notaryNodes.single { it.notaryIdentity == dealToFix.state.notary }
+        override val notaryParty: Party get() {
+            return serviceHub.networkMapCache.notaryIdentities.single { it.party == dealToFix.state.notary }.party
         }
 
         @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {

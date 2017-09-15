@@ -29,7 +29,7 @@ class CashIssueFlowTests {
         val nodes = mockNet.createSomeNodes(1)
         notaryNode = nodes.notaryNode
         bankOfCordaNode = nodes.partyNodes[0]
-        notary = notaryNode.info.notaryIdentity
+        notary = notaryNode.services.notaryIdentity.party
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
 
         mockNet.runNetwork()

@@ -51,7 +51,7 @@ object TwoPartyDealFlow {
         }
 
         abstract val payload: Any
-        abstract val notaryNode: NodeInfo
+        abstract val notaryParty: Party
         abstract val otherParty: Party
 
         @Suspendable override fun call(): SignedTransaction {
@@ -97,6 +97,7 @@ object TwoPartyDealFlow {
         }
 
         abstract val otherParty: Party
+        open val regulators: List<Party> = emptyList()
 
         @Suspendable
         override fun call(): SignedTransaction {
@@ -126,11 +127,11 @@ object TwoPartyDealFlow {
             logger.trace { "Recorded transaction." }
 
             progressTracker.currentStep = COPYING_TO_REGULATOR
-            val regulators = serviceHub.networkMapCache.regulatorNodes
+
             if (regulators.isNotEmpty()) {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
-                regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first(), ftx) }
+                regulators.forEach { send(it, ftx) }
             }
 
             progressTracker.currentStep = COPYING_TO_COUNTERPARTY
@@ -173,8 +174,8 @@ object TwoPartyDealFlow {
     open class Instigator(override val otherParty: Party,
                           override val payload: AutoOffer,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
-        override val notaryNode: NodeInfo get() =
-            serviceHub.networkMapCache.notaryNodes.single { it.notaryIdentity == payload.notary }
+        override val notaryParty: Party get() = serviceHub.networkMapCache.notaryIdentities.singleOrNull { it.party == payload.notary }?.party ?:
+                throw IllegalStateException("Couldn't find notary ${payload.notary} in NetworkMapCache")
 
         @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
             // Add some constraints here.

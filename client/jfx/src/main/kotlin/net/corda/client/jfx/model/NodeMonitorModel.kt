@@ -5,6 +5,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.Vault
@@ -45,6 +46,7 @@ class NodeMonitorModel {
     val networkMap: Observable<MapChange> = networkMapSubject
 
     val proxyObservable = SimpleObjectProperty<CordaRPCOps?>()
+    lateinit var notaryIdentities: List<PartyAndCertificate>
 
     /**
      * Register for updates to/from a given vault.
@@ -60,6 +62,7 @@ class NodeMonitorModel {
         )
         val connection = client.start(username, password)
         val proxy = connection.proxy
+        notaryIdentities = proxy.notaryIdentities()
 
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         // Extract the flow tracking stream

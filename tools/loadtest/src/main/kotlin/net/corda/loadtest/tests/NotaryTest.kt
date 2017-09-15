@@ -24,7 +24,7 @@ val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
             val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
             val generateTx = Generator.pickOne(simpleNodes).flatMap { node ->
                 Generator.int().map {
-                    val issueBuilder = DummyContract.generateInitial(it, notary.info.notaryIdentity, DUMMY_CASH_ISSUER)
+                    val issueBuilder = DummyContract.generateInitial(it, notary.info.legalIdentities[1], DUMMY_CASH_ISSUER) // TODO notary choice
                     val issueTx = issuerServices.signInitialTransaction(issueBuilder)
                     val asset = issueTx.tx.outRef<DummyContract.SingleOwnerState>(0)
                     val moveBuilder = DummyContract.move(asset, DUMMY_CASH_ISSUER.party)

@@ -51,14 +51,9 @@ class DistributedServiceTests : DriverBasedTest() {
         raftNotaryIdentity = notaryIdentity
         notaries = notaryNodes.map { it as NodeHandle.OutOfProcess }
 
-        val notariesIdentities = notaries.fold(HashSet<PartyAndCertificate>()) {
-            acc, elem -> acc.addAll(elem.nodeInfo.legalIdentitiesAndCerts)
-            acc
-        }
         assertEquals(notaries.size, clusterSize)
         // Check that each notary has different identity as a node.
-        assertEquals(notaries.size, notariesIdentities.size - notaries[0].nodeInfo.advertisedServices.size)
-
+        assertEquals(notaries.size, notaries.map { it.nodeInfo.chooseIdentity() }.toSet().size)
         // Connect to Alice and the notaries
         fun connectRpc(node: NodeHandle): CordaRPCOps {
             val client = node.rpcClientToNode()

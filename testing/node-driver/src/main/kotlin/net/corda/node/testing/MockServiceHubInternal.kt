@@ -24,6 +24,7 @@ import net.corda.testing.node.MockAttachmentStorage
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStateMachineRecordedTransactionMappingStorage
 import net.corda.testing.node.MockTransactionStorage
+import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
 
@@ -67,6 +68,8 @@ open class MockServiceHubInternal(
         get() = overrideClock ?: throw UnsupportedOperationException()
     override val myInfo: NodeInfo
         get() = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(DUMMY_IDENTITY_1), 1, serial = 1L) // Required to get a dummy platformVersion when required for tests.
+    override val notaryIdentity: PartyAndCertificate
+        get() = throw IllegalStateException("No notary identity in MockServiceHubInternal")
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     override val rpcFlows: List<Class<out FlowLogic<*>>>
         get() = throw UnsupportedOperationException()
