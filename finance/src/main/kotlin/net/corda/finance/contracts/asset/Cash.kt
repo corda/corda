@@ -327,13 +327,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             val totalAmount = payments.map { it.amount }.sumOrThrow()
             val cashSelection = CashSelection.getInstance({ services.jdbcSession().metaData })
             val acceptableCoins = cashSelection.unconsumedCashStatesForSpending(services, totalAmount, onlyFromParties, tx.notary, tx.lockId)
-            val revocationEnabled = false // Revocation is currently unsupported
-            // Generate a new identity that change will be sent to for confidentiality purposes. This means that a
-            // third party with a copy of the transaction (such as the notary) cannot identify who the change was
-            // sent to
-            val changeIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, revocationEnabled)
             return OnLedgerAsset.generateSpend(tx, payments, acceptableCoins,
-                    changeIdentity.party.anonymise(),
                     { state, quantity, owner -> deriveState(state, quantity, owner) },
                     { Cash().generateMoveCommand() })
         }
