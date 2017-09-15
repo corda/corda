@@ -43,11 +43,4 @@ class NetworkIdentityModel {
     val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }
 
     fun partyFromPublicKey(publicKey: PublicKey): ObservableValue<NodeInfo?> = identityCache[publicKey]
-    //TODO rebase fix
-//    // TODO: Use Identity Service in service hub instead?
-//    fun lookup(publicKey: PublicKey): ObservableValue<PartyAndCertificate?> {
-//        val party = parties.flatMap { it.legalIdentitiesAndCerts }.firstOrNull { publicKey in it.owningKey.keys } ?:
-//                notaries.flatMap { it.legalIdentitiesAndCerts }.firstOrNull { it.owningKey.keys.any { it == publicKey }}
-//        return ReadOnlyObjectWrapper(party)
-//    }
 }

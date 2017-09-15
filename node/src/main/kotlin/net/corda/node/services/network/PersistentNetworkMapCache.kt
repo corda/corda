@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.map
@@ -58,7 +59,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     // TODO Small explanation, partyNodes and registeredNodes is left in memory as it was before, because it will be removed in
     //  next PR that gets rid of services. These maps are used only for queries by service.
     protected val registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
-    override val partyNodes: MutableList<NodeInfo> get() = registeredNodes.map { it.value }.toMutableList()
+    protected val partyNodes: MutableList<NodeInfo> get() = registeredNodes.map { it.value }.toMutableList()
     private val _changed = PublishSubject.create<MapChange>()
     // We use assignment here so that multiple subscribers share the same wrapped Observable.
     override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
@@ -68,6 +69,10 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override val nodeReady: CordaFuture<Void?> get() = _registrationFuture
     private var _loadDBSuccess: Boolean = false
     override val loadDBSuccess get() = _loadDBSuccess
+    // From the NetworkMapService redesign doc: Remove the concept of network services.
+    // As a temporary hack, just assume for now that every network has a notary service named "Notary Service" that can be looked up in the map.
+    // This should eliminate the only required usage of services.
+    override val notaryIdentities: List<PartyAndCertificate> get() = partyNodes.filter { it.legalIdentitiesAndCerts.any { it.name.toString().contains("notary", true) }}.map { it.legalIdentitiesAndCerts[1] }
 
     init {
         serviceHub.database.transaction { loadFromDB() }
@@ -90,7 +95,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
 
     // TODO See comment to queryByLegalName why it's left like that.
     override fun getNodeByLegalName(principal: CordaX500Name): NodeInfo? = partyNodes.singleOrNull { principal in it.legalIdentities.map { it.name } }
-            //serviceHub!!.database.transaction { queryByLegalName(principal).firstOrNull() }
+    //serviceHub!!.database.transaction { queryByLegalName(principal).firstOrNull() }
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
             serviceHub.database.transaction { queryByIdentityKey(identityKey) }
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
@@ -193,6 +198,12 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         }
     }
 
+    override fun allNodeInfos(): List<NodeInfo> = serviceHub.database.transaction {
+        createSession {
+            getAllInfos(it).map { it.toNodeInfo() }
+        }
+    }
+
     private fun processRegistration(reg: NodeRegistration) {
         // TODO: Implement filtering by sequence number, so we only accept changes that are
         // more recent than the latest change we've processed.
@@ -250,8 +261,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         //  network map registration on network map node)
         serviceHub.database.dataSource.connection.use {
             val session = serviceHub.database.entityManagerFactory.withOptions().connection(it.apply {
-                        transactionIsolation = 1
-                    }).openSession()
+                transactionIsolation = 1
+            }).openSession()
             session.use {
                 val tx = session.beginTransaction()
                 // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?

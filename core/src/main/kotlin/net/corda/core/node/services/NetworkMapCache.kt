@@ -32,15 +32,9 @@ interface NetworkMapCache {
         data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
     }
 
-    // TODO get rid of party nodes
-    /** A list of all nodes the cache is aware of */
-    val partyNodes: List<NodeInfo> //todo move it to persistent
-    //Remove the concept of network services. Update the DemoBench tool and cash app to fix issue #567 and work through any other impact.
-    //As a temporary hack, just assume for now that every network has a notary service named "Notary Service" that can be looked up in the map.
-    //This should eliminate the only required usage of services.
     /** A list of parties that run as a notary service */
     // TODO this list will be taken from NetworkParameters distributed by NetworkMap.
-    val notaryIdentities: List<PartyAndCertificate> get() = partyNodes.filter { it.legalIdentitiesAndCerts.any { it.name.toString().contains("notary", true) }}.map { it.legalIdentitiesAndCerts[1] }
+    val notaryIdentities: List<PartyAndCertificate>
     /** Tracks changes to the network map cache */
     val changed: Observable<MapChange>
     /** Future to track completion of the NetworkMapService registration. */
@@ -74,6 +68,7 @@ interface NetworkMapCache {
         it.legalIdentitiesAndCerts.singleOrNull { it.name == principal }?.party
     }
 
+    fun allNodeInfos(): List<NodeInfo>
     /**
      * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
      * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
