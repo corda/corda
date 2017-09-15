@@ -3,10 +3,7 @@ package net.corda.docs
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
@@ -180,7 +177,8 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
         val selfSignedTx = serviceHub.signInitialTransaction(tx)
         //DOCEND 2
         // Send the signed transaction to the originator and await their signature to confirm
-        val allPartySignedTx = sendAndReceive<TransactionSignature>(newState.source, selfSignedTx).unwrap {
+        val session = initiateFlow(newState.source)
+        val allPartySignedTx = session.sendAndReceive<TransactionSignature>(selfSignedTx).unwrap {
             // Add their signature to our unmodified transaction. To check they signed the same tx.
             val agreedTx = selfSignedTx + it
             // Receive back their signature and confirm that it is for an unmodified transaction
@@ -207,12 +205,12 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
  * transaction to the ledger.
  */
 @InitiatedBy(SubmitCompletionFlow::class)
-class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
+class RecordCompletionFlow(val sourceSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call(): Unit {
         // DOCSTART 3
         // First we receive the verdict transaction signed by their single key
-        val completeTx = receive<SignedTransaction>(source).unwrap {
+        val completeTx = sourceSession.receive<SignedTransaction>().unwrap {
             // Check the transaction is signed apart from our own key and the notary
             it.verifySignaturesExcept(serviceHub.myInfo.chooseIdentity().owningKey, it.tx.notary!!.owningKey)
             // Check the transaction data is correctly formed
@@ -228,7 +226,7 @@ class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
             require(state.state.data.source == serviceHub.myInfo.chooseIdentity()) {
                 "Proposal not one of our original proposals"
             }
-            require(state.state.data.counterparty == source) {
+            require(state.state.data.counterparty == sourceSession.counterparty) {
                 "Proposal not for sent from correct source"
             }
             it
@@ -237,7 +235,7 @@ class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
         // Having verified the SignedTransaction passed to us we can sign it too
         val ourSignature = serviceHub.createSignature(completeTx)
         // Send our signature to the other party.
-        send(source, ourSignature)
+        sourceSession.send(ourSignature)
         // N.B. The FinalityProtocol will be responsible for Notarising the SignedTransaction
         // and broadcasting the result to us.
     }
