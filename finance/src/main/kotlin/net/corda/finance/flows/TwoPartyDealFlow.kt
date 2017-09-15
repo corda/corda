@@ -127,7 +127,11 @@ object TwoPartyDealFlow {
             if (regulators.isNotEmpty()) {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
-                regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first(), ftx) }
+                regulators.forEach {
+                    val regulator = it.serviceIdentities(ServiceType.regulator).first()
+                    val session = initiateFlow(regulator)
+                    session.send(ftx)
+                }
             }
 
             progressTracker.currentStep = COPYING_TO_COUNTERPARTY
