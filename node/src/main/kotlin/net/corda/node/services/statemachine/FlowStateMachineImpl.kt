@@ -158,6 +158,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun initiateFlow(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession {
+        if (openSessions.containsKey(Pair(sessionFlow, otherParty))) {
+            throw IllegalStateException("Attempted to initiateFlow() twice in the same InitiatingFlow $sessionFlow for the same party $otherParty")
+        }
         val flowSession = FlowSessionImpl(otherParty)
         flowSession.stateMachine = this
         flowSession.sessionFlow = sessionFlow
