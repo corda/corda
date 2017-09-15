@@ -138,6 +138,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         node1.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
         node2.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
 
+        val notaryId = node1.rpcOps.notaryIdentities().first().party
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,
                             val payload: AutoOffer) : FlowLogic<SignedTransaction>() {
@@ -160,7 +161,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val instigator = StartDealFlow(
                 node2.info.chooseIdentity(),
-                AutoOffer(notary.services.notaryIdentity.party, irs)) // TODO Pass notary as parameter to Simulation.
+                AutoOffer(notaryId, irs)) // TODO Pass notary as parameter to Simulation.
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
         return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose { instigatorTxFuture.toCompletableFuture() }

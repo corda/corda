@@ -68,7 +68,7 @@ open class MockServiceHubInternal(
         get() = overrideClock ?: throw UnsupportedOperationException()
     override val myInfo: NodeInfo
         get() = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(DUMMY_IDENTITY_1), 1, serial = 1L) // Required to get a dummy platformVersion when required for tests.
-    override val notaryIdentity: PartyAndCertificate
+    override val notaryIdentityKey: PublicKey
         get() = throw IllegalStateException("No notary identity in MockServiceHubInternal")
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     override val rpcFlows: List<Class<out FlowLogic<*>>>

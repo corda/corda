@@ -31,10 +31,10 @@ class CashExitFlowTests {
         val nodes = mockNet.createSomeNodes(1)
         notaryNode = nodes.notaryNode
         bankOfCordaNode = nodes.partyNodes[0]
-        notary = notaryNode.services.notaryIdentity.party
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
 
         mockNet.runNetwork()
+        notary = bankOfCordaNode.services.networkMapCache.notaryIdentities.first().party
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()

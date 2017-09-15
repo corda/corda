@@ -27,4 +27,4 @@ Additional, ``ServiceHub`` exposes the following properties:
 * ``ServiceHub.toSignedTransaction`` to sign a ``TransactionBuilder`` and convert it into a ``SignedTransaction``
 * ``ServiceHub.createSignature`` and ``ServiceHub.addSignature`` to create and add signatures to a ``SignedTransaction``
 
-Finally, ``ServiceHub`` exposes notary identity and key via ``ServiceHub.notaryIdentity``, ``ServiceHub.notaryIdentityKey``.
+Finally, ``ServiceHub`` exposes notary identity key via ``ServiceHub.notaryIdentityKey``.

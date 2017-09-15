@@ -1,5 +1,6 @@
 package net.corda.docs
 
+import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
@@ -25,6 +26,7 @@ class FxTransactionBuildTutorialTest {
     lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
     lateinit var nodeA: StartedNode<MockNetwork.MockNode>
     lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    lateinit var notary: Party
 
     @Before
     fun setup() {
@@ -39,6 +41,7 @@ class FxTransactionBuildTutorialTest {
         nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
         nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1))
         nodeB.internals.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
+        notary = nodeA.services.networkMapCache.notaryIdentities.first().party
     }
 
     @After
@@ -51,7 +54,7 @@ class FxTransactionBuildTutorialTest {
         // Use NodeA as issuer and create some dollars
         val flowHandle1 = nodeA.services.startFlow(CashIssueFlow(DOLLARS(1000),
                 OpaqueBytes.of(0x01),
-                notaryNode.services.notaryIdentity.party))
+                notary))
         // Wait for the flow to stop and print
         flowHandle1.resultFuture.getOrThrow()
         printBalances()
@@ -59,7 +62,7 @@ class FxTransactionBuildTutorialTest {
         // Using NodeB as Issuer create some pounds.
         val flowHandle2 = nodeB.services.startFlow(CashIssueFlow(POUNDS(1000),
                 OpaqueBytes.of(0x01),
-                notaryNode.services.notaryIdentity.party))
+                notary))
         // Wait for flow to come to an end and print
         flowHandle2.resultFuture.getOrThrow()
         printBalances()

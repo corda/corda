@@ -732,7 +732,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val myInfo: NodeInfo get() = info
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
-        override val notaryIdentity: PartyAndCertificate get() = myNotaryIdentity
+        override val notaryIdentityKey: PublicKey get() = myNotaryIdentity.owningKey
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }

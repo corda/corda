@@ -145,8 +145,7 @@ interface ServiceHub : ServicesForResolution {
      */
     // TODO Remove that from ServiceHub, we could take that information from a transaction notary field and figure out what key to use from that.
     //  But, it's separate PR.
-    val notaryIdentity: PartyAndCertificate
-    val notaryIdentityKey: PublicKey get() = this.notaryIdentity.owningKey
+    val notaryIdentityKey: PublicKey
 
     // Helper method to construct an initial partially signed transaction from a [TransactionBuilder].
     private fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey, signatureMetadata: SignatureMetadata): SignedTransaction {
