@@ -34,28 +34,9 @@ dependencies {
     // Quasar, for suspendable fibres.
     compileOnly "co.paralleluniverse:quasar-core:$quasar_version:jdk8"
 
-    // Log4J: logging framework (ONLY explicitly referenced by net.corda.core.utilities.Logging.kt)
-    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
-
-    // SLF4J: commons-logging bindings for a SLF4J back end
-    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
-    compile "org.slf4j:slf4j-api:$slf4j_version"
-
     // AssertJ: for fluent assertions for testing
     testCompile "org.assertj:assertj-core:${assertj_version}"
-
-    // Guava: Google utilities library.
-    testCompile "com.google.guava:guava:$guava_version"
 }
-
-// TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
-task copyQuasarJar(type: Copy) {
-    from configurations.quasar
-    into "$project.rootProject.projectDir/lib"
-    rename { filename -> "quasar.jar"}
-}
-
-jar.finalizedBy(copyQuasarJar)
 
 configurations {
     testArtifacts.extendsFrom testRuntime
