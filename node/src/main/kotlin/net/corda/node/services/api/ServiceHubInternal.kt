@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.messaging.DataFeed
@@ -137,6 +138,21 @@ interface ServiceHubInternal : ServiceHub {
     }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+
+    override fun getNotaryForState(type: Class<*>): Party {
+        val rules = configuration.notaryRules
+        val identity = rules.firstOrNull {
+            val regex = it.pattern
+                    .replace(".", "\\.")
+                    .replace("$", "\\$")
+                    .replace("*", ".*")
+                    .toRegex()
+            type.canonicalName.matches(regex)
+        }?.name ?: throw IllegalStateException("No notary has been configured for the state type $type")
+
+        return networkMapCache.getNotary(identity)
+                ?: throw IllegalStateException("Notary $identity not found on the network")
+    }
 }
 
 /**

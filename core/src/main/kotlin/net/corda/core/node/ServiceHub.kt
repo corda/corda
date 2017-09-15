@@ -5,6 +5,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.identity.Party
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -288,4 +289,12 @@ interface ServiceHub : ServicesForResolution {
      * @return A new [Connection]
      */
     fun jdbcSession(): Connection
+
+    /**
+     * Returns a notary [Party] for the specified state [type]. The mapping between state types and notaries is derived
+     * from node configuration.
+     */
+    fun getNotaryForState(type: Class<*>): Party
 }
+
+inline fun <reified T : Any> ServiceHub.getNotaryForState() = getNotaryForState(T::class.java)
