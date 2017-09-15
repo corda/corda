@@ -547,10 +547,10 @@ public class FlowCookbookJava {
     @InitiatedBy(InitiatorFlow.class)
     public static class ResponderFlow extends FlowLogic<Void> {
 
-        private final Party counterparty;
+        private final FlowSession counterpartySession;
 
-        public ResponderFlow(Party counterparty) {
-            this.counterparty = counterparty;
+        public ResponderFlow(FlowSession counterpartySession) {
+            this.counterpartySession = counterpartySession;
         }
 
         private static final Step RECEIVING_AND_SENDING_DATA = new Step("Sending data between parties.");
@@ -582,9 +582,9 @@ public class FlowCookbookJava {
             //    ``Boolean`` instance back
             // Our side of the flow must mirror these calls.
             // DOCSTART 8
-            Object obj = receive(Object.class, counterparty).unwrap(data -> data);
-            String string = sendAndReceive(String.class, counterparty, 99).unwrap(data -> data);
-            send(counterparty, true);
+            Object obj = counterpartySession.receive(Object.class).unwrap(data -> data);
+            String string = counterpartySession.sendAndReceive(String.class, 99).unwrap(data -> data);
+            counterpartySession.send(true);
             // DOCEND 8
 
             /*-----------------------------------------
@@ -597,8 +597,8 @@ public class FlowCookbookJava {
             // ``SignTransactionFlow`` subclass.
             // DOCSTART 16
             class SignTxFlow extends SignTransactionFlow {
-                private SignTxFlow(Party otherParty, ProgressTracker progressTracker) {
-                    super(otherParty, progressTracker);
+                private SignTxFlow(FlowSession otherSession, ProgressTracker progressTracker) {
+                    super(otherSession, progressTracker);
                 }
 
                 @Override
@@ -612,7 +612,7 @@ public class FlowCookbookJava {
                 }
             }
 
-            subFlow(new SignTxFlow(counterparty, SignTransactionFlow.Companion.tracker()));
+            subFlow(new SignTxFlow(counterpartySession, SignTransactionFlow.Companion.tracker()));
             // DOCEND 16
 
             /*------------------------------

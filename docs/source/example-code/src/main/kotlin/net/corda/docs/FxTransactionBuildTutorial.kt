@@ -115,11 +115,12 @@ class ForeignExchangeFlow(val tradeId: String,
         // ensure request to other side is for a consistent notary
         val remoteRequestWithNotary = remoteRequest.copy(notary = notary)
 
-        // Send the request to the counterpartySession to verify and call their version of prepareOurInputsAndOutputs
+        // Send the request to the counterparty to verify and call their version of prepareOurInputsAndOutputs
         // Then they can return their candidate states
-        send(remoteRequestWithNotary.owner, remoteRequestWithNotary)
-        val theirInputStates = subFlow(ReceiveStateAndRefFlow<Cash.State>(remoteRequestWithNotary.owner))
-        val theirOutputStates = receive<List<Cash.State>>(remoteRequestWithNotary.owner).unwrap {
+        val session = initiateFlow(remoteRequestWithNotary.owner)
+        session.send(remoteRequestWithNotary)
+        val theirInputStates = subFlow(ReceiveStateAndRefFlow<Cash.State>(session))
+        val theirOutputStates = session.receive<List<Cash.State>>().unwrap {
             require(theirInputStates.all { it.state.notary == notary }) {
                 "notary of remote states must be same as for our states"
             }
@@ -145,8 +146,8 @@ class ForeignExchangeFlow(val tradeId: String,
 
         // pass transaction details to the counterpartySession to revalidate and confirm with a signature
         // Allow otherSideSession to access our data to resolve the transaction.
-        subFlow(SendTransactionFlow(remoteRequestWithNotary.owner, signedTransaction))
-        val allPartySignedTx = receive<TransactionSignature>(remoteRequestWithNotary.owner).unwrap {
+        subFlow(SendTransactionFlow(session, signedTransaction))
+        val allPartySignedTx = session.receive<TransactionSignature>().unwrap {
             val withNewSignature = signedTransaction + it
             // check all signatures are present except the notary
             withNewSignature.verifySignaturesExcept(withNewSignature.tx.notary!!.owningKey)
