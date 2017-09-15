@@ -3,6 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.abbreviate
 import net.corda.core.messaging.DataFeed
@@ -55,6 +56,12 @@ abstract class FlowLogic<out T> {
 
     @Suspendable
     fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, flowUsedForSessions)
+
+    /**
+     * Specifies our identity in the flow. With node's multiple identities we can choose which one to use for communication.
+     * Defaults to the first one from [NodeInfo.legalIdentitiesAndCerts].
+     */
+    val ourIdentity: PartyAndCertificate get() = stateMachine.ourIdentity
 
     /**
      * Returns a [FlowInfo] object describing the flow [otherParty] is using. With [FlowInfo.flowVersion] it

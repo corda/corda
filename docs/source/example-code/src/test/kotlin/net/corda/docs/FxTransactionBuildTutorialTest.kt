@@ -13,6 +13,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -69,10 +70,10 @@ class FxTransactionBuildTutorialTest {
 
         // Now run the actual Fx exchange
         val doIt = nodeA.services.startFlow(ForeignExchangeFlow("trade1",
-                POUNDS(100).issuedBy(nodeB.info.legalIdentity.ref(0x01)),
-                DOLLARS(200).issuedBy(nodeA.info.legalIdentity.ref(0x01)),
-                nodeA.info.legalIdentity,
-                nodeB.info.legalIdentity))
+                POUNDS(100).issuedBy(nodeB.info.chooseIdentity().ref(0x01)),
+                DOLLARS(200).issuedBy(nodeA.info.chooseIdentity().ref(0x01)),
+                nodeA.info.chooseIdentity(),
+                nodeB.info.chooseIdentity()))
         // wait for the flow to finish and the vault updates to be done
         doIt.resultFuture.getOrThrow()
         // Get the balances when the vault updates

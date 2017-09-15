@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.cert
+import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -112,7 +113,16 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
-        identity.verify(trustAnchor)
+        try {
+            identity.verify(trustAnchor)
+        } catch (e: CertPathValidatorException) {
+            log.error(e.localizedMessage)
+            log.error("Path = ")
+            identity.certPath.certificates.reversed().forEach {
+                log.error(it.toX509CertHolder().subject.toString())
+            }
+            throw e
+        }
 
         log.info("Registering identity $identity")
         val key = mapToKey(identity)

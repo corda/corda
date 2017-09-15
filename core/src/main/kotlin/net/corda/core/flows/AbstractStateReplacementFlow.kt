@@ -96,10 +96,10 @@ abstract class AbstractStateReplacementFlow {
 
         @Suspendable
         private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<TransactionSignature> {
+            // In identity service we record all identities we know about from network map.
             val parties = participants.map {
-                val participantNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it) ?:
+                serviceHub.identityService.partyFromKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
-                participantNode.legalIdentity
             }
 
             val participantSignatures = parties.map { getParticipantSignature(it, stx) }
@@ -193,7 +193,8 @@ abstract class AbstractStateReplacementFlow {
 
         private fun checkMySignatureRequired(stx: SignedTransaction) {
             // TODO: use keys from the keyManagementService instead
-            val myKey = serviceHub.myInfo.legalIdentity.owningKey
+            // TODO Check the set of multiple identities?
+            val myKey = ourIdentity.owningKey
 
             val requiredKeys = if (stx.isNotaryChangeTransaction()) {
                 stx.resolveNotaryChangeTransaction(serviceHub).requiredSigningKeys

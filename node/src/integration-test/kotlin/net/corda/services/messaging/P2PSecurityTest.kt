@@ -5,7 +5,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.NonEmptySet
 import net.corda.core.internal.cert
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -44,7 +43,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `register with the network map service using a legal name different from the TLS CN`() {
-        startSimpleNode(DUMMY_BANK_A.name, DUMMY_CA.certificate.cert).use {
+        startSimpleNode(DUMMY_BANK_A.name, DEV_TRUST_ROOT.cert).use {
             // Register with the network map using a different legal name
             val response = it.registerWithNetworkMap(DUMMY_BANK_B.name)
             // We don't expect a response because the network map's host verification will prevent a connection back
@@ -60,7 +59,7 @@ class P2PSecurityTest : NodeBasedTest() {
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName).also {
-            whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
+            whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.chooseIdentity().name))
         }
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
         return SimpleNode(config, trustRoot = trustRoot).apply { start() }
@@ -68,7 +67,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     private fun SimpleNode.registerWithNetworkMap(registrationName: CordaX500Name): CordaFuture<NetworkMapService.RegistrationResponse> {
         val legalIdentity = getTestPartyAndCertificate(registrationName, identity.public)
-        val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), legalIdentity, NonEmptySet.of(legalIdentity), 1, serial = 1)
+        val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(legalIdentity), 1, serial = 1)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
         val request = RegistrationRequest(registration.toWire(keyService, identity.public), network.myAddress)
         return network.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.network.myAddress)

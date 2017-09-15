@@ -96,7 +96,7 @@ open class NodeStartup(val args: Array<String>) {
         printPluginsAndServices(node.internals)
         node.internals.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            val name = node.info.legalIdentity.name.organisation
+            val name = node.info.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.

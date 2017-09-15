@@ -13,6 +13,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Assert
@@ -77,9 +78,9 @@ class CustomVaultQueryTest {
 
     private fun topUpCurrencies() {
         val flowHandle1 = nodeA.services.startFlow(TopupIssuerFlow.TopupIssuanceRequester(
-                nodeA.info.legalIdentity,
+                nodeA.info.chooseIdentity(),
                 OpaqueBytes.of(0x01),
-                nodeA.info.legalIdentity,
+                nodeA.info.chooseIdentity(),
                 notaryNode.info.notaryIdentity))
         flowHandle1.resultFuture.getOrThrow()
     }

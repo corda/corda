@@ -251,8 +251,10 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
             logger.error(msg, e)
             return RegistrationResponse(msg)
         }
-
         val node = change.node
+        // Get identity from signature on node's registration and use it as an index.
+        val identity = node.legalIdentitiesAndCerts.singleOrNull { request.wireReg.sig.by == it.owningKey }
+        identity ?: return RegistrationResponse("Key from signature on the node registration wasn't found in NodeInfo")
 
         if (node.platformVersion < minimumPlatformVersion) {
             return RegistrationResponse("Minimum platform version requirement not met: $minimumPlatformVersion")
@@ -262,7 +264,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         // in on different threads, there is no risk of a race condition while checking
         // sequence numbers.
         val registrationInfo = try {
-            nodeRegistrations.compute(node.legalIdentityAndCert) { _, existing: NodeRegistrationInfo? ->
+            nodeRegistrations.compute(identity) { _, existing: NodeRegistrationInfo? ->
                 require(!((existing == null || existing.reg.type == REMOVE) && change.type == REMOVE)) {
                     "Attempting to de-register unknown node"
                 }
@@ -352,7 +354,9 @@ data class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddO
 class WireNodeRegistration(raw: SerializedBytes<NodeRegistration>, sig: DigitalSignature.WithKey) : SignedData<NodeRegistration>(raw, sig) {
     @Throws(IllegalArgumentException::class)
     override fun verifyData(data: NodeRegistration) {
-        require(data.node.legalIdentity.owningKey.isFulfilledBy(sig.by))
+        // Check that the registration is fulfilled by any of node's identities.
+        // TODO It may cause some problems with distributed services? We loose node's main identity. Should be all signatures instead of isFulfilledBy?
+        require(data.node.legalIdentitiesAndCerts.any { it.owningKey.isFulfilledBy(sig.by) })
     }
 }
 

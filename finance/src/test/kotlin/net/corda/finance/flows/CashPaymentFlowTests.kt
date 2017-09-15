@@ -10,6 +10,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.internal.StartedNode
+import net.corda.testing.chooseIdentity
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
@@ -36,7 +37,7 @@ class CashPaymentFlowTests {
         notaryNode = nodes.notaryNode
         bankOfCordaNode = nodes.partyNodes[0]
         notary = notaryNode.info.notaryIdentity
-        bankOfCorda = bankOfCordaNode.info.legalIdentity
+        bankOfCorda = bankOfCordaNode.info.chooseIdentity()
 
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
         mockNet.runNetwork()
@@ -50,7 +51,7 @@ class CashPaymentFlowTests {
 
     @Test
     fun `pay some cash`() {
-        val payTo = notaryNode.info.legalIdentity
+        val payTo = notaryNode.info.chooseIdentity()
         val expectedPayment = 500.DOLLARS
         val expectedChange = 1500.DOLLARS
 
@@ -90,7 +91,7 @@ class CashPaymentFlowTests {
 
     @Test
     fun `pay more than we have`() {
-        val payTo = notaryNode.info.legalIdentity
+        val payTo = notaryNode.info.chooseIdentity()
         val expected = 4000.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
                 payTo)).resultFuture
@@ -102,7 +103,7 @@ class CashPaymentFlowTests {
 
     @Test
     fun `pay zero cash`() {
-        val payTo = notaryNode.info.legalIdentity
+        val payTo = notaryNode.info.chooseIdentity()
         val expected = 0.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
                 payTo)).resultFuture

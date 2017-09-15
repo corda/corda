@@ -17,6 +17,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -45,8 +46,8 @@ class DataVendingServiceTests {
         val nodes = mockNet.createSomeNodes(2)
         val vaultServiceNode = nodes.partyNodes[0]
         val registerNode = nodes.partyNodes[1]
-        val beneficiary = vaultServiceNode.info.legalIdentity
-        val deposit = registerNode.info.legalIdentity.ref(1)
+        val beneficiary = vaultServiceNode.info.chooseIdentity()
+        val deposit = registerNode.info.chooseIdentity().ref(1)
         mockNet.runNetwork()
 
         // Generate an issuance transaction
@@ -75,7 +76,7 @@ class DataVendingServiceTests {
         val nodes = mockNet.createSomeNodes(2)
         val vaultServiceNode = nodes.partyNodes[0]
         val registerNode = nodes.partyNodes[1]
-        val beneficiary = vaultServiceNode.info.legalIdentity
+        val beneficiary = vaultServiceNode.info.chooseIdentity()
         val deposit = MEGA_CORP.ref(1)
         mockNet.runNetwork()
 
@@ -97,7 +98,7 @@ class DataVendingServiceTests {
 
     private fun StartedNode<*>.sendNotifyTx(tx: SignedTransaction, walletServiceNode: StartedNode<*>) {
         walletServiceNode.internals.registerInitiatedFlow(InitiateNotifyTxFlow::class.java)
-        services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
+        services.startFlow(NotifyTxFlow(walletServiceNode.info.chooseIdentity(), tx))
         mockNet.runNetwork()
     }
 

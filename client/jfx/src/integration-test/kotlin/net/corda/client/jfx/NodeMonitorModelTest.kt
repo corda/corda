@@ -94,13 +94,13 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentity.name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.legalIdentity.name}" }
+                                require(output.node.chooseIdentity().name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentity.name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.legalIdentity.name}" }
+                                require(output.node.chooseIdentity().name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentity.name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.legalIdentity.name}" }
+                                require(output.node.chooseIdentity().name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             }
                     )
                 }
@@ -134,7 +134,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     fun `cash issue and move`() {
         val anonymous = false
         val (_, issueIdentity) = rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
-        val (_, paymentIdentity) = rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity).returnValue.getOrThrow()
+        val (_, paymentIdentity) = rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.chooseIdentity()).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
@@ -167,7 +167,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.Peer && initiator.party.name == aliceNode.legalIdentity.name)
+                        require(initiator is FlowInitiator.Peer && initiator.party.name == aliceNode.chooseIdentity().name)
                     }
             )
         }
@@ -180,7 +180,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                         require(stx.tx.outputs.size == 1)
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Only Alice signed
-                        val aliceKey = aliceNode.legalIdentity.owningKey
+                        val aliceKey = aliceNode.chooseIdentity().owningKey
                         require(signaturePubKeys.size <= aliceKey.keys.size)
                         require(aliceKey.isFulfilledBy(signaturePubKeys))
                         issueTx = stx

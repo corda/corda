@@ -77,7 +77,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val dataSourceProps = makeTestDataSourceProperties()
         val databaseProperties = makeTestDatabaseProperties()
         database = configureDatabase(dataSourceProps, databaseProperties, createIdentityService = ::makeTestIdentityService)
-        val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
+        val identityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
         database.transaction {
@@ -277,7 +277,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         database.transaction {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
-                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant, services.myInfo.legalIdentity)
+                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant, services.myInfo.chooseIdentity())
                 val builder = TransactionBuilder(null).apply {
                     addOutputState(state, DUMMY_PROGRAM_ID, DUMMY_NOTARY)
                     addCommand(Command(), freshKey)

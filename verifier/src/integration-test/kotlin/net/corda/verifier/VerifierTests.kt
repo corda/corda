@@ -15,6 +15,7 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.NetworkMapStartStrategy
+import net.corda.testing.chooseIdentity
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -120,7 +121,7 @@ class VerifierTests {
             alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notaryFuture.get().nodeInfo.notaryIdentity).returnValue.get()
             notary.waitUntilNumberOfVerifiers(1)
             for (i in 1..10) {
-                alice.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.get()
+                alice.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice.nodeInfo.chooseIdentity()).returnValue.get()
             }
         }
     }

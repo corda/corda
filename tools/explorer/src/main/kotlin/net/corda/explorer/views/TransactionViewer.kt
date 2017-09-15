@@ -305,22 +305,21 @@ class TransactionViewer : CordaView("Transactions") {
 /**
  * We calculate the total value by subtracting relevant input states and adding relevant output states, as long as they're cash
  */
-private fun calculateTotalEquiv(myIdentity: NodeInfo?,
+private fun calculateTotalEquiv(myIdentity: Party?,
                                 reportingCurrencyExchange: Pair<Currency, (Amount<Currency>) -> Amount<Currency>>,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
-    val myLegalIdentity = myIdentity?.legalIdentity
     fun List<ContractState>.sum() = this.map { it as? Cash.State }
             .filterNotNull()
-            .filter { it.owner.owningKey.toKnownParty().value == myLegalIdentity }
+            .filter { it.owner.owningKey.toKnownParty().value == myIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum()
 
     // For issuing cash, if I am the issuer and not the owner (e.g. issuing cash to other party), count it as negative.
     val issuedAmount = if (inputs.isEmpty()) outputs.map { it as? Cash.State }
             .filterNotNull()
-            .filter { it.amount.token.issuer.party.owningKey.toKnownParty().value == myLegalIdentity && it.owner.owningKey.toKnownParty().value != myLegalIdentity }
+            .filter { it.amount.token.issuer.party.owningKey.toKnownParty().value == myIdentity && it.owner.owningKey.toKnownParty().value != myIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum() else 0
 

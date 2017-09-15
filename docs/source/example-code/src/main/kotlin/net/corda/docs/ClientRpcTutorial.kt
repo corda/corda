@@ -113,7 +113,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
     val issueRef = OpaqueBytes.of(0)
     val parties = proxy.networkMapSnapshot()
     val notary = parties.first { it.advertisedServices.any { it.info.type.isNotary() } }.notaryIdentity
-    val me = proxy.nodeIdentity().legalIdentity
+    val me = proxy.nodeInfo().legalIdentities.first()
     while (true) {
         Thread.sleep(1000)
         val random = SplittableRandom()
