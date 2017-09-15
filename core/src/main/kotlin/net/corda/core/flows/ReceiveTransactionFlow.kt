@@ -16,7 +16,7 @@ import java.security.SignatureException
  */
 class ReceiveTransactionFlow(private val initiatingSession: FlowSession,
                              private val checkSufficientSignatures: Boolean,
-                             private val recordTransactions: Boolean) : FlowLogic<SignedTransaction>() {
+                             private val recordTransaction: Boolean) : FlowLogic<SignedTransaction>() {
     constructor(initiatingSession: FlowSession) : this(initiatingSession, true, true)
 
     @Suspendable
@@ -28,7 +28,7 @@ class ReceiveTransactionFlow(private val initiatingSession: FlowSession,
         return initiatingSession.receive<SignedTransaction>().unwrap {
             subFlow(ResolveTransactionsFlow(it, initiatingSession))
             it.verify(serviceHub, checkSufficientSignatures)
-            if (recordTransactions) serviceHub.recordTransactions(it)
+            if (recordTransaction) serviceHub.recordTransactions(it)
             it
         }
     }

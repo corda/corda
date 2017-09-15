@@ -227,7 +227,7 @@ class ForeignExchangeRemoteFlow(private val source: FlowSession) : FlowLogic<Uni
         // SendStateAndRefFlow allows otherSideSession to access our transaction data to resolve the transaction.
         subFlow(SendStateAndRefFlow(source, ourInputState))
         source.send(ourOutputState)
-        val proposedTrade = subFlow(ReceiveTransactionFlow(source, checkSufficientSignatures = false, recordTransactions = false)).let {
+        val proposedTrade = subFlow(ReceiveTransactionFlow(source, checkSufficientSignatures = false, recordTransaction = false)).let {
             val wtx = it.tx
             // check all signatures are present except our own and the notary
             it.verifySignaturesExcept(ourKey, wtx.notary!!.owningKey)

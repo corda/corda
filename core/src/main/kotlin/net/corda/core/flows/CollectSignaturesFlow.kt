@@ -207,7 +207,7 @@ abstract class SignTransactionFlow(val initiatingSession: FlowSession,
     @Suspendable override fun call(): SignedTransaction {
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
-        val stx = subFlow(ReceiveTransactionFlow(initiatingSession, checkSufficientSignatures = false, recordTransactions = false))
+        val stx = subFlow(ReceiveTransactionFlow(initiatingSession, checkSufficientSignatures = false, recordTransaction = false))
         // Receive the signing key that the party requesting the signature expects us to sign with. Having this provided
         // means we only have to check we own that one key, rather than matching all keys in the transaction against all
         // keys we own.
