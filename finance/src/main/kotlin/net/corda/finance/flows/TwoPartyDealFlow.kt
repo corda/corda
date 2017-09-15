@@ -111,8 +111,12 @@ object TwoPartyDealFlow {
 
             progressTracker.currentStep = COLLECTING_SIGNATURES
 
+            // Get signature of initiating side
+            val ptxSignedByOtherSide = ptx + subFlow(CollectSignatureFlow(ptx, otherSideSession, otherSideSession.counterparty.owningKey))
+
             // DOCSTART 1
-            val stx = subFlow(CollectSignaturesFlow(ptx, additionalSigningPubKeys))
+            // Get signatures of other signers
+            val stx = subFlow(CollectSignaturesFlow(ptxSignedByOtherSide, additionalSigningPubKeys))
             // DOCEND 1
 
             logger.trace { "Got signatures from other party, verifying ... " }
