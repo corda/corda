@@ -1,4 +1,4 @@
-package net.corda.core.internal
+package net.corda.core.experimental
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
@@ -12,9 +12,15 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 
 /**
- * Very basic flow which generates new confidential identities for parties in a transaction and exchanges the transaction
+ * Prototype flow for generating new confidential identities for parties in a transaction and exchanging the transaction
  * key and certificate paths between the parties. This is intended for use as a subflow of another flow which builds a
  * transaction.
+ *
+ * This will be replaced with a stable flow (or flows) in a later release. Key missing elements include:
+ *
+ * * Address whether this should be a core flow or inline flow.
+ * * Verify that counterparties own the key they claim to.
+ * * Handle key exchange with 3+ parties.
  */
 @StartableByRPC
 @InitiatingFlow

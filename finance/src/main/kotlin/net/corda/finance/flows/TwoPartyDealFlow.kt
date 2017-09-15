@@ -8,7 +8,7 @@ import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.SwapIdentitiesFlow
+import net.corda.core.experimental.SwapIdentitiesFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable

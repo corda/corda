@@ -1,4 +1,4 @@
-package net.corda.core.internal
+package net.corda.core.experimental
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty

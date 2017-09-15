@@ -6,6 +6,7 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.*
+import net.corda.core.experimental.SwapIdentitiesFlow
 import net.corda.core.flows.*
 import net.corda.core.flows.ContractUpgradeFlow.Acceptor
 import net.corda.core.identity.CordaX500Name
