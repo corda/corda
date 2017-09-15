@@ -74,7 +74,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         ]
     }
     node {
-        name "O=BigCorporation,OU=corda,L=London,C=GB"
+        name "O=BigCorporation,L=London,C=GB"
         advertisedServices = []
         p2pPort 10008
         rpcPort 10009
