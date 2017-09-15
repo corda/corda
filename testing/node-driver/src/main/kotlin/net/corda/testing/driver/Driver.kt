@@ -751,7 +751,7 @@ class DriverDSL(
         }
 
         return firstNotaryFuture.flatMap { firstNotary ->
-            val notaryParty = firstNotary.nodeInfo.legalIdentities[1]
+            val notaryParty = firstNotary.nodeInfo.legalIdentities[1] // For now the second identity is notary identity.
             restNotaryFutures.transpose().map { restNotaries ->
                 Pair(notaryParty, listOf(firstNotary) + restNotaries)
             }

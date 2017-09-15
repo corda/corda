@@ -67,6 +67,7 @@ interface NetworkMapCache {
         it.legalIdentitiesAndCerts.singleOrNull { it.name == principal }?.party
     }
 
+    /** Return all [NodeInfo]s the node currently is aware of. */
     val allNodes: List<NodeInfo>
 
     /**

@@ -74,7 +74,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     //  This should eliminate the only required usage of services.
     override val notaryIdentities: List<PartyAndCertificate> get() = partyNodes.filter {
         it.legalIdentitiesAndCerts.any { it.name.toString().contains("notary", true) }
-    }.map { it.legalIdentitiesAndCerts[1] }.sortedBy { it.owningKey.toBase58String() }
+    }.map { it.legalIdentitiesAndCerts[1] }.sortedBy { it.owningKey.toBase58String() } // TODO Until we don't have network parameters in, we assume the second identity to be a notary identity.
 
     init {
         serviceHub.database.transaction { loadFromDB() }

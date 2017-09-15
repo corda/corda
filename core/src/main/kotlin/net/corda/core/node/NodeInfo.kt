@@ -16,6 +16,7 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
 
 /**
  * Info about a network node that acts on behalf of some form of contract party.
+ * @param legalIdentitiesAndCerts is a non-empty list, where the first identity is assumed to be the default identity of the node.
  */
 // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
 @CordaSerializable

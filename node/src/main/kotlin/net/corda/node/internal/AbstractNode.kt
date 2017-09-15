@@ -431,7 +431,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun getNotaryIdentity(): PartyAndCertificate? {
         return advertisedServices.singleOrNull { it.type.isNotary() }?.let {
             myNotaryIdentity = obtainIdentity(it)
-            return myNotaryIdentity
+            myNotaryIdentity
         }
     }
 
