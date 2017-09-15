@@ -5,7 +5,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.NonEmptySet
 import net.corda.core.internal.cert
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -44,7 +43,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `register with the network map service using a legal name different from the TLS CN`() {
-        startSimpleNode(DUMMY_BANK_A.name, DUMMY_CA.certificate.cert).use {
+        startSimpleNode(DUMMY_BANK_A.name, DEV_TRUST_ROOT.cert).use {
             // Register with the network map using a different legal name
             val response = it.registerWithNetworkMap(DUMMY_BANK_B.name)
             // We don't expect a response because the network map's host verification will prevent a connection back

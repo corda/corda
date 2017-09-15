@@ -86,7 +86,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
          * Creates an instance of [InMemoryIdentityService] with [MOCK_IDENTITIES].
          */
         @JvmStatic
-        fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
+        fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
 
         /**
          * Makes database and mock services appropriate for unit tests.
@@ -144,7 +144,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val attachments: AttachmentStorage = MockAttachmentStorage()
     override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage()
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
-    override val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
+    override val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()

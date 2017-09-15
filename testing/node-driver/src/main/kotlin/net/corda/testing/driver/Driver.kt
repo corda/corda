@@ -13,7 +13,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.div
@@ -730,7 +729,7 @@ class DriverDSL(
         val nodeNames = (0 until clusterSize).map { CordaX500Name(organisation = "Notary Service $it", locality = "Zurich", country = "CH") }
         val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
-        val advertisedServices = setOf(ServiceInfo(type, notaryName))
+        val advertisedServices = setOf(ServiceInfo(type))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 
         // Start the first node that will bootstrap the cluster

@@ -18,6 +18,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
+import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -26,6 +27,7 @@ import kotlin.test.assertFailsWith
 class RaftNotaryServiceTests : NodeBasedTest() {
     private val notaryName = CordaX500Name(organisation = "RAFT Notary Service", locality = "London", country = "GB")
 
+    @Ignore
     @Test
     fun `detect double spend`() {
         val (bankA) = listOf(

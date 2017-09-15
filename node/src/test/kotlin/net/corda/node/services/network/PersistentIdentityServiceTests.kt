@@ -37,7 +37,7 @@ class PersistentIdentityServiceTests {
 
     @Before
     fun setup() {
-        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), createIdentityService = { PersistentIdentityService(trustRoot = DUMMY_CA.certificate) })
+        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), createIdentityService = { PersistentIdentityService(trustRoot = DEV_TRUST_ROOT) })
         database = databaseAndServices.first
         services = databaseAndServices.second
         identityService = services.identityService
@@ -152,9 +152,8 @@ class PersistentIdentityServiceTests {
      */
     @Test
     fun `get anonymous identity by key`() {
-        val trustRoot = DUMMY_CA
-        val (alice, aliceTxIdentity) = createParty(ALICE.name, trustRoot)
-        val (_, bobTxIdentity) = createParty(ALICE.name, trustRoot)
+        val (alice, aliceTxIdentity) = createParty(ALICE.name, DEV_CA)
+        val (_, bobTxIdentity) = createParty(ALICE.name, DEV_CA)
 
         // Now we have identities, construct the service and let it know about both
         database.transaction {
@@ -186,9 +185,8 @@ class PersistentIdentityServiceTests {
     @Test
     fun `assert ownership`() {
         withTestSerialization {
-            val trustRoot = DUMMY_CA
-            val (alice, anonymousAlice) = createParty(ALICE.name, trustRoot)
-            val (bob, anonymousBob) = createParty(BOB.name, trustRoot)
+            val (alice, anonymousAlice) = createParty(ALICE.name, DEV_CA)
+            val (bob, anonymousBob) = createParty(BOB.name, DEV_CA)
 
             database.transaction {
                 // Now we have identities, construct the service and let it know about both
@@ -213,9 +211,9 @@ class PersistentIdentityServiceTests {
             }
 
             assertFailsWith<IllegalArgumentException> {
-                val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
+                val owningKey = Crypto.decodePublicKey(DEV_CA.certificate.subjectPublicKeyInfo.encoded)
                 database.transaction {
-                    val subject = CordaX500Name.build(X500Principal(trustRoot.certificate.subject.encoded))
+                    val subject = CordaX500Name.build(DEV_CA.certificate.cert.subjectX500Principal)
                     identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
                 }
             }
@@ -224,9 +222,8 @@ class PersistentIdentityServiceTests {
 
     @Test
     fun `Test Persistence`() {
-        val trustRoot = DUMMY_CA
-        val (alice, anonymousAlice) = createParty(ALICE.name, trustRoot)
-        val (bob, anonymousBob) = createParty(BOB.name, trustRoot)
+        val (alice, anonymousAlice) = createParty(ALICE.name, DEV_CA)
+        val (bob, anonymousBob) = createParty(BOB.name, DEV_CA)
 
         database.transaction {
             // Register well known identities
@@ -239,7 +236,7 @@ class PersistentIdentityServiceTests {
 
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = database.transaction {
-            PersistentIdentityService(trustRoot = DUMMY_CA.certificate)
+            PersistentIdentityService(trustRoot = DEV_TRUST_ROOT)
         }
 
         database.transaction {

@@ -23,8 +23,8 @@ import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.chooseIdentity
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
@@ -54,11 +54,12 @@ class BFTNotaryServiceTests {
                 replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
                 serviceType.id,
                 clusterName)
-        val bftNotaryService = ServiceInfo(serviceType, clusterName)
+        val bftNotaryService = ServiceInfo(serviceType)
         val notaryClusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
         replicaIds.forEach { replicaId ->
             mockNet.createNode(
                     node.network.myAddress,
+                    legalName = clusterName.copy(organisation = clusterName.organisation + replicaId),
                     advertisedServices = bftNotaryService,
                     configOverrides = {
                         whenever(it.bftSMaRt).thenReturn(BFTSMaRtConfiguration(replicaId, false, exposeRaces))

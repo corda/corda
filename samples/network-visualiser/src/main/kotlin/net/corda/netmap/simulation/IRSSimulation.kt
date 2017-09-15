@@ -20,9 +20,8 @@ import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.FixingFlow
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.testing.DUMMY_CA
+import net.corda.testing.DEV_TRUST_ROOT
 import net.corda.testing.chooseIdentity
-import net.corda.testing.chooseIdentityAndCert
 import net.corda.testing.node.InMemoryMessagingNetwork
 import rx.Observable
 import java.time.LocalDate
@@ -44,7 +43,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): CompletableFuture<Unit> {
-        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap.internals + ratesOracle).flatMap { it.started!!.info.legalIdentitiesAndCerts }, trustRoot = DUMMY_CA.certificate))
+        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap.internals + ratesOracle).flatMap { it.started!!.info.legalIdentitiesAndCerts }, trustRoot = DEV_TRUST_ROOT))
         registerFinanceJSONMappers(om)
 
         return startIRSDealBetween(0, 1).thenCompose {

@@ -9,11 +9,16 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.toX509CertHolder
 import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.X509Utilities
+import net.corda.node.utilities.getCertificateAndKeyPair
+import net.corda.node.utilities.loadKeyStore
+import org.bouncycastle.cert.X509CertificateHolder
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.cert.Certificate
 import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
@@ -62,14 +67,18 @@ val DUMMY_REGULATOR_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(1
 /** Dummy regulator for tests and simulations */
 val DUMMY_REGULATOR: Party get() = Party(CordaX500Name(organisation = "Regulator A", locality = "Paris", country = "FR"), DUMMY_REGULATOR_KEY.public)
 
-val DUMMY_CA_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(110)) }
-val DUMMY_CA: CertificateAndKeyPair by lazy {
+val DEV_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
-    val cert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Dummy CA", organisationUnit = "Corda", organisation = "R3 Ltd", locality = "London", state = null, country = "GB"), DUMMY_CA_KEY)
-    CertificateAndKeyPair(cert, DUMMY_CA_KEY)
+    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+    caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
+}
+val DEV_TRUST_ROOT: X509CertificateHolder by lazy {
+    // TODO: Should be identity scheme
+    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+    caKeyStore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA).last().toX509CertHolder()
 }
 
-fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public) ) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
+fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
 
 object DummyCommandData : TypeOnlyCommandData()
 

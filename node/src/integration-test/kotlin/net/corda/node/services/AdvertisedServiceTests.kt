@@ -32,7 +32,7 @@ class AdvertisedServiceTests {
     fun `service is accessible through getAnyServiceOfType`() {
         driver(startNodesInProcess = true) {
             val bankA = startNode(rpcUsers = listOf(User(user, pass, setOf(startFlowPermission<ServiceTypeCheckingFlow>())))).get()
-            startNode(advertisedServices = setOf(ServiceInfo(serviceType, serviceName))).get()
+            startNode(providedName = serviceName, advertisedServices = setOf(ServiceInfo(serviceType))).get()
             bankA.rpcClientToNode().use(user, pass) { connection ->
                 val result = connection.proxy.startFlow(::ServiceTypeCheckingFlow).returnValue.get()
                 assertTrue(result)
