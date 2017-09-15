@@ -70,19 +70,20 @@ class IdentitySyncFlowTests {
     class Initiator(val otherSide: Party, val tx: WireTransaction): FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
-            subFlow(IdentitySyncFlow.Send(otherSide, tx))
+            val session = initiateFlow(otherSide)
+            subFlow(IdentitySyncFlow.Send(session, tx))
             // Wait for the counterparty to indicate they're done
-            return receive<Boolean>(otherSide).unwrap { it }
+            return session.receive<Boolean>().unwrap { it }
         }
     }
 
     @InitiatedBy(IdentitySyncFlowTests.Initiator::class)
-    class Receive(val otherSide: Party): FlowLogic<Unit>() {
+    class Receive(val otherSideSession: FlowSession): FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            subFlow(IdentitySyncFlow.Receive(otherSide))
+            subFlow(IdentitySyncFlow.Receive(otherSideSession))
             // Notify the initiator that we've finished syncing
-            send(otherSide, true)
+            otherSideSession.send(true)
         }
     }
 }

@@ -1,10 +1,7 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -52,8 +49,9 @@ object AutoOfferFlow {
             // need to pick which ever party is not us
             val otherParty = notUs(dealToBeOffered.participants).map { serviceHub.identityService.partyFromAnonymous(it) }.requireNoNulls().single()
             progressTracker.currentStep = DEALING
+            val session = initiateFlow(otherParty)
             val instigator = Instigator(
-                    otherParty,
+                    session,
                     AutoOffer(notary, dealToBeOffered),
                     progressTracker.getChildProgressTracker(DEALING)!!
             )
@@ -67,5 +65,5 @@ object AutoOfferFlow {
     }
 
     @InitiatedBy(Requester::class)
-    class AutoOfferAcceptor(otherParty: Party) : Acceptor(otherParty)
+    class AutoOfferAcceptor(otherSideSession: FlowSession) : Acceptor(otherSideSession)
 }

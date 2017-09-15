@@ -69,7 +69,7 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, lockId: UUID, req
     // the flow is suspended.
     val (inputs, residual) = gatherOurInputs(serviceHub, lockId, sellAmount, request.notary)
 
-    // Build and an output state for the counterparty
+    // Build and an output state for the counterpartySession
     val transferedFundsOutput = Cash.State(sellAmount, request.counterparty)
 
     val outputs = if (residual > 0L) {
@@ -115,7 +115,7 @@ class ForeignExchangeFlow(val tradeId: String,
         // ensure request to other side is for a consistent notary
         val remoteRequestWithNotary = remoteRequest.copy(notary = notary)
 
-        // Send the request to the counterparty to verify and call their version of prepareOurInputsAndOutputs
+        // Send the request to the counterpartySession to verify and call their version of prepareOurInputsAndOutputs
         // Then they can return their candidate states
         send(remoteRequestWithNotary.owner, remoteRequestWithNotary)
         val theirInputStates = subFlow(ReceiveStateAndRefFlow<Cash.State>(remoteRequestWithNotary.owner))
@@ -143,7 +143,7 @@ class ForeignExchangeFlow(val tradeId: String,
         // having collated the data create the full transaction.
         val signedTransaction = buildTradeProposal(ourInputStates, ourOutputStates, theirInputStates, theirOutputStates)
 
-        // pass transaction details to the counterparty to revalidate and confirm with a signature
+        // pass transaction details to the counterpartySession to revalidate and confirm with a signature
         // Allow otherSideSession to access our data to resolve the transaction.
         subFlow(SendTransactionFlow(remoteRequestWithNotary.owner, signedTransaction))
         val allPartySignedTx = receive<TransactionSignature>(remoteRequestWithNotary.owner).unwrap {

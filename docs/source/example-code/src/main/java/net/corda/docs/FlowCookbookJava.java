@@ -131,7 +131,7 @@ public class FlowCookbookJava {
             Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryNodes().get(0).getNotaryIdentity();
             // DOCEND 1
 
-            // We may also need to identify a specific counterparty.
+            // We may also need to identify a specific counterpartySession.
             // Again, we do so using the network map.
             // DOCSTART 2
             Party namedCounterparty = getServiceHub().getIdentityService().partyFromX500Name(new CordaX500Name("NodeA", "London", "UK"));
@@ -149,14 +149,14 @@ public class FlowCookbookJava {
             ------------------------------*/
             progressTracker.setCurrentStep(SENDING_AND_RECEIVING_DATA);
 
-            // We can send arbitrary data to a counterparty.
-            // If this is the first ``send``, the counterparty will either:
+            // We can send arbitrary data to a counterpartySession.
+            // If this is the first ``send``, the counterpartySession will either:
             // 1. Ignore the message if they are not registered to respond
             //    to messages from this flow.
             // 2. Start the flow they have registered to respond to this flow,
             //    and run the flow until the first call to ``receive``, at
             //    which point they process the message.
-            // In other words, we are assuming that the counterparty is
+            // In other words, we are assuming that the counterpartySession is
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
             // DOCSTART 4
@@ -164,11 +164,11 @@ public class FlowCookbookJava {
             // DOCEND 4
 
             // We can wait to receive arbitrary data of a specific type from a
-            // counterparty. Again, this implies a corresponding ``send`` call
-            // in the counterparty's flow. A few scenarios:
+            // counterpartySession. Again, this implies a corresponding ``send`` call
+            // in the counterpartySession's flow. A few scenarios:
             // - We never receive a message back. In the current design, the
             //   flow is paused until the node's owner kills the flow.
-            // - Instead of sending a message back, the counterparty throws a
+            // - Instead of sending a message back, the counterpartySession throws a
             //   ``FlowException``. This exception is propagated back to us,
             //   and we can use the error message to establish what happened.
             // - We receive a message back, but it's of the wrong type. In
@@ -192,7 +192,7 @@ public class FlowCookbookJava {
             });
             // DOCEND 5
 
-            // We can also use a single call to send data to a counterparty
+            // We can also use a single call to send data to a counterpartySession
             // and wait to receive data of a specific type back. The type of
             // data sent doesn't need to match the type of the data received
             // back.
@@ -207,7 +207,7 @@ public class FlowCookbookJava {
             // DOCEND 7
 
             // We're not limited to sending to and receiving from a single
-            // counterparty. A flow can send messages to as many parties as it
+            // counterpartySession. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
             // DOCSTART 6
             send(regulator, new Object());
@@ -363,7 +363,7 @@ public class FlowCookbookJava {
             // DOCEND 30
 
             // If instead this was a ``SignedTransaction`` that we'd received
-            // from a counterparty and we needed to sign it, we would add our
+            // from a counterpartySession and we needed to sign it, we would add our
             // signature using:
             // DOCSTART 38
             SignedTransaction twiceSignedTx = getServiceHub().addSignature(onceSignedTx);
@@ -395,7 +395,7 @@ public class FlowCookbookJava {
 
             // Verifying a transaction will also verify every transaction in
             // the transaction's dependency chain, which will require
-            // transaction data access on counterparty's node. The
+            // transaction data access on counterpartySession's node. The
             // ``SendTransactionFlow`` can be used to automate the sending and
             // data vending process. The ``SendTransactionFlow`` will listen
             // for data request until the transaction is resolved and verified
@@ -455,7 +455,7 @@ public class FlowCookbookJava {
                 DummyState outputState = ledgerTx.outputsOfType(DummyState.class).get(0);
                 if (outputState.getMagicNumber() != 777) {
                     // ``FlowException`` is a special exception type. It will be
-                    // propagated back to any counterparty flows waiting for a
+                    // propagated back to any counterpartySession flows waiting for a
                     // message from this flow, notifying them that the flow has
                     // failed.
                     throw new FlowException("We expected a magic number of 777.");

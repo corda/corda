@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.TransactionParts
-import net.corda.core.identity.Party
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction

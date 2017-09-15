@@ -82,7 +82,7 @@ data class TradeApprovalContract(val blank: Unit? = null) : Contract {
                         "Output must be a final state" using (after.state in setOf(WorkflowState.APPROVED, WorkflowState.REJECTED))
                         "Completed command can only change state" using (before == after.copy(state = before.state))
                         "Completed command requires the source Party as signer" using (command.signers.contains(before.source.owningKey))
-                        "Completed command requires the counterparty as signer" using (command.signers.contains(before.counterparty.owningKey))
+                        "Completed command requires the counterpartySession as signer" using (command.signers.contains(before.counterparty.owningKey))
                     }
                 }
             }

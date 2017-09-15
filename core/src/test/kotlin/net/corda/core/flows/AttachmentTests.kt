@@ -162,12 +162,15 @@ class AttachmentTests {
     @InitiatingFlow
     private class InitiatingFetchAttachmentsFlow(val otherSide: Party, val hashes: Set<SecureHash>) : FlowLogic<FetchDataFlow.Result<Attachment>>() {
         @Suspendable
-        override fun call(): FetchDataFlow.Result<Attachment> = subFlow(FetchAttachmentsFlow(hashes, otherSide))
+        override fun call(): FetchDataFlow.Result<Attachment> {
+            val session = initiateFlow(otherSide)
+            return subFlow(FetchAttachmentsFlow(hashes, session))
+        }
     }
 
     @InitiatedBy(InitiatingFetchAttachmentsFlow::class)
-    private class FetchAttachmentsResponse(val otherSide: Party) : FlowLogic<Void?>() {
+    private class FetchAttachmentsResponse(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(TestDataVendingFlow(otherSide))
+        override fun call() = subFlow(TestDataVendingFlow(otherSideSession))
     }
 }

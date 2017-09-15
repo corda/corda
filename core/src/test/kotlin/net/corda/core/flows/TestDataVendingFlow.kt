@@ -6,12 +6,12 @@ import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.UntrustworthyData
 
 // Flow to start data vending without sending transaction. For testing only.
-class TestDataVendingFlow(otherSide: Party) : SendStateAndRefFlow(otherSide, emptyList()) {
+class TestDataVendingFlow(otherSideSession: FlowSession) : SendStateAndRefFlow(otherSideSession, emptyList()) {
     @Suspendable
-    override fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any): UntrustworthyData<FetchDataFlow.Request> {
+    override fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any): UntrustworthyData<FetchDataFlow.Request> {
         return if (payload is List<*> && payload.isEmpty()) {
             // Hack to not send the first message.
-            receive(otherSide)
+            otherSideSession.receive()
         } else {
             super.sendPayloadAndReceiveDataRequest(otherSide, payload)
         }

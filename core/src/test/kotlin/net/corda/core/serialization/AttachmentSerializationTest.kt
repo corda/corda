@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.TestDataVendingFlow
 import net.corda.core.identity.Party
@@ -82,14 +83,14 @@ class AttachmentSerializationTest {
         mockNet.stopNodes()
     }
 
-    private class ServerLogic(private val client: Party, private val sendData: Boolean) : FlowLogic<Unit>() {
+    private class ServerLogic(private val clientSession: FlowSession, private val sendData: Boolean) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             if (sendData) {
-                subFlow(TestDataVendingFlow(client))
+                subFlow(TestDataVendingFlow(clientSession))
             }
-            receive<String>(client).unwrap { assertEquals("ping one", it) }
-            sendAndReceive<String>(client, "pong").unwrap { assertEquals("ping two", it) }
+            clientSession.receive<String>().unwrap { assertEquals("ping one", it) }
+            clientSession.sendAndReceive<String>("pong").unwrap { assertEquals("ping two", it) }
         }
     }
 
@@ -100,9 +101,9 @@ class AttachmentSerializationTest {
         internal val server = server.info.chooseIdentity()
 
         @Suspendable
-        internal fun communicate() {
-            sendAndReceive<String>(server, "ping one").unwrap { assertEquals("pong", it) }
-            send(server, "ping two")
+        internal fun communicate(serverSession: FlowSession) {
+            serverSession.sendAndReceive<String>("ping one").unwrap { assertEquals("pong", it) }
+            serverSession.send("ping two")
         }
 
         @Suspendable
@@ -121,7 +122,8 @@ class AttachmentSerializationTest {
         @Suspendable
         override fun getAttachmentContent(): String {
             val customAttachment = CustomAttachment(attachmentId, customContent)
-            communicate()
+            val session = initiateFlow(server)
+            communicate(session)
             return customAttachment.customContent
         }
     }
@@ -130,7 +132,8 @@ class AttachmentSerializationTest {
         @Suspendable
         override fun getAttachmentContent(): String {
             val localAttachment = serviceHub.attachments.openAttachment(attachmentId)!!
-            communicate()
+            val session = initiateFlow(server)
+            communicate(session)
             return localAttachment.extractContent()
         }
     }
@@ -138,9 +141,10 @@ class AttachmentSerializationTest {
     private class FetchAttachmentLogic(server: StartedNode<*>, private val attachmentId: SecureHash) : ClientLogic(server) {
         @Suspendable
         override fun getAttachmentContent(): String {
-            val (downloadedAttachment) = subFlow(FetchAttachmentsFlow(setOf(attachmentId), server)).downloaded
-            send(server, FetchDataFlow.Request.End)
-            communicate()
+            val serverSession = initiateFlow(server)
+            val (downloadedAttachment) = subFlow(FetchAttachmentsFlow(setOf(attachmentId), serverSession)).downloaded
+            serverSession.send(FetchDataFlow.Request.End)
+            communicate(serverSession)
             return downloadedAttachment.extractContent()
         }
     }
@@ -148,7 +152,7 @@ class AttachmentSerializationTest {
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int, sendData: Boolean = false) {
         server.internals.internalRegisterFlowFactory(
                 ClientLogic::class.java,
-                InitiatedFlowFactory.Core { ServerLogic(it.counterparty, sendData) },
+                InitiatedFlowFactory.Core { ServerLogic(it, sendData) },
                 ServerLogic::class.java,
                 track = false)
         client.services.startFlow(clientLogic)

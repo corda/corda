@@ -4,10 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -397,7 +394,7 @@ class TwoPartyTradeFlowTests {
                 val records = (aliceNode.services.validatedTransactions as RecordingTransactionStorage).records
                 records.expectEvents(isStrict = false) {
                     sequence(
-                            // Seller Alice sends her seller info to Bob, who wants to check the asset for sale.
+                            // Seller Alice sends her sellerSession info to Bob, who wants to check the asset for sale.
                             // He requests, Alice looks up in her DB to send the tx to Bob
                             expect(TxRecord.Get(alicesFakePaper[0].id)),
                             // Seller Alice gets a proposed tx which depends on Bob's two cash txns and her own tx.
@@ -526,7 +523,7 @@ class TwoPartyTradeFlowTests {
     }
 
     private data class RunResult(
-            // The buyer is not created immediately, only when the seller starts running
+            // The buyer is not created immediately, only when the sellerSession starts running
             val buyer: CordaFuture<FlowStateMachine<*>>,
             val sellerResult: CordaFuture<SignedTransaction>,
             val sellerId: StateMachineRunId
@@ -557,9 +554,10 @@ class TwoPartyTradeFlowTests {
             } else {
                 serviceHub.myInfo.chooseIdentityAndCert()
             }
-            send(buyer, TestTx(notary.notaryIdentity, price, anonymous))
+            val buyerSession = initiateFlow(buyer)
+            buyerSession.send(TestTx(notary.notaryIdentity, price, anonymous))
             return subFlow(Seller(
-                    buyer,
+                    buyerSession,
                     notary,
                     assetToSell,
                     price,
@@ -568,14 +566,14 @@ class TwoPartyTradeFlowTests {
     }
 
     @InitiatedBy(SellerInitiator::class)
-    class BuyerAcceptor(val seller: Party) : FlowLogic<SignedTransaction>() {
+    class BuyerAcceptor(val sellerSession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            val (notary, price, anonymous) = receive<TestTx>(seller).unwrap {
+            val (notary, price, anonymous) = sellerSession.receive<TestTx>().unwrap {
                 require(serviceHub.networkMapCache.isNotary(it.notaryIdentity)) { "${it.notaryIdentity} is not a notary" }
                 it
             }
-            return subFlow(Buyer(seller, notary, price, CommercialPaper.State::class.java, anonymous))
+            return subFlow(Buyer(sellerSession, notary, price, CommercialPaper.State::class.java, anonymous))
         }
     }
 

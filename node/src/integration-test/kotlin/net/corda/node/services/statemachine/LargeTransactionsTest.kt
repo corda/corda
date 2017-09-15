@@ -3,7 +3,6 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
-import net.corda.core.identity.Party
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.TransactionBuilder
@@ -37,8 +36,9 @@ class LargeTransactionsTest {
             val stx = serviceHub.signInitialTransaction(tx, serviceHub.myInfo.chooseIdentity().owningKey)
             // Send to the other side and wait for it to trigger resolution from us.
             val bob = serviceHub.identityService.partyFromX500Name(BOB.name)!!
-            subFlow(SendTransactionFlow(bob, stx))
-            receive<Unit>(bob)
+            val bobSession = initiateFlow(bob)
+            subFlow(SendTransactionFlow(bobSession, stx))
+            bobSession.receive<Unit>()
         }
     }
 

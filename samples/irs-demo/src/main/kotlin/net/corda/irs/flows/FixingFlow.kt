@@ -3,10 +3,7 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.SchedulableFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
@@ -28,7 +25,7 @@ object FixingFlow {
      * who does what in the flow.
      */
     @InitiatedBy(FixingRoleDecider::class)
-    class Fixer(override val otherParty: Party) : TwoPartyDealFlow.Secondary<FixingSession>() {
+    class Fixer(override val otherSideSession: FlowSession) : TwoPartyDealFlow.Secondary<FixingSession>() {
 
         private lateinit var txState: TransactionState<*>
         private lateinit var deal: FixableDealState
@@ -91,7 +88,7 @@ object FixingFlow {
      * is just the "side" of the flow run by the party with the floating leg as a way of deciding who
      * does what in the flow.
      */
-    class Floater(override val otherParty: Party,
+    class Floater(override val otherSideSession: FlowSession,
                   override val payload: FixingSession,
                   override val progressTracker: ProgressTracker = TwoPartyDealFlow.Primary.tracker()) : TwoPartyDealFlow.Primary() {
         @Suppress("UNCHECKED_CAST")
@@ -143,7 +140,8 @@ object FixingFlow {
                 val fixing = FixingSession(ref, fixableDeal.oracle)
                 val counterparty = serviceHub.identityService.partyFromAnonymous(parties[1]) ?: throw IllegalStateException("Cannot resolve floater party")
                 // Start the Floater which will then kick-off the Fixer
-                subFlow(Floater(counterparty, fixing))
+                val session = initiateFlow(counterparty)
+                subFlow(Floater(session, fixing))
             }
         }
     }
