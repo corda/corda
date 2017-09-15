@@ -327,7 +327,9 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             val totalAmount = payments.map { it.amount }.sumOrThrow()
             val cashSelection = CashSelection.getInstance({ services.jdbcSession().metaData })
             val acceptableCoins = cashSelection.unconsumedCashStatesForSpending(services, totalAmount, onlyFromParties, tx.notary, tx.lockId)
+            val changeIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, revocationEnabled = false)
             return OnLedgerAsset.generateSpend(tx, payments, acceptableCoins,
+                    changeIdentity.party.anonymise(),
                     { state, quantity, owner -> deriveState(state, quantity, owner) },
                     { Cash().generateMoveCommand() })
         }
