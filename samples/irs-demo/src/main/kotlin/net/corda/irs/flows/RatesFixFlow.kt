@@ -57,15 +57,14 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     @Suspendable
     override fun call(): TransactionSignature {
         progressTracker.currentStep = progressTracker.steps[1]
-        val oracleSession = initiateFlow(oracle)
-        val fix = subFlow(FixQueryFlow(fixOf, oracleSession))
+        val fix = subFlow(FixQueryFlow(fixOf, oracle))
         progressTracker.currentStep = WORKING
         checkFixIsNearExpected(fix)
         tx.addCommand(fix, oracle.owningKey)
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
         val mtx = tx.toWireTransaction().buildFilteredTransaction(Predicate { filtering(it) })
-        return subFlow(FixSignFlow(tx, oracleSession, mtx))
+        return subFlow(FixSignFlow(tx, oracle, mtx))
     }
     // DOCEND 2
 
@@ -96,9 +95,10 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
 
     // DOCSTART 1
     @InitiatingFlow
-    class FixQueryFlow(val fixOf: FixOf, val oracleSession: FlowSession) : FlowLogic<Fix>() {
+    class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
+            val oracleSession = initiateFlow(oracle)
             // TODO: add deadline to receive
             val resp = oracleSession.sendAndReceive<ArrayList<Fix>>(QueryRequest(listOf(fixOf)))
 
@@ -112,10 +112,11 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     }
 
     @InitiatingFlow
-    class FixSignFlow(val tx: TransactionBuilder, val oracleSession: FlowSession,
+    class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
                       val partialMerkleTx: FilteredTransaction) : FlowLogic<TransactionSignature>() {
         @Suspendable
         override fun call(): TransactionSignature {
+            val oracleSession = initiateFlow(oracle)
             val resp = oracleSession.sendAndReceive<TransactionSignature>(SignRequest(partialMerkleTx))
             return resp.unwrap { sig ->
                 check(oracleSession.counterparty.owningKey.isFulfilledBy(listOf(sig.by)))
