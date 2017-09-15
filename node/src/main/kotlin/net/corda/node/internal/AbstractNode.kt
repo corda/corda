@@ -268,7 +268,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun handleCustomNotaryService(service: NotaryService) {
         runOnStop += service::stop
         service.start()
-        installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
+        installCoreFlowExpectingFlowSession(NotaryFlow.Client::class, service::createServiceFlow)
     }
 
     private fun registerCordappFlows() {
@@ -366,9 +366,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
 
     private fun installCoreFlows() {
-        installCoreFlow(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
-        installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
-        installCoreFlow(ContractUpgradeFlow.Initiator::class, ::Acceptor)
+        installCoreFlowExpectingFlowSession(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
+        installCoreFlowExpectingFlowSession(NotaryChangeFlow::class, ::NotaryChangeHandler)
+        installCoreFlowExpectingFlowSession(ContractUpgradeFlow.Initiator::class, ::Acceptor)
         installCoreFlow(SwapIdentitiesFlow::class, ::SwapIdentitiesHandler)
     }
 
@@ -486,7 +486,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     runOnStop += this::stop
                     start()
                 }
-                installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
+                installCoreFlowExpectingFlowSession(NotaryFlow.Client::class, service::createServiceFlow)
             } else {
                 log.info("Notary type ${notaryServiceType.id} does not match any built-in notary types. " +
                         "It is expected to be loaded via a CorDapp")

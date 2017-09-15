@@ -65,16 +65,17 @@ object NotaryFlow {
             }
 
             val response = try {
+                val session = initiateFlow(notaryParty)
                 if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
-                    subFlow(SendTransactionWithRetry(notaryParty, stx))
-                    receive<List<TransactionSignature>>(notaryParty)
+                    subFlow(SendTransactionWithRetry(session, stx))
+                    session.receive<List<TransactionSignature>>()
                 } else {
                     val tx: Any = if (stx.isNotaryChangeTransaction()) {
                         stx.notaryChangeTx
                     } else {
                         stx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
                     }
-                    sendAndReceiveWithRetry(notaryParty, tx)
+                    session.sendAndReceiveWithRetry(tx)
                 }
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
@@ -104,13 +105,13 @@ object NotaryFlow {
      * Additional transaction validation logic can be added when implementing [receiveAndVerifyTx].
      */
     // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-    abstract class Service(val otherSide: Party, val service: TrustedAuthorityNotaryService) : FlowLogic<Void?>() {
+    abstract class Service(val otherSideSession: FlowSession, val service: TrustedAuthorityNotaryService) : FlowLogic<Void?>() {
 
         @Suspendable
         override fun call(): Void? {
             val (id, inputs, timeWindow) = receiveAndVerifyTx()
             service.validateTimeWindow(timeWindow)
-            service.commitInputStates(inputs, id, otherSide)
+            service.commitInputStates(inputs, id, otherSideSession.counterparty)
             signAndSendResponse(id)
             return null
         }
@@ -125,7 +126,7 @@ object NotaryFlow {
         @Suspendable
         private fun signAndSendResponse(txId: SecureHash) {
             val signature = service.sign(txId)
-            send(otherSide, listOf(signature))
+            otherSideSession.send(listOf(signature))
         }
     }
 }
@@ -156,7 +157,7 @@ sealed class NotaryError {
  * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [sendAndReceiveWithRetry]
  * instead of [sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
  */
-private class SendTransactionWithRetry(otherSide: Party, stx: SignedTransaction) : SendTransactionFlow(otherSide, stx) {
+private class SendTransactionWithRetry(otherSideSession: FlowSession, stx: SignedTransaction) : SendTransactionFlow(otherSideSession, stx) {
     @Suspendable
-    override fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any) = sendAndReceiveWithRetry<FetchDataFlow.Request>(otherSide, payload)
+    override fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any) = otherSideSession.sendAndReceiveWithRetry<FetchDataFlow.Request>(payload)
 }

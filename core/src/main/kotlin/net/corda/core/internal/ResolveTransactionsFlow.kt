@@ -3,6 +3,7 @@ package net.corda.core.internal
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -17,14 +18,14 @@ import java.util.*
  * @return a list of verified [SignedTransaction] objects, in a depth-first order.
  */
 class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
-                              private val otherSide: Party) : FlowLogic<List<SignedTransaction>>() {
+                              private val otherSide: FlowSession) : FlowLogic<List<SignedTransaction>>() {
     /**
      * Resolves and validates the dependencies of the specified [signedTransaction]. Fetches the attachments, but does
      * *not* validate or store the [signedTransaction] itself.
      *
      * @return a list of verified [SignedTransaction] objects, in a depth-first order.
      */
-    constructor(signedTransaction: SignedTransaction, otherSide: Party) : this(dependencyIDs(signedTransaction), otherSide) {
+    constructor(signedTransaction: SignedTransaction, otherSide: FlowSession) : this(dependencyIDs(signedTransaction), otherSide) {
         this.signedTransaction = signedTransaction
     }
     companion object {
@@ -82,7 +83,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
         // Start fetching data.
         val newTxns = downloadDependencies(txHashes)
         fetchMissingAttachments(signedTransaction?.let { newTxns + it } ?: newTxns)
-        send(otherSide, FetchDataFlow.Request.End)
+        otherSide.send(FetchDataFlow.Request.End)
         // Finish fetching data.
 
         val result = topologicalSort(newTxns)

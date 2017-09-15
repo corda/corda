@@ -12,15 +12,15 @@ import net.corda.core.utilities.unwrap
 //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
 // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
 //       cash without from unknown parties?
-class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
+class NotifyTransactionHandler(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val stx = subFlow(ReceiveTransactionFlow(otherParty))
+        val stx = subFlow(ReceiveTransactionFlow(otherSideSession))
         serviceHub.recordTransactions(stx)
     }
 }
 
-class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Party>(otherSide) {
+class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacementFlow.Acceptor<Party>(otherSideSession) {
     /**
      * Check the notary change proposal.
      *

@@ -63,9 +63,10 @@ class CollectSignaturesFlowTests {
         class Initiator(val state: DummyContract.MultiOwnerState, val otherParty: Party) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
-                send(otherParty, state)
+                val session = initiateFlow(otherParty)
+                session.send(state)
 
-                val flow = object : SignTransactionFlow(otherParty) {
+                val flow = object : SignTransactionFlow(session) {
                     @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         val tx = stx.tx
                         val ltx = tx.toLedgerTransaction(serviceHub)
@@ -84,10 +85,10 @@ class CollectSignaturesFlowTests {
         }
 
         @InitiatedBy(TestFlow.Initiator::class)
-        class Responder(val otherParty: Party, val identities: Map<Party, AnonymousParty>) : FlowLogic<SignedTransaction>() {
+        class Responder(val initiatingSession: FlowSession, val identities: Map<Party, AnonymousParty>) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
-                val state = receive<DummyContract.MultiOwnerState>(otherParty).unwrap { it }
+                val state = initiatingSession.receive<DummyContract.MultiOwnerState>().unwrap { it }
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
                 val myInputKeys = state.participants.map { it.owningKey }
@@ -95,7 +96,8 @@ class CollectSignaturesFlowTests {
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
-                val stx = subFlow(CollectSignaturesFlow(ptx, myKeys))
+                val signature = subFlow(CollectSignatureFlow(ptx, initiatingSession))
+                val stx = ptx + signature
                 val ftx = subFlow(FinalityFlow(stx)).single()
 
                 return ftx
@@ -124,9 +126,9 @@ class CollectSignaturesFlowTests {
         }
 
         @InitiatedBy(TestFlowTwo.Initiator::class)
-        class Responder(val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        class Responder(val otherSideSession: FlowSession) : FlowLogic<SignedTransaction>() {
             @Suspendable override fun call(): SignedTransaction {
-                val flow = object : SignTransactionFlow(otherParty) {
+                val flow = object : SignTransactionFlow(otherSideSession) {
                     @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         val tx = stx.tx
                         val ltx = tx.toLedgerTransaction(serviceHub)

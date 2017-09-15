@@ -72,6 +72,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         fun tracker() = ProgressTracker(COLLECTING, VERIFYING)
 
         // TODO: Make the progress tracker adapt to the number of counter-parties to collect from.
+
     }
 
     @Suspendable override fun call(): SignedTransaction {
@@ -101,7 +102,10 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         if (unsigned.isEmpty()) return partiallySignedTx
 
         // Collect signatures from all counter-parties and append them to the partially signed transaction.
-        val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it.first, it.second) }
+        val counterpartySignatures = keysToParties(unsigned).map {
+            val session = initiateFlow(it.first)
+            subFlow(CollectSignatureFlow(partiallySignedTx, session))
+        }
         val stx = partiallySignedTx + counterpartySignatures
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
@@ -122,28 +126,33 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
                 ?: throw IllegalStateException("Party ${it.toBase58String()} not found on the network.")
         Pair(party, it)
     }
+}
 
-    // DOCSTART 1
-    /**
-     * Get and check the required signature.
-     *
-     * @param counterparty the party to request a signature from.
-     * @param signingKey the key the party should use to sign the transaction.
-     */
-    @Suspendable private fun collectSignature(counterparty: Party, signingKey: PublicKey): TransactionSignature {
+// DOCSTART 1
+/**
+ * Get and check the required signature.
+ *
+ * @param counterparty the party to request a signature from.
+ * @param signingKey the key the party should use to sign the transaction.
+ */
+@Suspendable
+class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session: FlowSession) : FlowLogic<TransactionSignature>() {
+    @Suspendable
+    override fun call(): TransactionSignature {
+        val signingKey = session.counterparty.owningKey
         // SendTransactionFlow allows counterparty to access our data to resolve the transaction.
-        subFlow(SendTransactionFlow(counterparty, partiallySignedTx))
+        subFlow(SendTransactionFlow(session, partiallySignedTx))
         // Send the key we expect the counterparty to sign with - this is important where they may have several
         // keys to sign with, as it makes it faster for them to identify the key to sign with, and more straight forward
         // for us to check we have the expected signature returned.
-        send(counterparty, signingKey)
-        return receive<TransactionSignature>(counterparty).unwrap {
+        session.send(signingKey)
+        return session.receive<TransactionSignature>().unwrap {
             require(signingKey.isFulfilledBy(it.by)) { "Not signed by the required signing key." }
             it
         }
     }
-    // DOCEND 1
 }
+// DOCEND 1
 
 /**
  * The [SignTransactionFlow] should be called in response to the [CollectSignaturesFlow]. It automates the signing of
@@ -182,9 +191,9 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
  *          }
  *      }
  *
- * @param otherParty The counter-party which is providing you a transaction to sign.
+ * @param initiatingSession The session which is providing you a transaction to sign.
  */
-abstract class SignTransactionFlow(val otherParty: Party,
+abstract class SignTransactionFlow(val initiatingSession: FlowSession,
                                    override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()) : FlowLogic<SignedTransaction>() {
 
     companion object {
@@ -198,11 +207,11 @@ abstract class SignTransactionFlow(val otherParty: Party,
     @Suspendable override fun call(): SignedTransaction {
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
-        val stx = subFlow(ReceiveTransactionFlow(otherParty, checkSufficientSignatures = false))
+        val stx = subFlow(ReceiveTransactionFlow(initiatingSession, checkSufficientSignatures = false))
         // Receive the signing key that the party requesting the signature expects us to sign with. Having this provided
         // means we only have to check we own that one key, rather than matching all keys in the transaction against all
         // keys we own.
-        val signingKey = receive<PublicKey>(otherParty).unwrap {
+        val signingKey = initiatingSession.receive<PublicKey>().unwrap {
             // TODO: We should have a faster way of verifying we own a single key
             serviceHub.keyManagementService.filterMyKeys(listOf(it)).single()
         }
@@ -224,7 +233,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
         // Sign and send back our signature to the Initiator.
         progressTracker.currentStep = SIGNING
         val mySignature = serviceHub.createSignature(stx, signingKey)
-        send(otherParty, mySignature)
+        initiatingSession.send(mySignature)
 
         // Return the fully signed transaction once it has been committed.
         return waitForLedgerCommit(stx.id)
@@ -233,8 +242,8 @@ abstract class SignTransactionFlow(val otherParty: Party,
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
         val signingIdentities = stx.sigs.map(TransactionSignature::by).mapNotNull(serviceHub.identityService::partyFromKey)
         val signingWellKnownIdentities = signingIdentities.mapNotNull(serviceHub.identityService::partyFromAnonymous)
-        require(otherParty in signingWellKnownIdentities) {
-            "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${otherParty}"
+        require(initiatingSession.counterparty in signingWellKnownIdentities) {
+            "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${initiatingSession}"
         }
         val signed = stx.sigs.map { it.by }
         val allSigners = stx.tx.requiredSigningKeys

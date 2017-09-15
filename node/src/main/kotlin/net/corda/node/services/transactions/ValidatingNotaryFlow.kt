@@ -14,7 +14,7 @@ import java.security.SignatureException
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
  * indeed valid.
  */
-class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSide, service) {
+class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSideSession, service) {
     /**
      * The received transaction is checked for contract-validity, which requires fully resolving it into a
      * [TransactionForVerification], for which the caller also has to to reveal the whole transaction
@@ -23,7 +23,7 @@ class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryServ
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
         try {
-            val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false))
+            val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
             checkSignatures(stx)
             val wtx = stx.tx
             return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow)

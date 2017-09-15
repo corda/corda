@@ -401,10 +401,11 @@ public class FlowCookbookJava {
             // for data request until the transaction is resolved and verified
             // on the other side:
             // DOCSTART 12
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx));
+            FlowSession counterpartySession = initiateFlow(counterparty);
+            subFlow(new SendTransactionFlow(counterpartySession, twiceSignedTx));
 
             // Optional request verification to further restrict data access.
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx) {
+            subFlow(new SendTransactionFlow(counterpartySession, twiceSignedTx) {
                 @Override
                 protected void verifyDataRequest(@NotNull FetchDataFlow.Request.Data dataRequest) {
                     // Extra request verification.
@@ -421,7 +422,7 @@ public class FlowCookbookJava {
 
             // We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies.
             // DOCSTART 14
-            subFlow(new SendStateAndRefFlow(counterparty, dummyStates));
+            subFlow(new SendStateAndRefFlow(counterpartySession, dummyStates));
 
             // On the receive side ...
             List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterparty));

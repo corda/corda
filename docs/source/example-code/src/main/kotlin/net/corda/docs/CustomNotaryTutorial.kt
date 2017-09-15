@@ -18,7 +18,7 @@ class MyCustomValidatingNotaryService(override val services: ServiceHub) : Trust
     override val timeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider = PersistentUniquenessProvider()
 
-    override fun createServiceFlow(otherParty: Party): FlowLogic<Void?> = MyValidatingNotaryFlow(otherParty, this)
+    override fun createServiceFlow(otherPartySession: Party): FlowLogic<Void?> = MyValidatingNotaryFlow(otherPartySession, this)
 
     override fun start() {}
     override fun stop() {}

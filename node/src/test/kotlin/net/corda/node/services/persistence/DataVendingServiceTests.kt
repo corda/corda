@@ -3,10 +3,7 @@ package net.corda.node.services.persistence
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.SendTransactionFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
@@ -105,12 +102,16 @@ class DataVendingServiceTests {
     @InitiatingFlow
     private class NotifyTxFlow(val otherParty: Party, val stx: SignedTransaction) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(SendTransactionFlow(otherParty, stx))
+        override fun call(): Void? {
+            val session = initiateFlow(otherParty)
+            subFlow(SendTransactionFlow(session, stx))
+            return null
+        }
     }
 
     @InitiatedBy(NotifyTxFlow::class)
-    private class InitiateNotifyTxFlow(val otherParty: Party) : FlowLogic<Unit>() {
+    private class InitiateNotifyTxFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() = subFlow(NotifyTransactionHandler(otherParty))
+        override fun call() = subFlow(NotifyTransactionHandler(otherSideSession))
     }
 }

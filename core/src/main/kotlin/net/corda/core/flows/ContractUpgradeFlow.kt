@@ -2,7 +2,6 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -93,7 +92,7 @@ object ContractUpgradeFlow {
 
     @StartableByRPC
     @InitiatedBy(ContractUpgradeFlow.Initiator::class)
-    class Acceptor(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Class<out UpgradedContract<ContractState, *>>>(otherSide) {
+    class Acceptor(otherSide: FlowSession) : AbstractStateReplacementFlow.Acceptor<Class<out UpgradedContract<ContractState, *>>>(otherSide) {
 
         companion object {
             @JvmStatic
@@ -133,7 +132,7 @@ object ContractUpgradeFlow {
             val proposedTx = stx.tx
             val expectedTx = ContractUpgradeFlow.Initiator.assembleBareTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt).toWireTransaction()
             requireThat {
-                "The instigator is one of the participants" using (otherSide in oldStateAndRef.state.data.participants)
+                "The instigator is one of the participants" using (initiatingSession.counterparty in oldStateAndRef.state.data.participants)
                 "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" using (proposal.modification.name == authorisedUpgrade)
                 "The proposed tx matches the expected tx for this upgrade" using (proposedTx == expectedTx)
             }

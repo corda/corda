@@ -6,7 +6,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -102,22 +101,24 @@ abstract class AbstractStateReplacementFlow {
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
             }
 
-            val participantSignatures = parties.map { getParticipantSignature(it, stx) }
+            val sessions = parties.map { initiateFlow(it) }
+
+            val participantSignatures = sessions.map { getParticipantSignature(it, stx) }
 
             val allPartySignedTx = stx + participantSignatures
 
             val allSignatures = participantSignatures + getNotarySignatures(allPartySignedTx)
-            parties.forEach { send(it, allSignatures) }
+            sessions.forEach { it.send(allSignatures) }
 
             return allSignatures
         }
 
         @Suspendable
-        private fun getParticipantSignature(party: Party, stx: SignedTransaction): TransactionSignature {
+        private fun getParticipantSignature(session: FlowSession, stx: SignedTransaction): TransactionSignature {
             val proposal = Proposal(originalState.ref, modification)
-            subFlow(SendTransactionFlow(party, stx))
-            return sendAndReceive<TransactionSignature>(party, proposal).unwrap {
-                check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
+            subFlow(SendTransactionFlow(session, stx))
+            return session.sendAndReceive<TransactionSignature>(proposal).unwrap {
+                check(session.counterparty.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verify(stx.id)
                 it
             }
@@ -136,9 +137,9 @@ abstract class AbstractStateReplacementFlow {
 
     // Type parameter should ideally be Unit but that prevents Java code from subclassing it (https://youtrack.jetbrains.com/issue/KT-15964).
     // We use Void? instead of Unit? as that's what you'd use in Java.
-    abstract class Acceptor<in T>(val otherSide: Party,
+    abstract class Acceptor<in T>(val initiatingSession: FlowSession,
                                   override val progressTracker: ProgressTracker = Acceptor.tracker()) : FlowLogic<Void?>() {
-            constructor(otherSide: Party) : this(otherSide, Acceptor.tracker())
+            constructor(initiatingSession: FlowSession) : this(initiatingSession, Acceptor.tracker())
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
             object APPROVING : ProgressTracker.Step("State replacement approved")
@@ -151,9 +152,9 @@ abstract class AbstractStateReplacementFlow {
         override fun call(): Void? {
             progressTracker.currentStep = VERIFYING
             // We expect stx to have insufficient signatures here
-            val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false))
+            val stx = subFlow(ReceiveTransactionFlow(initiatingSession, checkSufficientSignatures = false))
             checkMySignatureRequired(stx)
-            val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
+            val maybeProposal: UntrustworthyData<Proposal<T>> = initiatingSession.receive()
             maybeProposal.unwrap {
                 verifyProposal(stx, it)
             }
@@ -166,7 +167,7 @@ abstract class AbstractStateReplacementFlow {
             progressTracker.currentStep = APPROVING
 
             val mySignature = sign(stx)
-            val swapSignatures = sendAndReceive<List<TransactionSignature>>(otherSide, mySignature)
+            val swapSignatures = initiatingSession.sendAndReceive<List<TransactionSignature>>(mySignature)
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifyRequiredSignatures.
             val allSignatures = swapSignatures.unwrap { signatures ->
