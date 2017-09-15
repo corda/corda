@@ -29,7 +29,7 @@ class CordaPersistence(var dataSource: HikariDataSource, private var createSchem
 
    val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(createSchemaService, databaseProperties, createIdentityService)
+            HibernateConfiguration(createSchemaService(), databaseProperties, createIdentityService)
         }
    }
 
