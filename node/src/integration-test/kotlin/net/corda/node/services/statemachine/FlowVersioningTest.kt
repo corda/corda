@@ -33,10 +33,11 @@ class FlowVersioningTest : NodeBasedTest() {
         @Suspendable
         override fun call(): Pair<Int, Int> {
             // Execute receive() outside of the Pair constructor to avoid Kotlin/Quasar instrumentation bug.
-            val alicePlatformVersionAccordingToBob = receive<Int>(initiatedParty).unwrap { it }
+            val session = initiateFlow(initiatedParty)
+            val alicePlatformVersionAccordingToBob = session.receive<Int>().unwrap { it }
             return Pair(
                     alicePlatformVersionAccordingToBob,
-                    getFlowInfo(initiatedParty).flowVersion
+                    session.getCounterpartyFlowInfo().flowVersion
             )
         }
     }
