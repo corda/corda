@@ -11,7 +11,7 @@ interface FlowIORequest {
 interface WaitingRequest : FlowIORequest
 
 interface SessionedFlowIORequest : FlowIORequest {
-    val session: FlowSession
+    val session: FlowSessionInternal
 }
 
 interface SendRequest : SessionedFlowIORequest {
@@ -23,7 +23,7 @@ interface ReceiveRequest<T : SessionMessage> : SessionedFlowIORequest, WaitingRe
     val userReceiveType: Class<*>?
 }
 
-data class SendAndReceive<T : SessionMessage>(override val session: FlowSession,
+data class SendAndReceive<T : SessionMessage>(override val session: FlowSessionInternal,
                                               override val message: SessionMessage,
                                               override val receiveType: Class<T>,
                                               override val userReceiveType: Class<*>?) : SendRequest, ReceiveRequest<T> {
@@ -31,14 +31,14 @@ data class SendAndReceive<T : SessionMessage>(override val session: FlowSession,
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }
 
-data class ReceiveOnly<T : SessionMessage>(override val session: FlowSession,
+data class ReceiveOnly<T : SessionMessage>(override val session: FlowSessionInternal,
                                            override val receiveType: Class<T>,
                                            override val userReceiveType: Class<*>?) : ReceiveRequest<T> {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }
 
-data class SendOnly(override val session: FlowSession, override val message: SessionMessage) : SendRequest {
+data class SendOnly(override val session: FlowSessionInternal, override val message: SessionMessage) : SendRequest {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }

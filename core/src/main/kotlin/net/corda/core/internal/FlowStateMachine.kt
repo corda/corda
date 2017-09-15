@@ -13,7 +13,10 @@ import org.slf4j.Logger
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 interface FlowStateMachine<R> {
     @Suspendable
-    fun getFlowContext(otherParty: Party, sessionFlow: FlowLogic<*>): FlowContext
+    fun getFlowInfo(otherParty: Party, sessionFlow: FlowLogic<*>): FlowInfo
+
+    @Suspendable
+    fun initiateFlow(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession
 
     @Suspendable
     fun <T : Any> sendAndReceive(receiveType: Class<T>,

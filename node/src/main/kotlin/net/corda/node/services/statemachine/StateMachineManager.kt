@@ -136,7 +136,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val totalStartedFlows = metrics.counter("Flows.Started")
     private val totalFinishedFlows = metrics.counter("Flows.Finished")
 
-    private val openSessions = ConcurrentHashMap<Long, FlowSession>()
+    private val openSessions = ConcurrentHashMap<Long, FlowSessionInternal>()
     private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
 
     internal val tokenizableServices = ArrayList<Any>()
@@ -341,7 +341,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     // We resume the fiber if it's received a response for which it was waiting for or it's waiting for a ledger
     // commit but a counterparty flow has ended with an error (in which case our flow also has to end)
-    private fun resumeOnMessage(message: ExistingSessionMessage, session: FlowSession): Boolean {
+    private fun resumeOnMessage(message: ExistingSessionMessage, session: FlowSessionInternal): Boolean {
         val waitingForResponse = session.fiber.waitingForResponse
         return (waitingForResponse as? ReceiveRequest<*>)?.session === session ||
                 waitingForResponse is WaitForLedgerCommit && message is ErrorSessionEnd
@@ -355,21 +355,24 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         val (session, initiatedFlowFactory) = try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionInit)
-            val flow = initiatedFlowFactory.createFlow(sender)
+            val flowSession = FlowSessionImpl(sender)
+            val flow = initiatedFlowFactory.createFlow(flowSession)
             val senderFlowVersion = when (initiatedFlowFactory) {
                 is InitiatedFlowFactory.Core -> receivedMessage.platformVersion  // The flow version for the core flows is the platform version
                 is InitiatedFlowFactory.CorDapp -> sessionInit.flowVersion
             }
-            val session = FlowSession(
+            val session = FlowSessionInternal(
                     flow,
                     random63BitValue(),
                     sender,
-                    FlowSessionState.Initiated(sender, senderSessionId, FlowContext(senderFlowVersion, sessionInit.appName)))
+                    FlowSessionState.Initiated(sender, senderSessionId, FlowInfo(senderFlowVersion, sessionInit.appName)))
             if (sessionInit.firstPayload != null) {
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
             }
             openSessions[session.ourSessionId] = session
             val fiber = createFiber(flow, FlowInitiator.Peer(sender))
+            flowSession.sessionFlow = flow
+            flowSession.stateMachine = fiber
             fiber.openSessions[Pair(flow, sender)] = session
             updateCheckpoint(fiber)
             session to initiatedFlowFactory
@@ -484,7 +487,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun FlowSession.endSession(exception: Throwable?, propagated: Boolean) {
+    private fun FlowSessionInternal.endSession(exception: Throwable?, propagated: Boolean) {
         val initiatedState = state as? FlowSessionState.Initiated ?: return
         val sessionEnd = if (exception == null) {
             NormalSessionEnd(initiatedState.peerSessionId)
