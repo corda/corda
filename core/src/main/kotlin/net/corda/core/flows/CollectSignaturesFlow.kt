@@ -102,9 +102,9 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         if (unsigned.isEmpty()) return partiallySignedTx
 
         // Collect signatures from all counter-parties and append them to the partially signed transaction.
-        val counterpartySignatures = keysToParties(unsigned).map {
-            val session = initiateFlow(it.first)
-            subFlow(CollectSignatureFlow(partiallySignedTx, session))
+        val counterpartySignatures = keysToParties(unsigned).map { (party, signingKey) ->
+            val session = initiateFlow(party)
+            subFlow(CollectSignatureFlow(partiallySignedTx, session, signingKey))
         }
         val stx = partiallySignedTx + counterpartySignatures
 
@@ -136,10 +136,9 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
  * @param signingKey the key the party should use to sign the transaction.
  */
 @Suspendable
-class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session: FlowSession) : FlowLogic<TransactionSignature>() {
+class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session: FlowSession, val signingKey: PublicKey) : FlowLogic<TransactionSignature>() {
     @Suspendable
     override fun call(): TransactionSignature {
-        val signingKey = session.counterparty.owningKey
         // SendTransactionFlow allows counterparty to access our data to resolve the transaction.
         subFlow(SendTransactionFlow(session, partiallySignedTx))
         // Send the key we expect the counterparty to sign with - this is important where they may have several

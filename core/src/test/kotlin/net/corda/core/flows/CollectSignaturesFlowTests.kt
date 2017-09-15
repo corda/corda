@@ -96,7 +96,7 @@ class CollectSignaturesFlowTests {
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
-                val signature = subFlow(CollectSignatureFlow(ptx, initiatingSession))
+                val signature = subFlow(CollectSignatureFlow(ptx, initiatingSession, initiatingSession.counterparty.owningKey))
                 val stx = ptx + signature
                 val ftx = subFlow(FinalityFlow(stx)).single()
 
