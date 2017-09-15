@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.node.services.api.CheckpointStorage
@@ -22,4 +23,5 @@ interface StartedNode<out N : AbstractNode> {
     val database: CordaPersistence
     val rpcOps: CordaRPCOps
     fun dispose() = internals.stop()
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(initiatedFlowClass)
 }
