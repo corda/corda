@@ -144,8 +144,8 @@ class ForeignExchangeFlow(val tradeId: String,
         // having collated the data create the full transaction.
         val signedTransaction = buildTradeProposal(ourInputStates, ourOutputStates, theirInputStates, theirOutputStates)
 
-        // pass transaction details to the counterpartySession to revalidate and confirm with a signature
-        // Allow otherSideSession to access our data to resolve the transaction.
+        // pass transaction details to the counterparty to revalidate and confirm with a signature
+        // Allow counterparty to access our data to resolve the transaction.
         subFlow(SendTransactionFlow(session, signedTransaction))
         val allPartySignedTx = session.receive<TransactionSignature>().unwrap {
             val withNewSignature = signedTransaction + it
@@ -225,7 +225,7 @@ class ForeignExchangeRemoteFlow(private val source: FlowSession) : FlowLogic<Uni
 
         // Send back our proposed states and await the full transaction to verify
         val ourKey = serviceHub.keyManagementService.filterMyKeys(ourInputState.flatMap { it.state.data.participants }.map { it.owningKey }).single()
-        // SendStateAndRefFlow allows otherSideSession to access our transaction data to resolve the transaction.
+        // SendStateAndRefFlow allows counterparty to access our transaction data to resolve the transaction.
         subFlow(SendStateAndRefFlow(source, ourInputState))
         source.send(ourOutputState)
         val proposedTrade = subFlow(ReceiveTransactionFlow(source, checkSufficientSignatures = false, recordTransaction = false)).let {

@@ -85,7 +85,7 @@ object TwoPartyTradeFlow {
             val hello = SellerTradeInfo(price, myParty)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
-            // SendTransactionFlow allows otherSideSession to access our data to resolve the transaction.
+            // SendTransactionFlow allows sellerSession to access our data to resolve the transaction.
             subFlow(SendStateAndRefFlow(otherSideSession, listOf(assetToSell)))
             otherSideSession.send(hello)
 
@@ -129,7 +129,7 @@ object TwoPartyTradeFlow {
         // express flow state machines on top of the messaging layer.
     }
 
-    open class Buyer(val otherSideSession: FlowSession,
+    open class Buyer(val sellerSession: FlowSession,
                      val notary: Party,
                      val acceptablePrice: Amount<Currency>,
                      val typeToBuy: Class<out OwnableState>,
@@ -172,12 +172,13 @@ object TwoPartyTradeFlow {
             val partSignedTx = serviceHub.signInitialTransaction(ptx, cashSigningPubKeys)
 
             // Sync up confidential identities in the transaction with our counterparty
-            subFlow(IdentitySyncFlow.Send(otherSideSession, ptx.toWireTransaction()))
+            subFlow(IdentitySyncFlow.Send(sellerSession, ptx.toWireTransaction()))
 
             // Send the signed transaction to the seller, who must then sign it themselves and commit
             // it to the ledger by sending it to the notary.
             progressTracker.currentStep = COLLECTING_SIGNATURES
-            val twiceSignedTx = subFlow(CollectSignaturesFlow(partSignedTx, cashSigningPubKeys, COLLECTING_SIGNATURES.childProgressTracker()))
+            val sellerSignature = subFlow(CollectSignatureFlow(partSignedTx, sellerSession, sellerSession.counterparty.owningKey))
+            val twiceSignedTx = partSignedTx + sellerSignature
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
@@ -186,8 +187,8 @@ object TwoPartyTradeFlow {
 
         @Suspendable
         private fun receiveAndValidateTradeRequest(): Pair<StateAndRef<OwnableState>, SellerTradeInfo> {
-            val assetForSale = subFlow(ReceiveStateAndRefFlow<OwnableState>(otherSideSession)).single()
-            return assetForSale to otherSideSession.receive<SellerTradeInfo>().unwrap {
+            val assetForSale = subFlow(ReceiveStateAndRefFlow<OwnableState>(sellerSession)).single()
+            return assetForSale to sellerSession.receive<SellerTradeInfo>().unwrap {
                 progressTracker.currentStep = VERIFYING
                 // What is the seller trying to sell us?
                 val asset = assetForSale.state.data
@@ -196,12 +197,12 @@ object TwoPartyTradeFlow {
                 // The asset must either be owned by the well known identity of the counterparty, or we must be able to
                 // prove the owner is a confidential identity of the counterparty.
                 val assetForSaleIdentity = serviceHub.identityService.partyFromAnonymous(asset.owner)
-                require(assetForSaleIdentity == otherSideSession.counterparty)
+                require(assetForSaleIdentity == sellerSession.counterparty)
 
                 // Register the identity we're about to send payment to. This shouldn't be the same as the asset owner
                 // identity, so that anonymity is enforced.
                 val wellKnownPayToIdentity = serviceHub.identityService.verifyAndRegisterIdentity(it.payToIdentity)
-                require(wellKnownPayToIdentity?.party == otherSideSession.counterparty) { "Well known identity to pay to must match counterparty identity" }
+                require(wellKnownPayToIdentity?.party == sellerSession.counterparty) { "Well known identity to pay to must match counterparty identity" }
 
                 if (it.price > acceptablePrice)
                     throw UnacceptablePriceException(it.price)
