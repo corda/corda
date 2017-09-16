@@ -99,7 +99,7 @@ class BFTNotaryServiceTests {
         val notary = bftNotaryCluster(clusterSize)
         node.run {
             val issueTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = (info.chooseIdentity())), DUMMY_PROGRAM_ID)
+                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DUMMY_PROGRAM_ID)
             }
             database.transaction {
                 services.recordTransactions(issueTx)

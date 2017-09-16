@@ -76,7 +76,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = serviceHub.database.transaction { queryByIdentityKey(party.owningKey) }
-        if (nodes.size == 1 && party in nodes[0].legalIdentities) {
+        if (nodes.size == 1 && nodes[0].isLegalIdentity(party)) {
             return PartyInfo.SingleNode(party, nodes[0].addresses)
         }
         for (node in nodes) {
