@@ -97,7 +97,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             database.transaction {
                 // A tx that spends our money.
                 val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
-                Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
+                Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, services.myInfo.chooseIdentityAndCert(), BOB)
                 val spendPTX = services.signInitialTransaction(spendTXBuilder, freshKey)
                 notaryServices.addSignature(spendPTX)
             }
@@ -149,7 +149,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             database.transaction {
                 try {
                     val txn1Builder = TransactionBuilder(DUMMY_NOTARY)
-                    Cash.generateSpend(services, txn1Builder, 60.DOLLARS, BOB)
+                    Cash.generateSpend(services, txn1Builder, 60.DOLLARS, services.myInfo.chooseIdentityAndCert(), BOB)
                     val ptxn1 = notaryServices.signInitialTransaction(txn1Builder)
                     val txn1 = services.addSignature(ptxn1, freshKey)
                     println("txn1: ${txn1.id} spent ${((txn1.tx.outputs[0].data) as Cash.State).amount}")
@@ -185,7 +185,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             database.transaction {
                 try {
                     val txn2Builder = TransactionBuilder(DUMMY_NOTARY)
-                    Cash.generateSpend(services, txn2Builder, 80.DOLLARS, BOB)
+                    Cash.generateSpend(services, txn2Builder, 80.DOLLARS, services.myInfo.chooseIdentityAndCert(), BOB)
                     val ptxn2 = notaryServices.signInitialTransaction(txn2Builder)
                     val txn2 = services.addSignature(ptxn2, freshKey)
                     println("txn2: ${txn2.id} spent ${((txn2.tx.outputs[0].data) as Cash.State).amount}")
@@ -308,7 +308,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
         database.transaction {
             // A tx that spends our money.
             val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
-            Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
+            Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, services.myInfo.chooseIdentityAndCert(), BOB)
             val spendPTX = notaryServices.signInitialTransaction(spendTXBuilder)
             val spendTX = services.addSignature(spendPTX, freshKey)
             services.recordTransactions(spendTX)

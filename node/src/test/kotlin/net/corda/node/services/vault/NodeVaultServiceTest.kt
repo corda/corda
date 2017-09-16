@@ -517,7 +517,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         database.transaction {
             val moveTx = TransactionBuilder(services.myInfo.chooseIdentity()).apply {
-                Cash.generateSpend(services, this, Amount(1000, GBP), thirdPartyIdentity)
+                Cash.generateSpend(services, this, Amount(1000, GBP), services.myInfo.chooseIdentityAndCert(), thirdPartyIdentity)
             }.toWireTransaction()
             service.notify(moveTx)
         }
@@ -562,7 +562,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         // Move cash
         val moveTx = database.transaction {
             TransactionBuilder(newNotary).apply {
-                Cash.generateSpend(services, this, Amount(1000, GBP), thirdPartyIdentity)
+                Cash.generateSpend(services, this, Amount(1000, GBP), services.myInfo.chooseIdentityAndCert(), thirdPartyIdentity)
             }.toWireTransaction()
         }
 

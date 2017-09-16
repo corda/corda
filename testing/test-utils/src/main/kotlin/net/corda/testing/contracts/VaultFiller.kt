@@ -8,6 +8,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.toFuture
@@ -21,11 +22,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.CommodityContract
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_OBLIGATION_ISSUER
-import net.corda.testing.CHARLIE
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.testing.dummyCommand
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -243,14 +240,26 @@ fun ServiceHub.consumeLinearStates(linearStates: List<StateAndRef<LinearState>>,
 fun ServiceHub.evolveLinearStates(linearStates: List<StateAndRef<LinearState>>, notary: Party) = consumeAndProduce(linearStates, notary)
 fun ServiceHub.evolveLinearState(linearState: StateAndRef<LinearState>, notary: Party) : StateAndRef<LinearState> = consumeAndProduce(linearState, notary)
 
+/**
+ * Consume cash, sending any change to the default identity for this node. Only suitable for use in test scenarios,
+ * where nodes have a default identity.
+ */
 @JvmOverloads
 fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE, notary: Party): Vault.Update<ContractState> {
+    return consumeCash(amount, myInfo.chooseIdentityAndCert(), to, notary)
+}
+
+/**
+ * Consume cash, sending any change to the specified identity.
+ */
+@JvmOverloads
+fun ServiceHub.consumeCash(amount: Amount<Currency>, ourIdentity: PartyAndCertificate, to: Party = CHARLIE, notary: Party): Vault.Update<ContractState> {
     val update =  vaultService.rawUpdates.toFuture()
     val services = this
 
     // A tx that spends our money.
     val builder = TransactionBuilder(notary).apply {
-        Cash.generateSpend(services, this, amount, to)
+        Cash.generateSpend(services, this, amount, ourIdentity, to)
     }
     val spendTx = signInitialTransaction(builder, notary.owningKey)
 

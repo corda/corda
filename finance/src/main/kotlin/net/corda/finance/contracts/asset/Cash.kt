@@ -11,6 +11,7 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServiceHub
 import net.corda.core.schemas.MappedSchema
@@ -276,6 +277,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          *           to move the cash will be added on top.
          * @param amount How much currency to send.
          * @param to a key of the recipient.
+         * @param ourIdentity well known identity to create a new confidential identity from, for sending change to.
          * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
          *                        of given parties. This can be useful if the party you're trying to pay has expectations
          *                        about which type of asset claims they are willing to accept.
@@ -290,9 +292,10 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         fun generateSpend(services: ServiceHub,
                           tx: TransactionBuilder,
                           amount: Amount<Currency>,
+                          ourIdentity: PartyAndCertificate,
                           to: AbstractParty,
                           onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
-            return generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), onlyFromParties)
+            return generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), ourIdentity, onlyFromParties)
         }
 
         /**
@@ -305,6 +308,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          *           to move the cash will be added on top.
          * @param amount How much currency to send.
          * @param to a key of the recipient.
+         * @param ourIdentity well known identity to create a new confidential identity from, for sending change to.
          * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
          *                        of given parties. This can be useful if the party you're trying to pay has expectations
          *                        about which type of asset claims they are willing to accept.
@@ -319,6 +323,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         fun generateSpend(services: ServiceHub,
                           tx: TransactionBuilder,
                           payments: List<PartyAndAmount<Currency>>,
+                          ourIdentity: PartyAndCertificate,
                           onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
             fun deriveState(txState: TransactionState<Cash.State>, amt: Amount<Issued<Currency>>, owner: AbstractParty)
                     = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
@@ -331,7 +336,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             // Generate a new identity that change will be sent to for confidentiality purposes. This means that a
             // third party with a copy of the transaction (such as the notary) cannot identify who the change was
             // sent to
-            val changeIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentitiesAndCerts.first(), revocationEnabled)
+            val changeIdentity = services.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled)
             return OnLedgerAsset.generateSpend(tx, payments, acceptableCoins,
                     changeIdentity.party.anonymise(),
                     { state, quantity, owner -> deriveState(state, quantity, owner) },

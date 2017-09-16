@@ -483,7 +483,7 @@ class CashTests : TestDependencyInjectionBase() {
     private fun makeSpend(amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
-            Cash.generateSpend(miniCorpServices, tx, amount, dest)
+            Cash.generateSpend(miniCorpServices, tx, amount, MINI_CORP_IDENTITY, dest)
         }
         return tx.toWireTransaction()
     }
@@ -586,7 +586,7 @@ class CashTests : TestDependencyInjectionBase() {
         database.transaction {
 
             val tx = TransactionBuilder(DUMMY_NOTARY)
-            Cash.generateSpend(miniCorpServices, tx, 80.DOLLARS, ALICE, setOf(MINI_CORP))
+            Cash.generateSpend(miniCorpServices, tx, 80.DOLLARS, MINI_CORP_IDENTITY, ALICE, setOf(MINI_CORP))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -802,7 +802,7 @@ class CashTests : TestDependencyInjectionBase() {
                     PartyAndAmount(THEIR_IDENTITY_1, 400.DOLLARS),
                     PartyAndAmount(THEIR_IDENTITY_2, 150.DOLLARS)
             )
-            Cash.generateSpend(miniCorpServices, tx, payments)
+            Cash.generateSpend(miniCorpServices, tx, payments, MINI_CORP_IDENTITY)
         }
         val wtx = tx.toWireTransaction()
         fun out(i: Int) = wtx.getOutput(i) as Cash.State

@@ -6,6 +6,7 @@ import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServiceHub
 import net.corda.core.schemas.MappedSchema
@@ -183,9 +184,9 @@ class CommercialPaper : Contract {
      */
     @Throws(InsufficientBalanceException::class)
     @Suspendable
-    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub) {
+    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub, ourIdentity: PartyAndCertificate) {
         // Add the cash movement using the states in our vault.
-        Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
+        Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), ourIdentity, paper.state.data.owner)
         tx.addInputState(paper)
         tx.addCommand(Commands.Redeem(), paper.state.data.owner.owningKey)
     }

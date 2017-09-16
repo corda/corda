@@ -253,7 +253,7 @@ class CommercialPaperTestsGeneric {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
                 val builder = TransactionBuilder(DUMMY_NOTARY)
-                Cash.generateSpend(aliceServices, builder, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
+                Cash.generateSpend(aliceServices, builder, 9000.DOLLARS, aliceServices.myInfo.chooseIdentityAndCert(), AnonymousParty(bigCorpServices.key.public))
                 CommercialPaper().generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(aliceServices.key.public))
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = bigCorpServices.addSignature(ptx)
@@ -275,7 +275,7 @@ class CommercialPaperTestsGeneric {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
                 val builder = TransactionBuilder(DUMMY_NOTARY)
                 builder.setTimeWindow(time, 30.seconds)
-                CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), bigCorpServices)
+                CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), bigCorpServices, bigCorpServices.myInfo.chooseIdentityAndCert())
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = bigCorpServices.addSignature(ptx)
                 val stx = notaryServices.addSignature(ptx2)
