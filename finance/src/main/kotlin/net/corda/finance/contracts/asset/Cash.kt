@@ -331,7 +331,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             // Generate a new identity that change will be sent to for confidentiality purposes. This means that a
             // third party with a copy of the transaction (such as the notary) cannot identify who the change was
             // sent to
-            val changeIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, revocationEnabled)
+            val changeIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentitiesAndCerts.first(), revocationEnabled)
             return OnLedgerAsset.generateSpend(tx, payments, acceptableCoins,
                     changeIdentity.party.anonymise(),
                     { state, quantity, owner -> deriveState(state, quantity, owner) },
