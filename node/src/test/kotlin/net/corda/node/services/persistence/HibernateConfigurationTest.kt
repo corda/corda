@@ -128,7 +128,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     @Test
     fun `consumed states`() {
         database.transaction {
-            services.consumeCash(50.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
         }
 
         // structure query
@@ -207,11 +207,11 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     fun `with sorting by state ref desc and asc`() {
         // generate additional state ref indexes
         database.transaction {
-            services.consumeCash(1.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
-            services.consumeCash(2.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
-            services.consumeCash(3.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
-            services.consumeCash(4.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
-            services.consumeCash(5.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
+            services.consumeCash(1.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(2.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(3.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(4.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(5.DOLLARS, notary = DUMMY_NOTARY)
         }
 
         // structure query
@@ -237,11 +237,11 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     fun `with sorting by state ref index and txId desc and asc`() {
         // generate additional state ref indexes
         database.transaction {
-            services.consumeCash(1.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
-            services.consumeCash(2.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
-            services.consumeCash(3.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
-            services.consumeCash(4.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
-            services.consumeCash(5.DOLLARS, BOB_IDENTITY, notary = DUMMY_NOTARY)
+            services.consumeCash(1.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(2.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(3.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(4.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(5.DOLLARS, notary = DUMMY_NOTARY)
         }
 
         // structure query

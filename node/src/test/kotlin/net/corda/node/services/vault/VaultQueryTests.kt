@@ -47,7 +47,6 @@ import java.util.*
 class VaultQueryTests : TestDependencyInjectionBase() {
 
     lateinit var services: MockServices
-    lateinit var nodeIdentity: PartyAndCertificate
     lateinit var notaryServices: MockServices
     val vaultSvc: VaultService get() = services.vaultService
     val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
@@ -69,7 +68,6 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                                                                   customSchemas = setOf(CashSchemaV1, CommercialPaperSchemaV1, DummyLinearStateSchemaV1))
         database = databaseAndServices.first
         services = databaseAndServices.second
-        nodeIdentity = services.myInfo.chooseIdentityAndCert()
         notaryServices = MockServices(DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
     }
 
@@ -110,7 +108,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.consumeLinearStates(linearStatesXYZ.states.toList(), DUMMY_NOTARY)
             services.consumeLinearStates(linearStatesJKL.states.toList(), DUMMY_NOTARY)
             services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
-            services.consumeCash(50.DOLLARS, nodeIdentity, notary = DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
             // Total unconsumed states = 4 + 3 + 2 + 1 (new cash change) = 10
             // Total consumed states = 6 + 1 + 2 + 1 = 10
@@ -195,7 +193,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
         }
         database.transaction {
-            services.consumeCash(75.DOLLARS, nodeIdentity, notary = DUMMY_NOTARY)
+            services.consumeCash(75.DOLLARS, notary = DUMMY_NOTARY)
         }
         database.transaction {
             val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)
@@ -245,7 +243,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             stateRefs.addAll(issuedStateRefs)
         }
         database.transaction {
-            val spentStates = services.consumeCash(25.DOLLARS, nodeIdentity, notary = DUMMY_NOTARY)
+            val spentStates = services.consumeCash(25.DOLLARS, notary = DUMMY_NOTARY)
             val consumedStateRefs = spentStates.consumed.map { it.ref }.toList()
             val producedStateRefs = spentStates.produced.map { it.ref }.toList()
             stateRefs.addAll(consumedStateRefs.plus(producedStateRefs))
@@ -275,8 +273,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 10, 10, Random(0L))
         }
         database.transaction {
-            services.consumeCash(10.DOLLARS, nodeIdentity, notary = DUMMY_NOTARY).consumed.forEach { consumed += it.ref.txhash }
-            services.consumeCash(10.DOLLARS, nodeIdentity, notary = DUMMY_NOTARY).consumed.forEach { consumed += it.ref.txhash }
+            services.consumeCash(10.DOLLARS, notary = DUMMY_NOTARY).consumed.forEach { consumed += it.ref.txhash }
+            services.consumeCash(10.DOLLARS, notary = DUMMY_NOTARY).consumed.forEach { consumed += it.ref.txhash }
         }
         database.transaction {
             val sortAttributeTxnId = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID)
@@ -346,7 +344,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
             services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
-            services.consumeCash(50.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
         }
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
@@ -371,7 +369,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
         }
         database.transaction {
-            services.consumeCash(75.DOLLARS, nodeIdentity, notary = DUMMY_NOTARY)
+            services.consumeCash(75.DOLLARS, notary = DUMMY_NOTARY)
         }
         database.transaction {
             val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
@@ -391,7 +389,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
             services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
-            services.consumeCash(50.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY) // generates a new change state!
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY) // generates a new change state!
         }
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
@@ -413,7 +411,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(1)
         }
         database.transaction {
-            services.consumeCash(50.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)    // consumed 100 (spent), produced 50 (change)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)    // consumed 100 (spent), produced 50 (change)
         }
         database.transaction {
             val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
@@ -916,7 +914,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                     services.consumeLinearStates(linearStatesXYZ.states.toList(), DUMMY_NOTARY)
                     services.consumeLinearStates(linearStatesJKL.states.toList(), DUMMY_NOTARY)
                     services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
-                    services.consumeCash(50.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+                    services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
                     // UNCONSUMED states (default)
                 }
@@ -987,7 +985,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
         }
         database.transaction {
-            services.consumeCash(100.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
         }
         database.transaction {
             val asOfDateTime = TODAY
@@ -1133,7 +1131,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
         }
         database.transaction {
-            services.consumeCash(50.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
         }
         database.transaction {
             services.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices)
@@ -1164,7 +1162,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
         }
         database.transaction {
-            services.consumeCash(50.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
         }
         // should now have x2 CONSUMED + x2 UNCONSUMED (one spent + one change)
         database.transaction {
@@ -1180,7 +1178,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
         }
         database.transaction {
-            services.consumeCash(50.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
         }
         val linearStates =
                 database.transaction {
@@ -1219,7 +1217,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
             services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
-            services.consumeCash(50.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
         }
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
@@ -2030,7 +2028,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 }
         database.transaction {
             // consume stuff
-            services.consumeCash(100.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
             services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
             services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
         }
@@ -2072,11 +2070,11 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 }
         database.transaction {
             // consume stuff
-            services.consumeCash(100.POUNDS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(100.POUNDS, notary = DUMMY_NOTARY)
         }
         database.transaction {
             // consume more stuff
-            services.consumeCash(100.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
             services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
             services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
         }
@@ -2117,11 +2115,11 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 }
         database.transaction {
             // consume stuff
-            services.consumeCash(99.POUNDS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(99.POUNDS, notary = DUMMY_NOTARY)
         }
         database.transaction {
             // consume more stuff
-            services.consumeCash(100.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
             services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
             services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
         }
@@ -2175,7 +2173,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 }
         database.transaction {
             // consume stuff
-            services.consumeCash(100.DOLLARS, services.myInfo.chooseIdentityAndCert(), notary = DUMMY_NOTARY)
+            services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
             services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
             services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
         }
@@ -2224,7 +2222,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 }
         database.transaction {
             // consume stuff
-            services.consumeCash(100.DOLLARS, nodeIdentity, notary = DUMMY_NOTARY)
+            services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
             services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
             services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
         }
