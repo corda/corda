@@ -1,20 +1,19 @@
 package net.corda.node.cordapp
 
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
-import net.corda.node.internal.cordapp.Cordapp
 import net.corda.node.internal.cordapp.CordappLoader
-import org.junit.Assert
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
-import org.assertj.core.api.Assertions.assertThat
 
 class DummyFlow : FlowLogic<Unit>() {
     override fun call() { }
 }
 
 @InitiatedBy(DummyFlow::class)
-class LoaderTestFlow : FlowLogic<Unit>() {
+class LoaderTestFlow(unusedSession: FlowSession) : FlowLogic<Unit>() {
     override fun call() { }
 }
 
