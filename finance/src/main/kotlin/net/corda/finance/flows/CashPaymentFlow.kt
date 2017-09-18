@@ -61,8 +61,8 @@ open class CashPaymentFlow(
         val tx = serviceHub.signInitialTransaction(spendTX, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
-        val session = initiateFlow(recipient)
-        val notarised = finaliseTx(tx, setOf(session), "Unable to notarise spend")
+        val sessions: Set<FlowSession> = if (serviceHub.myInfo.isLegalIdentity(recipient)) emptySet() else setOf(initiateFlow(recipient))
+        val notarised = finaliseTx(tx, sessions, "Unable to notarise spend")
         return Result(notarised, anonymousRecipient)
     }
 
