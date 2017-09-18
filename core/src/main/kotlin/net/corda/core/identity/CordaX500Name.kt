@@ -9,7 +9,6 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
-import java.security.Principal
 import javax.security.auth.x500.X500Principal
 
 /**
@@ -108,7 +107,11 @@ data class CordaX500Name(val commonName: String?,
         }
 
         @JvmStatic
-        fun parse(name: String) : CordaX500Name = build(X500Principal(name))
+        fun parse(name: String): CordaX500Name = build(X500Principal(name))
+
+        /** For JAX-RS integration only, prefer [parse] in regular code. */
+        @JvmStatic
+        fun valueOf(name: String) = parse(name)
     }
 
     @Transient
