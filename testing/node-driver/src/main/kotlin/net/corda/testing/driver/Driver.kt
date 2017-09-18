@@ -310,6 +310,7 @@ fun <A> driver(
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         networkMapStartStrategy: NetworkMapStartStrategy = defaultParameters.networkMapStartStrategy,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
+        cordappPackagesToScan: List<String> = defaultParameters.cordappPackagesToScan,
         dsl: DriverDSLExposedInterface.() -> A
 ): A {
     return genericDriver(
@@ -319,9 +320,10 @@ fun <A> driver(
                     systemProperties = systemProperties,
                     driverDirectory = driverDirectory.toAbsolutePath(),
                     useTestClock = useTestClock,
+                    isDebug = isDebug,
                     networkMapStartStrategy = networkMapStartStrategy,
                     startNodesInProcess = startNodesInProcess,
-                    isDebug = isDebug
+                    cordappPackagesToScan = cordappPackagesToScan
             ),
             coerce = { it },
             dsl = dsl,
@@ -355,7 +357,8 @@ data class DriverParameters(
         val useTestClock: Boolean = false,
         val initialiseSerialization: Boolean = true,
         val networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
-        val startNodesInProcess: Boolean = false
+        val startNodesInProcess: Boolean = false,
+        val cordappPackagesToScan: List<String> = emptyList()
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -366,6 +369,7 @@ data class DriverParameters(
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setNetworkMapStartStrategy(networkMapStartStrategy: NetworkMapStartStrategy) = copy(networkMapStartStrategy = networkMapStartStrategy)
     fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
+    fun setCordappPackagesToScan(cordappPackagesToScan: List<String>) = copy(cordappPackagesToScan = cordappPackagesToScan)
 }
 
 /**
@@ -579,14 +583,15 @@ class DriverDSL(
         val useTestClock: Boolean,
         val isDebug: Boolean,
         val networkMapStartStrategy: NetworkMapStartStrategy,
-        val startNodesInProcess: Boolean
+        val startNodesInProcess: Boolean,
+        val cordappPackagesToScan: List<String>
 ) : DriverDSLInternalInterface {
     private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
-    private val callerPackage = getCallerPackage()
+    private val packagesToScanString = (cordappPackagesToScan + getCallerPackage()).joinToString(",")
 
     class State {
         val processes = ArrayList<CordaFuture<Process>>()
@@ -786,7 +791,7 @@ class DriverDSL(
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
         // We set this property so that in-process nodes find cordapps. Out-of-process nodes need this passed in when started.
-        System.setProperty("net.corda.node.cordapp.scan.package", callerPackage)
+        System.setProperty("net.corda.node.cordapp.scan.packages", packagesToScanString)
         if (networkMapStartStrategy.startDedicated) {
             startDedicatedNetworkMapService().andForget(log) // Allow it to start concurrently with other nodes.
         }
@@ -840,7 +845,7 @@ class DriverDSL(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, callerPackage)
+            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, packagesToScanString)
             registerProcess(processFuture)
             return processFuture.flatMap { process ->
                 val processDeathFuture = poll(executorService, "process death") {
@@ -914,7 +919,7 @@ class DriverDSL(
                 val systemProperties = overriddenSystemProperties + mapOf(
                         "name" to nodeConf.myLegalName,
                         "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
-                        "net.corda.node.cordapp.scan.package" to callerPackage,
+                        "net.corda.node.cordapp.scan.packages" to callerPackage,
                         "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
                 )
                 // See experimental/quasar-hook/README.md for how to generate.
