@@ -25,7 +25,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.poll
 import java.io.InputStream
 import java.net.HttpURLConnection
@@ -118,7 +117,7 @@ class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: Secu
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
         val ptx = TransactionBuilder(notary)
                 .addOutputState(AttachmentContract.State(hash), ATTACHMENT_PROGRAM_ID)
-                .addCommand(AttachmentContract.Command, serviceHub.myInfo.chooseIdentity().owningKey)
+                .addCommand(AttachmentContract.Command, serviceHub.myInfo.legalIdentities[0].owningKey)
                 .addAttachment(hash)
 
         progressTracker.currentStep = SIGNING
