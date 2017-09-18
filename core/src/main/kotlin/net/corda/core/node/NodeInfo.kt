@@ -18,10 +18,9 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
  * Info about a network node that acts on behalf of some form of contract party.
  */
 // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
-//  Note that order of `legalIdentitiesAndCerts` is now important. We still treat the first identity as a special one.
-//  It will change after introducing proper multi-identity management.
 @CordaSerializable
 data class NodeInfo(val addresses: List<NetworkHostAndPort>,
+                    /** Non-empty list of all the identities, plus certificates, that belong to this node. */
                     val legalIdentitiesAndCerts: List<PartyAndCertificate>,
                     val platformVersion: Int,
                     val advertisedServices: List<ServiceEntry> = emptyList(),
@@ -33,17 +32,16 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
 
     // TODO This part will be removed with services removal.
     val notaryIdentity: Party get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
+
+    @Transient private var _legalIdentities: List<Party>? = null
+    val legalIdentities: List<Party> get() {
+        return _legalIdentities ?: legalIdentitiesAndCerts.map { it.party }.also { _legalIdentities = it }
+    }
+
+    /** Returns true iff [party] is one of the identities of this node. */
+    fun isLegalIdentity(party: Party): Boolean = party in legalIdentities
+
     fun serviceIdentities(type: ServiceType): List<Party> {
         return advertisedServices.mapNotNull { if (it.info.type.isSubTypeOf(type)) it.identity.party else null }
     }
-
-    /**
-     * Uses node's owner X500 name to infer the node's location. Used in Explorer in map view.
-     */
-    fun getWorldMapLocation(): WorldMapLocation? {
-        val nodeOwnerLocation = legalIdentitiesAndCerts.first().name.locality
-        return nodeOwnerLocation.let { CityDatabase[it] }
-    }
-    val legalIdentities: List<Party>
-        get() = legalIdentitiesAndCerts.map { it.party }
 }

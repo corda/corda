@@ -132,9 +132,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue and move`() {
-        val anonymous = false
         val (_, issueIdentity) = rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
-        val (_, paymentIdentity) = rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.chooseIdentity()).returnValue.getOrThrow()
+        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.chooseIdentity()).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
@@ -152,7 +151,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                         require(remove.id == issueSmId)
                     },
                     // MOVE - N.B. There are other framework flows that happen in parallel for the remote resolve transactions flow
-                    expect(match = { it is StateMachineUpdate.Added && it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
+                    expect(match = { it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
                         val initiator = add.stateMachineInfo.initiator
                         require(initiator is FlowInitiator.RPC && initiator.username == "user1")
@@ -167,7 +166,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.Peer && initiator.party.name == aliceNode.chooseIdentity().name)
+                        require(initiator is FlowInitiator.Peer && aliceNode.isLegalIdentity(initiator.party))
                     }
             )
         }

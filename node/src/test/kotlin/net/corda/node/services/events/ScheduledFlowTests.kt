@@ -21,8 +21,8 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.chooseIdentity
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -81,7 +81,7 @@ class ScheduledFlowTests {
             val state = serviceHub.toStateAndRef<ScheduledState>(stateRef)
             val scheduledState = state.state.data
             // Only run flow over states originating on this node
-            if (scheduledState.source != serviceHub.myInfo.chooseIdentity()) {
+            if (!serviceHub.myInfo.isLegalIdentity(scheduledState.source)) {
                 return
             }
             require(!scheduledState.processed) { "State should not have been previously processed" }
@@ -144,7 +144,7 @@ class ScheduledFlowTests {
     fun `run a whole batch of scheduled flows`() {
         val N = 100
         val futures = mutableListOf<CordaFuture<*>>()
-        for (i in 0..N - 1) {
+        for (i in 0 until N) {
             futures.add(nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.chooseIdentity())).resultFuture)
             futures.add(nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.chooseIdentity())).resultFuture)
         }
