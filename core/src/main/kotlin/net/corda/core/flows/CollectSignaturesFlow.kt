@@ -57,14 +57,16 @@ import java.security.PublicKey
  *     val stx = subFlow(CollectSignaturesFlow(ptx))
  *
  * @param partiallySignedTx Transaction to collect the remaining signatures for
+ * @param sessionsToCollectFrom A session for every party we need to collect a signature from.  Must be an exact match.
  * @param myOptionalKeys set of keys in the transaction which are owned by this node. This includes keys used on commands, not
  * just in the states. If null, the default well known identity of the node is used.
  */
 // TODO: AbstractStateReplacementFlow needs updating to use this flow.
 class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: SignedTransaction,
+                                                       val sessionsToCollectFrom: Collection<FlowSession>,
                                                        val myOptionalKeys: Iterable<PublicKey>?,
                                                        override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
-    @JvmOverloads constructor(partiallySignedTx: SignedTransaction, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, null, progressTracker)
+    @JvmOverloads constructor(partiallySignedTx: SignedTransaction, sessionsToCollectFrom: Collection<FlowSession>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, sessionsToCollectFrom, null, progressTracker)
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counter-parties.")
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")
@@ -102,8 +104,13 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         // If the unsigned counter-parties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
+        val keysToParties = keysToParties(unsigned)
+        // Check that we have a session for all parties.  No more, no less.
+        require(sessionsToCollectFrom.map { it.counterparty }.toSet() == keysToParties.toMap().keys) {
+            "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
+        }
         // Collect signatures from all counter-parties and append them to the partially signed transaction.
-        val counterpartySignatures = keysToParties(unsigned).map { (party, signingKey) ->
+        val counterpartySignatures = keysToParties.map { (party, signingKey) ->
             val session = initiateFlow(party)
             subFlow(CollectSignatureFlow(partiallySignedTx, session, signingKey))
         }
@@ -168,15 +175,15 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  * - Subclass [SignTransactionFlow] - this can be done inside an existing flow (as shown below)
  * - Override the [checkTransaction] method to add some custom verification logic
  * - Call the flow via [FlowLogic.subFlow]
- * - The flow returns the fully signed transaction once it has been committed to the ledger
+ * - The flow returns the transaction signed with the additional signature.
  *
  * Example - checking and signing a transaction involving a [net.corda.core.contracts.DummyContract], see
  * CollectSignaturesFlowTests.kt for further examples:
  *
- *     class Responder(val otherParty: Party): FlowLogic<SignedTransaction>() {
+ *     class Responder(val otherPartySession: FlowSession): FlowLogic<SignedTransaction>() {
  *          @Suspendable override fun call(): SignedTransaction {
  *              // [SignTransactionFlow] sub-classed as a singleton object.
- *              val flow = object : SignTransactionFlow(otherParty) {
+ *              val flow = object : SignTransactionFlow(otherPartySession) {
  *                  @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {
  *                      val tx = stx.tx
  *                      val magicNumberState = tx.outputs.single().data as DummyContract.MultiOwnerState
@@ -236,8 +243,8 @@ abstract class SignTransactionFlow(val initiatingSession: FlowSession,
         val mySignature = serviceHub.createSignature(stx, signingKey)
         initiatingSession.send(mySignature)
 
-        // Return the fully signed transaction once it has been committed.
-        return waitForLedgerCommit(stx.id)
+        // Return the additionally signed transaction.
+        return stx + mySignature
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {

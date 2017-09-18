@@ -116,7 +116,7 @@ class CollectSignaturesFlowTests {
                         .mapNotNull { serviceHub.identityService.partyFromAnonymous(it) }
                         .toSet()
                         .mapNotNull { if (serviceHub.myInfo.isLegalIdentity(it)) null else initiateFlow(it) }
-                val stx = subFlow(CollectSignaturesFlow(ptx, myInputKeys))
+                val stx = subFlow(CollectSignaturesFlow(ptx, sessions, myInputKeys))
                 return subFlow(FinalityFlow(stx, sessions))
             }
         }
@@ -166,7 +166,7 @@ class CollectSignaturesFlowTests {
     fun `no need to collect any signatures`() {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, a.info.chooseIdentity().ref(1))
         val ptx = a.services.signInitialTransaction(onePartyDummyContract)
-        val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
+        val flow = a.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
         result.verifyRequiredSignatures()
@@ -179,7 +179,7 @@ class CollectSignaturesFlowTests {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, a.info.chooseIdentity().ref(1))
         val miniCorpServices = MockServices(MINI_CORP_KEY)
         val ptx = miniCorpServices.signInitialTransaction(onePartyDummyContract)
-        val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
+        val flow = a.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException>("The Initiator of CollectSignaturesFlow must have signed the transaction.") {
             flow.resultFuture.getOrThrow()
@@ -194,7 +194,7 @@ class CollectSignaturesFlowTests {
                 b.info.chooseIdentity().ref(3))
         val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)
         val signedByBoth = b.services.addSignature(signedByA)
-        val flow = a.services.startFlow(CollectSignaturesFlow(signedByBoth))
+        val flow = a.services.startFlow(CollectSignaturesFlow(signedByBoth, emptySet()))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
         println(result.tx)

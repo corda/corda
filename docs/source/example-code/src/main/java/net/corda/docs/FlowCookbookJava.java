@@ -29,6 +29,7 @@ import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 
 import static java.util.Collections.singleton;
@@ -483,7 +484,7 @@ public class FlowCookbookJava {
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()));
+            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, Collections.emptySet(), SIGS_GATHERING.childProgressTracker()));
             // DOCEND 15
 
             /*------------------------
