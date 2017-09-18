@@ -28,8 +28,10 @@ import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
+import net.corda.core.node.CityDatabase
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ScreenCoordinate
+import net.corda.core.node.WorldMapLocation
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
@@ -39,10 +41,10 @@ class Network : CordaView() {
     override val root by fxml<Parent>()
     override val icon = FontAwesomeIcon.GLOBE
     // Inject data.
-    val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
-    val notaries by observableList(NetworkIdentityModel::notaries)
-    val peers by observableList(NetworkIdentityModel::parties)
-    val transactions by observableList(TransactionDataModel::partiallyResolvedTransactions)
+    private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
+    private val notaries by observableList(NetworkIdentityModel::notaries)
+    private val peers by observableList(NetworkIdentityModel::parties)
+    private val transactions by observableList(TransactionDataModel::partiallyResolvedTransactions)
     var centralPeer: String? = null
     private var centralLabel: ObservableValue<Label?>
 
@@ -215,8 +217,8 @@ class Network : CordaView() {
     private fun List<ContractState>.getParties() = map { it.participants.map { it.owningKey.toKnownParty() } }.flatten()
 
     private fun fireBulletBetweenNodes(senderParty: Party, destParty: Party, startType: String, endType: String) {
-        val senderNode = allComponents.firstOrNull { senderParty in it.nodeInfo.legalIdentities } ?: return
-        val destNode = allComponents.firstOrNull { destParty in it.nodeInfo.legalIdentities } ?: return
+        val senderNode = allComponents.firstOrNull { it.nodeInfo.isLegalIdentity(senderParty) } ?: return
+        val destNode = allComponents.firstOrNull { it.nodeInfo.isLegalIdentity(destParty) } ?: return
         val sender = senderNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
         val receiver = destNode.label.boundsInParentProperty().map { Point2D(it.width / 2 + it.minX, it.height / 4 - 2.5 + it.minY) }
         val bullet = Circle(3.0)
@@ -253,5 +255,9 @@ class Network : CordaView() {
         }
         mapPane.children.add(1, line)
         mapPane.children.add(bullet)
+    }
+
+    private fun NodeInfo.getWorldMapLocation(): WorldMapLocation? {
+        return CityDatabase[legalIdentitiesAndCerts[0].name.locality]
     }
 }
