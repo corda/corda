@@ -30,6 +30,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.flows.CashReceiveFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.network.NetworkMapService
@@ -333,6 +334,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `different notaries are picked when addressing shared notary identity`() {
+        node2.registerInitiatedFlow(CashReceiveFlow::class.java)
         assertEquals(notary1.info.notaryIdentity, notary2.info.notaryIdentity)
         node1.services.startFlow(CashIssueFlow(
                 2000.DOLLARS,
@@ -604,7 +606,7 @@ class FlowFrameworkTests {
                 .addCommand(dummyCommand(node1.info.chooseIdentity().owningKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
-        val committerFiber = node1.registerFlowFactoryExpectingFlowSession(WaitingFlows.Waiter::class) {
+        val committerFiber = node1.registerFlowFactoryExpectingFlowSession(WaitingFlows.Receiver::class) {
             WaitingFlows.Committer(it)
         }.map { it.stateMachine }
         val waiterStx = node2.services.startFlow(WaitingFlows.Waiter(stx)).resultFuture
@@ -1018,7 +1020,7 @@ class FlowFrameworkTests {
             // hold onto reference here to force checkpoint of vaultQueryService and thus
             // prove it is registered as a tokenizableService in the node
             val vaultQuerySvc = serviceHub.vaultQueryService
-            waitForLedgerCommit(stx.id)
+            subFlow(ReceiveTransactionFlow(otherPartySession))
             return vaultQuerySvc.queryBy<ContractState>().states
         }
     }
