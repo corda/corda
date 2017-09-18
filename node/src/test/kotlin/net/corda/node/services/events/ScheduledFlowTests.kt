@@ -125,6 +125,10 @@ class ScheduledFlowTests {
         notaryNode.internals.ensureRegistered()
 
         mockNet.startNodes()
+        a.registerInitiatedFlow(ReceiveScheduledFlow::class.java)
+        a.registerInitiatedFlow(RecordInitialStateFlow::class.java)
+        b.registerInitiatedFlow(ReceiveScheduledFlow::class.java)
+        b.registerInitiatedFlow(RecordInitialStateFlow::class.java)
         nodeA = a.started!!
         nodeB = b.started!!
     }
