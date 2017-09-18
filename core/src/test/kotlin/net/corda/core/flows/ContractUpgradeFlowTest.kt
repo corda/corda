@@ -45,6 +45,8 @@ class ContractUpgradeFlowTest {
         val nodes = mockNet.createSomeNodes(notaryKeyPair = null) // prevent generation of notary override
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
+        a.registerInitiatedFlow(ReceiveFinalisedTxFlow::class.java)
+        b.registerInitiatedFlow(ReceiveFinalisedTxFlow::class.java)
 
         // Process registration
         mockNet.runNetwork()
@@ -257,12 +259,13 @@ class ContractUpgradeFlowTest {
                           private val recipients: Collection<Party>) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            return subFlow(FinalityFlow(transaction, recipients.map { initiateFlow(it) }))
+            val sessions = recipients.map { initiateFlow(it) }
+            return subFlow(FinalityFlow(transaction, sessions))
         }
     }
 
     @InitiatedBy(FinalityInvoker::class)
-    class ReceiveTxFlow(private val source: FlowSession) : FlowLogic<Unit>() {
+    class ReceiveFinalisedTxFlow(private val source: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             subFlow(ReceiveTransactionFlow(source))
