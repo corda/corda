@@ -94,31 +94,29 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         serviceHub.database.transaction { loadFromDB() }
     }
 
-
     private fun loadFromFiles() {
         logger.info("Loading network map from files..")
         val configuration = serviceHub.configuration
 
         val nodeInfoDirectory = configuration.baseDirectory / NodeInfoSerializer.NODE_INFO_FOLDER
         if (!nodeInfoDirectory.isDirectory()) {
-            logger.info("{$nodeInfoDirectory} isn't a Directory, not loading NodeInfo from files")
+            logger.info("$nodeInfoDirectory isn't a Directory, not loading NodeInfo from files")
             return
         }
         var readFiles = 0
         for (file in nodeInfoDirectory.toFile().walk().maxDepth(1)) if (file.isFile) {
             try {
-                logger.info("Reading NodeInfo from file: ${file}")
+                logger.info("Reading NodeInfo from file: $file")
                 val nodeInfo = NodeInfoSerializer.loadFromFile(file)
                 addNode(nodeInfo)
                 readFiles++
             } catch (e: Exception) {
-                logger.error("Exception parsing NodeInfo from file. ${file}: " + e)
+                logger.error("Exception parsing NodeInfo from file. $file: " + e)
                 e.printStackTrace()
             }
         }
-        logger.info("Succesfully read and loaded {$readFiles} NodeInfo files.")
+        logger.info("Succesfully read and loaded $readFiles NodeInfo files.")
     }
-
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = serviceHub.database.transaction { queryByIdentityKey(party.owningKey) }
