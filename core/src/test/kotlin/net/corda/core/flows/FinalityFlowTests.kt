@@ -1,12 +1,13 @@
 package net.corda.core.flows
 
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.identity.Party
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.GBP
+import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.issuedBy
 import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
@@ -41,11 +42,13 @@ class FinalityFlowTests {
 
     @Test
     fun `finalise a simple transaction`() {
-        val amount = Amount(1000, Issued(nodeA.info.chooseIdentity().ref(0), GBP))
+        nodeB.registerInitiatedFlow(RecordTx::class.java)
+        val amount = 1000.POUNDS.issuedBy(nodeA.info.chooseIdentity().ref(0))
+        val bIdentity = nodeB.info.chooseIdentity()
         val builder = TransactionBuilder(notary)
-        Cash().generateIssue(builder, amount, nodeB.info.chooseIdentity(), notary)
+        Cash().generateIssue(builder, amount, bIdentity, notary)
         val stx = nodeA.services.signInitialTransaction(builder)
-        val flow = nodeA.services.startFlow(FinalityFlow(stx, emptySet()))
+        val flow = nodeA.services.startFlow(Finaliser(stx, bIdentity))
         mockNet.runNetwork()
         val notarisedTx = flow.resultFuture.getOrThrow()
         notarisedTx.verifyRequiredSignatures()
@@ -53,5 +56,19 @@ class FinalityFlowTests {
             nodeB.services.validatedTransactions.getTransaction(notarisedTx.id)
         }
         assertEquals(notarisedTx, transactionSeenByB)
+    }
+
+    @InitiatingFlow
+    private class Finaliser(private val stx: SignedTransaction, private val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction = subFlow(FinalityFlow(stx, initiateFlow(otherParty)))
+    }
+
+    @InitiatedBy(Finaliser::class)
+    private class RecordTx(private val source: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveTransactionFlow(source))
+        }
     }
 }
