@@ -268,7 +268,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 
     companion object {
         /**
-         * Generate a transaction that moves an amount of currency to the given pubkey.
+         * Generate a transaction that moves an amount of currency to the given party.
          *
          * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
          *
@@ -276,7 +276,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
          *           to move the cash will be added on top.
          * @param amount How much currency to send.
-         * @param to a key of the recipient.
+         * @param to the recipient party.
          * @param ourIdentity well known identity to create a new confidential identity from, for sending change to.
          * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
          *                        of given parties. This can be useful if the party you're trying to pay has expectations
@@ -299,15 +299,14 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         }
 
         /**
-         * Generate a transaction that moves an amount of currency to the given pubkey.
+         * Generate a transaction that moves money of the given amounts to the recipients specified.
          *
          * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
          *
          * @param services The [ServiceHub] to provide access to the database session.
          * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
          *           to move the cash will be added on top.
-         * @param amount How much currency to send.
-         * @param to a key of the recipient.
+         * @param payments A list of amounts to pay, and the party to send the payment to.
          * @param ourIdentity well known identity to create a new confidential identity from, for sending change to.
          * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
          *                        of given parties. This can be useful if the party you're trying to pay has expectations
