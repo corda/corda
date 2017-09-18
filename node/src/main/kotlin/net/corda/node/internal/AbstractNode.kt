@@ -4,6 +4,8 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
+import net.corda.confidential.SwapIdentitiesFlow
+import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.*
 import net.corda.core.flows.*
@@ -35,7 +37,6 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProvider
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
-import net.corda.node.services.SwapIdentitiesHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate

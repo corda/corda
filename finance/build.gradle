@@ -14,6 +14,7 @@ dependencies {
     // Note the :finance module is a CorDapp in its own right
     // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
     cordaCompile project(':core')
+    cordaCompile project(':confidential-identities')
 
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
