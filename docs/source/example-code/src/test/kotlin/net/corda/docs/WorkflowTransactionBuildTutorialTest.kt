@@ -44,6 +44,7 @@ class WorkflowTransactionBuildTutorialTest {
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeA.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)
+        nodeB.internals.registerInitiatedFlow(ReceiveTradeApprovalFlow::class.java)
     }
 
     @After
