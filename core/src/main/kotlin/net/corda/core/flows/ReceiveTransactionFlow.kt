@@ -10,7 +10,7 @@ import java.security.SignatureException
 /**
  * The [ReceiveTransactionFlow] should be called in response to the [SendTransactionFlow].
  *
- * This flow is a combination of [receive], resolve and [SignedTransaction.verify]. This flow will receive the [SignedTransaction]
+ * This flow is a combination of [FlowSession.receive], resolve and [SignedTransaction.verify]. This flow will receive the [SignedTransaction]
  * and perform the resolution back-and-forth required to check the dependencies and download any missing attachments.
  * The flow will return the [SignedTransaction] after it is resolved and then verified using [SignedTransaction.verify].
  */
@@ -38,7 +38,7 @@ class ReceiveTransactionFlow(private val otherSideSession: FlowSession,
 /**
  * The [ReceiveStateAndRefFlow] should be called in response to the [SendStateAndRefFlow].
  *
- * This flow is a combination of [receive] and resolve. This flow will receive a list of [StateAndRef]
+ * This flow is a combination of [FlowSession.receive] and resolve. This flow will receive a list of [StateAndRef]
  * and perform the resolution back-and-forth required to check the dependencies.
  * The flow will return the list of [StateAndRef] after it is resolved.
  */

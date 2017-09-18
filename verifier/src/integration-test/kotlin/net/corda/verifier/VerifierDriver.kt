@@ -76,7 +76,7 @@ fun <A> verifierDriver(
         useTestClock: Boolean = false,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
         startNodesInProcess: Boolean = false,
-        cordappPackagesToScan: List<String> = emptyList(),
+        extraCordappPackagesToScan: List<String> = emptyList(),
         dsl: VerifierExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -89,7 +89,7 @@ fun <A> verifierDriver(
                         networkMapStartStrategy = networkMapStartStrategy,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
-                        cordappPackagesToScan = cordappPackagesToScan
+                        extraCordappPackagesToScan = extraCordappPackagesToScan
                 )
         ),
         coerce = { it },
