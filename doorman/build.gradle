@@ -21,6 +21,29 @@ repositories {
     }
 }
 
+configurations{
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets{
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
 task buildDoormanJAR(type: FatCapsule, dependsOn: 'jar') {
     group = 'build'
     applicationClass 'com.r3.corda.doorman.MainKt'
@@ -44,6 +67,7 @@ dependencies {
     compile "net.corda:corda-node:$corda_dependency_version"
     compile "net.corda:corda-node-api:$corda_dependency_version"
     testCompile "net.corda:corda-test-utils:$corda_dependency_version"
+    testCompile "net.corda:corda-node-driver:$corda_dependency_version"
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
