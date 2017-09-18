@@ -2,8 +2,8 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -40,7 +40,7 @@ class SwapIdentitiesFlow(val otherSide: Party,
 
         // Special case that if we're both parties, a single identity is generated
         val identities = LinkedHashMap<Party, AnonymousParty>()
-        if (otherSide in serviceHub.myInfo.legalIdentities) {
+        if (serviceHub.myInfo.isLegalIdentity(otherSide)) {
             identities.put(otherSide, legalIdentityAnonymous.party.anonymise())
         } else {
             val anonymousOtherSide = sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->

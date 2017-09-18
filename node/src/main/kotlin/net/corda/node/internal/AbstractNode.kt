@@ -575,7 +575,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate, clientCa?.certificate?.cert)
                 .filterNotNull()
                 .toTypedArray()
-        val service = PersistentIdentityService(info.legalIdentitiesAndCerts.toSet(), trustRoot = trustRoot, caCertificates = *caCertificates)
+        val service = PersistentIdentityService(info.legalIdentitiesAndCerts, trustRoot = trustRoot, caCertificates = *caCertificates)
         services.networkMapCache.partyNodes.forEach { it.legalIdentitiesAndCerts.forEach { service.verifyAndRegisterIdentity(it) } }
         services.networkMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
