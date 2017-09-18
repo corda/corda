@@ -731,9 +731,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
         }
 
-        override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate?): FlowStateMachineImpl<T> {
-            check(me == null || me in myInfo.legalIdentitiesAndCerts) { "Attempt to start a flow with legal identity not belonging to this node." }
-            return serverThread.fetchFrom { smm.add(logic, flowInitiator, me) }
+        override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party?): FlowStateMachineImpl<T> {
+            return serverThread.fetchFrom { smm.add(logic, flowInitiator, ourIdentity) }
         }
 
         override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {

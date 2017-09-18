@@ -17,12 +17,12 @@ import java.time.LocalDate
 object SimmRevaluation {
     @StartableByRPC
     @SchedulableFlow
-    class Initiator(val curStateRef: StateRef, val valuationDate: LocalDate) : FlowLogic<Unit>() {
+    class Initiator(private val curStateRef: StateRef, private val valuationDate: LocalDate) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call(): Unit {
+        override fun call() {
             val stateAndRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(VaultQueryCriteria(stateRefs = listOf(curStateRef))).states.single()
             val curState = stateAndRef.state.data
-            if (ourIdentity.party == curState.participants[0]) {
+            if (ourIdentity == curState.participants[0]) {
                 val otherParty = serviceHub.identityService.partyFromAnonymous(curState.participants[1])
                 require(otherParty != null) { "Other party must be known by this node" }
                 subFlow(SimmFlow.Requester(otherParty!!, valuationDate, stateAndRef))

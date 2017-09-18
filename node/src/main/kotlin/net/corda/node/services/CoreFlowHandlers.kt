@@ -1,16 +1,12 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.flows.AbstractStateReplacementFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.unwrap
 
 // TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
 //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
@@ -32,7 +28,7 @@ class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Accep
      * and is also in a geographically convenient location we can just automatically approve the change.
      * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
      */
-    override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
+    override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Party>) {
         val state = proposal.stateRef
         val proposedTx = stx.resolveNotaryChangeTransaction(serviceHub)
         val newNotary = proposal.modification

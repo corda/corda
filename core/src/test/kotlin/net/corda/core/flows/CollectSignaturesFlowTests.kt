@@ -12,10 +12,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.StartedNode
 import net.corda.testing.MINI_CORP_KEY
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
-import net.corda.testing.contracts.DummyContract
 import net.corda.testing.chooseIdentity
 import net.corda.testing.chooseIdentityAndCert
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import org.junit.After
@@ -77,9 +77,7 @@ class CollectSignaturesFlowTests {
                 }
 
                 val stx = subFlow(flow)
-                val ftx = waitForLedgerCommit(stx.id)
-
-                return ftx
+                return waitForLedgerCommit(stx.id)
             }
         }
 
@@ -91,14 +89,12 @@ class CollectSignaturesFlowTests {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
                 val myInputKeys = state.participants.map { it.owningKey }
-                val myKeys = myInputKeys + (identities[serviceHub.myInfo.chooseIdentity()] ?: serviceHub.myInfo.chooseIdentity()).owningKey
+                val myKeys = myInputKeys + (identities[ourIdentity] ?: ourIdentity).owningKey
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx, myKeys))
-                val ftx = subFlow(FinalityFlow(stx)).single()
-
-                return ftx
+                return subFlow(FinalityFlow(stx)).single()
             }
         }
     }
@@ -117,9 +113,7 @@ class CollectSignaturesFlowTests {
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx, myInputKeys))
-                val ftx = subFlow(FinalityFlow(stx)).single()
-
-                return ftx
+                return subFlow(FinalityFlow(stx)).single()
             }
         }
 

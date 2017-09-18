@@ -50,5 +50,5 @@ interface FlowStateMachine<R> {
     val id: StateMachineRunId
     val resultFuture: CordaFuture<R>
     val flowInitiator: FlowInitiator
-    val ourIdentity: PartyAndCertificate
+    val ourIdentityAndCert: PartyAndCertificate
 }

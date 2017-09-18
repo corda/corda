@@ -1,10 +1,6 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.OwnableState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.withoutIssuer
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -103,7 +99,9 @@ object TwoPartyTradeFlow {
                     val states: Iterable<ContractState> = (stx.tx.inputs.map { serviceHub.loadState(it).data } + stx.tx.outputs.map { it.data })
                     states.forEach { state ->
                         state.participants.forEach { anon ->
-                            require(serviceHub.identityService.partyFromAnonymous(anon) != null) { "Transaction state ${state} involves unknown participant ${anon}" }
+                            require(serviceHub.identityService.partyFromAnonymous(anon) != null) {
+                                "Transaction state $state involves unknown participant $anon"
+                            }
                         }
                     }
 
@@ -129,12 +127,13 @@ object TwoPartyTradeFlow {
         // express flow state machines on top of the messaging layer.
     }
 
-    open class Buyer(val otherParty: Party,
-                     val notary: Party,
-                     val acceptablePrice: Amount<Currency>,
-                     val typeToBuy: Class<out OwnableState>,
-                     val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
-        constructor(otherParty: Party, notary: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>): this(otherParty, notary, acceptablePrice, typeToBuy, true)
+    open class Buyer(private val otherParty: Party,
+                     private val notary: Party,
+                     private val acceptablePrice: Amount<Currency>,
+                     private val typeToBuy: Class<out OwnableState>,
+                     private val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
+        constructor(otherParty: Party, notary: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>) :
+                this(otherParty, notary, acceptablePrice, typeToBuy, true)
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
 
@@ -161,9 +160,9 @@ object TwoPartyTradeFlow {
 
             // Create the identity we'll be paying to, and send the counterparty proof we own the identity
             val buyerAnonymousIdentity = if (anonymous)
-                serviceHub.keyManagementService.freshKeyAndCert(ourIdentity, false)
+                serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
             else
-                ourIdentity
+                ourIdentityAndCert
             // Put together a proposed transaction that performs the trade, and sign it.
             progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(assetForSale, tradeRequest, buyerAnonymousIdentity)
