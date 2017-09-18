@@ -396,7 +396,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 services, this)
         makeNetworkServices(tokenizableServices)
         System.getProperty("corda.NodeInfoQuit")?.let {
-            NodeInfoSerializer.saveToFile(this)
+            NodeInfoSerializer.saveToFile(configuration.baseDirectory, info, services.keyManagementService)
             log.info("Peacefully quitting after having written my NodeInfo to disk")
             System.exit(0)
         }

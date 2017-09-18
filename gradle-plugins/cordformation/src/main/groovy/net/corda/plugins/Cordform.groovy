@@ -159,7 +159,7 @@ class Cordform extends DefaultTask {
                     .directory(fullNodePath(node).toFile())
                     .redirectErrorStream(true)
                     .start()
-            process.inputStream.eachLine {println it}
+                    .waitFor()
         }
         for (source in nodes) {
             for (destination in nodes) if (source.nodeDir != destination.nodeDir) {

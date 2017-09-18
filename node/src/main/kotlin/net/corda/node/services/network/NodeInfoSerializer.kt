@@ -23,18 +23,14 @@ object NodeInfoSerializer {
         return signedData.verified()
     }
 
-    fun saveToFile(path: Path, nodeInfo: NodeInfo, keyManager: KeyManagementService, publicKey: PublicKey) {
+    fun saveToFile(path: Path, nodeInfo: NodeInfo, keyManager: KeyManagementService) {
         path.toFile().mkdirs()
         val sb: SerializedBytes<NodeInfo> = nodeInfo.serialize()
-        val regSig = keyManager.sign(sb.bytes, publicKey)
+        val regSig = keyManager.sign(sb.bytes, nodeInfo.legalIdentities.first().owningKey)
         val sd: SignedData<NodeInfo> = SignedData(sb, regSig)
         //nodeInfo.
         val file: File = (path / ("nodeInfo-" + sd.hashCode().toString())).toFile()
         file.writeBytes(sd.serialize().bytes)
     }
 
-    fun saveToFile(node: AbstractNode) {
-        saveToFile(node.configuration.baseDirectory, node.info,
-                node.services.keyManagementService, node.services.legalIdentityKey)
-    }
 }
