@@ -22,6 +22,7 @@ import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
+import net.corda.finance.contracts.generateSpend
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
@@ -517,7 +518,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         database.transaction {
             val moveTx = TransactionBuilder(services.myInfo.chooseIdentity()).apply {
-                Cash.generateSpend(services, this, Amount(1000, GBP), services.myInfo.chooseIdentityAndCert(), thirdPartyIdentity)
+                generateSpend(services, this, Amount(1000, GBP), thirdPartyIdentity)
             }.toWireTransaction()
             service.notify(moveTx)
         }
@@ -562,7 +563,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         // Move cash
         val moveTx = database.transaction {
             TransactionBuilder(newNotary).apply {
-                Cash.generateSpend(services, this, Amount(1000, GBP), services.myInfo.chooseIdentityAndCert(), thirdPartyIdentity)
+                generateSpend(services, this, Amount(1000, GBP), thirdPartyIdentity)
             }.toWireTransaction()
         }
 

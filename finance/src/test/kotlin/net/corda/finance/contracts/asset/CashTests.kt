@@ -12,6 +12,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.*
+import net.corda.finance.contracts.generateSpend
 import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashBy
 import net.corda.finance.utils.sumCashOrNull
@@ -483,7 +484,7 @@ class CashTests : TestDependencyInjectionBase() {
     private fun makeSpend(amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
-            Cash.generateSpend(miniCorpServices, tx, amount, MINI_CORP_IDENTITY, dest)
+            generateSpend(miniCorpServices, tx, amount, dest)
         }
         return tx.toWireTransaction()
     }
@@ -802,7 +803,7 @@ class CashTests : TestDependencyInjectionBase() {
                     PartyAndAmount(THEIR_IDENTITY_1, 400.DOLLARS),
                     PartyAndAmount(THEIR_IDENTITY_2, 150.DOLLARS)
             )
-            Cash.generateSpend(miniCorpServices, tx, payments, MINI_CORP_IDENTITY)
+            generateSpend(miniCorpServices, tx, payments)
         }
         val wtx = tx.toWireTransaction()
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
