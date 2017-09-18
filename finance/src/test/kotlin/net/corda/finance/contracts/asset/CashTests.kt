@@ -676,6 +676,12 @@ class CashTests : TestDependencyInjectionBase() {
         }
     }
 
+    // TODO: Once multiple hosted identities on a node are ready, we should have a test case for a node with multiple
+    //       identities. Need to verify that:
+    //
+    // * Change is send to a confidential identity derived from the correct well known identity
+    // * The change shows up correctly in the vault / in the correct vault / whatever design is implemented
+
     /**
      * Confirm that aggregation of states is correctly modelled.
      */
