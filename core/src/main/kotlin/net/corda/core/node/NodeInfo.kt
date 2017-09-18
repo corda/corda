@@ -38,7 +38,7 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
         return _legalIdentities ?: legalIdentitiesAndCerts.map { it.party }.also { _legalIdentities = it }
     }
 
-    /** Returns true iff [party] is one of the identities of this node. */
+    /** Returns true if [party] is one of the identities of this node, else false. */
     fun isLegalIdentity(party: Party): Boolean = party in legalIdentities
 
     fun serviceIdentities(type: ServiceType): List<Party> {
