@@ -44,7 +44,7 @@ class CashIssueFlow(private val amount: Amount<Currency>,
         progressTracker.currentStep = FINALISING_TX
         // There is no one to send the tx to as we're the only participants
         val notarised = finaliseTx(tx, emptySet(), "Unable to notarise issue")
-        return Result(notarised, ourIdentity.party)
+        return Result(notarised, ourIdentity)
     }
 
     @CordaSerializable

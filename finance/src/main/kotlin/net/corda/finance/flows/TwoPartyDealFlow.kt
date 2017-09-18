@@ -1,12 +1,10 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.CollectSignaturesFlow
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.SignTransactionFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
@@ -17,6 +15,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
+import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.DealState
 import java.security.PublicKey
 

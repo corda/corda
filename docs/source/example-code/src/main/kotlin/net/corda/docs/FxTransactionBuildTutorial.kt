@@ -98,12 +98,12 @@ class ForeignExchangeFlow(private val tradeId: String,
         // Specifically we own the assets we wish to sell.
         // Also prepare the other side query
         val (localRequest, remoteRequest) = if (weAreBaseCurrencySeller) {
-            val local = FxRequest(tradeId, baseCurrencyAmount, ourIdentity.party, counterparty)
-            val remote = FxRequest(tradeId, quoteCurrencyAmount, counterparty, ourIdentity.party)
+            val local = FxRequest(tradeId, baseCurrencyAmount, ourIdentity, counterparty)
+            val remote = FxRequest(tradeId, quoteCurrencyAmount, counterparty, ourIdentity)
             Pair(local, remote)
         } else {
-            val local = FxRequest(tradeId, quoteCurrencyAmount, ourIdentity.party, counterparty)
-            val remote = FxRequest(tradeId, baseCurrencyAmount, counterparty, ourIdentity.party)
+            val local = FxRequest(tradeId, quoteCurrencyAmount, ourIdentity, counterparty)
+            val remote = FxRequest(tradeId, baseCurrencyAmount, counterparty, ourIdentity)
             Pair(local, remote)
         }
 
