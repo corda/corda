@@ -7,7 +7,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDateTime
 import java.util.*
 import javax.ws.rs.*
@@ -17,11 +16,6 @@ import javax.ws.rs.core.Response
 // API is accessible from /api/bank. All paths specified below are relative to it.
 @Path("bank")
 class BankOfCordaWebApi(val rpc: CordaRPCOps) {
-    data class IssueRequestParams(val amount: Long, val currency: String,
-                                  val issueToPartyName: X500Name, val issuerBankPartyRef: String,
-                                  val issuerBankName: X500Name,
-                                  val notaryName: X500Name,
-                                  val anonymous: Boolean)
 
     private companion object {
         val logger = loggerFor<BankOfCordaWebApi>()
@@ -40,10 +34,10 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     @POST
     @Path("issue-asset-request")
     @Consumes(MediaType.APPLICATION_JSON)
-    fun issueAssetRequest(params: IssueRequestParams): Response {
+    fun issueAssetRequest(params: IssueAndPaymentRequest): Response {
         // Resolve parties via RPC
-        val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)
-                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issueToPartyName} in identity service").build()
+        val issueToParty = rpc.partyFromX500Name(params.payToPartyName)
+                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.payToPartyName} in identity service").build()
         rpc.partyFromX500Name(params.issuerBankName) ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issuerBankName} in identity service").build()
         val notaryParty = rpc.partyFromX500Name(params.notaryName)
                 ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.notaryName} in identity service").build()

@@ -1,7 +1,7 @@
 package net.corda.bank
 
 import net.corda.bank.api.BankOfCordaClientApi
-import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
+import net.corda.bank.api.IssueAndPaymentRequestParams
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
@@ -21,7 +21,7 @@ class BankOfCordaHttpAPITest {
             ).transpose().getOrThrow()
             val anonymous = false
             val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow().listenAddress
-            assertTrue(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", BOC.name, BOC.name, anonymous)))
+            assertTrue(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssueAndPayment(IssueAndPaymentRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", BOC.name, BOC.name, anonymous)))
         }, isDebug = true)
     }
 }

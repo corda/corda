@@ -69,6 +69,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
                 ['username'   : "bankUser",
                  'password'   : "test",
                  'permissions': ["StartFlow.net.corda.finance.flows.CashPaymentFlow",
+                                 "StartFlow.net.corda.finance.flows.CashIssueFlow",
                                  "StartFlow.net.corda.finance.flows.CashExitFlow",
                                  "StartFlow.net.corda.finance.flows.CashIssueAndPaymentFlow"]]
         ]
@@ -125,16 +126,38 @@ task runRPCCashIssue(type: JavaExec) {
     args '--role'
     args 'ISSUE_CASH_RPC'
     args '--quantity'
+    args 25000
+    args '--currency'
+    args 'USD'
+}
+
+task runRPCCashIssueAndPay(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.bank.BankOfCordaDriverKt'
+    args '--role'
+    args 'ISSUE_PAY_CASH_RPC'
+    args '--quantity'
     args 20000
     args '--currency'
     args 'USD'
 }
 
-task runWebCashIssue(type: JavaExec) {
+task runRPCCashPay(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.BankOfCordaDriverKt'
     args '--role'
-    args 'ISSUE_CASH_WEB'
+    args 'PAY_CASH_RPC'
+    args '--quantity'
+    args 997
+    args '--currency'
+    args 'USD'
+}
+
+task runWebCashIssueAndPay(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.bank.BankOfCordaDriverKt'
+    args '--role'
+    args 'ISSUE_PAY_CASH_WEB'
     args '--quantity'
     args 30000
     args '--currency'

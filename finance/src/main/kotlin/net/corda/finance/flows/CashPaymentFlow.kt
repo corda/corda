@@ -2,6 +2,8 @@ package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionKeyFlow
@@ -56,9 +58,14 @@ open class CashPaymentFlow(
         } catch (e: InsufficientBalanceException) {
             throw CashException("Insufficient cash for spend: ${e.message}", e)
         }
-
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(spendTX, keysForSigning)
+
+        // This just exists to validate the identity service is working, as part of testing
+        val previousTx = serviceHub.validatedTransactions.getTransaction(tx.inputs.first().txhash)!!
+        val signers = previousTx.tx.commands.flatMap(Command<*>::signers).toSet()
+        val signingParties = signers.map(serviceHub.identityService::partyFromKey).requireNoNulls()
+        require(signers == signingParties.map(Party::owningKey).toSet())
 
         progressTracker.currentStep = FINALISING_TX
         finaliseTx(setOf(recipient), tx, "Unable to notarise spend")

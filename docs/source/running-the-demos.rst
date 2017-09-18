@@ -177,16 +177,16 @@ To run from the command line in Unix:
 
 1. Run ``./gradlew samples:bank-of-corda-demo:deployNodes`` to create a set of configs and installs under ``samples/bank-of-corda-demo/build/nodes``
 2. Run ``./samples/bank-of-corda-demo/build/nodes/runnodes`` to open up three new terminal tabs/windows with the three nodes
-3. Run ``./gradlew samples:bank-of-corda-demo:runRPCCashIssue`` to trigger a cash issuance request
-4. Run ``./gradlew samples:bank-of-corda-demo:runWebCashIssue`` to trigger another cash issuance request.
+3. Run ``./gradlew samples:bank-of-corda-demo:runRPCCashIssueAndPay`` to trigger a cash issuance and payment request
+4. Run ``./gradlew samples:bank-of-corda-demo:runWebCashIssueAndPay`` to trigger another cash issuance and payment request.
    Now look at your terminal tab/window to see the output of the demo
 
 To run from the command line in Windows:
 
 1. Run ``gradlew samples:bank-of-corda-demo:deployNodes`` to create a set of configs and installs under ``samples\bank-of-corda-demo\build\nodes``
 2. Run ``samples\bank-of-corda-demo\build\nodes\runnodes`` to open up three new terminal tabs/windows with the three nodes
-3. Run ``gradlew samples:bank-of-corda-demo:runRPCCashIssue`` to trigger a cash issuance request
-4. Run ``gradlew samples:bank-of-corda-demo:runWebCashIssue`` to trigger another cash issuance request.
+3. Run ``gradlew samples:bank-of-corda-demo:runRPCCashIssueAndPay`` to trigger a cash issuance and payment request
+4. Run ``gradlew samples:bank-of-corda-demo:runWebCashIssueAndPay`` to trigger another cash issuance and payment request.
    Now look at the your terminal tab/window to see the output of the demo
 
 .. note:: To verify that the Bank of Corda node is alive and running, navigate to the following URL:
@@ -197,7 +197,7 @@ To run from the command line in Windows:
           This allows for 3rd party applications to perform actions based on Node Type.
           For example, the Explorer tool only allows nodes of this type to issue and exit cash.
 
-In the window you run the command you should see (in case of Web, RPC is simmilar):
+In the window you run the command you should see (in case of Web, RPC is similar):
 
 - Requesting Cash via Web ...
 - Successfully processed Cash Issue request
@@ -215,6 +215,9 @@ Using the following login details:
 - For the Big Corporation node: localhost / port 10009 / username bigCorpUser / password test
 
 See https://docs.corda.net/node-explorer.html for further details on usage.
+
+The Bank of Corda sample also supports issuance and payment as separate actions for testing
+purposes, using the Gradle tasks "runRPCCashIssue" and "runRPCCashPay" respectively.
 
 .. _simm-demo:
 
