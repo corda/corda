@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
 import net.corda.node.internal.StartedNode;
-import net.corda.testing.CoreTestUtils;
 import net.corda.testing.node.MockNetwork;
 import org.junit.After;
 import org.junit.Before;
@@ -13,6 +12,7 @@ import org.junit.Test;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static net.corda.testing.CoreTestUtils.chooseIdentity;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 
@@ -40,7 +40,7 @@ public class FlowsInJavaTest {
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
         node2.getInternals().registerInitiatedFlow(SendHelloAndThenReceive.class);
-        Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(CoreTestUtils.chooseIdentity(node2.getInfo()))).getResultFuture();
+        Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(chooseIdentity(node2.getInfo()))).getResultFuture();
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }
@@ -55,7 +55,7 @@ public class FlowsInJavaTest {
     }
 
     private void primitiveReceiveTypeTest(Class<?> receiveType) throws InterruptedException {
-        PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(CoreTestUtils.chooseIdentity(node2.getInfo()), receiveType);
+        PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(chooseIdentity(node2.getInfo()), receiveType);
         Future<?> result = node1.getServices().startFlow(flow).getResultFuture();
         mockNet.runNetwork();
         try {

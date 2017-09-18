@@ -155,7 +155,7 @@ class SubmitCompletionFlow(private val ref: StateRef, private val verdict: Workf
             "Input trade not modifiable ${latestRecord.state.data.state}"
         }
         // Check we are the correct Party to run the protocol. Note they will counter check this too.
-        require(latestRecord.state.data.counterparty == serviceHub.myInfo.chooseIdentity()) {
+        require(serviceHub.myInfo.isLegalIdentity(latestRecord.state.data.counterparty)) {
             "The counterparty must give the verdict"
         }
 
@@ -232,7 +232,7 @@ class RecordCompletionFlow(private val sourceSession: FlowSession) : FlowLogic<U
             // Check the context dependent parts of the transaction as the
             // Contract verify method must not use serviceHub queries.
             val state = ltx.outRef<TradeApprovalContract.State>(0)
-            require(state.state.data.source == serviceHub.myInfo.chooseIdentity()) {
+            require(serviceHub.myInfo.isLegalIdentity(state.state.data.source)) {
                 "Proposal not one of our original proposals"
             }
             require(state.state.data.counterparty == sourceSession.counterparty) {

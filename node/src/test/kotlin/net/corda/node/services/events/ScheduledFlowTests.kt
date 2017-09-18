@@ -90,7 +90,7 @@ class ScheduledFlowTests {
             val state = serviceHub.toStateAndRef<ScheduledState>(stateRef)
             val scheduledState = state.state.data
             // Only run flow over states originating on this node
-            if (scheduledState.source != serviceHub.myInfo.chooseIdentity()) {
+            if (!serviceHub.myInfo.isLegalIdentity(scheduledState.source)) {
                 return
             }
             require(!scheduledState.processed) { "State should not have been previously processed" }

@@ -134,8 +134,8 @@ class ForeignExchangeFlow(private val tradeId: String,
                     >= remoteRequestWithNotary.amount.quantity) {
                 "the provided inputs don't provide sufficient funds"
             }
-            require(it.filter { it.owner == serviceHub.myInfo.chooseIdentity() }.
-                    map { it.amount.quantity }.sum() == remoteRequestWithNotary.amount.quantity) {
+            val sum = it.filter { it.owner.let { it is Party && serviceHub.myInfo.isLegalIdentity(it) } }.map { it.amount.quantity }.sum()
+            require(sum == remoteRequestWithNotary.amount.quantity) {
                 "the provided outputs don't provide the request quantity"
             }
             it // return validated response
@@ -207,7 +207,7 @@ class ForeignExchangeRemoteFlow(private val source: FlowSession) : FlowLogic<Uni
             // the lifecycle of the Fx trades which would be included in the transaction
 
             // Check request is for us
-            require(serviceHub.myInfo.chooseIdentity() == it.owner) {
+            require(serviceHub.myInfo.isLegalIdentity(it.owner)) {
                 "Request does not include the correct counterparty"
             }
             require(source.counterparty == it.counterparty) {
