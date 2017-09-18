@@ -17,10 +17,6 @@ import javax.ws.rs.core.Response
 // API is accessible from /api/bank. All paths specified below are relative to it.
 @Path("bank")
 class BankOfCordaWebApi(val rpc: CordaRPCOps) {
-    data class IssueRequestParams(val amount: Long, val currency: String,
-                                  val issueToPartyName: CordaX500Name, val issuerBankPartyRef: String,
-                                  val issuerBankName: CordaX500Name,
-                                  val notaryName: CordaX500Name)
 
     private companion object {
         val logger = loggerFor<BankOfCordaWebApi>()
@@ -39,10 +35,10 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     @POST
     @Path("issue-asset-request")
     @Consumes(MediaType.APPLICATION_JSON)
-    fun issueAssetRequest(params: IssueRequestParams): Response {
+    fun issueAssetRequest(params: IssueAndPaymentRequest): Response {
         // Resolve parties via RPC
-        val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)
-                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issueToPartyName} in identity service").build()
+        val issueToParty = rpc.partyFromX500Name(params.payToPartyName)
+                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.payToPartyName} in identity service").build()
         rpc.partyFromX500Name(params.issuerBankName) ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issuerBankName} in identity service").build()
         val notaryParty = rpc.partyFromX500Name(params.notaryName)
                 ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.notaryName} in identity service").build()

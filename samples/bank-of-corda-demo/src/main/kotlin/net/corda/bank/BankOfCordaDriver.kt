@@ -2,8 +2,8 @@ package net.corda.bank
 
 import joptsimple.OptionParser
 import net.corda.bank.api.BankOfCordaClientApi
-import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.identity.CordaX500Name
+import net.corda.bank.api.IssueAndPaymentRequestParams
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.NetworkHostAndPort
@@ -16,6 +16,7 @@ import net.corda.nodeapi.User
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
+import java.util.*
 import kotlin.system.exitProcess
 
 /**
@@ -33,13 +34,16 @@ val BIGCORP_LEGAL_NAME = CordaX500Name(organisation = "BigCorporation", locality
 private class BankOfCordaDriver {
     enum class Role {
         ISSUE_CASH_RPC,
-        ISSUE_CASH_WEB,
-        ISSUER
+        ISSUE_PAY_CASH_RPC,
+        ISSUE_PAY_CASH_WEB,
+        ISSUER,
+        PAY_CASH_RPC
     }
 
     fun main(args: Array<String>) {
         val parser = OptionParser()
-        val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).describedAs("[ISSUER|ISSUE_CASH_RPC|ISSUE_CASH_WEB]")
+        val roleArgSyntax = EnumSet.allOf(Role::class.java).map(Enum<*>::name).joinToString("|", "[", "]")
+        val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).describedAs(roleArgSyntax)
         val quantity = parser.accepts("quantity").withOptionalArg().ofType(Long::class.java)
         val currency = parser.accepts("currency").withOptionalArg().ofType(String::class.java).describedAs("[GBP|USD|CHF|EUR]")
         val options = try {
@@ -55,7 +59,7 @@ private class BankOfCordaDriver {
         // The ISSUE_CASH will request some Cash from the ISSUER on behalf of Big Corporation node
         val role = options.valueOf(roleArg)!!
 
-        val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name, DUMMY_NOTARY.name)
+        val requestParams = IssueAndPaymentRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name, DUMMY_NOTARY.name)
 
         try {
             when (role) {
@@ -82,15 +86,25 @@ private class BankOfCordaDriver {
                     }, isDebug = true)
                 }
                 Role.ISSUE_CASH_RPC -> {
-                    println("Requesting Cash via RPC ...")
+                    println("Requesting Cash issue and payment via RPC ...")
                     val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10006)).requestRPCIssue(requestParams)
                     println("Success!! You transaction receipt is ${result.tx.id}")
                 }
-                Role.ISSUE_CASH_WEB -> {
-                    println("Requesting Cash via Web ...")
-                    val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10007)).requestWebIssue(requestParams)
+                Role.ISSUE_PAY_CASH_RPC -> {
+                    println("Requesting Cash issue and payment via RPC ...")
+                    val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10006)).requestRPCIssueAndPayment(requestParams)
+                    println("Success!! You transaction receipt is ${result.tx.id}")
+                }
+                Role.ISSUE_PAY_CASH_WEB -> {
+                    println("Requesting Cash issue and payment via Web ...")
+                    val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10007)).requestWebIssueAndPayment(requestParams)
                     if (result)
                         println("Successfully processed Cash Issue request")
+                }
+                Role.PAY_CASH_RPC -> {
+                    println("Requesting Cash issue and payment via RPC ...")
+                    val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10006)).requestRPCPayment(requestParams)
+                    println("Success!! You transaction receipt is ${result.tx.id}")
                 }
             }
         } catch (e: Exception) {
