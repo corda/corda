@@ -253,7 +253,7 @@ class CommercialPaperTestsGeneric {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
                 val builder = TransactionBuilder(DUMMY_NOTARY)
-                generateSpend(aliceServices, builder, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
+                Cash.generateSpend(aliceServices, builder, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
                 CommercialPaper().generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(aliceServices.key.public))
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = bigCorpServices.addSignature(ptx)

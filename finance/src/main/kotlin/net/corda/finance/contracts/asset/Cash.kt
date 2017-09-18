@@ -268,6 +268,35 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 
     companion object {
         /**
+         * Generate a transaction that moves an amount of currency to the given party, and sends any change back to
+         * sole identity of the calling node. Fails for nodes with multiple identities.
+         *
+         * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
+         *
+         * @param services The [ServiceHub] to provide access to the database session.
+         * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
+         *           to move the cash will be added on top.
+         * @param amount How much currency to send.
+         * @param to the recipient party.
+         * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
+         *                        of given parties. This can be useful if the party you're trying to pay has expectations
+         *                        about which type of asset claims they are willing to accept.
+         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         *         the resulting transaction for it to be valid.
+         * @throws InsufficientBalanceException when a cash spending transaction fails because
+         *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+         */
+        @JvmStatic
+        @Throws(InsufficientBalanceException::class)
+        @Suspendable
+        @Deprecated("Our identity should be specified", replaceWith = ReplaceWith("generateSpend(services, tx, amount, to, ourIdentity, onlyFromParties)"))
+        fun generateSpend(services: ServiceHub,
+                          tx: TransactionBuilder,
+                          amount: Amount<Currency>,
+                          to: AbstractParty,
+                          onlyFromParties: Set<AbstractParty> = emptySet()) = generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), services.myInfo.legalIdentitiesAndCerts.single(), onlyFromParties)
+
+        /**
          * Generate a transaction that moves an amount of currency to the given party.
          *
          * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
@@ -297,6 +326,33 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                           onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
             return generateSpend(services, tx, listOf(PartyAndAmount(to, amount)), ourIdentity, onlyFromParties)
         }
+
+        /**
+         * Generate a transaction that moves money of the given amounts to the recipients specified, and sends any change
+         * back to sole identity of the calling node. Fails for nodes with multiple identities.
+         *
+         * Note: an [Amount] of [Currency] is only fungible for a given Issuer Party within a [FungibleAsset]
+         *
+         * @param services The [ServiceHub] to provide access to the database session.
+         * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
+         *           to move the cash will be added on top.
+         * @param payments A list of amounts to pay, and the party to send the payment to.
+         * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
+         *                        of given parties. This can be useful if the party you're trying to pay has expectations
+         *                        about which type of asset claims they are willing to accept.
+         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         *         the resulting transaction for it to be valid.
+         * @throws InsufficientBalanceException when a cash spending transaction fails because
+         *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
+         */
+        @JvmStatic
+        @Throws(InsufficientBalanceException::class)
+        @Suspendable
+        @Deprecated("Our identity should be specified", replaceWith = ReplaceWith("generateSpend(services, tx, amount, to, ourIdentity, onlyFromParties)"))
+        fun generateSpend(services: ServiceHub,
+                          tx: TransactionBuilder,
+                          payments: List<PartyAndAmount<Currency>>,
+                          onlyFromParties: Set<AbstractParty> = emptySet()) = generateSpend(services, tx, payments, services.myInfo.legalIdentitiesAndCerts.single(), onlyFromParties)
 
         /**
          * Generate a transaction that moves money of the given amounts to the recipients specified.

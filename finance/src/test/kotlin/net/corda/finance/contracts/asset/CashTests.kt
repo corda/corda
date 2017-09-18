@@ -12,7 +12,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.*
-import net.corda.finance.contracts.generateSpend
 import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashBy
 import net.corda.finance.utils.sumCashOrNull
@@ -484,7 +483,7 @@ class CashTests : TestDependencyInjectionBase() {
     private fun makeSpend(amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
-            generateSpend(miniCorpServices, tx, amount, dest)
+            Cash.generateSpend(miniCorpServices, tx, amount, dest)
         }
         return tx.toWireTransaction()
     }
@@ -587,7 +586,7 @@ class CashTests : TestDependencyInjectionBase() {
         database.transaction {
 
             val tx = TransactionBuilder(DUMMY_NOTARY)
-            generateSpend(miniCorpServices, tx, 80.DOLLARS, ALICE, setOf(MINI_CORP))
+            Cash.generateSpend(miniCorpServices, tx, 80.DOLLARS, ALICE, setOf(MINI_CORP))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -675,12 +674,6 @@ class CashTests : TestDependencyInjectionBase() {
             }
         }
     }
-
-    // TODO: Once multiple hosted identities on a node are ready, we should have a test case for a node with multiple
-    //       identities. Need to verify that:
-    //
-    // * Change is send to a confidential identity derived from the correct well known identity
-    // * The change shows up correctly in the vault / in the correct vault / whatever design is implemented
 
     /**
      * Confirm that aggregation of states is correctly modelled.
@@ -809,7 +802,7 @@ class CashTests : TestDependencyInjectionBase() {
                     PartyAndAmount(THEIR_IDENTITY_1, 400.DOLLARS),
                     PartyAndAmount(THEIR_IDENTITY_2, 150.DOLLARS)
             )
-            generateSpend(miniCorpServices, tx, payments)
+            Cash.generateSpend(miniCorpServices, tx, payments)
         }
         val wtx = tx.toWireTransaction()
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
