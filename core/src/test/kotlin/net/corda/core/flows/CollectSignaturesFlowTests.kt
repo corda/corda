@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -12,10 +11,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.StartedNode
 import net.corda.testing.MINI_CORP_KEY
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
-import net.corda.testing.contracts.DummyContract
 import net.corda.testing.chooseIdentity
 import net.corda.testing.chooseIdentityAndCert
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import org.junit.After
@@ -60,7 +59,7 @@ class CollectSignaturesFlowTests {
     // "collectSignaturesFlow" and "SignTransactionFlow" can be used in practise.
     object TestFlow {
         @InitiatingFlow
-        class Initiator(val state: DummyContract.MultiOwnerState, val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        class Initiator(private val state: DummyContract.MultiOwnerState, private val otherParty: Party) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val session = initiateFlow(otherParty)
@@ -77,30 +76,25 @@ class CollectSignaturesFlowTests {
                     }
                 }
 
-                val stx = subFlow(flow)
-                val ftx = waitForLedgerCommit(stx.id)
-
-                return ftx
+                subFlow(flow)
+                return subFlow(ReceiveTransactionFlow(session))
             }
         }
 
         @InitiatedBy(TestFlow.Initiator::class)
-        class Responder(val initiatingSession: FlowSession, val identities: Map<Party, AnonymousParty>) : FlowLogic<SignedTransaction>() {
+        class Responder(private val initiatingSession: FlowSession) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val state = initiatingSession.receive<DummyContract.MultiOwnerState>().unwrap { it }
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
                 val myInputKeys = state.participants.map { it.owningKey }
-                val myKeys = myInputKeys + (identities[serviceHub.myInfo.chooseIdentity()] ?: serviceHub.myInfo.chooseIdentity()).owningKey
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val signature = subFlow(CollectSignatureFlow(ptx, initiatingSession, initiatingSession.counterparty.owningKey))
                 val stx = ptx + signature
-                val ftx = subFlow(FinalityFlow(stx)).single()
-
-                return ftx
+                return subFlow(FinalityFlow(stx, initiatingSession))
             }
         }
     }
@@ -110,7 +104,7 @@ class CollectSignaturesFlowTests {
     // receiving off the wire.
     object TestFlowTwo {
         @InitiatingFlow
-        class Initiator(val state: DummyContract.MultiOwnerState) : FlowLogic<SignedTransaction>() {
+        class Initiator(private val state: DummyContract.MultiOwnerState) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
@@ -118,17 +112,19 @@ class CollectSignaturesFlowTests {
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
+                val sessions = state.owners
+                        .mapNotNull { serviceHub.identityService.partyFromAnonymous(it) }
+                        .toSet()
+                        .mapNotNull { if (serviceHub.myInfo.isLegalIdentity(it)) null else initiateFlow(it) }
                 val stx = subFlow(CollectSignaturesFlow(ptx, myInputKeys))
-                val ftx = subFlow(FinalityFlow(stx)).single()
-
-                return ftx
+                return subFlow(FinalityFlow(stx, sessions))
             }
         }
 
         @InitiatedBy(TestFlowTwo.Initiator::class)
-        class Responder(val otherSideSession: FlowSession) : FlowLogic<SignedTransaction>() {
-            @Suspendable override fun call(): SignedTransaction {
-                val flow = object : SignTransactionFlow(otherSideSession) {
+        class Responder(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+            @Suspendable override fun call() {
+                val signFlow = object : SignTransactionFlow(otherSideSession) {
                     @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         val tx = stx.tx
                         val ltx = tx.toLedgerTransaction(serviceHub)
@@ -139,9 +135,8 @@ class CollectSignaturesFlowTests {
                     }
                 }
 
-                val stx = subFlow(flow)
-
-                return waitForLedgerCommit(stx.id)
+                subFlow(signFlow)
+                subFlow(ReceiveTransactionFlow(otherSideSession))
             }
         }
     }

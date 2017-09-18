@@ -14,10 +14,11 @@ import java.security.SignatureException
  * and perform the resolution back-and-forth required to check the dependencies and download any missing attachments.
  * The flow will return the [SignedTransaction] after it is resolved and then verified using [SignedTransaction.verify].
  */
-class ReceiveTransactionFlow(private val initiatingSession: FlowSession,
+class ReceiveTransactionFlow(private val otherSideSession: FlowSession,
                              private val checkSufficientSignatures: Boolean,
                              private val recordTransaction: Boolean) : FlowLogic<SignedTransaction>() {
-    constructor(initiatingSession: FlowSession) : this(initiatingSession, true, true)
+    /** Receives a [SignedTransaction] from [otherSideSession], verifies it and then records it in the vault. */
+    constructor(otherSideSession: FlowSession) : this(otherSideSession, true, true)
 
     @Suspendable
     @Throws(SignatureException::class,
@@ -25,8 +26,8 @@ class ReceiveTransactionFlow(private val initiatingSession: FlowSession,
             TransactionResolutionException::class,
             TransactionVerificationException::class)
     override fun call(): SignedTransaction {
-        return initiatingSession.receive<SignedTransaction>().unwrap {
-            subFlow(ResolveTransactionsFlow(it, initiatingSession))
+        return otherSideSession.receive<SignedTransaction>().unwrap {
+            subFlow(ResolveTransactionsFlow(it, otherSideSession))
             it.verify(serviceHub, checkSufficientSignatures)
             if (recordTransaction) serviceHub.recordTransactions(it)
             it
@@ -42,11 +43,11 @@ class ReceiveTransactionFlow(private val initiatingSession: FlowSession,
  * The flow will return the list of [StateAndRef] after it is resolved.
  */
 // @JvmSuppressWildcards is used to suppress wildcards in return type when calling `subFlow(new ReceiveStateAndRef<T>(otherParty))` in java.
-class ReceiveStateAndRefFlow<out T : ContractState>(private val initiatingSession: FlowSession) : FlowLogic<@JvmSuppressWildcards List<StateAndRef<T>>>() {
+class ReceiveStateAndRefFlow<out T : ContractState>(private val otherSideSession: FlowSession) : FlowLogic<@JvmSuppressWildcards List<StateAndRef<T>>>() {
     @Suspendable
     override fun call(): List<StateAndRef<T>> {
-        return initiatingSession.receive<List<StateAndRef<T>>>().unwrap {
-            subFlow(ResolveTransactionsFlow(it.map { it.ref.txhash }.toSet(), initiatingSession))
+        return otherSideSession.receive<List<StateAndRef<T>>>().unwrap {
+            subFlow(ResolveTransactionsFlow(it.map { it.ref.txhash }.toSet(), otherSideSession))
             it
         }
     }

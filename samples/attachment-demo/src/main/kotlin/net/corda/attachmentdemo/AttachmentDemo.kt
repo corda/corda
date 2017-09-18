@@ -8,9 +8,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
@@ -25,7 +23,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.poll
 import java.io.InputStream
 import java.net.HttpURLConnection
@@ -107,7 +104,8 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
 }
 
 @StartableByRPC
-class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
+@InitiatingFlow
+class AttachmentDemoFlow(private val otherSide: Party, private val notary: Party, private val attachId: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
 
     object SIGNING : ProgressTracker.Step("Signing transaction")
 
@@ -117,16 +115,24 @@ class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: Secu
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
         val ptx = TransactionBuilder(notary)
-                .addOutputState(AttachmentContract.State(hash), ATTACHMENT_PROGRAM_ID)
-                .addCommand(AttachmentContract.Command, serviceHub.myInfo.chooseIdentity().owningKey)
-                .addAttachment(hash)
+                .addOutputState(AttachmentContract.State(attachId), ATTACHMENT_PROGRAM_ID)
+                .addCommand(AttachmentContract.Command, ourIdentity.owningKey)
+                .addAttachment(attachId)
 
         progressTracker.currentStep = SIGNING
 
         // Send the transaction to the other recipient
         val stx = serviceHub.signInitialTransaction(ptx)
 
-        return subFlow(FinalityFlow(stx, setOf(otherSide))).single()
+        return subFlow(FinalityFlow(stx, initiateFlow(otherSide)))
+    }
+}
+
+@InitiatedBy(AttachmentDemoFlow::class)
+class ReceiveAttachmentFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        subFlow(ReceiveTransactionFlow(otherSide))
     }
 }
 

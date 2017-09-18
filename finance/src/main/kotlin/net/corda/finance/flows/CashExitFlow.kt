@@ -3,8 +3,7 @@ package net.corda.finance.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.Party
+import net.corda.core.flows.*
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
 import net.corda.core.node.services.vault.PageSpecification
@@ -26,7 +25,10 @@ import java.util.*
  * issuer.
  */
 @StartableByRPC
-class CashExitFlow(val amount: Amount<Currency>, val issuerRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
+@InitiatingFlow
+class CashExitFlow(private val amount: Amount<Currency>,
+                   private val issuerRef: OpaqueBytes,
+                   progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes) : this(amount, issueRef, tracker())
     constructor(request: ExitRequest) : this(request.amount, request.issueRef, tracker())
 
@@ -42,9 +44,11 @@ class CashExitFlow(val amount: Amount<Currency>, val issuerRef: OpaqueBytes, pro
     @Throws(CashException::class)
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary = null as Party?)
+        val builder = TransactionBuilder(notary = null)
         val issuer = ourIdentity.party.ref(issuerRef)
-        val exitStates = CashSelection.getInstance({serviceHub.jdbcSession().metaData}).unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
+        val exitStates = CashSelection
+                .getInstance { serviceHub.jdbcSession().metaData }
+                .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
             Cash().generateExit(
                     builder,
@@ -60,21 +64,30 @@ class CashExitFlow(val amount: Amount<Currency>, val issuerRef: OpaqueBytes, pro
 
         // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
         //       count as a reason to fail?
-        val participants: Set<Party> = inputStates
-                .filterIsInstance<Cash.State>()
-                .map { serviceHub.identityService.partyFromAnonymous(it.owner) }
-                .filterNotNull()
+        val participants: List<FlowSession> = inputStates
+                .mapNotNull { serviceHub.identityService.partyFromAnonymous(it.state.data.owner) }
                 .toSet()
+                .mapNotNull { if (serviceHub.myInfo.isLegalIdentity(it)) null else initiateFlow(it) }
         // Sign transaction
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(builder, signers)
 
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
-        finaliseTx(participants, tx, "Unable to notarise exit")
-        return Result(tx, null)
+        val notarised = finaliseTx(tx, participants, "Unable to notarise exit")
+        return Result(notarised, null)
     }
 
     @CordaSerializable
     class ExitRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes) : AbstractRequest(amount)
+}
+
+
+@InitiatedBy(CashExitFlow::class)
+class CashExitNotificationFlow(private val exiter: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        // Receive the transaction finalised by the exiter and store in our vault
+        subFlow(ReceiveTransactionFlow(exiter))
+    }
 }

@@ -3,8 +3,7 @@ package net.corda.finance.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.SwapIdentitiesFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -23,6 +22,7 @@ import java.util.*
  * for testing purposes.
  */
 @StartableByRPC
+@InitiatingFlow
 open class CashPaymentFlow(
         val amount: Amount<Currency>,
         val recipient: Party,
@@ -45,7 +45,7 @@ open class CashPaymentFlow(
         }
         val anonymousRecipient = txIdentities[recipient] ?: recipient
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(null as Party?)
+        val builder = TransactionBuilder(notary = null)
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
             Cash.generateSpend(serviceHub,
@@ -61,10 +61,25 @@ open class CashPaymentFlow(
         val tx = serviceHub.signInitialTransaction(spendTX, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
-        finaliseTx(setOf(recipient), tx, "Unable to notarise spend")
-        return Result(tx, anonymousRecipient)
+        val session = initiateFlow(recipient)
+        val notarised = finaliseTx(tx, setOf(session), "Unable to notarise spend")
+        return Result(notarised, anonymousRecipient)
     }
 
     @CordaSerializable
-    class PaymentRequest(amount: Amount<Currency>, val recipient: Party, val anonymous: Boolean, val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
+    class PaymentRequest(amount: Amount<Currency>,
+                         val recipient: Party,
+                         val anonymous: Boolean,
+                         val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
+}
+
+
+@InitiatedBy(CashPaymentFlow::class)
+class CashReceiveFlow(private val payer: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        // TODO Add SwapIdentitiesFlow sub-flow call here when it's been inlined
+        // The payer will send the notarised tx to us (via FinalityFlow) so we must receive it and record it
+        subFlow(ReceiveTransactionFlow(payer))
+    }
 }

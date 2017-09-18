@@ -2,7 +2,6 @@ package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.requireThat
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
@@ -68,9 +67,7 @@ object TwoPartyDealFlow {
 
             subFlow(signTransactionFlow)
 
-            val txHash = otherSideSession.receive<SecureHash>().unwrap { it }
-
-            return waitForLedgerCommit(txHash)
+            return subFlow(ReceiveTransactionFlow(otherSideSession))
         }
 
         @Suspendable abstract fun checkProposal(stx: SignedTransaction)
@@ -88,9 +85,8 @@ object TwoPartyDealFlow {
             object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.")
             object RECORDING : ProgressTracker.Step("Recording completed transaction.")
             object COPYING_TO_REGULATOR : ProgressTracker.Step("Copying regulator.")
-            object COPYING_TO_COUNTERPARTY : ProgressTracker.Step("Copying counterparty.")
 
-            fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING, COPYING_TO_REGULATOR, COPYING_TO_COUNTERPARTY)
+            fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING, COPYING_TO_REGULATOR)
         }
 
         abstract val otherSideSession: FlowSession
@@ -122,7 +118,7 @@ object TwoPartyDealFlow {
             logger.trace { "Got signatures from other party, verifying ... " }
 
             progressTracker.currentStep = RECORDING
-            val ftx = subFlow(FinalityFlow(stx, setOf(otherSideSession.counterparty, ourIdentity.party))).single()
+            val ftx = subFlow(FinalityFlow(stx, otherSideSession))
 
             logger.trace { "Recorded transaction." }
 
@@ -137,11 +133,6 @@ object TwoPartyDealFlow {
                     session.send(ftx)
                 }
             }
-
-            progressTracker.currentStep = COPYING_TO_COUNTERPARTY
-            // Send the final transaction hash back to the other party.
-            // We need this so we don't break the IRS demo and the SIMM Demo.
-            otherSideSession.send(ftx.id)
 
             return ftx
         }

@@ -47,10 +47,10 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
 
     val fullCriteria = fungibleCriteria.and(vaultCriteria).and(cashCriteria)
 
-    val eligibleStates = serviceHub.vaultService.tryLockFungibleStatesForSpending<Cash.State, Currency>(lockId, fullCriteria, amountRequired.withoutIssuer(), Cash.State::class.java)
+    val eligibleStates = serviceHub.vaultService.tryLockFungibleStatesForSpending(lockId, fullCriteria, amountRequired.withoutIssuer(), Cash.State::class.java)
 
     check(eligibleStates.isNotEmpty()) { "Insufficient funds" }
-    val amount = eligibleStates.fold(0L) { tot, x -> tot + x.state.data.amount.quantity }
+    val amount = eligibleStates.fold(0L) { tot, (state) -> tot + state.data.amount.quantity }
     val change = amount - amountRequired.quantity
 
     return Pair(eligibleStates, change)
@@ -87,25 +87,25 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, lockId: UUID, req
 // A flow representing creating a transaction that
 // carries out exchange of cash assets.
 @InitiatingFlow
-class ForeignExchangeFlow(val tradeId: String,
-                          val baseCurrencyAmount: Amount<Issued<Currency>>,
-                          val quoteCurrencyAmount: Amount<Issued<Currency>>,
-                          val baseCurrencyBuyer: Party,
-                          val baseCurrencySeller: Party) : FlowLogic<SecureHash>() {
+class ForeignExchangeFlow(private val tradeId: String,
+                          private val baseCurrencyAmount: Amount<Issued<Currency>>,
+                          private val quoteCurrencyAmount: Amount<Issued<Currency>>,
+                          private val counterparty: Party,
+                          private val weAreBaseCurrencySeller: Boolean) : FlowLogic<SecureHash>() {
     @Suspendable
     override fun call(): SecureHash {
         // Select correct sides of the Fx exchange to query for.
         // Specifically we own the assets we wish to sell.
         // Also prepare the other side query
-        val (localRequest, remoteRequest) = if (baseCurrencySeller == serviceHub.myInfo.chooseIdentity()) {
-            val local = FxRequest(tradeId, baseCurrencyAmount, baseCurrencySeller, baseCurrencyBuyer)
-            val remote = FxRequest(tradeId, quoteCurrencyAmount, baseCurrencyBuyer, baseCurrencySeller)
+        val (localRequest, remoteRequest) = if (weAreBaseCurrencySeller) {
+            val local = FxRequest(tradeId, baseCurrencyAmount, ourIdentity.party, counterparty)
+            val remote = FxRequest(tradeId, quoteCurrencyAmount, counterparty, ourIdentity.party)
             Pair(local, remote)
-        } else if (baseCurrencyBuyer == serviceHub.myInfo.chooseIdentity()) {
-            val local = FxRequest(tradeId, quoteCurrencyAmount, baseCurrencyBuyer, baseCurrencySeller)
-            val remote = FxRequest(tradeId, baseCurrencyAmount, baseCurrencySeller, baseCurrencyBuyer)
+        } else {
+            val local = FxRequest(tradeId, quoteCurrencyAmount, ourIdentity.party, counterparty)
+            val remote = FxRequest(tradeId, baseCurrencyAmount, counterparty, ourIdentity.party)
             Pair(local, remote)
-        } else throw IllegalArgumentException("Our identity must be one of the parties in the trade.")
+        }
 
         // Call the helper method to identify suitable inputs and make the outputs
         val (ourInputStates, ourOutputStates) = prepareOurInputsAndOutputs(serviceHub, runId.uuid, localRequest)
@@ -117,10 +117,10 @@ class ForeignExchangeFlow(val tradeId: String,
 
         // Send the request to the counterparty to verify and call their version of prepareOurInputsAndOutputs
         // Then they can return their candidate states
-        val session = initiateFlow(remoteRequestWithNotary.owner)
-        session.send(remoteRequestWithNotary)
-        val theirInputStates = subFlow(ReceiveStateAndRefFlow<Cash.State>(session))
-        val theirOutputStates = session.receive<List<Cash.State>>().unwrap {
+        val counterpartySession = initiateFlow(counterparty)
+        counterpartySession.send(remoteRequestWithNotary)
+        val theirInputStates = subFlow(ReceiveStateAndRefFlow<Cash.State>(counterpartySession))
+        val theirOutputStates = counterpartySession.receive<List<Cash.State>>().unwrap {
             require(theirInputStates.all { it.state.notary == notary }) {
                 "notary of remote states must be same as for our states"
             }
@@ -146,8 +146,8 @@ class ForeignExchangeFlow(val tradeId: String,
 
         // pass transaction details to the counterparty to revalidate and confirm with a signature
         // Allow counterparty to access our data to resolve the transaction.
-        subFlow(SendTransactionFlow(session, signedTransaction))
-        val allPartySignedTx = session.receive<TransactionSignature>().unwrap {
+        subFlow(SendTransactionFlow(counterpartySession, signedTransaction))
+        val allPartySignedTx = counterpartySession.receive<TransactionSignature>().unwrap {
             val withNewSignature = signedTransaction + it
             // check all signatures are present except the notary
             withNewSignature.verifySignaturesExcept(withNewSignature.tx.notary!!.owningKey)
@@ -161,7 +161,7 @@ class ForeignExchangeFlow(val tradeId: String,
         }
 
         // Initiate the standard protocol to notarise and distribute to the involved parties.
-        subFlow(FinalityFlow(allPartySignedTx, setOf(baseCurrencyBuyer, baseCurrencySeller)))
+        subFlow(FinalityFlow(allPartySignedTx, counterpartySession))
 
         return allPartySignedTx.id
     }
@@ -240,7 +240,8 @@ class ForeignExchangeRemoteFlow(private val source: FlowSession) : FlowLogic<Uni
 
         // send the other side our signature.
         source.send(ourSignature)
-        // N.B. The FinalityProtocol will be responsible for Notarising the SignedTransaction
-        // and broadcasting the result to us.
+
+        // The other side invokes FinalityFlow and sends the notarised transaction so we must receive it
+        subFlow(ReceiveTransactionFlow(source))
     }
 }

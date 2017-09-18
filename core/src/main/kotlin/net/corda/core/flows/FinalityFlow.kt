@@ -1,10 +1,8 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.google.common.collect.Lists
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 
@@ -22,15 +20,16 @@ import net.corda.core.utilities.ProgressTracker
  * The flow returns the same transaction but with the additional signature from the notary.
  *
  * @param transaction What to commit.
- * @param broadcast Set of established flow sessions to parties to which to send the notarised transaction to. Every
- * participant in the transaction must have a session. There can be sessions to extra parties as well. However there can
- * be no sessions which point back to the local node, even if the local party is participant to the transactin. Each of
- * flows running on these counterparties must sub-flow [ReceiveTransactionFlow].
+ * @param sendTo Collection of established flow sessions to parties to which to send the notarised transaction to. There
+ * can be no sessions which point back to the local node. [SendTransactionFlow] is called for each session therefore each
+ * counterparty *must* sub-flow [ReceiveTransactionFlow].
  */
 class FinalityFlow(private val transaction: SignedTransaction,
-                   private val broadcast: Set<FlowSession>,
+                   private val sendTo: Collection<FlowSession>,
                    override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
-    constructor(transaction: SignedTransaction, broadcast: Set<FlowSession>) : this(transaction, broadcast, tracker())
+    constructor(transaction: SignedTransaction, sendTo: Collection<FlowSession>) : this(transaction, sendTo, tracker())
+    constructor(transaction: SignedTransaction, firstSendTo: FlowSession, vararg restSendTo: FlowSession) :
+            this(transaction, Lists.asList(firstSendTo, restSendTo))
 
     companion object {
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
@@ -39,15 +38,15 @@ class FinalityFlow(private val transaction: SignedTransaction,
 
         object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to participants")
 
-        // TODO: Make all tracker() methods @JvmStatic
+        @JvmStatic
         fun tracker() = ProgressTracker(NOTARISING, BROADCASTING)
     }
 
     @Suspendable
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
-        require(broadcast.none { serviceHub.myInfo.isLegalIdentity(it.counterparty) }) {
-            "Cannot broadcast to self"
+        require(sendTo.none { serviceHub.myInfo.isLegalIdentity(it.counterparty) }) {
+            "Transaction is recorded locally so no need to send to self"
         }
 
         // Note: this method is carefully broken up to minimize the amount of data reachable from the stack at
@@ -55,17 +54,11 @@ class FinalityFlow(private val transaction: SignedTransaction,
         //
         // Lookup the resolved transactions and use them to map each signed transaction to the list of participants.
         // Then send to the notary if needed, record locally and distribute.
-        val parties = lookupParties(verifyTx())
-        for (party in parties) {
-            require(broadcast.any { it.counterparty == party }) {
-                "$party is a participant of the transaction but no session for it was provided"
-            }
-        }
-
+        verifyTx()
         progressTracker.currentStep = NOTARISING
         val notarised = notariseAndRecord()
         progressTracker.currentStep = BROADCASTING
-        broadcast.forEach { subFlow(SendTransactionFlow(it, notarised)) }
+        sendTo.forEach { subFlow(SendTransactionFlow(it, notarised)) }
         return notarised
     }
 
@@ -93,25 +86,10 @@ class FinalityFlow(private val transaction: SignedTransaction,
         return !(notaryKey?.isFulfilledBy(signers) ?: false)
     }
 
-    private fun lookupParties(ltx: LedgerTransaction): Set<Party> {
-        // Calculate who is meant to see the results based on the participants involved.
-        return extractParticipants(ltx).mapNotNull {
-            val party = serviceHub.identityService.partyFromAnonymous(it)
-                    ?: throw IllegalArgumentException("Could not resolve well known identity of participant $it")
-            if (serviceHub.myInfo.isLegalIdentity(party)) null else party
-        }.toSet()
-    }
-
-    private fun extractParticipants(ltx: LedgerTransaction): List<AbstractParty> {
-        return ltx.outputStates.flatMap { it.participants } + ltx.inputStates.flatMap { it.participants }
-    }
-
-    private fun verifyTx(): LedgerTransaction {
+    private fun verifyTx() {
         val notary = transaction.tx.notary
         // The notary signature(s) are allowed to be missing but no others.
         if (notary != null) transaction.verifySignaturesExcept(notary.owningKey) else transaction.verifyRequiredSignatures()
-        val ltx = transaction.toLedgerTransaction(serviceHub, false)
-        ltx.verify()
-        return ltx
+        transaction.toLedgerTransaction(serviceHub, false).verify()
     }
 }

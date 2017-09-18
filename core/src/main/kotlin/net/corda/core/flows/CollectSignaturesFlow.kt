@@ -69,6 +69,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counter-parties.")
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")
 
+        @JvmStatic
         fun tracker() = ProgressTracker(COLLECTING, VERIFYING)
 
         // TODO: Make the progress tracker adapt to the number of counter-parties to collect from.
@@ -200,6 +201,7 @@ abstract class SignTransactionFlow(val initiatingSession: FlowSession,
         object VERIFYING : ProgressTracker.Step("Verifying transaction proposal.")
         object SIGNING : ProgressTracker.Step("Signing transaction proposal.")
 
+        @JvmStatic
         fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING)
     }
 

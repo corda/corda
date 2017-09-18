@@ -140,7 +140,7 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
         progressTracker.currentStep = GENERATING_TRANSACTION
 
-        val messageState = MessageState(message = message, by = serviceHub.myInfo.chooseIdentity())
+        val messageState = MessageState(message = message, by = ourIdentity.party)
         val txCommand = Command(MessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
         val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), txCommand)
 
@@ -151,6 +151,6 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         progressTracker.currentStep = FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker())).single()
+        return subFlow(FinalityFlow(signedTx, emptySet(), FINALISING_TRANSACTION.childProgressTracker()))
     }
 }

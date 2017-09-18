@@ -558,7 +558,6 @@ class TwoPartyTradeFlowTests {
             buyerSession.send(TestTx(notary.notaryIdentity, price, anonymous))
             return subFlow(Seller(
                     buyerSession,
-                    notary,
                     assetToSell,
                     price,
                     myParty))

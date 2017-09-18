@@ -17,8 +17,11 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
+import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.seconds
+import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
@@ -40,7 +43,7 @@ object FlowCookbook {
     @StartableByRPC
     // Every flow must subclass ``FlowLogic``. The generic indicates the
     // flow's return type.
-    class InitiatorFlow(val arg1: Boolean, val arg2: Int, val counterparty: Party) : FlowLogic<Unit>() {
+    class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: Party) : FlowLogic<Unit>() {
 
         /**---------------------------------
          * WIRING UP THE PROGRESS TRACKER *
@@ -496,13 +499,12 @@ object FlowCookbook {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 9
-            val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).single()
+            val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, listOf(counterpartySession), FINALISATION.childProgressTracker()))
             // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            val additionalParties: Set<Party> = setOf(regulator)
-            val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).single()
+            val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, listOf(regulatorSession), FINALISATION.childProgressTracker()))
             // DOCEND 10
         }
     }
@@ -579,9 +581,9 @@ object FlowCookbook {
             -----------------------------**/
             progressTracker.currentStep = FINALISATION
 
-            // Nothing to do here! As long as some other party calls
-            // ``FinalityFlow``, the recording of the transaction on our node
-            // we be handled automatically.
+            // We need to sub-flow ReceiveTransactionFlow as the other party sent the transaction to us using FinalityFlow
+            // By default ReceiveTransactionFlow verifies and then records the transaction to our vault.
+            subFlow(ReceiveTransactionFlow(counterpartySession))
         }
     }
 }

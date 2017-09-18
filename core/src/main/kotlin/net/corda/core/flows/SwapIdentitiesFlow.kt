@@ -41,7 +41,7 @@ class SwapIdentitiesFlow(val otherParty: Party,
         // Special case that if we're both parties, a single identity is generated
         val otherSession = initiateFlow(otherParty)
         val identities = LinkedHashMap<Party, AnonymousParty>()
-        if (otherSession.counterparty in serviceHub.myInfo.legalIdentities) {
+        if (serviceHub.myInfo.isLegalIdentity(otherSession.counterparty)) {
             identities.put(otherSession.counterparty, legalIdentityAnonymous.party.anonymise())
         } else {
             val anonymousOtherSide = otherSession.sendAndReceive<PartyAndCertificate>(legalIdentityAnonymous).unwrap { confidentialIdentity ->

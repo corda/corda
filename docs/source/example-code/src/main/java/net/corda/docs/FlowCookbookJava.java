@@ -2,7 +2,6 @@ package net.corda.docs;
 
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.crypto.TransactionSignature;
@@ -31,13 +30,14 @@ import java.security.PublicKey;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 
+import static java.util.Collections.singleton;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.testing.TestConstants.getALICE_KEY;
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
+@SuppressWarnings("unused")
 public class FlowCookbookJava {
     // ``InitiatorFlow`` is our first flow, and will communicate with
     // ``ResponderFlow``, below.
@@ -79,14 +79,14 @@ public class FlowCookbookJava {
             // subflow's progress steps in our flow's progress tracker.
             @Override
             public ProgressTracker childProgressTracker() {
-                return CollectSignaturesFlow.Companion.tracker();
+                return CollectSignaturesFlow.tracker();
             }
         };
         private static final Step VERIFYING_SIGS = new Step("Verifying a transaction's signatures.");
         private static final Step FINALISATION = new Step("Finalising a transaction.") {
             @Override
             public ProgressTracker childProgressTracker() {
-                return FinalityFlow.Companion.tracker();
+                return FinalityFlow.tracker();
             }
         };
 
@@ -525,13 +525,12 @@ public class FlowCookbookJava {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 9
-            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).get(0);
+            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, singleton(counterpartySession), FINALISATION.childProgressTracker()));
             // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            Set<Party> additionalParties = ImmutableSet.of(regulator, regulator);
-            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(ImmutableList.of(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).get(0);
+            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, singleton(regulatorSession), FINALISATION.childProgressTracker()));
             // DOCEND 10
 
             return null;
@@ -613,7 +612,7 @@ public class FlowCookbookJava {
                 }
             }
 
-            subFlow(new SignTxFlow(counterpartySession, SignTransactionFlow.Companion.tracker()));
+            subFlow(new SignTxFlow(counterpartySession, SignTransactionFlow.tracker()));
             // DOCEND 16
 
             /*------------------------------
@@ -621,9 +620,9 @@ public class FlowCookbookJava {
             ------------------------------*/
             progressTracker.setCurrentStep(FINALISATION);
 
-            // Nothing to do here! As long as some other party calls
-            // ``FinalityFlow``, the recording of the transaction on our node
-            // we be handled automatically.
+            // We need to sub-flow ReceiveTransactionFlow as the other party sent the transaction to us using FinalityFlow
+            // By default ReceiveTransactionFlow verifies and then records the transaction to our vault.
+            subFlow(new ReceiveTransactionFlow(counterpartySession));
 
             return null;
         }

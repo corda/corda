@@ -21,14 +21,10 @@ import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
-import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.rpcDriver
-import net.corda.testing.rpcTestUser
-import net.corda.testing.startRpcClient
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -63,7 +59,6 @@ class ContractUpgradeFlowTest {
         b.database.transaction {
             b.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
         }
-
     }
 
     @After
@@ -78,7 +73,7 @@ class ContractUpgradeFlowTest {
         val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)
         val stx = b.services.addSignature(signedByA)
 
-        a.services.startFlow(FinalityFlow(stx, setOf(a.info.chooseIdentity(), b.info.chooseIdentity())))
+        a.services.startFlow(FinalityInvoker(stx, setOf(b.info.chooseIdentity())))
         mockNet.runNetwork()
 
         val atx = a.database.transaction { a.services.validatedTransactions.getTransaction(stx.id) }
@@ -157,7 +152,7 @@ class ContractUpgradeFlowTest {
             ))
             val rpcA = startProxy(a, user)
             val rpcB = startProxy(b, user)
-            val handle = rpcA.startFlow(::FinalityInvoker, stx, setOf(a.info.chooseIdentity(), b.info.chooseIdentity()))
+            val handle = rpcA.startFlow(::FinalityInvoker, stx, setOf(b.info.chooseIdentity()))
             mockNet.runNetwork()
             handle.returnValue.getOrThrow()
 
@@ -257,9 +252,20 @@ class ContractUpgradeFlowTest {
     }
 
     @StartableByRPC
-    class FinalityInvoker(val transaction: SignedTransaction,
-                          val extraRecipients: Set<Party>) : FlowLogic<List<SignedTransaction>>() {
+    @InitiatingFlow
+    class FinalityInvoker(private val transaction: SignedTransaction,
+                          private val recipients: Collection<Party>) : FlowLogic<SignedTransaction>() {
         @Suspendable
-        override fun call(): List<SignedTransaction> = subFlow(FinalityFlow(transaction, extraRecipients))
+        override fun call(): SignedTransaction {
+            return subFlow(FinalityFlow(transaction, recipients.map { initiateFlow(it) }))
+        }
+    }
+
+    @InitiatedBy(FinalityInvoker::class)
+    class ReceiveTxFlow(private val source: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveTransactionFlow(source))
+        }
     }
 }

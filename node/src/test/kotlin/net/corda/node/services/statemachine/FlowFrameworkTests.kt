@@ -607,9 +607,11 @@ class FlowFrameworkTests {
         val committerFiber = node1.registerFlowFactoryExpectingFlowSession(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it)
         }.map { it.stateMachine }
-        val waiterStx = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.chooseIdentity())).resultFuture
+        val waiterStx = node2.services.startFlow(WaitingFlows.Waiter(stx)).resultFuture
+        val receiverStx = node2.services.startFlow(WaitingFlows.Receiver(stx, node1.info.chooseIdentity())).resultFuture
         mockNet.runNetwork()
         assertThat(waiterStx.getOrThrow()).isEqualTo(committerFiber.getOrThrow().resultFuture.getOrThrow())
+        assertThat(waiterStx.getOrThrow()).isEqualTo(receiverStx.getOrThrow())
     }
 
     @Test
@@ -622,7 +624,7 @@ class FlowFrameworkTests {
         node1.registerFlowFactoryExpectingFlowSession(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it) { throw Exception("Error") }
         }
-        val waiter = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.chooseIdentity())).resultFuture
+        val waiter = node2.services.startFlow(WaitingFlows.Receiver(stx, node1.info.chooseIdentity())).resultFuture
         mockNet.runNetwork()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             waiter.getOrThrow()
@@ -982,13 +984,18 @@ class FlowFrameworkTests {
     }
 
     private object WaitingFlows {
+        class Waiter(val stx: SignedTransaction) : FlowLogic<SignedTransaction>() {
+            @Suspendable
+            override fun call(): SignedTransaction = waitForLedgerCommit(stx.id)
+        }
+
         @InitiatingFlow
-        class Waiter(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        class Receiver(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val otherPartySession = initiateFlow(otherParty)
                 otherPartySession.send(stx)
-                return waitForLedgerCommit(stx.id)
+                return subFlow(ReceiveTransactionFlow(otherPartySession))
             }
         }
 
@@ -997,7 +1004,7 @@ class FlowFrameworkTests {
             override fun call(): SignedTransaction {
                 val stx = otherPartySession.receive<SignedTransaction>().unwrap { it }
                 if (throwException != null) throw throwException.invoke()
-                return subFlow(FinalityFlow(stx, setOf(otherPartySession.counterparty))).single()
+                return subFlow(FinalityFlow(stx, otherPartySession))
             }
         }
     }

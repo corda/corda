@@ -7,8 +7,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.internal.StartedNode
 import net.corda.finance.schemas.CashSchemaV1
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
@@ -72,8 +72,8 @@ class FxTransactionBuildTutorialTest {
         val doIt = nodeA.services.startFlow(ForeignExchangeFlow("trade1",
                 POUNDS(100).issuedBy(nodeB.info.chooseIdentity().ref(0x01)),
                 DOLLARS(200).issuedBy(nodeA.info.chooseIdentity().ref(0x01)),
-                nodeA.info.chooseIdentity(),
-                nodeB.info.chooseIdentity()))
+                nodeB.info.chooseIdentity(),
+                weAreBaseCurrencySeller = false))
         // wait for the flow to finish and the vault updates to be done
         doIt.resultFuture.getOrThrow()
         // Get the balances when the vault updates

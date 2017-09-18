@@ -1,15 +1,10 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.OwnableState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.withoutIssuer
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -59,11 +54,10 @@ object TwoPartyTradeFlow {
             val payToIdentity: PartyAndCertificate
     )
 
-    open class Seller(val otherSideSession: FlowSession,
-                      val notaryNode: NodeInfo,
-                      val assetToSell: StateAndRef<OwnableState>,
-                      val price: Amount<Currency>,
-                      val myParty: PartyAndCertificate, // TODO Left because in tests it's used to pass anonymous party.
+    open class Seller(private val otherSideSession: FlowSession,
+                      private val assetToSell: StateAndRef<OwnableState>,
+                      private val price: Amount<Currency>,
+                      private val myParty: PartyAndCertificate, // TODO Left because in tests it's used to pass anonymous party.
                       override val progressTracker: ProgressTracker = Seller.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
@@ -100,10 +94,12 @@ object TwoPartyTradeFlow {
             val signTransactionFlow = object : SignTransactionFlow(otherSideSession, VERIFYING_AND_SIGNING.childProgressTracker()) {
                 override fun checkTransaction(stx: SignedTransaction) {
                     // Verify that we know who all the participants in the transaction are
-                    val states: Iterable<ContractState> = (stx.tx.inputs.map { serviceHub.loadState(it).data } + stx.tx.outputs.map { it.data })
+                    val states: Iterable<ContractState> = stx.tx.inputs.map { serviceHub.loadState(it).data } + stx.tx.outputs.map { it.data }
                     states.forEach { state ->
                         state.participants.forEach { anon ->
-                            require(serviceHub.identityService.partyFromAnonymous(anon) != null) { "Transaction state ${state} involves unknown participant ${anon}" }
+                            require(serviceHub.identityService.partyFromAnonymous(anon) != null) {
+                                "Transaction state $state involves unknown participant $anon"
+                            }
                         }
                     }
 
@@ -111,8 +107,10 @@ object TwoPartyTradeFlow {
                         throw FlowException("Transaction is not sending us the right amount of cash")
                 }
             }
-            return subFlow(signTransactionFlow)
+            subFlow(signTransactionFlow)
             // DOCEND 5
+
+            return subFlow(ReceiveTransactionFlow(otherSideSession))
         }
         // DOCEND 4
 
@@ -129,11 +127,11 @@ object TwoPartyTradeFlow {
         // express flow state machines on top of the messaging layer.
     }
 
-    open class Buyer(val sellerSession: FlowSession,
-                     val notary: Party,
-                     val acceptablePrice: Amount<Currency>,
-                     val typeToBuy: Class<out OwnableState>,
-                     val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
+    open class Buyer(private val sellerSession: FlowSession,
+                     private val notary: Party,
+                     private val acceptablePrice: Amount<Currency>,
+                     private val typeToBuy: Class<out OwnableState>,
+                     private val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
         constructor(otherSideSession: FlowSession, notary: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>): this(otherSideSession, notary, acceptablePrice, typeToBuy, true)
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
@@ -182,7 +180,7 @@ object TwoPartyTradeFlow {
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
-            return subFlow(FinalityFlow(twiceSignedTx)).single()
+            return subFlow(FinalityFlow(twiceSignedTx, sellerSession))
         }
 
         @Suspendable
