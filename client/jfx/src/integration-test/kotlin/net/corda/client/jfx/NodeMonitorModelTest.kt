@@ -52,7 +52,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     lateinit var newNode: (CordaX500Name) -> NodeInfo
 
-    override fun setup() = driver(cordappPackagesToScan = listOf("net.corda.finance")) {
+    override fun setup() = driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
         val cashUser = User("user1", "test", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>(),

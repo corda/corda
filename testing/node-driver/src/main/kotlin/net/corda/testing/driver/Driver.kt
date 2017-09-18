@@ -310,7 +310,7 @@ fun <A> driver(
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         networkMapStartStrategy: NetworkMapStartStrategy = defaultParameters.networkMapStartStrategy,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
-        cordappPackagesToScan: List<String> = defaultParameters.cordappPackagesToScan,
+        extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         dsl: DriverDSLExposedInterface.() -> A
 ): A {
     return genericDriver(
@@ -323,7 +323,7 @@ fun <A> driver(
                     isDebug = isDebug,
                     networkMapStartStrategy = networkMapStartStrategy,
                     startNodesInProcess = startNodesInProcess,
-                    cordappPackagesToScan = cordappPackagesToScan
+                    extraCordappPackagesToScan = extraCordappPackagesToScan
             ),
             coerce = { it },
             dsl = dsl,
@@ -358,7 +358,7 @@ data class DriverParameters(
         val initialiseSerialization: Boolean = true,
         val networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
         val startNodesInProcess: Boolean = false,
-        val cordappPackagesToScan: List<String> = emptyList()
+        val extraCordappPackagesToScan: List<String> = emptyList()
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -369,7 +369,7 @@ data class DriverParameters(
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setNetworkMapStartStrategy(networkMapStartStrategy: NetworkMapStartStrategy) = copy(networkMapStartStrategy = networkMapStartStrategy)
     fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
-    fun setCordappPackagesToScan(cordappPackagesToScan: List<String>) = copy(cordappPackagesToScan = cordappPackagesToScan)
+    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
 }
 
 /**
@@ -584,14 +584,14 @@ class DriverDSL(
         val isDebug: Boolean,
         val networkMapStartStrategy: NetworkMapStartStrategy,
         val startNodesInProcess: Boolean,
-        val cordappPackagesToScan: List<String>
+        val extraCordappPackagesToScan: List<String>
 ) : DriverDSLInternalInterface {
     private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
-    private val packagesToScanString = (cordappPackagesToScan + getCallerPackage()).joinToString(",")
+    private val packagesToScanString = (extraCordappPackagesToScan + getCallerPackage()).joinToString(",")
 
     class State {
         val processes = ArrayList<CordaFuture<Process>>()

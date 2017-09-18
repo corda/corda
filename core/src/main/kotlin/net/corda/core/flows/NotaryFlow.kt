@@ -154,8 +154,8 @@ sealed class NotaryError {
 }
 
 /**
- * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [sendAndReceiveWithRetry]
- * instead of [sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
+ * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [FlowSession.sendAndReceiveWithRetry]
+ * instead of [FlowSession.sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
  */
 private class SendTransactionWithRetry(otherSideSession: FlowSession, stx: SignedTransaction) : SendTransactionFlow(otherSideSession, stx) {
     @Suspendable
