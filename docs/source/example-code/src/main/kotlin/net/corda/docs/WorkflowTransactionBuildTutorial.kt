@@ -98,17 +98,12 @@ class SubmitTradeApprovalFlow(private val tradeId: String,
     @Suspendable
     override fun call(): StateAndRef<TradeApprovalContract.State> {
         // Manufacture an initial state
-        val tradeProposal = TradeApprovalContract.State(
-                tradeId,
-                serviceHub.myInfo.chooseIdentity(),
-                counterparty)
+        val tradeProposal = TradeApprovalContract.State(tradeId, ourIdentity, counterparty)
         // identify a notary. This might also be done external to the flow
         val notary = serviceHub.networkMapCache.getAnyNotary()
         // Create the TransactionBuilder and populate with the new state.
         val tx = TransactionBuilder(notary)
-                .withItems(
-                        StateAndContract(tradeProposal, TRADE_APPROVAL_PROGRAM_ID),
-                        Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
+                .withItems(StateAndContract(tradeProposal, TRADE_APPROVAL_PROGRAM_ID), Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
         tx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)
         // We can automatically sign as there is no untrusted data.
         val signedTx = serviceHub.signInitialTransaction(tx)
@@ -177,7 +172,7 @@ class SubmitCompletionFlow(private val ref: StateRef, private val verdict: Workf
                         latestRecord,
                         StateAndContract(newState, TRADE_APPROVAL_PROGRAM_ID),
                         Command(TradeApprovalContract.Commands.Completed(),
-                                listOf(serviceHub.myInfo.chooseIdentity().owningKey, latestRecord.state.data.source.owningKey)))
+                                listOf(ourIdentity.owningKey, latestRecord.state.data.source.owningKey)))
         tx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)
         // We can sign this transaction immediately as we have already checked all the fields and the decision
         // is ultimately a manual one from the caller.
@@ -221,7 +216,7 @@ class RecordCompletionFlow(private val sourceSession: FlowSession) : FlowLogic<U
         // First we receive the verdict transaction signed by their single key
         val completeTx = sourceSession.receive<SignedTransaction>().unwrap {
             // Check the transaction is signed apart from our own key and the notary
-            it.verifySignaturesExcept(serviceHub.myInfo.chooseIdentity().owningKey, it.tx.notary!!.owningKey)
+            it.verifySignaturesExcept(ourIdentity.owningKey, it.tx.notary!!.owningKey)
             // Check the transaction data is correctly formed
             val ltx = it.toLedgerTransaction(serviceHub, false)
             ltx.verify()

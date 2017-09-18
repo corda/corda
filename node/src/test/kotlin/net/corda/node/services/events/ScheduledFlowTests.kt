@@ -63,7 +63,8 @@ class ScheduledFlowTests {
     class InsertInitialStateFlow(private val destination: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val scheduledState = ScheduledState(serviceHub.clock.instant(), serviceHub.myInfo.chooseIdentity(), destination)
+            val scheduledState = ScheduledState(serviceHub.clock.instant(),
+                    ourIdentity, destination)
 
             val notary = serviceHub.networkMapCache.getAnyNotary()
             val builder = TransactionBuilder(notary)
@@ -99,7 +100,7 @@ class ScheduledFlowTests {
             val builder = TransactionBuilder(notary)
                     .addInputState(state)
                     .addOutputState(newStateOutput, DUMMY_PROGRAM_ID)
-                    .addCommand(dummyCommand(serviceHub.myInfo.chooseIdentity().owningKey))
+                    .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, initiateFlow(scheduledState.destination)))
         }

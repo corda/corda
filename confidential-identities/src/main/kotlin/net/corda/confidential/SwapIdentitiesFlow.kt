@@ -1,6 +1,9 @@
-package net.corda.core.flows
+package net.corda.confidential
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -15,8 +18,8 @@ import net.corda.core.utilities.unwrap
  */
 @StartableByRPC
 @InitiatingFlow
-class SwapIdentitiesFlow(val otherParty: Party,
-                         val revocationEnabled: Boolean,
+class SwapIdentitiesFlow(private val otherParty: Party,
+                         private val revocationEnabled: Boolean,
                          override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
     constructor(otherParty: Party) : this(otherParty, false, tracker())
 
@@ -36,7 +39,7 @@ class SwapIdentitiesFlow(val otherParty: Party,
     @Suspendable
     override fun call(): LinkedHashMap<Party, AnonymousParty> {
         progressTracker.currentStep = AWAITING_KEY
-        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled)
+        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, revocationEnabled)
 
         // Special case that if we're both parties, a single identity is generated
         val otherSession = initiateFlow(otherParty)
@@ -47,7 +50,7 @@ class SwapIdentitiesFlow(val otherParty: Party,
             val anonymousOtherSide = otherSession.sendAndReceive<PartyAndCertificate>(legalIdentityAnonymous).unwrap { confidentialIdentity ->
                 validateAndRegisterIdentity(serviceHub.identityService, otherSession.counterparty, confidentialIdentity)
             }
-            identities.put(ourIdentity.party, legalIdentityAnonymous.party.anonymise())
+            identities.put(ourIdentity, legalIdentityAnonymous.party.anonymise())
             identities.put(otherSession.counterparty, anonymousOtherSide.party.anonymise())
         }
         return identities

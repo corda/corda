@@ -51,9 +51,9 @@ object SimmFlow {
      */
     @InitiatingFlow
     @StartableByRPC
-    class Requester(val otherParty: Party,
-                    val valuationDate: LocalDate,
-                    val existing: StateAndRef<PortfolioState>?)
+    class Requester(private val otherParty: Party,
+                    private val valuationDate: LocalDate,
+                    private val existing: StateAndRef<PortfolioState>?)
         : FlowLogic<RevisionedState<PortfolioState.Update>>() {
         constructor(otherParty: Party, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
         lateinit var notary: Party
@@ -61,7 +61,7 @@ object SimmFlow {
 
         @Suspendable
         override fun call(): RevisionedState<PortfolioState.Update> {
-            logger.debug("Calling from: ${ourIdentity.party}. Sending to: $otherParty")
+            logger.debug("Calling from: $ourIdentity. Sending to: $otherParty")
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
 
@@ -85,7 +85,7 @@ object SimmFlow {
         @Suspendable
         private fun agreePortfolio(portfolio: Portfolio) {
             logger.info("Agreeing portfolio")
-            val parties = Pair(ourIdentity.party, otherParty)
+            val parties = Pair(ourIdentity, otherParty)
             val portfolioState = PortfolioState(portfolio.refs, parties, valuationDate)
 
             otherPartySession.send(OfferMessage(notary, portfolioState, existing?.ref, valuationDate))

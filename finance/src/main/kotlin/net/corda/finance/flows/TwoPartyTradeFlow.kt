@@ -132,7 +132,8 @@ object TwoPartyTradeFlow {
                      private val acceptablePrice: Amount<Currency>,
                      private val typeToBuy: Class<out OwnableState>,
                      private val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
-        constructor(otherSideSession: FlowSession, notary: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>): this(otherSideSession, notary, acceptablePrice, typeToBuy, true)
+        constructor(otherSideSession: FlowSession, notary: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>) :
+                this(otherSideSession, notary, acceptablePrice, typeToBuy, true)
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
 
@@ -159,9 +160,9 @@ object TwoPartyTradeFlow {
 
             // Create the identity we'll be paying to, and send the counterparty proof we own the identity
             val buyerAnonymousIdentity = if (anonymous)
-                serviceHub.keyManagementService.freshKeyAndCert(ourIdentity, false)
+                serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
             else
-                ourIdentity
+                ourIdentityAndCert
             // Put together a proposed transaction that performs the trade, and sign it.
             progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(assetForSale, tradeRequest, buyerAnonymousIdentity)

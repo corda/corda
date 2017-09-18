@@ -15,8 +15,8 @@ import java.util.*
 
 @InitiatingFlow
 @StartableByRPC
-class SellerFlow(val otherParty: Party,
-                 val amount: Amount<Currency>,
+class SellerFlow(private val otherParty: Party,
+                 private val amount: Amount<Currency>,
                  override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
     constructor(otherParty: Party, amount: Amount<Currency>) : this(otherParty, amount, tracker())
 
@@ -39,7 +39,7 @@ class SellerFlow(val otherParty: Party,
     override fun call(): SignedTransaction {
         progressTracker.currentStep = SELF_ISSUING
 
-        val cpOwner = serviceHub.keyManagementService.freshKeyAndCert(ourIdentity, false)
+        val cpOwner = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
         val commercialPaper = serviceHub.vaultQueryService.queryBy(CommercialPaper.State::class.java).states.first()
 
         progressTracker.currentStep = TRADING

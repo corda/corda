@@ -10,7 +10,6 @@ import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.aliceBobAndNotary
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
-import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.driver.driver
 import net.corda.testing.dummyCommand
@@ -23,17 +22,20 @@ import kotlin.test.assertEquals
  */
 class LargeTransactionsTest {
     @StartableByRPC @InitiatingFlow
-    class SendLargeTransactionFlow(val hash1: SecureHash, val hash2: SecureHash, val hash3: SecureHash, val hash4: SecureHash) : FlowLogic<Unit>() {
+    class SendLargeTransactionFlow(private val hash1: SecureHash,
+                                   private val hash2: SecureHash,
+                                   private val hash3: SecureHash,
+                                   private val hash4: SecureHash) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val tx = TransactionBuilder(notary = DUMMY_NOTARY)
                     .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
-                    .addCommand(dummyCommand(serviceHub.myInfo.chooseIdentity().owningKey))
+                    .addCommand(dummyCommand(ourIdentity.owningKey))
                     .addAttachment(hash1)
                     .addAttachment(hash2)
                     .addAttachment(hash3)
                     .addAttachment(hash4)
-            val stx = serviceHub.signInitialTransaction(tx, serviceHub.myInfo.chooseIdentity().owningKey)
+            val stx = serviceHub.signInitialTransaction(tx, ourIdentity.owningKey)
             // Send to the other side and wait for it to trigger resolution from us.
             val bob = serviceHub.identityService.partyFromX500Name(BOB.name)!!
             val bobSession = initiateFlow(bob)

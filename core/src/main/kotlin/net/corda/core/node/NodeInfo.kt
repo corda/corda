@@ -32,12 +32,16 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
 
     // TODO This part will be removed with services removal.
     val notaryIdentity: Party get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
+
+    @Transient private var _legalIdentities: List<Party>? = null
+    val legalIdentities: List<Party> get() {
+        return _legalIdentities ?: legalIdentitiesAndCerts.map { it.party }.also { _legalIdentities = it }
+    }
+
+    /** Returns true if [party] is one of the identities of this node, else false. */
+    fun isLegalIdentity(party: Party): Boolean = party in legalIdentities
+
     fun serviceIdentities(type: ServiceType): List<Party> {
         return advertisedServices.mapNotNull { if (it.info.type.isSubTypeOf(type)) it.identity.party else null }
     }
-
-    val legalIdentities: List<Party> get() = legalIdentitiesAndCerts.map { it.party }
-
-    /** Returns true iff [party] is one of the legal identities of this node. */
-    fun isLegalIdentity(party: Party): Boolean = legalIdentitiesAndCerts.any { it.party == party }
 }

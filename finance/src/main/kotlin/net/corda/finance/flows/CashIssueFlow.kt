@@ -37,8 +37,8 @@ class CashIssueFlow(private val amount: Amount<Currency>,
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary)
-        val issuer = ourIdentity.party.ref(issuerBankPartyRef)
-        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity.party, notary)
+        val issuer = ourIdentity.ref(issuerBankPartyRef)
+        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity, notary)
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(builder, signers)
         progressTracker.currentStep = FINALISING_TX

@@ -1,12 +1,10 @@
 package net.corda.node.services
 
-import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.*
+import net.corda.core.flows.AbstractStateReplacementFlow
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.unwrap
 
 class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacementFlow.Acceptor<Party>(otherSideSession) {
     /**
@@ -16,7 +14,7 @@ class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacem
      * and is also in a geographically convenient location we can just automatically approve the change.
      * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
      */
-    override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
+    override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Party>) {
         val state = proposal.stateRef
         val proposedTx = stx.resolveNotaryChangeTransaction(serviceHub)
         val newNotary = proposal.modification
@@ -29,25 +27,6 @@ class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacem
         val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.notaryIdentity == newNotary }
         if (!isNotary) {
             throw StateReplacementException("The proposed node $newNotary does not run a Notary service")
-        }
-    }
-}
-
-class SwapIdentitiesHandler(val otherSideSession: FlowSession, val revocationEnabled: Boolean) : FlowLogic<Unit>() {
-    constructor(otherSideSession: FlowSession) : this(otherSideSession, false)
-    companion object {
-        object SENDING_KEY : ProgressTracker.Step("Sending key")
-    }
-
-    override val progressTracker: ProgressTracker = ProgressTracker(SENDING_KEY)
-
-    @Suspendable
-    override fun call(): Unit {
-        val revocationEnabled = false
-        progressTracker.currentStep = SENDING_KEY
-        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled)
-        otherSideSession.sendAndReceive<PartyAndCertificate>(legalIdentityAnonymous).unwrap { confidentialIdentity ->
-            SwapIdentitiesFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSideSession.counterparty, confidentialIdentity)
         }
     }
 }

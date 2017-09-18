@@ -542,17 +542,17 @@ class TwoPartyTradeFlowTests {
     }
 
     @InitiatingFlow
-    class SellerInitiator(val buyer: Party,
-                          val notary: NodeInfo,
-                          val assetToSell: StateAndRef<OwnableState>,
-                          val price: Amount<Currency>,
-                          val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
+    class SellerInitiator(private val buyer: Party,
+                          private val notary: NodeInfo,
+                          private val assetToSell: StateAndRef<OwnableState>,
+                          private val price: Amount<Currency>,
+                          private val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            val myParty = if (anonymous) {
-                serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.chooseIdentityAndCert(), false)
+            val myPartyAndCert = if (anonymous) {
+                serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
             } else {
-                serviceHub.myInfo.chooseIdentityAndCert()
+                ourIdentityAndCert
             }
             val buyerSession = initiateFlow(buyer)
             buyerSession.send(TestTx(notary.notaryIdentity, price, anonymous))
@@ -560,12 +560,12 @@ class TwoPartyTradeFlowTests {
                     buyerSession,
                     assetToSell,
                     price,
-                    myParty))
+                    myPartyAndCert))
         }
     }
 
     @InitiatedBy(SellerInitiator::class)
-    class BuyerAcceptor(val sellerSession: FlowSession) : FlowLogic<SignedTransaction>() {
+    class BuyerAcceptor(private val sellerSession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val (notary, price, anonymous) = sellerSession.receive<TestTx>().unwrap {

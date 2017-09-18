@@ -14,7 +14,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
@@ -371,8 +370,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
             }
             openSessions[session.ourSessionId] = session
-            val meIdentity = sessionInit.otherIdentity ?: serviceHub.myInfo.legalIdentitiesAndCerts.first()
-            val fiber = createFiber(flow, FlowInitiator.Peer(sender), meIdentity)
+            // TODO Perhaps the session-init will specificy which of our multiple identies to use, which we would have to
+            // double-check is actually ours. However, what if we want to control how our identities gets used?
+            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             flowSession.sessionFlow = flow
             flowSession.stateMachine = fiber
             fiber.openSessions[Pair(flow, sender)] = session
@@ -427,15 +427,23 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate): FlowStateMachineImpl<T> {
-        val id = StateMachineRunId.createRandom()
-        return FlowStateMachineImpl(id, logic, scheduler, flowInitiator, me).apply { initFiber(this) }
+    private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T> {
+        val fsm = FlowStateMachineImpl(
+                StateMachineRunId.createRandom(),
+                logic,
+                scheduler,
+                flowInitiator,
+                ourIdentity ?: serviceHub.myInfo.legalIdentities[0])
+        initFiber(fsm)
+        return fsm
     }
 
     private fun initFiber(fiber: FlowStateMachineImpl<*>) {
         verifyFlowLogicIsSuspendable(fiber.logic)
         fiber.database = database
         fiber.serviceHub = serviceHub
+        fiber.ourIdentityAndCert = serviceHub.myInfo.legalIdentitiesAndCerts.find { it.party == fiber.ourIdentity }
+                ?: throw IllegalStateException("Identity specified by ${fiber.id} (${fiber.ourIdentity}) is not one of ours!")
         fiber.actionOnSuspend = { ioRequest ->
             updateCheckpoint(fiber)
             // We commit on the fibers transaction that was copied across ThreadLocals during suspend
@@ -514,11 +522,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      *
      * Note that you must be on the [executor] thread.
      */
-    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate?): FlowStateMachineImpl<T> {
+    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         val fiber = database.transaction {
-            val fiber = createFiber(logic, flowInitiator, me ?: serviceHub.myInfo.legalIdentitiesAndCerts.first())
+            val fiber = createFiber(logic, flowInitiator, ourIdentity)
             updateCheckpoint(fiber)
             fiber
         }

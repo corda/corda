@@ -7,6 +7,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.abbreviate
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -58,10 +59,24 @@ abstract class FlowLogic<out T> {
     fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, flowUsedForSessions)
 
     /**
-     * Specifies our identity in the flow. With node's multiple identities we can choose which one to use for communication.
-     * Defaults to the first one from [NodeInfo.legalIdentitiesAndCerts].
+     * Specifies the identity, with certificate, to use for this flow. This will be one of the multiple identities that
+     * belong to this node.
+     * @see NodeInfo.legalIdentitiesAndCerts
+     *
+     * Note: The current implementation returns the single identity of the node. This will change once multiple identities
+     * is implemented.
      */
-    val ourIdentity: PartyAndCertificate get() = stateMachine.ourIdentity
+    val ourIdentityAndCert: PartyAndCertificate get() = stateMachine.ourIdentityAndCert
+
+    /**
+     * Specifies the identity to use for this flow. This will be one of the multiple identities that belong to this node.
+     * This is the same as calling `ourIdentityAndCert.party`.
+     * @see NodeInfo.legalIdentities
+     *
+     * Note: The current implementation returns the single identity of the node. This will change once multiple identities
+     * is implemented.
+     */
+    val ourIdentity: Party get() = ourIdentityAndCert.party
 
     /**
      * Returns a [FlowInfo] object describing the flow [otherParty] is using. With [FlowInfo.flowVersion] it
