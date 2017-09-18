@@ -8,6 +8,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.node.services.FlowPermissions
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -17,7 +20,7 @@ import org.junit.Test
 
 class BankOfCordaRPCClientTest {
     @Test
-    fun `issuer flow via RPC`() {
+    fun `combined issue and pay flow via RPC`() {
         driver(dsl = {
             val bocManager = User("bocManager", "password1", permissions = setOf(
                     startFlowPermission<CashIssueAndPaymentFlow>()))
@@ -75,6 +78,35 @@ class BankOfCordaRPCClientTest {
                         }
                 )
             }
+        }, isDebug = true)
+    }
+
+    @Test
+    fun `separate issue then pay flows via RPC`() {
+        driver(dsl = {
+            val bocManager = User("bocManager", "password1", permissions = setOf(
+                    FlowPermissions.startFlowPermission<CashIssueFlow>(),
+                    FlowPermissions.startFlowPermission<CashPaymentFlow>()))
+            val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
+            val (nodeBankOfCorda, nodeBigCorporation) = listOf(
+                    startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type)), listOf(bocManager)),
+                    startNode(BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
+            ).transpose().getOrThrow()
+
+            // Bank of Corda RPC Client
+            val bocClient = nodeBankOfCorda.rpcClientToNode()
+            val bocProxy = bocClient.start("bocManager", "password1").proxy
+
+            // Kick-off actual Issue Flow
+            val anonymous = true
+            bocProxy.startFlow(::CashIssueFlow,
+                    10000.DOLLARS, BIG_CORP_PARTY_REF,
+                    nodeBankOfCorda.nodeInfo.notaryIdentity)
+            // Kick-off actual Payment Flow with a different amount so we force a change payment
+            bocProxy.startFlow(::CashPaymentFlow,
+                    997.DOLLARS,
+                    nodeBigCorporation.nodeInfo.legalIdentity,
+                    anonymous)
         }, isDebug = true)
     }
 }
