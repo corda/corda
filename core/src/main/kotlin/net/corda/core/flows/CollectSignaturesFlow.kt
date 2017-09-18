@@ -104,15 +104,14 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         // If the unsigned counter-parties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
-        val keysToParties = keysToParties(unsigned)
+        val partyToKeyMap = createPartyToKeyMap(unsigned)
         // Check that we have a session for all parties.  No more, no less.
-        require(sessionsToCollectFrom.map { it.counterparty }.toSet() == keysToParties.toMap().keys) {
+        require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeyMap.keys) {
             "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
         }
         // Collect signatures from all counter-parties and append them to the partially signed transaction.
-        val counterpartySignatures = keysToParties.map { (party, signingKey) ->
-            val session = initiateFlow(party)
-            subFlow(CollectSignatureFlow(partiallySignedTx, session, signingKey))
+        val counterpartySignatures = sessionsToCollectFrom.map { session ->
+            subFlow(CollectSignatureFlow(partiallySignedTx, session, partyToKeyMap[session.counterparty]!!))
         }
         val stx = partiallySignedTx + counterpartySignatures
 
@@ -129,10 +128,11 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
      * @return a pair of the well known identity to contact for a signature, and the public key that party should sign
      * with (this may belong to a confidential identity).
      */
-    @Suspendable private fun keysToParties(keys: Collection<PublicKey>): List<Pair<Party, PublicKey>> = keys.map {
-        val party = serviceHub.identityService.partyFromAnonymous(AnonymousParty(it))
-                ?: throw IllegalStateException("Party ${it.toBase58String()} not found on the network.")
-        Pair(party, it)
+    @Suspendable private fun createPartyToKeyMap(keys: Collection<PublicKey>): Map<Party, PublicKey> {
+        return keys.associateBy {
+            serviceHub.identityService.partyFromAnonymous(AnonymousParty(it))
+                    ?: throw IllegalStateException("Party ${it.toBase58String()} not found on the network.")
+        }
     }
 }
 
