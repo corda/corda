@@ -23,8 +23,9 @@ import java.util.*
 @Suspendable
 fun generateSpend(services: ServiceHub,
                   tx: TransactionBuilder,
-                  payments: List<PartyAndAmount<Currency>>): Pair<TransactionBuilder, List<PublicKey>> {
-    return Cash.generateSpend(services, tx, payments, services.myInfo.chooseIdentityAndCert())
+                  payments: List<PartyAndAmount<Currency>>,
+                  onlyFromParties: Set<AbstractParty> = emptySet()): Pair<TransactionBuilder, List<PublicKey>> {
+    return Cash.generateSpend(services, tx, payments, services.myInfo.chooseIdentityAndCert(), onlyFromParties)
 }
 
 /**
