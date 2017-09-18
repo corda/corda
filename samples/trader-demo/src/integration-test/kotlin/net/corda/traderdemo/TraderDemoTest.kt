@@ -7,20 +7,18 @@ import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.flows.CashReceiveFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.testing.BOC
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.driver.poll
 import net.corda.testing.node.NodeBasedTest
 import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
+import net.corda.traderdemo.flow.CommericalPaperReceiveFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -41,6 +39,8 @@ class TraderDemoTest : NodeBasedTest() {
         val (nodeA, nodeB, bankNode) = listOf(nodeAFuture, nodeBFuture, bankNodeFuture, notaryFuture).map { it.getOrThrow() }
 
         nodeA.internals.registerInitiatedFlow(BuyerFlow::class.java)
+        nodeA.internals.registerInitiatedFlow(CashReceiveFlow::class.java)
+        nodeB.internals.registerInitiatedFlow(CommericalPaperReceiveFlow::class.java)
         nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
         nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1, CommercialPaperSchemaV1))
 
