@@ -656,8 +656,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val certificates = if (keyStore.containsAlias(compositeKeyAlias)) {
             // Use composite key instead if it exists
             val certificate = keyStore.getCertificate(compositeKeyAlias)
-            // We have to create the certificate chain for the composite key manually, this is because in order to store
-            // the chain in key store we need a private key, however there is no corresponding private key for the composite key.
+            // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
+            // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
+            // the tail of the private key certificates, as they are both signed by the same certificate chain.
             Lists.asList(certificate, keyStore.getCertificateChain(privateKeyAlias).drop(1).toTypedArray())
         } else {
             keyStore.getCertificateChain(privateKeyAlias).let {
