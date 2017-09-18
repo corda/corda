@@ -16,5 +16,5 @@ class ManualFinalityFlow(transactions: Iterable<SignedTransaction>,
                          recipients: Set<Party>,
                          progressTracker: ProgressTracker) : FinalityFlow(transactions, recipients, progressTracker) {
     constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(listOf(transaction), extraParticipants, tracker())
-    override fun lookupParties(ltx: LedgerTransaction): List<Party> = emptyList()
+    override fun lookupParties(ltx: LedgerTransaction): Set<Party> = emptySet()
 }

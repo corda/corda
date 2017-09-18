@@ -25,9 +25,9 @@ import java.util.*
  * @param notary the notary to set on the output states.
  */
 @StartableByRPC
-class CashIssueFlow(val amount: Amount<Currency>,
-                    val issuerBankPartyRef: OpaqueBytes,
-                    val notary: Party,
+class CashIssueFlow(private val amount: Amount<Currency>,
+                    private val issuerBankPartyRef: OpaqueBytes,
+                    private val notary: Party,
                     progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>,
                 issuerBankPartyRef: OpaqueBytes,
@@ -38,13 +38,13 @@ class CashIssueFlow(val amount: Amount<Currency>,
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary)
-        val issuer = ourIdentity.party.ref(issuerBankPartyRef)
-        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity.party, notary)
+        val issuer = ourIdentity.ref(issuerBankPartyRef)
+        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity, notary)
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(builder, signers)
         progressTracker.currentStep = FINALISING_TX
-        subFlow(FinalityFlow(tx))
-        return Result(tx, ourIdentity.party)
+        val notarised = subFlow(FinalityFlow(tx)).single()
+        return Result(notarised, ourIdentity)
     }
 
     @CordaSerializable

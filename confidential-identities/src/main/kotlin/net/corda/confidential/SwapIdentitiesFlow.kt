@@ -18,8 +18,8 @@ import net.corda.core.utilities.unwrap
  */
 @StartableByRPC
 @InitiatingFlow
-class SwapIdentitiesFlow(val otherSide: Party,
-                         val revocationEnabled: Boolean,
+class SwapIdentitiesFlow(private val otherSide: Party,
+                         private val revocationEnabled: Boolean,
                          override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
     constructor(otherSide: Party) : this(otherSide, false, tracker())
 
@@ -39,7 +39,7 @@ class SwapIdentitiesFlow(val otherSide: Party,
     @Suspendable
     override fun call(): LinkedHashMap<Party, AnonymousParty> {
         progressTracker.currentStep = AWAITING_KEY
-        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled)
+        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, revocationEnabled)
 
         // Special case that if we're both parties, a single identity is generated
         val identities = LinkedHashMap<Party, AnonymousParty>()
@@ -49,7 +49,7 @@ class SwapIdentitiesFlow(val otherSide: Party,
             val anonymousOtherSide = sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->
                 validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
             }
-            identities.put(ourIdentity.party, legalIdentityAnonymous.party.anonymise())
+            identities.put(ourIdentity, legalIdentityAnonymous.party.anonymise())
             identities.put(otherSide, anonymousOtherSide.party.anonymise())
         }
         return identities

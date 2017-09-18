@@ -16,10 +16,10 @@ class SwapIdentitiesHandler(val otherSide: Party, val revocationEnabled: Boolean
     override val progressTracker: ProgressTracker = ProgressTracker(SENDING_KEY)
 
     @Suspendable
-    override fun call(): Unit {
+    override fun call() {
         val revocationEnabled = false
         progressTracker.currentStep = SENDING_KEY
-        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled)
+        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, revocationEnabled)
         sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->
             SwapIdentitiesFlow.validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
         }
