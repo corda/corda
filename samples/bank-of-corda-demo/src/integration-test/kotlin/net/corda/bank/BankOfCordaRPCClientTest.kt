@@ -18,7 +18,7 @@ import org.junit.Test
 class BankOfCordaRPCClientTest {
     @Test
     fun `issuer flow via RPC`() {
-        driver(dsl = {
+        driver(cordappPackagesToScan = listOf("net.corda.finance"), dsl = {
             val bocManager = User("bocManager", "password1", permissions = setOf(
                     startFlowPermission<CashIssueAndPaymentFlow>()))
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
