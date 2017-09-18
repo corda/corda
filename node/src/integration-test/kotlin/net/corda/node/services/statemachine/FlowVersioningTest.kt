@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.InitiatingFlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
@@ -29,7 +30,7 @@ class FlowVersioningTest : NodeBasedTest() {
     }
 
     @InitiatingFlow
-    private class PretendInitiatingCoreFlow(val initiatedParty: Party) : FlowLogic<Pair<Int, Int>>() {
+    private class PretendInitiatingCoreFlow(val initiatedParty: Party) : InitiatingFlowLogic<Pair<Int, Int>>() {
         @Suspendable
         override fun call(): Pair<Int, Int> {
             // Execute receive() outside of the Pair constructor to avoid Kotlin/Quasar instrumentation bug.

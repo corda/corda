@@ -92,7 +92,7 @@ data class TradeApprovalContract(val blank: Unit? = null) : Contract {
  * as their approval/rejection is to follow.
  */
 class SubmitTradeApprovalFlow(private val tradeId: String,
-                              private val counterparty: Party) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
+                              private val counterparty: Party) : InitiatingFlowLogic<StateAndRef<TradeApprovalContract.State>>() {
     @Suspendable
     override fun call(): StateAndRef<TradeApprovalContract.State> {
         // Manufacture an initial state
@@ -118,7 +118,7 @@ class SubmitTradeApprovalFlow(private val tradeId: String,
  * end up with a fully signed copy of the state either as APPROVED, or REJECTED
  */
 @InitiatingFlow
-class SubmitCompletionFlow(private val ref: StateRef, private val verdict: WorkflowState) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
+class SubmitCompletionFlow(private val ref: StateRef, private val verdict: WorkflowState) : InitiatingFlowLogic<StateAndRef<TradeApprovalContract.State>>() {
     init {
         require(verdict in setOf(WorkflowState.APPROVED, WorkflowState.REJECTED)) {
             "Verdict must be a final state"

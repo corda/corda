@@ -49,7 +49,7 @@ public class FlowCookbookJava {
     @StartableByRPC
     // Every flow must subclass ``FlowLogic``. The generic indicates the
     // flow's return type.
-    public static class InitiatorFlow extends FlowLogic<Void> {
+    public static class InitiatorFlow extends InitiatingFlowLogic<Void> {
 
         private final boolean arg1;
         private final int arg2;

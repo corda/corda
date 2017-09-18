@@ -77,7 +77,7 @@ object TopupIssuerFlow {
     class TopupIssuanceRequester(val issueToParty: Party,
                                  val issueToPartyRef: OpaqueBytes,
                                  val issuerBankParty: Party,
-                                 val notaryParty: Party) : FlowLogic<List<AbstractCashFlow.Result>>() {
+                                 val notaryParty: Party) : InitiatingFlowLogic<List<AbstractCashFlow.Result>>() {
         @Suspendable
         @Throws(CashException::class)
         override fun call(): List<AbstractCashFlow.Result> {

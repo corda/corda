@@ -33,7 +33,7 @@ object UpdateBusinessDayFlow {
 
     @InitiatingFlow
     @StartableByRPC
-    class Broadcast(val date: LocalDate, override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
+    class Broadcast(val date: LocalDate, override val progressTracker: ProgressTracker) : InitiatingFlowLogic<Unit>() {
         constructor(date: LocalDate) : this(date, tracker())
 
         companion object {

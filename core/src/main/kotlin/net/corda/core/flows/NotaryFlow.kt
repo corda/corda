@@ -34,7 +34,7 @@ class NotaryFlow {
      */
     @InitiatingFlow
     open class Client(private val stx: SignedTransaction,
-                      override val progressTracker: ProgressTracker) : FlowLogic<List<TransactionSignature>>() {
+                      override val progressTracker: ProgressTracker) : InitiatingFlowLogic<List<TransactionSignature>>() {
         constructor(stx: SignedTransaction) : this(stx, tracker())
 
         companion object {

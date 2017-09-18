@@ -5,10 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import net.corda.client.jackson.JacksonSupport
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.InitiatingFlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.services.queryBy
@@ -142,7 +142,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val notaryId = node1.rpcOps.notaryIdentities().first()
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,
-                            val payload: AutoOffer) : FlowLogic<SignedTransaction>() {
+                            val payload: AutoOffer) : InitiatingFlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val session = initiateFlow(otherParty)

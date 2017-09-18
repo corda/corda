@@ -91,7 +91,7 @@ class ForeignExchangeFlow(private val tradeId: String,
                           private val baseCurrencyAmount: Amount<Issued<Currency>>,
                           private val quoteCurrencyAmount: Amount<Issued<Currency>>,
                           private val counterparty: Party,
-                          private val weAreBaseCurrencySeller: Boolean) : FlowLogic<SecureHash>() {
+                          private val weAreBaseCurrencySeller: Boolean) : InitiatingFlowLogic<SecureHash>() {
     @Suspendable
     override fun call(): SecureHash {
         // Select correct sides of the Fx exchange to query for.

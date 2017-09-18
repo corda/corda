@@ -15,4 +15,4 @@ import kotlin.reflect.KClass
  * @see InitiatingFlow
  */
 @Target(CLASS)
-annotation class InitiatedBy(val value: KClass<out FlowLogic<*>>)
+annotation class InitiatedBy(val value: KClass<out InitiatingFlowLogic<*>>)

@@ -5,6 +5,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.InitiatingFlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -17,7 +18,7 @@ import java.util.*
 @StartableByRPC
 class SellerFlow(private val otherParty: Party,
                  private val amount: Amount<Currency>,
-                 override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
+                 override val progressTracker: ProgressTracker) : InitiatingFlowLogic<SignedTransaction>() {
     constructor(otherParty: Party, amount: Amount<Currency>) : this(otherParty, amount, tracker())
 
     companion object {

@@ -55,9 +55,6 @@ abstract class FlowLogic<out T> {
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
-    @Suspendable
-    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, flowUsedForSessions)
-
     /**
      * Specifies the identity, with certificate, to use for this flow. This will be one of the multiple identities that
      * belong to this node.
@@ -317,7 +314,7 @@ abstract class FlowLogic<out T> {
 
     // This is the flow used for managing sessions. It defaults to the current flow but if this is an inlined sub-flow
     // then it will point to the flow it's been inlined to.
-    private var flowUsedForSessions: FlowLogic<*> = this
+    internal var flowUsedForSessions: FlowLogic<*> = this
 
     private fun maybeWireUpProgressTracking(subLogic: FlowLogic<*>) {
         val ours = progressTracker
@@ -330,6 +327,11 @@ abstract class FlowLogic<out T> {
             ours.setChildProgressTracker(ours.currentStep, theirs)
         }
     }
+}
+
+abstract class InitiatingFlowLogic<out A> : FlowLogic<A>() {
+    @Suspendable
+    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, flowUsedForSessions)
 }
 
 /**

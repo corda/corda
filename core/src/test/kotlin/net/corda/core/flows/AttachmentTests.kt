@@ -160,7 +160,7 @@ class AttachmentTests {
     private fun StartedNode<*>.startAttachmentFlow(hashes: Set<SecureHash>, otherSide: Party) = services.startFlow(InitiatingFetchAttachmentsFlow(otherSide, hashes))
 
     @InitiatingFlow
-    private class InitiatingFetchAttachmentsFlow(val otherSide: Party, val hashes: Set<SecureHash>) : FlowLogic<FetchDataFlow.Result<Attachment>>() {
+    private class InitiatingFetchAttachmentsFlow(val otherSide: Party, val hashes: Set<SecureHash>) : InitiatingFlowLogic<FetchDataFlow.Result<Attachment>>() {
         @Suspendable
         override fun call(): FetchDataFlow.Result<Attachment> {
             val session = initiateFlow(otherSide)

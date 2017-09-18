@@ -416,7 +416,7 @@ class FlowFrameworkTests {
 
     @InitiatingFlow
     private class WaitForOtherSideEndBeforeSendAndReceive(val otherParty: Party,
-                                                          @Transient val receivedOtherFlowEnd: Semaphore) : FlowLogic<Unit>() {
+                                                          @Transient val receivedOtherFlowEnd: Semaphore) : InitiatingFlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             // Kick off the flow on the other side ...
@@ -558,7 +558,7 @@ class FlowFrameworkTests {
     @Test
     fun `retry subFlow due to receiving FlowException`() {
         @InitiatingFlow
-        class AskForExceptionFlow(val otherParty: Party, val throwException: Boolean) : FlowLogic<String>() {
+        class AskForExceptionFlow(val otherParty: Party, val throwException: Boolean) : InitiatingFlowLogic<String>() {
             @Suspendable
             override fun call(): String = initiateFlow(otherParty).sendAndReceive<String>(throwException).unwrap { it }
         }
@@ -747,7 +747,7 @@ class FlowFrameworkTests {
     }
 
     @InitiatingFlow
-    private class DoubleInitiatingFlow : FlowLogic<Unit>() {
+    private class DoubleInitiatingFlow : InitiatingFlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             initiateFlow(serviceHub.myInfo.chooseIdentity())
@@ -867,7 +867,7 @@ class FlowFrameworkTests {
     }
 
     @InitiatingFlow
-    private open class SendFlow(val payload: Any, vararg val otherParties: Party) : FlowLogic<FlowInfo>() {
+    private open class SendFlow(val payload: Any, vararg val otherParties: Party) : InitiatingFlowLogic<FlowInfo>() {
         init {
             require(otherParties.isNotEmpty())
         }
@@ -896,7 +896,7 @@ class FlowFrameworkTests {
     private class IncorrectCustomSendFlow(payload: String, otherParty: Party) : CustomInterface, SendFlow(payload, otherParty)
 
     @InitiatingFlow
-    private class ReceiveFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
+    private class ReceiveFlow(vararg val otherParties: Party) : InitiatingFlowLogic<Unit>() {
         object START_STEP : ProgressTracker.Step("Starting")
         object RECEIVED_STEP : ProgressTracker.Step("Received")
 
@@ -950,7 +950,7 @@ class FlowFrameworkTests {
     }
 
     @InitiatingFlow
-    private class SendAndReceiveFlow(val otherParty: Party, val payload: Any, val otherPartySession: FlowSession? = null) : FlowLogic<Any>() {
+    private class SendAndReceiveFlow(val otherParty: Party, val payload: Any, val otherPartySession: FlowSession? = null) : InitiatingFlowLogic<Any>() {
         constructor(otherPartySession: FlowSession, payload: Any) : this(otherPartySession.counterparty, payload, otherPartySession)
         @Suspendable
         override fun call(): Any = (otherPartySession ?: initiateFlow(otherParty)).sendAndReceive<Any>(payload).unwrap { it }
@@ -962,7 +962,7 @@ class FlowFrameworkTests {
     }
 
     @InitiatingFlow
-    private class PingPongFlow(val otherParty: Party, val payload: Long, val otherPartySession: FlowSession? = null) : FlowLogic<Unit>() {
+    private class PingPongFlow(val otherParty: Party, val payload: Long, val otherPartySession: FlowSession? = null) : InitiatingFlowLogic<Unit>() {
         constructor(otherPartySession: FlowSession, payload: Long) : this(otherPartySession.counterparty, payload, otherPartySession)
         @Transient var receivedPayload: Long? = null
         @Transient var receivedPayload2: Long? = null
@@ -996,7 +996,7 @@ class FlowFrameworkTests {
 
     private object WaitingFlows {
         @InitiatingFlow
-        class Waiter(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        class Waiter(val stx: SignedTransaction, val otherParty: Party) : InitiatingFlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val otherPartySession = initiateFlow(otherParty)
@@ -1016,7 +1016,7 @@ class FlowFrameworkTests {
     }
 
     @InitiatingFlow
-    private class VaultQueryFlow(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<List<StateAndRef<ContractState>>>() {
+    private class VaultQueryFlow(val stx: SignedTransaction, val otherParty: Party) : InitiatingFlowLogic<List<StateAndRef<ContractState>>>() {
         @Suspendable
         override fun call(): List<StateAndRef<ContractState>> {
             val otherPartySession = initiateFlow(otherParty)
@@ -1030,7 +1030,7 @@ class FlowFrameworkTests {
     }
 
     @InitiatingFlow(version = 2)
-    private class UpgradedFlow(val otherParty: Party, val otherPartySession: FlowSession? = null) : FlowLogic<Pair<Any, Int>>() {
+    private class UpgradedFlow(val otherParty: Party, val otherPartySession: FlowSession? = null) : InitiatingFlowLogic<Pair<Any, Int>>() {
         constructor(otherPartySession: FlowSession) : this(otherPartySession.counterparty, otherPartySession)
         @Suspendable
         override fun call(): Pair<Any, Int> {

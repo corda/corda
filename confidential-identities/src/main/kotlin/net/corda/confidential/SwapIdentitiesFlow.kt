@@ -1,8 +1,8 @@
 package net.corda.confidential
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.InitiatingFlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -20,7 +20,7 @@ import net.corda.core.utilities.unwrap
 @InitiatingFlow
 class SwapIdentitiesFlow(private val otherParty: Party,
                          private val revocationEnabled: Boolean,
-                         override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
+                         override val progressTracker: ProgressTracker) : InitiatingFlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
     constructor(otherParty: Party) : this(otherParty, false, tracker())
 
     companion object {

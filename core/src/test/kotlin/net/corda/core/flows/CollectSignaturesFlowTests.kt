@@ -59,7 +59,7 @@ class CollectSignaturesFlowTests {
     // "collectSignaturesFlow" and "SignTransactionFlow" can be used in practise.
     object TestFlow {
         @InitiatingFlow
-        class Initiator(private val state: DummyContract.MultiOwnerState, private val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        class Initiator(private val state: DummyContract.MultiOwnerState, private val otherParty: Party) : InitiatingFlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val session = initiateFlow(otherParty)
@@ -104,7 +104,7 @@ class CollectSignaturesFlowTests {
     // receiving off the wire.
     object TestFlowTwo {
         @InitiatingFlow
-        class Initiator(private val state: DummyContract.MultiOwnerState) : FlowLogic<SignedTransaction>() {
+        class Initiator(private val state: DummyContract.MultiOwnerState) : InitiatingFlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val notary = serviceHub.getDefaultNotary()

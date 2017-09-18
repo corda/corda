@@ -252,7 +252,7 @@ class ContractUpgradeFlowTest {
 
     @StartableByRPC
     class FinalityInvoker(private val transaction: SignedTransaction,
-                          private val extraRecipients: Set<Party>) : FlowLogic<SignedTransaction>() {
+                          private val extraRecipients: Set<Party>) : InitiatingFlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction = subFlow(FinalityFlow(transaction, extraRecipients))
     }

@@ -66,7 +66,7 @@ class CordappSmokeTest {
 
     @InitiatingFlow
     @StartableByRPC
-    class GatherContextsFlow(private val otherParty: Party) : FlowLogic<Pair<FlowInfo, FlowInfo>>() {
+    class GatherContextsFlow(private val otherParty: Party) : InitiatingFlowLogic<Pair<FlowInfo, FlowInfo>>() {
         @Suspendable
         override fun call(): Pair<FlowInfo, FlowInfo> {
             // This receive will kick off SendBackInitiatorFlowContext by sending a session-init with our app name.
