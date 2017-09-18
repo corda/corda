@@ -13,6 +13,7 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -47,7 +48,7 @@ class IdentitySyncFlowTests {
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
-        val notary = aliceNode.services.networkMapCache.notaryIdentities.first().party
+        val notary = aliceNode.services.getDefaultNotary()
         val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary))
         val issueTx = issueFlow.resultFuture.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner

@@ -38,7 +38,6 @@ class ServiceType private constructor(val id: String) {
 
     fun isSubTypeOf(superType: ServiceType) = (id == superType.id) || id.startsWith(superType.id + ".")
     fun isNotary() = isSubTypeOf(notary)
-    fun isValidatingNotary() = isNotary() && id.contains(".validating")
 
     override fun equals(other: Any?): Boolean = other === this || other is ServiceType && other.id == this.id
     override fun hashCode(): Int = id.hashCode()

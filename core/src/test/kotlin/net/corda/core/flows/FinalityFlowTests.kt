@@ -10,6 +10,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE
 import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import org.junit.After
@@ -33,7 +34,7 @@ class FinalityFlowTests {
         nodeB = nodes.partyNodes[1]
         mockNet.runNetwork()
         nodeA.internals.ensureRegistered()
-        notary = nodeA.services.networkMapCache.notaryIdentities.first().party
+        notary = nodeA.services.getDefaultNotary()
     }
 
     @After

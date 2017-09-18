@@ -50,7 +50,6 @@ class SellerFlow(private val otherParty: Party,
         send(otherParty, amount)
         val seller = TwoPartyTradeFlow.Seller(
                 otherParty,
-                notary,
                 commercialPaper,
                 amount,
                 cpOwner,

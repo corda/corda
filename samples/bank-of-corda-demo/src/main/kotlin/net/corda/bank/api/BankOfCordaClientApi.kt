@@ -36,6 +36,7 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
         // TODO: privileged security controls required
         client.start("bankUser", "test").use { connection ->
             val rpc = connection.proxy
+            rpc.waitUntilNetworkReady()
 
             // Resolve parties via RPC
             val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)

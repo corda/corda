@@ -56,13 +56,13 @@ class BootTests {
 
     // TODO rewrite it
 //    @Test
-    fun `node quits on failure to register with network map`() {
-        val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.regulator.getSubType("$it")) }.toSet()
-        driver(networkMapStartStrategy = NetworkMapStartStrategy.Nominated(ALICE.name)) {
-            val future = startNode(providedName = ALICE.name, advertisedServices = tooManyAdvertisedServices)
-            assertFailsWith(ListenProcessDeathException::class) { future.getOrThrow() }
-        }
-    }
+//    fun `node quits on failure to register with network map`() {
+//        val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.regulator.getSubType("$it")) }.toSet()
+//        driver(networkMapStartStrategy = NetworkMapStartStrategy.Nominated(ALICE.name)) {
+//            val future = startNode(providedName = ALICE.name, advertisedServices = tooManyAdvertisedServices)
+//            assertFailsWith(ListenProcessDeathException::class) { future.getOrThrow() }
+//        }
+//    }
 }
 
 @StartableByRPC

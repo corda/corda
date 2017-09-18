@@ -21,6 +21,7 @@ import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -46,7 +47,7 @@ class ValidatingNotaryServiceTests {
         clientNode = mockNet.createNode(notaryNode.network.myAddress)
         mockNet.runNetwork() // Clear network map registration messages
         notaryNode.internals.ensureRegistered()
-        notary = clientNode.services.networkMapCache.notaryIdentities.first().party
+        notary = clientNode.services.getDefaultNotary()
     }
 
     @After

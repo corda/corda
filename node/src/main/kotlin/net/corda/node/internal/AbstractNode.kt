@@ -134,9 +134,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
-    lateinit var legalIdentity: PartyAndCertificate
+    protected lateinit var legalIdentity: PartyAndCertificate
     protected lateinit var info: NodeInfo
-    protected lateinit var myNotaryIdentity: PartyAndCertificate
+    protected var myNotaryIdentity: PartyAndCertificate? = null
     protected lateinit var checkpointStorage: CheckpointStorage
     protected lateinit var smm: StateMachineManager
     protected lateinit var attachments: NodeAttachmentService
@@ -416,9 +416,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeInfo(legalIdentity: PartyAndCertificate): NodeInfo {
         // TODO  We keep only notary identity as additional legalIdentity if we run it on a node . Multiple identities need more design thinking.
-        val notaryIdentity = getNotaryIdentity()
+        myNotaryIdentity = getNotaryIdentity()
         val allIdentitiesList = mutableListOf(legalIdentity)
-        notaryIdentity?.let { allIdentitiesList.add(it) }
+        myNotaryIdentity?.let { allIdentitiesList.add(it) }
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
         return NodeInfo(addresses, allIdentitiesList, platformVersion, platformClock.instant().toEpochMilli())
     }
@@ -429,10 +429,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Used only for notary identities.
      */
     protected open fun getNotaryIdentity(): PartyAndCertificate? {
-        return advertisedServices.singleOrNull { it.type.isNotary() }?.let {
-            myNotaryIdentity = obtainIdentity(it)
-            myNotaryIdentity
-        }
+        return advertisedServices.singleOrNull { it.type.isNotary() }?.let { obtainIdentity(it) }
     }
 
     @VisibleForTesting
@@ -631,7 +628,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // Create node identity if service info = null
             Pair("identity", myLegalName.copy(commonName = null))
         } else {
-            val name = serviceInfo.name ?: myLegalName.copy(commonName = serviceInfo.type.id)
+            // Ensure that we always have notary in name and type of it. TODO It is temporary solution until we will have proper handling of NetworkParameters
+            val baseName = serviceInfo.name ?: myLegalName
+            val name = if (baseName.commonName == null)
+                baseName.copy(commonName = serviceInfo.type.id)
+            else
+                baseName.copy(commonName = listOf(baseName.commonName, serviceInfo.type.id).joinToString(" "))
             Pair(serviceInfo.type.id, name)
         }
 
@@ -731,7 +733,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val myInfo: NodeInfo get() = info
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
-        override val notaryIdentityKey: PublicKey get() = myNotaryIdentity.owningKey
+        override val notaryIdentityKey: PublicKey get() = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("Node doesn't have notary identity key")
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }

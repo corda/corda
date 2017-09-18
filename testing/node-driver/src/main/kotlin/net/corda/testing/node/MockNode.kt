@@ -6,6 +6,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.doneFuture
@@ -208,6 +209,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return if (override == null || defaultIdentity == null)
                 defaultIdentity
             else {
+                // Ensure that we always have notary in name and type of it. TODO It is temporary solution until we will have proper handling of NetworkParameters
                 myNotaryIdentity = getTestPartyAndCertificate(defaultIdentity.name, override.value.public)
                 myNotaryIdentity
             }

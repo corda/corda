@@ -8,6 +8,7 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -32,7 +33,7 @@ class CashIssueFlowTests {
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
 
         mockNet.runNetwork()
-        notary = bankOfCordaNode.services.networkMapCache.notaryIdentities.first().party
+        notary = bankOfCordaNode.services.getDefaultNotary()
     }
 
     @After

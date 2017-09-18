@@ -11,6 +11,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationCustomization
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
@@ -57,6 +58,7 @@ fun main(args: Array<String>) {
         // START 2
         val client = node.rpcClientToNode()
         val proxy = client.start("user", "password").proxy
+        proxy.waitUntilNetworkReady().getOrThrow()
 
         thread {
             generateTransactions(proxy)

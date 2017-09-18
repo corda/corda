@@ -17,6 +17,7 @@ import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MINI_CORP
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import org.junit.After
@@ -48,7 +49,7 @@ class ResolveTransactionsFlowTest {
         a.internals.registerInitiatedFlow(TestResponseFlow::class.java)
         b.internals.registerInitiatedFlow(TestResponseFlow::class.java)
         mockNet.runNetwork()
-        notary = a.services.networkMapCache.notaryIdentities.first().party
+        notary = a.services.getDefaultNotary()
     }
 
     @After

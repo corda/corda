@@ -21,7 +21,6 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
 // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
 @CordaSerializable
 data class NodeInfo(val addresses: List<NetworkHostAndPort>,
-                    /** Non-empty list of all the identities, plus certificates, that belong to this node. */
                     val legalIdentitiesAndCerts: List<PartyAndCertificate>,
                     val platformVersion: Int,
                     val serial: Long

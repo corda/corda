@@ -98,7 +98,7 @@ class TwoPartyTradeFlowTests {
             val bankNode = basketOfNodes.partyNodes[2]
             val cashIssuer = bankNode.info.chooseIdentity().ref(1)
             val cpIssuer = bankNode.info.chooseIdentity().ref(1, 2, 3)
-            val notary = aliceNode.services.networkMapCache.notaryIdentities.first().party
+            val notary = aliceNode.services.getDefaultNotary()
 
 
             aliceNode.internals.disableDBCloseOnStop()
@@ -147,7 +147,7 @@ class TwoPartyTradeFlowTests {
             val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
             val bankNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
             val issuer = bankNode.info.chooseIdentity().ref(1)
-            val notary = aliceNode.services.networkMapCache.notaryIdentities.first().party
+            val notary = aliceNode.services.getDefaultNotary()
 
             aliceNode.internals.disableDBCloseOnStop()
             bobNode.internals.disableDBCloseOnStop()
@@ -218,7 +218,7 @@ class TwoPartyTradeFlowTests {
             val networkMapAddress = notaryNode.network.myAddress
 
             mockNet.runNetwork() // Clear network map registration messages
-            val notary = aliceNode.services.networkMapCache.notaryIdentities.first().party
+            val notary = aliceNode.services.getDefaultNotary()
 
             bobNode.database.transaction {
                 bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary,
@@ -337,7 +337,7 @@ class TwoPartyTradeFlowTests {
         val issuer = bankNode.info.chooseIdentity().ref(1, 2, 3)
         mockNet.runNetwork()
         notaryNode.internals.ensureRegistered()
-        val notary = aliceNode.services.networkMapCache.notaryIdentities.first().party
+        val notary = aliceNode.services.getDefaultNotary()
 
         mockNet.registerIdentities()
 
@@ -444,7 +444,7 @@ class TwoPartyTradeFlowTests {
 
         mockNet.runNetwork()
         notaryNode.internals.ensureRegistered()
-        val notary = aliceNode.services.networkMapCache.notaryIdentities.first().party
+        val notary = aliceNode.services.getDefaultNotary()
 
         mockNet.registerIdentities()
 
@@ -565,7 +565,6 @@ class TwoPartyTradeFlowTests {
             send(buyer, TestTx(notary, price, anonymous))
             return subFlow(Seller(
                     buyer,
-                    notary,
                     assetToSell,
                     price,
                     myPartyAndCert))
@@ -600,7 +599,7 @@ class TwoPartyTradeFlowTests {
 
         mockNet.runNetwork()
         notaryNode.internals.ensureRegistered()
-        val notary = aliceNode.services.networkMapCache.notaryIdentities.first().party
+        val notary = aliceNode.services.getDefaultNotary()
 
         // Let the nodes know about each other - normally the network map would handle this
         mockNet.registerIdentities()

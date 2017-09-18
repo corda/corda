@@ -15,6 +15,7 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.chooseIdentity
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -41,7 +42,7 @@ class FxTransactionBuildTutorialTest {
         nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
         nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1))
         nodeB.internals.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
-        notary = nodeA.services.networkMapCache.notaryIdentities.first().party
+        notary = nodeA.services.getDefaultNotary()
     }
 
     @After

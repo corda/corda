@@ -60,7 +60,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                 startFlowPermission<CashExitFlow>())
         )
         val aliceNodeFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser))
-        startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+        val notaryHandle = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
         val aliceNodeHandle = aliceNodeFuture.getOrThrow()
         aliceNode = aliceNodeHandle.nodeInfo
         newNode = { nodeName -> startNode(providedName = nodeName).getOrThrow().nodeInfo }
@@ -74,7 +74,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
         monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password, initialiseSerialization = false)
         rpc = monitor.proxyObservable.value!!
-        notaryParty = rpc.notaryIdentities().first().party
+        notaryParty = notaryHandle.nodeInfo.legalIdentities[1]
 
         val bobNodeHandle = startNode(providedName = BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
         bobNode = bobNodeHandle.nodeInfo
@@ -84,27 +84,27 @@ class NodeMonitorModelTest : DriverBasedTest() {
         rpcBob = monitorBob.proxyObservable.value!!
         runTest()
     }
-//TODO rewrite this test
-//    @Test
-//    fun `network map update`() {
-//        newNode(CHARLIE.name)
-//        networkMapUpdates.filter { !it.node.advertisedServices.any { it.info.type.isNotary() } } // TODO filter on notary identities
-//                .filter { !it.node.advertisedServices.any { it.info.type == NetworkMapService.type } }
-//                .expectEvents(isStrict = false) {
-//                    sequence(
-//                            // TODO : Add test for remove when driver DSL support individual node shutdown.
-//                            expect { output: NetworkMapCache.MapChange ->
-//                                require(output.node.chooseIdentity().name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
-//                            },
-//                            expect { output: NetworkMapCache.MapChange ->
-//                                require(output.node.chooseIdentity().name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
-//                            },
-//                            expect { output: NetworkMapCache.MapChange ->
-//                                require(output.node.chooseIdentity().name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
-//                            }
-//                    )
-//                }
-//    }
+
+    @Test
+    fun `network map update`() {
+        val charlieNode = newNode(CHARLIE.name)
+        val nonServiceIdentities = aliceNode.legalIdentitiesAndCerts + bobNode.legalIdentitiesAndCerts + charlieNode.legalIdentitiesAndCerts
+        networkMapUpdates.filter { it.node.legalIdentitiesAndCerts.any { it in nonServiceIdentities } }
+                .expectEvents(isStrict = false) {
+                    sequence(
+                            // TODO : Add test for remove when driver DSL support individual node shutdown.
+                            expect { output: NetworkMapCache.MapChange ->
+                                require(output.node.chooseIdentity().name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
+                            },
+                            expect { output: NetworkMapCache.MapChange ->
+                                require(output.node.chooseIdentity().name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
+                            },
+                            expect { output: NetworkMapCache.MapChange ->
+                                require(output.node.chooseIdentity().name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
+                            }
+                    )
+                }
+    }
 
     @Test
     fun `cash issue works end to end`() {

@@ -27,6 +27,7 @@ import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Test
@@ -47,7 +48,7 @@ class BFTNotaryServiceTests {
         mockNet.stopNodes()
     }
 
-    private fun bftNotaryCluster(clusterSize: Int, exposeRaces: Boolean = false): Party {
+    private fun bftNotaryCluster(clusterSize: Int, exposeRaces: Boolean = false) {
         Files.deleteIfExists("config" / "currentView") // XXX: Make config object warn if this exists?
         val replicaIds = (0 until clusterSize)
         val party = ServiceIdentityGenerator.generateToDisk(
@@ -66,13 +67,14 @@ class BFTNotaryServiceTests {
                         whenever(it.notaryClusterAddresses).thenReturn(notaryClusterAddresses)
                     })
         }
-        return party
+        mockNet.runNetwork() // Exchange initial network map registration messages.
     }
 
     /** Failure mode is the redundant replica gets stuck in startup, so we can't dispose it cleanly at the end. */
     @Test
     fun `all replicas start even if there is a new consensus during startup`() {
-        val notary = bftNotaryCluster(minClusterSize(1), true) // This true adds a sleep to expose the race.
+        bftNotaryCluster(minClusterSize(1), true) // This true adds a sleep to expose the race.
+        val notary = node.services.getDefaultNotary()
         val f = node.run {
             val trivialTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DUMMY_PROGRAM_ID)
@@ -96,7 +98,8 @@ class BFTNotaryServiceTests {
 
     private fun detectDoubleSpend(faultyReplicas: Int) {
         val clusterSize = minClusterSize(faultyReplicas)
-        val notary = bftNotaryCluster(clusterSize)
+        bftNotaryCluster(clusterSize)
+        val notary = node.services.getDefaultNotary()
         node.run {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DUMMY_PROGRAM_ID)

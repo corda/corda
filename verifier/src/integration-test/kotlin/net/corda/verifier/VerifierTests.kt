@@ -117,7 +117,7 @@ class VerifierTests {
             val notaryFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)), verifierType = VerifierType.OutOfProcess)
             val alice = aliceFuture.get()
             val notary = notaryFuture.get()
-            val notaryIdentity = alice.rpc.notaryIdentities().first().party
+            val notaryIdentity = notary.nodeInfo.legalIdentities[1]
             startVerifier(notary)
             alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notaryIdentity).returnValue.get()
             notary.waitUntilNumberOfVerifiers(1)

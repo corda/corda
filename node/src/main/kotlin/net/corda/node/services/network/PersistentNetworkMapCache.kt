@@ -95,9 +95,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         return null
     }
 
-    // TODO See comment to queryByLegalName why it's left like that.
-    override fun getNodeByLegalName(principal: CordaX500Name): NodeInfo? = partyNodes.singleOrNull { principal in it.legalIdentities.map { it.name } }
-    //serviceHub!!.database.transaction { queryByLegalName(principal).firstOrNull() }
+    override fun getNodeByLegalName(principal: CordaX500Name): NodeInfo? = serviceHub.database.transaction { queryByLegalName(principal).firstOrNull() }
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
             serviceHub.database.transaction { queryByIdentityKey(identityKey) }
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
