@@ -64,7 +64,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
 
         // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
         //       count as a reason to fail?
-        val participants: List<FlowSession> = inputStates
+        val participantSessions = inputStates
                 .mapNotNull { serviceHub.identityService.partyFromAnonymous(it.state.data.owner) }
                 .toSet()
                 .mapNotNull { if (serviceHub.myInfo.isLegalIdentity(it)) null else initiateFlow(it) }
@@ -74,7 +74,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
 
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
-        val notarised = finaliseTx(tx, participants, "Unable to notarise exit")
+        val notarised = finaliseTx(tx, participantSessions, "Unable to notarise exit")
         return Result(notarised, null)
     }
 

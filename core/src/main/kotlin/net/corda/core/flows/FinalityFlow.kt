@@ -16,7 +16,7 @@ import net.corda.core.utilities.ProgressTracker
  * If specified, the extra recipients are sent all the given transactions. The base set of parties to inform of each
  * transaction are calculated on a per transaction basis from the contract-given set of participants.
  *
- * The flow returns the same transaction but with the additional signature from the notary.
+ * The flow returns the same transaction but with the additional signatures from the notary.
  *
  * @param transaction What to commit.
  * @param sendTo Collection of established flow sessions to parties to which to send the notarised transaction to. There

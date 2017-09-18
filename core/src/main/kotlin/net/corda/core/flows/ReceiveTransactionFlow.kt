@@ -10,9 +10,13 @@ import java.security.SignatureException
 /**
  * The [ReceiveTransactionFlow] should be called in response to the [SendTransactionFlow].
  *
- * This flow is a combination of [FlowSession.receive], resolve and [SignedTransaction.verify]. This flow will receive the [SignedTransaction]
- * and perform the resolution back-and-forth required to check the dependencies and download any missing attachments.
- * The flow will return the [SignedTransaction] after it is resolved and then verified using [SignedTransaction.verify].
+ * This flow is a combination of [FlowSession.receive], resolve and [SignedTransaction.verify]. This flow will receive the
+ * [SignedTransaction] and perform the resolution back-and-forth required to check the dependencies and download any missing
+ * attachments. The flow will return the [SignedTransaction] after it is resolved and then verified using [SignedTransaction.verify].
+ * 
+ * @param otherSideSession session to the other side which is calling [SendTransactionFlow].
+ * @param checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
+ * @param recordTransaction if true will store the transaction to the vault after verification.
  */
 class ReceiveTransactionFlow(private val otherSideSession: FlowSession,
                              private val checkSufficientSignatures: Boolean,

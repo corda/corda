@@ -77,9 +77,9 @@ open class CashPaymentFlow(
 
 @InitiatedBy(CashPaymentFlow::class)
 class CashReceiveFlow(private val payer: FlowSession) : FlowLogic<Unit>() {
+    // TODO Add SwapIdentitiesFlow sub-flow call when it's been inlined
     @Suspendable
     override fun call() {
-        // TODO Add SwapIdentitiesFlow sub-flow call here when it's been inlined
         // The payer will send the notarised tx to us (via FinalityFlow) so we must receive it and record it
         subFlow(ReceiveTransactionFlow(payer))
     }
