@@ -132,13 +132,43 @@ class Cordform extends DefaultTask {
         }
         installRunScript()
         def networkMapNode = getNodeByName(networkMapNodeName)
-        if (networkMapNode == null)
-            throw new IllegalStateException("The networkMap property refers to a node that isn't configured ($networkMapNodeName)")
-        nodes.each {
-            if(it != networkMapNode) {
-                it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
+        if (networkMapNode == null){
+            nodes.each {
+                it.build()
             }
-            it.build()
+            generateNodeInfos()
+
+            println "Starting without networkMapNode, this an experimental feature"
+        } else {
+            nodes.each {
+                if (it != networkMapNode) {
+                    it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
+                }
+                it.build()
+            }
+        }
+    }
+
+    Path fullNodePath(Node node) {
+        return project.projectDir.toPath().resolve(node.nodeDir.toPath())
+    }
+
+    void generateNodeInfos() {
+        nodes.each { Node node ->
+            def process = new ProcessBuilder("java", "-Dcorda.NodeInfoQuit=1" , "-jar", Node.NODEJAR_NAME)
+                    .directory(fullNodePath(node).toFile())
+                    .redirectErrorStream(true)
+                    .start()
+            process.inputStream.eachLine {println it}
+        }
+        for (source in nodes) {
+            for (destination in nodes) if (source.nodeDir != destination.nodeDir) {
+                project.copy {
+                    from fullNodePath(source).toString()
+                    include 'nodeInfo-*'
+                    into fullNodePath(destination).resolve("additional-node-infos").toString()
+                }
+            }
         }
     }
 }

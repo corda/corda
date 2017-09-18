@@ -1,6 +1,10 @@
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.crypto.cert
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.crypto.parsePublicKeyBase58
+import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -8,6 +12,8 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.div
+import net.corda.core.internal.isDirectory
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -29,15 +35,14 @@ import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
-import net.corda.node.utilities.AddOrRemove
-import net.corda.node.utilities.DatabaseTransactionManager
-import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.node.utilities.*
+import org.bouncycastle.asn1.x500.X500Name
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.security.SignatureException
+import java.security.cert.TrustAnchor
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
@@ -88,8 +93,35 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         }
 
     init {
+        loadFromFiles()
         serviceHub.database.transaction { loadFromDB() }
     }
+
+
+    private fun loadFromFiles() {
+        logger.info("Loading network map from files..")
+        val configuration = serviceHub.configuration
+
+        val nodeInfoDirectory = configuration.baseDirectory / NodeInfoSerializer.NODE_INFO_FOLDER
+        if (!nodeInfoDirectory.isDirectory()) {
+            logger.info("{$nodeInfoDirectory} isn't a Directory, not loading NodeInfo from files")
+            return
+        }
+        var readFiles = 0
+        for (file in nodeInfoDirectory.toFile().walk().maxDepth(1)) if (file.isFile) {
+            try {
+                logger.info("Reading NodeInfo from file: ${file}")
+                val nodeInfo = NodeInfoSerializer.loadFromFile(file)
+                addNode(nodeInfo)
+                readFiles++
+            } catch (e: Exception) {
+                logger.error("Exception parsing NodeInfo from file. ${file}: " + e)
+                e.printStackTrace()
+            }
+        }
+        logger.info("Succesfully read and loaded {$readFiles} NodeInfo files.")
+    }
+
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = serviceHub.database.transaction { queryByIdentityKey(party.owningKey) }
@@ -159,6 +191,12 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override fun addNode(node: NodeInfo) {
         logger.info("Adding node with info: $node")
         synchronized(_changed) {
+            registeredNodes[node.legalIdentities.first().owningKey]?.let {
+                if (it.serial > node.serial) {
+                    logger.info("Discarding nodeInfo for ${node.legalIdentities.first().name} with an older timestamp")
+                    return
+                }
+            }
             val previousNode = registeredNodes.put(node.legalIdentities.first().owningKey, node) // TODO hack... we left the first one as special one
             if (previousNode == null) {
                 logger.info("No previous node found")
@@ -225,8 +263,6 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         }
 
     private fun processRegistration(reg: NodeRegistration) {
-        // TODO: Implement filtering by sequence number, so we only accept changes that are
-        // more recent than the latest change we've processed.
         when (reg.type) {
             AddOrRemove.ADD -> addNode(reg.node)
             AddOrRemove.REMOVE -> removeNode(reg.node)
@@ -263,8 +299,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                     logger.info("Loaded node info: $nodeInfo")
                     val publicKey = parsePublicKeyBase58(nodeInfo.legalIdentitiesAndCerts.single { it.isMain }.owningKey)
                     val node = nodeInfo.toNodeInfo()
-                    registeredNodes.put(publicKey, node)
-                    changePublisher.onNext(MapChange.Added(node)) // Redeploy bridges after reading from DB on startup.
+                    addNode(node)
                     _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
                 } catch (e: Exception) {
                     logger.warn("Exception parsing network map from the database.", e)
