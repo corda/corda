@@ -1,4 +1,4 @@
-package net.corda.core.flows
+package net.corda.confidential
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty

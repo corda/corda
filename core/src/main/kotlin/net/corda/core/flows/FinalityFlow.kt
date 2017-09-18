@@ -62,13 +62,13 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         // Lookup the resolved transactions and use them to map each signed transaction to the list of participants.
         // Then send to the notary if needed, record locally and distribute.
         progressTracker.currentStep = NOTARISING
-        val notarisedTxns: List<Pair<SignedTransaction, List<Party>>> = resolveDependenciesOf(transactions)
+        val notarisedTxns: List<Pair<SignedTransaction, Set<Party>>> = resolveDependenciesOf(transactions)
                 .map { (stx, ltx) -> Pair(notariseAndRecord(stx), lookupParties(ltx)) }
 
         // Each transaction has its own set of recipients, but extra recipients get them all.
         progressTracker.currentStep = BROADCASTING
         for ((stx, parties) in notarisedTxns) {
-            val participants = (parties + extraRecipients).filter { it != ourIdentity.party }.toSet()
+            val participants = (parties + extraRecipients).filter { !serviceHub.myInfo.isLegalIdentity(it) }.toSet()
             if (participants.isNotEmpty()) {
                 broadcastTransaction(stx, participants.toNonEmptySet())
             }
@@ -117,12 +117,12 @@ open class FinalityFlow(val transactions: Iterable<SignedTransaction>,
      *
      * The default implementation throws an exception if an unknown party is encountered.
      */
-    open protected fun lookupParties(ltx: LedgerTransaction): List<Party> {
+    open protected fun lookupParties(ltx: LedgerTransaction): Set<Party> {
         // Calculate who is meant to see the results based on the participants involved.
         return extractParticipants(ltx).map {
             serviceHub.identityService.partyFromAnonymous(it)
                     ?: throw IllegalArgumentException("Could not resolve well known identity of participant $it")
-        }
+        }.toSet()
     }
 
     /**

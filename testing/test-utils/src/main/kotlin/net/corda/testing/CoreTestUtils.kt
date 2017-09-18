@@ -12,7 +12,9 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.loggerFor
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -159,4 +161,4 @@ inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) 
  * TODO: Should be removed after multiple identities are introduced.
  */
 fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
-fun NodeInfo.chooseIdentity(): Party = legalIdentitiesAndCerts.first().party
+fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party

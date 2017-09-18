@@ -1,11 +1,14 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.*
-import net.corda.core.identity.AbstractParty
+import net.corda.core.flows.CollectSignaturesFlow
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
@@ -54,8 +57,8 @@ object TwoPartyDealFlow {
         @Suspendable override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
             val txIdentities = subFlow(SwapIdentitiesFlow(otherParty))
-            val anonymousMe = txIdentities.get(ourIdentity.party) ?: ourIdentity.party.anonymise()
-            val anonymousCounterparty = txIdentities.get(otherParty) ?: otherParty.anonymise()
+            val anonymousMe = txIdentities[ourIdentity] ?: ourIdentity.anonymise()
+            val anonymousCounterparty = txIdentities[otherParty] ?: otherParty.anonymise()
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
             val hello = Handshake(payload, anonymousMe, anonymousCounterparty)
@@ -118,7 +121,7 @@ object TwoPartyDealFlow {
             logger.trace { "Got signatures from other party, verifying ... " }
 
             progressTracker.currentStep = RECORDING
-            val ftx = subFlow(FinalityFlow(stx, setOf(otherParty, ourIdentity.party))).single()
+            val ftx = subFlow(FinalityFlow(stx, setOf(otherParty, ourIdentity))).single()
 
             logger.trace { "Recorded transaction." }
 
@@ -150,13 +153,15 @@ object TwoPartyDealFlow {
                 val wellKnownOtherParty = serviceHub.identityService.partyFromAnonymous(it.primaryIdentity)
                 val wellKnownMe = serviceHub.identityService.partyFromAnonymous(it.secondaryIdentity)
                 require(wellKnownOtherParty == otherParty)
-                require(wellKnownMe == ourIdentity.party)
+                require(wellKnownMe == ourIdentity)
                 validateHandshake(it)
             }
         }
 
-        @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
-        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Triple<TransactionBuilder, List<PublicKey>, List<TransactionSignature>>
+        @Suspendable
+        protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
+        @Suspendable
+        protected abstract fun assembleSharedTX(handshake: Handshake<U>): Triple<TransactionBuilder, List<PublicKey>, List<TransactionSignature>>
     }
 
     @CordaSerializable
@@ -169,7 +174,7 @@ object TwoPartyDealFlow {
                           override val payload: AutoOffer,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
         override val notaryNode: NodeInfo get() =
-        serviceHub.networkMapCache.notaryNodes.filter { it.notaryIdentity == payload.notary }.single()
+            serviceHub.networkMapCache.notaryNodes.single { it.notaryIdentity == payload.notary }
 
         @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
             // Add some constraints here.
@@ -197,7 +202,7 @@ object TwoPartyDealFlow {
             // We set the transaction's time-window: it may be that none of the contracts need this!
             // But it can't hurt to have one.
             ptx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
-            return Triple(ptx, arrayListOf(deal.participants.single { it == ourIdentity.party as AbstractParty }.owningKey), emptyList())
+            return Triple(ptx, arrayListOf(deal.participants.single { it is Party && serviceHub.myInfo.isLegalIdentity(it) }.owningKey), emptyList())
         }
     }
 }

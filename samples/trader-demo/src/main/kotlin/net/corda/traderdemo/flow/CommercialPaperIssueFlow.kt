@@ -22,10 +22,10 @@ import java.util.*
  * Flow for the Bank of Corda node to issue some commercial paper to the seller's node, to sell to the buyer.
  */
 @StartableByRPC
-class CommercialPaperIssueFlow(val amount: Amount<Currency>,
-                               val issueRef: OpaqueBytes,
-                               val recipient: Party,
-                               val notary: Party,
+class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
+                               private val issueRef: OpaqueBytes,
+                               private val recipient: Party,
+                               private val notary: Party,
                                override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes, recipient: Party, notary: Party) : this(amount, issueRef, recipient, notary, tracker())
 
@@ -40,7 +40,7 @@ class CommercialPaperIssueFlow(val amount: Amount<Currency>,
         progressTracker.currentStep = ISSUING
 
         val issuance: SignedTransaction = run {
-            val tx = CommercialPaper().generateIssue(ourIdentity.party.ref(issueRef), amount `issued by` ourIdentity.party.ref(issueRef),
+            val tx = CommercialPaper().generateIssue(ourIdentity.ref(issueRef), amount `issued by` ourIdentity.ref(issueRef),
                     Instant.now() + 10.days, notary)
 
             // TODO: Consider moving these two steps below into generateIssue.

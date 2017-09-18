@@ -11,7 +11,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow
 import net.corda.vega.contracts.IRSState
-import net.corda.vega.contracts.OGTrade
 import net.corda.vega.contracts.SwapData
 
 object IRSTradeFlow {
@@ -27,9 +26,9 @@ object IRSTradeFlow {
             val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             val (buyer, seller) =
                     if (swap.buyer.second == ourIdentity.owningKey) {
-                        Pair(ourIdentity.party, otherParty)
+                        Pair(ourIdentity, otherParty)
                     } else {
-                        Pair(otherParty, ourIdentity.party)
+                        Pair(otherParty, ourIdentity)
                     }
             val offer = IRSState(swap, buyer, seller)
 
