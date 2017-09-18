@@ -1,7 +1,6 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.collect.Lists
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -29,7 +28,7 @@ class FinalityFlow(private val transaction: SignedTransaction,
                    override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
     constructor(transaction: SignedTransaction, sendTo: Collection<FlowSession>) : this(transaction, sendTo, tracker())
     constructor(transaction: SignedTransaction, firstSendTo: FlowSession, vararg restSendTo: FlowSession) :
-            this(transaction, Lists.asList(firstSendTo, restSendTo))
+            this(transaction, listOf(firstSendTo, *restSendTo))
 
     companion object {
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {

@@ -86,7 +86,7 @@ object ContractUpgradeFlow {
             // TODO: We need a much faster way of finding our key in the transaction
             val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()
             val stx = serviceHub.signInitialTransaction(baseTx, myKey)
-            return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey)
+            return AbstractStateReplacementFlow.UpgradeTx(stx)
         }
     }
 

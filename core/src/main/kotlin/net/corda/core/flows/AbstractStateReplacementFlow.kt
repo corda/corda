@@ -6,12 +6,12 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
-import java.security.PublicKey
 
 /**
  * Abstract flow to be used for replacing one state with another, for example when changing the notary of a state.
@@ -32,10 +32,8 @@ abstract class AbstractStateReplacementFlow {
      * The assembled transaction for upgrading a contract.
      *
      * @param stx signed transaction to do the upgrade.
-     * @param participants the parties involved in the upgrade transaction.
-     * @param myKey key
      */
-    data class UpgradeTx(val stx: SignedTransaction, val participants: Iterable<PublicKey>, val myKey: PublicKey)
+    data class UpgradeTx(val stx: SignedTransaction)
 
     /**
      * The [Instigator] assembles the transaction for state replacement and sends out change proposals to all participants
@@ -61,15 +59,11 @@ abstract class AbstractStateReplacementFlow {
         @Suspendable
         @Throws(StateReplacementException::class)
         override fun call(): StateAndRef<T> {
-            val (stx, participantKeys, myKey) = assembleTx()
-
+            val (stx) = assembleTx()
+            val participantSessions = getParticipantSessions()
             progressTracker.currentStep = SIGNING
 
-            val signatures = if (participantKeys.singleOrNull() == myKey) {
-                getNotarySignatures(stx)
-            } else {
-                collectSignatures(participantKeys - myKey, stx)
-            }
+            val signatures = collectSignatures(participantSessions, stx)
 
             val finalTx = stx + signatures
             serviceHub.recordTransactions(finalTx)
@@ -88,21 +82,29 @@ abstract class AbstractStateReplacementFlow {
         /**
          * Build the upgrade transaction.
          *
-         * @return a triple of the transaction, the public keys of all participants, and the participating public key of
-         * this node.
+         * @return the transaction
          */
         abstract protected fun assembleTx(): UpgradeTx
 
-        @Suspendable
-        private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<TransactionSignature> {
-            // In identity service we record all identities we know about from network map.
-            val parties = participants.map {
-                serviceHub.identityService.partyFromKey(it) ?:
-                        throw IllegalStateException("Participant $it to state $originalState not found on the network")
+        /**
+         * Initiate sessions with parties we want signatures from.
+         */
+        open fun getParticipantSessions(): List<FlowSession> {
+            return getParticipantsExceptMe().map { initiateFlow(it) }
+        }
+
+        protected fun getParticipantsExceptMe(): Iterable<Party> {
+            val parties = originalState.state.data.participants.map {
+                val party = serviceHub.identityService.partyFromAnonymous(it) ?: throw IllegalArgumentException("Could not resolve $it")
+                party
             }
+            val keyToParty = parties.associateBy { it.owningKey }
+            val myKeys = serviceHub.keyManagementService.filterMyKeys(keyToParty.keys).toSet()
+            return keyToParty.filter { it.key !in myKeys }.values
+        }
 
-            val sessions = parties.map { initiateFlow(it) }
-
+        @Suspendable
+        private fun collectSignatures(sessions: Iterable<FlowSession>, stx: SignedTransaction): List<TransactionSignature> {
             val participantSignatures = sessions.map { getParticipantSignature(it, stx) }
 
             val allPartySignedTx = stx + participantSignatures

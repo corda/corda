@@ -99,7 +99,13 @@ object SimmFlow {
             otherPartySession.sendAndReceive<Ack>(OfferMessage(notary, stateAndRef.state.data, existing?.ref, valuationDate))
             logger.info("Updating portfolio")
             val update = PortfolioState.Update(portfolio = portfolio.refs)
-            subFlow(StateRevisionFlow.Requester(stateAndRef, update))
+            subFlow(StateRevisionFlowRequester(otherPartySession, stateAndRef, update))
+        }
+
+        private class StateRevisionFlowRequester<T>(val session: FlowSession, stateAndRef: StateAndRef<RevisionedState<T>>, update: T) : StateRevisionFlow.Requester<T>(stateAndRef, update) {
+            override fun getParticipantSessions(): List<FlowSession> {
+                return listOf(session)
+            }
         }
 
         @Suspendable
@@ -112,7 +118,7 @@ object SimmFlow {
             require(valuer != null) { "Valuer party must be known to this node" }
             val valuation = agreeValuation(portfolio, valuationDate, valuer!!)
             val update = PortfolioState.Update(valuation = valuation)
-            return subFlow(StateRevisionFlow.Requester(stateRef, update)).state.data
+            return subFlow(StateRevisionFlowRequester(otherPartySession, stateRef, update)).state.data
         }
 
         @Suspendable

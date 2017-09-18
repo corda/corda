@@ -14,7 +14,7 @@ import net.corda.vega.contracts.RevisionedState
  * on the update between two parties.
  */
 object StateRevisionFlow {
-    class Requester<T>(curStateRef: StateAndRef<RevisionedState<T>>,
+    open class Requester<T>(curStateRef: StateAndRef<RevisionedState<T>>,
                        updatedData: T) : AbstractStateReplacementFlow.Instigator<RevisionedState<T>, RevisionedState<T>, T>(curStateRef, updatedData) {
         override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
             val state = originalState.state.data
@@ -22,12 +22,8 @@ object StateRevisionFlow {
             tx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
             val privacySalt = PrivacySalt()
             tx.setPrivacySalt(privacySalt)
-
             val stx = serviceHub.signInitialTransaction(tx)
-            val participantKeys = state.participants.map { it.owningKey }
-            // TODO: We need a much faster way of finding our key in the transaction
-            val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()
-            return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey)
+            return AbstractStateReplacementFlow.UpgradeTx(stx)
         }
     }
 
