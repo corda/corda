@@ -1,6 +1,6 @@
-package net.corda.confidential;
+package net.corda.confidential
 
-import co.paralleluniverse.fibers.Suspendable;
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate

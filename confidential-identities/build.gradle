@@ -11,17 +11,15 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda Experimental Confidential Identities'
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-}
-
 dependencies {
     // Note the :confidential-identities module is a CorDapp in its own right
     // and CorDapps using :confidential-identities features should use 'cordapp' not 'compile' linkage.
     cordaCompile project(':core')
 
+    // Quasar, for suspendable fibres.
+    compileOnly "co.paralleluniverse:quasar-core:$quasar_version:jdk8"
+
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     // Guava: Google test library (collections test suite)
@@ -31,28 +29,8 @@ dependencies {
     testCompile project(":node")
     testCompile project(":node-driver")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-
-    // Quasar, for suspendable fibres.
-    compileOnly "co.paralleluniverse:quasar-core:$quasar_version:jdk8"
-
     // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:${assertj_version}"
-}
-
-configurations {
-    testArtifacts.extendsFrom testRuntime
-}
-
-task testJar(type: Jar) {
-    classifier "tests"
-    from sourceSets.test.output
-}
-
-artifacts {
-    testArtifacts testJar
+    testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
 jar {
