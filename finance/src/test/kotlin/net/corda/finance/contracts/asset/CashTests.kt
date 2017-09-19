@@ -602,9 +602,19 @@ class CashTests : TestDependencyInjectionBase() {
         database.transaction {
             @Suppress("UNCHECKED_CAST")
             val vaultState = vaultStatesUnconsumed.elementAt(0)
+            val changeAmount = 90.DOLLARS `issued by` defaultIssuer
+            val likelyChangeState = wtx.outputs.map(TransactionState<*>::data).filter { state ->
+                if (state is Cash.State) {
+                    state.amount == changeAmount
+                } else {
+                    false
+                }
+            }.single()
+            val changeOwner = (likelyChangeState as Cash.State).owner
+            assertEquals(1, miniCorpServices.keyManagementService.filterMyKeys(setOf(changeOwner.owningKey)).toList().size)
             assertEquals(vaultState.ref, wtx.inputs[0])
             assertEquals(vaultState.state.data.copy(owner = THEIR_IDENTITY_1, amount = 10.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
-            assertEquals(vaultState.state.data.copy(amount = 90.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
+            assertEquals(vaultState.state.data.copy(amount = changeAmount, owner = changeOwner), wtx.outputs[1].data)
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
