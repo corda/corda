@@ -122,7 +122,16 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
-        identity.verify(trustAnchor)
+        try {
+            identity.verify(trustAnchor)
+        } catch (e: CertPathValidatorException) {
+            log.error(e.localizedMessage)
+            log.error("Path = ")
+            identity.certPath.certificates.reversed().forEach {
+                log.error(it.toX509CertHolder().subject.toString())
+            }
+            throw e
+        }
 
         log.info("Registering identity $identity")
         val key = mapToKey(identity)
@@ -147,7 +156,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = keyToParties.allPersisted().map { it.second }.asIterable()
 
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
-    override fun partyFromX500Name(principal: X500Name): Party? = certificateFromX500Name(principal)?.party
+    override fun partyFromX500Name(name: X500Name): Party? = certificateFromX500Name(name)?.party
     override fun partyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: partyFromKey(party.owningKey)
