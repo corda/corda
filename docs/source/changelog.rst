@@ -4,8 +4,17 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-UNRELEASED
-----------
+Milestone 15.1
+--------------
+
+* Added X509EdDSAEngine to intercept and rewrite EdDSA public keys wrapped in X509Key instances. This corrects an issue
+with verifying certificate paths loaded from a Java Keystore where they contain EdDSA keys.
+* Backported persistent identity service from M16.
+* generateSpend() now creates a new confidential identity for the change address rather than using the identity of the
+  input state owner.
+
+Milestone 15
+------------
 * Vault query common attributes (state status and contract state types) are now handled correctly when using composite
   criteria specifications. State status is overridable. Contract states types are aggregatable.
 
