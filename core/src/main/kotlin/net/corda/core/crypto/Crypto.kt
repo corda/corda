@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.internal.X509EdDSAEngine
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.*
 import net.i2p.crypto.eddsa.math.GroupElement
