@@ -11,7 +11,6 @@ import org.gradle.api.tasks.TaskAction
 import java.nio.file.Path
 import java.nio.file.Paths
 
-
 /**
  * Creates nodes based on the configuration of this task in the gradle configuration DSL.
  *
