@@ -94,7 +94,8 @@ class Network : CordaView() {
             useMaxWidth = true
             graphic = vbox {
                 label(PartyNameFormatter.short.format(identities[0].name)) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
-                gridpane { // TODO We lose node's main identity for display.
+                gridpane {
+                    // TODO We lose node's main identity for display.
                     hgap = 5.0
                     vgap = 5.0
                     for (identity in identities) {

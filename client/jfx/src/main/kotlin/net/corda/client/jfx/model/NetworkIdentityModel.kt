@@ -5,8 +5,10 @@ import com.google.common.cache.CacheLoader
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
+import net.corda.client.jfx.utils.filterNotNull
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
+import net.corda.client.jfx.utils.toObservableList
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -32,13 +34,12 @@ class NetworkIdentityModel {
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
 
     private val identityCache = CacheBuilder.newBuilder()
-            .build<PublicKey, ObservableValue<NodeInfo?>>(CacheLoader.from {
-                publicKey ->
+            .build<PublicKey, ObservableValue<NodeInfo?>>(CacheLoader.from { publicKey ->
                 publicKey?.let { rpcProxy.map { it?.nodeInfoFromParty(AnonymousParty(publicKey)) } }
             })
 
-    val notaries: ObservableList<Party> = FXCollections.observableList(rpcProxy.value?.notaryIdentities())
-    val notaryNodes: ObservableList<NodeInfo> = FXCollections.observableList(notaries.map { rpcProxy.value?.nodeInfoFromParty(it) })
+    val notaries: ObservableList<Party> = rpcProxy.toObservableList { it?.notaryIdentities() ?: emptyList() }
+    val notaryNodes: ObservableList<NodeInfo> = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()
     val parties: ObservableList<NodeInfo> = networkIdentities.filtered { it.legalIdentities.all { it !in notaries } }
     val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }
 

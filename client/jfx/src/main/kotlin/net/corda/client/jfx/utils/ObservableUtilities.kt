@@ -354,3 +354,14 @@ fun <T : ContractState> DataFeed<Vault.Page<T>, Vault.Update<T>>.toFXListOfState
 fun <T : ContractState> DataFeed<Vault.Page<T>, Vault.Update<T>>.toFXListOfStates(): ObservableList<T> {
     return toFXListOfStateRefs().map { it.state.data }
 }
+
+fun <S, T> ObservableValue<S>.toObservableList(mapper: (S) -> List<T>): ObservableList<T> {
+    val list = FXCollections.emptyObservableList<T>()
+    addListener { _, _, newValue ->
+        list.clear()
+        list.addAll(mapper(newValue))
+    }
+    return list
+}
+
+fun <T> ObservableValue<List<T>>.toObservableList() = toObservableList { it }

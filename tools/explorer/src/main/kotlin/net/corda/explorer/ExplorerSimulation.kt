@@ -122,7 +122,7 @@ class ExplorerSimulation(val options: OptionSet) {
         val issuerRPCGBP = issuerGBPConnection.proxy
 
         val issuerClientUSD = issuerNodeUSD.rpcClientToNode()
-        val issuerUSDConnection =issuerClientUSD.start(manager.username, manager.password)
+        val issuerUSDConnection = issuerClientUSD.start(manager.username, manager.password)
         val issuerRPCUSD = issuerUSDConnection.proxy
 
         RPCConnections.addAll(listOf(aliceConnection, bobConnection, issuerGBPConnection, issuerUSDConnection))
