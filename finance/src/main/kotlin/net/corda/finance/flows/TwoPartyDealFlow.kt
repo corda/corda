@@ -8,7 +8,6 @@ import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -76,7 +75,8 @@ object TwoPartyDealFlow {
     /**
      * Abstracted bilateral deal flow participant that is recipient of initial communication.
      */
-    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker()) : FlowLogic<SignedTransaction>() {
+    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker(),
+                                val regulators: Collection<Party> = emptySet()) : FlowLogic<SignedTransaction>() {
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Waiting for deal info.")
@@ -84,9 +84,8 @@ object TwoPartyDealFlow {
             object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal.")
             object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.")
             object RECORDING : ProgressTracker.Step("Recording completed transaction.")
-            object COPYING_TO_REGULATOR : ProgressTracker.Step("Copying regulator.")
 
-            fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING, COPYING_TO_REGULATOR)
+            fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING)
         }
 
         abstract val otherSideSession: FlowSession
@@ -117,25 +116,13 @@ object TwoPartyDealFlow {
             val stx = subFlow(CollectSignaturesFlow(ptxSignedByOtherSide, sessionsForOtherSigners, additionalSigningPubKeys))
             // DOCEND 1
 
-            logger.trace { "Got signatures from other party, verifying ... " }
+            logger.trace("Got signatures from other party, verifying ... ")
 
             progressTracker.currentStep = RECORDING
-            val ftx = subFlow(FinalityFlow(stx, otherSideSession))
-
-            logger.trace { "Recorded transaction." }
-
-            progressTracker.currentStep = COPYING_TO_REGULATOR
-            val regulators = serviceHub.networkMapCache.regulatorNodes
-            if (regulators.isNotEmpty()) {
-                // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
-                // just for demo purposes.
-                regulators.forEach {
-                    val regulator = it.serviceIdentities(ServiceType.regulator).first()
-                    val session = initiateFlow(regulator)
-                    session.send(ftx)
-                }
-            }
-
+            // Start the regulator flows for them to receive the final tx. Their flows must be calling ReceiveTransactionFlow
+            val regulatorSessions = regulators.map { initiateFlow(it) }
+            val ftx = subFlow(FinalityFlow(stx, regulatorSessions + otherSideSession))
+            logger.trace("Recorded transaction.")
             return ftx
         }
 
