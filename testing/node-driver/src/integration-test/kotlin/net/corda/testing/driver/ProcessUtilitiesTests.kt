@@ -1,0 +1,31 @@
+package net.corda.testing.driver
+
+import org.apache.commons.io.FileUtils
+import org.junit.Test
+import java.io.File
+import java.util.concurrent.TimeUnit
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class ProcessUtilitiesTests {
+
+    companion object {
+
+        private val tmpString = ProcessUtilitiesTests::class.java.name
+
+        @JvmStatic
+        fun main(args: Array<String>) {
+            val fileNameToCreate = args[0]
+            FileUtils.write(File(fileNameToCreate), tmpString)
+        }
+    }
+
+    @Test
+    fun `test dummy process can be started`() {
+        val tmpFile = File.createTempFile(ProcessUtilitiesTests::class.java.simpleName, null)
+        tmpFile.deleteOnExit()
+        val startedProcess = ProcessUtilities.startJavaProcess<ProcessUtilitiesTests>(listOf(tmpFile.absolutePath))
+        assertTrue { startedProcess.waitFor(20, TimeUnit.SECONDS) }
+        assertEquals(tmpString, FileUtils.readFileToString(tmpFile))
+    }
+}
