@@ -75,7 +75,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     //  It is ensured on node startup when constructing a notary that the name contains "notary".
     override val notaryIdentities: List<PartyAndCertificate> get() {
         return partyNodes.flatMap { it.legalIdentitiesAndCerts }.filter {
-            it.name.toString().contains("notary", true)
+            it.name.toString().contains("corda.notary", true)
         }.distinct().sortedBy { it.name.toString() } // Distinct, because of distributed service nodes.
     }
 
@@ -98,7 +98,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         return null
     }
 
-    override fun getNodeByLegalName(principal: CordaX500Name): NodeInfo? = serviceHub.database.transaction { queryByLegalName(principal).firstOrNull() }
+    override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = serviceHub.database.transaction { queryByLegalName(name).firstOrNull() }
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
             serviceHub.database.transaction { queryByIdentityKey(identityKey) }
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {

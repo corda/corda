@@ -10,7 +10,6 @@ import net.corda.core.flows.*;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.internal.FetchDataFlow;
-import net.corda.core.node.services.ServiceType;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.Vault.Page;
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
@@ -54,11 +53,13 @@ public class FlowCookbookJava {
         private final boolean arg1;
         private final int arg2;
         private final Party counterparty;
+        private final Party regulator;
 
-        public InitiatorFlow(boolean arg1, int arg2, Party counterparty) {
+        public InitiatorFlow(boolean arg1, int arg2, Party counterparty, Party regulator) {
             this.arg1 = arg1;
             this.arg2 = arg2;
             this.counterparty = counterparty;
+            this.regulator = regulator;
         }
 
         /*----------------------------------
@@ -204,8 +205,8 @@ public class FlowCookbookJava {
             // counterparty. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
             // DOCSTART 6
-            send(namedCounterparty, new Object());
-            UntrustworthyData<Object> packet3 = receive(Object.class, namedCounterparty);
+            send(regulator, new Object());
+            UntrustworthyData<Object> packet3 = receive(Object.class, regulator);
             // DOCEND 6
 
             /*------------------------------------
@@ -522,7 +523,7 @@ public class FlowCookbookJava {
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            Set<Party> additionalParties = ImmutableSet.of(namedCounterparty, namedCounterparty);
+            Set<Party> additionalParties = ImmutableSet.of(regulator);
             SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(ImmutableList.of(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).get(0);
             // DOCEND 10
 

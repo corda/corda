@@ -5,12 +5,12 @@ import net.corda.core.internal.div
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import net.corda.nodeapi.User
 import net.corda.testing.driver.ListenProcessDeathException
 import net.corda.testing.driver.NetworkMapStartStrategy

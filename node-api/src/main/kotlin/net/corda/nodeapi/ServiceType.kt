@@ -1,4 +1,4 @@
-package net.corda.core.node.services
+package net.corda.nodeapi
 
 import net.corda.core.serialization.CordaSerializable
 

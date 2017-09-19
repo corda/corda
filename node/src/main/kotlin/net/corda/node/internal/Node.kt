@@ -11,7 +11,6 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
@@ -19,6 +18,7 @@ import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectRequestProperty

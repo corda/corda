@@ -6,7 +6,6 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.doneFuture
@@ -17,7 +16,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
@@ -25,6 +23,8 @@ import net.corda.core.utilities.loggerFor
 import net.corda.finance.utils.WorldMapLocation
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
@@ -317,10 +317,10 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
     fun <N : MockNode> createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null, nodeFactory: Factory<N>,
-                   legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
-                   entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                   vararg advertisedServices: ServiceInfo,
-                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
+                                  legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
+                                  entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+                                  vararg advertisedServices: ServiceInfo,
+                                  configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
         return uncheckedCast(createNodeImpl(networkMapAddress, forcedID, nodeFactory, true, legalName, overrideServices, entropyRoot, advertisedServices, configOverrides).started)!!
     }
 

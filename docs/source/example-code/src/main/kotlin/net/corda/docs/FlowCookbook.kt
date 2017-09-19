@@ -10,7 +10,6 @@ import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
@@ -40,7 +39,7 @@ object FlowCookbook {
     @StartableByRPC
     // Every flow must subclass ``FlowLogic``. The generic indicates the
     // flow's return type.
-    class InitiatorFlow(val arg1: Boolean, val arg2: Int, val counterparty: Party) : FlowLogic<Unit>() {
+    class InitiatorFlow(val arg1: Boolean, val arg2: Int, val counterparty: Party, val regulator: Party) : FlowLogic<Unit>() {
 
         /**---------------------------------
          * WIRING UP THE PROGRESS TRACKER *
@@ -187,8 +186,8 @@ object FlowCookbook {
             // counterparty. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
             // DOCSTART 6
-            send(namedCounterparty, Any())
-            val packet3: UntrustworthyData<Any> = receive<Any>(namedCounterparty)
+            send(regulator, Any())
+            val packet3: UntrustworthyData<Any> = receive<Any>(regulator)
             // DOCEND 6
 
             /**-----------------------------------
@@ -495,7 +494,7 @@ object FlowCookbook {
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            val additionalParties: Set<Party> = setOf(namedCounterparty)
+            val additionalParties: Set<Party> = setOf(regulator)
             val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).single()
             // DOCEND 10
         }

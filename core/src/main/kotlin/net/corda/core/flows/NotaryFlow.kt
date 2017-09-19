@@ -64,9 +64,7 @@ class NotaryFlow {
             }
 
             val response = try {
-                // TODO Workaround, for now we don't have a mechanism to specify if a notary is validating/non-validating.
-                //  As a temporary solution it will have simple in a name :/
-                if (serviceHub.networkMapCache.isNotary(notaryParty) && !notaryParty.name.toString().contains("simple", true)) {
+                if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
                     subFlow(SendTransactionWithRetry(notaryParty, stx))
                     receive<List<TransactionSignature>>(notaryParty)
                 } else {

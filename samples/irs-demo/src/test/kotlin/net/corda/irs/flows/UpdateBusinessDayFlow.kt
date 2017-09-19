@@ -57,7 +57,7 @@ object UpdateBusinessDayFlow {
             val notaryParties = serviceHub.networkMapCache.notaryIdentities.map { it.party }
             val peerParties = serviceHub.networkMapCache.allNodes.filter {
                 it.legalIdentities.all { !serviceHub.networkMapCache.isNotary(it) }
-            }.map { it.legalIdentities[0] }.sortedBy { it.name.toString() } // TODO rewrite it nicer
+            }.map { it.legalIdentities[0] }.sortedBy { it.name.toString() }
             return notaryParties + peerParties
         }
 

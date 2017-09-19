@@ -10,7 +10,6 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
-import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.contracts.DealState
 import net.corda.vega.analytics.InitialMarginTriple
@@ -22,7 +21,6 @@ import net.corda.vega.flows.SimmRevaluation
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import net.corda.vega.portfolio.toStateAndRef
-import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId

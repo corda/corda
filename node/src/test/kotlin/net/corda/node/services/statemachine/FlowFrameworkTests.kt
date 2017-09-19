@@ -15,7 +15,6 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -32,6 +31,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -97,8 +97,8 @@ class FlowFrameworkTests {
 
         // We don't create a network map, so manually handle registrations
         mockNet.registerIdentities()
-        notary1Identity = node1.services.networkMapCache.notaryIdentities[0].party
-        notary2Identity = node1.services.networkMapCache.notaryIdentities[1].party
+        notary1Identity = notary1.services.myInfo.legalIdentities[1]
+        notary2Identity = notary2.services.myInfo.legalIdentities[1]
     }
 
     @After
@@ -338,6 +338,7 @@ class FlowFrameworkTests {
     @Test
     fun `different notaries are picked when addressing shared notary identity`() {
         assertEquals(notary1Identity, notary2Identity)
+        assertThat(node1.services.networkMapCache.notaryIdentities.size == 1)
         node1.services.startFlow(CashIssueFlow(
                 2000.DOLLARS,
                 OpaqueBytes.of(0x01),

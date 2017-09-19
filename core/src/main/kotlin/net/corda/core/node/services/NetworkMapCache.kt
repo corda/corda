@@ -57,16 +57,16 @@ interface NetworkMapCache {
     fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 
     /** Look up the node info for a legal name. */
-    fun getNodeByLegalName(principal: CordaX500Name): NodeInfo?
+    fun getNodeByLegalName(name: CordaX500Name): NodeInfo?
 
     /** Look up the node info for a host and port. */
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
 
-    fun getPeerByLegalName(principal: CordaX500Name): Party? = getNodeByLegalName(principal)?.let {
-        it.legalIdentitiesAndCerts.singleOrNull { it.name == principal }?.party
+    fun getPeerByLegalName(name: CordaX500Name): Party? = getNodeByLegalName(name)?.let {
+        it.legalIdentitiesAndCerts.singleOrNull { it.name == name }?.party
     }
 
-    /** Return all [NodeInfo]s the node currently is aware of. */
+    /** Return all [NodeInfo]s the node currently is aware of (including ourselves).  */
     val allNodes: List<NodeInfo>
 
     /**
@@ -81,7 +81,7 @@ interface NetworkMapCache {
     fun getPartyInfo(party: Party): PartyInfo?
 
     /** Gets a notary identity by the given name. */
-    fun getNotary(name: CordaX500Name): Party? = notaryIdentities.filter { it.name == name }.randomOrNull()?.party
+    fun getNotary(name: CordaX500Name): Party? = notaryIdentities.filter { it.name == name }.firstOrNull()?.party
 
     /**
      * Returns a notary identity advertised by any of the nodes on the network (chosen at random)
@@ -92,6 +92,12 @@ interface NetworkMapCache {
     /** Checks whether a given party is an advertised notary identity */
     fun isNotary(party: Party): Boolean = notaryIdentities.any { party == it.party }
 
+    /** Checks whether a given party is an validating notary identity */
+    fun isValidatingNotary(party: Party): Boolean {
+        val notary = notaryIdentities.firstOrNull { it.party == party } ?:
+                throw IllegalArgumentException("No notary found with identity $party.")
+        return !notary.name.toString().contains("corda.notary.simple", true) // TODO This implementation will change after introducing of NetworkParameters.
+    }
     /**
      * Clear all network map data from local node cache.
      */

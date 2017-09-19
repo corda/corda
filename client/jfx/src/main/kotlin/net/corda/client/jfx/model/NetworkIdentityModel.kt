@@ -7,7 +7,6 @@ import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo

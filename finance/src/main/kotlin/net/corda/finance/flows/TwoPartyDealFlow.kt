@@ -11,8 +11,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -82,7 +80,8 @@ object TwoPartyDealFlow {
     /**
      * Abstracted bilateral deal flow participant that is recipient of initial communication.
      */
-    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker()) : FlowLogic<SignedTransaction>() {
+    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker(),
+                                val regulators: List<Party> = emptyList()) : FlowLogic<SignedTransaction>() {
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Waiting for deal info.")
@@ -97,7 +96,6 @@ object TwoPartyDealFlow {
         }
 
         abstract val otherParty: Party
-        open val regulators: List<Party> = emptyList()
 
         @Suspendable
         override fun call(): SignedTransaction {

@@ -1,7 +1,6 @@
 package net.corda.docs
 
 import net.corda.core.identity.Party
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -10,6 +9,7 @@ import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.finance.schemas.CashSchemaV1
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
