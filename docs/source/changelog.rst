@@ -152,6 +152,8 @@ UNRELEASED
 
 * ``X509CertificateHolder`` has been removed from the public API, replaced by ``java.security.X509Certificate``.
 
+* Moved ``CityDatabase`` out of ``core`` and into ``finance``
+
 Milestone 14
 ------------
 
