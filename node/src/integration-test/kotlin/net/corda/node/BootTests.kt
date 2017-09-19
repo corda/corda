@@ -18,6 +18,7 @@ import net.corda.testing.ProjectStructure.projectRootDir
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Ignore
 import org.junit.Test
 import java.io.*
 import java.nio.file.Files
@@ -54,15 +55,15 @@ class BootTests {
         }
     }
 
-    // TODO rewrite it
-//    @Test
-//    fun `node quits on failure to register with network map`() {
-//        val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.regulator.getSubType("$it")) }.toSet()
-//        driver(networkMapStartStrategy = NetworkMapStartStrategy.Nominated(ALICE.name)) {
-//            val future = startNode(providedName = ALICE.name, advertisedServices = tooManyAdvertisedServices)
-//            assertFailsWith(ListenProcessDeathException::class) { future.getOrThrow() }
-//        }
-//    }
+    @Ignore("Need rewriting to produce too big network map registration (adverticed services trick doesn't work after services removal).")
+    @Test
+    fun `node quits on failure to register with network map`() {
+        val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.notary.getSubType("$it")) }.toSet()
+        driver(networkMapStartStrategy = NetworkMapStartStrategy.Nominated(ALICE.name)) {
+            val future = startNode(providedName = ALICE.name, advertisedServices = tooManyAdvertisedServices)
+            assertFailsWith(ListenProcessDeathException::class) { future.getOrThrow() }
+        }
+    }
 }
 
 @StartableByRPC

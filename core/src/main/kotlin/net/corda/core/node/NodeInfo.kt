@@ -8,13 +8,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 
 /**
- * Information for an advertised service including the service specific identity information.
- * The identity can be used in flows and is distinct from the Node's legalIdentity
- */
-@CordaSerializable
-data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate)
-
-/**
  * Info about a network node that acts on behalf of some form of contract party.
  * @param legalIdentitiesAndCerts is a non-empty list, where the first identity is assumed to be the default identity of the node.
  */

@@ -12,7 +12,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -134,7 +133,7 @@ class InMemoryMessagingNetwork(
             : MessagingServiceBuilder<InMemoryMessaging> {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
-        notaryService?.let { if(it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
+        notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
         val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) } ?: emptyList() //TODO only notary can be distributed?
         return Builder(manuallyPumped, peerHandle, serviceHandles, executor, database = database)
     }

@@ -2,7 +2,6 @@ package net.corda.core.schemas
 
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceEntry
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
@@ -77,12 +76,6 @@ object NodeInfoSchemaV1 : MappedSchema(
             return NetworkHostAndPort(this.pk.host!!, this.pk.port!!)
         }
     }
-
-    @Embeddable // TODO To be removed with services.
-    data class DBServiceEntry(
-            @Column(length = 65535)
-            val serviceEntry: ByteArray? = null
-    )
 
     /**
      *  PartyAndCertificate entity (to be replaced by referencing final Identity Schema).

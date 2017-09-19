@@ -9,9 +9,7 @@ import net.corda.client.jfx.utils.ChosenList
 import net.corda.client.jfx.utils.map
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceEntry
 import tornadofx.*
-import java.util.*
 
 val ISSUER_SERVICE_TYPE = Regex("corda.issuer.(USD|GBP|CHF|EUR)")
 

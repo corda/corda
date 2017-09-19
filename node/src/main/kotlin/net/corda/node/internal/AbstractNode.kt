@@ -633,7 +633,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val name = if (baseName.commonName == null)
                 baseName.copy(commonName = serviceInfo.type.id)
             else
-                baseName.copy(commonName = listOf(baseName.commonName, serviceInfo.type.id).joinToString(" "))
+                baseName.copy(commonName = baseName.commonName + " " + serviceInfo.type.id)
             Pair(serviceInfo.type.id, name)
         }
 

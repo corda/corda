@@ -55,7 +55,9 @@ object UpdateBusinessDayFlow {
          */
         private fun getRecipients(): Iterable<Party> {
             val notaryParties = serviceHub.networkMapCache.notaryIdentities.map { it.party }
-            val peerParties = serviceHub.networkMapCache.allNodes.filter { it.legalIdentities.all { it !in notaryParties } }.map { it.legalIdentities[0] }.sortedBy { it.name.toString() }
+            val peerParties = serviceHub.networkMapCache.allNodes.filter {
+                it.legalIdentities.all { !serviceHub.networkMapCache.isNotary(it) }
+            }.map { it.legalIdentities[0] }.sortedBy { it.name.toString() } // TODO rewrite it nicer
             return notaryParties + peerParties
         }
 

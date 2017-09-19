@@ -72,9 +72,12 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     // TODO From the NetworkMapService redesign doc: Remove the concept of network services.
     //  As a temporary hack, just assume for now that every network has a notary service named "Notary Service" that can be looked up in the map.
     //  This should eliminate the only required usage of services.
-    override val notaryIdentities: List<PartyAndCertificate> get() = partyNodes.filter {
-        it.legalIdentitiesAndCerts.any { it.name.toString().contains("notary", true) }
-    }.map { it.legalIdentitiesAndCerts[1] }.sortedBy { it.owningKey.toBase58String() } // TODO Until we don't have network parameters in, we assume the second identity to be a notary identity.
+    //  It is ensured on node startup when constructing a notary that the name contains "notary".
+    override val notaryIdentities: List<PartyAndCertificate> get() {
+        return partyNodes.flatMap { it.legalIdentitiesAndCerts }.filter {
+            it.name.toString().contains("notary", true)
+        }.distinct().sortedBy { it.name.toString() } // Distinct, because of distributed service nodes.
+    }
 
     init {
         serviceHub.database.transaction { loadFromDB() }

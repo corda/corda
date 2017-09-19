@@ -9,7 +9,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceEntry
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
@@ -82,7 +81,7 @@ interface NetworkMapCache {
     fun getPartyInfo(party: Party): PartyInfo?
 
     /** Gets a notary identity by the given name. */
-    fun getNotary(principal: CordaX500Name): Party? = notaryIdentities.filter { it.name == principal }.randomOrNull()?.party
+    fun getNotary(name: CordaX500Name): Party? = notaryIdentities.filter { it.name == name }.randomOrNull()?.party
 
     /**
      * Returns a notary identity advertised by any of the nodes on the network (chosen at random)
