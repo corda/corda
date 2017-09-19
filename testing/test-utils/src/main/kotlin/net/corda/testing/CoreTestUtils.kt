@@ -76,7 +76,7 @@ val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BigCorporation", locality = "London", country = "GB"), BIG_CORP_PUBKEY)
+val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BigCorporation", locality = "New York", country = "US"), BIG_CORP_PUBKEY)
 val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
