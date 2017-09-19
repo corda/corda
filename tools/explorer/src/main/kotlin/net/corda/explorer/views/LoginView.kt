@@ -10,7 +10,7 @@ import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
 import kotlin.system.exitProcess
 
-class LoginView : View() {
+class LoginView : View(WINDOW_TITLE) {
     override val root by fxml<DialogPane>()
 
     private val hostTextField by fxid<TextField>()
