@@ -241,14 +241,14 @@ internal enum class CommonPropertyNames {
 
 /**
  * Utility function which helps tracking the path in the object graph when exceptions are thrown.
- * Since there might be a chain of nested calls it is useful to record which part of teh graph caused an issue.
- * Path information is added to the message of teh exception being thrown.
+ * Since there might be a chain of nested calls it is useful to record which part of the graph caused an issue.
+ * Path information is added to the message of the exception being thrown.
  */
 internal inline fun <T> ifThrowsAppend(strToAppendFn: () -> String, block: () -> T): T {
     try {
         return block()
     } catch (th: Throwable) {
-        th.setMessage("${strToAppendFn()} -> " + th.message)
+        th.setMessage("${strToAppendFn()} -> ${th.message}")
         throw th
     }
 }
