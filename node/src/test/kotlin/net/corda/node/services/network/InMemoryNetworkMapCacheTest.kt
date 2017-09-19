@@ -63,7 +63,7 @@ class InMemoryNetworkMapCacheTest {
         val expected = n1.info
 
         mockNet.runNetwork()
-        val actual = node0Cache.getNodeByLegalIdentity(n1.info.legalIdentity)
+        val actual = n0.database.transaction { node0Cache.getNodeByLegalIdentity(n1.info.legalIdentity) }
         assertEquals(expected, actual)
 
         // TODO: Should have a test case with anonymous lookup

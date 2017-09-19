@@ -26,10 +26,14 @@ class TransactionKeyFlowTests {
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         val alice: Party = aliceNode.services.myInfo.legalIdentity
         val bob: Party = bobNode.services.myInfo.legalIdentity
-        aliceNode.services.identityService.verifyAndRegisterIdentity(bobNode.info.legalIdentityAndCert)
-        aliceNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
-        bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
-        bobNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
+        aliceNode.database.transaction {
+            aliceNode.services.identityService.verifyAndRegisterIdentity(bobNode.info.legalIdentityAndCert)
+            aliceNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
+        }
+        bobNode.database.transaction {
+            bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
+            bobNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
+        }
 
         // Run the flows
         val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow(bob))
@@ -44,8 +48,8 @@ class TransactionKeyFlowTests {
         assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity)
 
         // Verify that the anonymous identities look sane
-        assertEquals(alice.name, aliceNode.services.identityService.partyFromAnonymous(aliceAnonymousIdentity)!!.name)
-        assertEquals(bob.name, bobNode.services.identityService.partyFromAnonymous(bobAnonymousIdentity)!!.name)
+        assertEquals(alice.name, aliceNode.database.transaction { aliceNode.services.identityService.partyFromAnonymous(aliceAnonymousIdentity)!!.name })
+        assertEquals(bob.name, bobNode.database.transaction { bobNode.services.identityService.partyFromAnonymous(bobAnonymousIdentity)!!.name })
 
         // Verify that the nodes have the right anonymous identities
         assertTrue { aliceAnonymousIdentity.owningKey in aliceNode.services.keyManagementService.keys }

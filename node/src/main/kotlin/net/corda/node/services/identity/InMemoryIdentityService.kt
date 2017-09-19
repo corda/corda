@@ -65,8 +65,17 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
-        identity.verify(trustAnchor)
-
+        try {
+            identity.verify(trustAnchor)
+        } catch (e: CertPathValidatorException) {
+            log.error("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
+            log.error("Certificate path :")
+            identity.certPath.certificates.reversed().forEachIndexed { index, certificate ->
+                val space = (0 until index).map { "   " }.joinToString("")
+                log.error("$space${certificate.toX509CertHolder().subject}")
+            }
+            throw e
+        }
         log.trace { "Registering identity $identity" }
         keyToParties[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
@@ -81,7 +90,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
 
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
-    override fun partyFromX500Name(principal: X500Name): Party? = principalToParties[principal]?.party
+    override fun partyFromX500Name(name: X500Name): Party? = principalToParties[name]?.party
     override fun partyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: keyToParties[party.owningKey]?.party

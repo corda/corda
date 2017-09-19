@@ -11,7 +11,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
@@ -205,11 +204,17 @@ class TwoPartyTradeFlowTests {
             // Let the nodes know about each other - normally the network map would handle this
             val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
             allNodes.forEach { node ->
-                allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.registerIdentity(identity) }
+                node.database.transaction {
+                    allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.registerIdentity(identity) }
+                }
             }
 
-            aliceNode.services.identityService.verifyAndRegisterIdentity(bobNode.info.legalIdentityAndCert)
-            bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
+            aliceNode.database.transaction {
+                aliceNode.services.identityService.verifyAndRegisterIdentity(bobNode.info.legalIdentityAndCert)
+            }
+            bobNode.database.transaction {
+                bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
+            }
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
@@ -336,7 +341,9 @@ class TwoPartyTradeFlowTests {
 
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
         allNodes.forEach { node ->
-            allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.verifyAndRegisterIdentity(identity) }
+            node.database.transaction {
+                allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.verifyAndRegisterIdentity(identity) }
+            }
         }
 
         ledger(aliceNode.services, initialiseSerialization = false) {
@@ -442,7 +449,11 @@ class TwoPartyTradeFlowTests {
 
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
         allNodes.forEach { node ->
-            allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.verifyAndRegisterIdentity(identity) }
+            node.database.transaction {
+                allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
+                    node.services.identityService.verifyAndRegisterIdentity(identity)
+                }
+            }
         }
 
         ledger(aliceNode.services, initialiseSerialization = false) {
@@ -598,7 +609,9 @@ class TwoPartyTradeFlowTests {
         // Let the nodes know about each other - normally the network map would handle this
         val allNodes = listOf(notaryNode, aliceNode, bobNode, bankNode)
         allNodes.forEach { node ->
-            allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.registerIdentity(identity) }
+            node.database.transaction {
+                allNodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity -> node.services.identityService.registerIdentity(identity) }
+            }
         }
 
         val bobsBadCash = bobNode.database.transaction {
