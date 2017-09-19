@@ -122,8 +122,8 @@ class NotaryFlow {
             val (id, inputs, timeWindow, notary) = receiveAndVerifyTx()
             checkNotary(notary)
             service.validateTimeWindow(timeWindow)
-            service.commitInputStates(inputs, id, otherSide, notary!!.owningKey)
-            signAndSendResponse(id, notary)
+            service.commitInputStates(inputs, id, otherSide)
+            signAndSendResponse(id)
             return null
         }
 
@@ -134,15 +134,16 @@ class NotaryFlow {
         @Suspendable
         abstract fun receiveAndVerifyTx(): TransactionParts
 
+        // Check if transaction is intended to be signed by this notary.
         @Suspendable
-        private fun checkNotary(notary: Party?) {
+        protected fun checkNotary(notary: Party?) {
             if (notary == null || notary !in serviceHub.myInfo.legalIdentities)
                 throw NotaryException(NotaryError.WrongNotary)
         }
 
         @Suspendable
-        private fun signAndSendResponse(txId: SecureHash, notary: Party) {
-            val signature = service.sign(txId, notary.owningKey)
+        private fun signAndSendResponse(txId: SecureHash) {
+            val signature = service.sign(txId)
             send(otherSide, listOf(signature))
         }
     }

@@ -177,6 +177,7 @@ object BFTSMaRt {
                            createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx,
                                    BFTNonValidatingNotaryService.PersistedCommittedState, PersistentStateRef>,
                            protected val services: ServiceHubInternal,
+                           protected val notaryIdentityKey: PublicKey,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
             private val log = loggerFor<Replica>()
@@ -220,7 +221,7 @@ object BFTSMaRt {
          */
         abstract fun executeCommand(command: ByteArray): ByteArray?
 
-        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, notaryIdentityKey: PublicKey) {
+        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
             log.debug { "Attempting to commit inputs for transaction: $txId" }
             val conflicts = mutableMapOf<StateRef, UniquenessProvider.ConsumingTx>()
             services.database.transaction {
@@ -237,7 +238,7 @@ object BFTSMaRt {
                     log.debug { "Conflict detected – the following inputs have already been committed: ${conflicts.keys.joinToString()}" }
                     val conflict = UniquenessProvider.Conflict(conflicts)
                     val conflictData = conflict.serialize()
-                    val signedConflict = SignedData(conflictData, sign(conflictData.bytes, notaryIdentityKey))
+                    val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
                     throw NotaryException(NotaryError.Conflict(txId, signedConflict))
                 }
             }
@@ -248,7 +249,7 @@ object BFTSMaRt {
                 throw NotaryException(NotaryError.TimeWindowInvalid)
         }
 
-        protected fun sign(bytes: ByteArray, notaryIdentityKey: PublicKey): DigitalSignature.WithKey {
+        protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
             return services.database.transaction { services.keyManagementService.sign(bytes, notaryIdentityKey) }
         }
 

@@ -10,11 +10,12 @@ import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import java.security.PublicKey
 import java.security.SignatureException
 
 // START 1
 @CordaService
-class MyCustomValidatingNotaryService(override val services: ServiceHub) : TrustedAuthorityNotaryService() {
+class MyCustomValidatingNotaryService(override val services: ServiceHub, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
     override val timeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider = PersistentUniquenessProvider()
 
@@ -50,7 +51,7 @@ class MyValidatingNotaryFlow(otherSide: Party, service: MyCustomValidatingNotary
 
     private fun checkSignatures(stx: SignedTransaction) {
         try {
-            stx.verifySignaturesExcept(stx.notary!!.owningKey)
+            stx.verifySignaturesExcept(service.notaryIdentityKey)
         } catch (e: SignatureException) {
             throw NotaryException(NotaryError.TransactionInvalid(e))
         }

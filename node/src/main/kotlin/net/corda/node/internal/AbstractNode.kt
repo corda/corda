@@ -569,12 +569,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     open protected fun makeCoreNotaryService(type: ServiceType): NotaryService? {
+        check(myNotaryIdentity != null) { "No notary identity initialized when creating a notary service" }
         return when (type) {
-            SimpleNotaryService.type -> SimpleNotaryService(services)
-            ValidatingNotaryService.type -> ValidatingNotaryService(services)
-            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services)
-            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services)
-            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services)
+            SimpleNotaryService.type -> SimpleNotaryService(services, myNotaryIdentity!!.owningKey)
+            ValidatingNotaryService.type -> ValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
+            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
+            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
+            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
             else -> null
         }
     }
@@ -735,7 +736,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val myInfo: NodeInfo get() = info
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
-        override val notaryIdentityKey: PublicKey get() = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("Node doesn't have notary identity key")
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }

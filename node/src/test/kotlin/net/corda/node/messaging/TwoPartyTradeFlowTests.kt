@@ -646,7 +646,8 @@ class TwoPartyTradeFlowTests {
             val sigs = mutableListOf<TransactionSignature>()
             val nodeKey = node.info.chooseIdentity().owningKey
             sigs.add(node.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(nodeKey).schemeNumberID)), nodeKey))
-            sigs.add(notaryNode.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(notaryNode.info.notaryIdentity.owningKey).schemeNumberID)), notaryNode.info.notaryIdentity.owningKey))
+            sigs.add(notaryNode.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1,
+                    Crypto.findSignatureScheme(notaryNode.info.legalIdentities[1].owningKey).schemeNumberID)), notaryNode.info.legalIdentities[1].owningKey))
             extraSigningNodes.forEach { currentNode ->
                 sigs.add(currentNode.services.keyManagementService.sign(
                         SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(currentNode.info.chooseIdentity().owningKey).schemeNumberID)),
