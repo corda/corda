@@ -394,7 +394,7 @@ class TwoPartyTradeFlowTests {
                 val records = (aliceNode.services.validatedTransactions as RecordingTransactionStorage).records
                 records.expectEvents(isStrict = false) {
                     sequence(
-                            // Seller Alice sends her sellerSession info to Bob, who wants to check the asset for sale.
+                            // Seller Alice sends her seller info to Bob, who wants to check the asset for sale.
                             // He requests, Alice looks up in her DB to send the tx to Bob
                             expect(TxRecord.Get(alicesFakePaper[0].id)),
                             // Seller Alice gets a proposed tx which depends on Bob's two cash txns and her own tx.
@@ -523,7 +523,7 @@ class TwoPartyTradeFlowTests {
     }
 
     private data class RunResult(
-            // The buyer is not created immediately, only when the sellerSession starts running
+            // The buyer is not created immediately, only when the seller starts running
             val buyer: CordaFuture<FlowStateMachine<*>>,
             val sellerResult: CordaFuture<SignedTransaction>,
             val sellerId: StateMachineRunId

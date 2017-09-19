@@ -165,7 +165,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun initiateFlow(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession {
         if (openSessions.containsKey(Pair(sessionFlow, otherParty))) {
-            throw IllegalStateException("Attempted to initiateFlow() twice in the same InitiatingFlow $sessionFlow for the same party $otherParty")
+            throw IllegalStateException(
+                    "Attempted to initiateFlow() twice in the same InitiatingFlow $sessionFlow for the same party " +
+                            "$otherParty. This isn't supported in this version of Corda. Alternatively you may " +
+                            "initiate a new flow by calling initiateFlow() in an " +
+                            "@${InitiatingFlow::class.java.simpleName} sub-flow."
+            )
         }
         val flowSession = FlowSessionImpl(otherParty)
         flowSession.stateMachine = this

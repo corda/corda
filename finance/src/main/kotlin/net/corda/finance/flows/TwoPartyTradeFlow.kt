@@ -79,7 +79,7 @@ object TwoPartyTradeFlow {
             val hello = SellerTradeInfo(price, myParty)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
-            // SendTransactionFlow allows sellerSession to access our data to resolve the transaction.
+            // SendTransactionFlow allows seller to access our data to resolve the transaction.
             subFlow(SendStateAndRefFlow(otherSideSession, listOf(assetToSell)))
             otherSideSession.send(hello)
 

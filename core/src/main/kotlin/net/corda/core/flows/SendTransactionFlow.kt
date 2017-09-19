@@ -13,7 +13,7 @@ import net.corda.core.utilities.unwrap
  * to check the dependencies and download any missing attachments.
  *
  * @param otherSide the target party.
- * @param stx the [SignedTransaction] being sent to the [otherSide].
+ * @param stx the [SignedTransaction] being sent to the [otherSideSession].
  */
 open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction) : DataVendingFlow(otherSide, stx)
 
@@ -24,11 +24,11 @@ open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction) :
  * required to check the dependencies.
  *
  * @param otherSideSession the target session.
- * @param stateAndRefs the list of [StateAndRef] being sent to the [otherSide].
+ * @param stateAndRefs the list of [StateAndRef] being sent to the [otherSideSession].
  */
 open class SendStateAndRefFlow(otherSideSession: FlowSession, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow(otherSideSession, stateAndRefs)
 
-sealed class DataVendingFlow(val otherSide: FlowSession, val payload: Any) : FlowLogic<Void?>() {
+sealed class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) : FlowLogic<Void?>() {
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any) = otherSideSession.sendAndReceive<FetchDataFlow.Request>(payload)
 
@@ -41,11 +41,11 @@ sealed class DataVendingFlow(val otherSide: FlowSession, val payload: Any) : Flo
     override fun call(): Void? {
         // The first payload will be the transaction data, subsequent payload will be the transaction/attachment data.
         var payload = payload
-        // This loop will receive [FetchDataFlow.Request] continuously until the `initiatingSession` has all the data they need
-        // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `initiatingSession` to indicate end of
+        // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need
+        // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `otherSideSession` to indicate end of
         // data request.
         while (true) {
-            val dataRequest = sendPayloadAndReceiveDataRequest(otherSide, payload).unwrap { request ->
+            val dataRequest = sendPayloadAndReceiveDataRequest(otherSideSession, payload).unwrap { request ->
                 when (request) {
                     is FetchDataFlow.Request.Data -> {
                         // Security TODO: Check for abnormally large or malformed data requests

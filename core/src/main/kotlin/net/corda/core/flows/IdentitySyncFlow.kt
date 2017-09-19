@@ -46,7 +46,7 @@ object IdentitySyncFlow {
 
             otherSideSessions.forEach { otherSideSession ->
                 val requestedIdentities: List<AbstractParty> = otherSideSession.sendAndReceive<List<AbstractParty>>(confidentialIdentities).unwrap { req ->
-                    require(req.all { it in identityCertificates.keys }) { "${otherSideSession} requested a confidential identity not part of transaction: ${tx.id}" }
+                    require(req.all { it in identityCertificates.keys }) { "${otherSideSession.counterparty} requested a confidential identity not part of transaction: ${tx.id}" }
                     req
                 }
                 val sendIdentities: List<PartyAndCertificate?> = requestedIdentities.map {

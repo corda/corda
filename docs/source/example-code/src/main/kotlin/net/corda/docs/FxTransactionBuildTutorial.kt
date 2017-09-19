@@ -69,7 +69,7 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, lockId: UUID, req
     // the flow is suspended.
     val (inputs, residual) = gatherOurInputs(serviceHub, lockId, sellAmount, request.notary)
 
-    // Build and an output state for the counterpartySession
+    // Build and an output state for the counterparty
     val transferedFundsOutput = Cash.State(sellAmount, request.counterparty)
 
     val outputs = if (residual > 0L) {

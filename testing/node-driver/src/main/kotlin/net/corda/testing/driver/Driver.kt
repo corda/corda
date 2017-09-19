@@ -909,7 +909,7 @@ class DriverDSL(
                 quasarJarPath: String,
                 debugPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
-                callerPackage: String
+                packagesToScanString: String
         ): CordaFuture<Process> {
             val processFuture = executorService.fork {
                 log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}")
@@ -919,7 +919,7 @@ class DriverDSL(
                 val systemProperties = overriddenSystemProperties + mapOf(
                         "name" to nodeConf.myLegalName,
                         "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
-                        "net.corda.node.cordapp.scan.packages" to callerPackage,
+                        "net.corda.node.cordapp.scan.packages" to packagesToScanString,
                         "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
                 )
                 // See experimental/quasar-hook/README.md for how to generate.

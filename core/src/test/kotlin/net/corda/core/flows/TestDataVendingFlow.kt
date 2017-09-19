@@ -1,7 +1,6 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.UntrustworthyData
 
@@ -13,7 +12,7 @@ class TestDataVendingFlow(otherSideSession: FlowSession) : SendStateAndRefFlow(o
             // Hack to not send the first message.
             otherSideSession.receive()
         } else {
-            super.sendPayloadAndReceiveDataRequest(otherSide, payload)
+            super.sendPayloadAndReceiveDataRequest(this.otherSideSession, payload)
         }
     }
 }

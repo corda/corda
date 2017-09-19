@@ -140,7 +140,8 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
 /**
  * Get and check the required signature.
  *
- * @param counterparty the party to request a signature from.
+ * @param partiallySignedTx the transaction to sign.
+ * @param session the [FlowSession] to connect to to get the signature.
  * @param signingKey the key the party should use to sign the transaction.
  */
 @Suspendable
@@ -198,9 +199,9 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  *          }
  *      }
  *
- * @param initiatingSession The session which is providing you a transaction to sign.
+ * @param otherSideSession The session which is providing you a transaction to sign.
  */
-abstract class SignTransactionFlow(val initiatingSession: FlowSession,
+abstract class SignTransactionFlow(val otherSideSession: FlowSession,
                                    override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()) : FlowLogic<SignedTransaction>() {
 
     companion object {
@@ -215,11 +216,11 @@ abstract class SignTransactionFlow(val initiatingSession: FlowSession,
     @Suspendable override fun call(): SignedTransaction {
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
-        val stx = subFlow(ReceiveTransactionFlow(initiatingSession, checkSufficientSignatures = false, recordTransaction = false))
+        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, recordTransaction = false))
         // Receive the signing key that the party requesting the signature expects us to sign with. Having this provided
         // means we only have to check we own that one key, rather than matching all keys in the transaction against all
         // keys we own.
-        val signingKey = initiatingSession.receive<PublicKey>().unwrap {
+        val signingKey = otherSideSession.receive<PublicKey>().unwrap {
             // TODO: We should have a faster way of verifying we own a single key
             serviceHub.keyManagementService.filterMyKeys(listOf(it)).single()
         }
@@ -241,7 +242,7 @@ abstract class SignTransactionFlow(val initiatingSession: FlowSession,
         // Sign and send back our signature to the Initiator.
         progressTracker.currentStep = SIGNING
         val mySignature = serviceHub.createSignature(stx, signingKey)
-        initiatingSession.send(mySignature)
+        otherSideSession.send(mySignature)
 
         // Return the additionally signed transaction.
         return stx + mySignature
@@ -250,8 +251,8 @@ abstract class SignTransactionFlow(val initiatingSession: FlowSession,
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
         val signingIdentities = stx.sigs.map(TransactionSignature::by).mapNotNull(serviceHub.identityService::partyFromKey)
         val signingWellKnownIdentities = signingIdentities.mapNotNull(serviceHub.identityService::partyFromAnonymous)
-        require(initiatingSession.counterparty in signingWellKnownIdentities) {
-            "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${initiatingSession}"
+        require(otherSideSession.counterparty in signingWellKnownIdentities) {
+            "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${otherSideSession}"
         }
         val signed = stx.sigs.map { it.by }
         val allSigners = stx.tx.requiredSigningKeys

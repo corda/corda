@@ -93,18 +93,15 @@ abstract class AbstractStateReplacementFlow {
             return getParticipantsExceptMe().map { initiateFlow(it) }
         }
 
-        protected fun getParticipantsExceptMe(): Iterable<Party> {
+        protected fun getParticipantsExceptMe(): Collection<Party> {
             val parties = originalState.state.data.participants.map {
-                val party = serviceHub.identityService.partyFromAnonymous(it) ?: throw IllegalArgumentException("Could not resolve $it")
-                party
+                serviceHub.identityService.partyFromAnonymous(it) ?: throw IllegalArgumentException("Could not resolve $it")
             }
-            val keyToParty = parties.associateBy { it.owningKey }
-            val myKeys = serviceHub.keyManagementService.filterMyKeys(keyToParty.keys).toSet()
-            return keyToParty.filter { it.key !in myKeys }.values
+            return parties.filter { !serviceHub.myInfo.isLegalIdentity(it) }
         }
 
         @Suspendable
-        private fun collectSignatures(sessions: Iterable<FlowSession>, stx: SignedTransaction): List<TransactionSignature> {
+        private fun collectSignatures(sessions: Collection<FlowSession>, stx: SignedTransaction): List<TransactionSignature> {
             val participantSignatures = sessions.map { getParticipantSignature(it, stx) }
 
             val allPartySignedTx = stx + participantSignatures
