@@ -3,6 +3,7 @@ package net.corda.plugins
 import com.typesafe.config.*
 import net.corda.cordform.CordformNode
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.RDN
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.Project
 import java.nio.charset.StandardCharsets
@@ -87,10 +88,13 @@ class Node extends CordformNode {
     }
 
     protected void rootDir(Path rootDir) {
-        def dirName
+        def dirName = name
         try {
             X500Name x500Name = new X500Name(name)
-            dirName = x500Name.getRDNs(BCStyle.O).getAt(0).getFirst().getValue().toString()
+            RDN[] o = x500Name.getRDNs(BCStyle.O)
+            if (o.length > 0) {
+                dirName = o.getAt(0).getFirst().getValue().toString()
+            }
         } catch(IllegalArgumentException ignore) {
             // Can't parse as an X500 name, use the full string
             dirName = name
