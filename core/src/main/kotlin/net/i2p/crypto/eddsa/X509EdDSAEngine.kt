@@ -5,9 +5,12 @@ import java.security.spec.AlgorithmParameterSpec
 import java.security.spec.X509EncodedKeySpec
 
 /**
- * Temporary solution to EdDSA engine not being able to handle X.509 keys.
+ * Wrapper around [EdDSAEngine] which can intelligently rewrite X509Keys to a [EdDSAPublicKey]. This is a temporary
+ * solution until this is integrated upstream and/or a custom certificate factory implemented to force the correct
+ * key type. Only intercepts public keys passed into [engineInitVerify], as there is no equivalent issue with private
+ * keys.
  */
-class KludgeEdDSAEngine : Signature {
+class X509EdDSAEngine : Signature {
     private val engine: EdDSAEngine
 
     constructor() : super(EdDSAEngine.SIGNATURE_ALGORITHM) {
