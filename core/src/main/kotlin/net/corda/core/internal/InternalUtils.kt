@@ -272,3 +272,5 @@ annotation class VisibleForTesting
 
 @Suppress("UNCHECKED_CAST")
 fun <T, U : T> uncheckedCast(obj: T) = obj as U
+
+fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }

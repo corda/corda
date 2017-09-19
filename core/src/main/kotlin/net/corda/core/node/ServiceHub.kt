@@ -5,8 +5,10 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.toMultiMap
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -281,4 +283,49 @@ interface ServiceHub : ServicesForResolution {
      * @return A new [Connection]
      */
     fun jdbcSession(): Connection
+
+    /**
+     * Group each [PublicKey] by the well known party using the [ServiceHub.identityService], in preparation for
+     * creating [FlowSession]s, for example.
+     *
+     * @param publicKeys the [PublicKey]s to group.
+     * @param ignoreUnrecognisedParties if this is false, throw an exception if some of the [PublicKey]s cannot be mapped
+     * to a [Party].
+     * @return a map of well known [Party] to associated [PublicKey]s.
+     */
+    @Throws(IllegalArgumentException::class)
+    fun groupPublicKeysByKnownParty(publicKeys: Collection<PublicKey>, ignoreUnrecognisedParties: Boolean = false): Map<Party, List<PublicKey>> =
+            groupAbstractPartyByKnownParty(publicKeys.map { AnonymousParty(it) }, ignoreUnrecognisedParties).mapValues { it.value.map { it.owningKey } }
+
+    /**
+     * Group each [AbstractParty] by the well known party using the [ServiceHub.identityService], in preparation for
+     * creating [FlowSession]s, for example.
+     *
+     * @param parties the [AbstractParty]s to group.
+     * @param ignoreUnrecognisedParties if this is false, throw an exception if some of the [AbstractParty]s cannot be mapped
+     * to a [Party].
+     * @return a map of well known [Party] to associated [AbstractParty]s.
+     */
+    @Throws(IllegalArgumentException::class)
+    fun groupAbstractPartyByKnownParty(parties: Collection<AbstractParty>, ignoreUnrecognisedParties: Boolean = false): Map<Party, List<AbstractParty>> {
+        val partyToPublicKey: Iterable<Pair<Party, AbstractParty>> = parties.map { (identityService.partyFromAnonymous(it) ?: if (ignoreUnrecognisedParties) null else throw IllegalArgumentException("Could not find Party for $it")) to it }
+                .filter { it.first != null }.map { Pair(it.first!!, it.second) }
+        return partyToPublicKey.toMultiMap()
+    }
+
+    /**
+     * Remove this node from a map of well known [Party]s.
+     *
+     * @return a new copy of the map, with the well known [Party] for this node removed.
+     */
+    fun <T> excludeMe(map: Map<Party, T>): Map<Party, T> = map.filterKeys { !myInfo.isLegalIdentity(it) }
+
+
+    /**
+     * Remove the [Party] associated with the notary of a [SignedTransaction] from the a map of [Party]s.  It is a no-op
+     * if the notary is null.
+     *
+     * @return a new copy of the map, with the well known [Party] for the notary removed.
+     */
+    fun <T> excludeNotary(map: Map<Party, T>, stx: SignedTransaction): Map<Party, T> = map.filterKeys { it != stx.notary }
 }

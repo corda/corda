@@ -29,7 +29,6 @@ class CollectSignaturesFlowTests {
     lateinit var b: StartedNode<MockNetwork.MockNode>
     lateinit var c: StartedNode<MockNetwork.MockNode>
     lateinit var notary: Party
-    val services = MockServices()
 
     @Before
     fun setup() {
@@ -112,10 +111,7 @@ class CollectSignaturesFlowTests {
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
-                val sessions = state.owners
-                        .mapNotNull { serviceHub.identityService.partyFromAnonymous(it) }
-                        .toSet()
-                        .mapNotNull { if (serviceHub.myInfo.isLegalIdentity(it)) null else initiateFlow(it) }
+                val sessions = serviceHub.excludeMe(serviceHub.groupAbstractPartyByKnownParty(state.owners)).map { initiateFlow(it.key) }
                 val stx = subFlow(CollectSignaturesFlow(ptx, sessions, myInputKeys))
                 return subFlow(FinalityFlow(stx, sessions))
             }

@@ -6,7 +6,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -90,14 +89,7 @@ abstract class AbstractStateReplacementFlow {
          * Initiate sessions with parties we want signatures from.
          */
         open fun getParticipantSessions(): List<FlowSession> {
-            return getParticipantsExceptMe().map { initiateFlow(it) }
-        }
-
-        protected fun getParticipantsExceptMe(): Collection<Party> {
-            val parties = originalState.state.data.participants.map {
-                serviceHub.identityService.partyFromAnonymous(it) ?: throw IllegalArgumentException("Could not resolve $it")
-            }
-            return parties.filter { !serviceHub.myInfo.isLegalIdentity(it) }
+            return serviceHub.excludeMe(serviceHub.groupAbstractPartyByKnownParty(originalState.state.data.participants)).keys.map { initiateFlow(it) }
         }
 
         @Suspendable
