@@ -19,8 +19,6 @@ import net.corda.finance.contracts.asset.Cash
 import tornadofx.*
 import java.security.PublicKey
 
-const val WINDOW_TITLE = "Corda Node Explorer"
-
 /**
  *  Helper method to reduce boiler plate code
  */

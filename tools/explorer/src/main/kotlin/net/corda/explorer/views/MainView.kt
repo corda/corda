@@ -30,7 +30,7 @@ import tornadofx.*
 /**
  * The root view embeds the [Shell] and provides support for the status bar, and modal dialogs.
  */
-class MainView : View(WINDOW_TITLE) {
+class MainView : View() {
     override val root by fxml<Parent>()
 
     // Inject components.
