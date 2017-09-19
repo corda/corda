@@ -204,8 +204,8 @@ object Crypto {
 
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
         putAll(EdDSASecurityProvider())
-        // Override the normal EdDSA engine with one which can handle X509 keys
-        put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", KludgeEdDSAEngine::class.qualifiedName)
+        // Override the normal EdDSA engine with one which can handle X509 keys.
+        put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", X509EdDSAEngine::class.qualifiedName)
         addKeyInfoConverter(EDDSA_ED25519_SHA512.signatureOID.algorithm, KeyInfoConverter(EDDSA_ED25519_SHA512))
     }
 
