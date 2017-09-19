@@ -93,7 +93,7 @@ Run from IntelliJ
 
 .. warning:: If you click "Import Project" instead of "Open", the project's run configurations will be erased!
 
-3. Once the project is open, click "File > Project Structure". Under "Project SDK:", set the project SDK by clicking "New...", clicking "JDK", and navigating to C:\Program Files\Java\jdk1.8.0_XXX (where "XXX" is the latest minor version number). Click "OK".
+3. Once the project is open, click "File > Project Structure". Under "Project SDK:", set the project SDK by clicking "New...", clicking "JDK", and navigating to C:\\Program Files\\Java\\jdk1.8.0_XXX (where "XXX" is the latest minor version number). Click "OK".
 4. Click "View > Tool Windows > Event Log", and click "Import Gradle project", then "OK". Wait, and click "OK" again when the "Gradle Project Data To Import" window appears
 5. Wait for indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing is complete)
 6. At the top-right of the screen, to the left of the green "play" arrow, you should see a dropdown. In that dropdown, select "Run Example Cordapp - Kotlin" and click the green "play" arrow.
