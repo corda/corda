@@ -60,6 +60,7 @@ class Cordformation implements Plugin<Project> {
         def excludes = [
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib'],
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jre8'],
+                [group: 'org.jetbrains.kotlin', name: 'kotlin-reflect'],
                 [group: 'co.paralleluniverse', name: 'quasar-core']
         ]
 
