@@ -294,8 +294,20 @@ interface ServiceHub : ServicesForResolution {
      * @return a map of well known [Party] to associated [PublicKey]s.
      */
     @Throws(IllegalArgumentException::class)
-    fun groupPublicKeysByWellKnownParty(publicKeys: Collection<PublicKey>, ignoreUnrecognisedParties: Boolean = false): Map<Party, List<PublicKey>> =
+    fun groupPublicKeysByWellKnownParty(publicKeys: Collection<PublicKey>, ignoreUnrecognisedParties: Boolean): Map<Party, List<PublicKey>> =
             groupAbstractPartyByWellKnownParty(publicKeys.map { AnonymousParty(it) }, ignoreUnrecognisedParties).mapValues { it.value.map { it.owningKey } }
+
+    /**
+     * Group each [PublicKey] by the well known party using the [ServiceHub.identityService], in preparation for
+     * creating [FlowSession]s, for example.  Throw an exception if some of the [PublicKey]s cannot be mapped
+     * to a [Party].
+     *
+     * @param publicKeys the [PublicKey]s to group.
+     * @return a map of well known [Party] to associated [PublicKey]s.
+     */
+    // Cannot use @JvmOverloads in interface
+    @Throws(IllegalArgumentException::class)
+    fun groupPublicKeysByWellKnownParty(publicKeys: Collection<PublicKey>): Map<Party, List<PublicKey>> = groupPublicKeysByWellKnownParty(publicKeys, false)
 
     /**
      * Group each [AbstractParty] by the well known party using the [ServiceHub.identityService], in preparation for
@@ -307,7 +319,7 @@ interface ServiceHub : ServicesForResolution {
      * @return a map of well known [Party] to associated [AbstractParty]s.
      */
     @Throws(IllegalArgumentException::class)
-    fun groupAbstractPartyByWellKnownParty(parties: Collection<AbstractParty>, ignoreUnrecognisedParties: Boolean = false): Map<Party, List<AbstractParty>> {
+    fun groupAbstractPartyByWellKnownParty(parties: Collection<AbstractParty>, ignoreUnrecognisedParties: Boolean): Map<Party, List<AbstractParty>> {
         val partyToPublicKey: Iterable<Pair<Party, AbstractParty>> = parties.mapNotNull {
             (identityService.partyFromAnonymous(it) ?: if (ignoreUnrecognisedParties) return@mapNotNull null else throw IllegalArgumentException("Could not find Party for $it")) to it
         }
@@ -315,12 +327,23 @@ interface ServiceHub : ServicesForResolution {
     }
 
     /**
+     * Group each [AbstractParty] by the well known party using the [ServiceHub.identityService], in preparation for
+     * creating [FlowSession]s, for example. Throw an exception if some of the [AbstractParty]s cannot be mapped
+     * to a [Party].
+     *
+     * @param parties the [AbstractParty]s to group.
+     * @return a map of well known [Party] to associated [AbstractParty]s.
+     */
+    // Cannot use @JvmOverloads in interface
+    @Throws(IllegalArgumentException::class)
+    fun groupAbstractPartyByWellKnownParty(parties: Collection<AbstractParty>): Map<Party, List<AbstractParty>> = groupAbstractPartyByWellKnownParty(parties, false)
+
+    /**
      * Remove this node from a map of well known [Party]s.
      *
      * @return a new copy of the map, with the well known [Party] for this node removed.
      */
     fun <T> excludeMe(map: Map<Party, T>): Map<Party, T> = map.filterKeys { !myInfo.isLegalIdentity(it) }
-
 
     /**
      * Remove the [Party] associated with the notary of a [SignedTransaction] from the a map of [Party]s.  It is a no-op
