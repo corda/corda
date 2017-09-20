@@ -736,6 +736,23 @@ class FlowFrameworkTests {
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
     }
 
+    @Test
+    fun `double initiateFlow throws`() {
+        val future = node1.services.startFlow(DoubleInitiatingFlow()).resultFuture
+        mockNet.runNetwork()
+        assertThatExceptionOfType(IllegalStateException::class.java)
+                .isThrownBy { future.getOrThrow() }
+                .withMessageContaining("Attempted to initiateFlow() twice")
+    }
+
+    @InitiatingFlow
+    private class DoubleInitiatingFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            initiateFlow(serviceHub.myInfo.chooseIdentity())
+            initiateFlow(serviceHub.myInfo.chooseIdentity())
+        }
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
