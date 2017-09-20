@@ -144,9 +144,9 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
             return try {
                 val id = ftx.id
                 val inputs = ftx.inputs
-                val notary = ftx.filteredLeaves.notary
+                val notary = ftx.notary
                 validateTimeWindow(ftx.timeWindow)
-                if (notary == null || notary !in services.myInfo.legalIdentities) throw NotaryException(NotaryError.WrongNotary)
+                if (notary !in services.myInfo.legalIdentities) throw NotaryException(NotaryError.WrongNotary)
                 commitInputStates(inputs, id, callerIdentity)
                 log.debug { "Inputs committed successfully, signing $id" }
                 BFTSMaRt.ReplicaResponse.Signature(sign(ftx))

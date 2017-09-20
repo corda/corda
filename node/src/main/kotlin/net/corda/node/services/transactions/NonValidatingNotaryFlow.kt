@@ -27,8 +27,8 @@ class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryS
                     it.verify()
                     it.checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                     it.checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
-                    val notary = it.filteredLeaves.notary
-                    TransactionParts(it.id, it.filteredLeaves.inputs, it.filteredLeaves.timeWindow, notary)
+                    val notary = it.notary
+                    TransactionParts(it.id, it.inputs, it.timeWindow, notary)
                 }
                 is NotaryChangeWireTransaction -> TransactionParts(it.id, it.inputs, null, it.notary)
                 else -> {
