@@ -7,20 +7,15 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import net.corda.core.contracts.*
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
-import net.corda.nodeapi.internal.AttachmentsClassLoader
-import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.transactions.CoreTransaction
-import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
@@ -241,42 +236,15 @@ fun Input.readBytesWithLength(): ByteArray {
 @ThreadSafe
 object WireTransactionSerializer : Serializer<WireTransaction>() {
     override fun write(kryo: Kryo, output: Output, obj: WireTransaction) {
-        kryo.writeClassAndObject(output, obj.inputs)
-        kryo.writeClassAndObject(output, obj.attachments)
-        kryo.writeClassAndObject(output, obj.outputs)
-        kryo.writeClassAndObject(output, obj.commands)
-        kryo.writeClassAndObject(output, obj.notary)
-        kryo.writeClassAndObject(output, obj.timeWindow)
+        kryo.writeClassAndObject(output, obj.componentGroups)
         kryo.writeClassAndObject(output, obj.privacySalt)
-    }
-
-    private fun attachmentsClassLoader(kryo: Kryo, attachmentHashes: List<SecureHash>): ClassLoader? {
-        kryo.context[attachmentsClassLoaderEnabledPropertyName] as? Boolean ?: false || return null
-        val serializationContext = kryo.serializationContext() ?: return null // Some tests don't set one.
-        val missing = ArrayList<SecureHash>()
-        val attachments = ArrayList<Attachment>()
-        attachmentHashes.forEach { id ->
-            serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
-        }
-        missing.isNotEmpty() && throw MissingAttachmentsException(missing)
-        return AttachmentsClassLoader(attachments)
     }
 
     @Suppress("UNCHECKED_CAST")
     override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
-        val inputs = kryo.readClassAndObject(input) as List<StateRef>
-        val attachmentHashes = kryo.readClassAndObject(input) as List<SecureHash>
-
-        // If we're deserialising in the sandbox context, we use our special attachments classloader.
-        // Otherwise we just assume the code we need is on the classpath already.
-        kryo.useClassLoader(attachmentsClassLoader(kryo, attachmentHashes) ?: javaClass.classLoader) {
-            val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
-            val commands = kryo.readClassAndObject(input) as List<Command<*>>
-            val notary = kryo.readClassAndObject(input) as Party?
-            val timeWindow = kryo.readClassAndObject(input) as TimeWindow?
-            val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
-            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, timeWindow, privacySalt)
-        }
+        val componentGroups = kryo.readClassAndObject(input) as List<ComponentGroup>
+        val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
+        return WireTransaction(componentGroups, privacySalt)
     }
 }
 
@@ -410,8 +378,7 @@ inline fun <reified T> readListOfLength(kryo: Kryo, input: Input, minLen: Int = 
     if (elemCount < minLen) throw KryoException("Cannot deserialize list, too little elements. Minimum required: $minLen, got: $elemCount")
     if (expectedLen != null && elemCount != expectedLen)
         throw KryoException("Cannot deserialize list, expected length: $expectedLen, got: $elemCount.")
-    val list = (1..elemCount).map { kryo.readClassAndObject(input) as T }
-    return list
+    return (1..elemCount).map { kryo.readClassAndObject(input) as T }
 }
 
 /**

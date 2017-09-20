@@ -5,8 +5,8 @@ import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.ALICE

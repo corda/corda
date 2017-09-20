@@ -193,7 +193,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         val tx = makeFullTx()
         val wtx = tx.toWireTransaction()
         val ftx = wtx.buildFilteredTransaction(Predicate { false })
-        assertFailsWith<MerkleTreeException> { oracle.sign(ftx) }
+        assertFailsWith<IllegalArgumentException> { oracle.sign(ftx) } // It throws failed requirement (as it is empty there is no command to check and sign).
     }
 
     @Test

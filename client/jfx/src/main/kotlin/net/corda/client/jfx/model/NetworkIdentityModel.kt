@@ -7,8 +7,8 @@ import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import java.security.PublicKey
@@ -33,25 +33,13 @@ class NetworkIdentityModel {
     private val identityCache = CacheBuilder.newBuilder()
             .build<PublicKey, ObservableValue<NodeInfo?>>(CacheLoader.from {
                 publicKey ->
-                publicKey?.let { rpcProxy.map { it?.nodeIdentityFromParty(AnonymousParty(publicKey)) } }
+                publicKey?.let { rpcProxy.map { it?.nodeInfoFromParty(AnonymousParty(publicKey)) } }
             })
 
-    val parties: ObservableList<NodeInfo> = networkIdentities.filtered { !it.isCordaService() }
-    val notaries: ObservableList<NodeInfo> = networkIdentities.filtered { it.advertisedServices.any { it.info.type.isNotary() } }
-    val myNodeInfo = rpcProxy.map { it?.nodeInfo() } // TODO Used only for querying for advertised services, remove with services.
-    val myIdentity = myNodeInfo.map { it?.legalIdentitiesAndCerts?.first()?.party }
-
-    private fun NodeInfo.isCordaService(): Boolean {
-        // TODO: better way to identify Corda service?
-        return advertisedServices.any { it.info.type.isNetworkMap() || it.info.type.isNotary() }
-    }
+    val notaries: ObservableList<PartyAndCertificate> = FXCollections.observableList(rpcProxy.value?.notaryIdentities())
+    val notaryNodes: ObservableList<NodeInfo> = FXCollections.observableList(notaries.map { rpcProxy.value?.nodeInfoFromParty(it.party) })
+    val parties: ObservableList<NodeInfo> = networkIdentities.filtered { it.legalIdentitiesAndCerts.all { it !in notaries } }
+    val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }
 
     fun partyFromPublicKey(publicKey: PublicKey): ObservableValue<NodeInfo?> = identityCache[publicKey]
-    //TODO rebase fix
-//    // TODO: Use Identity Service in service hub instead?
-//    fun lookup(publicKey: PublicKey): ObservableValue<PartyAndCertificate?> {
-//        val party = parties.flatMap { it.legalIdentitiesAndCerts }.firstOrNull { publicKey in it.owningKey.keys } ?:
-//                notaries.flatMap { it.legalIdentitiesAndCerts }.firstOrNull { it.owningKey.keys.any { it == publicKey }}
-//        return ReadOnlyObjectWrapper(party)
-//    }
 }

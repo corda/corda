@@ -1,8 +1,8 @@
 package net.corda.attachmentdemo
 
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_BANK_A

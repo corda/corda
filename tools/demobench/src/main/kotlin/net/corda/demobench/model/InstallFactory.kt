@@ -2,9 +2,9 @@ package net.corda.demobench.model
 
 import com.typesafe.config.Config
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files

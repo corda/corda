@@ -1,10 +1,10 @@
 package net.corda.demobench.model
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory
