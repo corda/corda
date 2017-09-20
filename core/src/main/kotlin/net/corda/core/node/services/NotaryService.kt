@@ -10,9 +10,11 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
+import java.security.PublicKey
 
 abstract class NotaryService : SingletonSerializeAsToken() {
     abstract val services: ServiceHub
+    abstract val notaryIdentityKey: PublicKey
 
     abstract fun start()
     abstract fun stop()
@@ -67,11 +69,11 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
     }
 
     fun sign(bits: ByteArray): DigitalSignature.WithKey {
-        return services.keyManagementService.sign(bits, services.notaryIdentityKey)
+        return services.keyManagementService.sign(bits, notaryIdentityKey)
     }
 
     fun sign(txId: SecureHash): TransactionSignature {
-        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(services.notaryIdentityKey).schemeNumberID))
-        return services.keyManagementService.sign(signableData, services.notaryIdentityKey)
+        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
+        return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
 }

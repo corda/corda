@@ -32,10 +32,10 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.flows.CashReceiveFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.nodeapi.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyState
@@ -86,7 +86,7 @@ class FlowFrameworkTests {
 
         // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
-        val notaryService = ServiceInfo(ValidatingNotaryService.type, CordaX500Name(organisation = "Notary service 2000", locality = "London", country = "GB"))
+        val notaryService = ServiceInfo(ValidatingNotaryService.type, CordaX500Name(commonName = ValidatingNotaryService.type.id, organisation = "Notary service 2000", locality = "London", country = "GB"))
         val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.

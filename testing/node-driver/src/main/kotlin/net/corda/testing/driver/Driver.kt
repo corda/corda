@@ -734,7 +734,7 @@ class DriverDSL(
         val nodeNames = (0 until clusterSize).map { CordaX500Name(organisation = "Notary Service $it", locality = "Zurich", country = "CH") }
         val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
-        val advertisedServices = setOf(ServiceInfo(type))
+        val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 
         // Start the first node that will bootstrap the cluster

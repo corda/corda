@@ -6,9 +6,10 @@ import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.nodeapi.ServiceType
 import net.corda.node.services.api.ServiceHubInternal
+import java.security.PublicKey
 
 /** A simple Notary service that does not perform transaction validation */
-class SimpleNotaryService(override val services: ServiceHubInternal) : TrustedAuthorityNotaryService() {
+class SimpleNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
     companion object {
         val type = ServiceType.notary.getSubType("simple")
     }

@@ -13,6 +13,7 @@ import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -72,7 +73,7 @@ class NotaryFlow {
                     val tx: Any = if (stx.isNotaryChangeTransaction()) {
                         stx.notaryChangeTx
                     } else {
-                        stx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
+                        stx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
                     }
                     session.sendAndReceiveWithRetry(tx)
                 }
@@ -119,7 +120,8 @@ class NotaryFlow {
 
         @Suspendable
         override fun call(): Void? {
-            val (id, inputs, timeWindow) = receiveAndVerifyTx()
+            val (id, inputs, timeWindow, notary) = receiveAndVerifyTx()
+            checkNotary(notary)
             service.validateTimeWindow(timeWindow)
             service.commitInputStates(inputs, id, otherSideSession.counterparty)
             signAndSendResponse(id)
@@ -133,6 +135,13 @@ class NotaryFlow {
         @Suspendable
         abstract fun receiveAndVerifyTx(): TransactionParts
 
+        // Check if transaction is intended to be signed by this notary.
+        @Suspendable
+        protected fun checkNotary(notary: Party?) {
+            if (notary !in serviceHub.myInfo.legalIdentities)
+                throw NotaryException(NotaryError.WrongNotary)
+        }
+
         @Suspendable
         private fun signAndSendResponse(txId: SecureHash) {
             val signature = service.sign(txId)
@@ -145,7 +154,7 @@ class NotaryFlow {
  * The minimum amount of information needed to notarise a transaction. Note that this does not include
  * any sensitive transaction details.
  */
-data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?)
+data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?)
 
 class NotaryException(val error: NotaryError) : FlowException("Error response from Notary - $error")
 
@@ -161,4 +170,6 @@ sealed class NotaryError {
     data class TransactionInvalid(val cause: Throwable) : NotaryError() {
         override fun toString() = cause.toString()
     }
+
+    object WrongNotary: NotaryError()
 }

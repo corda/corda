@@ -13,10 +13,12 @@ import net.corda.core.flows.ContractUpgradeFlow.Acceptor
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.toX509CertHolder
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -35,8 +37,6 @@ import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProvider
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.nodeapi.ServiceInfo
-import net.corda.nodeapi.ServiceType
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -66,13 +66,14 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.PublicKey
@@ -253,9 +254,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
-        val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
         val service = try {
-            constructor.newInstance(services)
+            if (NotaryService::class.java.isAssignableFrom(serviceClass)) {
+                check(myNotaryIdentity != null) { "Trying to install a notary service but no notary identity specified" }
+                val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
+                constructor.newInstance(services, myNotaryIdentity!!.owningKey)
+            }
+            else {
+                val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
+                constructor.newInstance(services)
+            }
         } catch (e: InvocationTargetException) {
             throw ServiceInstantiationException(e.cause)
         }
@@ -422,7 +430,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Used only for notary identities.
      */
     protected open fun getNotaryIdentity(): PartyAndCertificate? {
-        return advertisedServices.singleOrNull { it.type.isNotary() }?.let { obtainIdentity(it) }
+        return advertisedServices.singleOrNull { it.type.isNotary() }?.let {
+            it.name?.let {
+                require(it.commonName != null) {"Common name must not be null for notary service, use service type id as common name."}
+                require(ServiceType.parse(it.commonName!!).isNotary()) {"Common name for notary service must be the notary service type id."}
+            }
+            obtainIdentity(it)
+        }
     }
 
     @VisibleForTesting
@@ -560,12 +574,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     open protected fun makeCoreNotaryService(type: ServiceType): NotaryService? {
+        check(myNotaryIdentity != null) { "No notary identity initialized when creating a notary service" }
         return when (type) {
-            SimpleNotaryService.type -> SimpleNotaryService(services)
-            ValidatingNotaryService.type -> ValidatingNotaryService(services)
-            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services)
-            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services)
-            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services)
+            SimpleNotaryService.type -> SimpleNotaryService(services, myNotaryIdentity!!.owningKey)
+            ValidatingNotaryService.type -> ValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
+            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
+            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
+            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
             else -> null
         }
     }
@@ -621,43 +636,30 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // Create node identity if service info = null
             Pair("identity", myLegalName.copy(commonName = null))
         } else {
-            // Ensure that we always have notary in name and type of it. TODO It is temporary solution until we will have proper handling of NetworkParameters
-            val baseName = serviceInfo.name ?: myLegalName
-            val name = if (baseName.commonName == null)
-                baseName.copy(commonName = serviceInfo.type.id)
-            else
-                baseName.copy(commonName = baseName.commonName + " " + serviceInfo.type.id)
+            val name = serviceInfo.name ?: myLegalName.copy(commonName = serviceInfo.type.id)
             Pair(serviceInfo.type.id, name)
         }
 
         // TODO: Integrate with Key management service?
         val privateKeyAlias = "$id-private-key"
-        val compositeKeyAlias = "$id-composite-key"
 
         if (!keyStore.containsAlias(privateKeyAlias)) {
-            val privKeyFile = configuration.baseDirectory / privateKeyAlias
-            val pubIdentityFile = configuration.baseDirectory / "$id-public"
-            val compositeKeyFile = configuration.baseDirectory / compositeKeyAlias
             // TODO: Remove use of [ServiceIdentityGenerator.generateToDisk].
-            // Get keys from key file.
-            // TODO: this is here to smooth out the key storage transition, remove this migration in future release.
-            if (privKeyFile.exists()) {
-                migrateKeysFromFile(keyStore, name, pubIdentityFile, privKeyFile, compositeKeyFile, privateKeyAlias, compositeKeyAlias)
-            } else {
                 log.info("$privateKeyAlias not found in key store ${configuration.nodeKeystore}, generating fresh key!")
                 keyStore.signAndSaveNewKeyPair(name, privateKeyAlias, generateKeyPair())
-            }
         }
 
         val (x509Cert, keys) = keyStore.certificateAndKeyPair(privateKeyAlias)
 
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
+        val compositeKeyAlias = "$id-composite-key"
         val certificates = if (keyStore.containsAlias(compositeKeyAlias)) {
             // Use composite key instead if it exists
             val certificate = keyStore.getCertificate(compositeKeyAlias)
-            // We have to create the certificate chain for the composite key manually, this is because in order to store
-            // the chain in key store we need a private key, however there is no corresponding private key for the composite key.
-            Lists.asList(certificate, keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA))
+            // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
+            // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
+            // the tail of the private key certificates, as they are both signed by the same certificate chain.
+            Lists.asList(certificate, keyStore.getCertificateChain(privateKeyAlias).drop(1).toTypedArray())
         } else {
             keyStore.getCertificateChain(privateKeyAlias).let {
                 check(it[0].toX509CertHolder() == x509Cert) { "Certificates from key store do not line up!" }
@@ -672,22 +674,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         partyKeys += keys
         return PartyAndCertificate(CertificateFactory.getInstance("X509").generateCertPath(certificates))
-    }
-
-    private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: CordaX500Name,
-                                    pubKeyFile: Path, privKeyFile: Path, compositeKeyFile:Path,
-                                    privateKeyAlias: String, compositeKeyAlias: String) {
-        log.info("Migrating $privateKeyAlias from file to key store...")
-        // Check that the identity in the config file matches the identity file we have stored to disk.
-        // Load the private key.
-        val publicKey = Crypto.decodePublicKey(pubKeyFile.readAll())
-        val privateKey = Crypto.decodePrivateKey(privKeyFile.readAll())
-        keyStore.signAndSaveNewKeyPair(serviceName, privateKeyAlias, KeyPair(publicKey, privateKey))
-        // Store composite key separately.
-        if (compositeKeyFile.exists()) {
-            keyStore.savePublicKey(serviceName, compositeKeyAlias, Crypto.decodePublicKey(compositeKeyFile.readAll()))
-        }
-        log.info("Finish migrating $privateKeyAlias from file to keystore.")
     }
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
@@ -726,7 +712,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val myInfo: NodeInfo get() = info
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
-        override val notaryIdentityKey: PublicKey get() = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("Node doesn't have notary identity key")
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
