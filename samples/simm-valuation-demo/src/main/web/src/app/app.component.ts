@@ -49,11 +49,10 @@ export class AppComponent {
   ngOnInit() {
     this.httpWrapperService.getAbsolute("whoami").toPromise().then((data) => {
       this.whoAmI = this.renderX500Name(data.self.text);
-      var self = this;
-      this.counterParties = data.counterparties.map(function (x) {
+      this.counterParties = data.counterparties.map((x) => {
           return {
               id: x.id,
-              text: self.renderX500Name(x.text)
+              text: this.renderX500Name(x.text)
           };
       });
       if (this.counterParties.length == 0) {

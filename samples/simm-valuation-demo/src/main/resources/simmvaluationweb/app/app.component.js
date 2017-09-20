@@ -28,7 +28,7 @@ var AppComponent = (function () {
         var name = x500Name;
         x500Name.split(',').forEach(function (element) {
             var keyValue = element.split('=');
-            if (keyValue[0].toUpperCase() == 'CN') {
+            if (keyValue[0].toUpperCase() == 'O') {
                 name = keyValue[1];
             }
         });
@@ -41,7 +41,7 @@ var AppComponent = (function () {
             _this.counterParties = data.counterparties.map(function (x) {
                 return {
                     id: x.id,
-                    text: this.renderX500Name(x.text)
+                    text: _this.renderX500Name(x.text)
                 };
             });
             if (_this.counterParties.length == 0) {
