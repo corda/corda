@@ -201,6 +201,9 @@ UNRELEASED
 * A new ``ComponentGroupEnum`` is added with the following enum items: ``INPUTS_GROUP``, ``OUTPUTS_GROUP``,
  ``COMMANDS_GROUP``, ``ATTACHMENTS_GROUP``, ``NOTARY_GROUP``, ``TIMEWINDOW_GROUP``.
 
+* ``SignatureMetadata`` now includes a timestamp that corresponds to the advertised time the signature took place.
+  If one is not provided, then current UTC time ``Instant.now`` is used.
+
 Milestone 14
 ------------
 
