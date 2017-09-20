@@ -49,10 +49,11 @@ object StabilityTest {
     fun selfIssueTest(replication: Int) = LoadTest<SelfIssueCommand, Unit>(
             "Self issuing lot of cash",
             generate = { _, _ ->
+                val notaryIdentity = simpleNodes[0].proxy.notaryIdentities().first().party
                 // Self issue cash is fast, its ok to flood the node with this command.
                 val generateIssue =
                         simpleNodes.map { issuer ->
-                            SelfIssueCommand(IssueAndPaymentRequest(Amount(100000, USD), OpaqueBytes.of(0), issuer.mainIdentity, notary.info.notaryIdentity, anonymous = true), issuer)
+                            SelfIssueCommand(IssueAndPaymentRequest(Amount(100000, USD), OpaqueBytes.of(0), issuer.mainIdentity, notaryIdentity, anonymous = true), issuer)
                         }
                 Generator.pure(List(replication) { generateIssue }.flatten())
             },

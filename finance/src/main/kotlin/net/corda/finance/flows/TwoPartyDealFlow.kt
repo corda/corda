@@ -11,8 +11,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -51,7 +49,7 @@ object TwoPartyDealFlow {
         }
 
         abstract val payload: Any
-        abstract val notaryNode: NodeInfo
+        abstract val notaryParty: Party
         abstract val otherParty: Party
 
         @Suspendable override fun call(): SignedTransaction {
@@ -82,7 +80,8 @@ object TwoPartyDealFlow {
     /**
      * Abstracted bilateral deal flow participant that is recipient of initial communication.
      */
-    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker()) : FlowLogic<SignedTransaction>() {
+    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker(),
+                                val regulators: List<Party> = emptyList()) : FlowLogic<SignedTransaction>() {
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Waiting for deal info.")
@@ -126,12 +125,10 @@ object TwoPartyDealFlow {
             logger.trace { "Recorded transaction." }
 
             progressTracker.currentStep = COPYING_TO_REGULATOR
-            val regulators = serviceHub.networkMapCache.regulatorNodes
-            if (regulators.isNotEmpty()) {
-                // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
-                // just for demo purposes.
-                regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first(), ftx) }
-            }
+
+            // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
+            // just for demo purposes.
+            regulators.forEach { send(it, ftx) }
 
             progressTracker.currentStep = COPYING_TO_COUNTERPARTY
             // Send the final transaction hash back to the other party.
@@ -173,8 +170,7 @@ object TwoPartyDealFlow {
     open class Instigator(override val otherParty: Party,
                           override val payload: AutoOffer,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
-        override val notaryNode: NodeInfo get() =
-            serviceHub.networkMapCache.notaryNodes.single { it.notaryIdentity == payload.notary }
+        override val notaryParty: Party get() = payload.notary
 
         @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
             // Add some constraints here.

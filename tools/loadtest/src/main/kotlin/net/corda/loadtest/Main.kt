@@ -88,7 +88,7 @@ private fun runLoadTest(loadTestConfiguration: LoadTestConfiguration) {
                                     ),
                                     DisruptionSpec(
                                             disruption = kill,
-                                            nodeFilter = isNetworkMap.or(isNotary),
+                                            nodeFilter = isNotary, // TODO Fix it with network map, isNetworkMap.or(isNotary).
                                             noDisruptionWindowMs = 10000L..20000L // Takes a while for it to restart
                                     ),
                                     // DOCS START 1
@@ -117,7 +117,7 @@ private fun runLoadTest(loadTestConfiguration: LoadTestConfiguration) {
                                     ),
                                     DisruptionSpec(
                                             disruption = kill,
-                                            nodeFilter = isNetworkMap.or(isNotary),
+                                            nodeFilter = isNotary, // TODO Fix it with network map, isNetworkMap.or(isNotary).
                                             noDisruptionWindowMs = 10000L..20000L // Takes a while for it to restart
                                     ),
                                     DisruptionSpec(

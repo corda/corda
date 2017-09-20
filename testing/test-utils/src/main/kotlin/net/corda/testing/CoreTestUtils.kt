@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -162,3 +163,5 @@ inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) 
  */
 fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
+
+fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first().party

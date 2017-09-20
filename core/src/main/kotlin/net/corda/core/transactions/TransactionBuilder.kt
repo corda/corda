@@ -2,13 +2,16 @@ package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.KeyManagementService
 import java.lang.UnsupportedOperationException
-import java.security.KeyPair
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -72,8 +75,9 @@ open class TransactionBuilder(
     }
     // DOCEND 1
 
-    fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), notary, window, privacySalt)
+    fun toWireTransaction(serializationContext: SerializationContext? = null) = SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
+        WireTransaction(WireTransaction.createComponentGroups(inputs, outputs, commands, attachments, notary, window), privacySalt)
+    }
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)

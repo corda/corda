@@ -143,7 +143,9 @@ interface ServiceHub : ServicesForResolution {
      * If the key is actually a [net.corda.core.crypto.CompositeKey], the first leaf key hosted on this node
      * will be used to create the signature.
      */
-    val notaryIdentityKey: PublicKey get() = this.myInfo.notaryIdentity.owningKey
+    // TODO Remove that from ServiceHub, we could take that information from a transaction notary field and figure out what key to use from that.
+    //  But, it's separate PR.
+    val notaryIdentityKey: PublicKey
 
     // Helper method to construct an initial partially signed transaction from a [TransactionBuilder].
     private fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey, signatureMetadata: SignatureMetadata): SignedTransaction {

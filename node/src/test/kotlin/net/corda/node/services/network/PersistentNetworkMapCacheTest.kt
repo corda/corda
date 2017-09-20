@@ -60,8 +60,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     @Test
     fun `restart node with DB map cache and no network map`() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
-        val partyNodes = alice.services.networkMapCache.partyNodes
-        assertTrue(NetworkMapService.type !in alice.info.advertisedServices.map { it.info.type })
+        val partyNodes = alice.services.networkMapCache.allNodes
         assertEquals(NullNetworkMapService, alice.inNodeNetworkMapService)
         assertEquals(infos.size, partyNodes.size)
         assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
@@ -72,9 +71,8 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val parties = partiesList.subList(1, partiesList.size)
         val nodes = startNodesWithPort(parties, noNetworkMap = true)
         assertTrue(nodes.all { it.inNodeNetworkMapService == NullNetworkMapService })
-        assertTrue(nodes.all { NetworkMapService.type !in it.info.advertisedServices.map { it.info.type } })
         nodes.forEach {
-            val partyNodes = it.services.networkMapCache.partyNodes
+            val partyNodes = it.services.networkMapCache.allNodes
             assertEquals(infos.size, partyNodes.size)
             assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
         }
@@ -86,9 +84,8 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val parties = partiesList.subList(1, partiesList.size)
         val nodes = startNodesWithPort(parties, noNetworkMap = false)
         assertTrue(nodes.all { it.inNodeNetworkMapService == NullNetworkMapService })
-        assertTrue(nodes.all { NetworkMapService.type !in it.info.advertisedServices.map { it.info.type } })
         nodes.forEach {
-            val partyNodes = it.services.networkMapCache.partyNodes
+            val partyNodes = it.services.networkMapCache.allNodes
             assertEquals(infos.size, partyNodes.size)
             assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
         }
@@ -118,7 +115,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         // Start node that is not in databases of other nodes. Point to NMS. Which has't started yet.
         val charlie = startNodesWithPort(listOf(CHARLIE), noNetworkMap = false)[0]
         otherNodes.forEach {
-            assertThat(it.services.networkMapCache.partyNodes).doesNotContain(charlie.info)
+            assertThat(it.services.networkMapCache.allNodes).doesNotContain(charlie.info)
         }
         // Start Network Map and see that charlie node appears in caches.
         val nms = startNodesWithPort(listOf(DUMMY_NOTARY), noNetworkMap = false)[0]
@@ -126,13 +123,13 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         assertTrue(nms.inNodeNetworkMapService != NullNetworkMapService)
         assertTrue(infos.any { it.legalIdentities.toSet() == nms.info.legalIdentities.toSet() })
         otherNodes.forEach {
-            assertTrue(nms.info.chooseIdentity() in it.services.networkMapCache.partyNodes.map { it.chooseIdentity() })
+            assertTrue(nms.info.chooseIdentity() in it.services.networkMapCache.allNodes.map { it.chooseIdentity() })
         }
         charlie.internals.nodeReadyFuture.get() // Finish registration.
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
-        val cacheA = otherNodes[0].services.networkMapCache.partyNodes
-        val cacheB = otherNodes[1].services.networkMapCache.partyNodes
-        val cacheC = charlie.services.networkMapCache.partyNodes
+        val cacheA = otherNodes[0].services.networkMapCache.allNodes
+        val cacheB = otherNodes[1].services.networkMapCache.allNodes
+        val cacheC = charlie.services.networkMapCache.allNodes
         assertEquals(4, cacheC.size) // Charlie fetched data from NetworkMap
         assertThat(cacheB).contains(charlie.info)
         assertEquals(cacheA.toSet(), cacheB.toSet())

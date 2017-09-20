@@ -46,8 +46,6 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
         rpc.partyFromX500Name(params.issuerBankName) ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issuerBankName} in identity service").build()
         val notaryParty = rpc.partyFromX500Name(params.notaryName)
                 ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.notaryName} in identity service").build()
-        val notaryNode = rpc.nodeIdentityFromParty(notaryParty)
-                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate $notaryParty in network map service").build()
 
         val amount = Amount(params.amount, Currency.getInstance(params.currency))
         val anonymous = true
@@ -56,7 +54,7 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
         // invoke client side of Issuer Flow: IssuanceRequester
         // The line below blocks and waits for the future to resolve.
         return try {
-            rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, anonymous, notaryNode.notaryIdentity).returnValue.getOrThrow()
+            rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, anonymous, notaryParty).returnValue.getOrThrow()
             logger.info("Issue and payment request completed successfully: $params")
             Response.status(Response.Status.CREATED).build()
         } catch (e: Exception) {

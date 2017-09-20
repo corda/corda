@@ -6,11 +6,11 @@ import net.corda.finance.utils.CityDatabase
 import net.corda.finance.utils.WorldMapLocation
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager

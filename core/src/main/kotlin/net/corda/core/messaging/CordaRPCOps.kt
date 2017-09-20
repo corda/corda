@@ -9,6 +9,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
@@ -212,6 +213,11 @@ interface CordaRPCOps : RPCOps {
      */
     fun nodeInfo(): NodeInfo
 
+    /**
+     * Returns network's notary identities, assuming this will not change while the node is running.
+     */
+    fun notaryIdentities(): List<PartyAndCertificate>
+
     /*
      * Add note(s) to an existing Vault transaction
      */
@@ -284,11 +290,11 @@ interface CordaRPCOps : RPCOps {
     fun registeredFlows(): List<String>
 
     /**
-     * Returns a node's identity from the network map cache, where known.
+     * Returns a node's info from the network map cache, where known.
      *
      * @return the node info if available.
      */
-    fun nodeIdentityFromParty(party: AbstractParty): NodeInfo?
+    fun nodeInfoFromParty(party: AbstractParty): NodeInfo?
 
     /**
      * Clear all network map data from local node cache.

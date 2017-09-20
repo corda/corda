@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.TransactionParts
 import net.corda.core.identity.Party
@@ -24,7 +25,9 @@ class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryS
             when (it) {
                 is FilteredTransaction -> {
                     it.verify()
-                    TransactionParts(it.id, it.filteredLeaves.inputs, it.filteredLeaves.timeWindow)
+                    it.checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
+                    it.checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
+                    TransactionParts(it.id, it.inputs, it.timeWindow)
                 }
                 is NotaryChangeWireTransaction -> TransactionParts(it.id, it.inputs, null)
                 else -> {

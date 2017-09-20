@@ -5,9 +5,9 @@ import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
