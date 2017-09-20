@@ -12,7 +12,7 @@ UNRELEASED
    * We no longer support advertising services in network map. Removed ``NodeInfo::advertisedServices``, ``serviceIdentities``
    and ``notaryIdentity``.
    * Removed service methods from ``NetworkMapCache``: ``partyNodes``, ``networkMapNodes``, ``notaryNodes``, ``regulatorNodes``,
-   ``getNodesWithService``, ``getPeersWithService``, ``getRecommended``, ``getNodesByAdvertisedServiceIdentityKey``,
+   ``getNodesWithService``, ``getPeersWithService``, ``getRecommended``, ``getNodesByAdvertisedServiceIdentityKey``, ``getAnyNotary``,
    ``notaryNode``, ``getAnyServiceOfType``. To get all known ``NodeInfo``s call ``allNodes``.
    * In preparation for ``NetworkMapService`` redesign and distributing notaries through ``NetworkParameters`` we added
    ``NetworkMapCache::notaryIdentities`` list to enable to lookup for notary parties known to the network. Related ``CordaRPCOps::notaryIdentities``
