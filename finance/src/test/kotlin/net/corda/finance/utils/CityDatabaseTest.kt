@@ -1,4 +1,4 @@
-package net.corda.core.node
+package net.corda.finance.utils
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

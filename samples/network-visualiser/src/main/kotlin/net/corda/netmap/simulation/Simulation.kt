@@ -2,10 +2,10 @@ package net.corda.netmap.simulation
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
+import net.corda.finance.utils.CityDatabase
+import net.corda.finance.utils.WorldMapLocation
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.CityDatabase
-import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ProgressTracker

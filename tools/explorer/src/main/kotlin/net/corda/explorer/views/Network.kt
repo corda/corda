@@ -28,13 +28,13 @@ import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
-import net.corda.core.node.CityDatabase
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ScreenCoordinate
-import net.corda.core.node.WorldMapLocation
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
+import net.corda.finance.utils.CityDatabase
+import net.corda.finance.utils.ScreenCoordinate
+import net.corda.finance.utils.WorldMapLocation
 import tornadofx.*
 
 class Network : CordaView() {

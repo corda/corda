@@ -15,11 +15,12 @@ import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import java.security.SignatureException
 import java.util.function.Predicate
 
-object NotaryFlow {
+class NotaryFlow {
     /**
      * A flow to be used by a party for obtaining signature(s) from a [NotaryService] ascertaining the transaction
      * time-window is correct and none of its inputs have been used in another completed transaction.
@@ -42,14 +43,12 @@ object NotaryFlow {
             fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
         }
 
-        lateinit var notaryParty: Party
-
         @Suspendable
         @Throws(NotaryException::class)
         override fun call(): List<TransactionSignature> {
             progressTracker.currentStep = REQUESTING
 
-            notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
+            val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
             check(stx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) {
                 "Input states must have the same Notary"
             }
@@ -84,14 +83,25 @@ object NotaryFlow {
             }
 
             return response.unwrap { signatures ->
-                signatures.forEach { validateSignature(it, stx.id) }
+                signatures.forEach { validateSignature(it, stx.id, notaryParty) }
                 signatures
             }
         }
 
-        private fun validateSignature(sig: TransactionSignature, txId: SecureHash) {
+        private fun validateSignature(sig: TransactionSignature, txId: SecureHash, notaryParty: Party) {
             check(sig.by in notaryParty.owningKey.keys) { "Invalid signer for the notary result" }
             sig.verify(txId)
+        }
+    }
+
+    /**
+     * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [sendAndReceiveWithRetry]
+     * instead of [sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
+     */
+    private class SendTransactionWithRetry(otherSide: Party, stx: SignedTransaction) : SendTransactionFlow(otherSide, stx) {
+        @Suspendable
+        override fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any): UntrustworthyData<FetchDataFlow.Request> {
+            return sendAndReceiveWithRetry(otherSide, payload)
         }
     }
 
@@ -150,13 +160,4 @@ sealed class NotaryError {
     data class TransactionInvalid(val cause: Throwable) : NotaryError() {
         override fun toString() = cause.toString()
     }
-}
-
-/**
- * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [sendAndReceiveWithRetry]
- * instead of [sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
- */
-private class SendTransactionWithRetry(otherSide: Party, stx: SignedTransaction) : SendTransactionFlow(otherSide, stx) {
-    @Suspendable
-    override fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any) = sendAndReceiveWithRetry<FetchDataFlow.Request>(otherSide, payload)
 }
