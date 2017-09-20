@@ -12,6 +12,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.*
 import net.corda.core.flows.AbstractStateReplacementFlow.Proposal
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria
@@ -103,8 +104,8 @@ object SimmFlow {
         }
 
         private class StateRevisionFlowRequester<T>(val session: FlowSession, stateAndRef: StateAndRef<RevisionedState<T>>, update: T) : StateRevisionFlow.Requester<T>(stateAndRef, update) {
-            override fun getParticipantSessions(): List<FlowSession> {
-                return listOf(session)
+            override fun getParticipantSessions(): List<Pair<FlowSession, List<AbstractParty>>> {
+                return listOf(session to listOf(session.counterparty))
             }
         }
 
