@@ -42,7 +42,7 @@ interface TransactionWithSignatures : NamedByHash {
     fun verifySignaturesExcept(vararg allowedToBeMissing: PublicKey) {
         checkSignaturesAreValid()
 
-        val needed = getMissingSignatures() - allowedToBeMissing
+        val needed = getMissingSigners() - allowedToBeMissing
         if (needed.isNotEmpty())
             throw SignaturesMissingException(needed.toNonEmptySet(), getKeyDescriptions(needed), id)
     }
@@ -74,7 +74,7 @@ interface TransactionWithSignatures : NamedByHash {
     /**
      * Return the [PublicKey]s for which we still need signatures.
      */
-    fun getMissingSignatures(): Set<PublicKey> {
+    fun getMissingSigners(): Set<PublicKey> {
         val sigKeys = sigs.map { it.by }.toSet()
         // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign
         //  equals on CompositeKey won't catch this case (do we want to single PublicKey be equal to the same key wrapped in CompositeKey with threshold 1?)

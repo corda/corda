@@ -111,7 +111,7 @@ object TwoPartyDealFlow {
 
             // DOCSTART 1
             // Get signatures of other signers
-            val sessionsForOtherSigners = serviceHub.excludeNotary(serviceHub.groupPublicKeysByKnownParty(ptxSignedByOtherSide.getMissingSignatures()), ptxSignedByOtherSide).map { initiateFlow(it.key) }
+            val sessionsForOtherSigners = serviceHub.excludeNotary(serviceHub.groupPublicKeysByKnownParty(ptxSignedByOtherSide.getMissingSigners()), ptxSignedByOtherSide).map { initiateFlow(it.key) }
             val stx = subFlow(CollectSignaturesFlow(ptxSignedByOtherSide, sessionsForOtherSigners, additionalSigningPubKeys))
             // DOCEND 1
 

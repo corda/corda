@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.identity.AbstractParty
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -88,28 +89,31 @@ abstract class AbstractStateReplacementFlow {
         /**
          * Initiate sessions with parties we want signatures from.
          */
-        open fun getParticipantSessions(): List<FlowSession> {
-            return serviceHub.excludeMe(serviceHub.groupAbstractPartyByKnownParty(originalState.state.data.participants)).keys.map { initiateFlow(it) }
+        open fun getParticipantSessions(): List<Pair<FlowSession, List<AbstractParty>>> {
+            return serviceHub.excludeMe(serviceHub.groupAbstractPartyByKnownParty(originalState.state.data.participants)).map { initiateFlow(it.key) to it.value }
         }
 
         @Suspendable
-        private fun collectSignatures(sessions: Collection<FlowSession>, stx: SignedTransaction): List<TransactionSignature> {
-            val participantSignatures = sessions.map { getParticipantSignature(it, stx) }
+        private fun collectSignatures(sessions: List<Pair<FlowSession, List<AbstractParty>>>, stx: SignedTransaction): List<TransactionSignature> {
+            val participantSignatures = sessions.map { getParticipantSignature(it.first, it.second, stx) }
 
             val allPartySignedTx = stx + participantSignatures
 
             val allSignatures = participantSignatures + getNotarySignatures(allPartySignedTx)
-            sessions.forEach { it.send(allSignatures) }
+            sessions.forEach { it.first.send(allSignatures) }
 
             return allSignatures
         }
 
         @Suspendable
-        private fun getParticipantSignature(session: FlowSession, stx: SignedTransaction): TransactionSignature {
+        private fun getParticipantSignature(session: FlowSession, party: List<AbstractParty>, stx: SignedTransaction): TransactionSignature {
+            require(party.size == 1) {
+                "We do not currently support multiple signatures from the same party ${session.counterparty}: $party"
+            }
             val proposal = Proposal(originalState.ref, modification)
             subFlow(SendTransactionFlow(session, stx))
             return session.sendAndReceive<TransactionSignature>(proposal).unwrap {
-                check(session.counterparty.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
+                check(party.single().owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verify(stx.id)
                 it
             }
