@@ -36,7 +36,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     class PersistentKey(
 
             @Id
-            @Column(name = "public_key")
+            @Column(length = 6000, name = "public_key")
             var publicKey: String = "",
 
             @Lob
