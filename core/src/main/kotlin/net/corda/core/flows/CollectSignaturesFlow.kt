@@ -277,7 +277,7 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
 
     @Suspendable private fun checkMySignaturesRequired(stx: SignedTransaction, signingKeys: Iterable<PublicKey>) {
         require(signingKeys.all { it in stx.tx.requiredSigningKeys }) {
-            "Party is not a participant for any of the input states of transaction ${stx.id}"
+            "A signature was requested for a key that isn't part of the required signing keys for transaction ${stx.id}"
         }
     }
 }
