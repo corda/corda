@@ -1,6 +1,6 @@
 package net.corda.node.messaging
 
-import net.corda.core.node.services.ServiceInfo
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.TopicStringValidator
 import net.corda.node.services.messaging.createMessage

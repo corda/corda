@@ -56,7 +56,6 @@ object TwoPartyTradeFlow {
     )
 
     open class Seller(val otherParty: Party,
-                      val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount<Currency>,
                       val myParty: PartyAndCertificate, // TODO Left because in tests it's used to pass anonymous party.

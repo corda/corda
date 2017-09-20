@@ -10,7 +10,6 @@ import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
@@ -40,7 +39,7 @@ object FlowCookbook {
     @StartableByRPC
     // Every flow must subclass ``FlowLogic``. The generic indicates the
     // flow's return type.
-    class InitiatorFlow(val arg1: Boolean, val arg2: Int, val counterparty: Party) : FlowLogic<Unit>() {
+    class InitiatorFlow(val arg1: Boolean, val arg2: Int, val counterparty: Party, val regulator: Party) : FlowLogic<Unit>() {
 
         /**---------------------------------
          * WIRING UP THE PROGRESS TRACKER *
@@ -109,21 +108,17 @@ object FlowCookbook {
             // Unlike the first two methods, ``getNotaryNodes`` returns a
             // ``List<NodeInfo>``. We have to extract the notary identity of
             // the node we want.
-            val firstNotary: Party = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
+            val firstNotary: Party = serviceHub.networkMapCache.notaryIdentities[0].party
             // DOCEND 1
 
             // We may also need to identify a specific counterparty. We
             // do so using identity service.
             // DOCSTART 2
-            val namedCounterparty: Party? = serviceHub.identityService.partyFromX500Name(CordaX500Name(organisation = "NodeA", locality = "London", country = "UK"))
-            val keyedCounterparty: Party? = serviceHub.identityService.partyFromKey(dummyPubKey)
+            val namedCounterparty: Party = serviceHub.identityService.partyFromX500Name(CordaX500Name(organisation = "NodeA", locality = "London", country = "UK")) ?:
+                    throw IllegalArgumentException("Couldn't find counterparty for NodeA in identity service")
+            val keyedCounterparty: Party = serviceHub.identityService.partyFromKey(dummyPubKey) ?:
+                    throw IllegalArgumentException("Couldn't find counterparty with key: $dummyPubKey in identity service")
             // DOCEND 2
-
-            // Finally, we can use the map to identify nodes providing a
-            // specific service (e.g. a regulator or an oracle).
-            // DOCSTART 3
-            val regulator: Party = serviceHub.networkMapCache.getPeersWithService(ServiceType.regulator)[0].identity.party
-            // DOCEND 3
 
             /**-----------------------------
              * SENDING AND RECEIVING DATA *

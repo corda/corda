@@ -10,6 +10,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -114,6 +115,10 @@ class CordaRPCOpsImpl(
         return services.myInfo
     }
 
+    override fun notaryIdentities(): List<PartyAndCertificate> {
+        return services.networkMapCache.notaryIdentities
+    }
+
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
         return database.transaction {
             services.vaultService.addNoteToTransaction(txnId, txnNote)
@@ -202,7 +207,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? {
+    override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
         return database.transaction {
             services.networkMapCache.getNodeByLegalIdentity(party)
         }

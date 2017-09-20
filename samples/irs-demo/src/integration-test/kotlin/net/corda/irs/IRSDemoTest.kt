@@ -12,7 +12,6 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.Party
 import net.corda.core.messaging.vaultTrackBy
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
@@ -21,6 +20,7 @@ import net.corda.core.utilities.seconds
 import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.uploadFile
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User

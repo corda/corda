@@ -1,7 +1,6 @@
 package net.corda.notarydemo
 
 import net.corda.core.internal.div
-import net.corda.core.node.services.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
@@ -12,6 +11,7 @@ import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
+import net.corda.nodeapi.ServiceInfo
 import net.corda.testing.internal.demorun.*
 
 fun main(args: Array<String>) = SingleNotaryCordform.runNodes()

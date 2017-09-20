@@ -1,8 +1,8 @@
 package net.corda.node.services.network
 
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
+import net.corda.nodeapi.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity

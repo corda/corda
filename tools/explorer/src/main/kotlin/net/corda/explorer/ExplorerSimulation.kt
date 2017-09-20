@@ -12,8 +12,6 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.GBP
@@ -26,6 +24,8 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
@@ -52,6 +52,7 @@ class ExplorerSimulation(val options: OptionSet) {
     private lateinit var bobNode: NodeHandle
     private lateinit var issuerNodeGBP: NodeHandle
     private lateinit var issuerNodeUSD: NodeHandle
+    private lateinit var notary: Party
 
     private val RPCConnections = ArrayList<CordaRPCConnection>()
     private val issuers = HashMap<Currency, CordaRPCOps>()
@@ -172,9 +173,10 @@ class ExplorerSimulation(val options: OptionSet) {
     private fun startNormalSimulation() {
         println("Running simulation mode ...")
         setUpRPC()
+        notary = aliceNode.rpc.notaryIdentities().first().party
         val eventGenerator = EventGenerator(
                 parties = parties.map { it.first },
-                notary = notaryNode.nodeInfo.notaryIdentity,
+                notary = notary,
                 currencies = listOf(GBP, USD)
         )
         val maxIterations = 100_000
@@ -184,7 +186,8 @@ class ExplorerSimulation(val options: OptionSet) {
             for (ref in 0..1) {
                 for ((currency, issuer) in issuers) {
                     val amount = Amount(1_000_000, currency)
-                    issuer.startFlow(::CashIssueAndPaymentFlow, amount, OpaqueBytes(ByteArray(1, { ref.toByte() })), it, anonymous, notaryNode.nodeInfo.notaryIdentity).returnValue.getOrThrow()
+                    issuer.startFlow(::CashIssueAndPaymentFlow, amount, OpaqueBytes(ByteArray(1, { ref.toByte() })),
+                            it, anonymous, notary).returnValue.getOrThrow()
                 }
             }
         }
@@ -197,7 +200,7 @@ class ExplorerSimulation(val options: OptionSet) {
         setUpRPC()
         val eventGenerator = ErrorFlowsEventGenerator(
                 parties = parties.map { it.first },
-                notary = notaryNode.nodeInfo.notaryIdentity,
+                notary = notary,
                 currencies = listOf(GBP, USD)
         )
         val maxIterations = 10_000

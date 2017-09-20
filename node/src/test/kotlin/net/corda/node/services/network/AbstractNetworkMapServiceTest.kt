@@ -4,11 +4,10 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send

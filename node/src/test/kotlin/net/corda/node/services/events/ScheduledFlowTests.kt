@@ -6,7 +6,6 @@ import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
@@ -17,6 +16,7 @@ import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService

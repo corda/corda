@@ -2,7 +2,6 @@ package net.corda.node.services
 
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
@@ -51,14 +50,9 @@ class DistributedServiceTests : DriverBasedTest() {
         raftNotaryIdentity = notaryIdentity
         notaries = notaryNodes.map { it as NodeHandle.OutOfProcess }
 
-        val notariesIdentities = notaries.fold(HashSet<PartyAndCertificate>()) {
-            acc, elem -> acc.addAll(elem.nodeInfo.legalIdentitiesAndCerts)
-            acc
-        }
         assertEquals(notaries.size, clusterSize)
         // Check that each notary has different identity as a node.
-        assertEquals(notaries.size, notariesIdentities.size - notaries[0].nodeInfo.advertisedServices.size)
-
+        assertEquals(notaries.size, notaries.map { it.nodeInfo.chooseIdentity() }.toSet().size)
         // Connect to Alice and the notaries
         fun connectRpc(node: NodeHandle): CordaRPCOps {
             val client = node.rpcClientToNode()

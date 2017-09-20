@@ -6,6 +6,19 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* ``NodeInfo`` and ``NetworkMapCache`` changes:
+   * Removed ``NodeInfo::legalIdentity`` in preparation for handling of multiple identities. We left list of ``NodeInfo::legalIdentitiesAndCerts``,
+   the first identity still plays a special role of main node identity.
+   * We no longer support advertising services in network map. Removed ``NodeInfo::advertisedServices``, ``serviceIdentities``
+   and ``notaryIdentity``.
+   * Removed service methods from ``NetworkMapCache``: ``partyNodes``, ``networkMapNodes``, ``notaryNodes``, ``regulatorNodes``,
+   ``getNodesWithService``, ``getPeersWithService``, ``getRecommended``, ``getNodesByAdvertisedServiceIdentityKey``,
+   ``notaryNode``, ``getAnyServiceOfType``. To get all known ``NodeInfo``s call ``allNodes``.
+   * In preparation for ``NetworkMapService`` redesign and distributing notaries through ``NetworkParameters`` we added
+   ``NetworkMapCache::notaryIdentities`` list to enable to lookup for notary parties known to the network. Related ``CordaRPCOps::notaryIdentities``
+   was introduced. Other special nodes parties like Oracles or Regulators need to be specified directly in CorDapp or flow.
+   * Moved ``ServiceType`` and ``ServiceInfo`` to ``net.corda.nodeapi`` package as services are only required on node startup.
+
 * Adding enum support to the class carpenter
 
 * ``ContractState::contract`` has been moved ``TransactionState::contract`` and it's type has changed to ``String`` in order to
