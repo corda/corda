@@ -1,6 +1,15 @@
 package net.corda.irs
 
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.TreeNode
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.module.kotlin.readValue
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.ServiceInfo
@@ -63,6 +72,7 @@ class IRSDemoTest : IntegrationTestCategory {
             val (_, nodeAApi, nodeBApi) = listOf(controller, nodeA, nodeB).zip(listOf(controllerAddr, nodeAAddr, nodeBAddr)).map {
                 val mapper = net.corda.jackson.JacksonSupport.createDefaultMapper(it.first.rpc)
                 registerFinanceJSONMappers(mapper)
+                registerIRSModule(mapper)
                 HttpApi.fromHostAndPort(it.second, "api/irs", mapper = mapper)
             }
             val nextFixingDates = getFixingDateObservable(nodeA.configuration)
@@ -129,11 +139,33 @@ class IRSDemoTest : IntegrationTestCategory {
 
     private fun getTrades(nodeApi: HttpApi): Array<InterestRateSwap.State> {
         log.info("Getting trades from ${nodeApi.root}")
-        val deals = nodeApi.getJson<Array<InterestRateSwap.State>>("deals")
-        return deals
+        return nodeApi.getJson("deals")
     }
 
-    fun<T> Observable<T>.firstWithTimeout(timeout: Duration, pred: (T) -> Boolean) {
+    private fun <T> Observable<T>.firstWithTimeout(timeout: Duration, pred: (T) -> Boolean) {
         first(pred).toFuture().getOrThrow(timeout)
+    }
+
+    private fun registerIRSModule(mapper: ObjectMapper) {
+        val module = SimpleModule("finance").apply {
+            addDeserializer(InterestRateSwap.State::class.java, InterestRateSwapStateDeserializer(mapper))
+        }
+        mapper.registerModule(module)
+    }
+
+    class InterestRateSwapStateDeserializer(private val mapper: ObjectMapper) : JsonDeserializer<InterestRateSwap.State>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): InterestRateSwap.State {
+            return try {
+                val node = parser.readValueAsTree<TreeNode>()
+                val fixedLeg: InterestRateSwap.FixedLeg = mapper.readValue(node.get("fixedLeg").toString())
+                val floatingLeg: InterestRateSwap.FloatingLeg = mapper.readValue(node.get("floatingLeg").toString())
+                val calculation: InterestRateSwap.Calculation = mapper.readValue(node.get("calculation").toString())
+                val common: InterestRateSwap.Common = mapper.readValue(node.get("common").toString())
+                val linearId: UniqueIdentifier = mapper.readValue(node.get("linearId").toString())
+                InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, linearId = linearId)
+            } catch (e: Exception) {
+                throw JsonParseException(parser, "Invalid interest rate swap state(s) ${parser.text}: ${e.message}")
+            }
+        }
     }
 }
