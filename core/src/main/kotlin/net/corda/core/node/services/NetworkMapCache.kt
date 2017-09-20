@@ -85,13 +85,12 @@ interface NetworkMapCache {
     fun getNotary(name: CordaX500Name): Party? = notaryIdentities.firstOrNull { it.name == name }
 
     /** Checks whether a given party is an advertised notary identity. */
-    fun isNotary(party: Party): Boolean = notaryIdentities.any { party == it }
+    fun isNotary(party: Party): Boolean = party in notaryIdentities
 
     /** Checks whether a given party is an validating notary identity. */
     fun isValidatingNotary(party: Party): Boolean {
-        val notary = notaryIdentities.firstOrNull { it == party } ?:
-                throw IllegalArgumentException("No notary found with identity $party.")
-        return !notary.name.toString().contains("corda.notary.simple", true) // TODO This implementation will change after introducing of NetworkParameters.
+        require(isNotary(party)) { "No notary found with identity $party." }
+        return !party.name.toString().contains("corda.notary.simple", true) // TODO This implementation will change after introducing of NetworkParameters.
     }
 
     /** Clear all network map data from local node cache. */
