@@ -19,7 +19,7 @@ import kotlin.test.*
 
 class PartialMerkleTreeTest : TestDependencyInjectionBase() {
     val nodes = "abcdef"
-    val hashed = nodes.map {
+    private val hashed = nodes.map {
         initialiseTestSerialization()
         try {
             it.serialize().sha256()
@@ -27,10 +27,10 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
             resetTestSerialization()
         }
     }
-    val expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
-    val merkleTree = MerkleTree.getMerkleTree(hashed)
+    private val expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
+    private val merkleTree = MerkleTree.getMerkleTree(hashed)
 
-    val testLedger = ledger {
+    private val testLedger = ledger {
         unverifiedTransaction {
             output(CASH_PROGRAM_ID, "MEGA_CORP cash") {
                 Cash.State(
@@ -55,8 +55,8 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         }
     }
 
-    val txs = testLedger.interpreter.transactionsToVerify
-    val testTx = txs[0]
+    private val txs = testLedger.interpreter.transactionsToVerify
+    private val testTx = txs[0]
 
     // Building full Merkle Tree tests.
     @Test
@@ -115,17 +115,15 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         assertEquals(testTx.id, d.id)
 
         val mt = testTx.buildFilteredTransaction(Predicate(::filtering))
-        val leaves = mt.filteredLeaves
 
-        assertEquals(1, leaves.inputs.size)
-        assertEquals(0, leaves.attachments.size)
-        assertEquals(1, leaves.outputs.size)
-        assertEquals(1, leaves.commands.size)
-        assertNull(mt.filteredLeaves.notary)
-        assertNotNull(mt.filteredLeaves.timeWindow)
-        assertNull(mt.filteredLeaves.privacySalt)
-        assertEquals(4, leaves.nonces.size)
-        assertTrue(mt.verify())
+        assertEquals(4, mt.filteredComponentGroups.size)
+        assertEquals(1, mt.inputs.size)
+        assertEquals(0, mt.attachments.size)
+        assertEquals(1, mt.outputs.size)
+        assertEquals(1, mt.commands.size)
+        assertNull(mt.notary)
+        assertNotNull(mt.timeWindow)
+        mt.verify()
     }
 
     @Test
@@ -140,25 +138,15 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
 
     @Test
     fun `nothing filtered`() {
-        val mt = testTx.buildFilteredTransaction(Predicate { false })
-        assertTrue(mt.filteredLeaves.attachments.isEmpty())
-        assertTrue(mt.filteredLeaves.commands.isEmpty())
-        assertTrue(mt.filteredLeaves.inputs.isEmpty())
-        assertTrue(mt.filteredLeaves.outputs.isEmpty())
-        assertTrue(mt.filteredLeaves.timeWindow == null)
-        assertTrue(mt.filteredLeaves.availableComponents.isEmpty())
-        assertTrue(mt.filteredLeaves.availableComponentHashes.isEmpty())
-        assertTrue(mt.filteredLeaves.nonces.isEmpty())
-        assertFailsWith<MerkleTreeException> { mt.verify() }
-
-        // Including only privacySalt still results to an empty FilteredTransaction.
-        fun filterPrivacySalt(elem: Any): Boolean = elem is PrivacySalt
-        val mt2 = testTx.buildFilteredTransaction(Predicate(::filterPrivacySalt))
-        assertTrue(mt2.filteredLeaves.privacySalt == null)
-        assertTrue(mt2.filteredLeaves.availableComponents.isEmpty())
-        assertTrue(mt2.filteredLeaves.availableComponentHashes.isEmpty())
-        assertTrue(mt2.filteredLeaves.nonces.isEmpty())
-        assertFailsWith<MerkleTreeException> { mt2.verify() }
+        val ftxNothing = testTx.buildFilteredTransaction(Predicate { false })
+        assertTrue(ftxNothing.componentGroups.isEmpty())
+        assertTrue(ftxNothing.attachments.isEmpty())
+        assertTrue(ftxNothing.commands.isEmpty())
+        assertTrue(ftxNothing.inputs.isEmpty())
+        assertTrue(ftxNothing.outputs.isEmpty())
+        assertNull(ftxNothing.timeWindow)
+        assertTrue(ftxNothing.availableComponentGroups.flatten().isEmpty())
+        ftxNothing.verify() // We allow empty ftx transactions (eg from a timestamp authority that blindly signs).
     }
 
     // Partial Merkle Tree building tests.

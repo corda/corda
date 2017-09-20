@@ -154,6 +154,40 @@ UNRELEASED
 
 * Moved ``CityDatabase`` out of ``core`` and into ``finance``
 
+* All of the ``serializedHash`` and ``computeNonce`` functions have been removed from ``MerkleTransaction``.
+  The ``serializedHash(x: T)`` and ``computeNonce`` were moved to ``CryptoUtils``.
+
+* Two overloaded methods ``componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int,
+  internalIndex: Int): SecureHash`` and ``componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash`` have
+  been added to ``CryptoUtils``. Similarly to ``computeNonce``, they internally use SHA256d for nonce and leaf hash
+  computations.
+
+* The ``verify(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash`` in ``PartialMerkleTree`` has been
+  renamed to ``rootAndUsedHashes`` and is now public, as it is required in the verify function of ``FilteredTransaction``.
+
+* ``TraversableTransaction`` is now an abstract class extending ``CoreTransaction``. ``WireTransaction`` and
+  ``FilteredTransaction`` now extend ``TraversableTransaction``.
+
+* Two classes, ``ComponentGroup(open val groupIndex: Int, open val components: List<OpaqueBytes>)`` and
+  ``FilteredComponentGroup(override val groupIndex: Int, override val components: List<OpaqueBytes>,
+      val nonces: List<SecureHash>, val partialMerkleTree: PartialMerkleTree): ComponentGroup(groupIndex, components)``
+  have been added, which are properties of the ``WireTransaction`` and ``FilteredTransaction``, respectively.
+
+* ``checkAllComponentsVisible(componentGroupEnum: ComponentGroupEnum)`` is added to ``FilteredTransaction``, a new
+  function to check if all components are visible in a specific component-group.
+
+* To allow for backwards compatibility, ``WireTransaction`` and ``FilteredTransaction`` have new fields and
+  constructors: ``WireTransaction(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt())``,
+  ``FilteredTransaction private constructor(id: SecureHash,filteredComponentGroups: List<FilteredComponentGroup>,
+      groupHashes: List<SecureHash>``. ``FilteredTransaction`` is still built via
+  ``buildFilteredTransaction(wtx: WireTransaction, filtering: Predicate<Any>).
+
+* ``FilteredLeaves`` class have been removed and as a result we can directly call the components from
+  ``FilteredTransaction``, such as ``ftx.inputs`` Vs the old ``ftx.filteredLeaves.inputs``.
+
+* A new ``ComponentGroupEnum`` is added with the following enum items: ``INPUTS_GROUP``, ``OUTPUTS_GROUP``,
+ ``COMMANDS_GROUP``, ``ATTACHMENTS_GROUP``, ``NOTARY_GROUP``, ``TIMEWINDOW_GROUP``.
+
 Milestone 14
 ------------
 
