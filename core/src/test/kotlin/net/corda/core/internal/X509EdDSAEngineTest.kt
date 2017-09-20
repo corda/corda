@@ -1,17 +1,9 @@
 package net.corda.core.internal
 
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.generateKeyPair
-import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import org.bouncycastle.asn1.ASN1Encodable
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.junit.Test
-import sun.security.util.DerValue
-import sun.security.x509.X509Key
-import java.security.InvalidKeyException
 import java.util.*
-import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class X509EdDSAEngineTest {
