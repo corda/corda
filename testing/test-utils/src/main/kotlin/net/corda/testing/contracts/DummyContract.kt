@@ -8,7 +8,7 @@ import net.corda.core.transactions.TransactionBuilder
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes, but has to be serializable
 
-val DUMMY_PROGRAM_ID = "net.corda.testing.contracts.DummyContract"
+const val DUMMY_PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContract"
 
 data class DummyContract(val blank: Any? = null) : Contract {
     interface State : ContractState {
@@ -54,7 +54,10 @@ data class DummyContract(val blank: Any? = null) : Contract {
             }
         }
 
+        @JvmStatic
         fun move(prior: StateAndRef<SingleOwnerState>, newOwner: AbstractParty) = move(listOf(prior), newOwner)
+
+        @JvmStatic
         fun move(priors: List<StateAndRef<SingleOwnerState>>, newOwner: AbstractParty): TransactionBuilder {
             require(priors.isNotEmpty())
             val priorState = priors[0].state.data

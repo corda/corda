@@ -62,8 +62,7 @@ data class MultilateralNetState<P : Any>(
 ) : NetState<P>
 
 
-// Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
-val OBLIGATION_PROGRAM_ID = "net.corda.finance.contracts.asset.Obligation"
+const val OBLIGATION_PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.asset.Obligation"
 
 /**
  * An obligation contract commits the obligor to delivering a specified amount of a fungible asset (for example the
