@@ -99,9 +99,9 @@ class NotaryFlow {
      * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [sendAndReceiveWithRetry]
      * instead of [sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
      */
-    private class SendTransactionWithRetry(otherSideSession: Party, stx: SignedTransaction) : SendTransactionFlow(otherSide, stx) {
+    private class SendTransactionWithRetry(otherSideSession: FlowSession, stx: SignedTransaction) : SendTransactionFlow(otherSideSession, stx) {
         @Suspendable
-        override fun sendPayloadAndReceiveDataRequest(otherSideSession: Party, payload: Any): UntrustworthyData<FetchDataFlow.Request> {
+        override fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any): UntrustworthyData<FetchDataFlow.Request> {
             return otherSideSession.sendAndReceiveWithRetry(payload)
         }
     }
