@@ -1,16 +1,23 @@
 package net.corda.nodeapi.internal.serialization
 
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
 import org.assertj.core.api.Assertions
+import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import org.bouncycastle.asn1.x500.X500Name
+import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 
 class MapsSerializationTest : TestDependencyInjectionBase() {
+    private companion object {
+        val linkedMapClass = linkedMapOf<Any, Any>().javaClass
+    }
 
     private val smallMap = mapOf("foo" to "bar", "buzz" to "bull")
 
@@ -53,5 +60,20 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
                 MyKey(1.0) to MyValue(X500Name("CN=one")),
                 MyKey(10.0) to MyValue(X500Name("CN=ten")))
         assertEqualAfterRoundTripSerialization(myMap)
+    }
+
+    @Test
+    fun `check empty map serialises as LinkedHashMap`() {
+        val nameID = 0
+        val serializedForm = emptyMap<Int, Int>().serialize()
+        val output = ByteArrayOutputStream().apply {
+            write(KryoHeaderV0_1.bytes)
+            write(DefaultClassResolver.NAME + 2)
+            write(nameID)
+            write(linkedMapClass.name.toAscii())
+            write(Kryo.NOT_NULL.toInt())
+            write(emptyMap<Int, Int>().size)
+        }
+        assertArrayEquals(output.toByteArray(), serializedForm.bytes)
     }
 }

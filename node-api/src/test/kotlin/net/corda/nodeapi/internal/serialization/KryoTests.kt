@@ -25,9 +25,7 @@ import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class KryoTests : TestDependencyInjectionBase() {
     private lateinit var factory: SerializationFactory
@@ -111,6 +109,20 @@ class KryoTests : TestDependencyInjectionBase() {
         val serialised = TestSingleton.serialize(factory, context)
         val deserialised = serialised.deserialize(factory, context)
         assertThat(deserialised).isSameAs(TestSingleton)
+    }
+
+    @Test
+    fun `check Kotlin EmptyList can be serialised`() {
+        val deserialisedList: List<Int> = emptyList<Int>().serialize(factory, context).deserialize(factory, context)
+        assertEquals(0, deserialisedList.size)
+        assertEquals<Any>(arrayListOf<Int>().javaClass, deserialisedList.javaClass)
+    }
+
+    @Test
+    fun `check Kotlin EmptySet can be serialised`() {
+        val deserialisedSet: Set<Int> = emptySet<Int>().serialize(factory, context).deserialize(factory, context)
+        assertEquals(0, deserialisedSet.size)
+        assertEquals<Any>(linkedSetOf<Int>().javaClass, deserialisedSet.javaClass)
     }
 
     @Test
