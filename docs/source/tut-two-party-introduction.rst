@@ -1,10 +1,7 @@
 Introduction
 ============
 
-.. note:: This tutorial extends the CorDapp built during the :doc:`Hello, World tutorial <hello-world-index>`. You can
-   download the final version of the CorDapp produced in that tutorial for 
-   `Java <https://github.com/joeldudleyr3/tutorials/tree/master/Tut1Java>`_ or 
-   `Kotlin <https://github.com/joeldudleyr3/tutorials/tree/master/Tut1Kotlin>`_.
+.. note:: This tutorial extends the CorDapp built during the :doc:`Hello, World tutorial <hello-world-index>`.
 
 In the Hello, World tutorial, we built a CorDapp allowing us to model IOUs on ledger. Our CorDapp was made up of three
 elements:

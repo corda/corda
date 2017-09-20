@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(organisation = "DistributedService", locality = "London", country = "GB")
+        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(commonName = RaftValidatingNotaryService.type.id, organisation = "DistributedService", locality = "London", country = "GB")
         val SERVICE_2_NAME = CordaX500Name(organisation = "Service 2", locality = "London", country = "GB")
     }
 
@@ -69,23 +69,23 @@ class P2PMessagingTest : NodeBasedTest() {
                 RaftValidatingNotaryService.type.id,
                 DISTRIBUTED_SERVICE_NAME)
 
+        val distributedService = ServiceInfo(RaftValidatingNotaryService.type, DISTRIBUTED_SERVICE_NAME)
         val notaryClusterAddress = freeLocalHostAndPort()
         startNetworkMapNode(
                 DUMMY_MAP.name,
-                advertisedServices = setOf(ServiceInfo(RaftValidatingNotaryService.type, DUMMY_MAP.name.copy(commonName = "DistributedService"))),
+                advertisedServices = setOf(distributedService),
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         val (serviceNode2, alice) = listOf(
                 startNode(
                         SERVICE_2_NAME,
-                        advertisedServices = setOf(ServiceInfo(RaftValidatingNotaryService.type, SERVICE_2_NAME.copy(commonName = "DistributedService"))),
+                        advertisedServices = setOf(distributedService),
                         configOverrides = mapOf(
                                 "notaryNodeAddress" to freeLocalHostAndPort().toString(),
                                 "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),
                 startNode(ALICE.name)
         ).transpose().getOrThrow()
 
-        val serviceName = serviceNode2.info.legalIdentities[1].name
-        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), serviceName, alice)
+        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), DISTRIBUTED_SERVICE_NAME, alice)
     }
 
     @Ignore
