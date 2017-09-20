@@ -65,6 +65,10 @@ lib/quasar.jar
 *.ipr
 *.iws
 
+# Java Script ignores
+#
+*.js.map
+
 ## Plugin-specific files:
 
 # IntelliJ
