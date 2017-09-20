@@ -136,20 +136,19 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 serviceType.id,
                 notaryName)
 
+        val serviceInfo = ServiceInfo(serviceType, notaryName)
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
-        val masterNode = CordaX500Name(organisation = "${notaryName.organisation}-0", locality = notaryName.locality, country = notaryName.country)
         val masterNodeFuture = startNode(
-                masterNode,
-                advertisedServices = setOf(ServiceInfo(serviceType, masterNode.copy(commonName = serviceType.id))),
+                CordaX500Name(organisation = "${notaryName.organisation}-0", locality = notaryName.locality, country = notaryName.country),
+                advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
                         "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else "")))
 
         val remainingNodesFutures = (1 until clusterSize).map {
-            val nodeName = CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country)
             startNode(
-                    nodeName,
-                    advertisedServices = setOf(ServiceInfo(serviceType, nodeName.copy(commonName = serviceType.id))),
+                    CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country),
+                    advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
                             "notaryClusterAddresses" to listOf(nodeAddresses[0]),

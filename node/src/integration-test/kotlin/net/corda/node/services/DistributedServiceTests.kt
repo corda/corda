@@ -39,7 +39,7 @@ class DistributedServiceTests : DriverBasedTest() {
         )
         val aliceFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser))
         val notariesFuture = startNotaryCluster(
-                DUMMY_NOTARY.name,
+                DUMMY_NOTARY.name.copy(commonName = RaftValidatingNotaryService.type.id),
                 rpcUsers = listOf(testUser),
                 clusterSize = clusterSize,
                 type = RaftValidatingNotaryService.type

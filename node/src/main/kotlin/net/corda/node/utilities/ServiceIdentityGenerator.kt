@@ -4,6 +4,8 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.cert
+import net.corda.core.internal.div
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import java.nio.file.Files
@@ -30,15 +32,20 @@ object ServiceIdentityGenerator {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
-        // Avoid adding complexity! This class is a hack that needs to stay runnable in the gradle environment.
-        val privateKeyFile = "$serviceId-private-key"
-        val publicKeyFile = "$serviceId-public"
-        val compositeKeyFile = "$serviceId-composite-key"
+
+        val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+        val issuer = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
+        val rootCert = caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
+
         keyPairs.zip(dirs) { keyPair, dir ->
-            Files.createDirectories(dir)
-            Files.write(dir.resolve(compositeKeyFile), notaryKey.encoded)
-            Files.write(dir.resolve(privateKeyFile), keyPair.private.encoded)
-            Files.write(dir.resolve(publicKeyFile), keyPair.public.encoded)
+            val serviceKeyCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuer.certificate, issuer.keyPair, serviceName, keyPair.public)
+            val compositeKeyCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuer.certificate, issuer.keyPair, serviceName, notaryKey)
+            val certPath = Files.createDirectories(dir / "certificates") / "distributedService.jks"
+
+            val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
+            keystore.setCertificateEntry("$serviceId-composite-key", compositeKeyCert.cert)
+            keystore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
+            keystore.save(certPath, "cordacadevpass")
         }
         return Party(serviceName, notaryKey)
     }
