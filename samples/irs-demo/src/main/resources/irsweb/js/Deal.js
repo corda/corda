@@ -37,7 +37,7 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
             _.assign(fixedLeg.fixedRate, fixedRateViewModel);
 
             fixedLeg.fixedRate = Number(fixedLeg.fixedRate) / 100;
-            fixedLeg.notional.token = common.baseCurrency;
+            fixedLeg.notional = fixedLeg.notional + ' ' + common.baseCurrency;
             fixedLeg.effectiveDate = formatDateForNode(common.effectiveDate);
             fixedLeg.terminationDate = formatDateForNode(common.terminationDate);
             fixedLeg.fixedRate = { ratioUnit: { value: fixedLeg.fixedRate } };
@@ -46,7 +46,7 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
             fixedLeg.paymentCalendar = calendarLookup[common.baseCurrency];
             delete fixedLeg.dayCountBasis;
 
-            floatingLeg.notional.token = common.baseCurrency;
+            floatingLeg.notional = floatingLeg.notional + ' ' + common.baseCurrency;
             floatingLeg.effectiveDate = formatDateForNode(common.effectiveDate);
             floatingLeg.terminationDate = formatDateForNode(common.terminationDate);
             floatingLeg.dayCountBasisDay = floatingLeg.dayCountBasis.day;

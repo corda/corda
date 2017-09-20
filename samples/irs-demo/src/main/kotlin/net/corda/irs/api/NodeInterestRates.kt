@@ -48,7 +48,7 @@ import kotlin.collections.set
 object NodeInterestRates {
     // DOCSTART 2
     @InitiatedBy(RatesFixFlow.FixSignFlow::class)
-    class FixSignHandler(val otherParty: Party) : FlowLogic<Unit>() {
+    class FixSignHandler(private val otherParty: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val request = receive<RatesFixFlow.SignRequest>(otherParty).unwrap { it }
@@ -58,14 +58,14 @@ object NodeInterestRates {
     }
 
     @InitiatedBy(RatesFixFlow.FixQueryFlow::class)
-    class FixQueryHandler(val otherParty: Party) : FlowLogic<Unit>() {
+    class FixQueryHandler(private val otherParty: Party) : FlowLogic<Unit>() {
         object RECEIVED : ProgressTracker.Step("Received fix request")
         object SENDING : ProgressTracker.Step("Sending fix response")
 
         override val progressTracker = ProgressTracker(RECEIVED, SENDING)
 
         @Suspendable
-        override fun call(): Unit {
+        override fun call() {
             val request = receive<RatesFixFlow.QueryRequest>(otherParty).unwrap { it }
             progressTracker.currentStep = RECEIVED
             val oracle = serviceHub.cordaService(Oracle::class.java)
