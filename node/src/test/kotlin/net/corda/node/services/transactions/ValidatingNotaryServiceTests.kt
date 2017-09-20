@@ -104,7 +104,7 @@ class ValidatingNotaryServiceTests {
     fun issueState(node: StartedNode<*>): StateAndRef<*> {
         val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.chooseIdentity().ref(0))
         val signedByNode = node.services.signInitialTransaction(tx)
-        val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
+        val stx = notaryNode.services.addSignature(signedByNode, notary.owningKey)
         node.services.recordTransactions(stx)
         return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
     }
