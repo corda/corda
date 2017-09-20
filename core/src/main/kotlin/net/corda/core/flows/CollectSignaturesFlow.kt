@@ -3,13 +3,11 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
@@ -104,14 +102,14 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         // If the unsigned counter-parties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
-        val partyToKeyMap = createPartyToKeyMap(unsigned)
+        val partyToKeyMap = serviceHub.groupPublicKeysByWellKnownParty(unsigned)
         // Check that we have a session for all parties.  No more, no less.
         require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeyMap.keys) {
             "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
         }
         // Collect signatures from all counter-parties and append them to the partially signed transaction.
         val counterpartySignatures = sessionsToCollectFrom.map { session ->
-            subFlow(CollectSignatureFlow(partiallySignedTx, session, partyToKeyMap[session.counterparty]!!))
+            subFlow(CollectSignatureFlow(partiallySignedTx, session, partyToKeyMap[session.counterparty]!!.single()))
         }
         val stx = partiallySignedTx + counterpartySignatures
 
@@ -120,19 +118,6 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         if (notaryKey != null) stx.verifySignaturesExcept(notaryKey) else stx.verifyRequiredSignatures()
 
         return stx
-    }
-
-    /**
-     * Lookup the [Party] object for each [PublicKey] using the [ServiceHub.identityService].
-     *
-     * @return a pair of the well known identity to contact for a signature, and the public key that party should sign
-     * with (this may belong to a confidential identity).
-     */
-    @Suspendable private fun createPartyToKeyMap(keys: Collection<PublicKey>): Map<Party, PublicKey> {
-        return keys.associateBy {
-            serviceHub.identityService.partyFromAnonymous(AnonymousParty(it))
-                    ?: throw IllegalStateException("Party ${it.toBase58String()} not found on the network.")
-        }
     }
 }
 
@@ -249,8 +234,7 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
-        val signingIdentities = stx.sigs.map(TransactionSignature::by).mapNotNull(serviceHub.identityService::partyFromKey)
-        val signingWellKnownIdentities = signingIdentities.mapNotNull(serviceHub.identityService::partyFromAnonymous)
+        val signingWellKnownIdentities = serviceHub.groupPublicKeysByWellKnownParty(stx.sigs.map(TransactionSignature::by))
         require(otherSideSession.counterparty in signingWellKnownIdentities) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${otherSideSession}"
         }
