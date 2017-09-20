@@ -78,7 +78,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                     .flatMap {
                         // TODO: validate notary identity certificates before loading into network map cache.
                         //       Notary certificates have to be signed by the doorman directly
-                        it.legalIdentitiesAndCerts.map { it.party }
+                        it.legalIdentities
                     }
                     .filter {
                         it.name.toString().contains("corda.notary", true)

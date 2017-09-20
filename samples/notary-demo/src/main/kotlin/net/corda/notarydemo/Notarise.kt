@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
 /** Interface for using the notary demo API from a client. */
 private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val notary by lazy {
-        val id = rpc.notaryIdentities().distinct().singleOrNull()
+        val id = rpc.notaryIdentities().singleOrNull()
         checkNotNull(id) { "No unique notary identity, try cleaning the node directories." }
     }
 
