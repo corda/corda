@@ -191,12 +191,13 @@ fun random63BitValue(): Long {
 
 /**
  * Compute the hash of each serialised component so as to be used as Merkle tree leaf. The resultant output (leaf) is
- * calculated as SHA256d(nonce || serializedComponent), where nonce is computed from [computeNonce].
+ * calculated using the SHA256d algorithm, thus SHA256(SHA256(nonce || serializedComponent)), where nonce is computed
+ * from [computeNonce].
  */
 fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
         componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
 
-/** Return the SHA256d(nonce || serializedComponent). */
+/** Return the SHA256(SHA256(nonce || serializedComponent)). */
 fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)
 
 /** Serialise the object and return the hash of the serialized bytes. */
@@ -204,10 +205,10 @@ fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = Serializa
 
 /**
  * Method to compute a nonce based on privacySalt, component group index and component internal index.
- * SHA256d is used to prevent length extension attacks.
+ * SHA256d (double SHA256) is used to prevent length extension attacks.
  * @param privacySalt a [PrivacySalt].
  * @param groupIndex the fixed index (ordinal) of this component group.
  * @param internalIndex the internal index of this object in its corresponding components list.
- * @return SHA256d(privacySalt || groupIndex || internalIndex)
+ * @return SHA256(SHA256(privacySalt || groupIndex || internalIndex))
  */
 fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())
