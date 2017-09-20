@@ -38,11 +38,10 @@ var AppComponent = (function () {
         var _this = this;
         this.httpWrapperService.getAbsolute("whoami").toPromise().then(function (data) {
             _this.whoAmI = _this.renderX500Name(data.self.text);
-            var self = _this;
             _this.counterParties = data.counterparties.map(function (x) {
                 return {
                     id: x.id,
-                    text: self.renderX500Name(x.text)
+                    text: _this.renderX500Name(x.text)
                 };
             });
             if (_this.counterParties.length == 0) {
