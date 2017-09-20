@@ -35,7 +35,7 @@ interface NetworkMapCache {
      */
     // TODO this list will be taken from NetworkParameters distributed by NetworkMap.
     val notaryIdentities: List<Party>
-    /** Tracks changes to the network map cache */
+    /** Tracks changes to the network map cache. */
     val changed: Observable<MapChange>
     /** Future to track completion of the NetworkMapService registration. */
     val nodeReady: CordaFuture<Void?>
@@ -84,17 +84,16 @@ interface NetworkMapCache {
     /** Gets a notary identity by the given name. */
     fun getNotary(name: CordaX500Name): Party? = notaryIdentities.firstOrNull { it.name == name }
 
-    /** Checks whether a given party is an advertised notary identity */
+    /** Checks whether a given party is an advertised notary identity. */
     fun isNotary(party: Party): Boolean = notaryIdentities.any { party == it }
 
-    /** Checks whether a given party is an validating notary identity */
+    /** Checks whether a given party is an validating notary identity. */
     fun isValidatingNotary(party: Party): Boolean {
         val notary = notaryIdentities.firstOrNull { it == party } ?:
                 throw IllegalArgumentException("No notary found with identity $party.")
         return !notary.name.toString().contains("corda.notary.simple", true) // TODO This implementation will change after introducing of NetworkParameters.
     }
-    /**
-     * Clear all network map data from local node cache.
-     */
+
+    /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()
 }

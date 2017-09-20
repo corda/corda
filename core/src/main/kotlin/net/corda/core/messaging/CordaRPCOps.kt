@@ -58,13 +58,12 @@ interface CordaRPCOps : RPCOps {
      */
     override val protocolVersion: Int get() = nodeInfo().platformVersion
 
-    /**
-     * Returns a list of currently in-progress state machine infos.
-     */
+    /** Returns a list of currently in-progress state machine infos. */
     fun stateMachinesSnapshot(): List<StateMachineInfo>
 
     /**
-     * Returns a data feed of currently in-progress state machine infos and an observable of future state machine adds/removes.
+     * Returns a data feed of currently in-progress state machine infos and an observable of
+     * future state machine adds/removes.
      */
     @RPCReturnsObservables
     fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate>
@@ -171,9 +170,7 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction>
 
-    /**
-     * Returns a snapshot list of existing state machine id - recorded transaction hash mappings.
-     */
+    /** Returns a snapshot list of existing state machine id - recorded transaction hash mappings. */
     fun stateMachineRecordedTransactionMappingSnapshot(): List<StateMachineTransactionMapping>
 
     /**
@@ -183,19 +180,19 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping>
 
-    /**
-     * Returns all parties currently visible on the network with their advertised services.
-     */
+    /** Returns all parties currently visible on the network with their advertised services. */
     fun networkMapSnapshot(): List<NodeInfo>
 
     /**
-     * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
+     * Returns all parties currently visible on the network with their advertised services and an observable of
+     * future updates to the network.
      */
     @RPCReturnsObservables
     fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
 
     /**
-     * Start the given flow with the given arguments. [logicType] must be annotated with [net.corda.core.flows.StartableByRPC].
+     * Start the given flow with the given arguments. [logicType] must be annotated
+     * with [net.corda.core.flows.StartableByRPC].
      */
     @RPCReturnsObservables
     fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
@@ -207,9 +204,7 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
 
-    /**
-     * Returns Node's NodeInfo, assuming this will not change while the node is running.
-     */
+    /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
 
     /**
@@ -219,34 +214,22 @@ interface CordaRPCOps : RPCOps {
      */
     fun notaryIdentities(): List<Party>
 
-    /*
-     * Add note(s) to an existing Vault transaction
-     */
+    /** Add note(s) to an existing Vault transaction. */
     fun addVaultTransactionNote(txnId: SecureHash, txnNote: String)
 
-    /*
-     * Retrieve existing note(s) for a given Vault transaction
-     */
+    /** Retrieve existing note(s) for a given Vault transaction. */
     fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String>
 
-    /**
-     * Checks whether an attachment with the given hash is stored on the node.
-     */
+    /** Checks whether an attachment with the given hash is stored on the node. */
     fun attachmentExists(id: SecureHash): Boolean
 
-    /**
-     * Download an attachment JAR by ID
-     */
+    /** Download an attachment JAR by ID. */
     fun openAttachment(id: SecureHash): InputStream
 
-    /**
-     * Uploads a jar to the node, returns it's hash.
-     */
+    /** Uploads a jar to the node, returns it's hash. */
     fun uploadAttachment(jar: InputStream): SecureHash
 
-    /**
-     * Returns the node's current time.
-     */
+    /** Returns the node's current time. */
     fun currentNodeTime(): Instant
 
     /**
@@ -267,14 +250,10 @@ interface CordaRPCOps : RPCOps {
      * @return well known identity, if found.
      */
     fun partyFromAnonymous(party: AbstractParty): Party?
-    /**
-     * Returns the [Party] corresponding to the given key, if found.
-     */
+    /** Returns the [Party] corresponding to the given key, if found. */
     fun partyFromKey(key: PublicKey): Party?
 
-    /**
-     * Returns the [Party] with the X.500 principal as it's [Party.name]
-     */
+    /** Returns the [Party] with the X.500 principal as it's [Party.name]. */
     fun partyFromX500Name(x500Name: CordaX500Name): Party?
 
     /**
@@ -297,9 +276,7 @@ interface CordaRPCOps : RPCOps {
      */
     fun nodeInfoFromParty(party: AbstractParty): NodeInfo?
 
-    /**
-     * Clear all network map data from local node cache.
-     */
+    /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()
 }
 
