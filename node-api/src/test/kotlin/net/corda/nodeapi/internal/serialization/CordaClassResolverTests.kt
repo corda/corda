@@ -214,17 +214,17 @@ class CordaClassResolverTests {
     }
 
     @Test
-    fun `Kotlin EmptyList registers as ArrayList`() {
-        val arrayListClass = arrayListOf<Any>().javaClass
+    fun `Kotlin EmptyList registers as Java emptyList`() {
+        val javaEmptyListClass = Collections.emptyList<Any>().javaClass
         val kryo = mock<Kryo>()
         val resolver = CordaClassResolver(allButBlacklistedContext).apply { setKryo(kryo) }
-        whenever(kryo.getDefaultSerializer(arrayListClass)).thenReturn(DefaultSerializableSerializer())
+        whenever(kryo.getDefaultSerializer(javaEmptyListClass)).thenReturn(DefaultSerializableSerializer())
 
         val registration = resolver.registerImplicit(emptyListClass)
         assertNotNull(registration)
-        assertEquals(arrayListClass, registration.type)
+        assertEquals(javaEmptyListClass, registration.type)
         assertEquals(DefaultClassResolver.NAME.toInt(), registration.id)
-        verify(kryo).getDefaultSerializer(arrayListClass)
+        verify(kryo).getDefaultSerializer(javaEmptyListClass)
         assertEquals(registration, resolver.getRegistration(emptyListClass))
     }
 
@@ -235,17 +235,17 @@ class CordaClassResolverTests {
     }
 
     @Test
-    fun `Kotlin EmptySet registers as LinkedHashSet`() {
-        val linkedSetClass = linkedSetOf<Any>().javaClass
+    fun `Kotlin EmptySet registers as Java emptySet`() {
+        val javaEmptySetClass = Collections.emptySet<Any>().javaClass
         val kryo = mock<Kryo>()
         val resolver = CordaClassResolver(allButBlacklistedContext).apply { setKryo(kryo) }
-        whenever(kryo.getDefaultSerializer(linkedSetClass)).thenReturn(DefaultSerializableSerializer())
+        whenever(kryo.getDefaultSerializer(javaEmptySetClass)).thenReturn(DefaultSerializableSerializer())
 
         val registration = resolver.registerImplicit(emptySetClass)
         assertNotNull(registration)
-        assertEquals(linkedSetClass, registration.type)
+        assertEquals(javaEmptySetClass, registration.type)
         assertEquals(DefaultClassResolver.NAME.toInt(), registration.id)
-        verify(kryo).getDefaultSerializer(linkedSetClass)
+        verify(kryo).getDefaultSerializer(javaEmptySetClass)
         assertEquals(registration, resolver.getRegistration(emptySetClass))
     }
 
@@ -256,17 +256,17 @@ class CordaClassResolverTests {
     }
 
     @Test
-    fun `Kotlin EmptyMap registers as LinkedHashMap`() {
-        val linkedMapClass = linkedMapOf<Any, Any>().javaClass
+    fun `Kotlin EmptyMap registers as Java emptyMap`() {
+        val javaEmptyMapClass = Collections.emptyMap<Any, Any>().javaClass
         val kryo = mock<Kryo>()
         val resolver = CordaClassResolver(allButBlacklistedContext).apply { setKryo(kryo) }
-        whenever(kryo.getDefaultSerializer(linkedMapClass)).thenReturn(DefaultSerializableSerializer())
+        whenever(kryo.getDefaultSerializer(javaEmptyMapClass)).thenReturn(DefaultSerializableSerializer())
 
         val registration = resolver.registerImplicit(emptyMapClass)
         assertNotNull(registration)
-        assertEquals(linkedMapClass, registration.type)
+        assertEquals(javaEmptyMapClass, registration.type)
         assertEquals(DefaultClassResolver.NAME.toInt(), registration.id)
-        verify(kryo).getDefaultSerializer(linkedMapClass)
+        verify(kryo).getDefaultSerializer(javaEmptyMapClass)
         assertEquals(registration, resolver.getRegistration(emptyMapClass))
     }
 

@@ -25,15 +25,21 @@ import java.util.*
 class CordaClassResolver(serializationContext: SerializationContext) : DefaultClassResolver() {
     val whitelist: ClassWhitelist = TransientClassWhiteList(serializationContext.whitelist)
 
+    /*
+     * These classes are assignment-compatible Java equivalents of Kotlin classes.
+     * The point is that we do not want to send Kotlin types "over the wire" via RPC.
+     */
     private val javaAliases: Map<Class<*>, Class<*>> = mapOf(
-        listOf<Any>().javaClass to ArrayList<Any>().javaClass,
-        setOf<Any>().javaClass to LinkedHashSet<Any>().javaClass,
-        mapOf<Any, Any>().javaClass to LinkedHashMap<Any, Any>().javaClass
+        listOf<Any>().javaClass to Collections.emptyList<Any>().javaClass,
+        setOf<Any>().javaClass to Collections.emptySet<Any>().javaClass,
+        mapOf<Any, Any>().javaClass to Collections.emptyMap<Any, Any>().javaClass
     )
+
+    private fun typeForSerializationOf(type: Class<*>): Class<*> = javaAliases[type] ?: type
 
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
-        val targetType = javaAliases[type] ?: type
+        val targetType = typeForSerializationOf(type)
         return super.getRegistration(targetType) ?: checkClass(targetType)
     }
 
@@ -68,7 +74,7 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
     }
 
     override fun registerImplicit(type: Class<*>): Registration {
-        val targetType = javaAliases[type] ?: type
+        val targetType = typeForSerializationOf(type)
         val objectInstance = try {
             targetType.kotlin.objectInstance
         } catch (t: Throwable) {

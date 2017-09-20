@@ -8,10 +8,11 @@ import net.corda.testing.TestDependencyInjectionBase
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import java.util.*
 
 class SetsSerializationTest : TestDependencyInjectionBase() {
     private companion object {
-        val linkedSetClass = linkedSetOf<Any>().javaClass
+        val javaEmptySetClass = Collections.emptySet<Any>().javaClass
     }
 
     @Test
@@ -38,16 +39,15 @@ class SetsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty set serialises as LinkedHashSet`() {
+    fun `check empty set serialises as Java emptySet`() {
         val nameID = 0
         val serializedForm = emptySet<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
             write(KryoHeaderV0_1.bytes)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)
-            write(linkedSetClass.name.toAscii())
+            write(javaEmptySetClass.name.toAscii())
             write(Kryo.NOT_NULL.toInt())
-            write(emptySet<Int>().size)
         }
         assertArrayEquals(output.toByteArray(), serializedForm.bytes)
     }

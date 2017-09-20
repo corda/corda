@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
+import java.util.Collections
 import kotlin.test.*
 
 class KryoTests : TestDependencyInjectionBase() {
@@ -115,14 +116,21 @@ class KryoTests : TestDependencyInjectionBase() {
     fun `check Kotlin EmptyList can be serialised`() {
         val deserialisedList: List<Int> = emptyList<Int>().serialize(factory, context).deserialize(factory, context)
         assertEquals(0, deserialisedList.size)
-        assertEquals<Any>(arrayListOf<Int>().javaClass, deserialisedList.javaClass)
+        assertEquals<Any>(Collections.emptyList<Int>().javaClass, deserialisedList.javaClass)
     }
 
     @Test
     fun `check Kotlin EmptySet can be serialised`() {
         val deserialisedSet: Set<Int> = emptySet<Int>().serialize(factory, context).deserialize(factory, context)
         assertEquals(0, deserialisedSet.size)
-        assertEquals<Any>(linkedSetOf<Int>().javaClass, deserialisedSet.javaClass)
+        assertEquals<Any>(Collections.emptySet<Int>().javaClass, deserialisedSet.javaClass)
+    }
+
+    @Test
+    fun `check Kotlin EmptyMap can be serialised`() {
+        val deserialisedMap: Map<Int, Int> = emptyMap<Int, Int>().serialize(factory, context).deserialize(factory, context)
+        assertEquals(0, deserialisedMap.size)
+        assertEquals<Any>(Collections.emptyMap<Int, Int>().javaClass, deserialisedMap.javaClass)
     }
 
     @Test

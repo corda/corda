@@ -12,10 +12,11 @@ import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 import java.nio.charset.StandardCharsets.*
+import java.util.*
 
 class ListsSerializationTest : TestDependencyInjectionBase() {
     private companion object {
-        val arrayListClass = arrayListOf<Any>().javaClass
+        val javaEmptyListClass = Collections.emptyList<Any>().javaClass
     }
 
     @Test
@@ -42,16 +43,15 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty list serialises as ArrayList`() {
+    fun `check empty list serialises as Java emptyList`() {
         val nameID = 0
         val serializedForm = emptyList<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
             write(KryoHeaderV0_1.bytes)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)
-            write(arrayListClass.name.toAscii())
+            write(javaEmptyListClass.name.toAscii())
             write(Kryo.NOT_NULL.toInt())
-            write(emptyList<Int>().size)
         }
         assertArrayEquals(output.toByteArray(), serializedForm.bytes)
     }

@@ -13,13 +13,13 @@ import org.junit.Test
 import org.bouncycastle.asn1.x500.X500Name
 import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
+import java.util.*
 
 class MapsSerializationTest : TestDependencyInjectionBase() {
     private companion object {
-        val linkedMapClass = linkedMapOf<Any, Any>().javaClass
+        val javaEmptyMapClass = Collections.emptyMap<Any, Any>().javaClass
+        val smallMap = mapOf("foo" to "bar", "buzz" to "bull")
     }
-
-    private val smallMap = mapOf("foo" to "bar", "buzz" to "bull")
 
     @Test
     fun `check EmptyMap serialization`() = amqpSpecific<MapsSerializationTest>("kotlin.collections.EmptyMap is not enabled for Kryo serialization") {
@@ -63,16 +63,15 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty map serialises as LinkedHashMap`() {
+    fun `check empty map serialises as Java emptytMap`() {
         val nameID = 0
         val serializedForm = emptyMap<Int, Int>().serialize()
         val output = ByteArrayOutputStream().apply {
             write(KryoHeaderV0_1.bytes)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)
-            write(linkedMapClass.name.toAscii())
+            write(javaEmptyMapClass.name.toAscii())
             write(Kryo.NOT_NULL.toInt())
-            write(emptyMap<Int, Int>().size)
         }
         assertArrayEquals(output.toByteArray(), serializedForm.bytes)
     }
