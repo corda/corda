@@ -8,12 +8,12 @@ import javafx.collections.ObservableList
 import net.corda.client.jfx.utils.filterNotNull
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
-import net.corda.client.jfx.utils.toObservableList
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.nodeapi.ServiceType
 import java.security.PublicKey
 
 class NetworkIdentityModel {
@@ -38,7 +38,10 @@ class NetworkIdentityModel {
                 publicKey?.let { rpcProxy.map { it?.nodeInfoFromParty(AnonymousParty(publicKey)) } }
             })
 
-    val notaries: ObservableList<Party> = rpcProxy.toObservableList { it?.notaryIdentities() ?: emptyList() }
+    val notaries: ObservableList<Party> = networkIdentities.map {
+        it.legalIdentitiesAndCerts.find { it.name.commonName?.let { ServiceType.parse(it).isNotary() } ?: false }
+    }.filterNotNull()
+
     val notaryNodes: ObservableList<NodeInfo> = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()
     val parties: ObservableList<NodeInfo> = networkIdentities.filtered { it.legalIdentities.all { it !in notaries } }
     val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }

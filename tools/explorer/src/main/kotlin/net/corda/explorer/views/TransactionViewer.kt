@@ -298,8 +298,7 @@ class TransactionViewer : CordaView("Transactions") {
         }
     }
 
-    private fun StateAndRef<ContractState>.contract() = this.state.contract
-
+    private fun StateAndRef<ContractState>.contract() = this.state.contract.split(".").last()
 }
 
 /**

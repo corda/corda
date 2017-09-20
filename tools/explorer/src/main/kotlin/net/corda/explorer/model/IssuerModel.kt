@@ -1,34 +1,25 @@
 package net.corda.explorer.model
 
 import javafx.collections.FXCollections
-import javafx.collections.ObservableList
-import net.corda.client.jfx.model.NetworkIdentityModel
-import net.corda.client.jfx.model.observableList
+import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.observableValue
 import net.corda.client.jfx.utils.ChosenList
 import net.corda.client.jfx.utils.map
-import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
+import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.getOrThrow
+import net.corda.finance.flows.CashConfigDataFlow
 import tornadofx.*
 
-val ISSUER_SERVICE_TYPE = Regex("corda.issuer.(USD|GBP|CHF|EUR)")
-
 class IssuerModel {
-    // TODO Explorer will be fixed as separate PR.
-    private val networkIdentities by observableList(NetworkIdentityModel::networkIdentities)
-    private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
-    private val supportedCurrencies by observableList(ReportingCurrencyModel::supportedCurrencies)
+    private val proxy by observableValue(NodeMonitorModel::proxyObservable)
+    private val cashAppConfiguration = proxy.map { it?.startFlow(::CashConfigDataFlow)?.returnValue?.getOrThrow() }
+    val supportedCurrencies = ChosenList(cashAppConfiguration.map { it?.supportedCurrencies?.observable() ?: FXCollections.emptyObservableList() })
+    val currencyTypes = ChosenList(cashAppConfiguration.map { it?.issuableCurrencies?.observable() ?: FXCollections.emptyObservableList() })
 
-    val issuers: ObservableList<NodeInfo> = FXCollections.observableList(networkIdentities)
-
-    val currencyTypes = ChosenList(myIdentity.map { supportedCurrencies })
-
-    val transactionTypes = ChosenList(myIdentity.map {
-        if (it?.isIssuerNode() ?: false)
+    val transactionTypes = ChosenList(cashAppConfiguration.map {
+        if (it?.issuableCurrencies?.isNotEmpty() == true)
             CashTransaction.values().asList().observable()
         else
             listOf(CashTransaction.Pay).observable()
     })
-
-    private fun Party.isIssuerNode() = true
 }

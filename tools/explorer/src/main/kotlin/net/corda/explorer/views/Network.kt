@@ -9,6 +9,7 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.geometry.Bounds
+import javafx.geometry.Insets
 import javafx.geometry.Point2D
 import javafx.scene.Parent
 import javafx.scene.control.Button
@@ -35,6 +36,7 @@ import net.corda.explorer.model.CordaView
 import net.corda.finance.utils.CityDatabase
 import net.corda.finance.utils.ScreenCoordinate
 import net.corda.finance.utils.WorldMapLocation
+import net.corda.nodeapi.ServiceType
 import tornadofx.*
 
 class Network : CordaView() {
@@ -91,6 +93,8 @@ class Network : CordaView() {
         val node = this
         val identities = node.legalIdentitiesAndCerts.sortedBy { it.owningKey.toBase58String() }
         return button {
+            minWidth = 300.0
+            padding = Insets(10.0)
             useMaxWidth = true
             graphic = vbox {
                 label(PartyNameFormatter.short.format(identities[0].name)) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
@@ -99,8 +103,9 @@ class Network : CordaView() {
                     hgap = 5.0
                     vgap = 5.0
                     for (identity in identities) {
-                        row(PartyNameFormatter.short.format(identity.name)) {
-                            copyableLabel(SimpleObjectProperty(identity.owningKey.toBase58String())).apply { minWidth = 400.0 }
+                        val isNotary = identity.name.commonName?.let { ServiceType.parse(it).isNotary() } ?: false
+                        row("${if (isNotary) "Notary " else ""}Public Key :") {
+                            copyableLabel(SimpleObjectProperty(identity.owningKey.toBase58String()))
                         }
                     }
                     node.getWorldMapLocation()?.apply { row("Location :") { label(this@apply.description) } }
@@ -115,7 +120,7 @@ class Network : CordaView() {
     private fun NodeInfo.render(): MapViewComponents {
         val node = this
         val identities = node.legalIdentitiesAndCerts.sortedBy { it.owningKey.toBase58String() }
-        val mapLabel = label(PartyNameFormatter.short.format(identities[0].name)) // We choose the first one for the name of the node on the map.
+        val mapLabel = label(PartyNameFormatter.short.format(identities.first().name)) // We choose the first one for the name of the node on the map.
         mapPane.add(mapLabel)
         // applyCss: This method does not normally need to be invoked directly but may be used in conjunction with Parent.layout()
         // to size a Node before the next pulse, or if the Scene is not in a Stage.

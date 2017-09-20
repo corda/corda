@@ -17,7 +17,6 @@ import java.util.*
 class ReportingCurrencyModel {
     private val exchangeRate: ObservableValue<ExchangeRate> by observableValue(ExchangeRateModel::exchangeRate)
     val reportingCurrency by observableValue(SettingsModel::reportingCurrencyProperty)
-    val supportedCurrencies = setOf(USD, GBP, CHF, EUR).toList().observable()
 
     /**
      * This stream provides a stream of exchange() functions that updates when either the reporting currency or the
