@@ -15,8 +15,8 @@ import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
 import net.corda.core.internal.*
-import net.corda.core.node.CityDatabase
-import net.corda.core.node.WorldMapLocation
+import net.corda.finance.utils.CityDatabase
+import net.corda.finance.utils.WorldMapLocation
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
 import org.controlsfx.control.CheckListView
