@@ -30,8 +30,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
-import static java.util.Collections.singleton;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.testing.TestConstants.getALICE_KEY;
 
@@ -521,12 +521,13 @@ public class FlowCookbookJava {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 9
-            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, singleton(counterpartySession), FINALISATION.childProgressTracker()));
+            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()));
             // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, singleton(regulatorSession), FINALISATION.childProgressTracker()));
+            Set<Party> additionalParties = Collections.singleton(regulator);
+            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()));
             // DOCEND 10
 
             return null;
@@ -616,9 +617,9 @@ public class FlowCookbookJava {
             ------------------------------*/
             progressTracker.setCurrentStep(FINALISATION);
 
-            // We need to sub-flow ReceiveTransactionFlow as the other party sent the transaction to us using FinalityFlow
-            // By default ReceiveTransactionFlow verifies and then records the transaction to our vault.
-            subFlow(new ReceiveTransactionFlow(counterpartySession));
+            // Nothing to do here! As long as some other party calls
+            // ``FinalityFlow``, the recording of the transaction on our node
+            // we be handled automatically.
 
             return null;
         }

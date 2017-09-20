@@ -24,7 +24,6 @@ import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -46,8 +45,6 @@ class ContractUpgradeFlowTest {
         val nodes = mockNet.createSomeNodes(notaryKeyPair = null) // prevent generation of notary override
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
-        a.registerInitiatedFlow(ReceiveFinalisedTxFlow::class.java)
-        b.registerInitiatedFlow(ReceiveFinalisedTxFlow::class.java)
 
         // Process registration
         mockNet.runNetwork()
@@ -75,7 +72,7 @@ class ContractUpgradeFlowTest {
         val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)
         val stx = b.services.addSignature(signedByA)
 
-        a.services.startFlow(FinalityInvoker(stx, setOf(b.info.chooseIdentity())))
+        a.services.startFlow(FinalityFlow(stx, setOf(b.info.chooseIdentity())))
         mockNet.runNetwork()
 
         val atx = a.database.transaction { a.services.validatedTransactions.getTransaction(stx.id) }
@@ -254,21 +251,9 @@ class ContractUpgradeFlowTest {
     }
 
     @StartableByRPC
-    @InitiatingFlow
     class FinalityInvoker(private val transaction: SignedTransaction,
-                          private val recipients: Collection<Party>) : FlowLogic<SignedTransaction>() {
+                          private val extraRecipients: Set<Party>) : FlowLogic<SignedTransaction>() {
         @Suspendable
-        override fun call(): SignedTransaction {
-            val sessions = recipients.map { initiateFlow(it) }
-            return subFlow(FinalityFlow(transaction, sessions))
-        }
-    }
-
-    @InitiatedBy(FinalityInvoker::class)
-    class ReceiveFinalisedTxFlow(private val source: FlowSession) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            subFlow(ReceiveTransactionFlow(source))
-        }
+        override fun call(): SignedTransaction = subFlow(FinalityFlow(transaction, extraRecipients))
     }
 }

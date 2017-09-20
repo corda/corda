@@ -161,7 +161,7 @@ class ForeignExchangeFlow(private val tradeId: String,
         }
 
         // Initiate the standard protocol to notarise and distribute to the involved parties.
-        subFlow(FinalityFlow(allPartySignedTx, counterpartySession))
+        subFlow(FinalityFlow(allPartySignedTx, setOf(counterparty)))
 
         return allPartySignedTx.id
     }
@@ -228,7 +228,7 @@ class ForeignExchangeRemoteFlow(private val source: FlowSession) : FlowLogic<Uni
         // SendStateAndRefFlow allows counterparty to access our transaction data to resolve the transaction.
         subFlow(SendStateAndRefFlow(source, ourInputState))
         source.send(ourOutputState)
-        val proposedTrade = subFlow(ReceiveTransactionFlow(source, checkSufficientSignatures = false, recordTransaction = false)).let {
+        val proposedTrade = subFlow(ReceiveTransactionFlow(source, checkSufficientSignatures = false)).let {
             val wtx = it.tx
             // check all signatures are present except our own and the notary
             it.verifySignaturesExcept(ourKey, wtx.notary!!.owningKey)
@@ -240,8 +240,7 @@ class ForeignExchangeRemoteFlow(private val source: FlowSession) : FlowLogic<Uni
 
         // send the other side our signature.
         source.send(ourSignature)
-
-        // The other side invokes FinalityFlow and sends the notarised transaction so we must receive it
-        subFlow(ReceiveTransactionFlow(source))
+        // N.B. The FinalityProtocol will be responsible for Notarising the SignedTransaction
+        // and broadcasting the result to us.
     }
 }

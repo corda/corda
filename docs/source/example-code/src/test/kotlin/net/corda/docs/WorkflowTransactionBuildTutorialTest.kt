@@ -9,9 +9,9 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.nodeapi.ServiceInfo
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.chooseIdentity
@@ -44,7 +44,6 @@ class WorkflowTransactionBuildTutorialTest {
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeA.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)
-        nodeB.internals.registerInitiatedFlow(ReceiveTradeApprovalFlow::class.java)
     }
 
     @After

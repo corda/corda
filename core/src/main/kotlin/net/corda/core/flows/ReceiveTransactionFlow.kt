@@ -16,13 +16,11 @@ import java.security.SignatureException
  * 
  * @param otherSideSession session to the other side which is calling [SendTransactionFlow].
  * @param checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
- * @param recordTransaction if true will store the transaction to the vault after verification.
  */
 class ReceiveTransactionFlow(private val otherSideSession: FlowSession,
-                             private val checkSufficientSignatures: Boolean,
-                             private val recordTransaction: Boolean) : FlowLogic<SignedTransaction>() {
+                             private val checkSufficientSignatures: Boolean) : FlowLogic<SignedTransaction>() {
     /** Receives a [SignedTransaction] from [otherSideSession], verifies it and then records it in the vault. */
-    constructor(otherSideSession: FlowSession) : this(otherSideSession, true, true)
+    constructor(otherSideSession: FlowSession) : this(otherSideSession, true)
 
     @Suspendable
     @Throws(SignatureException::class,
@@ -33,7 +31,6 @@ class ReceiveTransactionFlow(private val otherSideSession: FlowSession,
         return otherSideSession.receive<SignedTransaction>().unwrap {
             subFlow(ResolveTransactionsFlow(it, otherSideSession))
             it.verify(serviceHub, checkSufficientSignatures)
-            if (recordTransaction) serviceHub.recordTransactions(it)
             it
         }
     }

@@ -29,7 +29,6 @@ import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.finance.flows.CashReceiveFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.network.NetworkMapService
@@ -338,7 +337,6 @@ class FlowFrameworkTests {
 
     @Test
     fun `different notaries are picked when addressing shared notary identity`() {
-        node2.registerInitiatedFlow(CashReceiveFlow::class.java)
         assertEquals(notary1Identity, notary2Identity)
         assertThat(node1.services.networkMapCache.notaryIdentities.size == 1)
         node1.services.startFlow(CashIssueFlow(
@@ -611,14 +609,12 @@ class FlowFrameworkTests {
                 .addCommand(dummyCommand(node1.info.chooseIdentity().owningKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
-        val committerFiber = node1.registerFlowFactory(WaitingFlows.Receiver::class) {
+        val committerFiber = node1.registerFlowFactory(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it)
         }.map { it.stateMachine }
-        val waiterStx = node2.services.startFlow(WaitingFlows.Waiter(stx)).resultFuture
-        val receiverStx = node2.services.startFlow(WaitingFlows.Receiver(stx, node1.info.chooseIdentity())).resultFuture
+        val waiterStx = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.chooseIdentity())).resultFuture
         mockNet.runNetwork()
         assertThat(waiterStx.getOrThrow()).isEqualTo(committerFiber.getOrThrow().resultFuture.getOrThrow())
-        assertThat(waiterStx.getOrThrow()).isEqualTo(receiverStx.getOrThrow())
     }
 
     @Test
@@ -631,7 +627,7 @@ class FlowFrameworkTests {
         node1.registerFlowFactory(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it) { throw Exception("Error") }
         }
-        val waiter = node2.services.startFlow(WaitingFlows.Receiver(stx, node1.info.chooseIdentity())).resultFuture
+        val waiter = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.chooseIdentity())).resultFuture
         mockNet.runNetwork()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             waiter.getOrThrow()
@@ -999,18 +995,13 @@ class FlowFrameworkTests {
     }
 
     private object WaitingFlows {
-        class Waiter(val stx: SignedTransaction) : FlowLogic<SignedTransaction>() {
-            @Suspendable
-            override fun call(): SignedTransaction = waitForLedgerCommit(stx.id)
-        }
-
         @InitiatingFlow
-        class Receiver(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        class Waiter(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 val otherPartySession = initiateFlow(otherParty)
                 otherPartySession.send(stx)
-                return subFlow(ReceiveTransactionFlow(otherPartySession))
+                return waitForLedgerCommit(stx.id)
             }
         }
 
@@ -1019,7 +1010,7 @@ class FlowFrameworkTests {
             override fun call(): SignedTransaction {
                 val stx = otherPartySession.receive<SignedTransaction>().unwrap { it }
                 if (throwException != null) throw throwException.invoke()
-                return subFlow(FinalityFlow(stx, otherPartySession))
+                return subFlow(FinalityFlow(stx, setOf(otherPartySession.counterparty)))
             }
         }
     }
@@ -1033,7 +1024,7 @@ class FlowFrameworkTests {
             // hold onto reference here to force checkpoint of vaultQueryService and thus
             // prove it is registered as a tokenizableService in the node
             val vaultQuerySvc = serviceHub.vaultQueryService
-            subFlow(ReceiveTransactionFlow(otherPartySession))
+            waitForLedgerCommit(stx.id)
             return vaultQuerySvc.queryBy<ContractState>().states
         }
     }

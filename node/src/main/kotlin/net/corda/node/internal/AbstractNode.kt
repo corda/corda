@@ -36,6 +36,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProvider
+import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
@@ -370,6 +371,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
 
     private fun installCoreFlows() {
+        installCoreFlow(FinalityFlow::class, ::FinalityHandler)
         installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
         installCoreFlow(ContractUpgradeFlow.Initiator::class, ::Acceptor)
         installCoreFlow(SwapIdentitiesFlow::class, ::SwapIdentitiesHandler)

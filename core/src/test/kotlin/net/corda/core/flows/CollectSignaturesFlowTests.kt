@@ -76,8 +76,8 @@ class CollectSignaturesFlowTests {
                     }
                 }
 
-                subFlow(flow)
-                return subFlow(ReceiveTransactionFlow(session))
+                val stx = subFlow(flow)
+                return waitForLedgerCommit(stx.id)
             }
         }
 
@@ -94,7 +94,7 @@ class CollectSignaturesFlowTests {
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val signature = subFlow(CollectSignatureFlow(ptx, initiatingSession, initiatingSession.counterparty.owningKey))
                 val stx = ptx + signature
-                return subFlow(FinalityFlow(stx, initiatingSession))
+                return subFlow(FinalityFlow(stx))
             }
         }
     }
@@ -114,7 +114,7 @@ class CollectSignaturesFlowTests {
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val sessions = serviceHub.excludeMe(serviceHub.groupAbstractPartyByWellKnownParty(state.owners)).map { initiateFlow(it.key) }
                 val stx = subFlow(CollectSignaturesFlow(ptx, sessions, myInputKeys))
-                return subFlow(FinalityFlow(stx, sessions))
+                return subFlow(FinalityFlow(stx))
             }
         }
 
@@ -132,8 +132,8 @@ class CollectSignaturesFlowTests {
                     }
                 }
 
-                subFlow(signFlow)
-                subFlow(ReceiveTransactionFlow(otherSideSession))
+                val stx = subFlow(signFlow)
+                waitForLedgerCommit(stx.id)
             }
         }
     }

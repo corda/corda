@@ -14,7 +14,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import net.corda.testing.chooseIdentity
 
 // Minimal state model of a manual approval process
 @CordaSerializable
@@ -92,7 +91,6 @@ data class TradeApprovalContract(val blank: Unit? = null) : Contract {
  * The protocol then sends a copy to the other node. We don't require the other party to sign
  * as their approval/rejection is to follow.
  */
-@InitiatingFlow
 class SubmitTradeApprovalFlow(private val tradeId: String,
                               private val counterparty: Party) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
     @Suspendable
@@ -102,23 +100,16 @@ class SubmitTradeApprovalFlow(private val tradeId: String,
         // identify a notary. This might also be done external to the flow
         val notary = serviceHub.networkMapCache.getAnyNotary()
         // Create the TransactionBuilder and populate with the new state.
-        val tx = TransactionBuilder(notary)
-                .withItems(StateAndContract(tradeProposal, TRADE_APPROVAL_PROGRAM_ID), Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
+        val tx = TransactionBuilder(notary).withItems(
+                StateAndContract(tradeProposal, TRADE_APPROVAL_PROGRAM_ID),
+                Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
         tx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)
         // We can automatically sign as there is no untrusted data.
         val signedTx = serviceHub.signInitialTransaction(tx)
         // Notarise and distribute.
-        subFlow(FinalityFlow(signedTx, initiateFlow(counterparty)))
+        subFlow(FinalityFlow(signedTx, setOf(counterparty)))
         // Return the initial state
         return signedTx.tx.outRef(0)
-    }
-}
-
-@InitiatedBy(SubmitTradeApprovalFlow::class)
-class ReceiveTradeApprovalFlow(private val submitter: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        subFlow(ReceiveTransactionFlow(submitter))
     }
 }
 
@@ -196,7 +187,7 @@ class SubmitCompletionFlow(private val ref: StateRef, private val verdict: Workf
         }
         // DOCSTART 4
         // Notarise and distribute the completed transaction.
-        subFlow(FinalityFlow(allPartySignedTx, session))
+        subFlow(FinalityFlow(allPartySignedTx, setOf(newState.source)))
         // DOCEND 4
         // Return back the details of the completed state/transaction.
         return allPartySignedTx.tx.outRef(0)
@@ -240,8 +231,7 @@ class RecordCompletionFlow(private val sourceSession: FlowSession) : FlowLogic<U
         val ourSignature = serviceHub.createSignature(completeTx)
         // Send our signature to the other party.
         sourceSession.send(ourSignature)
-
-        // The other side invokes FinalityFlow and sends the notarised transaction so we must receive it
-        subFlow(ReceiveTransactionFlow(sourceSession))
+        // N.B. The FinalityProtocol will be responsible for Notarising the SignedTransaction
+        // and broadcasting the result to us.
     }
 }

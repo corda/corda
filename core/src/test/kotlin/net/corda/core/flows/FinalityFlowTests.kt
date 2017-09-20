@@ -1,14 +1,13 @@
 package net.corda.core.flows
 
-import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.identity.Party
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
 import net.corda.node.internal.StartedNode
+import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
 import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
@@ -17,6 +16,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class FinalityFlowTests {
     lateinit var mockNet: MockNetwork
@@ -43,13 +43,11 @@ class FinalityFlowTests {
 
     @Test
     fun `finalise a simple transaction`() {
-        nodeB.registerInitiatedFlow(RecordTx::class.java)
         val amount = 1000.POUNDS.issuedBy(nodeA.info.chooseIdentity().ref(0))
-        val bIdentity = nodeB.info.chooseIdentity()
         val builder = TransactionBuilder(notary)
-        Cash().generateIssue(builder, amount, bIdentity, notary)
+        Cash().generateIssue(builder, amount, nodeB.info.chooseIdentity(), notary)
         val stx = nodeA.services.signInitialTransaction(builder)
-        val flow = nodeA.services.startFlow(Finaliser(stx, bIdentity))
+        val flow = nodeA.services.startFlow(FinalityFlow(stx))
         mockNet.runNetwork()
         val notarisedTx = flow.resultFuture.getOrThrow()
         notarisedTx.verifyRequiredSignatures()
@@ -59,17 +57,17 @@ class FinalityFlowTests {
         assertEquals(notarisedTx, transactionSeenByB)
     }
 
-    @InitiatingFlow
-    private class Finaliser(private val stx: SignedTransaction, private val otherParty: Party) : FlowLogic<SignedTransaction>() {
-        @Suspendable
-        override fun call(): SignedTransaction = subFlow(FinalityFlow(stx, initiateFlow(otherParty)))
-    }
-
-    @InitiatedBy(Finaliser::class)
-    private class RecordTx(private val source: FlowSession) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            subFlow(ReceiveTransactionFlow(source))
+    @Test
+    fun `reject a transaction with unknown parties`() {
+        val amount = 1000.POUNDS.issuedBy(nodeA.info.chooseIdentity().ref(0))
+        val fakeIdentity = ALICE // Alice isn't part of this network, so node A won't recognise them
+        val builder = TransactionBuilder(notary)
+        Cash().generateIssue(builder, amount, fakeIdentity, notary)
+        val stx = nodeA.services.signInitialTransaction(builder)
+        val flow = nodeA.services.startFlow(FinalityFlow(stx))
+        mockNet.runNetwork()
+        assertFailsWith<IllegalArgumentException> {
+            flow.resultFuture.getOrThrow()
         }
     }
 }

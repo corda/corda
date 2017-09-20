@@ -3,7 +3,8 @@ package net.corda.finance.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.flows.*
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
 import net.corda.core.node.services.vault.PageSpecification
@@ -25,7 +26,6 @@ import java.util.*
  * issuer.
  */
 @StartableByRPC
-@InitiatingFlow
 class CashExitFlow(private val amount: Amount<Currency>,
                    private val issuerRef: OpaqueBytes,
                    progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
@@ -64,27 +64,19 @@ class CashExitFlow(private val amount: Amount<Currency>,
 
         // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
         //       count as a reason to fail?
-        val participantSessions = serviceHub.excludeMe(serviceHub.groupAbstractPartyByWellKnownParty(inputStates.map { it.state.data.owner })).map { initiateFlow(it.key) }
+        val participants: Set<Party> = inputStates
+                .mapNotNull { serviceHub.identityService.partyFromAnonymous(it.state.data.owner) }
+                .toSet()
         // Sign transaction
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(builder, signers)
 
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
-        val notarised = finaliseTx(tx, participantSessions, "Unable to notarise exit")
+        val notarised = finaliseTx(tx, participants, "Unable to notarise exit")
         return Result(notarised, null)
     }
 
     @CordaSerializable
     class ExitRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes) : AbstractRequest(amount)
-}
-
-
-@InitiatedBy(CashExitFlow::class)
-class CashExitNotificationFlow(private val exiter: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        // Receive the transaction finalised by the exiter and store in our vault
-        subFlow(ReceiveTransactionFlow(exiter))
-    }
 }

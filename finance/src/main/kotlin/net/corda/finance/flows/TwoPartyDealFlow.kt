@@ -48,7 +48,8 @@ object TwoPartyDealFlow {
         abstract val notaryParty: Party
         abstract val otherSideSession: FlowSession
 
-        @Suspendable override fun call(): SignedTransaction {
+        @Suspendable
+        override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
             val txIdentities = subFlow(SwapIdentitiesFlow(otherSideSession.counterparty))
             val anonymousMe = txIdentities[ourIdentity] ?: ourIdentity.anonymise()
@@ -63,19 +64,20 @@ object TwoPartyDealFlow {
                 override fun checkTransaction(stx: SignedTransaction) = checkProposal(stx)
             }
 
-            subFlow(signTransactionFlow)
+            val txId = subFlow(signTransactionFlow).id
 
-            return subFlow(ReceiveTransactionFlow(otherSideSession))
+            return waitForLedgerCommit(txId)
         }
 
-        @Suspendable abstract fun checkProposal(stx: SignedTransaction)
+        @Suspendable
+        abstract fun checkProposal(stx: SignedTransaction)
     }
 
     /**
      * Abstracted bilateral deal flow participant that is recipient of initial communication.
      */
     abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker(),
-                                val regulators: Collection<Party> = emptySet()) : FlowLogic<SignedTransaction>() {
+                                val regulators: Set<Party> = emptySet()) : FlowLogic<SignedTransaction>() {
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Waiting for deal info.")
@@ -101,7 +103,7 @@ object TwoPartyDealFlow {
                 serviceHub.signInitialTransaction(utx, additionalSigningPubKeys)
             }
 
-            logger.trace { "Signed proposed transaction." }
+            logger.trace("Signed proposed transaction.")
 
             progressTracker.currentStep = COLLECTING_SIGNATURES
 
@@ -117,10 +119,9 @@ object TwoPartyDealFlow {
             logger.trace("Got signatures from other party, verifying ... ")
 
             progressTracker.currentStep = RECORDING
-            // Start the regulator flows for them to receive the final tx. Their flows must be calling ReceiveTransactionFlow
-            val regulatorSessions = regulators.map { initiateFlow(it) }
-            val ftx = subFlow(FinalityFlow(stx, regulatorSessions + otherSideSession))
+            val ftx = subFlow(FinalityFlow(stx, regulators + otherSideSession.counterparty))
             logger.trace("Recorded transaction.")
+
             return ftx
         }
 

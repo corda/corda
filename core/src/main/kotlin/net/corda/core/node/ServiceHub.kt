@@ -324,7 +324,9 @@ interface ServiceHub : ServicesForResolution {
      */
     // Cannot use @JvmOverloads in interface
     @Throws(IllegalArgumentException::class)
-    fun groupAbstractPartyByWellKnownParty(parties: Collection<AbstractParty>): Map<Party, List<AbstractParty>> = groupAbstractPartyByWellKnownParty(parties, false)
+    fun groupAbstractPartyByWellKnownParty(parties: Collection<AbstractParty>): Map<Party, List<AbstractParty>> {
+        return groupAbstractPartyByWellKnownParty(parties, false)
+    }
 
     /**
      * Remove this node from a map of well known [Party]s.

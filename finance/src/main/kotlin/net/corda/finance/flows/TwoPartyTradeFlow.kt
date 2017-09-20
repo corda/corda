@@ -107,10 +107,11 @@ object TwoPartyTradeFlow {
                         throw FlowException("Transaction is not sending us the right amount of cash")
                 }
             }
-            subFlow(signTransactionFlow)
+
+            val txId = subFlow(signTransactionFlow).id
             // DOCEND 5
 
-            return subFlow(ReceiveTransactionFlow(otherSideSession))
+            return waitForLedgerCommit(txId)
         }
         // DOCEND 4
 
@@ -181,7 +182,7 @@ object TwoPartyTradeFlow {
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
-            return subFlow(FinalityFlow(twiceSignedTx, sellerSession))
+            return subFlow(FinalityFlow(twiceSignedTx))
         }
 
         @Suspendable

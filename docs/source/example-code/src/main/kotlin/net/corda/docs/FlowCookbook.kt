@@ -494,12 +494,13 @@ object FlowCookbook {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 9
-            val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, listOf(counterpartySession), FINALISATION.childProgressTracker()))
+            val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()))
             // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, listOf(regulatorSession), FINALISATION.childProgressTracker()))
+            val additionalParties: Set<Party> = setOf(regulator)
+            val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()))
             // DOCEND 10
         }
     }
@@ -576,9 +577,9 @@ object FlowCookbook {
             -----------------------------**/
             progressTracker.currentStep = FINALISATION
 
-            // We need to sub-flow ReceiveTransactionFlow as the other party sent the transaction to us using FinalityFlow
-            // By default ReceiveTransactionFlow verifies and then records the transaction to our vault.
-            subFlow(ReceiveTransactionFlow(counterpartySession))
+            // Nothing to do here! As long as some other party calls
+            // ``FinalityFlow``, the recording of the transaction on our node
+            // we be handled automatically.
         }
     }
 }

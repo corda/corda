@@ -34,7 +34,7 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
         try {
-            val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, recordTransaction = false))
+            val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
             checkNotary(stx.notary)
             checkSignatures(stx)
             val wtx = stx.tx
