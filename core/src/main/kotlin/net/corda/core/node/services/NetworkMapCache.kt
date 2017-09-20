@@ -81,7 +81,7 @@ interface NetworkMapCache {
     fun getPartyInfo(party: Party): PartyInfo?
 
     /** Gets a notary identity by the given name. */
-    fun getNotary(name: CordaX500Name): Party? = notaryIdentities.filter { it.name == name }.firstOrNull()?.party
+    fun getNotary(name: CordaX500Name): Party? = notaryIdentities.firstOrNull { it.name == name }?.party
 
     /**
      * Returns a notary identity advertised by any of the nodes on the network (chosen at random)
