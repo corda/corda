@@ -36,7 +36,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         // DOCS END 1
         "Self issuing cash randomly",
         generate = { _, parallelism ->
-            val notaryIdentity = simpleNodes[0].proxy.notaryIdentities().first().party
+            val notaryIdentity = simpleNodes[0].proxy.notaryIdentities().first()
             val generateIssue = Generator.pickOne(simpleNodes).flatMap { node ->
                 generateIssue(1000, USD, notaryIdentity, listOf(node.mainIdentity)).map {
                     SelfIssueCommand(it, node)

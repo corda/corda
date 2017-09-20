@@ -9,7 +9,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
@@ -215,8 +214,10 @@ interface CordaRPCOps : RPCOps {
 
     /**
      * Returns network's notary identities, assuming this will not change while the node is running.
+     *
+     * Note that the identities are sorted based on legal name, and the ordering might change once new notaries are introduced.
      */
-    fun notaryIdentities(): List<PartyAndCertificate>
+    fun notaryIdentities(): List<Party>
 
     /*
      * Add note(s) to an existing Vault transaction

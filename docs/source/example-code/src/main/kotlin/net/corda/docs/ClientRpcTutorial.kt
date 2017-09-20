@@ -113,7 +113,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
         sum + state.state.data.amount.quantity
     }
     val issueRef = OpaqueBytes.of(0)
-    val notary = proxy.notaryIdentities().first().party
+    val notary = proxy.notaryIdentities().first()
     val me = proxy.nodeInfo().legalIdentities.first()
     while (true) {
         Thread.sleep(1000)

@@ -173,7 +173,7 @@ class ExplorerSimulation(val options: OptionSet) {
     private fun startNormalSimulation() {
         println("Running simulation mode ...")
         setUpRPC()
-        notary = aliceNode.rpc.notaryIdentities().first().party
+        notary = aliceNode.rpc.notaryIdentities().first()
         val eventGenerator = EventGenerator(
                 parties = parties.map { it.first },
                 notary = notary,
