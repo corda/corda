@@ -8,7 +8,6 @@ import net.corda.core.internal.elapsedTime
 import net.corda.core.internal.times
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -19,6 +18,7 @@ import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.nodeapi.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(organisation = "DistributedService", locality = "London", country = "GB")
+        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(commonName = RaftValidatingNotaryService.type.id, organisation = "DistributedService", locality = "London", country = "GB")
         val SERVICE_2_NAME = CordaX500Name(organisation = "Service 2", locality = "London", country = "GB")
     }
 
@@ -85,8 +85,7 @@ class P2PMessagingTest : NodeBasedTest() {
                 startNode(ALICE.name)
         ).transpose().getOrThrow()
 
-        val serviceName = serviceNode2.info.legalIdentities[1].name
-        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), serviceName, alice)
+        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), DISTRIBUTED_SERVICE_NAME, alice)
     }
 
     @Ignore

@@ -38,8 +38,6 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProvider
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
-import net.corda.nodeapi.ServiceInfo
-import net.corda.nodeapi.ServiceType
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -69,6 +67,8 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
@@ -432,7 +432,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Used only for notary identities.
      */
     protected open fun getNotaryIdentity(): PartyAndCertificate? {
-        return advertisedServices.singleOrNull { it.type.isNotary() }?.let { obtainIdentity(it) }
+        return advertisedServices.singleOrNull { it.type.isNotary() }?.let {
+            it.name?.let {
+                require(it.commonName != null) {"Common name must not be null for notary service, use service type id as common name."}
+                require(ServiceType.parse(it.commonName!!).isNotary()) {"Common name for notary service must be the notary service type id."}
+            }
+            obtainIdentity(it)
+        }
     }
 
     @VisibleForTesting
@@ -631,12 +637,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // Create node identity if service info = null
             Pair("identity", myLegalName.copy(commonName = null))
         } else {
-            // Ensure that we always have notary in name and type of it. TODO It is temporary solution until we will have proper handling of NetworkParameters
-            val baseName = serviceInfo.name ?: myLegalName
-            val name = if (baseName.commonName == null)
-                baseName.copy(commonName = serviceInfo.type.id)
-            else
-                baseName.copy(commonName = baseName.commonName + " " + serviceInfo.type.id)
+            val name = serviceInfo.name ?: myLegalName.copy(commonName = serviceInfo.type.id)
             Pair(serviceInfo.type.id, name)
         }
 

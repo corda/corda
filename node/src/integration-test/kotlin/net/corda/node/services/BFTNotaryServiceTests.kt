@@ -37,7 +37,7 @@ import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
     companion object {
-        private val clusterName = CordaX500Name(organisation = "BFT", locality = "Zurich", country = "CH")
+        private val clusterName = CordaX500Name(commonName = BFTNonValidatingNotaryService.type.id, organisation = "BFT", locality = "Zurich", country = "CH")
         private val serviceType = BFTNonValidatingNotaryService.type
     }
 
