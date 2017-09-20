@@ -115,7 +115,7 @@ object SimmFlow {
             val state = stateRef.state.data
             val portfolio = serviceHub.vaultQueryService.queryBy<IRSState>(VaultQueryCriteria(stateRefs = state.portfolio)).states.toPortfolio()
 
-            val valuer = serviceHub.identityService.partyFromAnonymous(state.valuer)
+            val valuer = serviceHub.identityService.wellKnownPartyFromAnonymous(state.valuer)
             require(valuer != null) { "Valuer party must be known to this node" }
             val valuation = agreeValuation(portfolio, valuationDate, valuer!!)
             val update = PortfolioState.Update(valuation = valuation)
@@ -317,7 +317,7 @@ object SimmFlow {
         @Suspendable
         private fun updateValuation(stateRef: StateAndRef<PortfolioState>) {
             val portfolio = serviceHub.vaultQueryService.queryBy<IRSState>(VaultQueryCriteria(stateRefs = stateRef.state.data.portfolio)).states.toPortfolio()
-            val valuer = serviceHub.identityService.partyFromAnonymous(stateRef.state.data.valuer) ?: throw IllegalStateException("Unknown valuer party ${stateRef.state.data.valuer}")
+            val valuer = serviceHub.identityService.wellKnownPartyFromAnonymous(stateRef.state.data.valuer) ?: throw IllegalStateException("Unknown valuer party ${stateRef.state.data.valuer}")
             val valuation = agreeValuation(portfolio, offer.valuationDate, valuer)
             subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToSession) {
                 override fun verifyProposal(stx: SignedTransaction, proposal: Proposal<PortfolioState.Update>) {

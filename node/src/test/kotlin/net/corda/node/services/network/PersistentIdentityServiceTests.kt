@@ -88,7 +88,7 @@ class PersistentIdentityServiceTests {
     @Test
     fun `get identity by name with no registered identities`() {
         database.transaction {
-            assertNull(identityService.partyFromX500Name(ALICE.name))
+            assertNull(identityService.wellKnownPartyFromX500Name(ALICE.name))
         }
     }
 
@@ -112,7 +112,7 @@ class PersistentIdentityServiceTests {
         val identities = listOf("Organisation A", "Organisation B", "Organisation C")
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
         database.transaction {
-            assertNull(identityService.partyFromX500Name(identities.first().name))
+            assertNull(identityService.wellKnownPartyFromX500Name(identities.first().name))
         }
         identities.forEach {
             database.transaction {
@@ -121,7 +121,7 @@ class PersistentIdentityServiceTests {
         }
         identities.forEach {
             database.transaction {
-                assertEquals(it.party, identityService.partyFromX500Name(it.name))
+                assertEquals(it.party, identityService.wellKnownPartyFromX500Name(it.name))
             }
         }
     }
@@ -245,7 +245,7 @@ class PersistentIdentityServiceTests {
         }
 
         val aliceParent = database.transaction {
-            newPersistentIdentityService.partyFromAnonymous(anonymousAlice.party.anonymise())
+            newPersistentIdentityService.wellKnownPartyFromAnonymous(anonymousAlice.party.anonymise())
         }
         assertEquals(alice.party, aliceParent!!)
 
@@ -272,7 +272,7 @@ class PersistentIdentityServiceTests {
     fun `deanonymising a well known identity`() {
         val expected = ALICE
         val actual = database.transaction {
-            identityService.partyFromAnonymous(expected)
+            identityService.wellKnownPartyFromAnonymous(expected)
         }
         assertEquals(expected, actual)
     }

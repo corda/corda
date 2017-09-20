@@ -135,7 +135,7 @@ public class FlowCookbookJava {
             // We may also need to identify a specific counterparty.
             // Again, we do so using the network map.
             // DOCSTART 2
-            Party namedCounterparty = getServiceHub().getIdentityService().partyFromX500Name(new CordaX500Name("NodeA", "London", "UK"));
+            Party namedCounterparty = getServiceHub().getIdentityService().wellKnownPartyFromX500Name(new CordaX500Name("NodeA", "London", "UK"));
             Party keyedCounterparty = getServiceHub().getIdentityService().partyFromKey(dummyPubKey);
             // DOCEND 2
 

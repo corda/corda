@@ -309,7 +309,7 @@ interface ServiceHub : ServicesForResolution {
     @Throws(IllegalArgumentException::class)
     fun groupAbstractPartyByWellKnownParty(parties: Collection<AbstractParty>, ignoreUnrecognisedParties: Boolean): Map<Party, List<AbstractParty>> {
         val partyToPublicKey: Iterable<Pair<Party, AbstractParty>> = parties.mapNotNull {
-            (identityService.partyFromAnonymous(it) ?: if (ignoreUnrecognisedParties) return@mapNotNull null else throw IllegalArgumentException("Could not find Party for $it")) to it
+            (identityService.wellKnownPartyFromAnonymous(it) ?: if (ignoreUnrecognisedParties) return@mapNotNull null else throw IllegalArgumentException("Could not find Party for $it")) to it
         }
         return partyToPublicKey.toMultiMap()
     }
@@ -331,7 +331,7 @@ interface ServiceHub : ServicesForResolution {
     /**
      * Remove this node from a map of well known [Party]s.
      *
-     * @return a new copy of the map, with the well known [Party] for this node removed.
+     * @return a new copy of the map, with he well known [Party] for this node removed.
      */
     fun <T> excludeMe(map: Map<Party, T>): Map<Party, T> = map.filterKeys { !myInfo.isLegalIdentity(it) }
 

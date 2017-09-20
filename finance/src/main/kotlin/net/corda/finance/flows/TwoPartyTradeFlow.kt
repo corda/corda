@@ -98,7 +98,7 @@ object TwoPartyTradeFlow {
                     val states: Iterable<ContractState> = stx.tx.inputs.map { serviceHub.loadState(it).data } + stx.tx.outputs.map { it.data }
                     states.forEach { state ->
                         state.participants.forEach { anon ->
-                            require(serviceHub.identityService.partyFromAnonymous(anon) != null) {
+                            require(serviceHub.identityService.wellKnownPartyFromAnonymous(anon) != null) {
                                 "Transaction state $state involves unknown participant $anon"
                             }
                         }
@@ -197,7 +197,7 @@ object TwoPartyTradeFlow {
 
                 // The asset must either be owned by the well known identity of the counterparty, or we must be able to
                 // prove the owner is a confidential identity of the counterparty.
-                val assetForSaleIdentity = serviceHub.identityService.partyFromAnonymous(asset.owner)
+                val assetForSaleIdentity = serviceHub.identityService.wellKnownPartyFromAnonymous(asset.owner)
                 require(assetForSaleIdentity == sellerSession.counterparty)
 
                 // Register the identity we're about to send payment to. This shouldn't be the same as the asset owner

@@ -182,9 +182,9 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun partyFromAnonymous(party: AbstractParty): Party? {
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         return database.transaction {
-            services.identityService.partyFromAnonymous(party)
+            services.identityService.wellKnownPartyFromAnonymous(party)
         }
     }
 
@@ -194,9 +194,9 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun partyFromX500Name(x500Name: CordaX500Name): Party? {
+    override fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party? {
         return database.transaction {
-            services.identityService.partyFromX500Name(x500Name)
+            services.identityService.wellKnownPartyFromX500Name(x500Name)
         }
     }
 
