@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.deprecated.ResolveTransactionsFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import java.security.SignatureException
