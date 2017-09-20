@@ -12,22 +12,21 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
-import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
-import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class RaftNotaryServiceTests : NodeBasedTest() {
-    private val notaryName = CordaX500Name(organisation = "RAFT Notary Service", locality = "London", country = "GB")
+    private val notaryName = CordaX500Name(commonName = RaftValidatingNotaryService.type.id, organisation = "RAFT Notary Service", locality = "London", country = "GB")
 
-    @Ignore
     @Test
     fun `detect double spend`() {
         val (bankA) = listOf(
