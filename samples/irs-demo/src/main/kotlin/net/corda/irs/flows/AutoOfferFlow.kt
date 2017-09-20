@@ -45,7 +45,7 @@ object AutoOfferFlow {
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             // need to pick which ever party is not us
-            val otherParty = serviceHub.excludeMe(serviceHub.groupAbstractPartyByKnownParty(dealToBeOffered.participants)).keys.single()
+            val otherParty = serviceHub.excludeMe(serviceHub.groupAbstractPartyByWellKnownParty(dealToBeOffered.participants)).keys.single()
             progressTracker.currentStep = DEALING
             val session = initiateFlow(otherParty)
             val instigator = Instigator(

@@ -294,8 +294,8 @@ interface ServiceHub : ServicesForResolution {
      * @return a map of well known [Party] to associated [PublicKey]s.
      */
     @Throws(IllegalArgumentException::class)
-    fun groupPublicKeysByKnownParty(publicKeys: Collection<PublicKey>, ignoreUnrecognisedParties: Boolean = false): Map<Party, List<PublicKey>> =
-            groupAbstractPartyByKnownParty(publicKeys.map { AnonymousParty(it) }, ignoreUnrecognisedParties).mapValues { it.value.map { it.owningKey } }
+    fun groupPublicKeysByWellKnownParty(publicKeys: Collection<PublicKey>, ignoreUnrecognisedParties: Boolean = false): Map<Party, List<PublicKey>> =
+            groupAbstractPartyByWellKnownParty(publicKeys.map { AnonymousParty(it) }, ignoreUnrecognisedParties).mapValues { it.value.map { it.owningKey } }
 
     /**
      * Group each [AbstractParty] by the well known party using the [ServiceHub.identityService], in preparation for
@@ -307,9 +307,10 @@ interface ServiceHub : ServicesForResolution {
      * @return a map of well known [Party] to associated [AbstractParty]s.
      */
     @Throws(IllegalArgumentException::class)
-    fun groupAbstractPartyByKnownParty(parties: Collection<AbstractParty>, ignoreUnrecognisedParties: Boolean = false): Map<Party, List<AbstractParty>> {
-        val partyToPublicKey: Iterable<Pair<Party, AbstractParty>> = parties.map { (identityService.partyFromAnonymous(it) ?: if (ignoreUnrecognisedParties) null else throw IllegalArgumentException("Could not find Party for $it")) to it }
-                .filter { it.first != null }.map { Pair(it.first!!, it.second) }
+    fun groupAbstractPartyByWellKnownParty(parties: Collection<AbstractParty>, ignoreUnrecognisedParties: Boolean = false): Map<Party, List<AbstractParty>> {
+        val partyToPublicKey: Iterable<Pair<Party, AbstractParty>> = parties.mapNotNull {
+            (identityService.partyFromAnonymous(it) ?: if (ignoreUnrecognisedParties) return@mapNotNull null else throw IllegalArgumentException("Could not find Party for $it")) to it
+        }
         return partyToPublicKey.toMultiMap()
     }
 

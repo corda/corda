@@ -90,7 +90,7 @@ abstract class AbstractStateReplacementFlow {
          * Initiate sessions with parties we want signatures from.
          */
         open fun getParticipantSessions(): List<Pair<FlowSession, List<AbstractParty>>> {
-            return serviceHub.excludeMe(serviceHub.groupAbstractPartyByKnownParty(originalState.state.data.participants)).map { initiateFlow(it.key) to it.value }
+            return serviceHub.excludeMe(serviceHub.groupAbstractPartyByWellKnownParty(originalState.state.data.participants)).map { initiateFlow(it.key) to it.value }
         }
 
         @Suspendable

@@ -111,7 +111,7 @@ class CollectSignaturesFlowTests {
                 val command = Command(DummyContract.Commands.Create(), myInputKeys)
                 val builder = TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), command)
                 val ptx = serviceHub.signInitialTransaction(builder)
-                val sessions = serviceHub.excludeMe(serviceHub.groupAbstractPartyByKnownParty(state.owners)).map { initiateFlow(it.key) }
+                val sessions = serviceHub.excludeMe(serviceHub.groupAbstractPartyByWellKnownParty(state.owners)).map { initiateFlow(it.key) }
                 val stx = subFlow(CollectSignaturesFlow(ptx, sessions, myInputKeys))
                 return subFlow(FinalityFlow(stx, sessions))
             }

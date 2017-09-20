@@ -102,7 +102,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         // If the unsigned counter-parties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
-        val partyToKeyMap = serviceHub.groupPublicKeysByKnownParty(unsigned)
+        val partyToKeyMap = serviceHub.groupPublicKeysByWellKnownParty(unsigned)
         // Check that we have a session for all parties.  No more, no less.
         require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeyMap.keys) {
             "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
@@ -234,7 +234,7 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
-        val signingWellKnownIdentities = serviceHub.groupPublicKeysByKnownParty(stx.sigs.map(TransactionSignature::by))
+        val signingWellKnownIdentities = serviceHub.groupPublicKeysByWellKnownParty(stx.sigs.map(TransactionSignature::by))
         require(otherSideSession.counterparty in signingWellKnownIdentities) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${otherSideSession}"
         }
