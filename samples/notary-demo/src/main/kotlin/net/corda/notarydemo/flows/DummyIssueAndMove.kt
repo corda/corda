@@ -14,8 +14,9 @@ import net.corda.core.transactions.TransactionBuilder
 
 @StartableByRPC
 class DummyIssueAndMove(private val notary: Party, private val counterpartyNode: Party, private val discriminator: Int) : FlowLogic<SignedTransaction>() {
-    val DO_NOTHING_PROGRAM_ID = "net.corda.notarydemo.flows.DummyIssueAndMove.DoNothingContract"
-    object DoNothingContract : Contract {
+    val DO_NOTHING_PROGRAM_ID = DoNothingContract::class.java.name
+
+    class DoNothingContract : Contract {
         override fun verify(tx: LedgerTransaction) {}
     }
 
