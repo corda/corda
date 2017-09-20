@@ -127,7 +127,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
  *
  * @param partiallySignedTx the transaction to sign.
  * @param session the [FlowSession] to connect to to get the signature.
- * @param signingKey the key the party should use to sign the transaction.
+ * @param signingKeys the list of keys the party should use to sign the transaction.
  */
 @Suspendable
 class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session: FlowSession, val signingKeys: List<PublicKey>) : FlowLogic<List<TransactionSignature>>() {
