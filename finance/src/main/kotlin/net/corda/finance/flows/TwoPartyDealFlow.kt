@@ -7,7 +7,6 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -46,7 +45,7 @@ object TwoPartyDealFlow {
         }
 
         abstract val payload: Any
-        abstract val notaryNode: NodeInfo
+        abstract val notaryParty: Party
         abstract val otherSideSession: FlowSession
 
         @Suspendable override fun call(): SignedTransaction {
@@ -158,8 +157,7 @@ object TwoPartyDealFlow {
     open class Instigator(override val otherSideSession: FlowSession,
                           override val payload: AutoOffer,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
-        override val notaryNode: NodeInfo get() =
-            serviceHub.networkMapCache.notaryNodes.single { it.notaryIdentity == payload.notary }
+        override val notaryParty: Party get() = payload.notary
 
         @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
             // Add some constraints here.

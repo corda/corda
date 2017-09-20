@@ -48,7 +48,7 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
 
     private fun checkSignatures(stx: SignedTransaction) {
         try {
-            stx.verifySignaturesExcept(serviceHub.myInfo.notaryIdentity.owningKey)
+            stx.verifySignaturesExcept(serviceHub.notaryIdentityKey)
         } catch (e: SignatureException) {
             throw NotaryException(NotaryError.TransactionInvalid(e))
         }

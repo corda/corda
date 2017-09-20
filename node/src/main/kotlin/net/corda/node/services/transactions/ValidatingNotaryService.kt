@@ -2,9 +2,9 @@ package net.corda.node.services.transactions
 
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
+import net.corda.nodeapi.ServiceType
 import net.corda.node.services.api.ServiceHubInternal
 
 /** A Notary service that validates the transaction chain of the submitted transaction before committing it */

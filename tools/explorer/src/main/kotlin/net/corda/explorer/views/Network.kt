@@ -28,13 +28,13 @@ import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
-import net.corda.core.node.CityDatabase
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ScreenCoordinate
-import net.corda.core.node.WorldMapLocation
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
+import net.corda.finance.utils.CityDatabase
+import net.corda.finance.utils.ScreenCoordinate
+import net.corda.finance.utils.WorldMapLocation
 import tornadofx.*
 
 class Network : CordaView() {
@@ -42,7 +42,7 @@ class Network : CordaView() {
     override val icon = FontAwesomeIcon.GLOBE
     // Inject data.
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
-    private val notaries by observableList(NetworkIdentityModel::notaries)
+    private val notaries by observableList(NetworkIdentityModel::notaryNodes)
     private val peers by observableList(NetworkIdentityModel::parties)
     private val transactions by observableList(TransactionDataModel::partiallyResolvedTransactions)
     var centralPeer: String? = null
@@ -102,7 +102,6 @@ class Network : CordaView() {
                             copyableLabel(SimpleObjectProperty(identity.owningKey.toBase58String())).apply { minWidth = 400.0 }
                         }
                     }
-                    row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
                     node.getWorldMapLocation()?.apply { row("Location :") { label(this@apply.description) } }
                 }
             }

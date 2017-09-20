@@ -24,7 +24,7 @@ class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacem
         }
 
         // TODO: load and compare against notary whitelist from config. Remove the check below
-        val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.notaryIdentity == newNotary }
+        val isNotary = serviceHub.networkMapCache.isNotary(newNotary)
         if (!isNotary) {
             throw StateReplacementException("The proposed node $newNotary does not run a Notary service")
         }

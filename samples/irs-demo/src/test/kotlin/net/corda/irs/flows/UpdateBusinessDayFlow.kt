@@ -56,9 +56,11 @@ object UpdateBusinessDayFlow {
          * the notary or counterparty still use the old clock, so the time-window on the transaction does not validate.
          */
         private fun getRecipients(): Iterable<Party> {
-            val notaryNodes = serviceHub.networkMapCache.notaryNodes.map { it.legalIdentitiesAndCerts.first().party } // TODO Will break on distributed nodes, but it will change after services removal.
-            val partyNodes = (serviceHub.networkMapCache.partyNodes.map { it.legalIdentitiesAndCerts.first().party } - notaryNodes).sortedBy { it.name.toString() }
-            return notaryNodes + partyNodes
+            val notaryParties = serviceHub.networkMapCache.notaryIdentities.map { it.party }
+            val peerParties = serviceHub.networkMapCache.allNodes.filter {
+                it.legalIdentities.all { !serviceHub.networkMapCache.isNotary(it) }
+            }.map { it.legalIdentities[0] }.sortedBy { it.name.toString() }
+            return notaryParties + peerParties
         }
 
         @Suspendable

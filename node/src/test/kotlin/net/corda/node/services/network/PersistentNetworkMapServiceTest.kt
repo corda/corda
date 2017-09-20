@@ -1,7 +1,7 @@
 package net.corda.node.services.network
 
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.ServiceInfo
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.node.MockNetwork

@@ -125,10 +125,8 @@ object NodeInterestRates {
         //      It will be fixed by adding partial signatures later.
         // DOCSTART 1
         fun sign(ftx: FilteredTransaction): TransactionSignature {
-            if (!ftx.verify()) {
-                throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
-            }
-            // Performing validation of obtained FilteredLeaves.
+            ftx.verify()
+            // Performing validation of obtained filtered components.
             fun commandValidator(elem: Command<*>): Boolean {
                 require(services.myInfo.legalIdentities.first().owningKey in elem.signers && elem.value is Fix) {
                     "Oracle received unknown command (not in signers or not Fix)."
@@ -147,8 +145,7 @@ object NodeInterestRates {
                 }
             }
 
-            val leaves = ftx.filteredLeaves
-            require(leaves.checkWithFun(::check))
+            require(ftx.checkWithFun(::check))
 
             // It all checks out, so we can return a signature.
             //

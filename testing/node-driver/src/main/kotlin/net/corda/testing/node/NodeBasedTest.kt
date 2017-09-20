@@ -5,11 +5,11 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configOf

@@ -139,9 +139,9 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
         fun verifyAndCommitTx(ftx: FilteredTransaction, callerIdentity: Party): BFTSMaRt.ReplicaResponse {
             return try {
                 val id = ftx.id
-                val inputs = ftx.filteredLeaves.inputs
+                val inputs = ftx.inputs
 
-                validateTimeWindow(ftx.filteredLeaves.timeWindow)
+                validateTimeWindow(ftx.timeWindow)
                 commitInputStates(inputs, id, callerIdentity)
                 log.debug { "Inputs committed successfully, signing $id" }
                 BFTSMaRt.ReplicaResponse.Signature(sign(ftx))

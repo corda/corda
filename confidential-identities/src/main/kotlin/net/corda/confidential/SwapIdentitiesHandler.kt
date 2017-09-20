@@ -1,4 +1,4 @@
-package net.corda.confidential;
+package net.corda.confidential
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic

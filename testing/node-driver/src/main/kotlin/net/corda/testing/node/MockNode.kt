@@ -16,14 +16,15 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.node.ServiceEntry
-import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
+import net.corda.finance.utils.WorldMapLocation
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.ServiceType
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
@@ -163,7 +164,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     !mockNet.threadPerNode,
                     id,
                     serverThread,
-                    makeServiceEntries(),
+                    getNotaryIdentity(),
                     myLegalName,
                     database)
                     .start()
@@ -178,7 +179,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .toTypedArray()
             val identityService = PersistentIdentityService(info.legalIdentitiesAndCerts,
                     trustRoot = trustRoot, caCertificates = *caCertificates)
-            services.networkMapCache.partyNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
+            services.networkMapCache.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
             services.networkMapCache.changed.subscribe { mapChange ->
                 // TODO how should we handle network map removal
                 if (mapChange is NetworkMapCache.MapChange.Added) {
@@ -202,20 +203,15 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return InMemoryNetworkMapService(services, platformVersion)
         }
 
-        override fun makeServiceEntries(): List<ServiceEntry> {
-            val defaultEntries = super.makeServiceEntries()
-            return if (overrideServices == null) {
-                defaultEntries
-            } else {
-                defaultEntries.map {
-                    val override = overrideServices[it.info]
-                    if (override != null) {
-                        // TODO: Store the key
-                        ServiceEntry(it.info, getTestPartyAndCertificate(it.identity.name, override.public))
-                    } else {
-                        it
-                    }
-                }
+        override fun getNotaryIdentity(): PartyAndCertificate? {
+            val defaultIdentity = super.getNotaryIdentity()
+            val override = overrideServices?.filter { it.key.type.isNotary() }?.entries?.singleOrNull()
+            return if (override == null || defaultIdentity == null)
+                defaultIdentity
+            else {
+                // Ensure that we always have notary in name and type of it. TODO It is temporary solution until we will have proper handling of NetworkParameters
+                myNotaryIdentity = getTestPartyAndCertificate(defaultIdentity.name, override.value.public)
+                myNotaryIdentity
             }
         }
 
@@ -264,7 +260,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return BFTNonValidatingNotaryService(services, object : BFTSMaRt.Cluster {
                 override fun waitUntilAllReplicasHaveInitialized() {
                     val clusterNodes = mockNet.nodes.filter {
-                        services.notaryIdentityKey in it.started!!.info.serviceIdentities(BFTNonValidatingNotaryService.type).map { it.owningKey }
+                        services.notaryIdentityKey in it.info.legalIdentitiesAndCerts.map { it.owningKey }
                     }
                     if (clusterNodes.size != configuration.notaryClusterAddresses.size) {
                         throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")
@@ -321,10 +317,10 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
     fun <N : MockNode> createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null, nodeFactory: Factory<N>,
-                   legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
-                   entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                   vararg advertisedServices: ServiceInfo,
-                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
+                                  legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
+                                  entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+                                  vararg advertisedServices: ServiceInfo,
+                                  configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
         return uncheckedCast(createNodeImpl(networkMapAddress, forcedID, nodeFactory, true, legalName, overrideServices, entropyRoot, advertisedServices, configOverrides).started)!!
     }
 

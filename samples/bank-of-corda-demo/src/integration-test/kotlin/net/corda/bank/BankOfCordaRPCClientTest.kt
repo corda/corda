@@ -1,7 +1,6 @@
 package net.corda.bank
 
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.getOrThrow
@@ -9,6 +8,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
@@ -33,6 +33,8 @@ class BankOfCordaRPCClientTest {
             // Big Corporation RPC Client
             val bigCorpClient = nodeBigCorporation.rpcClientToNode()
             val bigCorpProxy = bigCorpClient.start("bigCorpCFO", "password2").proxy
+            bocProxy.waitUntilNetworkReady()
+            bigCorpProxy.waitUntilNetworkReady()
 
             // Register for Bank of Corda Vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
@@ -43,11 +45,12 @@ class BankOfCordaRPCClientTest {
 
             // Kick-off actual Issuer Flow
             val anonymous = true
+            val notary = bocProxy.notaryIdentities().first().party
             bocProxy.startFlow(::CashIssueAndPaymentFlow,
                     1000.DOLLARS, BIG_CORP_PARTY_REF,
                     nodeBigCorporation.nodeInfo.chooseIdentity(),
                     anonymous,
-                    nodeBankOfCorda.nodeInfo.notaryIdentity).returnValue.getOrThrow()
+                    notary).returnValue.getOrThrow()
 
             // Check Bank of Corda Vault Updates
             vaultUpdatesBoc.expectEvents {

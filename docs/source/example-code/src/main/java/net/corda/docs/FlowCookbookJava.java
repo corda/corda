@@ -9,7 +9,6 @@ import net.corda.core.flows.*;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.internal.FetchDataFlow;
-import net.corda.core.node.services.ServiceType;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.Vault.Page;
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
@@ -55,11 +54,13 @@ public class FlowCookbookJava {
         private final boolean arg1;
         private final int arg2;
         private final Party counterparty;
+        private final Party regulator;
 
-        public InitiatorFlow(boolean arg1, int arg2, Party counterparty) {
+        public InitiatorFlow(boolean arg1, int arg2, Party counterparty, Party regulator) {
             this.arg1 = arg1;
             this.arg2 = arg2;
             this.counterparty = counterparty;
+            this.regulator = regulator;
         }
 
         /*----------------------------------
@@ -125,11 +126,11 @@ public class FlowCookbookJava {
             // We retrieve a notary from the network map.
             // DOCSTART 1
             Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(new CordaX500Name("Notary Service", "London", "UK"));
-            Party anyNotary = getServiceHub().getNetworkMapCache().getAnyNotary(null);
+            Party anyNotary = getServiceHub().getNetworkMapCache().getAnyNotary();
             // Unlike the first two methods, ``getNotaryNodes`` returns a
             // ``List<NodeInfo>``. We have to extract the notary identity of
             // the node we want.
-            Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryNodes().get(0).getNotaryIdentity();
+            Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0).getParty();
             // DOCEND 1
 
             // We may also need to identify a specific counterpartySession.
@@ -138,12 +139,6 @@ public class FlowCookbookJava {
             Party namedCounterparty = getServiceHub().getIdentityService().partyFromX500Name(new CordaX500Name("NodeA", "London", "UK"));
             Party keyedCounterparty = getServiceHub().getIdentityService().partyFromKey(dummyPubKey);
             // DOCEND 2
-
-            // Finally, we can use the map to identify nodes providing a
-            // specific service (e.g. a regulator or an oracle).
-            // DOCSTART 3
-            Party regulator = getServiceHub().getNetworkMapCache().getPeersWithService(ServiceType.Companion.getRegulator()).get(0).getIdentity().getParty();
-            // DOCEND 3
 
             /*------------------------------
              * SENDING AND RECEIVING DATA *

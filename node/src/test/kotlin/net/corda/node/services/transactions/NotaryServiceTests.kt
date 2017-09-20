@@ -7,17 +7,19 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.node.services.ServiceInfo
+import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -32,6 +34,7 @@ class NotaryServiceTests {
     lateinit var mockNet: MockNetwork
     lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
     lateinit var clientNode: StartedNode<MockNetwork.MockNode>
+    lateinit var notary: Party
 
     @Before
     fun setup() {
@@ -42,6 +45,7 @@ class NotaryServiceTests {
         clientNode = mockNet.createNode(notaryNode.network.myAddress)
         mockNet.runNetwork() // Clear network map registration messages
         notaryNode.internals.ensureRegistered()
+        notary = clientNode.services.getDefaultNotary()
     }
 
     @After
@@ -53,7 +57,7 @@ class NotaryServiceTests {
     fun `should sign a unique transaction with a valid time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
-            val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
+            val tx = TransactionBuilder(notary)
                     .addInputState(inputState)
                     .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
                     .setTimeWindow(Instant.now(), 30.seconds)
@@ -69,7 +73,7 @@ class NotaryServiceTests {
     fun `should sign a unique transaction without a time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
-            val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
+            val tx = TransactionBuilder(notary)
                     .addInputState(inputState)
                     .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
             clientNode.services.signInitialTransaction(tx)
@@ -84,7 +88,7 @@ class NotaryServiceTests {
     fun `should report error for transaction with an invalid time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
-            val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
+            val tx = TransactionBuilder(notary)
                     .addInputState(inputState)
                     .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
                     .setTimeWindow(Instant.now().plusSeconds(3600), 30.seconds)
@@ -101,7 +105,7 @@ class NotaryServiceTests {
     fun `should sign identical transaction multiple times (signing is idempotent)`() {
         val stx = run {
             val inputState = issueState(clientNode)
-            val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
+            val tx = TransactionBuilder(notary)
                     .addInputState(inputState)
                     .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
             clientNode.services.signInitialTransaction(tx)
@@ -121,13 +125,13 @@ class NotaryServiceTests {
     fun `should report conflict when inputs are reused across transactions`() {
         val inputState = issueState(clientNode)
         val stx = run {
-            val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
+            val tx = TransactionBuilder(notary)
                     .addInputState(inputState)
                     .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
             clientNode.services.signInitialTransaction(tx)
         }
         val stx2 = run {
-            val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
+            val tx = TransactionBuilder(notary)
                     .addInputState(inputState)
                     .addInputState(issueState(clientNode))
                     .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
@@ -155,7 +159,7 @@ class NotaryServiceTests {
     }
 
     fun issueState(node: StartedNode<*>): StateAndRef<*> {
-        val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.chooseIdentity().ref(0))
+        val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.chooseIdentity().ref(0))
         val signedByNode = node.services.signInitialTransaction(tx)
         val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
         node.services.recordTransactions(stx)

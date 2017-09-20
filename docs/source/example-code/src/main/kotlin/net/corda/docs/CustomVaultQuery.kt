@@ -17,6 +17,7 @@ import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.testing.getDefaultNotary
 import java.util.*
 
 // DOCSTART CustomVaultQuery
@@ -129,7 +130,7 @@ object TopupIssuerFlow {
                                 issueTo: Party,
                                 issuerPartyRef: OpaqueBytes): AbstractCashFlow.Result {
             // TODO: pass notary in as request parameter
-            val notaryParty = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
+            val notaryParty = serviceHub.networkMapCache.getAnyNotary() ?: throw IllegalArgumentException("Couldn't find any notary in NetworkMapCache")
             // invoke Cash subflow to issue Asset
             progressTracker.currentStep = ISSUING
             val issueCashFlow = CashIssueFlow(amount, issuerPartyRef, notaryParty)

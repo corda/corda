@@ -8,8 +8,8 @@ import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.ScreenCoordinate
 import net.corda.core.utilities.ProgressTracker
+import net.corda.finance.utils.ScreenCoordinate
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
