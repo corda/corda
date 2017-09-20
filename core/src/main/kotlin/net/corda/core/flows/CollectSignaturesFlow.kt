@@ -210,13 +210,13 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
         // Receive the signing key that the party requesting the signature expects us to sign with. Having this provided
         // means we only have to check we own that one key, rather than matching all keys in the transaction against all
         // keys we own.
-        val signingKey = otherSideSession.receive<PublicKey>().unwrap {
+        val signingKeys = otherSideSession.receive<List<PublicKey>>().unwrap { keys ->
             // TODO: We should have a faster way of verifying we own a single key
-            serviceHub.keyManagementService.filterMyKeys(listOf(it)).single()
+            serviceHub.keyManagementService.filterMyKeys(keys)
         }
         progressTracker.currentStep = VERIFYING
         // Check that the Responder actually needs to sign.
-        checkMySignatureRequired(stx, signingKey)
+        checkMySignaturesRequired(stx, signingKeys)
         // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
         checkSignatures(stx)
         stx.tx.toLedgerTransaction(serviceHub).verify()
@@ -231,11 +231,13 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
         }
         // Sign and send back our signature to the Initiator.
         progressTracker.currentStep = SIGNING
-        val mySignature = serviceHub.createSignature(stx, signingKey)
-        otherSideSession.send(mySignature)
+        val mySignatures = signingKeys.map { key ->
+            serviceHub.createSignature(stx, key)
+        }
+        otherSideSession.send(mySignatures)
 
         // Return the additionally signed transaction.
-        return stx + mySignature
+        return stx + mySignatures
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
@@ -273,8 +275,8 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
     @Throws(FlowException::class)
     abstract protected fun checkTransaction(stx: SignedTransaction)
 
-    @Suspendable private fun checkMySignatureRequired(stx: SignedTransaction, signingKey: PublicKey) {
-        require(signingKey in stx.tx.requiredSigningKeys) {
+    @Suspendable private fun checkMySignaturesRequired(stx: SignedTransaction, signingKeys: Iterable<PublicKey>) {
+        require(signingKeys.all { it in stx.tx.requiredSigningKeys }) {
             "Party is not a participant for any of the input states of transaction ${stx.id}"
         }
     }
