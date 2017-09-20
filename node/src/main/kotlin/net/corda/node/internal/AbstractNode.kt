@@ -254,9 +254,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
-        val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
         val service = try {
-            constructor.newInstance(services)
+            if (NotaryService::class.java.isAssignableFrom(serviceClass)) {
+                check(myNotaryIdentity != null) { "Trying to install a notary service but no notary identity specified" }
+                val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
+                constructor.newInstance(services, myNotaryIdentity!!.owningKey)
+            }
+            else {
+                val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
+                constructor.newInstance(services)
+            }
         } catch (e: InvocationTargetException) {
             throw ServiceInstantiationException(e.cause)
         }

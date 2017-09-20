@@ -137,7 +137,7 @@ class NotaryFlow {
         // Check if transaction is intended to be signed by this notary.
         @Suspendable
         protected fun checkNotary(notary: Party?) {
-            if (notary == null || notary !in serviceHub.myInfo.legalIdentities)
+            if (notary !in serviceHub.myInfo.legalIdentities)
                 throw NotaryException(NotaryError.WrongNotary)
         }
 

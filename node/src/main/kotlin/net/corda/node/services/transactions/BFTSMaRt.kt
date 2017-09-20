@@ -254,7 +254,7 @@ object BFTSMaRt {
         }
 
         protected fun sign(filteredTransaction: FilteredTransaction): TransactionSignature {
-            return services.database.transaction { services.createSignature(filteredTransaction, filteredTransaction.filteredLeaves.notary!!.owningKey) }
+            return services.database.transaction { services.createSignature(filteredTransaction, notaryIdentityKey) }
         }
 
         // TODO:
