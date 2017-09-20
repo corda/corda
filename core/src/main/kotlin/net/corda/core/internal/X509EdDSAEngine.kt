@@ -5,9 +5,6 @@ import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.security.*
 import java.security.spec.AlgorithmParameterSpec
 import java.security.spec.X509EncodedKeySpec
-import kotlin.reflect.full.functions
-import kotlin.reflect.full.valueParameters
-import kotlin.reflect.jvm.isAccessible
 
 /**
  * Wrapper around [EdDSAEngine] which can intelligently rewrite X509Keys to a [EdDSAPublicKey]. This is a temporary
@@ -17,15 +14,6 @@ import kotlin.reflect.jvm.isAccessible
  */
 class X509EdDSAEngine : Signature {
     private val engine: EdDSAEngine
-    val getParameter = EdDSAEngine::class.functions.single { it.name == "engineGetParameter" }.apply { isAccessible = true }
-    val getParameters = EdDSAEngine::class.functions.single { it.name == "engineGetParameters" }.apply { isAccessible = true }
-    val setParameter = EdDSAEngine::class.functions.single { it.name == "engineSetParameter" && it.valueParameters.size == 2 }.apply { isAccessible = true }
-    val initSign = EdDSAEngine::class.functions.single { it.name == "engineInitSign" && it.valueParameters.size == 1 }.apply { isAccessible = true }
-    val initSignRandom = EdDSAEngine::class.functions.single { it.name == "engineInitSign" && it.valueParameters.size == 2 }.apply { isAccessible = true }
-    val initVerify = EdDSAEngine::class.functions.single { it.name == "engineInitVerify" }.apply { isAccessible = true }
-    val sign = EdDSAEngine::class.functions.single { it.name == "engineSign" && it.valueParameters.size == 0 }.apply { isAccessible = true }
-    val updateBuffer = EdDSAEngine::class.functions.single { it.name == "engineUpdate" && it.valueParameters.size == 3 }.apply { isAccessible = true }
-    val verify = EdDSAEngine::class.functions.single { it.name == "engineVerify" && it.valueParameters.size == 1 }.apply { isAccessible = true }
 
     constructor() : super(EdDSAEngine.SIGNATURE_ALGORITHM) {
         engine = EdDSAEngine()
@@ -35,8 +23,8 @@ class X509EdDSAEngine : Signature {
         engine = EdDSAEngine(digest)
     }
 
-    override fun engineInitSign(privateKey: PrivateKey) = initSign.call(engine, privateKey) as Unit
-    override fun engineInitSign(privateKey: PrivateKey, random: SecureRandom)  = initSignRandom.call(engine, privateKey, random) as Unit
+    override fun engineInitSign(privateKey: PrivateKey) = engine.initSign(privateKey)
+    override fun engineInitSign(privateKey: PrivateKey, random: SecureRandom) = engine.initSign(privateKey, random)
 
     override fun engineInitVerify(publicKey: PublicKey) {
         val parsedKey = if (publicKey is sun.security.x509.X509Key) {
@@ -45,22 +33,19 @@ class X509EdDSAEngine : Signature {
             publicKey
         }
 
-        initVerify.call(engine, parsedKey)
+        engine.initVerify(parsedKey)
     }
 
-    override fun engineVerify(sigBytes: ByteArray): Boolean = verify.call(engine, sigBytes) as Boolean
-    override fun engineSign(): ByteArray = sign.call(engine) as ByteArray
+    override fun engineSign(): ByteArray = engine.sign()
+    override fun engineVerify(sigBytes: ByteArray): Boolean = engine.verify(sigBytes)
 
-    override fun engineUpdate(b: Byte) {
-        val updateByte = EdDSAEngine::class.functions.single { it.name == "engineUpdate" && it.valueParameters.size == 1 && it.valueParameters.first().type == Byte::javaClass }.apply { isAccessible = true }
+    override fun engineUpdate(b: Byte) = engine.update(b)
+    override fun engineUpdate(b: ByteArray, off: Int, len: Int) = engine.update(b, off, len)
 
-        updateByte.call(engine, b)
-    }
-
-    override fun engineUpdate(b: ByteArray, off: Int, len: Int) = updateBuffer.call(engine, b, off, len) as Unit
-
-    override fun engineGetParameters(): AlgorithmParameters = getParameters.call(engine) as AlgorithmParameters
+    override fun engineGetParameters(): AlgorithmParameters = engine.parameters
     override fun engineSetParameter(params: AlgorithmParameterSpec) = engine.setParameter(params)
-    override fun engineGetParameter(param: String): Any = getParameter.call(engine, param)!!
-    override fun engineSetParameter(param: String, value: Any?) = setParameter.call(engine, param, value) as Unit
+    @Suppress("DEPRECATION")
+    override fun engineGetParameter(param: String): Any = engine.getParameter(param)
+    @Suppress("DEPRECATION")
+    override fun engineSetParameter(param: String, value: Any?) = engine.setParameter(param, value)
 }
