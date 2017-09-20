@@ -102,14 +102,14 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         // If the unsigned counter-parties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
-        val partyToKeyMap = serviceHub.groupPublicKeysByWellKnownParty(unsigned)
+        val partyToKeysMap = serviceHub.groupPublicKeysByWellKnownParty(unsigned)
         // Check that we have a session for all parties.  No more, no less.
-        require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeyMap.keys) {
+        require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeysMap.keys) {
             "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
         }
         // Collect signatures from all counter-parties and append them to the partially signed transaction.
-        val counterpartySignatures = sessionsToCollectFrom.map { session ->
-            subFlow(CollectSignatureFlow(partiallySignedTx, session, partyToKeyMap[session.counterparty]!!.single()))
+        val counterpartySignatures = sessionsToCollectFrom.flatMap { session ->
+            subFlow(CollectSignatureFlow(partiallySignedTx, session, partyToKeysMap[session.counterparty]!!))
         }
         val stx = partiallySignedTx + counterpartySignatures
 
@@ -130,18 +130,23 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
  * @param signingKey the key the party should use to sign the transaction.
  */
 @Suspendable
-class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session: FlowSession, val signingKey: PublicKey) : FlowLogic<TransactionSignature>() {
+class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session: FlowSession, val signingKeys: List<PublicKey>) : FlowLogic<List<TransactionSignature>>() {
+    constructor(partiallySignedTx: SignedTransaction, session: FlowSession, vararg signingKeys: PublicKey) :
+            this(partiallySignedTx, session, listOf(*signingKeys))
     @Suspendable
-    override fun call(): TransactionSignature {
+    override fun call(): List<TransactionSignature> {
         // SendTransactionFlow allows counterparty to access our data to resolve the transaction.
         subFlow(SendTransactionFlow(session, partiallySignedTx))
         // Send the key we expect the counterparty to sign with - this is important where they may have several
         // keys to sign with, as it makes it faster for them to identify the key to sign with, and more straight forward
         // for us to check we have the expected signature returned.
-        session.send(signingKey)
-        return session.receive<TransactionSignature>().unwrap {
-            require(signingKey.isFulfilledBy(it.by)) { "Not signed by the required signing key." }
-            it
+        session.send(signingKeys)
+        return session.receive<List<TransactionSignature>>().unwrap { signatures ->
+            require(signatures.size == signingKeys.size) { "Need signature for each signing key" }
+            signatures.forEachIndexed { index, signature ->
+                require(signingKeys[index].isFulfilledBy(signature.by)) { "Not signed by the required signing key." }
+            }
+            signatures
         }
     }
 }
