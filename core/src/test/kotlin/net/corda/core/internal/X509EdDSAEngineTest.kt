@@ -3,12 +3,10 @@ package net.corda.core.internal
 import net.corda.core.crypto.Crypto
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import org.bouncycastle.asn1.ASN1Enumerated
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.junit.Test
-import sun.security.util.DerValue
+import sun.security.util.BitArray
+import sun.security.util.ObjectIdentifier
+import sun.security.x509.AlgorithmId
 import sun.security.x509.X509Key
 import java.math.BigInteger
 import java.security.InvalidKeyException
@@ -16,12 +14,31 @@ import java.util.*
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+class TestX509Key(algorithmId: AlgorithmId, key: BitArray) : X509Key() {
+   init {
+       this.algid = algorithmId
+       this.setKey(key)
+       this.encode()
+   }
+}
+
 class X509EdDSAEngineTest {
     companion object {
         private const val SEED = 20170920L
         private const val TEST_DATA_SIZE = 2000
+
+        private const val algorithmStart = 4
+        private const val algorithmSize = 5
+        private const val keyStart = 12
+
         private fun toX509Key(publicKey: EdDSAPublicKey): X509Key {
-            return X509Key.parse(DerValue(publicKey.encoded)) as X509Key
+            val internals = publicKey.encoded
+            val keySize = (internals[algorithmStart + algorithmSize + 1].toInt()) - 1
+
+            val key = ByteArray(keySize)
+            System.arraycopy(internals, keyStart, key, 0, keySize)
+
+            return TestX509Key(AlgorithmId(ObjectIdentifier("1.3.101.112")), BitArray(keySize * 8, key))
         }
     }
 
