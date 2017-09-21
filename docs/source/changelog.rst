@@ -249,11 +249,17 @@ Milestone 14
 
 * Changes in ``NodeInfo``:
 
-   * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical
+  * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical
      location of the node server.
-   * Slots for multiple IP addresses and ``legalIdentitiesAndCert``s were introduced. Addresses are no longer of type
-     ``SingleMessageRecipient``, but of ``NetworkHostAndPort``.
+  * Slots for multiple IP addresses and ``legalIdentitiesAndCert``s were introduced. Addresses are no longer of type
+   ``SingleMessageRecipient``, but of ``NetworkHostAndPort`` .
 
+* Cordformation and node identity generation
+  * Cordform may not specify a NetworkMapNode, when that happens during DeployNodes the following happens:
+    1. each node is started and its signed serialized NodeInfo is written to disk in the node folder
+    2. every serialized NodeInfo above is copied in every other node "additional-node-info" folder under the NodeInfo folder
+  * Node read all the nodes stored in "additional-node-info" when the NetworkMapService starts up.
+      
 * ``ServiceHub.storageService`` has been removed. ``attachments`` and ``validatedTransactions`` are now direct members of
   ``ServiceHub``.
 
