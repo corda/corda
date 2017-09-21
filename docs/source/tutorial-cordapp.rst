@@ -453,7 +453,7 @@ We can see a list of the states in our node's vault using ``run vaultAndUpdates`
           participants:
           - "O=PartyB,L=New York,C=US"
           - "O=PartyA,L=London,C=GB"
-        notary: "O=Controller,OU=corda,L=London,C=GB,OU=corda.notary.validating"
+        notary: "O=Controller,L=London,C=GB,CN=corda.notary.validating"
         encumbrance: null
       ref:
         txhash: "52A1B18E6ABD535EF36B2075469B01D2EF888034F721C4BECD26F40355C8C9DC"
@@ -487,14 +487,14 @@ abbreviated the output below):
             participants:
             - "O=PartyB,L=New York,C=US"
             - "O=PartyA,L=London,C=GB"
-          notary: "O=Controller,OU=corda,L=London,C=GB,OU=corda.notary.validating"
+          notary: "O=Controller,L=London,C=GB,CN=corda.notary.validating"
           encumbrance: null
         commands:
         - value: {}
           signers:
           - "8Kqd4oWdx4KQAVc3u5qvHZTGJxMtrShFudAzLUTdZUzbF9aPQcCZD5KXViC"
           - "8Kqd4oWdx4KQAVcBx98LBHwXwC3a7hNptQomrg9mq2ScY7t1Qqsyk5dCNAr"
-        notary: "O=Controller,OU=corda,L=London,C=GB,OU=corda.notary.validating"
+        notary: "O=Controller,L=London,C=GB,CN=corda.notary.validating"
         type: {}
         timeWindow: null
         mustSign:
