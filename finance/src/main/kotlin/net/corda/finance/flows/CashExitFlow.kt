@@ -65,7 +65,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
         // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
         //       count as a reason to fail?
         val participants: Set<Party> = inputStates
-                .mapNotNull { serviceHub.identityService.partyFromAnonymous(it.state.data.owner) }
+                .mapNotNull { serviceHub.identityService.wellKnownPartyFromAnonymous(it.state.data.owner) }
                 .toSet()
         // Sign transaction
         progressTracker.currentStep = SIGNING_TX

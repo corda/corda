@@ -90,7 +90,7 @@ transaction and send it to the recipient node:
 
    fun sender(rpc: CordaRPCOps) {
        // Get the identity key of the other side (the recipient).
-       val otherSide: Party = rpc.partyFromName("Bank B")!!
+       val otherSide: Party = rpc.wellKnownPartyFromName("Bank B")!!
 
        // Make sure we have the file in storage
        // TODO: We should have our own demo file, not share the trader demo file

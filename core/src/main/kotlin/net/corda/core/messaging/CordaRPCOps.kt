@@ -249,12 +249,12 @@ interface CordaRPCOps : RPCOps {
      * @param party identity to determine well known identity for.
      * @return well known identity, if found.
      */
-    fun partyFromAnonymous(party: AbstractParty): Party?
+    fun wellKnownPartyFromAnonymous(party: AbstractParty): Party?
     /** Returns the [Party] corresponding to the given key, if found. */
     fun partyFromKey(key: PublicKey): Party?
 
     /** Returns the [Party] with the X.500 principal as it's [Party.name]. */
-    fun partyFromX500Name(x500Name: CordaX500Name): Party?
+    fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party?
 
     /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
@@ -292,15 +292,9 @@ inline fun <reified T : ContractState> CordaRPCOps.vaultTrackBy(criteria: QueryC
     return vaultTrackBy(criteria, paging, sorting, T::class.java)
 }
 
-/**
- * These allow type safe invocations of flows from Kotlin, e.g.:
- *
- * val rpc: CordaRPCOps = (..)
- * rpc.startFlow(::ResolveTransactionsFlow, setOf<SecureHash>(), aliceIdentity)
- *
- * Note that the passed in constructor function is only used for unification of other type parameters and reification of
- * the Class instance of the flow. This could be changed to use the constructor function directly.
- */
+// Note that the passed in constructor function is only used for unification of other type parameters and reification of
+// the Class instance of the flow. This could be changed to use the constructor function directly.
+
 inline fun <T, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: () -> R
@@ -312,6 +306,12 @@ inline fun <T , A, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         arg0: A
 ): FlowHandle<T> = startFlowDynamic(R::class.java, arg0)
 
+/**
+ * Extension function for type safe invocation of flows from Kotlin, for example:
+ *
+ * val rpc: CordaRPCOps = (..)
+ * rpc.startFlow(::ResolveTransactionsFlow, setOf<SecureHash>(), aliceIdentity)
+ */
 inline fun <T, A, B, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: (A, B) -> R,
@@ -358,7 +358,7 @@ inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startFlow
 ): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
 
 /**
- * Same again, except this time with progress-tracking enabled.
+ * Extension function for type safe invocation of flows from Kotlin, with progress tracking enabled.
  */
 @Suppress("unused")
 inline fun <T, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(

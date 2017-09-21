@@ -43,8 +43,8 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
 
     fun runIssuer(amount: Amount<Currency>, buyerName: CordaX500Name, sellerName: CordaX500Name) {
         val ref = OpaqueBytes.of(1)
-        val buyer = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
-        val seller = rpc.partyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
+        val buyer = rpc.wellKnownPartyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
+        val seller = rpc.wellKnownPartyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
         val notaryIdentity = rpc.notaryIdentities().first()
 
         val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
@@ -73,7 +73,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
     }
 
     fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, buyerName: CordaX500Name) {
-        val otherParty = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
+        val otherParty = rpc.wellKnownPartyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
         // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
         //
         // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an

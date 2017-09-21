@@ -19,7 +19,7 @@ public class CashTestsJava {
     private final PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
     private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), new AnonymousParty(getMEGA_CORP_PUBKEY()));
     private final Cash.State outState = new Cash.State(inState.getAmount(), new AnonymousParty(getMINI_CORP_PUBKEY()));
-    private final String CASH_PROGRAM_ID = CashUtilities.getCASH_PROGRAM_ID();
+    private final String CASH_PROGRAM_ID = CashUtilities.CASH_PROGRAM_ID;
 
     @Test
     public void trivial() {

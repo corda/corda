@@ -116,7 +116,7 @@ object FlowCookbook {
             // We may also need to identify a specific counterparty. We
             // do so using identity service.
             // DOCSTART 2
-            val namedCounterparty: Party = serviceHub.identityService.partyFromX500Name(CordaX500Name(organisation = "NodeA", locality = "London", country = "UK")) ?:
+            val namedCounterparty: Party = serviceHub.identityService.wellKnownPartyFromX500Name(CordaX500Name(organisation = "NodeA", locality = "London", country = "UK")) ?:
                     throw IllegalArgumentException("Couldn't find counterparty for NodeA in identity service")
             val keyedCounterparty: Party = serviceHub.identityService.partyFromKey(dummyPubKey) ?:
                     throw IllegalArgumentException("Couldn't find counterparty with key: $dummyPubKey in identity service")

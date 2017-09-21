@@ -43,7 +43,7 @@ import java.util.*
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 class CommercialPaper : Contract {
     companion object {
-        val CP_PROGRAM_ID = "net.corda.finance.contracts.CommercialPaper"
+        const val CP_PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.CommercialPaper"
     }
     data class State(
             val issuance: PartyAndReference,

@@ -134,8 +134,8 @@ object TwoPartyDealFlow {
             progressTracker.currentStep = VERIFYING
             return handshake.unwrap {
                 // Verify the transaction identities represent the correct parties
-                val wellKnownOtherParty = serviceHub.identityService.partyFromAnonymous(it.primaryIdentity)
-                val wellKnownMe = serviceHub.identityService.partyFromAnonymous(it.secondaryIdentity)
+                val wellKnownOtherParty = serviceHub.identityService.wellKnownPartyFromAnonymous(it.primaryIdentity)
+                val wellKnownMe = serviceHub.identityService.wellKnownPartyFromAnonymous(it.secondaryIdentity)
                 require(wellKnownOtherParty == otherSideSession.counterparty)
                 require(wellKnownMe == ourIdentity)
                 validateHandshake(it)
