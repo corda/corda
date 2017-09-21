@@ -1,1 +1,0 @@
-{"version":3,"file":"index.js","sourceRoot":"","sources":["../../home/arc/proj  ects/corda/samples/simm-valuation-demo/src/main/web/tmp/broccoli_type_script_compiler-input_base_path-q9SObyK6.tmp/0/src/app/view-trade/index.ts"],"names":[],"mappings":";;;;AAAA,iBAAc,wBAAwB,CAAC,EAAA","sourcesContent":["export * from './view-trade.component';\n"]}
