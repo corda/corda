@@ -444,15 +444,15 @@ We can see a list of the states in our node's vault using ``run vaultAndUpdates`
         data:
           iou:
             value: 50
-          sender: "CN=PartyB,O=PartyB,L=New York,C=US"
-          recipient: "CN=PartyA,O=PartyA,L=London,C=GB"
+          sender: "O=PartyB,L=New York,C=US"
+          recipient: "O=PartyA,L=London,C=GB"
           linearId:
             externalId: null
             id: "84628565-2688-45ef-bb06-aae70fcf3be7"
           contract: {}
           participants:
-          - "CN=PartyB,O=PartyB,L=New York,C=US"
-          - "CN=PartyA,O=PartyA,L=London,C=GB"
+          - "O=PartyB,L=New York,C=US"
+          - "O=PartyA,L=London,C=GB"
         notary: "O=Controller,OU=corda,L=London,C=GB,OU=corda.notary.validating"
         encumbrance: null
       ref:
@@ -478,15 +478,15 @@ abbreviated the output below):
         - data:
             iou:
               value: 50
-            sender: "CN=PartyB,O=PartyB,L=New York,C=US"
-            recipient: "CN=PartyA,O=PartyA,L=London,C=GB"
+            sender: "O=PartyB,L=New York,C=US"
+            recipient: "O=PartyA,L=London,C=GB"
             linearId:
               externalId: null
               id: "84628565-2688-45ef-bb06-aae70fcf3be7"
             contract: {}
             participants:
-            - "CN=PartyB,O=PartyB,L=New York,C=US"
-            - "CN=PartyA,O=PartyA,L=London,C=GB"
+            - "O=PartyB,L=New York,C=US"
+            - "O=PartyA,L=London,C=GB"
           notary: "O=Controller,OU=corda,L=London,C=GB,OU=corda.notary.validating"
           encumbrance: null
         commands:
