@@ -7,6 +7,7 @@ import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.BOC
 import net.corda.testing.driver.driver
+import net.corda.testing.notary
 import org.junit.Test
 import kotlin.test.assertTrue
 
@@ -18,7 +19,8 @@ class BankOfCordaHttpAPITest {
             val nodeBankOfCordaFuture = startNode(providedName = BOC.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
             val (nodeBankOfCorda) = listOf(nodeBankOfCordaFuture, bigCorpNodeFuture).map { it.getOrThrow() }
             val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow().listenAddress
-            assertTrue(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", BOC.name)))
+            val notaryName = notary().node.nodeInfo.legalIdentities[1].name
+            assertTrue(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", BOC.name, notaryName)))
         }, isDebug = true)
     }
 }
