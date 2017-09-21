@@ -64,10 +64,10 @@ To run from the command line in Unix:
 
 To run from the command line in Windows:
 
-1. Run ``gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples\irs-demo\build``
-2. Run ``gradlew samples:irs-demo:installDist``
-3. Move to the ``samples\irs-demo\build`` directory
-4. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
+1. Run ``gradlew.bat samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples\irs-demo\build``
+2. Run ``gradlew.bat samples:irs-demo:installDist``
+3. Run ``cd samples\irs-demo\build`` to change current working directory
+4. Run ``nodes\runnodes`` to open up several 6 terminals, 2 for each node. First terminal is a web-server associated with every node and second one is Corda interactive shell for the node.
 
 This demo also has a web app. To use this, run nodes and then navigate to
 http://localhost:10007/web/irsdemo and http://localhost:10010/web/irsdemo to see each node's view of the ledger.
