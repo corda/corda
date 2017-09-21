@@ -14,7 +14,7 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
-val KEYSTORE_TYPE = "JKS"
+const val KEYSTORE_TYPE = "JKS"
 
 /**
  * Helper method to either open an existing keystore for modification, or create a new blank keystore.

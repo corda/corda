@@ -25,7 +25,7 @@ import kotlin.concurrent.withLock
 class CashSelectionH2Impl : CashSelection {
 
     companion object {
-        val JDBC_DRIVER_NAME = "H2 JDBC Driver"
+        const val JDBC_DRIVER_NAME = "H2 JDBC Driver"
         val log = loggerFor<CashSelectionH2Impl>()
     }
 
