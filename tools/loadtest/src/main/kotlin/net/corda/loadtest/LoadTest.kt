@@ -3,7 +3,6 @@ package net.corda.loadtest
 import com.google.common.util.concurrent.RateLimiter
 import net.corda.client.mock.Generator
 import net.corda.core.utilities.toBase58String
-import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.driver.PortAllocation
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -195,7 +194,7 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
 
         val networkMapNode = hostNodeMap[networkMap]!!
         val notaryIdentity = networkMapNode.proxy.notaryIdentities().single()
-        val notaryNode = hostNodeMap.values.single { notaryIdentity in it.info.legalIdentitiesAndCerts }
+        val notaryNode = hostNodeMap.values.single { notaryIdentity in it.info.legalIdentities }
         val nodes = Nodes(
                 notary = notaryNode,
                 networkMap = networkMapNode,

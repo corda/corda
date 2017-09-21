@@ -45,7 +45,7 @@ class BankOfCordaRPCClientTest {
 
             // Kick-off actual Issuer Flow
             val anonymous = true
-            val notary = bocProxy.notaryIdentities().first().party
+            val notary = bocProxy.notaryIdentities().first()
             bocProxy.startFlow(::CashIssueAndPaymentFlow,
                     1000.DOLLARS, BIG_CORP_PARTY_REF,
                     nodeBigCorporation.nodeInfo.chooseIdentity(),

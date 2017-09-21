@@ -8,6 +8,7 @@ import javafx.collections.ObservableList
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache.MapChange
@@ -36,9 +37,9 @@ class NetworkIdentityModel {
                 publicKey?.let { rpcProxy.map { it?.nodeInfoFromParty(AnonymousParty(publicKey)) } }
             })
 
-    val notaries: ObservableList<PartyAndCertificate> = FXCollections.observableList(rpcProxy.value?.notaryIdentities())
-    val notaryNodes: ObservableList<NodeInfo> = FXCollections.observableList(notaries.map { rpcProxy.value?.nodeInfoFromParty(it.party) })
-    val parties: ObservableList<NodeInfo> = networkIdentities.filtered { it.legalIdentitiesAndCerts.all { it !in notaries } }
+    val notaries: ObservableList<Party> = FXCollections.observableList(rpcProxy.value?.notaryIdentities())
+    val notaryNodes: ObservableList<NodeInfo> = FXCollections.observableList(notaries.map { rpcProxy.value?.nodeInfoFromParty(it) })
+    val parties: ObservableList<NodeInfo> = networkIdentities.filtered { it.legalIdentities.all { it !in notaries } }
     val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }
 
     fun partyFromPublicKey(publicKey: PublicKey): ObservableValue<NodeInfo?> = identityCache[publicKey]

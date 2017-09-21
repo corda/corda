@@ -1,12 +1,9 @@
 package net.corda.core.node.services
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
@@ -31,10 +28,14 @@ interface NetworkMapCache {
         data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
     }
 
-    /** A list of notary services available on the network */
+    /**
+     * A list of notary services available on the network.
+     *
+     * Note that the identities are sorted based on legal name, and the ordering might change once new notaries are introduced.
+     */
     // TODO this list will be taken from NetworkParameters distributed by NetworkMap.
-    val notaryIdentities: List<PartyAndCertificate>
-    /** Tracks changes to the network map cache */
+    val notaryIdentities: List<Party>
+    /** Tracks changes to the network map cache. */
     val changed: Observable<MapChange>
     /** Future to track completion of the NetworkMapService registration. */
     val nodeReady: CordaFuture<Void?>
@@ -66,7 +67,7 @@ interface NetworkMapCache {
         it.legalIdentitiesAndCerts.singleOrNull { it.name == name }?.party
     }
 
-    /** Return all [NodeInfo]s the node currently is aware of (including ourselves).  */
+    /** Return all [NodeInfo]s the node currently is aware of (including ourselves). */
     val allNodes: List<NodeInfo>
 
     /**
@@ -81,25 +82,17 @@ interface NetworkMapCache {
     fun getPartyInfo(party: Party): PartyInfo?
 
     /** Gets a notary identity by the given name. */
-    fun getNotary(name: CordaX500Name): Party? = notaryIdentities.firstOrNull { it.name == name }?.party
+    fun getNotary(name: CordaX500Name): Party? = notaryIdentities.firstOrNull { it.name == name }
 
-    /**
-     * Returns a notary identity advertised by any of the nodes on the network (chosen at random)
-     * @param type Limits the result to notaries of the specified type (optional)
-     */
-    fun getAnyNotary(): Party? = notaryIdentities.randomOrNull()?.party
+    /** Checks whether a given party is an advertised notary identity. */
+    fun isNotary(party: Party): Boolean = party in notaryIdentities
 
-    /** Checks whether a given party is an advertised notary identity */
-    fun isNotary(party: Party): Boolean = notaryIdentities.any { party == it.party }
-
-    /** Checks whether a given party is an validating notary identity */
+    /** Checks whether a given party is an validating notary identity. */
     fun isValidatingNotary(party: Party): Boolean {
-        val notary = notaryIdentities.firstOrNull { it.party == party } ?:
-                throw IllegalArgumentException("No notary found with identity $party.")
-        return !notary.name.toString().contains("corda.notary.simple", true) // TODO This implementation will change after introducing of NetworkParameters.
+        require(isNotary(party)) { "No notary found with identity $party." }
+        return !party.name.toString().contains("corda.notary.simple", true) // TODO This implementation will change after introducing of NetworkParameters.
     }
-    /**
-     * Clear all network map data from local node cache.
-     */
+
+    /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()
 }
