@@ -192,11 +192,6 @@ To run from the command line in Windows:
 .. note:: To verify that the Bank of Corda node is alive and running, navigate to the following URL:
           http://localhost:10007/api/bank/date
 
-.. note:: The Bank of Corda node explicitly advertises with a node service type as follows:
-          ``advertisedServices = ["corda.issuer.USD"]``
-          This allows for 3rd party applications to perform actions based on Node Type.
-          For example, the Explorer tool only allows nodes of this type to issue and exit cash.
-
 In the window you run the command you should see (in case of Web, RPC is simmilar):
 
 - Requesting Cash via Web ...

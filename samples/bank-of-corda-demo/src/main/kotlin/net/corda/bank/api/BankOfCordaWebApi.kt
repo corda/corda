@@ -19,8 +19,7 @@ import javax.ws.rs.core.Response
 class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     data class IssueRequestParams(val amount: Long, val currency: String,
                                   val issueToPartyName: CordaX500Name, val issuerBankPartyRef: String,
-                                  val issuerBankName: CordaX500Name,
-                                  val notaryName: CordaX500Name)
+                                  val issuerBankName: CordaX500Name)
 
     private companion object {
         val logger = loggerFor<BankOfCordaWebApi>()
@@ -44,8 +43,8 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
         val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)
                 ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issueToPartyName} in identity service").build()
         rpc.partyFromX500Name(params.issuerBankName) ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issuerBankName} in identity service").build()
-        val notaryParty = rpc.partyFromX500Name(params.notaryName)
-                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.notaryName} in identity service").build()
+        val notaryParty = rpc.notaryIdentities().firstOrNull()
+                ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate any notary in network map").build()
 
         val amount = Amount(params.amount, Currency.getInstance(params.currency))
         val anonymous = true

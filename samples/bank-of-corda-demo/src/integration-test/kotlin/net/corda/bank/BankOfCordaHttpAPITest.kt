@@ -18,7 +18,7 @@ class BankOfCordaHttpAPITest {
             val nodeBankOfCordaFuture = startNode(providedName = BOC.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
             val (nodeBankOfCorda) = listOf(nodeBankOfCordaFuture, bigCorpNodeFuture).map { it.getOrThrow() }
             val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow().listenAddress
-            assertTrue(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", BOC.name, BOC.name)))
+            assertTrue(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", BOC.name)))
         }, isDebug = true)
     }
 }
