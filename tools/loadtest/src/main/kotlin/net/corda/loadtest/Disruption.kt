@@ -1,7 +1,6 @@
 package net.corda.loadtest
 
 import net.corda.client.mock.*
-import net.corda.node.services.network.NetworkMapService
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.Callable
@@ -44,7 +43,7 @@ data class DisruptionSpec(
  */
 val isNotary = { node: NodeConnection ->
     val notaries = node.proxy.notaryIdentities()
-    node.info.legalIdentitiesAndCerts.any { it in notaries }
+    node.info.legalIdentities.any { it in notaries }
 }
 fun <A> ((A) -> Boolean).or(other: (A) -> Boolean): (A) -> Boolean = { this(it) || other(it) }
 

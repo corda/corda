@@ -110,7 +110,7 @@ class NodePerformanceTests {
             a as NodeHandle.InProcess
             val metricRegistry = startReporter(shutdownManager, a.node.services.monitoringService.metrics)
             a.rpcClientToNode().use("A", "A") { connection ->
-                val notary = connection.proxy.notaryIdentities().first().party
+                val notary = connection.proxy.notaryIdentities().first()
                 println("ISSUING")
                 val doneFutures = (1..100).toList().parallelStream().map {
                     connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), notary).returnValue

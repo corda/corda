@@ -18,7 +18,6 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.vault.VaultSchemaV1
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -46,7 +45,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         val ref = OpaqueBytes.of(1)
         val buyer = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
         val seller = rpc.partyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
-        val notaryIdentity = rpc.notaryIdentities().first().party
+        val notaryIdentity = rpc.notaryIdentities().first()
 
         val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
         rpc.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(1), notaryIdentity).returnValue.getOrThrow()

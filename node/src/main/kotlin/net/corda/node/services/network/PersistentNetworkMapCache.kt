@@ -4,7 +4,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.map
@@ -73,11 +72,20 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     //  As a temporary hack, just assume for now that every network has a notary service named "Notary Service" that can be looked up in the map.
     //  This should eliminate the only required usage of services.
     //  It is ensured on node startup when constructing a notary that the name contains "notary".
-    override val notaryIdentities: List<PartyAndCertificate> get() {
-        return partyNodes.flatMap { it.legalIdentitiesAndCerts }.filter {
-            it.name.toString().contains("corda.notary", true)
-        }.distinct().sortedBy { it.name.toString() } // Distinct, because of distributed service nodes.
-    }
+    override val notaryIdentities: List<Party>
+        get() {
+            return partyNodes
+                    .flatMap {
+                        // TODO: validate notary identity certificates before loading into network map cache.
+                        //       Notary certificates have to be signed by the doorman directly
+                        it.legalIdentities
+                    }
+                    .filter {
+                        it.name.toString().contains("corda.notary", true)
+                    }
+                    .distinct() // Distinct, because of distributed service nodes
+                    .sortedBy { it.name.toString() }
+        }
 
     init {
         serviceHub.database.transaction { loadFromDB() }
@@ -127,9 +135,9 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                             data = NetworkMapService.UpdateAcknowledge(req.mapVersion, network.myAddress).serialize().bytes)
                     network.send(ackMessage, req.replyTo)
                     processUpdatePush(req)
-                } catch(e: NodeMapError) {
+                } catch (e: NodeMapError) {
                     logger.warn("Failure during node map update due to bad update: ${e.javaClass.name}")
-                } catch(e: Exception) {
+                } catch (e: Exception) {
                     logger.error("Exception processing update from network map service", e)
                 }
             }
@@ -183,7 +191,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.SubscribeRequest(false, network.myAddress)
         // `network.getAddressOfParty(partyInfo)` is a work-around for MockNetwork and InMemoryMessaging to get rid of SingleMessageRecipient in NodeInfo.
-        val address = getPartyInfo(mapParty)?.let{ network.getAddressOfParty(it) } ?:
+        val address = getPartyInfo(mapParty)?.let { network.getAddressOfParty(it) } ?:
                 throw IllegalArgumentException("Can't deregister for updates, don't know the party: $mapParty")
         val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, address).map {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
@@ -201,11 +209,12 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         }
     }
 
-    override val allNodes: List<NodeInfo> get () = serviceHub.database.transaction {
-        createSession {
-            getAllInfos(it).map { it.toNodeInfo() }
+    override val allNodes: List<NodeInfo>
+        get () = serviceHub.database.transaction {
+            createSession {
+                getAllInfos(it).map { it.toNodeInfo() }
+            }
         }
-    }
 
     private fun processRegistration(reg: NodeRegistration) {
         // TODO: Implement filtering by sequence number, so we only accept changes that are
@@ -333,7 +342,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                 addresses = nodeInfo.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
                 // TODO Another ugly hack with special first identity...
                 legalIdentitiesAndCerts = nodeInfo.legalIdentitiesAndCerts.mapIndexed { idx, elem ->
-                    NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0) },
+                    NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0)
+                },
                 platformVersion = nodeInfo.platformVersion,
                 serial = nodeInfo.serial
         )

@@ -156,7 +156,7 @@ class NewTransaction : Fragment() {
             val issueRef = if (issueRef.value != null) OpaqueBytes.of(issueRef.value) else defaultRef
             when (it) {
                 executeButton -> when (transactionTypeCB.value) {
-                    CashTransaction.Issue -> IssueAndPaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.party, notaries.first().party, anonymous)
+                    CashTransaction.Issue -> IssueAndPaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.party, notaries.first(), anonymous)
                     CashTransaction.Pay -> PaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.party, anonymous = anonymous)
                     CashTransaction.Exit -> ExitRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef)
                     else -> null
