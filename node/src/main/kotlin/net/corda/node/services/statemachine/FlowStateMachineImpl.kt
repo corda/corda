@@ -23,6 +23,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DatabaseTransaction
@@ -260,7 +261,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     // TODO Dummy implementation of access to application specific permission controls and audit logging
     override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
-        val permissionGranted = true // TODO define permission control service on ServiceHubInternal and actually check authorization.
+        // This is a hack to allow cash app access list of permitted issuer currency.
+        // TODO: replace this with cordapp configuration.
+        val config = serviceHub.configuration as? FullNodeConfiguration
+        val permissionGranted = config?.extraAdvertisedServiceIds?.contains(permissionName) ?: true
         val checkPermissionEvent = FlowPermissionAuditEvent(
                 serviceHub.clock.instant(),
                 flowInitiator,
