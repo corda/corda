@@ -34,7 +34,7 @@ import kotlin.test.assertEquals
 
 class ScheduledFlowTests {
     companion object {
-        val PAGE_SIZE = 20
+        const val PAGE_SIZE = 20
         val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
     }
 

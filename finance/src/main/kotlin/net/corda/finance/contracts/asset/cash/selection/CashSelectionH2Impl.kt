@@ -27,15 +27,17 @@ class CashSelectionH2Impl : CashSelection {
     companion object {
         const val JDBC_DRIVER_NAME = "H2 JDBC Driver"
         val log = loggerFor<CashSelectionH2Impl>()
+
+        // coin selection retry loop counter and sleep (msecs)
+        private const val MAX_RETRIES = 5
+        private const val RETRY_SLEEP = 100
     }
 
     override fun isCompatible(metadata: DatabaseMetaData): Boolean {
         return metadata.driverName == JDBC_DRIVER_NAME
     }
 
-    // coin selection retry loop counter, sleep (msecs) and lock for selecting states
-    private val MAX_RETRIES = 5
-    private val RETRY_SLEEP = 100
+    // coin selection lock for selecting states
     private val spendLock: ReentrantLock = ReentrantLock()
 
     /**

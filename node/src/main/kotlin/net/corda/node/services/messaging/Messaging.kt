@@ -32,7 +32,7 @@ interface MessagingService {
          * Session ID to use for services listening for the first message in a session (before a
          * specific session ID has been established).
          */
-        val DEFAULT_SESSION_ID = 0L
+        const val DEFAULT_SESSION_ID = 0L
     }
 
     /**
