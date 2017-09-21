@@ -36,6 +36,7 @@ import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import java.nio.file.Path
+import java.security.PublicKey
 import java.util.*
 
 /**
@@ -176,6 +177,7 @@ object BFTSMaRt {
                            createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx,
                                    BFTNonValidatingNotaryService.PersistedCommittedState, PersistentStateRef>,
                            protected val services: ServiceHubInternal,
+                           protected val notaryIdentityKey: PublicKey,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
             private val log = loggerFor<Replica>()
@@ -248,11 +250,11 @@ object BFTSMaRt {
         }
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
-            return services.database.transaction { services.keyManagementService.sign(bytes, services.notaryIdentityKey) }
+            return services.database.transaction { services.keyManagementService.sign(bytes, notaryIdentityKey) }
         }
 
         protected fun sign(filteredTransaction: FilteredTransaction): TransactionSignature {
-            return services.database.transaction { services.createSignature(filteredTransaction, services.notaryIdentityKey) }
+            return services.database.transaction { services.createSignature(filteredTransaction, notaryIdentityKey) }
         }
 
         // TODO:

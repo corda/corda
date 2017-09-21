@@ -6,6 +6,12 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
+* Remove the web front end from the simm demo
+  The state of the code and the extermely old version of (a beta) angular JS makes it almost impossible to maintain at this point.
+  Whilst the demo code itself is a useful teaching tool, the mess we have here isn't, so remove it with the purpose of putting something
+  better in place
+
 * ``NodeInfo`` and ``NetworkMapCache`` changes:
    * Removed ``NodeInfo::legalIdentity`` in preparation for handling of multiple identities. We left list of ``NodeInfo::legalIdentitiesAndCerts``,
    the first identity still plays a special role of main node identity.
