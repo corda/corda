@@ -1,6 +1,7 @@
 package net.corda.vega.contracts
 
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
@@ -8,7 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.DealState
 
-val IRS_PROGRAM_ID = "net.corda.vega.contracts.OGTrade"
+const val IRS_PROGRAM_ID: ContractClassName = "net.corda.vega.contracts.OGTrade"
 
 /**
  * Represents an OpenGamma IRS between two parties. Does not implement any fixing functionality.

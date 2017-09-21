@@ -18,7 +18,7 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import java.util.*
 
-val IRS_PROGRAM_ID = "net.corda.irs.contract.InterestRateSwap"
+const val IRS_PROGRAM_ID = "net.corda.irs.contract.InterestRateSwap"
 
 // This is a placeholder for some types that we haven't identified exactly what they are just yet for things still in discussion
 @CordaSerializable
