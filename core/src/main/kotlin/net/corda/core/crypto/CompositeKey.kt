@@ -30,7 +30,7 @@ import java.util.*
 @CordaSerializable
 class CompositeKey private constructor(val threshold: Int, children: List<NodeAndWeight>) : PublicKey {
     companion object {
-        val KEY_ALGORITHM = "COMPOSITE"
+        const val KEY_ALGORITHM = "COMPOSITE"
         /**
          * Build a composite key from a DER encoded form.
          */

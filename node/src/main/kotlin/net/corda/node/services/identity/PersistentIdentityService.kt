@@ -9,6 +9,7 @@ import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
@@ -124,7 +125,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             throw e
         }
 
-        log.info("Registering identity $identity")
+        log.debug { "Registering identity $identity" }
         val key = mapToKey(identity)
         keyToParties.addWithDuplicatesAllowed(key, identity)
         // Always keep the first party we registered, as that's the well known identity
@@ -141,14 +142,12 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         } else null
     }
 
-    override fun certificateFromParty(party: Party): PartyAndCertificate = certificateFromCordaX500Name(party.name) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
-
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = keyToParties.allPersisted().map { it.second }.asIterable()
 
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
-    override fun partyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
-    override fun partyFromAnonymous(party: AbstractParty): Party? {
+    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: partyFromKey(party.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
@@ -156,16 +155,16 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         return if (candidate != null) {
             // If we have a well known identity by that name, use it in preference to the candidate. Otherwise default
             // back to the candidate.
-            val res = partyFromX500Name(candidate.name) ?: candidate
+            val res = wellKnownPartyFromX500Name(candidate.name) ?: candidate
             res
         } else {
             null
         }
     }
 
-    override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
-    override fun requirePartyFromAnonymous(party: AbstractParty): Party {
-        return partyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+    override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
+    override fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
+        return wellKnownPartyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {

@@ -42,46 +42,48 @@ interface IdentityService {
     fun getAllIdentities(): Iterable<PartyAndCertificate>
 
     /**
-     * Get the certificate and path for a well known identity's owning key.
+     * Get the certificate and path for a known identity's owning key.
      *
      * @return the party and certificate, or null if unknown.
      */
     fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate?
 
     /**
-     * Get the certificate and path for a well known identity.
-     *
-     * @return the party and certificate.
-     * @throws IllegalArgumentException if the certificate and path are unknown. This should never happen for a well
-     * known identity.
+     * Converts an owning [PublicKey] to the X500Name extended [Party] object if the [Party] has been
+     * previously registered with the [IdentityService] either as a well known network map identity,
+     * or as a part of flows creating and exchanging the identity.
+     * @param key The owning [PublicKey] of the [Party].
+     * @return Returns a [Party] with a matching owningKey if known, else returns null.
      */
-    fun certificateFromParty(party: Party): PartyAndCertificate
-
-    // There is no method for removing identities, as once we are made aware of a Party we want to keep track of them
-    // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,
-    // but for now this is not supported.
-
     fun partyFromKey(key: PublicKey): Party?
 
-    fun partyFromX500Name(name: CordaX500Name): Party?
+    /**
+     * Resolves a party name to the well known identity [Party] instance for this name.
+     * @param name The [CordaX500Name] to search for.
+     * @return If known the canonical [Party] with that name, else null.
+     */
+    fun wellKnownPartyFromX500Name(name: CordaX500Name): Party?
 
     /**
-     * Returns the well known identity from an abstract party. This is intended to resolve the well known identity
-     * from a confidential identity, however it transparently handles returning the well known identity back if
+     * Returns the well known identity from an [AbstractParty]. This is intended to resolve the well known identity,
+     * as visible in the [NetworkMapCache] from a confidential identity.
+     * It transparently handles returning the well known identity back if
      * a well known identity is passed in.
      *
      * @param party identity to determine well known identity for.
      * @return well known identity, if found.
      */
-    fun partyFromAnonymous(party: AbstractParty): Party?
+    fun wellKnownPartyFromAnonymous(party: AbstractParty): Party?
 
     /**
-     * Resolve the well known identity of a party. If the party passed in is already a well known identity
-     * (i.e. a [Party]) this returns it as-is.
+     * Returns the well known identity from a PartyAndReference. This is intended to resolve the well known identity,
+     * as visible in the [NetworkMapCache] from a confidential identity.
+     * It transparently handles returning the well known identity back if
+     * a well known identity is passed in.
      *
      * @return the well known identity, or null if unknown.
      */
-    fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
+    fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
 
     /**
      * Resolve the well known identity of a party. Throws an exception if the party cannot be identified.
@@ -90,7 +92,7 @@ interface IdentityService {
      * @return the well known identity.
      * @throws IllegalArgumentException
      */
-    fun requirePartyFromAnonymous(party: AbstractParty): Party
+    fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party
 
     /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may

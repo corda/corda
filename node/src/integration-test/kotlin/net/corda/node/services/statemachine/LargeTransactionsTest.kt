@@ -37,7 +37,7 @@ class LargeTransactionsTest {
                     .addAttachment(hash4)
             val stx = serviceHub.signInitialTransaction(tx, ourIdentity.owningKey)
             // Send to the other side and wait for it to trigger resolution from us.
-            val bob = serviceHub.identityService.partyFromX500Name(BOB.name)!!
+            val bob = serviceHub.identityService.wellKnownPartyFromX500Name(BOB.name)!!
             val bobSession = initiateFlow(bob)
             subFlow(SendTransactionFlow(bobSession, stx))
             bobSession.receive<Unit>()

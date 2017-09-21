@@ -52,15 +52,15 @@ class IdentitySyncFlowTests {
         val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary))
         val issueTx = issueFlow.resultFuture.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
-        assertNull(bobNode.database.transaction { bobNode.services.identityService.partyFromAnonymous(confidentialIdentity) })
+        assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
 
         // Run the flow to sync up the identities
         aliceNode.services.startFlow(Initiator(bob, issueTx.tx)).resultFuture.getOrThrow()
         val expected = aliceNode.database.transaction {
-            aliceNode.services.identityService.partyFromAnonymous(confidentialIdentity)
+            aliceNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity)
         }
         val actual = bobNode.database.transaction {
-            bobNode.services.identityService.partyFromAnonymous(confidentialIdentity)
+            bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity)
         }
         assertEquals(expected, actual)
     }

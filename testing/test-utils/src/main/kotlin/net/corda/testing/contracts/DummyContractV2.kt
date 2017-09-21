@@ -8,7 +8,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
-val DUMMY_V2_PROGRAM_ID = "net.corda.testing.contracts.DummyContractV2"
+const val DUMMY_V2_PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContractV2"
 
 /**
  * Dummy contract state for testing of the upgrade process.

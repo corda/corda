@@ -54,7 +54,7 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `get identity by name with no registered identities`() {
         val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
-        assertNull(service.partyFromX500Name(ALICE.name))
+        assertNull(service.wellKnownPartyFromX500Name(ALICE.name))
     }
 
     @Test
@@ -74,9 +74,9 @@ class InMemoryIdentityServiceTests {
         val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         val identities = listOf("Org A", "Org B", "Org C")
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
-        assertNull(service.partyFromX500Name(identities.first().name))
+        assertNull(service.wellKnownPartyFromX500Name(identities.first().name))
         identities.forEach { service.verifyAndRegisterIdentity(it) }
-        identities.forEach { assertEquals(it.party, service.partyFromX500Name(it.name)) }
+        identities.forEach { assertEquals(it.party, service.wellKnownPartyFromX500Name(it.name)) }
     }
 
     /**
@@ -171,7 +171,7 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `deanonymising a well known identity`() {
         val expected = ALICE
-        val actual = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT).partyFromAnonymous(expected)
+        val actual = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT).wellKnownPartyFromAnonymous(expected)
         assertEquals(expected, actual)
     }
 }

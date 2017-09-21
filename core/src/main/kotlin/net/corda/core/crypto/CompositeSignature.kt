@@ -12,6 +12,7 @@ import java.security.spec.AlgorithmParameterSpec
 class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
     companion object {
         const val SIGNATURE_ALGORITHM = "COMPOSITESIG"
+        @JvmStatic
         fun getService(provider: Provider) = Provider.Service(provider, "Signature", SIGNATURE_ALGORITHM, CompositeSignature::class.java.name, emptyList(), emptyMap())
     }
 

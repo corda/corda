@@ -62,15 +62,15 @@ interface NetworkMapService {
 
     companion object {
         val DEFAULT_EXPIRATION_PERIOD: Period = Period.ofWeeks(4)
-        val FETCH_TOPIC = "platform.network_map.fetch"
-        val QUERY_TOPIC = "platform.network_map.query"
-        val REGISTER_TOPIC = "platform.network_map.register"
-        val SUBSCRIPTION_TOPIC = "platform.network_map.subscribe"
+        const val FETCH_TOPIC = "platform.network_map.fetch"
+        const val QUERY_TOPIC = "platform.network_map.query"
+        const val REGISTER_TOPIC = "platform.network_map.register"
+        const val SUBSCRIPTION_TOPIC = "platform.network_map.subscribe"
         // Base topic used when pushing out updates to the network map. Consumed, for example, by the map cache.
         // When subscribing to these updates, remember they must be acknowledged
-        val PUSH_TOPIC = "platform.network_map.push"
+        const val PUSH_TOPIC = "platform.network_map.push"
         // Base topic for messages acknowledging pushed updates
-        val PUSH_ACK_TOPIC = "platform.network_map.push_ack"
+        const val PUSH_ACK_TOPIC = "platform.network_map.push_ack"
 
         val type = ServiceType.networkMap
     }

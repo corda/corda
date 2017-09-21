@@ -79,7 +79,7 @@ object IdentitySyncFlow {
         override fun call(): Unit {
             progressTracker.currentStep = RECEIVING_IDENTITIES
             val allIdentities = otherSideSession.receive<List<AbstractParty>>().unwrap { it }
-            val unknownIdentities = allIdentities.filter { serviceHub.identityService.partyFromAnonymous(it) == null }
+            val unknownIdentities = allIdentities.filter { serviceHub.identityService.wellKnownPartyFromAnonymous(it) == null }
             progressTracker.currentStep = RECEIVING_CERTIFICATES
             val missingIdentities = otherSideSession.sendAndReceive<List<PartyAndCertificate>>(unknownIdentities)
 

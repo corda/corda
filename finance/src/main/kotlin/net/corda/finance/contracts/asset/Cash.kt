@@ -36,8 +36,7 @@ import java.util.concurrent.atomic.AtomicReference
 // Cash
 //
 
-// Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
-val CASH_PROGRAM_ID = "net.corda.finance.contracts.asset.Cash"
+const val CASH_PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.asset.Cash"
 
 /**
  * Pluggable interface to allow for different cash selection provider implementations

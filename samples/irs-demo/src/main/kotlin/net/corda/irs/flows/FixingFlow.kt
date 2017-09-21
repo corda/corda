@@ -136,7 +136,7 @@ object FixingFlow {
             val myKey = ourIdentity.owningKey
             if (parties[0].owningKey == myKey) {
                 val fixing = FixingSession(ref, fixableDeal.oracle)
-                val counterparty = serviceHub.identityService.partyFromAnonymous(parties[1]) ?: throw IllegalStateException("Cannot resolve floater party")
+                val counterparty = serviceHub.identityService.wellKnownPartyFromAnonymous(parties[1]) ?: throw IllegalStateException("Cannot resolve floater party")
                 // Start the Floater which will then kick-off the Fixer
                 val session = initiateFlow(counterparty)
                 subFlow(Floater(session, fixing))

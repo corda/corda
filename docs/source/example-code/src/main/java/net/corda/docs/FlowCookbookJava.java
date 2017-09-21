@@ -135,7 +135,7 @@ public class FlowCookbookJava {
             // We may also need to identify a specific counterparty.
             // Again, we do so using the network map.
             // DOCSTART 2
-            Party namedCounterparty = getServiceHub().getIdentityService().partyFromX500Name(new CordaX500Name("NodeA", "London", "UK"));
+            Party namedCounterparty = getServiceHub().getIdentityService().wellKnownPartyFromX500Name(new CordaX500Name("NodeA", "London", "UK"));
             Party keyedCounterparty = getServiceHub().getIdentityService().partyFromKey(dummyPubKey);
             // DOCEND 2
 
@@ -328,7 +328,7 @@ public class FlowCookbookJava {
             // We can also add items using methods for the individual components:
             // DOCSTART 28
             txBuilder.addInputState(ourStateAndRef);
-            txBuilder.addOutputState(ourOutput, DummyContractKt.getDUMMY_PROGRAM_ID());
+            txBuilder.addOutputState(ourOutput, DummyContractKt.DUMMY_PROGRAM_ID);
             txBuilder.addCommand(ourCommand);
             txBuilder.addAttachment(ourAttachment);
             // DOCEND 28
