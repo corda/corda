@@ -162,4 +162,12 @@ class AmountTests {
         assertEquals(originalTotals[Pair(partyA, GBP)], newTotals3[Pair(partyA, GBP)])
         assertEquals(originalTotals[Pair(partyB, GBP)], newTotals3[Pair(partyB, GBP)])
     }
+
+    @Test
+    fun `large amount formatting`() {
+        val largeNotional = SWISS_FRANCS(Int.MAX_VALUE)
+        val formattedValue = largeNotional.toString()
+        assertEquals("2,147,483,647.00 CHF", formattedValue)
+        assertEquals(largeNotional, Amount.parseCurrency(formattedValue))
+    }
 }
