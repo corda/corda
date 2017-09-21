@@ -107,11 +107,10 @@ object FlowCookbook {
             // We retrieve the notary from the network map.
             // DOCSTART 1
             val specificNotary: Party? = serviceHub.networkMapCache.getNotary(CordaX500Name(organisation = "Notary Service", locality = "London", country = "UK"))
-            val anyNotary: Party? = serviceHub.networkMapCache.getAnyNotary()
-            // Unlike the first two methods, ``getNotaryNodes`` returns a
-            // ``List<NodeInfo>``. We have to extract the notary identity of
-            // the node we want.
-            val firstNotary: Party = serviceHub.networkMapCache.notaryIdentities[0].party
+            // Alternatively, we can pick an arbitrary notary from the notary list. However, it is always preferable to
+            // specify which notary to use explicitly, as the notary list might change when new notaries are introduced,
+            // or old ones decommissioned.
+            val firstNotary: Party = serviceHub.networkMapCache.notaryIdentities.first()
             // DOCEND 1
 
             // We may also need to identify a specific counterparty. We

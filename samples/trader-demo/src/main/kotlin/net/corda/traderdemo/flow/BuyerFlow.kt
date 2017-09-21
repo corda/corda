@@ -30,7 +30,7 @@ class BuyerFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         // Receive the offered amount and automatically agree to it (in reality this would be a longer negotiation)
         val amount = otherSideSession.receive<Amount<Currency>>().unwrap { it }
         require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
-        val notary: Party = serviceHub.networkMapCache.notaryIdentities[0].party
+        val notary: Party = serviceHub.networkMapCache.notaryIdentities.first()
         val buyer = TwoPartyTradeFlow.Buyer(
                 otherSideSession,
                 notary,
@@ -59,7 +59,7 @@ class BuyerFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         //       the state.
         val search = TransactionGraphSearch(serviceHub.validatedTransactions, listOf(tradeTX.tx),
                 TransactionGraphSearch.Query(withCommandOfType = CommercialPaper.Commands.Issue::class.java,
-                    followInputsOfType = CommercialPaper.State::class.java))
+                        followInputsOfType = CommercialPaper.State::class.java))
         val cpIssuance = search.call().single()
 
         // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.

@@ -80,7 +80,7 @@ class CordaRPCOpsImplTest {
 
         mockNet.runNetwork()
         networkMap.internals.ensureRegistered()
-        notary = rpc.notaryIdentities().first().party
+        notary = rpc.notaryIdentities().first()
     }
 
     @After

@@ -123,7 +123,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
 
         generate = { (nodeVaults), parallelism ->
             val nodeMap = simpleNodes.associateBy { it.mainIdentity }
-            val notaryIdentity = simpleNodes[0].proxy.notaryIdentities().first().party
+            val notaryIdentity = simpleNodes[0].proxy.notaryIdentities().first()
             Generator.pickN(parallelism, simpleNodes).flatMap { nodes ->
                 Generator.sequence(
                         nodes.map { node ->

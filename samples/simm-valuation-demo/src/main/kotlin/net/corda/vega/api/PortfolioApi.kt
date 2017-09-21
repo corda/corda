@@ -254,7 +254,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         val parties = rpc.networkMapSnapshot()
         val notaries = rpc.notaryIdentities()
         // TODO We are not able to filter by network map node now
-        val counterParties = parties.filterNot { it.legalIdentitiesAndCerts.any { it in notaries }
+        val counterParties = parties.filterNot { it.legalIdentities.any { it in notaries }
                 || ownParty in it.legalIdentities
         }
         return AvailableParties(

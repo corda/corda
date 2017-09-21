@@ -39,7 +39,7 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
     val ourParties = ourKeys.map { serviceHub.identityService.partyFromKey(it) ?: throw IllegalStateException("Unable to resolve party from key") }
     val fungibleCriteria = QueryCriteria.FungibleAssetQueryCriteria(owner = ourParties)
 
-    val notaries = notary ?: serviceHub.networkMapCache.getAnyNotary()
+    val notaries = notary ?: serviceHub.networkMapCache.notaryIdentities.first()
     val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = listOf(notaries as AbstractParty))
 
     val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal(amountRequired.token.product.currencyCode) }

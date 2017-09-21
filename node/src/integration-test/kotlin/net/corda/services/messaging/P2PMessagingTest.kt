@@ -5,6 +5,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.elapsedTime
+import net.corda.core.internal.randomOrNull
 import net.corda.core.internal.times
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -55,7 +56,8 @@ class P2PMessagingTest : NodeBasedTest() {
         networkMapNode.respondWith("Hello")
         val alice = startNode(ALICE.name).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
-            alice.network.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+            val notaryParty = notaryIdentities.randomOrNull()!!
+            alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
         }
         val received = alice.receiveFrom(serviceAddress).getOrThrow(10.seconds)
         assertThat(received).isEqualTo("Hello")
@@ -100,7 +102,8 @@ class P2PMessagingTest : NodeBasedTest() {
         val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
         val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
-            alice.network.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+            val notaryParty = notaryIdentities.randomOrNull()!!
+            alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
         }
 
         val dummyTopic = "dummy.topic"
@@ -131,7 +134,8 @@ class P2PMessagingTest : NodeBasedTest() {
         val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
         val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
-            alice.network.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+            val notaryParty = notaryIdentities.randomOrNull()!!
+            alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
         }
 
         val dummyTopic = "dummy.topic"

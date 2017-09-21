@@ -23,6 +23,7 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.dummyCommand
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -62,10 +63,8 @@ class ScheduledFlowTests {
     class InsertInitialStateFlow(private val destination: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val scheduledState = ScheduledState(serviceHub.clock.instant(),
-                    ourIdentity, destination)
-
-            val notary = serviceHub.networkMapCache.getAnyNotary()
+            val scheduledState = ScheduledState(serviceHub.clock.instant(), ourIdentity, destination)
+            val notary = serviceHub.getDefaultNotary()
             val builder = TransactionBuilder(notary)
                     .addOutputState(scheduledState, DUMMY_PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))

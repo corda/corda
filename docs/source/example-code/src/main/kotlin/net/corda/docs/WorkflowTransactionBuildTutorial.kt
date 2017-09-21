@@ -98,7 +98,7 @@ class SubmitTradeApprovalFlow(private val tradeId: String,
         // Manufacture an initial state
         val tradeProposal = TradeApprovalContract.State(tradeId, ourIdentity, counterparty)
         // identify a notary. This might also be done external to the flow
-        val notary = serviceHub.networkMapCache.getAnyNotary()
+        val notary = serviceHub.networkMapCache.notaryIdentities.first()
         // Create the TransactionBuilder and populate with the new state.
         val tx = TransactionBuilder(notary).withItems(
                 StateAndContract(tradeProposal, TRADE_APPROVAL_PROGRAM_ID),
