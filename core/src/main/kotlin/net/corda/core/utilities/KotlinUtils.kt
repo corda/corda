@@ -13,7 +13,7 @@ import kotlin.reflect.KProperty
 // READ ME FIRST:
 // This is a collection of public utilities useful only for Kotlin code. Think carefully before adding anything here and
 // make sure it's tested and documented. If you're looking to add a public utility that is also relevant to Java then
-// don't put it here but in a seperate file called Utils.kt
+// don't put it here but in a separate file called Utils.kt
 //
 
 /** Like the + operator but throws [ArithmeticException] in case of integer overflow. */
