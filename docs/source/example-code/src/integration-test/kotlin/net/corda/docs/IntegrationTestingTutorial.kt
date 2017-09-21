@@ -56,7 +56,7 @@ class IntegrationTestingTutorial {
 
             // START 4
             val issueRef = OpaqueBytes.of(0)
-            val notaryParty = aliceProxy.notaryIdentities().first().party
+            val notaryParty = aliceProxy.notaryIdentities().first()
             (1..10).map { i ->
                 aliceProxy.startFlow(::CashIssueFlow,
                         i.DOLLARS,

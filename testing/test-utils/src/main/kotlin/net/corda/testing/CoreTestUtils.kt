@@ -163,5 +163,5 @@ inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) 
  */
 fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
-
-fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first().party
+/** Returns the identity of the first notary found on the network */
+fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()

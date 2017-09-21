@@ -6,7 +6,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
-import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -30,7 +29,7 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
         // Receive the offered amount and automatically agree to it (in reality this would be a longer negotiation)
         val amount = receive<Amount<Currency>>(otherParty).unwrap { it }
         require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
-        val notary: Party = serviceHub.networkMapCache.notaryIdentities[0].party
+        val notary: Party = serviceHub.networkMapCache.notaryIdentities.first()
         val buyer = TwoPartyTradeFlow.Buyer(
                 otherParty,
                 notary,
@@ -59,7 +58,7 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
         //       the state.
         val search = TransactionGraphSearch(serviceHub.validatedTransactions, listOf(tradeTX.tx),
                 TransactionGraphSearch.Query(withCommandOfType = CommercialPaper.Commands.Issue::class.java,
-                    followInputsOfType = CommercialPaper.State::class.java))
+                        followInputsOfType = CommercialPaper.State::class.java))
         val cpIssuance = search.call().single()
 
         // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.

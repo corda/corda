@@ -5,7 +5,6 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
@@ -13,7 +12,6 @@ import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.testing.BOB
 import java.util.concurrent.Future
-import kotlin.streams.asSequence
 
 fun main(args: Array<String>) {
     val address = NetworkHostAndPort("localhost", 10003)
@@ -26,7 +24,7 @@ fun main(args: Array<String>) {
 /** Interface for using the notary demo API from a client. */
 private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val notary by lazy {
-        val id = rpc.notaryIdentities().distinct().singleOrNull()?.party
+        val id = rpc.notaryIdentities().singleOrNull()
         checkNotNull(id) { "No unique notary identity, try cleaning the node directories." }
     }
 

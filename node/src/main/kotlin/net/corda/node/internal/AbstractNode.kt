@@ -154,7 +154,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * or has loaded network map data from local database */
     val nodeReadyFuture: CordaFuture<Unit>
         get() = _nodeReadyFuture
-
+    /** A [CordaX500Name] with null common name. */
     protected val myLegalName: CordaX500Name by lazy {
         val cert = loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_CA)
         CordaX500Name.build(cert.subjectX500Principal).copy(commonName = null)
@@ -639,7 +639,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         val (id, name) = if (serviceInfo == null) {
             // Create node identity if service info = null
-            Pair("identity", myLegalName.copy(commonName = null))
+            Pair("identity", myLegalName)
         } else {
             val name = serviceInfo.name ?: myLegalName.copy(commonName = serviceInfo.type.id)
             Pair(serviceInfo.type.id, name)
