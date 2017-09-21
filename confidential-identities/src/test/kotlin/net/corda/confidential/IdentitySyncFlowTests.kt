@@ -1,6 +1,10 @@
-package net.corda.core.flows
+package net.corda.confidential
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -9,11 +13,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.chooseIdentity
-import net.corda.testing.getDefaultNotary
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before

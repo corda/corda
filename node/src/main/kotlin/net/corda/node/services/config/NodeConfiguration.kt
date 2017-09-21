@@ -79,6 +79,7 @@ data class FullNodeConfiguration(
         rpcUsers.forEach {
             require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }
         }
+        require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
     }
 
     fun calculateServices(): Set<ServiceInfo> {
