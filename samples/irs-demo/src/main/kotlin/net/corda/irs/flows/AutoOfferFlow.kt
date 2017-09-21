@@ -20,7 +20,7 @@ import net.corda.finance.flows.TwoPartyDealFlow.Instigator
 object AutoOfferFlow {
     @InitiatingFlow
     @StartableByRPC
-    class Requester(val dealToBeOffered: DealState) : FlowLogic<SignedTransaction>() {
+    class Requester(val dealToBeOffered: DealState) : InitiatingFlowLogic<SignedTransaction>() {
 
         companion object {
             object RECEIVED : ProgressTracker.Step("Received API call")

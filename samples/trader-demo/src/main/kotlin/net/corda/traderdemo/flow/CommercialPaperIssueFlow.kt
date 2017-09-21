@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -26,7 +26,7 @@ class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
                                private val issueRef: OpaqueBytes,
                                private val recipient: Party,
                                private val notary: Party,
-                               override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
+                               override val progressTracker: ProgressTracker) : InitiatingFlowLogic<SignedTransaction>() {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes, recipient: Party, notary: Party) : this(amount, issueRef, recipient, notary, tracker())
 
     companion object {

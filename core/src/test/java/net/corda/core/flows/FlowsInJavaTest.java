@@ -70,7 +70,7 @@ public class FlowsInJavaTest {
     }
 
     @InitiatingFlow
-    private static class SendInUnwrapFlow extends FlowLogic<String> {
+    private static class SendInUnwrapFlow extends InitiatingFlowLogic<String> {
         private final Party otherParty;
 
         private SendInUnwrapFlow(Party otherParty) {
@@ -104,7 +104,7 @@ public class FlowsInJavaTest {
     }
 
     @InitiatingFlow
-    private static class PrimitiveReceiveFlow extends FlowLogic<Void> {
+    private static class PrimitiveReceiveFlow extends InitiatingFlowLogic<Void> {
         private final Party otherParty;
         private final Class<?> receiveType;
 

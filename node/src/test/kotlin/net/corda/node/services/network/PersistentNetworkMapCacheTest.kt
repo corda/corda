@@ -1,10 +1,7 @@
 package net.corda.node.services.network
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
@@ -166,7 +163,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     }
 
     @InitiatingFlow
-    private class SendFlow(val otherParty: Party) : FlowLogic<String>() {
+    private class SendFlow(val otherParty: Party) : InitiatingFlowLogic<String>() {
         @Suspendable
         override fun call(): String {
             println("SEND FLOW to $otherParty")

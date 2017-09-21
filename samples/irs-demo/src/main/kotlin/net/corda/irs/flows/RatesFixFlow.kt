@@ -4,8 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.InitiatingFlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.FilteredTransaction
@@ -95,7 +95,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
 
     // DOCSTART 1
     @InitiatingFlow
-    class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
+    class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : InitiatingFlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
             val oracleSession = initiateFlow(oracle)
@@ -113,7 +113,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
 
     @InitiatingFlow
     class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
-                      val partialMerkleTx: FilteredTransaction) : FlowLogic<TransactionSignature>() {
+                      val partialMerkleTx: FilteredTransaction) : InitiatingFlowLogic<TransactionSignature>() {
         @Suspendable
         override fun call(): TransactionSignature {
             val oracleSession = initiateFlow(oracle)

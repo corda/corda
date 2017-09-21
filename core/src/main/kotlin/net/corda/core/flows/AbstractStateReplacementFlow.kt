@@ -48,7 +48,7 @@ abstract class AbstractStateReplacementFlow {
     abstract class Instigator<out S : ContractState, out T : ContractState, out M>(
             val originalState: StateAndRef<S>,
             val modification: M,
-            override val progressTracker: ProgressTracker = Instigator.tracker()) : FlowLogic<StateAndRef<T>>() {
+            override val progressTracker: ProgressTracker = Instigator.tracker()) : InitiatingFlowLogic<StateAndRef<T>>() {
         companion object {
             object SIGNING : ProgressTracker.Step("Requesting signatures from other parties")
             object NOTARY : ProgressTracker.Step("Requesting notary signature")

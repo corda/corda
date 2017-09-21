@@ -42,7 +42,7 @@ object FlowCookbook {
     @StartableByRPC
     // Every flow must subclass ``FlowLogic``. The generic indicates the
     // flow's return type.
-    class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: Party, val regulator: Party) : FlowLogic<Unit>() {
+    class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: Party, val regulator: Party) : InitiatingFlowLogic<Unit>() {
 
         /**---------------------------------
          * WIRING UP THE PROGRESS TRACKER *

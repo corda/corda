@@ -16,7 +16,7 @@ object IRSTradeFlow {
 
     @InitiatingFlow
     @StartableByRPC
-    class Requester(val swap: SwapData, val otherParty: Party) : FlowLogic<SignedTransaction>() {
+    class Requester(val swap: SwapData, val otherParty: Party) : InitiatingFlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }

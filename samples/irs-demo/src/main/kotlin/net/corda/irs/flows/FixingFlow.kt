@@ -117,7 +117,7 @@ object FixingFlow {
      */
     @InitiatingFlow
     @SchedulableFlow
-    class FixingRoleDecider(val ref: StateRef, override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
+    class FixingRoleDecider(val ref: StateRef, override val progressTracker: ProgressTracker) : InitiatingFlowLogic<Unit>() {
         @Suppress("unused") // Used via reflection.
         constructor(ref: StateRef) : this(ref, tracker())
 

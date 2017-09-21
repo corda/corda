@@ -25,7 +25,7 @@ class LargeTransactionsTest {
     class SendLargeTransactionFlow(private val hash1: SecureHash,
                                    private val hash2: SecureHash,
                                    private val hash3: SecureHash,
-                                   private val hash4: SecureHash) : FlowLogic<Unit>() {
+                                   private val hash4: SecureHash) : InitiatingFlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val tx = TransactionBuilder(notary = DUMMY_NOTARY)

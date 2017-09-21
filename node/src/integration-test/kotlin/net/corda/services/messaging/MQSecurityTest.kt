@@ -4,10 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
@@ -228,7 +225,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     @InitiatingFlow
-    private class SendFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
+    private class SendFlow(val otherParty: Party, val payload: Any) : InitiatingFlowLogic<Unit>() {
         @Suspendable
         override fun call() = initiateFlow(otherParty).send(payload)
     }
