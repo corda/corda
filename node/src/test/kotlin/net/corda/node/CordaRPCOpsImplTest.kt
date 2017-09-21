@@ -9,8 +9,8 @@ import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
 import net.corda.core.messaging.*
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
@@ -28,6 +28,7 @@ import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.PermissionException
 import net.corda.nodeapi.User
@@ -59,6 +60,7 @@ class CordaRPCOpsImplTest {
     lateinit var mockNet: MockNetwork
     lateinit var aliceNode: StartedNode<MockNode>
     lateinit var notaryNode: StartedNode<MockNode>
+    lateinit var notary: Party
     lateinit var rpc: CordaRPCOps
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var transactions: Observable<SignedTransaction>
@@ -78,6 +80,7 @@ class CordaRPCOpsImplTest {
 
         mockNet.runNetwork()
         networkMap.internals.ensureRegistered()
+        notary = rpc.notaryIdentities().first().party
     }
 
     @After
@@ -102,7 +105,7 @@ class CordaRPCOpsImplTest {
 
         // Tell the monitoring service node to issue some cash
         val recipient = aliceNode.info.chooseIdentity()
-        val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, notaryNode.info.notaryIdentity)
+        val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, notary)
         mockNet.runNetwork()
 
         var issueSmId: StateMachineRunId? = null
@@ -146,7 +149,7 @@ class CordaRPCOpsImplTest {
         val result = rpc.startFlow(::CashIssueFlow,
                 100.DOLLARS,
                 OpaqueBytes(ByteArray(1, { 1 })),
-                notaryNode.info.notaryIdentity
+                notary
         )
 
         mockNet.runNetwork()
@@ -196,7 +199,7 @@ class CordaRPCOpsImplTest {
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
                         require(aliceNode.services.keyManagementService.filterMyKeys(signaturePubKeys).toList().isNotEmpty())
-                        require(notaryNode.info.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
+                        require(notary.owningKey.isFulfilledBy(signaturePubKeys))
                     }
             )
         }
@@ -221,7 +224,7 @@ class CordaRPCOpsImplTest {
     fun `cash command by user not permissioned for cash`() {
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = emptySet())))
         assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
-            rpc.startFlow(::CashIssueFlow, Amount(100, USD), OpaqueBytes(ByteArray(1, { 1 })), notaryNode.info.notaryIdentity)
+            rpc.startFlow(::CashIssueFlow, Amount(100, USD), OpaqueBytes(ByteArray(1, { 1 })), notary)
         }
     }
 

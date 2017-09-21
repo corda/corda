@@ -25,6 +25,7 @@ import net.corda.testing.RPCDriverExposedDSLInterface
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.rpcDriver
 import net.corda.testing.rpcTestUser
@@ -54,9 +55,8 @@ class ContractUpgradeFlowTest {
         mockNet.runNetwork()
         a.internals.ensureRegistered()
 
-        notary = nodes.notaryNode.info.notaryIdentity
-
-        val nodeIdentity = nodes.notaryNode.info.legalIdentitiesAndCerts.single { it.party == nodes.notaryNode.info.notaryIdentity }
+        notary = a.services.getDefaultNotary()
+        val nodeIdentity = nodes.notaryNode.info.legalIdentitiesAndCerts.single { it.party == notary }
         a.database.transaction {
             a.services.identityService.verifyAndRegisterIdentity(nodeIdentity)
         }

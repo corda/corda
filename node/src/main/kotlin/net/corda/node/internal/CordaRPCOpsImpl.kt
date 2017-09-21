@@ -115,6 +115,10 @@ class CordaRPCOpsImpl(
         return services.myInfo
     }
 
+    override fun notaryIdentities(): List<PartyAndCertificate> {
+        return services.networkMapCache.notaryIdentities
+    }
+
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
         return database.transaction {
             services.vaultService.addNoteToTransaction(txnId, txnNote)
@@ -143,11 +147,11 @@ class CordaRPCOpsImpl(
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
-        val me = services.myInfo.legalIdentitiesAndCerts.first() // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
         val rpcContext = getRpcContext()
         rpcContext.requirePermission(startFlowPermission(logicType))
         val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
-        return services.invokeFlowAsync(logicType, currentUser, me, *args)
+        // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
+        return services.invokeFlowAsync(logicType, currentUser, *args)
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
@@ -203,7 +207,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? {
+    override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
         return database.transaction {
             services.networkMapCache.getNodeByLegalIdentity(party)
         }

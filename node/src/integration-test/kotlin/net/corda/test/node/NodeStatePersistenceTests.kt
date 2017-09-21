@@ -8,7 +8,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -19,6 +18,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
@@ -140,7 +140,7 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
         progressTracker.currentStep = GENERATING_TRANSACTION
 
-        val messageState = MessageState(message = message, by = serviceHub.myInfo.chooseIdentity())
+        val messageState = MessageState(message = message, by = ourIdentity)
         val txCommand = Command(MessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
         val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), txCommand)
 

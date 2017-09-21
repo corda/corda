@@ -12,9 +12,12 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.abbreviate
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.staticField
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
@@ -37,7 +40,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
                               override val flowInitiator: FlowInitiator,
-                              override val ourIdentity: PartyAndCertificate) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
+                              // Store the Party rather than the full cert path with PartyAndCertificate
+                              val ourIdentity: Party) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
+
     companion object {
         // Used to work around a small limitation in Quasar.
         private val QUASAR_UNBLOCKER = Fiber::class.staticField<Any>("SERIALIZER_BLOCKER").value
@@ -67,6 +72,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient override lateinit var serviceHub: ServiceHubInternal
+    @Transient override lateinit var ourIdentityAndCert: PartyAndCertificate
     @Transient internal lateinit var database: CordaPersistence
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
     @Transient internal lateinit var actionOnEnd: (Try<R>, Boolean) -> Unit

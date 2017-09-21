@@ -1,4 +1,4 @@
-package net.corda.core.node
+package net.corda.finance.utils
 
 import net.corda.core.serialization.CordaSerializable
 import java.util.*

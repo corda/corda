@@ -331,7 +331,7 @@ the initiator then the buyer side would need to register their flow, perhaps wit
                     services.registerServiceFlow(TwoPartyTradeFlow.Seller::class.java) {
                         TwoPartyTradeFlow.Buyer(
                             it,
-                            notary = services.networkMapCache.notaryNodes[0].notaryIdentity,
+                            notary = services.networkMapCache.notaryIdentities[0].party,
                             acceptablePrice = TODO(),
                             typeToBuy = TODO())
                     }

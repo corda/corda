@@ -2,8 +2,10 @@ package net.corda.client.rpc
 
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.messaging.*
-import net.corda.core.node.services.ServiceInfo
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
@@ -17,6 +19,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
@@ -105,7 +108,6 @@ class CordaRPCClientTest : NodeBasedTest() {
         login(rpcUser.username, rpcUser.password)
         connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.chooseIdentity()).use {
             assertFalse(it is FlowProgressHandle<*>)
-            assertTrue(it is FlowHandle<*>)
         }
     }
 

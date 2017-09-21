@@ -6,7 +6,6 @@ import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
@@ -17,12 +16,13 @@ import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.chooseIdentity
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -37,6 +37,7 @@ class ScheduledFlowTests {
         val PAGE_SIZE = 20
         val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
     }
+
     lateinit var mockNet: MockNetwork
     lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
     lateinit var nodeA: StartedNode<MockNetwork.MockNode>
@@ -59,29 +60,28 @@ class ScheduledFlowTests {
         override val participants: List<AbstractParty> = listOf(source, destination)
     }
 
-    class InsertInitialStateFlow(val destination: Party) : FlowLogic<Unit>() {
+    class InsertInitialStateFlow(private val destination: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val scheduledState = ScheduledState(serviceHub.clock.instant(),
-                    serviceHub.myInfo.chooseIdentity(), destination)
+            val scheduledState = ScheduledState(serviceHub.clock.instant(), ourIdentity, destination)
 
             val notary = serviceHub.networkMapCache.getAnyNotary()
             val builder = TransactionBuilder(notary)
                     .addOutputState(scheduledState, DUMMY_PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
-            subFlow(FinalityFlow(tx, setOf(serviceHub.myInfo.chooseIdentity())))
+            subFlow(FinalityFlow(tx, setOf(ourIdentity)))
         }
     }
 
     @SchedulableFlow
-    class ScheduledFlow(val stateRef: StateRef) : FlowLogic<Unit>() {
+    class ScheduledFlow(private val stateRef: StateRef) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val state = serviceHub.toStateAndRef<ScheduledState>(stateRef)
             val scheduledState = state.state.data
             // Only run flow over states originating on this node
-            if (scheduledState.source != serviceHub.myInfo.chooseIdentity()) {
+            if (!serviceHub.myInfo.isLegalIdentity(scheduledState.source)) {
                 return
             }
             require(!scheduledState.processed) { "State should not have been previously processed" }
@@ -90,7 +90,7 @@ class ScheduledFlowTests {
             val builder = TransactionBuilder(notary)
                     .addInputState(state)
                     .addOutputState(newStateOutput, DUMMY_PROGRAM_ID)
-                    .addCommand(dummyCommand(serviceHub.myInfo.chooseIdentity().owningKey))
+                    .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, setOf(scheduledState.source, scheduledState.destination)))
         }
@@ -144,7 +144,7 @@ class ScheduledFlowTests {
     fun `run a whole batch of scheduled flows`() {
         val N = 100
         val futures = mutableListOf<CordaFuture<*>>()
-        for (i in 0..N - 1) {
+        for (i in 0 until N) {
             futures.add(nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.chooseIdentity())).resultFuture)
             futures.add(nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.chooseIdentity())).resultFuture)
         }

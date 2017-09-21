@@ -11,7 +11,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow
 import net.corda.vega.contracts.IRSState
-import net.corda.vega.contracts.OGTrade
 import net.corda.vega.contracts.SwapData
 
 object IRSTradeFlow {
@@ -23,13 +22,13 @@ object IRSTradeFlow {
     class Requester(val swap: SwapData, val otherParty: Party) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
-            val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
+            require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
+            val notary = serviceHub.networkMapCache.notaryIdentities.first().party // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.
             val (buyer, seller) =
                     if (swap.buyer.second == ourIdentity.owningKey) {
-                        Pair(ourIdentity.party, otherParty)
+                        Pair(ourIdentity, otherParty)
                     } else {
-                        Pair(otherParty, ourIdentity.party)
+                        Pair(otherParty, ourIdentity)
                     }
             val offer = IRSState(swap, buyer, seller)
 
@@ -53,7 +52,7 @@ object IRSTradeFlow {
 
             val offer = receive<OfferMessage>(replyToParty).unwrap { it }
             // Automatically agree - in reality we'd vet the offer message
-            require(serviceHub.networkMapCache.notaryNodes.map { it.notaryIdentity }.contains(offer.notary))
+            require(serviceHub.networkMapCache.notaryIdentities.map { it.party }.contains(offer.notary))
             send(replyToParty, true)
             subFlow(TwoPartyDealFlow.Acceptor(replyToParty))
         }
