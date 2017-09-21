@@ -27,17 +27,23 @@ class X509EdDSAEngineTest {
         private const val SEED = 20170920L
         private const val TEST_DATA_SIZE = 2000
 
-        private const val algorithmStart = 4
-        private const val algorithmSize = 5
+        // offset into an EdDSA header indicating where the key header and actual key start
+        // in the underlying byte array
+        private const val keyHeaderStart = 9
         private const val keyStart = 12
 
         private fun toX509Key(publicKey: EdDSAPublicKey): X509Key {
             val internals = publicKey.encoded
-            val keySize = (internals[algorithmStart + algorithmSize + 1].toInt()) - 1
+
+            // key size in the header includes the count unused bits at the end of the key
+            // [keyHeaderStart + 2] but NOT the key header ID [keyHeaderStart] so the
+            // actual length of the key blob is size - 1
+            val keySize = (internals[keyHeaderStart + 1].toInt()) - 1
 
             val key = ByteArray(keySize)
             System.arraycopy(internals, keyStart, key, 0, keySize)
 
+            // 1.3.101.102 is the EdDSA OID
             return TestX509Key(AlgorithmId(ObjectIdentifier("1.3.101.112")), BitArray(keySize * 8, key))
         }
     }
