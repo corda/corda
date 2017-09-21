@@ -85,7 +85,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcUsers = [
                 ['username'   : "bigCorpUser",
                  'password'   : "test",
-                 'permissions': ["StartFlow.net.corda.flows.CashPaymentFlow"]]
+                 'permissions': ["StartFlow.net.corda.finance.flows.CashPaymentFlow",
+                                 "StartFlow.net.corda.finance.flows.CashConfigDataFlow"]]
         ]
     }
 }
