@@ -8,3 +8,4 @@ Other
    secure-coding-guidelines
    corda-repo-layout
    building-the-docs
+   codestyle

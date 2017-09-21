@@ -6,5 +6,4 @@ Release process
 
    release-notes
    changelog
-   codestyle
    testing
