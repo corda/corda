@@ -28,7 +28,7 @@ class NodeInfoSerializerTest : NodeBasedTest() {
 
     companion object {
         val nodeInfoFileRegex = Regex("nodeInfo\\-\\d*")
-        val nodeInfo = NodeInfo(listOf(), listOf(getTestPartyAndCertificate(ALICE)), 0, listOf(), 0)
+        val nodeInfo = NodeInfo(listOf(), listOf(getTestPartyAndCertificate(ALICE)), 0, 0)
     }
 
     @Before
