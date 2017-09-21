@@ -1,6 +1,9 @@
-package net.corda.core.flows
+package net.corda.confidential
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
