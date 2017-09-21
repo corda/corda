@@ -64,6 +64,9 @@ interface ServiceHub : ServicesForResolution {
     val transactionVerifierService: TransactionVerifierService
     val clock: Clock
     val myInfo: NodeInfo
+    /**
+     * Returns local node configuration.
+     */
     val localNodeConfiguration: LocalNodeConfiguration
 
     /**
