@@ -254,9 +254,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
-        val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
         val service = try {
-            constructor.newInstance(services)
+            if (NotaryService::class.java.isAssignableFrom(serviceClass)) {
+                check(myNotaryIdentity != null) { "Trying to install a notary service but no notary identity specified" }
+                val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
+                constructor.newInstance(services, myNotaryIdentity!!.owningKey)
+            }
+            else {
+                val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
+                constructor.newInstance(services)
+            }
         } catch (e: InvocationTargetException) {
             throw ServiceInstantiationException(e.cause)
         }
@@ -572,12 +579,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     open protected fun makeCoreNotaryService(type: ServiceType): NotaryService? {
+        check(myNotaryIdentity != null) { "No notary identity initialized when creating a notary service" }
         return when (type) {
-            SimpleNotaryService.type -> SimpleNotaryService(services)
-            ValidatingNotaryService.type -> ValidatingNotaryService(services)
-            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services)
-            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services)
-            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services)
+            SimpleNotaryService.type -> SimpleNotaryService(services, myNotaryIdentity!!.owningKey)
+            ValidatingNotaryService.type -> ValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
+            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
+            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
+            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService(services, myNotaryIdentity!!.owningKey)
             else -> null
         }
     }
@@ -709,7 +717,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val myInfo: NodeInfo get() = info
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
-        override val notaryIdentityKey: PublicKey get() = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("Node doesn't have notary identity key")
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }

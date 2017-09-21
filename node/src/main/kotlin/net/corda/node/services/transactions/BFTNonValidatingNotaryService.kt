@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -20,6 +21,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import java.security.PublicKey
 import javax.persistence.Entity
 import kotlin.concurrent.thread
 
@@ -28,7 +30,9 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
-class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, cluster: BFTSMaRt.Cluster = distributedCluster) : NotaryService() {
+class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
+                                    override val notaryIdentityKey: PublicKey,
+                                    cluster: BFTSMaRt.Cluster = distributedCluster) : NotaryService() {
     companion object {
         val type = SimpleNotaryService.type.getSubType("bft")
         private val log = loggerFor<BFTNonValidatingNotaryService>()
@@ -51,7 +55,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
             thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
                 configHandle.use {
                     val timeWindowChecker = TimeWindowChecker(services.clock)
-                    val replica = Replica(it, replicaId, { createMap() }, services, timeWindowChecker)
+                    val replica = Replica(it, replicaId, { createMap() }, services, notaryIdentityKey, timeWindowChecker)
                     replicaHolder.set(replica)
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
@@ -100,8 +104,8 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
                     toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                     fromPersistentEntity = {
                         //TODO null check will become obsolete after making DB/JPA columns not nullable
-                        var txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                        var index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                        val txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
+                        val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
                         Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
                             UniquenessProvider.ConsumingTx(
                                     id = SecureHash.parse(it.consumingTxHash),
@@ -126,7 +130,8 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
                           replicaId: Int,
                           createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef>,
                           services: ServiceHubInternal,
-                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, createMap, services, timeWindowChecker) {
+                          notaryIdentityKey: PublicKey,
+                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, createMap, services, notaryIdentityKey, timeWindowChecker) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()
@@ -139,8 +144,9 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal, c
             return try {
                 val id = ftx.id
                 val inputs = ftx.inputs
-
+                val notary = ftx.notary
                 validateTimeWindow(ftx.timeWindow)
+                if (notary !in services.myInfo.legalIdentities) throw NotaryException(NotaryError.WrongNotary)
                 commitInputStates(inputs, id, callerIdentity)
                 log.debug { "Inputs committed successfully, signing $id" }
                 BFTSMaRt.ReplicaResponse.Signature(sign(ftx))
