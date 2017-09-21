@@ -98,43 +98,6 @@ task integrationTest(type: Test, dependsOn: []) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
-task npmInstall(type: Exec) {
-    workingDir 'src/main/web'
-    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
-        commandLine 'cmd', '/c', 'npm', 'install'
-    } else {
-        commandLine 'npm', 'install'
-    }
-
-    outputs.upToDateWhen { file('src/main/web/node_modules').exists() }
-}
-
-task cleanWeb() {
-    doLast {
-        delete 'src/main/resources/simmvaluationweb'
-        delete 'src/main/web/dist'
-    }
-}
-
-task buildWeb(type: Exec, dependsOn: [cleanWeb, npmInstall]) {
-    workingDir 'src/main/web'
-    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
-        commandLine 'cmd', '/c', 'ng', 'build'
-    } else {
-        commandLine 'node_modules/angular-cli/bin/ng', 'build'
-    }
-}
-
-task installWeb(type: Copy, dependsOn: [buildWeb]) {
-    from 'src/main/web/dist'
-    into 'src/main/resources/simmvaluationweb'
-    ['**/*.js', '**/*.js.map', '**/*.ts'].each {
-        filesMatching(it) {
-            filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.LF, fixlast: false)
-        }
-    }
-}
-
 publishing {
     publications {
         simmvaluationdemo(MavenPublication) {

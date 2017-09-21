@@ -133,20 +133,6 @@ interface ServiceHub : ServicesForResolution {
 
     private val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey
 
-    /**
-     * Helper property to shorten code for fetching the the [PublicKey] portion of the
-     * Node's Notary signing identity. It is required that the Node hosts a notary service,
-     * otherwise an [IllegalArgumentException] will be thrown.
-     * Typical use is during signing in flows and for unit test signing.
-     * When this [PublicKey] is passed into the signing methods below, or on the KeyManagementService
-     * the matching [java.security.PrivateKey] will be looked up internally and used to sign.
-     * If the key is actually a [net.corda.core.crypto.CompositeKey], the first leaf key hosted on this node
-     * will be used to create the signature.
-     */
-    // TODO Remove that from ServiceHub, we could take that information from a transaction notary field and figure out what key to use from that.
-    //  But, it's separate PR.
-    val notaryIdentityKey: PublicKey
-
     // Helper method to construct an initial partially signed transaction from a [TransactionBuilder].
     private fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey, signatureMetadata: SignatureMetadata): SignedTransaction {
         return builder.toSignedTransaction(keyManagementService, publicKey, signatureMetadata)
