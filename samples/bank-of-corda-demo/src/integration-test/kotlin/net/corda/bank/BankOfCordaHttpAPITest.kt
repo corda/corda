@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 class BankOfCordaHttpAPITest {
     @Test
     fun `issuer flow via Http`() {
-        driver(dsl = {
+        driver(extraCordappPackagesToScan = listOf("net.corda.finance"), dsl = {
             val bigCorpNodeFuture = startNode(providedName = BIGCORP_LEGAL_NAME)
             val nodeBankOfCordaFuture = startNode(providedName = BOC.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
             val (nodeBankOfCorda) = listOf(nodeBankOfCordaFuture, bigCorpNodeFuture).map { it.getOrThrow() }

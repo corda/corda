@@ -80,8 +80,9 @@ public class FlowsInJavaTest {
         @Suspendable
         @Override
         public String call() throws FlowException {
-            return receive(String.class, otherParty).unwrap(data -> {
-                send(otherParty, "Something");
+            FlowSession session = initiateFlow(otherParty);
+            return session.receive(String.class).unwrap(data -> {
+                session.send("Something");
                 return data;
             });
         }
@@ -89,16 +90,16 @@ public class FlowsInJavaTest {
 
     @InitiatedBy(SendInUnwrapFlow.class)
     private static class SendHelloAndThenReceive extends FlowLogic<String> {
-        private final Party otherParty;
+        private final FlowSession otherSide;
 
-        private SendHelloAndThenReceive(Party otherParty) {
-            this.otherParty = otherParty;
+        private SendHelloAndThenReceive(FlowSession otherParty) {
+            this.otherSide = otherParty;
         }
 
         @Suspendable
         @Override
         public String call() throws FlowException {
-            return sendAndReceive(String.class, otherParty, "Hello").unwrap(data -> data);
+            return otherSide.sendAndReceive(String.class, "Hello").unwrap(data -> data);
         }
     }
 
@@ -115,7 +116,8 @@ public class FlowsInJavaTest {
         @Suspendable
         @Override
         public Void call() throws FlowException {
-            receive(Primitives.unwrap(receiveType), otherParty);
+            FlowSession session = initiateFlow(otherParty);
+            session.receive(Primitives.unwrap(receiveType));
             return null;
         }
     }

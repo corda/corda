@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.queryBy
@@ -16,10 +15,10 @@ import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.nodeapi.ServiceInfo
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
@@ -50,15 +49,15 @@ class ScheduledFlowTests {
                               val processed: Boolean = false,
                               override val linearId: UniqueIdentifier = UniqueIdentifier()) : SchedulableState, LinearState {
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
-            if (!processed) {
+            return if (!processed) {
                 val logicRef = flowLogicRefFactory.create(ScheduledFlow::class.java, thisStateRef)
-                return ScheduledActivity(logicRef, creationTime)
+                ScheduledActivity(logicRef, creationTime)
             } else {
-                return null
+                null
             }
         }
 
-        override val participants: List<AbstractParty> = listOf(source, destination)
+        override val participants: List<Party> get() = listOf(source, destination)
     }
 
     class InsertInitialStateFlow(private val destination: Party) : FlowLogic<Unit>() {
@@ -70,7 +69,7 @@ class ScheduledFlowTests {
                     .addOutputState(scheduledState, DUMMY_PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
-            subFlow(FinalityFlow(tx, setOf(ourIdentity)))
+            subFlow(FinalityFlow(tx))
         }
     }
 
@@ -92,7 +91,7 @@ class ScheduledFlowTests {
                     .addOutputState(newStateOutput, DUMMY_PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
-            subFlow(FinalityFlow(tx, setOf(scheduledState.source, scheduledState.destination)))
+            subFlow(FinalityFlow(tx, setOf(scheduledState.destination)))
         }
     }
 

@@ -16,8 +16,11 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
+import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.seconds
+import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
@@ -39,7 +42,7 @@ object FlowCookbook {
     @StartableByRPC
     // Every flow must subclass ``FlowLogic``. The generic indicates the
     // flow's return type.
-    class InitiatorFlow(val arg1: Boolean, val arg2: Int, val counterparty: Party, val regulator: Party) : FlowLogic<Unit>() {
+    class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: Party, val regulator: Party) : FlowLogic<Unit>() {
 
         /**---------------------------------
          * WIRING UP THE PROGRESS TRACKER *
@@ -135,7 +138,8 @@ object FlowCookbook {
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
             // DOCSTART 4
-            send(counterparty, Any())
+            val counterpartySession = initiateFlow(counterparty)
+            counterpartySession.send(Any())
             // DOCEND 4
 
             // We can wait to receive arbitrary data of a specific type from a
@@ -158,7 +162,7 @@ object FlowCookbook {
             // be what it appears to be! We must unwrap the
             // ``UntrustworthyData`` using a lambda.
             // DOCSTART 5
-            val packet1: UntrustworthyData<Int> = receive<Int>(counterparty)
+            val packet1: UntrustworthyData<Int> = counterpartySession.receive<Int>()
             val int: Int = packet1.unwrap { data ->
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -172,7 +176,7 @@ object FlowCookbook {
             // data sent doesn't need to match the type of the data received
             // back.
             // DOCSTART 7
-            val packet2: UntrustworthyData<Boolean> = sendAndReceive<Boolean>(counterparty, "You can send and receive any class!")
+            val packet2: UntrustworthyData<Boolean> = counterpartySession.sendAndReceive<Boolean>("You can send and receive any class!")
             val boolean: Boolean = packet2.unwrap { data ->
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -185,8 +189,9 @@ object FlowCookbook {
             // counterparty. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
             // DOCSTART 6
-            send(regulator, Any())
-            val packet3: UntrustworthyData<Any> = receive<Any>(regulator)
+            val regulatorSession = initiateFlow(regulator)
+            regulatorSession.send(Any())
+            val packet3: UntrustworthyData<Any> = regulatorSession.receive<Any>()
             // DOCEND 6
 
             /**-----------------------------------
@@ -378,10 +383,10 @@ object FlowCookbook {
             // for data request until the transaction is resolved and verified
             // on the other side:
             // DOCSTART 12
-            subFlow(SendTransactionFlow(counterparty, twiceSignedTx))
+            subFlow(SendTransactionFlow(counterpartySession, twiceSignedTx))
 
             // Optional request verification to further restrict data access.
-            subFlow(object : SendTransactionFlow(counterparty, twiceSignedTx) {
+            subFlow(object : SendTransactionFlow(counterpartySession, twiceSignedTx) {
                 override fun verifyDataRequest(dataRequest: FetchDataFlow.Request.Data) {
                     // Extra request verification.
                 }
@@ -392,16 +397,16 @@ object FlowCookbook {
             // which will automatically download all the dependencies and verify
             // the transaction
             // DOCSTART 13
-            val verifiedTransaction = subFlow(ReceiveTransactionFlow(counterparty))
+            val verifiedTransaction = subFlow(ReceiveTransactionFlow(counterpartySession))
             // DOCEND 13
 
             // We can also send and receive a `StateAndRef` dependency chain
             // and automatically resolve its dependencies.
             // DOCSTART 14
-            subFlow(SendStateAndRefFlow(counterparty, dummyStates))
+            subFlow(SendStateAndRefFlow(counterpartySession, dummyStates))
 
             // On the receive side ...
-            val resolvedStateAndRef = subFlow(ReceiveStateAndRefFlow<DummyState>(counterparty))
+            val resolvedStateAndRef = subFlow(ReceiveStateAndRefFlow<DummyState>(counterpartySession))
             // DOCEND 14
 
             // We can now verify the transaction to ensure that it satisfies
@@ -452,7 +457,7 @@ object FlowCookbook {
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()))
+            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, emptySet(), SIGS_GATHERING.childProgressTracker()))
             // DOCEND 15
 
             /**-----------------------
@@ -488,13 +493,13 @@ object FlowCookbook {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 9
-            val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).single()
+            val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()))
             // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
             val additionalParties: Set<Party> = setOf(regulator)
-            val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).single()
+            val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()))
             // DOCEND 10
         }
     }
@@ -507,7 +512,7 @@ object FlowCookbook {
     // Each node also has several flow pairs registered by default - see
     // ``AbstractNode.installCoreFlows``.
     @InitiatedBy(InitiatorFlow::class)
-    class ResponderFlow(val counterparty: Party) : FlowLogic<Unit>() {
+    class ResponderFlow(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
 
         companion object {
             object RECEIVING_AND_SENDING_DATA : Step("Sending data between parties.")
@@ -541,9 +546,9 @@ object FlowCookbook {
             //    ``Boolean`` instance back
             // Our side of the flow must mirror these calls.
             // DOCSTART 8
-            val any: Any = receive<Any>(counterparty).unwrap { data -> data }
-            val string: String = sendAndReceive<String>(counterparty, 99).unwrap { data -> data }
-            send(counterparty, true)
+            val any: Any = counterpartySession.receive<Any>().unwrap { data -> data }
+            val string: String = counterpartySession.sendAndReceive<String>(99).unwrap { data -> data }
+            counterpartySession.send(true)
             // DOCEND 8
 
             /**----------------------------------------
@@ -555,7 +560,7 @@ object FlowCookbook {
             // ``CollectSignaturesFlow``. It does so my invoking its own
             // ``SignTransactionFlow`` subclass.
             // DOCSTART 16
-            val signTransactionFlow: SignTransactionFlow = object : SignTransactionFlow(counterparty) {
+            val signTransactionFlow: SignTransactionFlow = object : SignTransactionFlow(counterpartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     // Any additional checking we see fit...
                     val outputState = stx.tx.outputsOfType<DummyState>().single()

@@ -2,7 +2,6 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
@@ -14,9 +13,9 @@ import net.corda.core.utilities.unwrap
  * to check the dependencies and download any missing attachments.
  *
  * @param otherSide the target party.
- * @param stx the [SignedTransaction] being sent to the [otherSide].
+ * @param stx the [SignedTransaction] being sent to the [otherSideSession].
  */
-open class SendTransactionFlow(otherSide: Party, stx: SignedTransaction) : DataVendingFlow(otherSide, stx)
+open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction) : DataVendingFlow(otherSide, stx)
 
 /**
  * The [SendStateAndRefFlow] should be used to send a list of input [StateAndRef] to another peer that wishes to verify
@@ -24,14 +23,14 @@ open class SendTransactionFlow(otherSide: Party, stx: SignedTransaction) : DataV
  * at the right point in the conversation to receive the input state and ref and perform the resolution back-and-forth
  * required to check the dependencies.
  *
- * @param otherSide the target party.
- * @param stateAndRefs the list of [StateAndRef] being sent to the [otherSide].
+ * @param otherSideSession the target session.
+ * @param stateAndRefs the list of [StateAndRef] being sent to the [otherSideSession].
  */
-open class SendStateAndRefFlow(otherSide: Party, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow(otherSide, stateAndRefs)
+open class SendStateAndRefFlow(otherSideSession: FlowSession, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow(otherSideSession, stateAndRefs)
 
-sealed class DataVendingFlow(val otherSide: Party, val payload: Any) : FlowLogic<Void?>() {
+sealed class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) : FlowLogic<Void?>() {
     @Suspendable
-    protected open fun sendPayloadAndReceiveDataRequest(otherSide: Party, payload: Any) = sendAndReceive<FetchDataFlow.Request>(otherSide, payload)
+    protected open fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any) = otherSideSession.sendAndReceive<FetchDataFlow.Request>(payload)
 
     @Suspendable
     protected open fun verifyDataRequest(dataRequest: FetchDataFlow.Request.Data) {
@@ -42,11 +41,11 @@ sealed class DataVendingFlow(val otherSide: Party, val payload: Any) : FlowLogic
     override fun call(): Void? {
         // The first payload will be the transaction data, subsequent payload will be the transaction/attachment data.
         var payload = payload
-        // This loop will receive [FetchDataFlow.Request] continuously until the `otherSide` has all the data they need
-        // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `otherSide` to indicate end of
+        // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need
+        // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `otherSideSession` to indicate end of
         // data request.
         while (true) {
-            val dataRequest = sendPayloadAndReceiveDataRequest(otherSide, payload).unwrap { request ->
+            val dataRequest = sendPayloadAndReceiveDataRequest(otherSideSession, payload).unwrap { request ->
                 when (request) {
                     is FetchDataFlow.Request.Data -> {
                         // Security TODO: Check for abnormally large or malformed data requests

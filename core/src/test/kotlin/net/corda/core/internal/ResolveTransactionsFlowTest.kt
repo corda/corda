@@ -2,10 +2,7 @@ package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.TestDataVendingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -195,20 +192,22 @@ class ResolveTransactionsFlowTest {
     // DOCEND 2
 
     @InitiatingFlow
-    private class TestFlow(private val resolveTransactionsFlow: ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<List<SignedTransaction>>() {
-        constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(ResolveTransactionsFlow(txHashes, otherSide), txCountLimit = txCountLimit)
-        constructor(stx: SignedTransaction, otherSide: Party) : this(ResolveTransactionsFlow(stx, otherSide))
+    private class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<List<SignedTransaction>>() {
+        constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(otherSide, { ResolveTransactionsFlow(txHashes, it) }, txCountLimit = txCountLimit)
+        constructor(stx: SignedTransaction, otherSide: Party) : this(otherSide, { ResolveTransactionsFlow(stx, it) })
 
         @Suspendable
         override fun call(): List<SignedTransaction> {
+            val session = initiateFlow(otherSide)
+            val resolveTransactionsFlow = resolveTransactionsFlowFactory(session)
             txCountLimit?.let { resolveTransactionsFlow.transactionCountLimit = it }
             return subFlow(resolveTransactionsFlow)
         }
     }
 
     @InitiatedBy(TestFlow::class)
-    private class TestResponseFlow(val otherSide: Party) : FlowLogic<Void?>() {
+    private class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(TestDataVendingFlow(otherSide))
+        override fun call() = subFlow(TestDataVendingFlow(otherSideSession))
     }
 }

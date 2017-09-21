@@ -225,6 +225,7 @@ fun <A> rpcDriver(
         initialiseSerialization: Boolean = true,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
         startNodesInProcess: Boolean = false,
+        extraCordappPackagesToScan: List<String> = emptyList(),
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -236,7 +237,8 @@ fun <A> rpcDriver(
                         useTestClock = useTestClock,
                         networkMapStartStrategy = networkMapStartStrategy,
                         isDebug = isDebug,
-                        startNodesInProcess = startNodesInProcess
+                        startNodesInProcess = startNodesInProcess,
+                        extraCordappPackagesToScan = extraCordappPackagesToScan
                 )
         ),
         coerce = { it },

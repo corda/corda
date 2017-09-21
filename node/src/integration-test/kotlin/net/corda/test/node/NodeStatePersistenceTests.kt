@@ -18,8 +18,8 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions
-import net.corda.nodeapi.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.nodeapi.ServiceInfo
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
@@ -151,6 +151,6 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         progressTracker.currentStep = FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker())).single()
+        return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker()))
     }
 }

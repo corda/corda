@@ -17,16 +17,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.flows.AbstractCashFlow
-import net.corda.finance.flows.CashExitFlow
+import net.corda.finance.flows.*
 import net.corda.finance.flows.CashExitFlow.ExitRequest
-import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.ServiceInfo
 import net.corda.nodeapi.ServiceType
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
@@ -39,12 +36,14 @@ import java.util.*
 
 class ExplorerSimulation(val options: OptionSet) {
     private val user = User("user1", "test", permissions = setOf(
-            startFlowPermission<CashPaymentFlow>()
+            startFlowPermission<CashPaymentFlow>(),
+            startFlowPermission<CashConfigDataFlow>()
     ))
     private val manager = User("manager", "test", permissions = setOf(
             startFlowPermission<CashIssueAndPaymentFlow>(),
             startFlowPermission<CashPaymentFlow>(),
-            startFlowPermission<CashExitFlow>())
+            startFlowPermission<CashExitFlow>(),
+            startFlowPermission<CashConfigDataFlow>())
     )
 
     private lateinit var notaryNode: NodeHandle
@@ -122,7 +121,7 @@ class ExplorerSimulation(val options: OptionSet) {
         val issuerRPCGBP = issuerGBPConnection.proxy
 
         val issuerClientUSD = issuerNodeUSD.rpcClientToNode()
-        val issuerUSDConnection =issuerClientUSD.start(manager.username, manager.password)
+        val issuerUSDConnection = issuerClientUSD.start(manager.username, manager.password)
         val issuerRPCUSD = issuerUSDConnection.proxy
 
         RPCConnections.addAll(listOf(aliceConnection, bobConnection, issuerGBPConnection, issuerUSDConnection))

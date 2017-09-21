@@ -3,17 +3,16 @@ package net.corda.services.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.utilities.toBase58String
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
+import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
@@ -25,6 +24,8 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity
 import net.corda.testing.configureTestSSL
 import net.corda.testing.messaging.SimpleMQClient
@@ -229,12 +230,12 @@ abstract class MQSecurityTest : NodeBasedTest() {
     @InitiatingFlow
     private class SendFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() = send(otherParty, payload)
+        override fun call() = initiateFlow(otherParty).send(payload)
     }
 
     @InitiatedBy(SendFlow::class)
-    private class ReceiveFlow(val otherParty: Party) : FlowLogic<Any>() {
+    private class ReceiveFlow(val otherPartySession: FlowSession) : FlowLogic<Any>() {
         @Suspendable
-        override fun call() = receive<Any>(otherParty).unwrap { it }
+        override fun call() = otherPartySession.receive<Any>().unwrap { it }
     }
 }

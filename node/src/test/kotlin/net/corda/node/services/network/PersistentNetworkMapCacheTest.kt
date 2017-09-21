@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.CordaX500Name
@@ -170,17 +171,18 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         override fun call(): String {
             println("SEND FLOW to $otherParty")
             println("Party key ${otherParty.owningKey.toBase58String()}")
-            return sendAndReceive<String>(otherParty, "Hi!").unwrap { it }
+            val session = initiateFlow(otherParty)
+            return session.sendAndReceive<String>("Hi!").unwrap { it }
         }
     }
 
     @InitiatedBy(SendFlow::class)
-    private class SendBackFlow(val otherParty: Party) : FlowLogic<Unit>() {
+    private class SendBackFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            println("SEND BACK FLOW to $otherParty")
-            println("Party key ${otherParty.owningKey.toBase58String()}")
-            send(otherParty, "Hello!")
+            println("SEND BACK FLOW to ${otherSideSession.counterparty}")
+            println("Party key ${otherSideSession.counterparty.owningKey.toBase58String()}")
+            otherSideSession.send("Hello!")
         }
     }
 }

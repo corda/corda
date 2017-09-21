@@ -4,10 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -562,9 +559,10 @@ class TwoPartyTradeFlowTests {
             } else {
                 ourIdentityAndCert
             }
-            send(buyer, TestTx(notary, price, anonymous))
+            val buyerSession = initiateFlow(buyer)
+            buyerSession.send(TestTx(notary, price, anonymous))
             return subFlow(Seller(
-                    buyer,
+                    buyerSession,
                     assetToSell,
                     price,
                     myPartyAndCert))
@@ -572,14 +570,14 @@ class TwoPartyTradeFlowTests {
     }
 
     @InitiatedBy(SellerInitiator::class)
-    class BuyerAcceptor(private val seller: Party) : FlowLogic<SignedTransaction>() {
+    class BuyerAcceptor(private val sellerSession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            val (notary, price, anonymous) = receive<TestTx>(seller).unwrap {
+            val (notary, price, anonymous) = sellerSession.receive<TestTx>().unwrap {
                 require(serviceHub.networkMapCache.isNotary(it.notaryIdentity)) { "${it.notaryIdentity} is not a notary" }
                 it
             }
-            return subFlow(Buyer(seller, notary, price, CommercialPaper.State::class.java, anonymous))
+            return subFlow(Buyer(sellerSession, notary, price, CommercialPaper.State::class.java, anonymous))
         }
     }
 

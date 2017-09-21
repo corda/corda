@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -97,8 +98,9 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
+            val oracleSession = initiateFlow(oracle)
             // TODO: add deadline to receive
-            val resp = sendAndReceive<ArrayList<Fix>>(oracle, QueryRequest(listOf(fixOf)))
+            val resp = oracleSession.sendAndReceive<ArrayList<Fix>>(QueryRequest(listOf(fixOf)))
 
             return resp.unwrap {
                 val fix = it.first()
@@ -114,9 +116,10 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
                       val partialMerkleTx: FilteredTransaction) : FlowLogic<TransactionSignature>() {
         @Suspendable
         override fun call(): TransactionSignature {
-            val resp = sendAndReceive<TransactionSignature>(oracle, SignRequest(partialMerkleTx))
+            val oracleSession = initiateFlow(oracle)
+            val resp = oracleSession.sendAndReceive<TransactionSignature>(SignRequest(partialMerkleTx))
             return resp.unwrap { sig ->
-                check(oracle.owningKey.isFulfilledBy(listOf(sig.by)))
+                check(oracleSession.counterparty.owningKey.isFulfilledBy(listOf(sig.by)))
                 tx.toWireTransaction().checkSignature(sig)
                 sig
             }

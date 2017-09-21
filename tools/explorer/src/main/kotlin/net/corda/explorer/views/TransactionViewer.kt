@@ -26,7 +26,6 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
@@ -37,6 +36,7 @@ import net.corda.explorer.identicon.identiconToolTip
 import net.corda.explorer.model.CordaView
 import net.corda.explorer.model.CordaWidget
 import net.corda.explorer.model.ReportingCurrencyModel
+import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.sign
 import net.corda.explorer.ui.setCustomCellFactory
 import net.corda.finance.contracts.asset.Cash
@@ -52,7 +52,7 @@ class TransactionViewer : CordaView("Transactions") {
     // Inject data
     private val transactions by observableListReadOnly(TransactionDataModel::partiallyResolvedTransactions)
     private val reportingExchange by observableValue(ReportingCurrencyModel::reportingExchange)
-    private val reportingCurrency by observableValue(ReportingCurrencyModel::reportingCurrency)
+    private val reportingCurrency by observableValue(SettingsModel::reportingCurrencyProperty)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
 
     override val widgets = listOf(CordaWidget(title, TransactionWidget(), icon)).observable()
@@ -260,7 +260,7 @@ class TransactionViewer : CordaView("Transactions") {
                     vgap = 10.0
                     hgap = 10.0
                     row {
-                        label("${contractState.contract().javaClass.simpleName} (${contractState.ref.toString().substring(0, 16)}...)[${contractState.ref.index}]") {
+                        label("${contractState.contract()} (${contractState.ref.toString().substring(0, 16)}...)[${contractState.ref.index}]") {
                             graphic = identicon(contractState.ref.txhash, 30.0)
                             tooltip = identiconToolTip(contractState.ref.txhash)
                             gridpaneConstraints { columnSpan = 2 }
@@ -298,8 +298,7 @@ class TransactionViewer : CordaView("Transactions") {
         }
     }
 
-    private fun StateAndRef<ContractState>.contract() = this.state.contract
-
+    private fun StateAndRef<ContractState>.contract() = this.state.contract.split(".").last()
 }
 
 /**

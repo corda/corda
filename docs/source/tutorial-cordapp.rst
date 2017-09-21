@@ -307,7 +307,6 @@ IOUs, agree new IOUs, and see who is on the network.
 
 The nodes are running locally on the following ports:
 
-* Controller: ``localhost:10004``
 * NodeA:      ``localhost:10007``
 * NodeB:      ``localhost:10010``
 * NodeC:      ``localhost:10013``

@@ -1,14 +1,13 @@
 package net.corda.core.flows
 
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.GBP
+import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
-import net.corda.testing.ALICE
+import net.corda.finance.issuedBy
 import net.corda.node.internal.StartedNode
+import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
 import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
@@ -44,14 +43,13 @@ class FinalityFlowTests {
 
     @Test
     fun `finalise a simple transaction`() {
-        val amount = Amount(1000, Issued(nodeA.info.chooseIdentity().ref(0), GBP))
+        val amount = 1000.POUNDS.issuedBy(nodeA.info.chooseIdentity().ref(0))
         val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, nodeB.info.chooseIdentity(), notary)
         val stx = nodeA.services.signInitialTransaction(builder)
         val flow = nodeA.services.startFlow(FinalityFlow(stx))
         mockNet.runNetwork()
-        val result = flow.resultFuture.getOrThrow()
-        val notarisedTx = result.single()
+        val notarisedTx = flow.resultFuture.getOrThrow()
         notarisedTx.verifyRequiredSignatures()
         val transactionSeenByB = nodeB.services.database.transaction {
             nodeB.services.validatedTransactions.getTransaction(notarisedTx.id)
@@ -61,7 +59,7 @@ class FinalityFlowTests {
 
     @Test
     fun `reject a transaction with unknown parties`() {
-        val amount = Amount(1000, Issued(nodeA.info.chooseIdentity().ref(0), GBP))
+        val amount = 1000.POUNDS.issuedBy(nodeA.info.chooseIdentity().ref(0))
         val fakeIdentity = ALICE // Alice isn't part of this network, so node A won't recognise them
         val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, fakeIdentity, notary)
