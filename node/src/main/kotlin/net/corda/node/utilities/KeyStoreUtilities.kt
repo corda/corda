@@ -1,3 +1,5 @@
+@file:JvmName("KeyStoreUtilities")
+
 package net.corda.node.utilities
 
 import net.corda.core.crypto.Crypto
