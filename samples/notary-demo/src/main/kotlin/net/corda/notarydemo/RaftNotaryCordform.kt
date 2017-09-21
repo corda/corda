@@ -15,13 +15,14 @@ import net.corda.testing.internal.demorun.*
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
 
-internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { CordaX500Name(commonName ="Notary Service $it", organisationUnit = "corda", organisation = "R3 Ltd", locality = "Zurich", state = null, country = "CH") }
+internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { CordaX500Name("Notary Service $it", "Zurich", "CH") }
 
 private val notaryNames = createNotaryNames(3)
 
 object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0].toString()) {
-    private val clusterName = CordaX500Name(organisation = "Raft", locality = "Zurich", country = "CH")
-    private val advertisedService = ServiceInfo(RaftValidatingNotaryService.type, clusterName)
+    private val serviceType = RaftValidatingNotaryService.type
+    private val clusterName = CordaX500Name(serviceType.id, "Raft", "Zurich", "CH")
+    private val advertisedService = ServiceInfo(serviceType, clusterName)
 
     init {
         node {
@@ -61,6 +62,6 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map(CordaX500Name::toString).map(context::baseDirectory), advertisedService.type.id, clusterName)
+        ServiceIdentityGenerator.generateToDisk(notaryNames.map(CordaX500Name::toString).map(context::baseDirectory), clusterName)
     }
 }

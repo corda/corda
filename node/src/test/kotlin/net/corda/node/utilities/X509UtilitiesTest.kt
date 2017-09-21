@@ -11,6 +11,7 @@ import net.corda.core.internal.x500Name
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.node.internal.certificates.CertificateSourceImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.config.createKeystoreForCordaNode
 import net.corda.nodeapi.internal.serialization.AllWhitelist
@@ -48,7 +49,6 @@ import java.util.stream.Stream
 import javax.net.ssl.*
 import kotlin.concurrent.thread
 import kotlin.test.*
-
 
 class X509UtilitiesTest {
     @Rule
@@ -201,9 +201,8 @@ class X509UtilitiesTest {
                 "trustpass")
 
         // Load signing intermediate CA cert
-        val caKeyStore = loadKeyStore(tmpCAKeyStore, "cakeystorepass")
-        val caCertAndKey = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cakeypass")
-
+        val caKeyStore = CertificateSourceImpl(loadKeyStore(tmpCAKeyStore, "cakeystorepass"))
+        val caCertAndKey = caKeyStore.getCordaIntermediateCertificateAndKeyPair("cakeypass")
         // Generate server cert and private key and populate another keystore suitable for SSL
         createKeystoreForCordaNode(tmpSSLKeyStore, tmpServerKeyStore, "serverstorepass", "serverkeypass", caKeyStore, "cakeypass", MEGA_CORP.name)
 
@@ -239,12 +238,11 @@ class X509UtilitiesTest {
         val tmpServerKeyStore = tempFile("serverkeystore.jks")
 
         // Generate Root and Intermediate CA cert and put both into key store and root ca cert into trust store
-        val caKeyStore = createCAKeyStoreAndTrustStore(tmpCAKeyStore,
+        val caKeyStore = CertificateSourceImpl(createCAKeyStoreAndTrustStore(tmpCAKeyStore,
                 "cakeystorepass",
                 "cakeypass",
                 tmpTrustStore,
-                "trustpass")
-
+                "trustpass"))
         // Generate server cert and private key and populate another keystore suitable for SSL
         createKeystoreForCordaNode(tmpSSLKeyStore, tmpServerKeyStore, "serverstorepass", "serverstorepass", caKeyStore, "cakeypass", MEGA_CORP.name)
         val keyStore = loadKeyStore(tmpSSLKeyStore, "serverstorepass")

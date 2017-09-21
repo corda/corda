@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(commonName = RaftValidatingNotaryService.type.id, organisation = "DistributedService", locality = "London", country = "GB")
+        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.type.id, "DistributedService", "London", "GB")
         val SERVICE_2_NAME = CordaX500Name(organisation = "Service 2", locality = "London", country = "GB")
     }
 
@@ -68,7 +68,6 @@ class P2PMessagingTest : NodeBasedTest() {
     fun `communicating with a distributed service which the network map node is part of`() {
         ServiceIdentityGenerator.generateToDisk(
                 listOf(DUMMY_MAP.name, SERVICE_2_NAME).map { baseDirectory(it) },
-                RaftValidatingNotaryService.type.id,
                 DISTRIBUTED_SERVICE_NAME)
 
         val distributedService = ServiceInfo(RaftValidatingNotaryService.type, DISTRIBUTED_SERVICE_NAME)
@@ -240,7 +239,7 @@ class P2PMessagingTest : NodeBasedTest() {
 
     private fun StartedNode<*>.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
         val request = TestRequest(replyTo = network.myAddress)
-        return network.sendRequest<Any>(javaClass.name, request, target)
+        return network.sendRequest(javaClass.name, request, target)
     }
 
     @CordaSerializable

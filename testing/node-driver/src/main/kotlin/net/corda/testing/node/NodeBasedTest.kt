@@ -37,7 +37,9 @@ import kotlin.concurrent.thread
  */
 // TODO Some of the logic here duplicates what's in the driver
 abstract class NodeBasedTest : TestDependencyInjectionBase() {
-    val WHITESPACE = "\\s++".toRegex()
+    companion object {
+        private val WHITESPACE = "\\s++".toRegex()
+    }
 
     @Rule
     @JvmField
@@ -133,7 +135,6 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                            serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<StartedNode<Node>>> {
         ServiceIdentityGenerator.generateToDisk(
                 (0 until clusterSize).map { baseDirectory(notaryName.copy(organisation = "${notaryName.organisation}-$it")) },
-                serviceType.id,
                 notaryName)
 
         val serviceInfo = ServiceInfo(serviceType, notaryName)
