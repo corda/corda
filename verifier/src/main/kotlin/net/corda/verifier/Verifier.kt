@@ -12,8 +12,8 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.VerifierApi
-import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
+import net.corda.nodeapi.internal.VerifierApi
+import net.corda.nodeapi.internal.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
 import net.corda.nodeapi.internal.addShutdownHook
