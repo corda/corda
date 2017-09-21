@@ -1,7 +1,7 @@
 package net.corda.node.services.transactions
 
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.identity.Party
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.node.services.api.ServiceHubInternal
@@ -16,7 +16,7 @@ class RaftValidatingNotaryService(override val services: ServiceHubInternal, ove
     override val timeWindowChecker: TimeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider: RaftUniquenessProvider = RaftUniquenessProvider(services)
 
-    override fun createServiceFlow(otherParty: Party): NotaryFlow.Service = ValidatingNotaryFlow(otherParty, this)
+    override fun createServiceFlow(otherPartySession: FlowSession): NotaryFlow.Service = ValidatingNotaryFlow(otherPartySession, this)
 
     override fun start() {
         uniquenessProvider.start()

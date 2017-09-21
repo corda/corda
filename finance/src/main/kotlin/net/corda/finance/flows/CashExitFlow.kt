@@ -44,9 +44,10 @@ class CashExitFlow(private val amount: Amount<Currency>,
     @Throws(CashException::class)
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary = null as Party?)
+        val builder = TransactionBuilder(notary = null)
         val issuer = ourIdentity.ref(issuerRef)
-        val exitStates = CashSelection.getInstance { serviceHub.jdbcSession().metaData }
+        val exitStates = CashSelection
+                .getInstance { serviceHub.jdbcSession().metaData }
                 .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
             Cash().generateExit(
@@ -72,8 +73,8 @@ class CashExitFlow(private val amount: Amount<Currency>,
 
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
-        finaliseTx(participants, tx, "Unable to notarise exit")
-        return Result(tx, null)
+        val notarised = finaliseTx(tx, participants, "Unable to notarise exit")
+        return Result(notarised, null)
     }
 
     @CordaSerializable

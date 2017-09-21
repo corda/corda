@@ -1,10 +1,7 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.AbstractStateReplacementFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.ReceiveTransactionFlow
-import net.corda.core.flows.StateReplacementException
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 
@@ -12,15 +9,15 @@ import net.corda.core.transactions.SignedTransaction
 //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
 // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
 //       cash without from unknown parties?
-class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
+class FinalityHandler(private val sender: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val stx = subFlow(ReceiveTransactionFlow(otherParty))
+        val stx = subFlow(ReceiveTransactionFlow(sender))
         serviceHub.recordTransactions(stx)
     }
 }
 
-class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Party>(otherSide) {
+class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacementFlow.Acceptor<Party>(otherSideSession) {
     /**
      * Check the notary change proposal.
      *

@@ -3,10 +3,7 @@ package net.corda.core.node.services
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
-import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -24,9 +21,9 @@ abstract class NotaryService : SingletonSerializeAsToken() {
 
     /**
      * Produces a notary service flow which has the corresponding sends and receives as [NotaryFlow.Client].
-     * @param otherParty client [Party] making the request
+     * @param otherPartySession client [Party] making the request
      */
-    abstract fun createServiceFlow(otherParty: Party): FlowLogic<Void?>
+    abstract fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?>
 }
 
 /**

@@ -45,9 +45,10 @@ class SellerFlow(private val otherParty: Party,
         progressTracker.currentStep = TRADING
 
         // Send the offered amount.
-        send(otherParty, amount)
+        val session = initiateFlow(otherParty)
+        session.send(amount)
         val seller = TwoPartyTradeFlow.Seller(
-                otherParty,
+                session,
                 commercialPaper,
                 amount,
                 cpOwner,

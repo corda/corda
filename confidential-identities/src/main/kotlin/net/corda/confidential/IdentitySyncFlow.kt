@@ -3,8 +3,8 @@ package net.corda.confidential
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -22,10 +22,10 @@ object IdentitySyncFlow {
      * @return a mapping of well known identities to the confidential identities used in the transaction.
      */
     // TODO: Can this be triggered automatically from [SendTransactionFlow]
-    class Send(val otherSides: Set<Party>,
+    class Send(val otherSideSessions: Set<FlowSession>,
                val tx: WireTransaction,
                override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
-        constructor(otherSide: Party, tx: WireTransaction) : this(setOf(otherSide), tx, tracker())
+        constructor(otherSide: FlowSession, tx: WireTransaction) : this(setOf(otherSide), tx, tracker())
 
         companion object {
             object SYNCING_IDENTITIES : ProgressTracker.Step("Syncing identities")
@@ -45,9 +45,9 @@ object IdentitySyncFlow {
             val identityCertificates: Map<AbstractParty, PartyAndCertificate?> = identities
                     .map { Pair(it, serviceHub.identityService.certificateFromKey(it.owningKey)) }.toMap()
 
-            otherSides.forEach { otherSide ->
-                val requestedIdentities: List<AbstractParty> = sendAndReceive<List<AbstractParty>>(otherSide, confidentialIdentities).unwrap { req ->
-                    require(req.all { it in identityCertificates.keys }) { "${otherSide} requested a confidential identity not part of transaction: ${tx.id}" }
+            otherSideSessions.forEach { otherSideSession ->
+                val requestedIdentities: List<AbstractParty> = otherSideSession.sendAndReceive<List<AbstractParty>>(confidentialIdentities).unwrap { req ->
+                    require(req.all { it in identityCertificates.keys }) { "${otherSideSession.counterparty} requested a confidential identity not part of transaction: ${tx.id}" }
                     req
                 }
                 val sendIdentities: List<PartyAndCertificate?> = requestedIdentities.map {
@@ -57,7 +57,7 @@ object IdentitySyncFlow {
                     else
                         throw IllegalStateException("Counterparty requested a confidential identity for which we do not have the certificate path: ${tx.id}")
                 }
-                send(otherSide, sendIdentities)
+                otherSideSession.send(sendIdentities)
             }
         }
 
@@ -67,7 +67,7 @@ object IdentitySyncFlow {
      * Handle an offer to provide proof of identity (in the form of certificate paths) for confidential identities which
      * we do not yet know about.
      */
-    class Receive(val otherSide: Party) : FlowLogic<Unit>() {
+    class Receive(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         companion object {
             object RECEIVING_IDENTITIES : ProgressTracker.Step("Receiving confidential identities")
             object RECEIVING_CERTIFICATES : ProgressTracker.Step("Receiving certificates for unknown identities")
@@ -78,10 +78,10 @@ object IdentitySyncFlow {
         @Suspendable
         override fun call(): Unit {
             progressTracker.currentStep = RECEIVING_IDENTITIES
-            val allIdentities = receive<List<AbstractParty>>(otherSide).unwrap { it }
+            val allIdentities = otherSideSession.receive<List<AbstractParty>>().unwrap { it }
             val unknownIdentities = allIdentities.filter { serviceHub.identityService.partyFromAnonymous(it) == null }
             progressTracker.currentStep = RECEIVING_CERTIFICATES
-            val missingIdentities = sendAndReceive<List<PartyAndCertificate>>(otherSide, unknownIdentities)
+            val missingIdentities = otherSideSession.sendAndReceive<List<PartyAndCertificate>>(unknownIdentities)
 
             // Batch verify the identities we've received, so we know they're all correct before we start storing them in
             // the identity service

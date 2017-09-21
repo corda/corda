@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import net.corda.client.jackson.JacksonSupport
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
@@ -143,11 +144,14 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         class StartDealFlow(val otherParty: Party,
                             val payload: AutoOffer) : FlowLogic<SignedTransaction>() {
             @Suspendable
-            override fun call(): SignedTransaction = subFlow(Instigator(otherParty, payload))
+            override fun call(): SignedTransaction {
+                val session = initiateFlow(otherParty)
+                return subFlow(Instigator(session, payload))
+            }
         }
 
         @InitiatedBy(StartDealFlow::class)
-        class AcceptDealFlow(otherParty: Party) : Acceptor(otherParty)
+        class AcceptDealFlow(otherSession: FlowSession) : Acceptor(otherSession)
 
         val acceptDealFlows: Observable<AcceptDealFlow> = node2.internals.registerInitiatedFlow(AcceptDealFlow::class.java)
 

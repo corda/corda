@@ -36,8 +36,8 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProvider
+import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.services.NotifyTransactionHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -360,15 +360,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * compatibility [flowFactory] provides a second parameter which is the platform version of the initiating party.
      * @suppress
      */
-    @Deprecated("Use installCoreFlowExpectingFlowSession() instead")
     @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party) -> FlowLogic<*>) {
-        log.warn(deprecatedFlowConstructorMessage(clientFlowClass.java))
-        installCoreFlowExpectingFlowSession(clientFlowClass, { flowSession -> flowFactory(flowSession.counterparty) })
-    }
-
-    @VisibleForTesting
-    fun installCoreFlowExpectingFlowSession(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (FlowSession) -> FlowLogic<*>) {
+    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (FlowSession) -> FlowLogic<*>) {
         require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
@@ -378,7 +371,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
 
     private fun installCoreFlows() {
-        installCoreFlow(BroadcastTransactionFlow::class, ::NotifyTransactionHandler)
+        installCoreFlow(FinalityFlow::class, ::FinalityHandler)
         installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
         installCoreFlow(ContractUpgradeFlow.Initiator::class, ::Acceptor)
         installCoreFlow(SwapIdentitiesFlow::class, ::SwapIdentitiesHandler)
@@ -407,10 +400,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun makeCordappLoader(): CordappLoader {
-        val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
-        return if (scanPackage != null) {
+        val scanPackages = System.getProperty("net.corda.node.cordapp.scan.packages")
+        return if (scanPackages != null) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createDevMode(scanPackage)
+            CordappLoader.createDevMode(scanPackages)
         } else {
             CordappLoader.createDefault(configuration.baseDirectory)
         }

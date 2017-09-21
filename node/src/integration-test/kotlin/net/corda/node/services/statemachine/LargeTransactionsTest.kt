@@ -3,7 +3,6 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
-import net.corda.core.identity.Party
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.TransactionBuilder
@@ -39,18 +38,19 @@ class LargeTransactionsTest {
             val stx = serviceHub.signInitialTransaction(tx, ourIdentity.owningKey)
             // Send to the other side and wait for it to trigger resolution from us.
             val bob = serviceHub.identityService.partyFromX500Name(BOB.name)!!
-            subFlow(SendTransactionFlow(bob, stx))
-            receive<Unit>(bob)
+            val bobSession = initiateFlow(bob)
+            subFlow(SendTransactionFlow(bobSession, stx))
+            bobSession.receive<Unit>()
         }
     }
 
     @InitiatedBy(SendLargeTransactionFlow::class) @Suppress("UNUSED")
-    class ReceiveLargeTransactionFlow(private val counterParty: Party) : FlowLogic<Unit>() {
+    class ReceiveLargeTransactionFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            subFlow(ReceiveTransactionFlow(counterParty))
+            subFlow(ReceiveTransactionFlow(otherSide))
             // Unblock the other side by sending some dummy object (Unit is fine here as it's a singleton).
-            send(counterParty, Unit)
+            otherSide.send(Unit)
         }
     }
 
