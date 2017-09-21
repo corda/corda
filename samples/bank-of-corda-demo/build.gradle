@@ -71,7 +71,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
                  'permissions': ["StartFlow.net.corda.finance.flows.CashPaymentFlow",
                                  "StartFlow.net.corda.finance.flows.CashConfigDataFlow",
                                  "StartFlow.net.corda.finance.flows.CashExitFlow",
-                                 "StartFlow.net.corda.finance.flows.CashIssueAndPaymentFlow"]]
+                                 "StartFlow.net.corda.finance.flows.CashIssueAndPaymentFlow",
+                                 "StartFlow.net.corda.finance.flows.CashConfigDataFlow"]]
         ]
     }
     node {
