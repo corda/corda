@@ -1,15 +1,28 @@
 package net.corda.core.internal
 
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.Crypto
+import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import org.bouncycastle.asn1.ASN1Enumerated
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.junit.Test
+import sun.security.util.DerValue
+import sun.security.x509.X509Key
+import java.math.BigInteger
+import java.security.InvalidKeyException
 import java.util.*
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class X509EdDSAEngineTest {
     companion object {
         private const val SEED = 20170920L
-        private const val TEST_DATA_SIZE = 128
+        private const val TEST_DATA_SIZE = 2000
+        private fun toX509Key(publicKey: EdDSAPublicKey): X509Key {
+            return X509Key.parse(DerValue(publicKey.encoded)) as X509Key
+        }
     }
 
     /**
@@ -18,7 +31,7 @@ class X509EdDSAEngineTest {
     @Test
     fun `sign and verify`() {
         val engine = X509EdDSAEngine()
-        val keyPair = generateKeyPair()
+        val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger.valueOf(SEED))
         val publicKey = keyPair.public as EdDSAPublicKey
         val randomBytes = ByteArray(TEST_DATA_SIZE)
         Random(SEED).nextBytes(randomBytes)
@@ -32,5 +45,50 @@ class X509EdDSAEngineTest {
         engine.initVerify(publicKey)
         engine.update(randomBytes)
         assertTrue { engine.verify(signature) }
+    }
+
+    /**
+     * Verify that signing with an X509Key wrapped EdDSA key works.
+     */
+    @Test
+    fun `sign and verify with X509Key`() {
+        val engine = X509EdDSAEngine()
+        val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger.valueOf(SEED + 1))
+        val publicKey = toX509Key(keyPair.public as EdDSAPublicKey)
+        val randomBytes = ByteArray(TEST_DATA_SIZE)
+        Random(SEED + 1).nextBytes(randomBytes)
+        engine.initSign(keyPair.private)
+        engine.update(randomBytes[0])
+        engine.update(randomBytes, 1, randomBytes.size - 1)
+
+        // Now verify the signature
+        val signature = engine.sign()
+
+        engine.initVerify(publicKey)
+        engine.update(randomBytes)
+        assertTrue { engine.verify(signature) }
+    }
+
+    /**
+     * Verify that signing with an X509Key wrapped EdDSA key fails when using the underlying EdDSAEngine.
+     */
+    @Test
+    fun `sign and verify with X509Key and old engine fails`() {
+        val engine = EdDSAEngine()
+        val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger.valueOf(SEED + 1))
+        val publicKey = toX509Key(keyPair.public as EdDSAPublicKey)
+        val randomBytes = ByteArray(TEST_DATA_SIZE)
+        Random(SEED + 1).nextBytes(randomBytes)
+        engine.initSign(keyPair.private)
+        engine.update(randomBytes[0])
+        engine.update(randomBytes, 1, randomBytes.size - 1)
+
+        // Now verify the signature
+        val signature = engine.sign()
+        assertFailsWith<InvalidKeyException> {
+            engine.initVerify(publicKey)
+            engine.update(randomBytes)
+            engine.verify(signature)
+        }
     }
 }

@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.security.*
 import java.security.spec.AlgorithmParameterSpec
 import java.security.spec.X509EncodedKeySpec
@@ -28,7 +29,8 @@ class X509EdDSAEngine : Signature {
 
     override fun engineInitVerify(publicKey: PublicKey) {
         val parsedKey = if (publicKey is sun.security.x509.X509Key) {
-            EdDSAPublicKey(X509EncodedKeySpec(publicKey.encoded))
+            val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(publicKey.encoded)
+            EdDSAPublicKey(X509EncodedKeySpec(subjectPublicKeyInfo.publicKeyData.encoded))
         } else {
             publicKey
         }
