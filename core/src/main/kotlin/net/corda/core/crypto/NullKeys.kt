@@ -3,6 +3,7 @@ package net.corda.core.crypto
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
+import java.time.Instant
 
 object NullKeys {
     @CordaSerializable
@@ -17,6 +18,5 @@ object NullKeys {
     val NULL_PARTY = AnonymousParty(NullPublicKey)
 
     /** A signature with a key and value of zero. Useful when you want a signature object that you know won't ever be used. */
-    val NULL_SIGNATURE = TransactionSignature(ByteArray(32), NullPublicKey, SignatureMetadata(1, -1))
-
+    val NULL_SIGNATURE = TransactionSignature(ByteArray(32), NullPublicKey, SignatureMetadata(1, -1, Instant.MIN))
 }

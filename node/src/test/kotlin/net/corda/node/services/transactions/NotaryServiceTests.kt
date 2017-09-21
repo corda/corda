@@ -102,26 +102,6 @@ class NotaryServiceTests {
     }
 
     @Test
-    fun `should sign identical transaction multiple times (signing is idempotent)`() {
-        val stx = run {
-            val inputState = issueState(clientNode)
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
-            clientNode.services.signInitialTransaction(tx)
-        }
-
-        val firstAttempt = NotaryFlow.Client(stx)
-        val secondAttempt = NotaryFlow.Client(stx)
-        val f1 = clientNode.services.startFlow(firstAttempt)
-        val f2 = clientNode.services.startFlow(secondAttempt)
-
-        mockNet.runNetwork()
-
-        assertEquals(f1.resultFuture.getOrThrow(), f2.resultFuture.getOrThrow())
-    }
-
-    @Test
     fun `should report conflict when inputs are reused across transactions`() {
         val inputState = issueState(clientNode)
         val stx = run {
