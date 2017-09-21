@@ -13,9 +13,6 @@ import java.util.*
 
 /**
  * Flow to obtain cash cordapp app configuration.
- *
- * Currently it uses checkFlowPermission to determine the list of issuable currency as a temporary hack.
- * TODO: get the config from proper configuration source.
  */
 @StartableByRPC
 class CashConfigDataFlow : FlowLogic<CashConfiguration>() {
@@ -27,6 +24,8 @@ class CashConfigDataFlow : FlowLogic<CashConfiguration>() {
     override fun call(): CashConfiguration {
         val issuableCurrencies = supportedCurrencies.mapNotNull {
             try {
+                // Currently it uses checkFlowPermission to determine the list of issuable currency as a temporary hack.
+                // TODO: get the config from proper configuration source.
                 checkFlowPermission("corda.issuer.$it", emptyMap())
                 it
             } catch (e: FlowException) {

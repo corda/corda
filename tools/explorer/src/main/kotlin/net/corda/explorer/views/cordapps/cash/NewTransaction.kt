@@ -28,8 +28,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CashTransaction
 import net.corda.explorer.model.IssuerModel
-import net.corda.explorer.model.ReportingCurrencyModel
-import net.corda.explorer.views.*
+import net.corda.explorer.views.bigDecimalFormatter
+import net.corda.explorer.views.byteFormatter
+import net.corda.explorer.views.stringConverter
+import net.corda.explorer.views.toKnownParty
 import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashExitFlow.ExitRequest
@@ -37,7 +39,6 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
-import net.corda.testing.chooseIdentity
 import net.corda.testing.chooseIdentityAndCert
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
