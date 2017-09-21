@@ -44,12 +44,12 @@ object X509Utilities {
     val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
     // Aliases for private keys and certificates.
-    val CORDA_ROOT_CA = "cordarootca"
-    val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
-    val CORDA_CLIENT_TLS = "cordaclienttls"
-    val CORDA_CLIENT_CA = "cordaclientca"
+    const val CORDA_ROOT_CA = "cordarootca"
+    const val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
+    const val CORDA_CLIENT_TLS = "cordaclienttls"
+    const val CORDA_CLIENT_CA = "cordaclientca"
 
-    val CORDA_CLIENT_CA_CN = "Corda Client CA Certificate"
+    const val CORDA_CLIENT_CA_CN = "Corda Client CA Certificate"
 
     private val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
     /**

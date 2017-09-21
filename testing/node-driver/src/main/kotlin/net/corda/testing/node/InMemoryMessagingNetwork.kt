@@ -50,7 +50,7 @@ class InMemoryMessagingNetwork(
         private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
     companion object {
-        val MESSAGES_LOG_NAME = "messages"
+        const val MESSAGES_LOG_NAME = "messages"
         private val log = LoggerFactory.getLogger(MESSAGES_LOG_NAME)
     }
 

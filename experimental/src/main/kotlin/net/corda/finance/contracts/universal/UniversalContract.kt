@@ -10,7 +10,7 @@ import net.corda.finance.contracts.FixOf
 import java.math.BigDecimal
 import java.time.Instant
 
-val UNIVERSAL_PROGRAM_ID = "net.corda.finance.contracts.universal.UniversalContract"
+const val UNIVERSAL_PROGRAM_ID = "net.corda.finance.contracts.universal.UniversalContract"
 
 class UniversalContract : Contract {
     data class State(override val participants: List<AbstractParty>,

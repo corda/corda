@@ -14,7 +14,7 @@ import java.util.*
 class CashSelectionMySQLImpl : CashSelection {
 
     companion object {
-        val JDBC_DRIVER_NAME = "MySQL JDBC Driver"
+        const val JDBC_DRIVER_NAME = "MySQL JDBC Driver"
     }
 
     override fun isCompatible(metadata: DatabaseMetaData): Boolean {
