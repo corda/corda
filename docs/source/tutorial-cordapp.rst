@@ -18,12 +18,12 @@ unless:
 By default, the CorDapp is deployed on 4 test nodes:
 
 * **Controller**, which hosts the network map service and validating notary service
-* **NodeA**
-* **NodeB**
-* **NodeC**
+* **PartyA**
+* **PartyB**
+* **PartyC**
 
-Because data is only propagated on a need-to-know basis, any IOUs agreed between NodeA and NodeB become "shared facts"
-between NodeA and NodeB only. NodeC won't be aware of these IOUs.
+Because data is only propagated on a need-to-know basis, any IOUs agreed between PartyA and PartyB become "shared facts"
+between PartyA and PartyB only. PartyC won't be aware of these IOUs.
 
 Downloading the example CorDapp
 -------------------------------
@@ -236,12 +236,12 @@ The ``runnodes`` script creates a terminal tab/window for each node:
 
     📚  New! Training now available worldwide, see https://corda.net/corda-training/
 
-    Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-tutorial/kotlin-source/build/nodes/NodeA/logs
+    Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-tutorial/kotlin-source/build/nodes/PartyA/logs
     Database connection url is              : jdbc:h2:tcp://10.163.199.132:54763/node
     Listening on address                    : 127.0.0.1:10005
     RPC service listening on address        : localhost:10006
     Loaded plugins                          : com.example.plugin.ExamplePlugin
-    Node for "NodeA" started up and registered in 35.0 sec
+    Node for "PartyA" started up and registered in 35.0 sec
 
 
     Welcome to the Corda interactive shell.
@@ -253,13 +253,13 @@ The script will also create a webserver terminal tab for each node:
 
 .. sourcecode:: none
 
-    Logs can be found in /Users/joeldudley/Desktop/cordapp-tutorial/kotlin-source/build/nodes/NodeA/logs/web
+    Logs can be found in /Users/joeldudley/Desktop/cordapp-tutorial/kotlin-source/build/nodes/PartyA/logs/web
     Starting as webserver: localhost:10007
     Webserver started up in 42.02 sec
 
 Depending on your machine, it usually takes around 60 seconds for the nodes to finish starting up. If you want to
 ensure that all the nodes are running OK, you can query the 'status' end-point located at
-``http://localhost:[port]/api/status`` (e.g. ``http://localhost:10007/api/status`` for ``NodeA``).
+``http://localhost:[port]/api/status`` (e.g. ``http://localhost:10007/api/status`` for ``PartyA``).
 
 IntelliJ: Building and running the example CorDapp
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -281,9 +281,9 @@ and adds an RPC user for all but the "Controller" node (which serves as the nota
         driver(isDebug = true) {
             startNode(getX500Name(O="Controller",OU="corda",L="London",C='UK"), setOf(ServiceInfo(ValidatingNotaryService.type)))
             val (nodeA, nodeB, nodeC) = Futures.allAsList(
-                    startNode(getX500Name(O="NodeA",L="London",C="UK"), rpcUsers = listOf(user)),
-                    startNode(getX500Name(O="NodeB",L="New York",C="US"), rpcUsers = listOf(user)),
-                    startNode(getX500Name(O="NodeC",L="Paris",C="FR"), rpcUsers = listOf(user))).getOrThrow()
+                    startNode(getX500Name(O="PartyA",L="London",C="UK"), rpcUsers = listOf(user)),
+                    startNode(getX500Name(O="PartyB",L="New York",C="US"), rpcUsers = listOf(user)),
+                    startNode(getX500Name(O="PartyC",L="Paris",C="FR"), rpcUsers = listOf(user))).getOrThrow()
 
             startWebserver(nodeA)
             startWebserver(nodeB)
@@ -307,9 +307,9 @@ IOUs, agree new IOUs, and see who is on the network.
 
 The nodes are running locally on the following ports:
 
-* NodeA:      ``localhost:10007``
-* NodeB:      ``localhost:10010``
-* NodeC:      ``localhost:10013``
+* PartyA:      ``localhost:10007``
+* PartyB:      ``localhost:10010``
+* PartyC:      ``localhost:10013``
 
 These ports are defined in build.gradle and in each node's node.conf file under ``kotlin-source/build/nodes/NodeX``.
 
@@ -331,15 +331,15 @@ the web form hosted at ``/web/example``.
 
 **Creating an IOU via the HTTP API:**
 
-To create an IOU between NodeA and NodeB, we would run the following from the command line:
+To create an IOU between PartyA and PartyB, we would run the following from the command line:
 
 .. sourcecode:: bash
 
-  echo '{"value": "1"}' | cURL -T - -H 'Content-Type: application/json' http://localhost:10007/api/example/NodeB/create-iou
+  echo '{"value": "1"}' | cURL -T - -H 'Content-Type: application/json' http://localhost:10007/api/example/PartyB/create-iou
 
-Note that both NodeA's port number (``10007``) and NodeB are referenced in the PUT request path. This command instructs
-NodeA to agree an IOU with NodeB. Once the process is complete, both nodes will have a signed, notarised copy of the
-IOU. NodeC will not.
+Note that both PartyA's port number (``10007``) and PartyB are referenced in the PUT request path. This command instructs
+PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised copy of the
+IOU. PartyC will not.
 
 **Submitting an IOU via the web front-end:**
 
@@ -355,7 +355,7 @@ And click submit. Upon clicking submit, the modal dialogue will close, and the n
 
 **Once an IOU has been submitted:**
 
-Assuming all went well, you should see some activity in NodeA's web-server terminal window:
+Assuming all went well, you should see some activity in PartyA's web-server terminal window:
 
 .. sourcecode:: none
 
@@ -374,20 +374,20 @@ Assuming all went well, you should see some activity in NodeA's web-server termi
     >> Done
     >> Done
 
-You can view the newly-created IOU by accessing the vault of NodeA or NodeB:
+You can view the newly-created IOU by accessing the vault of PartyA or PartyB:
 
 *Via the HTTP API:*
 
-* NodeA's vault: Navigate to http://localhost:10007/api/example/ious
-* NodeB's vault: Navigate to http://localhost:10010/api/example/ious
+* PartyA's vault: Navigate to http://localhost:10007/api/example/ious
+* PartyB's vault: Navigate to http://localhost:10010/api/example/ious
 
 *Via web/example:*
 
-* NodeA: Navigate to http://localhost:10007/web/example and hit the "refresh" button
-* NodeA: Navigate to http://localhost:10010/web/example and hit the "refresh" button
+* PartyA: Navigate to http://localhost:10007/web/example and hit the "refresh" button
+* PartyA: Navigate to http://localhost:10010/web/example and hit the "refresh" button
 
-If you access the vault or web front-end of NodeC (on ``localhost:10013``), there will be no IOUs. This is because
-NodeC was not involved in this transaction.
+If you access the vault or web front-end of PartyC (on ``localhost:10013``), there will be no IOUs. This is because
+PartyC was not involved in this transaction.
 
 Via the interactive shell (terminal only)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -411,8 +411,8 @@ list:
     net.corda.finance.flows.CashPaymentFlow
     net.corda.finance.flows.ContractUpgradeFlow
 
-We can create a new IOU using the ``ExampleFlow$Initiator`` flow. For example, from the interactive shell of NodeA, you
-can agree an IOU of 50 with NodeB by running ``flow start Initiator iouValue: 50, otherParty: NodeB``.
+We can create a new IOU using the ``ExampleFlow$Initiator`` flow. For example, from the interactive shell of PartyA, you
+can agree an IOU of 50 with PartyB by running ``flow start Initiator iouValue: 50, otherParty: PartyB``.
 
 This will print out the following progress steps:
 
@@ -444,15 +444,15 @@ We can see a list of the states in our node's vault using ``run vaultAndUpdates`
         data:
           iou:
             value: 50
-          sender: "CN=NodeB,O=NodeB,L=New York,C=US"
-          recipient: "CN=NodeA,O=NodeA,L=London,C=UK"
+          sender: "CN=PartyB,O=PartyB,L=New York,C=US"
+          recipient: "CN=PartyA,O=PartyA,L=London,C=UK"
           linearId:
             externalId: null
             id: "84628565-2688-45ef-bb06-aae70fcf3be7"
           contract: {}
           participants:
-          - "CN=NodeB,O=NodeB,L=New York,C=US"
-          - "CN=NodeA,O=NodeA,L=London,C=UK"
+          - "CN=PartyB,O=PartyB,L=New York,C=US"
+          - "CN=PartyA,O=PartyA,L=London,C=UK"
         notary: "O=Controller,OU=corda,L=London,C=UK,OU=corda.notary.validating"
         encumbrance: null
       ref:
@@ -478,15 +478,15 @@ abbreviated the output below):
         - data:
             iou:
               value: 50
-            sender: "CN=NodeB,O=NodeB,L=New York,C=US"
-            recipient: "CN=NodeA,O=NodeA,L=London,C=UK"
+            sender: "CN=PartyB,O=PartyB,L=New York,C=US"
+            recipient: "CN=PartyA,O=PartyA,L=London,C=UK"
             linearId:
               externalId: null
               id: "84628565-2688-45ef-bb06-aae70fcf3be7"
             contract: {}
             participants:
-            - "CN=NodeB,O=NodeB,L=New York,C=US"
-            - "CN=NodeA,O=NodeA,L=London,C=UK"
+            - "CN=PartyB,O=PartyB,L=New York,C=US"
+            - "CN=PartyA,O=PartyA,L=London,C=UK"
           notary: "O=Controller,OU=corda,L=London,C=UK,OU=corda.notary.validating"
           encumbrance: null
         commands:
@@ -507,8 +507,8 @@ abbreviated the output below):
         serialized: "Y29yZGEAAAEOAQEAamF2YS51dGlsLkFycmF5TGlz9AABAAABAAEBAW5ldC5jb3JkYS5jb3JlLmNvbnRyYWN0cy5UcmFuc2FjdGlvblN0YXTlA1RyYW5zYWN0aW9uU3RhdGUuZGF04VRyYW5zYWN0aW9uU3RhdGUuZW5jdW1icmFuY+VUcmFuc2FjdGlvblN0YXRlLm5vdGFy+WkBAmNvbS5leGFtcGxlLnN0YXRlLklPVVN0YXTlBElPVVN0YXRlLmlv9UlPVVN0YXRlLmxpbmVhcknkSU9VU3RhdGUucmVjaXBpZW70SU9VU3RhdGUuc2VuZGXyDQEBSU9VLnZhbHXlAWQCAQA0ADIBAlVuaXF1ZUlkZW50aWZpZXIuZXh0ZXJuYWxJ5FVuaXF1ZUlkZW50aWZpZXIuaeQBgDAvAC0BAlVVSUQubGVhc3RTaWdCaXTzVVVJRC5tb3N0U2lnQml08wmxkIaDnsaq+YkNDAsACaHovZfbpr2d9wMCAQACAQBIAEYBAkFic3RyYWN0UGFydHkub3duaW5nS2X5UGFydHkubmFt5SIuIOnhdbFQY3EL/LQD90w6y+kCfj4x8UWXaqKtW68GBPlnREMAQTkwPjEOMAwGA1UEAwwFTm9kZUExDjAMBgNVBAoMBU5vZGVBMQ8wDQYDVQQHDAZMb25kb24xCzAJBgNVBAYTAlVLAgEAJgAkASIuIHI7goTSxPMdaRgJgGJVLQbFEzE++qJeYbEbQjrYxzuVRkUAQzkwQDEOMAwGA1UEAwwFTm9kZUIxDjAMBgNVBAoMBU5vZGVCMREwDwYDVQQHDAhOZXcgWW9yazELMAkGA1UEBhMCVVMCAQABAAABAAAkASIuIMqulslvpZ0PaM6fdyFZm+JsDGkuJ7xWnL3zB6PqpzANdwB1OTByMRMwEQYDVQQDDApDb250cm9sbGVyMQswCQYDVQQKDAJSMzEOMAwGA1UECwwFY29yZGExDzANBgNVBAcMBkxvbmRvbjELMAkGA1UEBhMCVUsxIDAeBgNVBAsMF2NvcmRhLm5vdGFyeS52YWxpZGF0aW5nAQAAAQABAQNuZXQuY29yZGEuY29yZS5jb250cmFjdHMuQ29tbWFu5AJDb21tYW5kLnNpZ25lcvNDb21tYW5kLnZhbHXlRwEAAi4gcjuChNLE8x1pGAmAYlUtBsUTMT76ol5hsRtCOtjHO5UuIOnhdbFQY3EL/LQD90w6y+kCfj4x8UWXaqKtW68GBPlnADMBBGNvbS5leGFtcGxlLmNvbnRyYWN0LklPVUNvbnRyYWN0JENvbW1hbmRzJENyZWF05QAAAQVuZXQuY29yZGEuY29yZS5pZGVudGl0eS5QYXJ0+SIuIMqulslvpZ0PaM6fdyFZm+JsDGkuJ7xWnL3zB6PqpzANAHU5MHIxEzARBgNVBAMMCkNvbnRyb2xsZXIxCzAJBgNVBAoMAlIzMQ4wDAYDVQQLDAVjb3JkYTEPMA0GA1UEBwwGTG9uZG9uMQswCQYDVQQGEwJVSzEgMB4GA1UECwwXY29yZGEubm90YXJ5LnZhbGlkYXRpbmcAAQACLiByO4KE0sTzHWkYCYBiVS0GxRMxPvqiXmGxG0I62Mc7lS4g6eF1sVBjcQv8tAP3TDrL6QJ+PjHxRZdqoq1brwYE+WcBBm5ldC5jb3JkYS5jb3JlLmNvbnRyYWN0cy5UcmFuc2FjdGlvblR5cGUkR2VuZXJh7AA="
     second: "(observable)"
 
-The same states and transactions will be present on NodeB, who was NodeA's counterparty in the creation of the IOU.
-However, the vault and local storage of NodeC will remain empty, since NodeC was not involved in the transaction.
+The same states and transactions will be present on PartyB, who was PartyA's counterparty in the creation of the IOU.
+However, the vault and local storage of PartyC will remain empty, since PartyC was not involved in the transaction.
 
 Via the h2 web console
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -523,7 +523,7 @@ any IOUs when you first connect to one of the nodes, the client will simply log 
 
 *Running the client via IntelliJ:*
 
-Select the 'Run Example RPC Client' run configuration which, by default, connects to NodeA (Artemis port 10007). Click the
+Select the 'Run Example RPC Client' run configuration which, by default, connects to PartyA (Artemis port 10007). Click the
 Green Arrow to run the client. You can edit the run configuration to connect on a different port.
 
 *Running the client via the command line:*
@@ -579,9 +579,9 @@ Debugging is done via IntelliJ as follows:
         driver(isDebug = true) {
             startNode(getX500Name(O="Controller",OU="corda",L="London",C="UK"), setOf(ServiceInfo(ValidatingNotaryService.type)))
             val (nodeA, nodeB, nodeC) = Futures.allAsList(
-                    startNode(getX500Name(O="NodeA",L=London,C=UK"), rpcUsers = listOf(user)),
-                    startNode(getX500Name(O="NodeB",L=New York,C=US"), rpcUsers = listOf(user)),
-                    startNode(getX500Name(O="NodeC",L=Paris,C=FR"), rpcUsers = listOf(user))).getOrThrow()
+                    startNode(getX500Name(O="PartyA",L=London,C=UK"), rpcUsers = listOf(user)),
+                    startNode(getX500Name(O="PartyB",L=New York,C=US"), rpcUsers = listOf(user)),
+                    startNode(getX500Name(O="PartyC",L=Paris,C=FR"), rpcUsers = listOf(user))).getOrThrow()
 
             startWebserver(nodeA)
             startWebserver(nodeB)
@@ -597,7 +597,7 @@ Debugging is done via IntelliJ as follows:
 
 .. sourcecode:: none
 
-    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Working Directory: /Users/joeldudley/cordapp-tutorial/build/20170707142746/NodeA
+    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Working Directory: /Users/joeldudley/cordapp-tutorial/build/20170707142746/PartyA
     [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Debug port: dt_socket:5007
 
 4. Edit the “Debug CorDapp” run configuration with the port of the node you wish to connect to
