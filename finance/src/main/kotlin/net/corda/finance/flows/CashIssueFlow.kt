@@ -2,7 +2,6 @@ package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
-import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -43,7 +42,8 @@ class CashIssueFlow(private val amount: Amount<Currency>,
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(builder, signers)
         progressTracker.currentStep = FINALISING_TX
-        val notarised = subFlow(FinalityFlow(tx)).single()
+        // There is no one to send the tx to as we're the only participants
+        val notarised = finaliseTx(tx, emptySet(), "Unable to notarise issue")
         return Result(notarised, ourIdentity)
     }
 

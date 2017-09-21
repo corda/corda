@@ -38,10 +38,9 @@ class CashPaymentFlowTests {
         notaryNode = nodes.notaryNode
         bankOfCordaNode = nodes.partyNodes[0]
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
-
-        mockNet.runNetwork()
-        notary = bankOfCordaNode.services.getDefaultNotary()
+        notary = notaryNode.services.getDefaultNotary()
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
+        mockNet.runNetwork()
         future.getOrThrow()
     }
 

@@ -1,16 +1,16 @@
 package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.FlowSession
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.TransactionParts
-import net.corda.core.identity.Party
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.utilities.unwrap
 
-class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSide, service) {
+class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSideSession, service) {
     /**
      * The received transaction is not checked for contract-validity, as that would require fully
      * resolving it into a [TransactionForVerification], for which the caller would have to reveal the whole transaction
@@ -21,7 +21,7 @@ class NonValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryS
      */
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
-        val parts = receive<Any>(otherSide).unwrap {
+        val parts = otherSideSession.receive<Any>().unwrap {
             when (it) {
                 is FilteredTransaction -> {
                     it.verify()

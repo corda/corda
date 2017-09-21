@@ -37,7 +37,7 @@ class NodeSchemaServiceTest {
     /**
      * Note: this test verifies auto-scanning to register identified [MappedSchema] schemas.
      *       By default, Driver uses the caller package for auto-scanning:
-     *       System.setProperty("net.corda.node.cordapp.scan.package", callerPackage)
+     *       System.setProperty("net.corda.node.cordapp.scan.packages", callerPackage)
      */
     @Test
     fun `auto scanning of custom schemas for testing with Driver`() {

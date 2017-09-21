@@ -106,7 +106,9 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
 }
 
 @StartableByRPC
-class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
+class AttachmentDemoFlow(private val otherSide: Party,
+                         private val notary: Party,
+                         private val attachId: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
 
     object SIGNING : ProgressTracker.Step("Signing transaction")
 
@@ -116,16 +118,16 @@ class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: Secu
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
         val ptx = TransactionBuilder(notary)
-                .addOutputState(AttachmentContract.State(hash), ATTACHMENT_PROGRAM_ID)
+                .addOutputState(AttachmentContract.State(attachId), ATTACHMENT_PROGRAM_ID)
                 .addCommand(AttachmentContract.Command, ourIdentity.owningKey)
-                .addAttachment(hash)
+                .addAttachment(attachId)
 
         progressTracker.currentStep = SIGNING
 
         // Send the transaction to the other recipient
         val stx = serviceHub.signInitialTransaction(ptx)
 
-        return subFlow(FinalityFlow(stx, setOf(otherSide))).single()
+        return subFlow(FinalityFlow(stx, setOf(otherSide)))
     }
 }
 

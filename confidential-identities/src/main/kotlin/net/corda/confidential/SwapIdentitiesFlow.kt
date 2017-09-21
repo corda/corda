@@ -18,10 +18,10 @@ import net.corda.core.utilities.unwrap
  */
 @StartableByRPC
 @InitiatingFlow
-class SwapIdentitiesFlow(private val otherSide: Party,
+class SwapIdentitiesFlow(private val otherParty: Party,
                          private val revocationEnabled: Boolean,
                          override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
-    constructor(otherSide: Party) : this(otherSide, false, tracker())
+    constructor(otherParty: Party) : this(otherParty, false, tracker())
 
     companion object {
         object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
@@ -43,14 +43,15 @@ class SwapIdentitiesFlow(private val otherSide: Party,
 
         // Special case that if we're both parties, a single identity is generated
         val identities = LinkedHashMap<Party, AnonymousParty>()
-        if (serviceHub.myInfo.isLegalIdentity(otherSide)) {
-            identities.put(otherSide, legalIdentityAnonymous.party.anonymise())
+        if (serviceHub.myInfo.isLegalIdentity(otherParty)) {
+            identities.put(otherParty, legalIdentityAnonymous.party.anonymise())
         } else {
-            val anonymousOtherSide = sendAndReceive<PartyAndCertificate>(otherSide, legalIdentityAnonymous).unwrap { confidentialIdentity ->
-                validateAndRegisterIdentity(serviceHub.identityService, otherSide, confidentialIdentity)
+            val otherSession = initiateFlow(otherParty)
+            val anonymousOtherSide = otherSession.sendAndReceive<PartyAndCertificate>(legalIdentityAnonymous).unwrap { confidentialIdentity ->
+                validateAndRegisterIdentity(serviceHub.identityService, otherSession.counterparty, confidentialIdentity)
             }
             identities.put(ourIdentity, legalIdentityAnonymous.party.anonymise())
-            identities.put(otherSide, anonymousOtherSide.party.anonymise())
+            identities.put(otherSession.counterparty, anonymousOtherSide.party.anonymise())
         }
         return identities
     }

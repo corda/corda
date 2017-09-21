@@ -45,7 +45,7 @@ open class CashPaymentFlow(
         }
         val anonymousRecipient = txIdentities[recipient] ?: recipient
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(null as Party?)
+        val builder = TransactionBuilder(notary = null)
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
             Cash.generateSpend(serviceHub,
@@ -61,10 +61,13 @@ open class CashPaymentFlow(
         val tx = serviceHub.signInitialTransaction(spendTX, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
-        finaliseTx(setOf(recipient), tx, "Unable to notarise spend")
-        return Result(tx, anonymousRecipient)
+        val notarised = finaliseTx(tx, setOf(recipient), "Unable to notarise spend")
+        return Result(notarised, anonymousRecipient)
     }
 
     @CordaSerializable
-    class PaymentRequest(amount: Amount<Currency>, val recipient: Party, val anonymous: Boolean, val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
+    class PaymentRequest(amount: Amount<Currency>,
+                         val recipient: Party,
+                         val anonymous: Boolean,
+                         val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
 }

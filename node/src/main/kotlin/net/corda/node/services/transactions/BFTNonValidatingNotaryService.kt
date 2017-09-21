@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.CordaX500Name
@@ -71,19 +72,19 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
 
     fun commitTransaction(tx: Any, otherSide: Party) = client.commitTransaction(tx, otherSide)
 
-    override fun createServiceFlow(otherParty: Party): FlowLogic<Void?> = ServiceFlow(otherParty, this)
+    override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = ServiceFlow(otherPartySession, this)
 
-    private class ServiceFlow(val otherSide: Party, val service: BFTNonValidatingNotaryService) : FlowLogic<Void?>() {
+    private class ServiceFlow(val otherSideSession: FlowSession, val service: BFTNonValidatingNotaryService) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
-            val stx = receive<FilteredTransaction>(otherSide).unwrap { it }
+            val stx = otherSideSession.receive<FilteredTransaction>().unwrap { it }
             val signatures = commit(stx)
-            send(otherSide, signatures)
+            otherSideSession.send(signatures)
             return null
         }
 
         private fun commit(stx: FilteredTransaction): List<DigitalSignature> {
-            val response = service.commitTransaction(stx, otherSide)
+            val response = service.commitTransaction(stx, otherSideSession.counterparty)
             when (response) {
                 is BFTSMaRt.ClusterResponse.Error -> throw NotaryException(response.error)
                 is BFTSMaRt.ClusterResponse.Signatures -> {

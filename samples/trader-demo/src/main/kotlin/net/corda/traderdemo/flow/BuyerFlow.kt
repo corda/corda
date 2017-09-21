@@ -3,6 +3,7 @@ package net.corda.traderdemo.flow
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
@@ -16,7 +17,7 @@ import net.corda.traderdemo.TransactionGraphSearch
 import java.util.*
 
 @InitiatedBy(SellerFlow::class)
-class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
+class BuyerFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
 
     object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
 
@@ -27,11 +28,11 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
         progressTracker.currentStep = STARTING_BUY
 
         // Receive the offered amount and automatically agree to it (in reality this would be a longer negotiation)
-        val amount = receive<Amount<Currency>>(otherParty).unwrap { it }
+        val amount = otherSideSession.receive<Amount<Currency>>().unwrap { it }
         require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
         val notary: Party = serviceHub.networkMapCache.notaryIdentities.first()
         val buyer = TwoPartyTradeFlow.Buyer(
-                otherParty,
+                otherSideSession,
                 notary,
                 amount,
                 CommercialPaper.State::class.java)

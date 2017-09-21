@@ -3,7 +3,6 @@ package net.corda.docs
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.*
-import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.TimeWindowChecker
@@ -19,7 +18,7 @@ class MyCustomValidatingNotaryService(override val services: ServiceHub, overrid
     override val timeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider = PersistentUniquenessProvider()
 
-    override fun createServiceFlow(otherParty: Party): FlowLogic<Void?> = MyValidatingNotaryFlow(otherParty, this)
+    override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = MyValidatingNotaryFlow(otherPartySession, this)
 
     override fun start() {}
     override fun stop() {}
@@ -27,7 +26,7 @@ class MyCustomValidatingNotaryService(override val services: ServiceHub, overrid
 // END 1
 
 // START 2
-class MyValidatingNotaryFlow(otherSide: Party, service: MyCustomValidatingNotaryService) : NotaryFlow.Service(otherSide, service) {
+class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidatingNotaryService) : NotaryFlow.Service(otherSide, service) {
     /**
      * The received transaction is checked for contract-validity, for which the caller also has to to reveal the whole
      * transaction dependency chain.
@@ -35,7 +34,7 @@ class MyValidatingNotaryFlow(otherSide: Party, service: MyCustomValidatingNotary
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
         try {
-            val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false))
+            val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
             checkNotary(stx.notary)
             checkSignatures(stx)
             val wtx = stx.tx

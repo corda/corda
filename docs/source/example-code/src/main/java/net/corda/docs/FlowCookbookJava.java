@@ -2,7 +2,6 @@ package net.corda.docs;
 
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.crypto.TransactionSignature;
@@ -29,6 +28,7 @@ import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -37,6 +37,7 @@ import static net.corda.testing.TestConstants.getALICE_KEY;
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
+@SuppressWarnings("unused")
 public class FlowCookbookJava {
     // ``InitiatorFlow`` is our first flow, and will communicate with
     // ``ResponderFlow``, below.
@@ -80,14 +81,14 @@ public class FlowCookbookJava {
             // subflow's progress steps in our flow's progress tracker.
             @Override
             public ProgressTracker childProgressTracker() {
-                return CollectSignaturesFlow.Companion.tracker();
+                return CollectSignaturesFlow.tracker();
             }
         };
         private static final Step VERIFYING_SIGS = new Step("Verifying a transaction's signatures.");
         private static final Step FINALISATION = new Step("Finalising a transaction.") {
             @Override
             public ProgressTracker childProgressTracker() {
-                return FinalityFlow.Companion.tracker();
+                return FinalityFlow.tracker();
             }
         };
 
@@ -154,7 +155,8 @@ public class FlowCookbookJava {
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
             // DOCSTART 4
-            send(counterparty, new Object());
+            FlowSession counterpartySession = initiateFlow(counterparty);
+            counterpartySession.send(new Object());
             // DOCEND 4
 
             // We can wait to receive arbitrary data of a specific type from a
@@ -177,7 +179,7 @@ public class FlowCookbookJava {
             // be what it appears to be! We must unwrap the
             // ``UntrustworthyData`` using a lambda.
             // DOCSTART 5
-            UntrustworthyData<Integer> packet1 = receive(Integer.class, counterparty);
+            UntrustworthyData<Integer> packet1 = counterpartySession.receive(Integer.class);
             Integer integer = packet1.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -191,7 +193,7 @@ public class FlowCookbookJava {
             // data sent doesn't need to match the type of the data received
             // back.
             // DOCSTART 7
-            UntrustworthyData<Boolean> packet2 = sendAndReceive(Boolean.class, counterparty, "You can send and receive any class!");
+            UntrustworthyData<Boolean> packet2 = counterpartySession.sendAndReceive(Boolean.class, "You can send and receive any class!");
             Boolean bool = packet2.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -204,8 +206,9 @@ public class FlowCookbookJava {
             // counterparty. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
             // DOCSTART 6
-            send(regulator, new Object());
-            UntrustworthyData<Object> packet3 = receive(Object.class, regulator);
+            FlowSession regulatorSession = initiateFlow(regulator);
+            regulatorSession.send(new Object());
+            UntrustworthyData<Object> packet3 = regulatorSession.receive(Object.class);
             // DOCEND 6
 
             /*------------------------------------
@@ -395,10 +398,10 @@ public class FlowCookbookJava {
             // for data request until the transaction is resolved and verified
             // on the other side:
             // DOCSTART 12
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx));
+            subFlow(new SendTransactionFlow(counterpartySession, twiceSignedTx));
 
             // Optional request verification to further restrict data access.
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx) {
+            subFlow(new SendTransactionFlow(counterpartySession, twiceSignedTx) {
                 @Override
                 protected void verifyDataRequest(@NotNull FetchDataFlow.Request.Data dataRequest) {
                     // Extra request verification.
@@ -408,17 +411,17 @@ public class FlowCookbookJava {
 
             // We can receive the transaction using ``ReceiveTransactionFlow``,
             // which will automatically download all the dependencies and verify
-            // the transaction
+            // the transaction and then record in our vault
             // DOCSTART 13
-            SignedTransaction verifiedTransaction = subFlow(new ReceiveTransactionFlow(counterparty));
+            SignedTransaction verifiedTransaction = subFlow(new ReceiveTransactionFlow(counterpartySession));
             // DOCEND 13
 
             // We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies.
             // DOCSTART 14
-            subFlow(new SendStateAndRefFlow(counterparty, dummyStates));
+            subFlow(new SendStateAndRefFlow(counterpartySession, dummyStates));
 
             // On the receive side ...
-            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterparty));
+            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterpartySession));
             // DOCEND 14
 
             try {
@@ -475,7 +478,7 @@ public class FlowCookbookJava {
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()));
+            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, Collections.emptySet(), SIGS_GATHERING.childProgressTracker()));
             // DOCEND 15
 
             /*------------------------
@@ -517,13 +520,13 @@ public class FlowCookbookJava {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 9
-            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).get(0);
+            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()));
             // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            Set<Party> additionalParties = ImmutableSet.of(regulator);
-            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(ImmutableList.of(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).get(0);
+            Set<Party> additionalParties = Collections.singleton(regulator);
+            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()));
             // DOCEND 10
 
             return null;
@@ -540,10 +543,10 @@ public class FlowCookbookJava {
     @InitiatedBy(InitiatorFlow.class)
     public static class ResponderFlow extends FlowLogic<Void> {
 
-        private final Party counterparty;
+        private final FlowSession counterpartySession;
 
-        public ResponderFlow(Party counterparty) {
-            this.counterparty = counterparty;
+        public ResponderFlow(FlowSession counterpartySession) {
+            this.counterpartySession = counterpartySession;
         }
 
         private static final Step RECEIVING_AND_SENDING_DATA = new Step("Sending data between parties.");
@@ -575,9 +578,9 @@ public class FlowCookbookJava {
             //    ``Boolean`` instance back
             // Our side of the flow must mirror these calls.
             // DOCSTART 8
-            Object obj = receive(Object.class, counterparty).unwrap(data -> data);
-            String string = sendAndReceive(String.class, counterparty, 99).unwrap(data -> data);
-            send(counterparty, true);
+            Object obj = counterpartySession.receive(Object.class).unwrap(data -> data);
+            String string = counterpartySession.sendAndReceive(String.class, 99).unwrap(data -> data);
+            counterpartySession.send(true);
             // DOCEND 8
 
             /*-----------------------------------------
@@ -590,8 +593,8 @@ public class FlowCookbookJava {
             // ``SignTransactionFlow`` subclass.
             // DOCSTART 16
             class SignTxFlow extends SignTransactionFlow {
-                private SignTxFlow(Party otherParty, ProgressTracker progressTracker) {
-                    super(otherParty, progressTracker);
+                private SignTxFlow(FlowSession otherSession, ProgressTracker progressTracker) {
+                    super(otherSession, progressTracker);
                 }
 
                 @Override
@@ -605,7 +608,7 @@ public class FlowCookbookJava {
                 }
             }
 
-            subFlow(new SignTxFlow(counterparty, SignTransactionFlow.Companion.tracker()));
+            subFlow(new SignTxFlow(counterpartySession, SignTransactionFlow.tracker()));
             // DOCEND 16
 
             /*------------------------------

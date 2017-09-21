@@ -18,7 +18,7 @@ class FlowSessionInternal(
         val ourSessionId: Long,
         val initiatingParty: Party?,
         var state: FlowSessionState,
-        val retryable: Boolean = false) {
+        var retryable: Boolean = false) {
     val receivedMessages = ConcurrentLinkedQueue<ReceivedSessionMessage<*>>()
     val fiber: FlowStateMachineImpl<*> get() = flow.stateMachine as FlowStateMachineImpl<*>
 
@@ -30,13 +30,18 @@ class FlowSessionInternal(
 /**
  * [FlowSessionState] describes the session's state.
  *
- * [Initiating] is pre-handshake. [Initiating.otherParty] at this point holds a [Party] corresponding to either a
- *     specific peer or a service.
+ * [Uninitiated] is pre-handshake, where no communication has happened. [Initiating.otherParty] at this point holds a
+ *     [Party] corresponding to either a specific peer or a service.
+ * [Initiating] is pre-handshake, where the initiating message has been sent.
  * [Initiated] is post-handshake. At this point [Initiating.otherParty] will have been resolved to a specific peer
  *     [Initiated.peerParty], and the peer's sessionId has been initialised.
  */
 sealed class FlowSessionState {
     abstract val sendToParty: Party
+
+    data class Uninitiated(val otherParty: Party) : FlowSessionState() {
+        override val sendToParty: Party get() = otherParty
+    }
 
     /** [otherParty] may be a specific peer or a service party */
     data class Initiating(val otherParty: Party) : FlowSessionState() {

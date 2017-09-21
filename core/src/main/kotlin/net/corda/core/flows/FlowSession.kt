@@ -23,12 +23,12 @@ import net.corda.core.utilities.UntrustworthyData
  *
  * If it's an InitiatedBy flow:
  *
- *   Change the constructor to take an initiatingSession: FlowSession instead of a counterparty: Party
+ *   Change the constructor to take an otherSideSession: FlowSession instead of a counterparty: Party
  *   Then look for usages of the deprecated functions and change them to use the FlowSession
  *   For example:
  *     send(counterparty, something)
  *   will become
- *     initiatingSession.send(something)
+ *     otherSideSession.send(something)
  */
 abstract class FlowSession {
     abstract val counterparty: Party
