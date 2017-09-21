@@ -209,7 +209,7 @@ Each node in the ``nodes`` folder has the following structure:
     ├── node.conf
     └── plugins
 
-``corda.jar` is the Corda runtime, ``plugins`` contains our node's CorDapps, and our node's configuration is provided
+``corda.jar`` is the Corda runtime, ``plugins`` contains our node's CorDapps, and our node's configuration is provided
 in ``node.conf``.
 
 Terminal: Running the example CorDapp
