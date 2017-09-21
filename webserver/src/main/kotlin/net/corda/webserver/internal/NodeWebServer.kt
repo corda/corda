@@ -7,6 +7,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.webserver.WebServerConfig
+import net.corda.webserver.converters.CordaConverterProvider
 import net.corda.webserver.services.WebServerPluginRegistry
 import net.corda.webserver.servlets.*
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -136,6 +137,7 @@ class NodeWebServer(val config: WebServerConfig) {
             val resourceConfig = ResourceConfig()
                 .register(ObjectMapperConfig(rpcObjectMapper))
                 .register(ResponseFilter())
+                .register(CordaConverterProvider)
                 .register(APIServerImpl(localRpc))
 
             val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
