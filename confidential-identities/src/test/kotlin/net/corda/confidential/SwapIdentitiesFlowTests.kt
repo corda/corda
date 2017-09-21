@@ -42,8 +42,8 @@ class SwapIdentitiesFlowTests {
         assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity)
 
         // Verify that the anonymous identities look sane
-        assertEquals(alice.name, aliceNode.database.transaction { aliceNode.services.identityService.partyFromAnonymous(aliceAnonymousIdentity)!!.name })
-        assertEquals(bob.name, bobNode.database.transaction { bobNode.services.identityService.partyFromAnonymous(bobAnonymousIdentity)!!.name })
+        assertEquals(alice.name, aliceNode.database.transaction { aliceNode.services.identityService.wellKnownPartyFromAnonymous(aliceAnonymousIdentity)!!.name })
+        assertEquals(bob.name, bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(bobAnonymousIdentity)!!.name })
 
         // Verify that the nodes have the right anonymous identities
         assertTrue { aliceAnonymousIdentity.owningKey in aliceNode.services.keyManagementService.keys }

@@ -21,7 +21,7 @@ class AbstractPartyToX500NameAsStringConverter(identitySvc: () -> IdentityServic
 
     override fun convertToDatabaseColumn(party: AbstractParty?): String? {
         if (party != null) {
-            val partyName = identityService.partyFromAnonymous(party)?.toString()
+            val partyName = identityService.wellKnownPartyFromAnonymous(party)?.toString()
             if (partyName != null) return partyName
             log.warn("Identity service unable to resolve AbstractParty: $party")
         }
@@ -30,7 +30,7 @@ class AbstractPartyToX500NameAsStringConverter(identitySvc: () -> IdentityServic
 
     override fun convertToEntityAttribute(dbData: String?): AbstractParty? {
         if (dbData != null) {
-            val party = identityService.partyFromX500Name(CordaX500Name.parse(dbData))
+            val party = identityService.wellKnownPartyFromX500Name(CordaX500Name.parse(dbData))
             if (party != null) return party
             log.warn ("Identity service unable to resolve X500name: $dbData")
         }

@@ -39,7 +39,7 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
             rpc.waitUntilNetworkReady()
 
             // Resolve parties via RPC
-            val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)
+            val issueToParty = rpc.wellKnownPartyFromX500Name(params.issueToPartyName)
                     ?: throw IllegalStateException("Unable to locate ${params.issueToPartyName} in Network Map Service")
             val notaryLegalIdentity = rpc.notaryIdentities().firstOrNull { it.name == params.notaryName } ?:
                     throw IllegalStateException("Couldn't locate notary ${params.notaryName} in NetworkMapCache")

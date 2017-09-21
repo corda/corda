@@ -75,14 +75,13 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[owningKey]
-    override fun certificateFromParty(party: Party): PartyAndCertificate = principalToParties[party.name] ?: throw IllegalArgumentException("Unknown identity ${party.name}")
 
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
 
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
-    override fun partyFromX500Name(name: CordaX500Name): Party? = principalToParties[name]?.party
-    override fun partyFromAnonymous(party: AbstractParty): Party? {
+    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = principalToParties[name]?.party
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: keyToParties[party.owningKey]?.party
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
@@ -95,9 +94,9 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
             null
         }
     }
-    override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
-    override fun requirePartyFromAnonymous(party: AbstractParty): Party {
-        return partyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+    override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
+    override fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
+        return wellKnownPartyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {

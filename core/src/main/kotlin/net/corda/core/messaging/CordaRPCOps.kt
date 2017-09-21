@@ -249,12 +249,12 @@ interface CordaRPCOps : RPCOps {
      * @param party identity to determine well known identity for.
      * @return well known identity, if found.
      */
-    fun partyFromAnonymous(party: AbstractParty): Party?
+    fun wellKnownPartyFromAnonymous(party: AbstractParty): Party?
     /** Returns the [Party] corresponding to the given key, if found. */
     fun partyFromKey(key: PublicKey): Party?
 
     /** Returns the [Party] with the X.500 principal as it's [Party.name]. */
-    fun partyFromX500Name(x500Name: CordaX500Name): Party?
+    fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party?
 
     /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
