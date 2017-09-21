@@ -9,10 +9,13 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.*
-import net.corda.core.utilities.seconds
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.MAX_PAGE_SIZE
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
 import rx.Observable
 import rx.subjects.PublishSubject
 
@@ -86,8 +89,13 @@ class NodeMonitorModel {
         stateMachineUpdates.startWith(currentStateMachines).subscribe(stateMachineUpdatesSubject)
 
         // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
-        val (vaultSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
-                                                                              PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
+        val (_, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
+                PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
+
+        val vaultSnapshot = proxy.vaultQueryBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED),
+                PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
+        // We have to fetch the snapshot separately since vault query API doesn't allow different criteria for snapshot and updates.
+        // TODO : This will create a small window of opportunity for inconsistent updates, might need to change the vault API to handle this case.
         val initialVaultUpdate = Vault.Update(setOf(), vaultSnapshot.states.toSet())
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
 
