@@ -260,7 +260,7 @@ class TransactionViewer : CordaView("Transactions") {
                     vgap = 10.0
                     hgap = 10.0
                     row {
-                        label("${contractState.contract().javaClass.simpleName} (${contractState.ref.toString().substring(0, 16)}...)[${contractState.ref.index}]") {
+                        label("${contractState.contract()} (${contractState.ref.toString().substring(0, 16)}...)[${contractState.ref.index}]") {
                             graphic = identicon(contractState.ref.txhash, 30.0)
                             tooltip = identiconToolTip(contractState.ref.txhash)
                             gridpaneConstraints { columnSpan = 2 }
