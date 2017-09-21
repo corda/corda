@@ -23,6 +23,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.node.LocalNodeConfiguration
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
@@ -75,6 +76,7 @@ import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.PublicKey
@@ -714,6 +716,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val myInfo: NodeInfo get() = info
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
+        override val localNodeConfiguration: LocalNodeConfiguration get() = LocalNodeConfigurationAdapter(configuration)
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
@@ -739,5 +742,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     fun registerCustomSchemas(schemas: Set<MappedSchema>) {
         database.hibernateConfig.schemaService.registerCustomSchemas(schemas)
     }
+}
 
+private class LocalNodeConfigurationAdapter(private val globalConfiguration: NodeConfiguration): LocalNodeConfiguration {
+    override val baseDirectory: Path get() { return globalConfiguration.baseDirectory }
+    override val minimumPlatformVersion: Int get() { return globalConfiguration.minimumPlatformVersion }
+    override val myLegalName: CordaX500Name get() { return globalConfiguration.myLegalName }
 }

@@ -3,13 +3,29 @@ package net.corda.node.testing
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.LocalNodeConfiguration
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.*
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.ContractUpgradeService
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.TransactionVerifierService
+import net.corda.core.node.services.VaultQueryService
+import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.serialization.NodeClock
-import net.corda.node.services.api.*
+import net.corda.node.services.api.AuditService
+import net.corda.node.services.api.DummyAuditService
+import net.corda.node.services.api.MonitoringService
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.api.SchedulerService
+import net.corda.node.services.api.SchemaService
+import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.schema.NodeSchemaService
@@ -24,7 +40,7 @@ import net.corda.testing.node.MockAttachmentStorage
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStateMachineRecordedTransactionMappingStorage
 import net.corda.testing.node.MockTransactionStorage
-import java.security.PublicKey
+import java.nio.file.Path
 import java.sql.Connection
 import java.time.Clock
 
@@ -86,4 +102,10 @@ open class MockServiceHubInternal(
     override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? = null
 
     override fun jdbcSession(): Connection = database.createSession()
+
+    override val localNodeConfiguration: LocalNodeConfiguration = object : LocalNodeConfiguration {
+        override val baseDirectory: Path get() = configuration.baseDirectory
+        override val myLegalName: CordaX500Name get() = configuration.myLegalName
+        override val minimumPlatformVersion: Int get() = configuration.minimumPlatformVersion
+    }
 }

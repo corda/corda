@@ -2,8 +2,10 @@ package net.corda.testing.node
 
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.LocalNodeConfiguration
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
@@ -31,6 +33,7 @@ import net.corda.testing.*
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -45,7 +48,7 @@ import java.util.*
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices(vararg val keys: KeyPair) : ServiceHub {
+open class MockServices @JvmOverloads constructor(vararg val keys: KeyPair, private val localNodeConfigurationFromKey: (key: KeyPair, info: NodeInfo) -> LocalNodeConfiguration = ::DefaultMockLocalNodeConfiguration) : ServiceHub {
 
     companion object {
 
@@ -107,7 +110,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
             val identityServiceRef: IdentityService by lazy { createIdentityService() }
             val database = configureDatabase(dataSourceProps, databaseProperties, createSchemaService, { identityServiceRef })
             val mockService = database.transaction {
-                object : MockServices(*(keys.toTypedArray())) {
+                object : MockServices(keys = *(keys.toTypedArray()), localNodeConfigurationFromKey = ::DefaultMockLocalNodeConfiguration) {
                     override val identityService: IdentityService = database.transaction { identityServiceRef }
                     override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
 
@@ -128,7 +131,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
         }
     }
 
-    constructor() : this(generateKeyPair())
+    constructor() : this(keys = generateKeyPair(), localNodeConfigurationFromKey = ::DefaultMockLocalNodeConfiguration)
 
     val key: KeyPair get() = keys.first()
 
@@ -154,8 +157,10 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo get() {
         val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
-        return NodeInfo(emptyList(), listOf(identity), 1,  serial = 1L)
+        return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
     }
+    override val localNodeConfiguration: LocalNodeConfiguration
+        get() = localNodeConfigurationFromKey(key, myInfo)
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
     lateinit var hibernatePersister: HibernateObserver
@@ -169,6 +174,12 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T = throw IllegalArgumentException("${type.name} not found")
 
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()
+
+    private class DefaultMockLocalNodeConfiguration(val key: KeyPair, val info: NodeInfo) : LocalNodeConfiguration {
+        override val baseDirectory: Path get() = ProjectStructure.projectRootDir
+        override val myLegalName: CordaX500Name get() = getTestPartyAndCertificate(MEGA_CORP.name, key.public).name
+        override val minimumPlatformVersion: Int get() = info.platformVersion
+    }
 }
 
 class MockKeyManagementService(val identityService: IdentityService,
