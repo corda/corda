@@ -260,13 +260,31 @@ class RPCServer(
 
     private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
         lifeCycle.requireState(State.STARTED)
-        val clientToServer = RPCApi.ClientToServer.fromClientMessage(RPC_SERVER_CONTEXT, artemisMessage)
+
+        // Attempt de-serialisation of the RPC request message, in such a way that we can route the error back to
+        // the RPC that was being tried if it fails in a method/rpc specific way.
+        val clientToServerTry = Try.on { RPCApi.ClientToServer.fromClientMessage(RPC_SERVER_CONTEXT, artemisMessage) }
+        val clientToServer = try {
+            clientToServerTry.getOrThrow()
+        } catch (e: RPCApi.ArgumentDeserialisationException) {
+            // The exception itself has a more informative error message, and this could be caused by buggy apps, so
+            // let's just log it as a warning instead of an error. Relay the failure to the client so they can see it.
+            log.warn("Inbound RPC failed", e)
+            sendReply(e.reqWithNoArguments.id, e.reqWithNoArguments.clientAddress, Try.Failure(e.cause!!))
+            return
+        } catch (e: Exception) {
+            // This path indicates something more fundamental went wrong, like a missing message header.
+            log.error("Failed to parse an inbound RPC: version skew between client and server?", e)
+            return
+        } finally {
+            artemisMessage.acknowledge()
+        }
+
+        // Now try dispatching the request itself.
         log.debug { "-> RPC -> $clientToServer" }
         when (clientToServer) {
             is RPCApi.ClientToServer.RpcRequest -> {
-                val rpcContext = RpcContext(
-                        currentUser = getUser(artemisMessage)
-                )
+                val rpcContext = RpcContext(currentUser = getUser(artemisMessage))
                 rpcExecutor!!.submit {
                     val result = invokeRpc(rpcContext, clientToServer.methodName, clientToServer.arguments)
                     sendReply(clientToServer.id, clientToServer.clientAddress, result)
