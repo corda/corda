@@ -9,6 +9,8 @@ API: Contracts
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-contracts`.
 
+.. contents::
+
 All Corda contracts are JVM classes that implement ``net.corda.core.contracts.Contract``.
 
 The ``Contract`` interface is defined as follows:
@@ -73,7 +75,7 @@ And here is the ``verify`` that rejects all transactions:
         }
 
 LedgerTransaction
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 The ``LedgerTransaction`` object passed into ``verify()`` represents the full set of information available to
 ``verify()`` when deciding whether to accept or reject the transaction. It has the following properties:
@@ -87,13 +89,14 @@ The ``LedgerTransaction`` object passed into ``verify()`` represents the full se
 
 Where:
 
-    * ``inputs`` is a list of the transaction's inputs'
-* ``outputs`` is a list of the transaction's outputs'
-* ``attachments`` is a list of the transaction's attachments'
-* ``commands`` is a list of the transaction's commands, and their associated signatures'
-* ``id`` is the transaction's Merkle root hash'
-* ``notary`` is the transaction's notary. If there are inputs these must have the same notary on their source transactions.
-* ``timeWindow`` is the transaction's timestamp and defines the acceptable delay for notarisation.
+* ``inputs`` is a list of the transaction's inputs
+* ``outputs`` is a list of the transaction's outputs
+* ``attachments`` is a list of the transaction's attachments
+* ``commands`` is a list of the transaction's commands, and their associated signatures
+* ``id`` is the transaction's Merkle root hash
+* ``notary`` is the transaction's notary. If there are inputs these must have the same notary on their source
+  transactions
+* ``timeWindow`` is the transaction's timestamp and defines the acceptable delay for notarisation
 
 requireThat()
 ^^^^^^^^^^^^^
@@ -225,7 +228,7 @@ We can imagine that we would like to verify the USD states and the GBP states se
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/TransactionVerification.kt
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/transactions/LedgerTransaction.kt
        :language: kotlin
        :start-after: DOCSTART 2
        :end-before: DOCEND 2
@@ -234,7 +237,7 @@ Where ``InOutGroup`` is defined as:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/TransactionVerification.kt
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/transactions/LedgerTransaction.kt
        :language: kotlin
        :start-after: DOCSTART 3
        :end-before: DOCEND 3
@@ -256,7 +259,7 @@ For example, we could group the states in the transaction above by currency (i.e
             it -> it.getAmount().getToken()
         );
 
-This would produce the following InOutGroups:
+This would produce the following instances of ``InOutGroup``:
 
 .. image:: resources/in-out-groups.png
 
