@@ -2,9 +2,9 @@ package net.corda.testing.messaging
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.ArtemisMessagingComponent
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.artemis.ArtemisTcpTransport
+import net.corda.nodeapi.internal.artemis.ConnectionDirection
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.configureTestSSL
 import org.apache.activemq.artemis.api.core.client.*

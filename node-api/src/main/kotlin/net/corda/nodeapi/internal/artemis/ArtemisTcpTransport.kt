@@ -1,4 +1,4 @@
-package net.corda.nodeapi
+package net.corda.nodeapi.internal.artemis
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
@@ -6,7 +6,6 @@ import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
-import org.bouncycastle.asn1.x500.X500Name
 
 sealed class ConnectionDirection {
     data class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()

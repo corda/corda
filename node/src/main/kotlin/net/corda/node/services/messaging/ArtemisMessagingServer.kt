@@ -27,8 +27,12 @@ import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
 import net.corda.node.utilities.loadKeyStore
 import net.corda.nodeapi.*
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.internal.artemis.ArtemisTcpTransport
+import net.corda.nodeapi.internal.artemis.ConnectionDirection
+import net.corda.nodeapi.internal.artemis.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
@@ -56,7 +60,6 @@ import java.math.BigInteger
 import java.security.KeyStore
 import java.security.KeyStoreException
 import java.security.Principal
-import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledExecutorService

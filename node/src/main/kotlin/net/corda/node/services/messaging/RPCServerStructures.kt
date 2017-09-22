@@ -2,7 +2,7 @@
 
 package net.corda.node.services.messaging
 
-import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent
 import net.corda.nodeapi.PermissionException
 
 /** Helper method which checks that the current RPC user is entitled for the given permission. Throws a [PermissionException] otherwise. */

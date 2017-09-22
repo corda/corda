@@ -29,7 +29,7 @@ import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.ANSIProgressRenderer
-import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
