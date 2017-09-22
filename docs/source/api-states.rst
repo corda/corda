@@ -36,12 +36,10 @@ common sub-interfaces are:
 * ``OwnableState``
 
 ``LinearState`` models shared facts for which there is only one current version at any point in time. ``LinearState``
-states evolve in a straight line by superseding themselves.
-
-Unlike ``LinearState``, ``OwnableState`` is meant to represent assets that can be freely split and merged over time.
-Cash is a good example of an ``OwnableState`` - two existing $5 cash states can be combined into a single $10 cash
-state, or split into five $1 cash states. With ``OwnableState``, its the total amount held that is important, rather
-than the actual units held.
+states evolve in a straight line by superseding themselves. On the other hand, ``OwnableState`` is meant to represent
+assets that can be freely split and merged over time. Cash is a good example of an ``OwnableState`` - two existing $5
+cash states can be combined into a single $10 cash state, or split into five $1 cash states. With ``OwnableState``, its
+the total amount held that is important, rather than the actual units held.
 
 We can picture the hierarchy as follows:
 
