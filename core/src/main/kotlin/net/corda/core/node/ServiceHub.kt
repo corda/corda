@@ -64,6 +64,10 @@ interface ServiceHub : ServicesForResolution {
     val transactionVerifierService: TransactionVerifierService
     val clock: Clock
     val myInfo: NodeInfo
+    /**
+     * Returns local node configuration.
+     */
+    val localNodeConfiguration: LocalNodeConfiguration
 
     /**
      * Return the singleton instance of the given Corda service type. This is a class that is annotated with

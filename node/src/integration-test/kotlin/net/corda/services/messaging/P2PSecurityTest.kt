@@ -18,6 +18,7 @@ import net.corda.node.utilities.AddOrRemove
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import net.corda.testing.node.SimpleNode
+import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -62,7 +63,7 @@ class P2PSecurityTest : NodeBasedTest() {
             whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.chooseIdentity().name))
         }
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
-        return SimpleNode(config, trustRoot = trustRoot).apply { start() }
+        return SimpleNode(config = config, trustRoot = trustRoot).apply { start() }
     }
 
     private fun SimpleNode.registerWithNetworkMap(registrationName: CordaX500Name): CordaFuture<NetworkMapService.RegistrationResponse> {

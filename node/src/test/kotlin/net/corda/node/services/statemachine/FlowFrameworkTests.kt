@@ -16,6 +16,7 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
@@ -54,6 +55,7 @@ import rx.Notification
 import rx.Observable
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -738,6 +740,31 @@ class FlowFrameworkTests {
     }
 
     @Test
+    fun localNodeConfiguration() {
+        val expected = AtomicReference<Data>()
+        val actual = AtomicReference<Data>()
+        val resultFuture = node1.services.startFlow(ReturnInfoFlow(node1.services.configuration.baseDirectory.toString(), actual::set, expected::set)).resultFuture
+        mockNet.runNetwork()
+
+        resultFuture.getOrThrow()
+
+        assertThat(actual.get()).isEqualTo(expected.get())
+    }
+
+    @InitiatingFlow
+    private class ReturnInfoFlow(private val baseDirectory: String, private val setActual: (data: Data) -> Unit, private val setExpected: (data: Data) -> Unit) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            setExpected(Data(serviceHub.myInfo.legalIdentities.first().name, serviceHub.myInfo.platformVersion, baseDirectory.toString()))
+            val localNodeConfiguration = serviceHub.localNodeConfiguration
+            setActual(Data(localNodeConfiguration.myLegalName, localNodeConfiguration.minimumPlatformVersion, localNodeConfiguration.baseDirectory.toString()))
+        }
+    }
+
+    @CordaSerializable
+    data class Data(val legalName: CordaX500Name, val minimumPlatformVersion: Int, val baseDirectory: String)
+
+    @Test
     fun `double initiateFlow throws`() {
         val future = node1.services.startFlow(DoubleInitiatingFlow()).resultFuture
         mockNet.runNetwork()
@@ -1019,6 +1046,7 @@ class FlowFrameworkTests {
     private class VaultQueryFlow(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<List<StateAndRef<ContractState>>>() {
         @Suspendable
         override fun call(): List<StateAndRef<ContractState>> {
+
             val otherPartySession = initiateFlow(otherParty)
             otherPartySession.send(stx)
             // hold onto reference here to force checkpoint of vaultQueryService and thus
