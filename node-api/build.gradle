@@ -5,12 +5,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node Artemis API'
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-}
-
 dependencies {
     compile project(":core")
 
@@ -36,8 +30,8 @@ dependencies {
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
-    testCompile "org.assertj:assertj-core:${assertj_version}"
-    testCompile project(':test-utils')
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile project(':node-driver')
 }
 
 jar {
