@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.div
 import net.corda.core.internal.isDirectory
@@ -44,7 +45,7 @@ class NodeInfoSerializer {
         val serializedBytes: SerializedBytes<NodeInfo> = nodeInfo.serialize()
         val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
         val signedData: SignedData<NodeInfo> = SignedData(serializedBytes, regSig)
-        val file: File = (path / ("nodeInfo-" + serializedBytes.hashCode().toString())).toFile()
+        val file: File = (path / ("nodeInfo-" + SecureHash.sha256(serializedBytes.bytes).toString())).toFile()
         file.writeBytes(signedData.serialize().bytes)
     }
 
