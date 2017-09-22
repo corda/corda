@@ -4,7 +4,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY

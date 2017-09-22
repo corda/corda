@@ -1,7 +1,7 @@
 package net.corda.demobench.model
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.testing.DUMMY_NOTARY
 import org.junit.Test
 import java.nio.file.Path

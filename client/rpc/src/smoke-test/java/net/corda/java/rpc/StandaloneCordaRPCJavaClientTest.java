@@ -10,7 +10,7 @@ import net.corda.core.node.NodeInfo;
 import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
-import net.corda.nodeapi.User;
+import net.corda.nodeapi.internal.User;
 import net.corda.smoketesting.NodeConfig;
 import net.corda.smoketesting.NodeProcess;
 import org.junit.After;

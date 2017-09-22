@@ -14,7 +14,7 @@ import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
 import net.corda.node.services.transactions.ValidatingNotaryService;
 import net.corda.nodeapi.internal.ServiceInfo;
-import net.corda.nodeapi.User;
+import net.corda.nodeapi.internal.User;
 import net.corda.testing.CoreTestUtils;
 import net.corda.testing.node.NodeBasedTest;
 import org.junit.After;

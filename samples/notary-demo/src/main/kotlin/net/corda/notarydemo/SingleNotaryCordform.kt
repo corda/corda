@@ -6,7 +6,7 @@ import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.cordform.CordformDefinition

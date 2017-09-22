@@ -7,7 +7,7 @@ import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 
 fun CordformDefinition.node(configure: CordformNode.() -> Unit) {
     addNode { cordformNode -> cordformNode.configure() }

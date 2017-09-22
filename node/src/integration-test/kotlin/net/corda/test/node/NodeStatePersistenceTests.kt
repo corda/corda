@@ -20,7 +20,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.driver

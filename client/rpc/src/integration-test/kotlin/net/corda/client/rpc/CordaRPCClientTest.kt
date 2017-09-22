@@ -21,7 +21,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest

@@ -1,6 +1,6 @@
 package net.corda.services.messaging
 
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.testing.configureTestSSL
 import net.corda.testing.messaging.SimpleMQClient
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException

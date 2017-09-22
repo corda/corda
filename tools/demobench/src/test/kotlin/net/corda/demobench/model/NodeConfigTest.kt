@@ -10,7 +10,7 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.webserver.WebServerConfig
