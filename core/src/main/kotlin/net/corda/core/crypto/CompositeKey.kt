@@ -88,7 +88,9 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             if (node is CompositeKey) {
                 val curVisitedMap = IdentityHashMap<CompositeKey, Boolean>()
                 curVisitedMap.putAll(visitedMap)
-                require(!curVisitedMap.contains(node)) { "Cycle detected for CompositeKey: $node" }
+                // We can't print the node details, because doing so involves serializing the node, which we can't
+                // do because of the cyclic graph
+                require(!curVisitedMap.contains(node)) { "Cycle detected for CompositeKey" }
                 curVisitedMap.put(node, true)
                 node.cycleDetection(curVisitedMap)
             }
