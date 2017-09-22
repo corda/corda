@@ -7,20 +7,33 @@ import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.shell.InteractiveShell
+import net.corda.node.utilities.configureDatabase
 import net.corda.testing.DEV_TRUST_ROOT
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_IDENTITY
+import net.corda.testing.node.MockServices
+import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 
 class InteractiveShellTest {
+    @Before
+    fun setup() {
+        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
+    }
+
+    @After
+    fun shutdown() {
+        InteractiveShell.database.close()
+    }
+
     @Suppress("UNUSED")
     class FlowA(val a: String) : FlowLogic<String>() {
         constructor(b: Int) : this(b.toString())

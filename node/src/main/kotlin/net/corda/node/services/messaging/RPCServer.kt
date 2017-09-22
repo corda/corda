@@ -11,6 +11,7 @@ import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import net.corda.client.rpc.RPCException
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LazyStickyPool
