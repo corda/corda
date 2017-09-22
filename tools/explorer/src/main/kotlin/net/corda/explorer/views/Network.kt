@@ -36,7 +36,7 @@ import net.corda.explorer.model.CordaView
 import net.corda.finance.utils.CityDatabase
 import net.corda.finance.utils.ScreenCoordinate
 import net.corda.finance.utils.WorldMapLocation
-import net.corda.nodeapi.ServiceType
+import net.corda.nodeapi.internal.ServiceType
 import tornadofx.*
 
 class Network : CordaView() {
