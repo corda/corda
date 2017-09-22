@@ -22,7 +22,9 @@ class AMQPSerializationCustomization(val factory: SerializerFactory) : Serializa
 
 fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     require(types.toSet().size == types.size) {
-        "Cannot add duplicate classes to the whitelist."
+        val duplicates = types.toMutableList()
+        types.toSet().forEach { duplicates -= it }
+        "Cannot add duplicate classes to the whitelist ($duplicates)."
     }
     for (type in types) {
         (this.whitelist as? MutableClassWhitelist)?.add(type)

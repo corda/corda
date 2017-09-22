@@ -7,7 +7,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
 import rx.exceptions.OnErrorNotImplementedException
-import java.math.BigDecimal
 import java.util.*
 
 /**
@@ -57,9 +56,6 @@ class DefaultWhitelist : CordaPluginRegistry() {
                     java.time.DayOfWeek::class.java, // No custom serialiser but it's an enum.
                     java.time.Month::class.java, // No custom serialiser but it's an enum.
 
-                    java.util.Collections.singletonMap("A", "B").javaClass,
-                    java.util.Collections.singleton("A").javaClass,
-                    java.util.Collections.singletonList("A").javaClass,
                     java.util.Collections.emptyMap<Object, Object>().javaClass,
                     java.util.Collections.emptySet<Object>().javaClass,
                     java.util.Collections.emptyList<Object>().javaClass,
