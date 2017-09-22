@@ -76,6 +76,8 @@ Please note you are not allowed to login to the notary.
 .. note:: Alternatively, you may start the demo nodes from within IntelliJ using either of the run configurations
           ``Explorer - demo nodes`` or ``Explorer - demo nodes (simulation)``
 
+.. note:: It is also possible to start the Explorer GUI from IntelliJ via ``Explorer - GUI`` run configuration, provided that the optional TornadoFX plugin has been installed first.
+
 .. note:: Use the Explorer in conjunction with the Trader Demo and Bank of Corda samples to use other *Issuer* nodes.
 
 Interface
