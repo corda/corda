@@ -4,6 +4,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
@@ -40,6 +41,7 @@ import sun.security.provider.certpath.X509CertPath
 import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.InputStream
+import java.io.Serializable
 import java.lang.reflect.Modifier.isPublic
 import java.security.cert.CertPath
 import java.util.*
@@ -113,6 +115,11 @@ object DefaultKryoCustomizer {
             // Don't deserialize PrivacySalt via its default constructor.
             register(PrivacySalt::class.java, PrivacySaltSerializer)
 
+            kryo.register(java.lang.invoke.SerializedLambda::class.java)
+//            register(java.lang.invoke.SerializedLambda::class.java, ClosureSerializer())
+            // TODO sollecitom - check
+            register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
+
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }
         }
@@ -168,6 +175,24 @@ object DefaultKryoCustomizer {
 
         override fun read(kryo: Kryo, input: Input, type: Class<PrivacySalt>): PrivacySalt {
             return PrivacySalt(input.readBytesWithLength())
+        }
+    }
+
+    object CordaClosureSerializer : ClosureSerializer() {
+
+        val ERROR_MESSAGE = "Unable to serialize Java Lambda expression, unless explicitly declared e.g., Runnable r = (Runnable & Serializable) () -> System.out.println(\"Hello world!\");"
+
+        override fun write(kryo: Kryo, output: Output, target: Any) {
+
+            if (!isSerializable(target)) {
+                throw IllegalArgumentException(ERROR_MESSAGE)
+            }
+            super.write(kryo, output, target)
+        }
+
+        private fun isSerializable(target: Any): Boolean {
+
+            return target is Serializable
         }
     }
 }
