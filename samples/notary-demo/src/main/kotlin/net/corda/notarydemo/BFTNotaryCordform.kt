@@ -8,7 +8,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.stream
 import net.corda.core.internal.toTypedArray
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator

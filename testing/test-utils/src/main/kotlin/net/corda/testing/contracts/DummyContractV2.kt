@@ -15,7 +15,7 @@ const val DUMMY_V2_PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.
  */
 // DOCSTART 1
 class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
-    override val legacyContract = DummyContract::class.java.name
+    override val legacyContract: String = DummyContract::class.java.name
 
     data class State(val magicNumber: Int = 0, val owners: List<AbstractParty>) : ContractState {
         override val participants: List<AbstractParty> = owners
@@ -31,7 +31,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
     }
 
     override fun verify(tx: LedgerTransaction) {
-        if (tx.commands.any { it.value is UpgradeCommand }) ContractUpgradeFlow.Acceptor.verify(tx)
+        if (tx.commands.any { it.value is UpgradeCommand }) ContractUpgradeFlow.verify(tx)
         // Other verifications.
     }
     // DOCEND 1

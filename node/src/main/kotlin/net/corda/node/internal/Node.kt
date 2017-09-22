@@ -18,7 +18,7 @@ import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
-import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectRequestProperty

@@ -19,7 +19,7 @@ import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
