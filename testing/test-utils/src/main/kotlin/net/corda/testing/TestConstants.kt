@@ -10,7 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX509CertHolder
-import net.corda.node.internal.certificates.caKeyStore
+import net.corda.node.internal.certificates.devCAKeys
 import net.corda.node.utilities.CertificateAndKeyPair
 import org.bouncycastle.cert.X509CertificateHolder
 import java.math.BigInteger
@@ -66,11 +66,11 @@ val DUMMY_REGULATOR: Party get() = Party(CordaX500Name(organisation = "Regulator
 
 val DEV_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
-    caKeyStore.getCordaIntermediateCertificateAndKeyPair("cordacadevkeypass")
+    devCAKeys.getCordaIntermediateCertificateAndKeyPair("cordacadevkeypass")
 }
 val DEV_TRUST_ROOT: X509CertificateHolder by lazy {
     // TODO: Should be identity scheme
-    caKeyStore.getCordaIntermediateCertificateChain()!!.last().toX509CertHolder()
+    devCAKeys.getCordaIntermediateCertificateChain()!!.last().toX509CertHolder()
 }
 
 fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())

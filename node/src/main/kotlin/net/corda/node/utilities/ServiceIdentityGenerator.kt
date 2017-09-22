@@ -8,7 +8,7 @@ import net.corda.core.internal.cert
 import net.corda.core.internal.div
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.internal.certificates.caKeyStore
+import net.corda.node.internal.certificates.devCAKeys
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -31,8 +31,8 @@ object ServiceIdentityGenerator {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
-        val issuer = caKeyStore.getCordaIntermediateCertificateAndKeyPair("cordacadevkeypass")
-        val rootCert = caKeyStore.getCordaRootCertificate()
+        val issuer = devCAKeys.getCordaIntermediateCertificateAndKeyPair("cordacadevkeypass")
+        val rootCert = devCAKeys.getCordaRootCertificate()
         keyPairs.zip(dirs) { keyPair, dir ->
             val serviceKeyCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuer.certificate, issuer.keyPair, serviceName, keyPair.public)
             val compositeKeyCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuer.certificate, issuer.keyPair, serviceName, notaryKey)

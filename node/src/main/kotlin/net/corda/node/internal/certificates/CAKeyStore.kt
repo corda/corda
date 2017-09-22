@@ -24,4 +24,4 @@ class CertificateSourceImpl(private val keyStore: KeyStore) : CertificateSource 
     override fun getCordaRootCertificate(): Certificate? = keyStore.getCertificate(CORDA_ROOT_CA)
 }
 
-val caKeyStore = CertificateSourceImpl(loadKeyStore(CertificateSourceImpl::class.java.getResourceAsStream("cordadevcakeys.jks"), "cordacadevpass"))
+val devCAKeys = CertificateSourceImpl(loadKeyStore(CertificateSourceImpl::class.java.getResourceAsStream("cordadevcakeys.jks"), "cordacadevpass"))
