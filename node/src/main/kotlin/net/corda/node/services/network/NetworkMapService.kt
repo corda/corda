@@ -18,7 +18,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.ServiceType
+import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.api.AbstractNodeService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.MessageHandlerRegistration

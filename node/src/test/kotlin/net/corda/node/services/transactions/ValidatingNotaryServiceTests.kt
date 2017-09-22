@@ -13,7 +13,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.issueInvalidState
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.DUMMY_NOTARY

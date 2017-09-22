@@ -3,7 +3,7 @@ package net.corda.bank
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.utilities.getOrThrow
-import net.corda.nodeapi.ServiceInfo
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.BOC
 import net.corda.testing.driver.driver
