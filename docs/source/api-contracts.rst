@@ -204,7 +204,7 @@ the single command of type ``XContract.Commands`` from the transaction, and bran
             override fun verify(tx: LedgerTransaction) {
                 val command = tx.findCommand<Commands> { true }
 
-                when (command.value) {
+                when (command) {
                     is Commands.Issue -> {
                         // Issuance verification logic.
                     }
@@ -225,11 +225,11 @@ the single command of type ``XContract.Commands`` from the transaction, and bran
 
             @Override
             public void verify(LedgerTransaction tx) {
-                final CommandWithParties<Commands> command = tx.findCommand(Commands.class, cmd -> true);
+                final Command<Commands> command = tx.findCommand(Commands.class, cmd -> true);
 
-                if (command.getValue() instanceof Commands.Issue) {
+                if (command instanceof Commands.Issue) {
                     // Issuance verification logic.
-                } else if (command.getValue() instanceof Commands.Transfer) {
+                } else if (command instanceof Commands.Transfer) {
                     // Transfer verification logic.
                 }
             }
