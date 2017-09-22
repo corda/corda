@@ -24,7 +24,7 @@ public final class LambdaSerializationTest extends TestDependencyInjectionBase {
     public void setup() {
 
         factory = SerializationDefaults.INSTANCE.getSERIALIZATION_FACTORY();
-        context = new SerializationContextImpl(SerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.P2P);
+        context = new SerializationContextImpl(SerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.Checkpoint);
     }
 
     @Test

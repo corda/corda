@@ -7,6 +7,8 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* Java 8 lambdas now work property with Kryo during check-pointing.
+
 * Remove the web front end from the simm demo
   The state of the code and the extermely old version of (a beta) angular JS makes it almost impossible to maintain at this point.
   Whilst the demo code itself is a useful teaching tool, the mess we have here isn't, so remove it with the purpose of putting something
