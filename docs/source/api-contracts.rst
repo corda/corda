@@ -11,9 +11,9 @@ API: Contracts
 
 .. contents::
 
-All Corda contracts are JVM classes that implement ``net.corda.core.contracts.Contract``.
-
-The ``Contract`` interface is defined as follows:
+Contract
+--------
+Contracts are classes that implement the ``Contract`` interface. The ``Contract`` interface is defined as follows:
 
 .. container:: codeset
 
@@ -22,25 +22,27 @@ The ``Contract`` interface is defined as follows:
         :start-after: DOCSTART 5
         :end-before: DOCEND 5
 
-Where:
+``Contract`` has a single method, ``verify``, which takes a ``LedgerTransaction`` as input and returns
+nothing. This function is used to check whether a transaction proposal is valid, as follows:
 
-* ``verify(tx: LedgerTransaction)`` determines whether transactions involving states which reference this contract type are valid
+* We gather together the contracts of each of the transaction's input and output states
+* We call each contract's ``verify`` function, passing in the transaction as an input
+* The proposal is only valid if none of the ``verify`` calls throw an exception
 
-verify()
---------
+``verify`` is executed in a sandbox:
 
-``verify()`` is a method that doesn't return anything and takes a ``LedgerTransaction`` as a parameter. It
-either throws an exception if the transaction is considered invalid, or returns normally if the transaction is
-considered valid.
+* It does not have access to the enclosing scope
+* The libraries available to it are whitelisted to disallow:
+  * Network access
+  * I/O such as disk or database access
+  * Sources of randomness such as the current time or random number generators
 
-``verify()`` is executed in a sandbox. It does not have access to the enclosing scope, and is not able to access
-the network or perform any other I/O. It only has access to the properties defined on ``LedgerTransaction`` when
-establishing whether a transaction is valid.
+This means that ``verify`` only has access to the properties defined on ``LedgerTransaction`` when deciding whether a
+transaction is valid.
 
-The two simplest ``verify`` functions are the one that accepts all transactions, and the one that rejects all
-transactions.
+Here are the two simplest ``verify`` functions:
 
-Here is the ``verify`` that accepts all transactions:
+* A  ``verify`` that **accepts** all possible transactions:
 
 .. container:: codeset
 
@@ -57,7 +59,7 @@ Here is the ``verify`` that accepts all transactions:
             // Always accepts!
         }
 
-And here is the ``verify`` that rejects all transactions:
+* A ``verify`` that **rejects** all possible transactions:
 
 .. container:: codeset
 
@@ -75,10 +77,8 @@ And here is the ``verify`` that rejects all transactions:
         }
 
 LedgerTransaction
-^^^^^^^^^^^^^^^^^
-
-The ``LedgerTransaction`` object passed into ``verify()`` represents the full set of information available to
-``verify()`` when deciding whether to accept or reject the transaction. It has the following properties:
+-----------------
+The ``LedgerTransaction`` object passed into ``verify`` has the following properties:
 
 .. container:: codeset
 
@@ -89,19 +89,52 @@ The ``LedgerTransaction`` object passed into ``verify()`` represents the full se
 
 Where:
 
-* ``inputs`` is a list of the transaction's inputs
-* ``outputs`` is a list of the transaction's outputs
-* ``attachments`` is a list of the transaction's attachments
-* ``commands`` is a list of the transaction's commands, and their associated signatures
-* ``id`` is the transaction's Merkle root hash
-* ``notary`` is the transaction's notary. If there are inputs these must have the same notary on their source
-  transactions
-* ``timeWindow`` is the transaction's timestamp and defines the acceptable delay for notarisation
+* ``inputs`` are the transaction's inputs as ``List<StateAndRef<ContractState>>``
+* ``outputs`` are the transaction's outputs as ``List<TransactionState<ContractState>>``
+* ``commands`` are the transaction's commands and associated signers, as ``List<CommandWithParties<CommandData>>``
+* ``attachments`` are the transaction's attachments as ``List<Attachment>``
+* ``notary`` is the transaction's notary. This must match the notary of all the inputs
+* ``timeWindow`` defines the window during which the transaction can be notarised
 
-requireThat()
-^^^^^^^^^^^^^
+``LedgerTransaction`` exposes a large number of utility methods to access the transaction's contents:
 
-Instead of throwing exceptions manually to reject a transaction, we can use the ``requireThat`` DSL:
+* ``inputStates`` extracts the input ``ContractState`` objects from the list of ``StateAndRef``
+* ``getInput``/``getOutput``/``getCommand``/``getAttachment`` extracts a component by index
+* ``getAttachment`` extracts an attachment by ID
+* ``inputsOfType``/``inRefsOfType``/``outputsOfType``/``outRefsOfType``/``commandsOfType`` extracts components based on
+  their generic type
+* ``filterInputs``/``filterInRefs``/``filterOutputs``/``filterOutRefs``/``filterCommands`` extracts components based on
+  a predicate
+* ``findInput``/``findInRef``/``findOutput``/``findOutRef``/``findCommand`` extracts the single component that matches
+  a predicate, or throws an exception if there are multiple matches
+
+requireThat
+-----------
+``verify`` can be written to manually throw an exception for each constraint:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        override fun verify(tx: LedgerTransaction) {
+            if (tx.inputs.size > 0)
+                throw IllegalArgumentException("No inputs should be consumed when issuing an X.")
+
+            if (tx.outputs.size != 1)
+                throw IllegalArgumentException("Only one output state should be created.")
+        }
+
+   .. sourcecode:: java
+
+        public void verify(LedgerTransaction tx) {
+            if (tx.getInputs().size() > 0)
+                throw new IllegalArgumentException("No inputs should be consumed when issuing an X.");
+
+            if (tx.getOutputs().size() != 1)
+                throw new IllegalArgumentException("Only one output state should be created.");
+        }
+
+However, this is verbose. To impose a series of constraints, we can use ``requireThat`` instead:
 
 .. container:: codeset
 
@@ -133,11 +166,9 @@ For each <``String``, ``Boolean``> pair within ``requireThat``, if the boolean c
 exception will cause the transaction to be rejected.
 
 Commands
-^^^^^^^^
-
-``LedgerTransaction`` contains the commands as a list of ``CommandWithParties`` instances.
-``CommandWithParties`` pairs a command with a list of the entities that are required to sign a transaction
-where this command is present:
+--------
+``LedgerTransaction`` contains the commands as a list of ``CommandWithParties`` instances. ``CommandWithParties`` pairs
+a ``CommandData`` with a list of required signers for the transaction:
 
 .. container:: codeset
 
@@ -152,19 +183,13 @@ Where:
 * ``signingParties`` is the list of the signer's identities, if known
 * ``value`` is the object being signed (a command, in this case)
 
-Extracting commands
-~~~~~~~~~~~~~~~~~~~
-You can use the ``requireSingleCommand()`` helper method to extract commands.
+Branching verify with commands
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Generally, we will want to impose different constraints on a transaction based on its commands. For example, we will
+want to impose different constraints on a cash issuance transaction to on a cash transfer transaction.
 
-``<C : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand(klass: Class<C>)`` asserts that
-the transaction contains exactly one command of type ``T``, and returns it. If there is not exactly one command of this
-type in the transaction, an exception is thrown, rejecting the transaction.
-
-For ``requireSingleCommand`` to work, all the commands that we wish to match against must be grouped using the same
-marker interface.
-
-Here is an example of using ``requireSingleCommand`` to extract a transaction's command and using it to fork the
-execution of ``verify()``:
+We can achieve this by extracting the command and using standard branching logic within ``verify``. Here, we extract
+the single command of type ``XContract.Commands`` from the transaction, and branch ``verify`` accordingly:
 
 .. container:: codeset
 
@@ -177,7 +202,7 @@ execution of ``verify()``:
             }
 
             override fun verify(tx: LedgerTransaction) {
-                val command = tx.commands.requireSingleCommand<Commands>()
+                val command = tx.findCommand<Commands> { true }
 
                 when (command.value) {
                     is Commands.Issue -> {
@@ -200,7 +225,7 @@ execution of ``verify()``:
 
             @Override
             public void verify(LedgerTransaction tx) {
-                final CommandWithParties<Commands> command = requireSingleCommand(tx.getCommands(), Commands.class);
+                final CommandWithParties<Commands> command = tx.findCommand(Commands.class, cmd -> true);
 
                 if (command.getValue() instanceof Commands.Issue) {
                     // Issuance verification logic.
@@ -209,89 +234,3 @@ execution of ``verify()``:
                 }
             }
         }
-
-Grouping states
----------------
-Suppose we have the following transaction, where 15 USD is being exchanged for 10 GBP:
-
-.. image:: resources/ungrouped-tx.png
-   :scale: 20
-   :align: center
-
-We can imagine that we would like to verify the USD states and the GBP states separately:
-
-.. image:: resources/grouped-tx.png
-   :scale: 20
-   :align: center
-
-``LedgerTransaction`` provides a ``groupStates`` method to allow you to group states in this way:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/transactions/LedgerTransaction.kt
-       :language: kotlin
-       :start-after: DOCSTART 2
-       :end-before: DOCEND 2
-
-Where ``InOutGroup`` is defined as:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/transactions/LedgerTransaction.kt
-       :language: kotlin
-       :start-after: DOCSTART 3
-       :end-before: DOCEND 3
-
-For example, we could group the states in the transaction above by currency (i.e. by ``amount.token``):
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        val groups: List<InOutGroup<Cash.State, Issued<Currency>>> = tx.groupStates(Cash.State::class.java) {
-	        it -> it.amount.token
-	    }
-
-   .. sourcecode:: java
-
-        final List<InOutGroup<Cash.State, Issued<Currency>>> groups = tx.groupStates(
-            Cash.State.class,
-            it -> it.getAmount().getToken()
-        );
-
-This would produce the following instances of ``InOutGroup``:
-
-.. image:: resources/in-out-groups.png
-
-We can now verify these groups individually:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-          for ((in_, out, key) in groups) {
-              when (key) {
-                  is GBP -> {
-                      // GBP verification logic.
-                  }
-                  is USD -> {
-                      // USD verification logic.
-                  }
-              }
-          }
-
-   .. sourcecode:: java
-
-        for (InOutGroup group : groups) {
-            if (group.getGroupingKey() == USD) {
-                // USD verification logic.
-            } else if (group.getGroupingKey() == GBP) {
-                // GBP verification logic.
-            }
-        }
-
-Legal prose
------------
-
-Currently, a ``Contract`` subtype may refer to the legal prose it implements via a ``LegalProseReference`` annotation.
-In the future, a contract's legal prose will be included as an attachment.
