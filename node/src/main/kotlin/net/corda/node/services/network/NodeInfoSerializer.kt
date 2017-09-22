@@ -21,7 +21,7 @@ class NodeInfoSerializer {
 
     companion object {
         /**
-         * Path relative to the running node where to look for serialized NodeInfos.
+         * Path relative to the running node where the serialized NodeInfos are stored.
          * Keep this in sync with the value in Cordform.groovy.
          */
         const val NODE_INFO_FOLDER = "additional-node-infos"
@@ -44,7 +44,7 @@ class NodeInfoSerializer {
         val serializedBytes: SerializedBytes<NodeInfo> = nodeInfo.serialize()
         val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
         val signedData: SignedData<NodeInfo> = SignedData(serializedBytes, regSig)
-        val file: File = (path / ("nodeInfo-" + signedData.hashCode().toString())).toFile()
+        val file: File = (path / ("nodeInfo-" + serializedBytes.hashCode().toString())).toFile()
         file.writeBytes(signedData.serialize().bytes)
     }
 
