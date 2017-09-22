@@ -33,11 +33,11 @@ class NodeInfoSerializer {
      * Saves the given [NodeInfo] to a path.
      * The node is 'encoded' as a SignedData<NodeInfo>, signed with the owning key of its first identity.
      * The name of the written file will be "nodeInfo-" followed by the hash of the content. The hash in the filename
-     * is used so that one can freely copy these files without fearing to overwrite a another one.
+     * is used so that one can freely copy these files without fearing to overwrite another one.
      *
-     * @param path the path where to write the file, if non-existant it will be created.
-     * @param nodeInfo the nodeInfo to serialize
-     * @param keyManager a KeyManagementService used to sign the node
+     * @param path the path where to write the file, if non-existaent it will be created.
+     * @param nodeInfo the NodeInfo to serialize.
+     * @param keyManager a KeyManagementService used to sign the NodeInfo data.
      */
     fun saveToFile(path: Path, nodeInfo: NodeInfo, keyManager: KeyManagementService) {
         path.toFile().mkdirs()
@@ -49,7 +49,7 @@ class NodeInfoSerializer {
     }
 
     /**
-     * Loads all the files contained in a given path and returns the deserialized [NodeInfo]s
+     * Loads all the files contained in a given path and returns the deserialized [NodeInfo]s.
      * Signatures are checked before returning a value.
      *
      * @param nodePath the node base path. NodeInfo files are searched for in nodePath/[NODE_INFO_FOLDER]

@@ -7,11 +7,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.div
-import net.corda.core.internal.isDirectory
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -33,14 +30,16 @@ import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
-import net.corda.node.utilities.*
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.node.utilities.AddOrRemove
+import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.node.utilities.bufferUntilDatabaseCommit
+import net.corda.node.utilities.wrapWithDatabaseTransaction
+
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.security.SignatureException
-import java.security.cert.TrustAnchor
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
