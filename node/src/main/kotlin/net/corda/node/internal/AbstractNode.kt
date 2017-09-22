@@ -7,9 +7,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.crypto.*
 import net.corda.core.flows.*
-import net.corda.core.flows.ContractUpgradeFlow.Acceptor
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -36,6 +34,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProvider
+import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
@@ -67,8 +66,8 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
-import net.corda.nodeapi.ServiceInfo
-import net.corda.nodeapi.ServiceType
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.ServiceType
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
@@ -373,7 +372,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun installCoreFlows() {
         installCoreFlow(FinalityFlow::class, ::FinalityHandler)
         installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
-        installCoreFlow(ContractUpgradeFlow.Initiator::class, ::Acceptor)
+        installCoreFlow(ContractUpgradeFlow.Initiate::class, ::ContractUpgradeHandler)
         installCoreFlow(SwapIdentitiesFlow::class, ::SwapIdentitiesHandler)
     }
 
