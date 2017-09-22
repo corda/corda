@@ -350,7 +350,7 @@ To create an IOU between PartyA and PartyB, run the following command from the c
 
 .. sourcecode:: bash
 
-   curl -X PUT "http://localhost:10007/api/example/create-iou?iouValue=1&partyName=PartyB"
+   curl -X PUT 'http://localhost:10007/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
 
 Note that both PartyA's port number (``10007``) and PartyB are referenced in the PUT request path. This command
 instructs PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised
@@ -428,7 +428,7 @@ following list:
 
 We can create a new IOU using the ``ExampleFlow$Initiator`` flow. For example, from the interactive shell of PartyA,
 you can agree an IOU of 50 with PartyB by running
-``flow start ExampleFlow$Initiator iouValue: 50, otherParty: PartyB``.
+``flow start ExampleFlow$Initiator iouValue: 50, otherParty: "O=PartyB,L=New York,C=US"``.
 
 This will print out the following progress steps:
 
