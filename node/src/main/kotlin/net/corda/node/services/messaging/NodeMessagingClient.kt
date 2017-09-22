@@ -29,9 +29,9 @@ import net.corda.node.utilities.*
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.VerifierApi
-import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
-import net.corda.nodeapi.VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX
+import net.corda.nodeapi.internal.VerifierApi
+import net.corda.nodeapi.internal.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
+import net.corda.nodeapi.internal.VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -48,7 +48,6 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
-import javax.security.auth.x500.X500Principal
 
 // TODO: Stop the wallet explorer and other clients from using this class and get rid of persistentInbox
 

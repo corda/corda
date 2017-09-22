@@ -14,7 +14,7 @@ import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.VerifierApi
+import net.corda.nodeapi.internal.VerifierApi
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.driver.*

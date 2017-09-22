@@ -12,7 +12,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.MonitoringService
-import net.corda.nodeapi.VerifierApi
+import net.corda.nodeapi.internal.VerifierApi
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import java.util.concurrent.ConcurrentHashMap
 
