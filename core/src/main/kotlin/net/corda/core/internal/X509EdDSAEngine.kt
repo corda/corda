@@ -1,5 +1,7 @@
-package net.i2p.crypto.eddsa
+package net.corda.core.internal
 
+import net.i2p.crypto.eddsa.EdDSAEngine
+import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.security.*
 import java.security.spec.AlgorithmParameterSpec
 import java.security.spec.X509EncodedKeySpec
@@ -16,33 +18,34 @@ class X509EdDSAEngine : Signature {
     constructor() : super(EdDSAEngine.SIGNATURE_ALGORITHM) {
         engine = EdDSAEngine()
     }
+
     constructor(digest: MessageDigest) : super(EdDSAEngine.SIGNATURE_ALGORITHM) {
         engine = EdDSAEngine(digest)
     }
 
-    override fun engineInitSign(privateKey: PrivateKey) = engine.engineInitSign(privateKey)
+    override fun engineInitSign(privateKey: PrivateKey) = engine.initSign(privateKey)
+    override fun engineInitSign(privateKey: PrivateKey, random: SecureRandom) = engine.initSign(privateKey, random)
+
     override fun engineInitVerify(publicKey: PublicKey) {
         val parsedKey = if (publicKey is sun.security.x509.X509Key) {
             EdDSAPublicKey(X509EncodedKeySpec(publicKey.encoded))
         } else {
             publicKey
         }
-        engine.engineInitVerify(parsedKey)
+
+        engine.initVerify(parsedKey)
     }
 
-    override fun engineVerify(sigBytes: ByteArray): Boolean = engine.engineVerify(sigBytes)
-    override fun engineSign(): ByteArray = engine.engineSign()
-    override fun engineUpdate(b: Byte) = engine.engineUpdate(b)
-    override fun engineUpdate(b: ByteArray, off: Int, len: Int) = engine.engineUpdate(b, off, len)
-    override fun engineGetParameters(): AlgorithmParameters {
-        val method = engine.javaClass.getMethod("engineGetParameters")
-        return method.invoke(engine) as AlgorithmParameters
-    }
+    override fun engineSign(): ByteArray = engine.sign()
+    override fun engineVerify(sigBytes: ByteArray): Boolean = engine.verify(sigBytes)
+
+    override fun engineUpdate(b: Byte) = engine.update(b)
+    override fun engineUpdate(b: ByteArray, off: Int, len: Int) = engine.update(b, off, len)
+
+    override fun engineGetParameters(): AlgorithmParameters = engine.parameters
     override fun engineSetParameter(params: AlgorithmParameterSpec) = engine.setParameter(params)
-    override fun engineGetParameter(param: String): Any = engine.engineGetParameter(param)
-    override fun engineSetParameter(param: String, value: Any?) = engine.engineSetParameter(param, value)
-    override fun engineInitSign(privateKey: PrivateKey, random: SecureRandom) {
-        val method = engine.javaClass.getMethod("engineInitSign", PrivateKey::class.java, SecureRandom::class.java)
-        method.invoke(engine, privateKey, random)
-    }
+    @Suppress("DEPRECATION")
+    override fun engineGetParameter(param: String): Any = engine.getParameter(param)
+    @Suppress("DEPRECATION")
+    override fun engineSetParameter(param: String, value: Any?) = engine.setParameter(param, value)
 }

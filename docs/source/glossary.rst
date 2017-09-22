@@ -5,8 +5,6 @@ Artemis
     The message queuing middleware used within Corda
 Attachment
     An attachment is a piece of data that can be referred to within a transaction but is never marked as used, i.e. can be referred to multiple times.
-Clause
-    A clause is a reusable piece of code that performs transaction verification
 Command
     Used for directing a transaction, sometimes containing command data. For example, a Cash contract may include an Issue command, which signals that one of the purposes of the transaction is to issue cash on to the ledger (i.e. by creating one or more Cash outputs, without any corresponding inputs.)
 Composite Key
