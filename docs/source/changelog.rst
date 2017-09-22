@@ -51,7 +51,13 @@ Release 1.0
    * In preparation for ``NetworkMapService`` redesign and distributing notaries through ``NetworkParameters`` we added
    ``NetworkMapCache::notaryIdentities`` list to enable to lookup for notary parties known to the network. Related ``CordaRPCOps::notaryIdentities``
    was introduced. Other special nodes parties like Oracles or Regulators need to be specified directly in CorDapp or flow.
-   * Moved ``ServiceType`` and ``ServiceInfo`` to ``net.corda.nodeapi`` package as services are only required on node startup.
+  * Moved ``ServiceType`` and ``ServiceInfo`` to ``net.corda.nodeapi`` package as services are only required on node startup.
+
+* ``Cordformation`` and node identity generation
+  * Cordform may not specify a ``NetworkMapNode``, when that happens during ``DeployNodes`` the following happens:
+    1. Each node is started and its signed serialized NodeInfo is written to disk in the node folder.
+    2. Every serialized ``NodeInfo`` above is copied in every other node "additional-node-info" folder under the NodeInfo folder.
+  * Nodes read all the nodes stored in ``additional-node-info`` when the ``NetworkMapService`` starts up.
 
 * Adding enum support to the class carpenter
 
@@ -253,12 +259,6 @@ Milestone 14
      location of the node server.
   * Slots for multiple IP addresses and ``legalIdentitiesAndCert``s were introduced. Addresses are no longer of type
    ``SingleMessageRecipient``, but of ``NetworkHostAndPort`` .
-
-* Cordformation and node identity generation
-  * Cordform may not specify a NetworkMapNode, when that happens during DeployNodes the following happens:
-    1. each node is started and its signed serialized NodeInfo is written to disk in the node folder
-    2. every serialized NodeInfo above is copied in every other node "additional-node-info" folder under the NodeInfo folder
-  * Node read all the nodes stored in "additional-node-info" when the NetworkMapService starts up.
       
 * ``ServiceHub.storageService`` has been removed. ``attachments`` and ``validatedTransactions`` are now direct members of
   ``ServiceHub``.

@@ -141,8 +141,7 @@ class Cordform extends DefaultTask {
                 it.build()
             }
             generateNodeInfos()
-
-            println "Starting without networkMapNode, this an experimental feature"
+            logger.info("Starting without networkMapNode, this an experimental feature")
         } else {
             nodes.each {
                 if (it != networkMapNode) {
