@@ -2,7 +2,7 @@
 
 package net.corda.demobench.model
 
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import java.util.*
 
 @Suppress("UNCHECKED_CAST")

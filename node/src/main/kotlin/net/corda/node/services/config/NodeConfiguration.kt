@@ -6,7 +6,7 @@ import net.corda.node.internal.NetworkMapInfo
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.node.services.network.NetworkMapService
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.OldConfig
 import java.net.URL

@@ -4,29 +4,15 @@ package net.corda.nodeapi
 
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.CordaRuntimeException
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.toFuture
 import net.corda.core.toObservable
-import net.corda.nodeapi.config.OldConfig
 import net.corda.nodeapi.internal.serialization.*
 import rx.Observable
 import java.io.InputStream
-
-data class User(
-        @OldConfig("user")
-        val username: String,
-        val password: String,
-        val permissions: Set<String>) {
-    override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
-    fun toMap() = mapOf(
-            "username" to username,
-            "password" to password,
-            "permissions" to permissions
-    )
-}
 
 /** Records the protocol version in which this RPC was added. */
 @Target(AnnotationTarget.FUNCTION)

@@ -25,6 +25,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.RPCUserService
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.User
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE

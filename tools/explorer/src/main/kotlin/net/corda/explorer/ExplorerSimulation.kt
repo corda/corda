@@ -24,7 +24,7 @@ import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.ServiceType
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY

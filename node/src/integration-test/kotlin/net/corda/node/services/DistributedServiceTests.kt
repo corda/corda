@@ -12,7 +12,7 @@ import net.corda.finance.POUNDS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver

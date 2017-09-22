@@ -5,7 +5,7 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.testing.RPCDriverExposedDSLInterface
 import net.corda.testing.rpcTestUser
 import net.corda.testing.startInVmRpcClient

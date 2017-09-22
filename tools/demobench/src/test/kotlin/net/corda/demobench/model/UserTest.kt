@@ -1,6 +1,6 @@
 package net.corda.demobench.model
 
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import org.junit.Test
 import kotlin.test.assertEquals
 

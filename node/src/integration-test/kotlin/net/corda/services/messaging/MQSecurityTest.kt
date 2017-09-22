@@ -22,7 +22,7 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRE
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.ALICE
 import net.corda.testing.BOB

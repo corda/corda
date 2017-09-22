@@ -1,7 +1,7 @@
 package net.corda.node.services
 
 import net.corda.core.flows.FlowLogic
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.User
 
 /**
  * Service for retrieving [User] objects representing RPC users who are authorised to use the RPC system. A [User]
