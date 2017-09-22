@@ -1,8 +1,9 @@
 API: Core types
 ===============
 
-Corda provides a large standard library of data types used to represent the Corda data model. In addition, there are a
-series of helper libraries which provide date manipulation, maths and cryptography functions.
+.. contents::
+
+Corda provides several more core classes as part of its API.
 
 SecureHash
 ----------
