@@ -433,8 +433,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun getNotaryIdentity(): PartyAndCertificate? {
         return advertisedServices.singleOrNull { it.type.isNotary() }?.let {
             it.name?.let {
-                require(it.commonName != null) {"Common name in $it must not be null for notary service, use service type id as common name."}
-                require(ServiceType.parse(it.commonName!!).isNotary()) {"Common name for notary service in $it must be the notary service type id."}
+                require(it.commonName != null) {"Common name in '$it' must not be null for notary service, use service type id as common name."}
+                require(ServiceType.parse(it.commonName!!).isNotary()) {"Common name for notary service in '$it' must be the notary service type id."}
             }
             obtainIdentity(it)
         }
@@ -671,7 +671,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val nodeCert = certificates[0] as? X509Certificate ?: throw ConfigurationException("Node certificate must be an X.509 certificate")
         val subject = CordaX500Name.build(nodeCert.subjectX500Principal)
         if (subject != name)
-            throw ConfigurationException("The name $name for $id doesn't match what's in the key store: $subject")
+            throw ConfigurationException("The name '$name' for $id doesn't match what's in the key store: $subject")
 
         partyKeys += keys
         return PartyAndCertificate(CertificateFactory.getInstance("X509").generateCertPath(certificates))
