@@ -31,10 +31,10 @@ We need to download the example CorDapp from GitHub.
 
 * Set up your machine by following the :doc:`quickstart guide <getting-set-up>`
 
-* Clone the example CorDapp from the `cordapp-tutorial repository <https://github.com/corda/cordapp-tutorial>`_ using
-  the following command: ``git clone https://github.com/corda/cordapp-tutorial``
+* Clone the example CorDapp from the `cordapp-example repository <https://github.com/corda/cordapp-example>`_ using
+  the following command: ``git clone https://github.com/corda/cordapp-example``
 
-* Change directories to the freshly cloned repo: ``cd cordapp-tutorial``
+* Change directories to the freshly cloned repo: ``cd cordapp-example``
 
 * We want to work off the latest Milestone release
 
@@ -61,7 +61,7 @@ Let's open the example CorDapp in IntelliJ IDEA.
   .. image:: resources/intellij-welcome.png
      :width: 400
 
-* Click open, navigate to the folder where you cloned the ``cordapp-tutorial``, and click OK
+* Click open, navigate to the folder where you cloned the ``cordapp-example``, and click OK
 
 * IntelliJ will show several pop-up windows, one of which requires our attention:
 
@@ -81,7 +81,7 @@ Let's open the example CorDapp in IntelliJ IDEA.
 
 * Navigate to ``Open ...``
 
-* Navigate to the directory where you cloned the ``cordapp-tutorial``
+* Navigate to the directory where you cloned the ``cordapp-example``
 
 * Click OK
 
@@ -193,7 +193,7 @@ Terminal
 
 Building the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Open a terminal window in the ``cordapp-tutorial`` directory
+* Open a terminal window in the ``cordapp-example`` directory
 
 * Build the test nodes with our CorDapp using the following command:
 
@@ -227,12 +227,12 @@ Building the example CorDapp
 
 Running the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Start the nodes by running the following command from the root of the ``cordapp-tutorial`` folder:
+Start the nodes by running the following command from the root of the ``cordapp-example`` folder:
 
 * Unix/Mac OSX: ``kotlin-source/build/nodes/runnodes``
 * Windows: ``call kotlin-source\build\nodes\runnodes.bat``
 
-.. warn:: On Unix/Mac OSX, do not click/change focus until all eight additional terminal windows have opened, or some
+.. warn:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
    nodes may fail to start.
 
 For each node, the ``runnodes`` script creates a node tab/window:
@@ -249,7 +249,7 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
     📚  New! Training now available worldwide, see https://corda.net/corda-training/
 
-    Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-tutorial/kotlin-source/build/nodes/PartyA/logs
+    Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs
     Database connection url is              : jdbc:h2:tcp://10.163.199.132:54763/node
     Listening on address                    : 127.0.0.1:10005
     RPC service listening on address        : localhost:10006
@@ -266,7 +266,7 @@ For every node except the controller, the script also creates a webserver termin
 
 .. sourcecode:: none
 
-    Logs can be found in /Users/joeldudley/Desktop/cordapp-tutorial/kotlin-source/build/nodes/PartyA/logs/web
+    Logs can be found in /Users/joeldudley/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs/web
     Starting as webserver: localhost:10007
     Webserver started up in 42.02 sec
 
@@ -540,7 +540,7 @@ Debugging is done via IntelliJ as follows:
 
 .. sourcecode:: none
 
-    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Working Directory: /Users/joeldudley/cordapp-tutorial/build/20170707142746/PartyA
+    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Working Directory: /Users/joeldudley/cordapp-example/build/20170707142746/PartyA
     [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Debug port: dt_socket:5007
 
 4. Edit the “Debug CorDapp” run configuration with the port of the node you wish to connect to
