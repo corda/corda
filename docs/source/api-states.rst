@@ -5,7 +5,8 @@ API: States
 
 ContractState
 -------------
-In Corda, states are classes that implement ``ContractState``. The ``ContractState`` interface is defined as follows:
+In Corda, states are instances of classes that implement ``ContractState``. The ``ContractState`` interface is defined
+as follows:
 
 .. container:: codeset
 
@@ -14,27 +15,14 @@ In Corda, states are classes that implement ``ContractState``. The ``ContractSta
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
 
-``participants`` is a ``List`` of the ``AbstractParty`` who are considered to have a stake in the state. Among other
-things, the ``participants`` will:
+``ContractState`` has a single field - ``participants``. ``participants`` is a ``List`` of the ``AbstractParty`` that
+are considered to have a stake in the state. Among other things, the ``participants`` will:
 
 * Usually store the state in their vault (see below)
 
-* Need to sign a notary-change or contract-upgrade transaction for this state
+* Need to sign any notary-change and contract-upgrade transactions involving this state
 
-* Receive any committed transactions involving this state as part of ``FinalityFlow``
-
-The vault
----------
-Each node has a vault where it stores the states that the node considers "relevant". Whenever the node records a new
-transaction, it also checks whether it should store each of the transaction's output states in its vault. The default
-vault implementation follows the following rules:
-
-  * If the state is an ``OwnableState`` (see below), the vault will store the state if the node is the state's
-    ``owner``
-  * Otherwise, the vault will store the state if it is one of the ``participants``
-
-State that are not considered relevant are not stored in the node's vault. However, the node will still store the
-transaction that created it in its transaction storage.
+* Receive any finalised transactions involving this state as part of ``FinalityFlow``
 
 ContractState sub-interfaces
 ----------------------------
@@ -136,6 +124,17 @@ For example, here is a relatively complex definition for a state representing ca
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
+
+The vault
+---------
+Whenever a node records a new transaction, it also decides whether it should store each of the transaction's output
+states in its vault. The default vault implementation makes the decision based on the following rules:
+
+  * If the state is an ``OwnableState``, the vault will store the state if the node is the state's ``owner``
+  * Otherwise, the vault will store the state if it is one of the ``participants``
+
+States that are not considered relevant are not stored in the node's vault. However, the node will still store the
+transactions that created the states in its transaction storage.
 
 TransactionState
 ----------------
