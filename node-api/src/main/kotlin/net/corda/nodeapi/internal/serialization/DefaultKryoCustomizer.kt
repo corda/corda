@@ -88,10 +88,10 @@ object DefaultKryoCustomizer {
             register(BufferedInputStream::class.java, InputStreamSerializer)
             register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
             noReferencesWithin<WireTransaction>()
-            register(ECPublicKeyImpl::class.java, ECPublicKeyImplSerializer)
-            register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
-            register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
-            register(CompositeKey::class.java, CompositeKeySerializer)  // Using a custom serializer for compactness
+            register(ECPublicKeyImpl::class.java, PublicKeySerializer)
+            register(EdDSAPublicKey::class.java, PublicKeySerializer)
+            register(EdDSAPrivateKey::class.java, PrivateKeySerializer)
+            register(CompositeKey::class.java, PublicKeySerializer)  // Using a custom serializer for compactness
             // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
             register(Array<StackTraceElement>::class, read = { _, _ -> emptyArray() }, write = { _, _, _ -> })
             // This ensures a NonEmptySetSerializer is constructed with an initial value.
