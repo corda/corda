@@ -16,11 +16,11 @@ import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration

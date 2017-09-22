@@ -3,8 +3,8 @@ package net.corda.services.messaging
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.node.utilities.*
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.MEGA_CORP
@@ -18,7 +18,6 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Test
 import java.nio.file.Files
 

@@ -9,7 +9,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
-import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent
 import java.io.ByteArrayInputStream
 import java.security.cert.CertificateFactory
 import javax.persistence.*

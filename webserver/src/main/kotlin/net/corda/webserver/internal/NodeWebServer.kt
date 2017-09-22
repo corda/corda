@@ -5,7 +5,7 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.artemis.ArtemisMessagingComponent
 import net.corda.webserver.WebServerConfig
 import net.corda.webserver.converters.CordaConverterProvider
 import net.corda.webserver.services.WebServerPluginRegistry

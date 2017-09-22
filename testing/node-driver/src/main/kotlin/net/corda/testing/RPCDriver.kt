@@ -16,8 +16,8 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.internal.artemis.ArtemisTcpTransport
+import net.corda.nodeapi.internal.artemis.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
