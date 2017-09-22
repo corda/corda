@@ -46,7 +46,7 @@ class CordappLoaderTest {
         val actualCordapp = actual.first()
         assertThat(actualCordapp.contractClassNames).isEqualTo(listOf("net.corda.finance.contracts.isolated.AnotherDummyContract"))
         assertThat(actualCordapp.initiatedFlows).isEmpty()
-        assertThat(actualCordapp.rpcFlows).isEqualTo(listOf(loader.appClassLoader.loadClass("net.corda.core.flows.ContractUpgradeFlow\$Initiator").asSubclass(FlowLogic::class.java)))
+        assertThat(actualCordapp.rpcFlows).contains(loader.appClassLoader.loadClass("net.corda.core.flows.ContractUpgradeFlow\$Initiate").asSubclass(FlowLogic::class.java))
         assertThat(actualCordapp.services).isEmpty()
         assertThat(actualCordapp.plugins).hasSize(1)
         assertThat(actualCordapp.plugins.first().javaClass.name).isEqualTo("net.corda.finance.contracts.isolated.DummyPlugin")

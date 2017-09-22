@@ -54,8 +54,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         /**
          * Creates a dev mode CordappLoader intended to only be used in test environments.
          *
-         * @param scanPackage Resolves the JARs that contain scanPackage and use them as the source for
-         *                      the classpath scanning.
+         * @param scanPackages list of packages to scan.
          */
         fun createDevMode(scanPackages: String): CordappLoader {
             val paths = scanPackages.split(",").flatMap { scanPackage ->
@@ -123,7 +122,11 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         }
 
         val found = scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() }
-        val coreFlows = listOf(ContractUpgradeFlow.Initiator::class.java)
+        val coreFlows = listOf(
+                ContractUpgradeFlow.Initiate::class.java,
+                ContractUpgradeFlow.Authorise::class.java,
+                ContractUpgradeFlow.Deauthorise::class.java
+        )
         return found + coreFlows
     }
 
