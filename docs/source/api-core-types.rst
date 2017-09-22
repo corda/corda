@@ -7,14 +7,18 @@ Corda provides several more core classes as part of its API.
 
 SecureHash
 ----------
-The ``SecureHash`` class represents a secure hash of unknown algorithm. We currently define only a single subclass,
-``SecureHash.SHA256``. There are utility methods to create them, parse them and so on.
+The ``SecureHash`` class is used to uniquely identify objects such as transactions and attachments by their hash.
+Any object that needs to be identified by its hash should implement the ``NamedByHash`` interface:
 
-NamedByHash
------------
-Things which are identified by their hash, like transactions and attachments, should implement the ``NamedByHash``
-interface which standardises how the ID is extracted. Note that a hash is *not* a globally unique identifier: it
-is always a derivative summary of the contents of the underlying data.
+.. container:: codeset
+
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/Structures.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+
+``SecureHash`` is a sealed class that only defines a single subclass, ``SecureHash.SHA256``. There are utility methods
+to create and parse ``SecureHash.SHA256`` objects.
 
 Party
 -----
@@ -22,7 +26,7 @@ Identities on the network are represented by ``AbstractParty``. There are two ty
 
 * ``Party``, identified by a ``PublicKey`` and a ``CordaX500Name``
 
-* ``AnonymousParty``, identified by a ``PublicKey`` only
+* ``AnonymousParty``, identified by a ``PublicKey``
 
 For example, in a transaction sent to your node as part of a chain of custody it is important you can convince yourself
 of the transaction's validity, but equally important that you don't learn anything about who was involved in that
