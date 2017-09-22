@@ -15,7 +15,7 @@ as follows:
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
 
-``ContractState`` has a single field - ``participants``. ``participants`` is a ``List`` of the ``AbstractParty`` that
+``ContractState`` has a single field, ``participants``. ``participants`` is a ``List`` of the ``AbstractParty`` that
 are considered to have a stake in the state. Among other things, the ``participants`` will:
 
 * Usually store the state in their vault (see below)
@@ -32,8 +32,8 @@ common sub-interfaces are:
 * ``LinearState``
 * ``OwnableState``
 
-``LinearState`` models shared facts for which there is only one current version at any point in time. ``LinearState``s
-evolve in a straight line by superseding themselves.
+``LinearState`` models shared facts for which there is only one current version at any point in time. ``LinearState``
+states evolve in a straight line by superseding themselves.
 
 Unlike ``LinearState``, ``OwnableState`` is meant to represent assets that can be freely split and merged over time.
 Cash is a good example of an ``OwnableState`` - two existing $5 cash states can be combined into a single $10 cash
@@ -55,11 +55,11 @@ The ``LinearState`` interface is defined as follows:
         :start-after: DOCSTART 2
         :end-before: DOCEND 2
 
-In Corda, states are immutable and can't be updated directly. Instead, we represent an evolving fact as a sequence of
-``LinearState``s that share the same ``linearId`` and represent the lifecycle of the fact up to the current point in
-time. This sequence serves as an audit trail for how the fact evolved over time.
+Remember that in Corda, states are immutable and can't be updated directly. Instead, we represent an evolving fact as a
+sequence of ``LinearState`` states that share the same ``linearId`` and represent an audit trail for the lifecycle of
+the fact over time.
 
-When we want to update a ``LinearState`` chain (i.e. a sequence of states sharing a ``linearId``), we:
+When we want to extend a ``LinearState`` chain (i.e. a sequence of states sharing a ``linearId``), we:
 
 * Use the ``linearId`` to extract the latest state in the chain from the vault
 
@@ -73,7 +73,7 @@ When we want to update a ``LinearState`` chain (i.e. a sequence of states sharin
 
 The new state will now become the latest state in the chain, representing the new current state of the agreement.
 
-``linearId`` is a ``UniqueIdentifier``, which is a combination of:
+``linearId`` is of type ``UniqueIdentifier``, which is a combination of:
 
 * A Java ``UUID`` representing a globally unique 128 bit random number
 * An optional external-reference string for referencing the state in external systems
@@ -93,10 +93,7 @@ Where:
 
 * ``owner`` is the ``PublicKey`` of the asset's owner
 
-  * ``OwnableState`` also override the default behavior of the vault's relevancy check. The default vault
-    implementation will track any ``OwnableState`` of which it is the owner.
-
-* ``withNewOwner(newOwner: AbstractParty)`` creates an identical copy of the state, only with a new owner
+* ``withNewOwner(newOwner: AbstractParty)`` creates an copy of the state with a new owner
 
 Because ``OwnableState`` models fungible assets that can be merged and split over time, ``OwnableState`` instances do
 not have a ``linearId``. $5 of cash created by one transaction is considered to be identical to $5 of cash produced by
@@ -106,17 +103,15 @@ Other interfaces
 ^^^^^^^^^^^^^^^^
 You can also customize your state by implementing the following interfaces:
 
-* ``QueryableState``, which allows the state to be queried in the node's database using SQL (see
+* ``QueryableState``, which allows the state to be queried in the node's database using custom attributes (see
   :doc:`api-persistence`)
-* ``SchedulableState``, which allows us to schedule future actions for the state (e.g. a coupon on a bond) (see
+* ``SchedulableState``, which allows us to schedule future actions for the state (e.g. a coupon payment on a bond) (see
   :doc:`event-scheduling`)
 
 User-defined fields
 -------------------
-Beyond implementing ``LinearState`` or ``OwnableState``, the definition of the state is up to the CorDapp developer.
-You can define any additional class fields and methods you see fit.
-
-For example, here is a relatively complex definition for a state representing cash:
+Beyond implementing ``ContractState`` or a sub-interface, a state is allowed to have any number of additional fields
+and methods. For example, here is the relatively complex definition for a state representing cash:
 
 .. container:: codeset
 
