@@ -3,6 +3,8 @@ API: States
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-states`.
 
+.. contents::
+
 ContractState
 -------------
 In Corda, states are instances of classes that implement ``ContractState``. The ``ContractState`` interface is defined
@@ -30,6 +32,7 @@ The behaviour of the state can be further customised by implementing sub-interfa
 common sub-interfaces are:
 
 * ``LinearState``
+
 * ``OwnableState``
 
 ``LinearState`` models shared facts for which there is only one current version at any point in time. ``LinearState``
@@ -105,6 +108,7 @@ You can also customize your state by implementing the following interfaces:
 
 * ``QueryableState``, which allows the state to be queried in the node's database using custom attributes (see
   :doc:`api-persistence`)
+
 * ``SchedulableState``, which allows us to schedule future actions for the state (e.g. a coupon payment on a bond) (see
   :doc:`event-scheduling`)
 
