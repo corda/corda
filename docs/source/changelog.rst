@@ -209,6 +209,8 @@ UNRELEASED
 
 * ``ContractUpgradeFlow.Initiator`` has been renamed to ``ContractUpgradeFlow.Initiate``
 
+* ``@RPCSinceVersion``, ``RPCException`` and ``PermissionException`` have moved to ``net.corda.client.rpc``.
+
 Milestone 14
 ------------
 
