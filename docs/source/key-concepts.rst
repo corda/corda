@@ -17,7 +17,6 @@ This section should be read in order:
    key-concepts-contracts
    key-concepts-transactions
    key-concepts-flows
-   key-concepts-identity
    key-concepts-consensus
    key-concepts-notaries
    key-concepts-time-windows
