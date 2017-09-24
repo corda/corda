@@ -38,5 +38,9 @@ It's reproduced here as an example of both ways you can do this for a couple of 
 .. note:: Several of the core interfaces at the heart of Corda are already annotated and so any classes that implement
    them will automatically be whitelisted.  This includes `Contract`, `ContractState` and `CommandData`.
 
+.. warning:: Java 8 Lambda expressions are not serializable by default. The syntax to declare a serializable Lambda
+expression that will work with Corda is ``Runnable r = (Runnable & Serializable) () -> System.out.println("Hello World");``, or
+``Callable<String> c = (Callable<String> & Serializable) () -> "Hello World";``.
+
 .. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are
    likely.
