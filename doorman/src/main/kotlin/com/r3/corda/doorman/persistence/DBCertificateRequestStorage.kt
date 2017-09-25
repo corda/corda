@@ -1,11 +1,12 @@
 package com.r3.corda.doorman.persistence
 
-import com.r3.corda.doorman.CertificateUtilities
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.node.utilities.CordaPersistence
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import java.security.cert.Certificate
+import java.io.ByteArrayInputStream
+import java.security.cert.CertPath
+import java.security.cert.CertificateFactory
 import java.time.Instant
 import javax.persistence.*
 import javax.persistence.criteria.CriteriaBuilder
@@ -13,7 +14,7 @@ import javax.persistence.criteria.Path
 import javax.persistence.criteria.Predicate
 
 // TODO Relax the uniqueness requirement to be on the entire X.500 subject rather than just the legal name
-class DBCertificateRequestStorage(private val database: CordaPersistence) : CertificationRequestStorage {
+open class DBCertificateRequestStorage(private val database: CordaPersistence) : CertificationRequestStorage {
     @Entity
     @Table(name = "certificate_signing_request")
     class CertificateSigningRequest(
@@ -34,19 +35,42 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
             @Column
             var request: ByteArray = ByteArray(0),
 
-            @Column(name = "request_timestamp")
-            var requestTimestamp: Instant = Instant.now(),
+            @Column(name = "created_at")
+            var createdAt: Instant = Instant.now(),
 
-            @Column(name = "process_timestamp", nullable = true)
-            var processTimestamp: Instant? = null,
+            @Column(name = "approved_at")
+            var approvedAt: Instant = Instant.now(),
+
+            @Column(name = "approved_by", length = 64)
+            var approvedBy: String? = null,
+
+            @Column
+            var status: Status = Status.New,
+
+            @Column(name = "signed_by", length = 512)
+            @ElementCollection(targetClass = String::class, fetch = FetchType.EAGER)
+            var signedBy: List<String>? = null,
+
+            @Column(name = "signed_at")
+            var signedAt: Instant? = Instant.now(),
+
+            @Column(name = "rejected_by", length = 64)
+            var rejectedBy: String? = null,
+
+            @Column(name = "rejected_at")
+            var rejectedAt: Instant? = Instant.now(),
 
             @Lob
             @Column(nullable = true)
-            var certificate: ByteArray? = null,
+            var certificatePath: ByteArray? = null,
 
             @Column(name = "reject_reason", length = 256, nullable = true)
             var rejectReason: String? = null
     )
+
+    enum class Status {
+        New, Approved, Rejected, Signed
+    }
 
     override fun saveRequest(certificationData: CertificationRequestData): String {
         val requestId = SecureHash.randomSHA256().toString()
@@ -60,9 +84,8 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
                     val criteriaQuery = createQuery(CertificateSigningRequest::class.java)
                     criteriaQuery.from(CertificateSigningRequest::class.java).run {
                         val nameEq = equal(get<String>(CertificateSigningRequest::legalName.name), legalName.toString())
-                        val certNotNull = isNotNull(get<String>(CertificateSigningRequest::certificate.name))
-                        val processTimeIsNull = isNull(get<String>(CertificateSigningRequest::processTimestamp.name))
-                        criteriaQuery.where(and(nameEq, or(certNotNull, processTimeIsNull)))
+                        val statusNewOrApproved = get<String>(CertificateSigningRequest::status.name).`in`(Status.Approved, Status.New)
+                        criteriaQuery.where(and(nameEq, statusNewOrApproved))
                     }
                 }
                 val duplicate = session.createQuery(query).resultList.isNotEmpty()
@@ -74,16 +97,14 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
             } catch (e: IllegalArgumentException) {
                 Pair(certificationData.request.subject, "Name validation failed with exception : ${e.message}")
             }
-            val now = Instant.now()
             val request = CertificateSigningRequest(
-                    requestId,
-                    certificationData.hostName,
-                    certificationData.ipAddress,
-                    legalName.toString(),
-                    certificationData.request.encoded,
-                    now,
+                    requestId = requestId,
+                    hostName = certificationData.hostName,
+                    ipAddress = certificationData.ipAddress,
+                    legalName = legalName.toString(),
+                    request = certificationData.request.encoded,
                     rejectReason = rejectReason,
-                    processTimestamp = rejectReason?.let { now }
+                    status = if (rejectReason == null) Status.New else Status.Rejected
             )
             session.save(request)
         }
@@ -93,49 +114,68 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
     override fun getResponse(requestId: String): CertificateResponse {
         return database.transaction {
             val response = singleRequestWhere { builder, path ->
-                val eq = builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
-                val timeNotNull = builder.isNotNull(path.get<Instant>(CertificateSigningRequest::processTimestamp.name))
-                builder.and(eq, timeNotNull)
+                builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
             }
-
             if (response == null) {
                 CertificateResponse.NotReady
             } else {
-                val certificate = response.certificate
-                if (certificate != null) {
-                    CertificateResponse.Ready(CertificateUtilities.toX509Certificate(certificate))
-                } else {
-                    CertificateResponse.Unauthorised(response.rejectReason!!)
+                when (response.status) {
+                    Status.New, Status.Approved -> CertificateResponse.NotReady
+                    Status.Rejected -> CertificateResponse.Unauthorised(response.rejectReason ?: "Unknown reason")
+                    Status.Signed -> CertificateResponse.Ready(buildCertPath(response.certificatePath))
                 }
             }
         }
     }
 
-    override fun approveRequest(requestId: String, generateCertificate: CertificationRequestData.() -> Certificate) {
+    override fun approveRequest(requestId: String, approvedBy: String): Boolean {
+        var approved = false
         database.transaction {
             val request = singleRequestWhere { builder, path ->
-                val eq = builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
-                val timeIsNull = builder.isNull(path.get<Instant>(CertificateSigningRequest::processTimestamp.name))
-                builder.and(eq, timeIsNull)
+                builder.and(builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId),
+                        builder.equal(path.get<String>(CertificateSigningRequest::status.name), Status.New))
             }
             if (request != null) {
-                request.certificate = request.toRequestData().generateCertificate().encoded
-                request.processTimestamp = Instant.now()
+                request.approvedAt = Instant.now()
+                request.approvedBy = approvedBy
+                request.status = Status.Approved
                 session.save(request)
+                approved = true
             }
         }
+        return approved
     }
 
-    override fun rejectRequest(requestId: String, rejectReason: String) {
+    override fun signCertificate(requestId: String, signedBy: List<String>, generateCertificate: CertificationRequestData.() -> CertPath): Boolean {
+        var signed = false
         database.transaction {
             val request = singleRequestWhere { builder, path ->
-                val eq = builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
-                val timeIsNull = builder.isNull(path.get<Instant>(CertificateSigningRequest::processTimestamp.name))
-                builder.and(eq, timeIsNull)
+                builder.and(builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId),
+                        builder.equal(path.get<String>(CertificateSigningRequest::status.name), Status.Approved))
+            }
+            if (request != null) {
+                val now = Instant.now()
+                request.certificatePath = request.toRequestData().generateCertificate().encoded
+                request.status = Status.Signed
+                request.signedAt = now
+                request.signedBy = signedBy
+                session.save(request)
+                signed = true
+            }
+        }
+        return signed
+    }
+
+    override fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String) {
+        database.transaction {
+            val request = singleRequestWhere { builder, path ->
+                builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
             }
             if (request != null) {
                 request.rejectReason = rejectReason
-                request.processTimestamp = Instant.now()
+                request.status = Status.Rejected
+                request.rejectedBy = rejectedBy
+                request.rejectedAt = Instant.now()
                 session.save(request)
             }
         }
@@ -149,20 +189,30 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
         }?.toRequestData()
     }
 
-    override fun getPendingRequestIds(): List<String> {
+    override fun getApprovedRequestIds(): List<String> {
+        return getRequestIdsByStatus(Status.Approved)
+    }
+
+    override fun getNewRequestIds(): List<String> {
+        return getRequestIdsByStatus(Status.New)
+    }
+
+    override fun getSignedRequestIds(): List<String> {
+        return getRequestIdsByStatus(Status.Signed)
+    }
+
+    private fun getRequestIdsByStatus(status: Status): List<String> {
         return database.transaction {
             val builder = session.criteriaBuilder
             val query = builder.createQuery(String::class.java).run {
                 from(CertificateSigningRequest::class.java).run {
                     select(get(CertificateSigningRequest::requestId.name))
-                    where(builder.isNull(get<String>(CertificateSigningRequest::processTimestamp.name)))
+                    where(builder.equal(get<Status>(CertificateSigningRequest::status.name), status))
                 }
             }
             session.createQuery(query).resultList
         }
     }
-
-    override fun getApprovedRequestIds(): List<String> = emptyList()
 
     private fun singleRequestWhere(predicate: (CriteriaBuilder, Path<CertificateSigningRequest>) -> Predicate): CertificateSigningRequest? {
         return database.transaction {
@@ -176,4 +226,6 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
     }
 
     private fun CertificateSigningRequest.toRequestData() = CertificationRequestData(hostName, ipAddress, PKCS10CertificationRequest(request))
+
+    private fun buildCertPath(certPathBytes: ByteArray?) = CertificateFactory.getInstance("X509").generateCertPath(ByteArrayInputStream(certPathBytes))
 }

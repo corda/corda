@@ -3,7 +3,7 @@ package com.r3.corda.doorman
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import net.corda.node.utilities.CertificateAndKeyPair
+import com.r3.corda.doorman.signer.DefaultCsrHandler
 import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_CA
 import net.corda.node.utilities.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
@@ -11,7 +11,6 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.codehaus.jackson.map.ObjectMapper
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import java.security.cert.Certificate
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.servlet.http.HttpServletRequest
@@ -26,7 +25,7 @@ import javax.ws.rs.core.Response.Status.UNAUTHORIZED
  * Provides functionality for asynchronous submission of certificate signing requests and retrieval of the results.
  */
 @Path("")
-class DoormanWebService(val intermediateCACertAndKey: CertificateAndKeyPair, val rootCert: Certificate, val storage: CertificationRequestStorage, val serverStatus: DoormanServerStatus) {
+class DoormanWebService(val csrHandler: DefaultCsrHandler, val serverStatus: DoormanServerStatus) {
     @Context lateinit var request: HttpServletRequest
     /**
      * Accept stream of [PKCS10CertificationRequest] from user and persists in [CertificationRequestStorage] for approval.
@@ -43,7 +42,7 @@ class DoormanWebService(val intermediateCACertAndKey: CertificateAndKeyPair, val
         // TODO: Certificate signing request verifications.
         // TODO: Use jira api / slack bot to semi automate the approval process?
         // TODO: Acknowledge to user we have received the request via email?
-        val requestId = storage.saveRequest(CertificationRequestData(request.remoteHost, request.remoteAddr, certificationRequest))
+        val requestId = csrHandler.saveRequest(CertificationRequestData(request.remoteHost, request.remoteAddr, certificationRequest))
         return ok(requestId).build()
     }
 
@@ -55,22 +54,17 @@ class DoormanWebService(val intermediateCACertAndKey: CertificateAndKeyPair, val
     @Path("certificate/{var}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun retrieveCert(@PathParam("var") requestId: String): Response {
-        val response = storage.getResponse(requestId)
+        val response = csrHandler.getResponse(requestId)
         return when (response) {
             is CertificateResponse.Ready -> {
                 // Write certificate chain to a zip stream and extract the bit array output.
                 val baos = ByteArrayOutputStream()
                 ZipOutputStream(baos).use { zip ->
                     // Client certificate must come first and root certificate should come last.
-                    val entries = listOf(
-                            CORDA_CLIENT_CA to response.certificate,
-                            CORDA_INTERMEDIATE_CA to intermediateCACertAndKey.certificate.toX509Certificate(),
-                            CORDA_ROOT_CA to rootCert
-                    )
-                    entries.forEach {
+                    val certificates = ArrayList(response.certificatePath.certificates)
+                    listOf(CORDA_CLIENT_CA, CORDA_INTERMEDIATE_CA, CORDA_ROOT_CA).zip(certificates).forEach {
                         zip.putNextEntry(ZipEntry("${it.first}.cer"))
                         zip.write(it.second.encoded)
-                        zip.setComment(it.first)
                         zip.closeEntry()
                     }
                 }

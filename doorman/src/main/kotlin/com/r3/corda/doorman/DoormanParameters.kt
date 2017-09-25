@@ -17,14 +17,12 @@ data class DoormanParameters(val basedir: Path,
                              val host: String,
                              val port: Int,
                              val dataSourceProperties: Properties,
+                             val mode: Mode,
                              val databaseProperties: Properties? = null,
-                             val keygen: Boolean = false,
-                             val rootKeygen: Boolean = false,
                              val jiraConfig: JiraConfig? = null,
-                             val keystorePath: Path = basedir / "certificates" / "caKeystore.jks",
-                             val rootStorePath: Path = basedir / "certificates" / "rootCAKeystore.jks"
+                             val keystorePath: Path? = null, // basedir / "certificates" / "caKeystore.jks",
+                             val rootStorePath: Path? = null // basedir / "certificates" / "rootCAKeystore.jks"
 ) {
-    val mode = if (rootKeygen) Mode.ROOT_KEYGEN else if (keygen) Mode.CA_KEYGEN else Mode.DOORMAN
 
     enum class Mode {
         DOORMAN, CA_KEYGEN, ROOT_KEYGEN
@@ -43,10 +41,9 @@ fun parseParameters(vararg args: String): DoormanParameters {
     val argConfig = args.toConfigWithOptions {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().defaultsTo(".").describedAs("filepath")
         accepts("configFile", "Overriding configuration file, default to <<current directory>>/node.conf.").withRequiredArg().describedAs("filepath")
-        accepts("keygen", "Generate CA keypair and certificate using provide Root CA key.").withOptionalArg()
-        accepts("rootKeygen", "Generate Root CA keypair and certificate.").withOptionalArg()
-        accepts("keystorePath", "CA keystore filepath, default to [basedir]/certificates/caKeystore.jks.").withRequiredArg().describedAs("filepath")
-        accepts("rootStorePath", "Root CA keystore filepath, default to [basedir]/certificates/rootCAKeystore.jks.").withRequiredArg().describedAs("filepath")
+        accepts("mode", "Execution mode. Allowed values: ${DoormanParameters.Mode.values()}").withRequiredArg().defaultsTo(DoormanParameters.Mode.DOORMAN.name)
+        accepts("keystorePath", "CA keystore filepath").withRequiredArg().describedAs("filepath")
+        accepts("rootStorePath", "Root CA keystore filepath").withRequiredArg().describedAs("filepath")
         accepts("keystorePassword", "CA keystore password.").withRequiredArg().describedAs("password")
         accepts("caPrivateKeyPassword", "CA private key password.").withRequiredArg().describedAs("password")
         accepts("rootKeystorePassword", "Root CA keystore password.").withRequiredArg().describedAs("password")

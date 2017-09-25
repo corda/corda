@@ -6,6 +6,7 @@ import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
+import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -26,7 +27,7 @@ object OptionParserHelper {
         // Convert all command line options to Config.
         return ConfigFactory.parseMap(parser.recognizedOptions().mapValues {
             val optionSpec = it.value
-            if (optionSpec is ArgumentAcceptingOptionSpec<*> && !optionSpec.requiresArgument() && optionSet.has(optionSpec)) true else optionSpec.value(optionSet)
+            if (optionSpec is ArgumentAcceptingOptionSpec<*> && !optionSpec.requiresArgument() && optionSet.has(optionSpec)) null else optionSpec.value(optionSet)
         }.filterValues { it != null })
     }
 }
@@ -40,3 +41,7 @@ object CertificateUtilities {
 }
 
 fun X509CertificateHolder.toX509Certificate(): Certificate = CertificateUtilities.toX509Certificate(encoded)
+
+fun buildCertPath(vararg certificates: Certificate): CertPath {
+    return CertificateFactory.getInstance("X509").generateCertPath(certificates.asList())
+}

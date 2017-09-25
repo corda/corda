@@ -14,9 +14,9 @@ class DoormanParametersTest {
 
     @Test
     fun `parse mode flag arg correctly`() {
-        assertEquals(DoormanParameters.Mode.CA_KEYGEN, parseParameters("--keygen", "--configFile", validConfigPath).mode)
-        assertEquals(DoormanParameters.Mode.ROOT_KEYGEN, parseParameters("--rootKeygen", "--configFile", validConfigPath).mode)
-        assertEquals(DoormanParameters.Mode.DOORMAN, parseParameters("--configFile", validConfigPath).mode)
+        assertEquals(DoormanParameters.Mode.CA_KEYGEN, parseParameters("--mode", "CA_KEYGEN", "--configFile", validConfigPath).mode)
+        assertEquals(DoormanParameters.Mode.ROOT_KEYGEN, parseParameters("--mode", "ROOT_KEYGEN", "--configFile", validConfigPath).mode)
+        assertEquals(DoormanParameters.Mode.DOORMAN, parseParameters("--mode", "DOORMAN", "--configFile", validConfigPath).mode)
     }
 
     @Test
@@ -34,7 +34,7 @@ class DoormanParametersTest {
     fun `should fail when config missing`() {
         // dataSourceProperties is missing from node_fail.conf and it should fail during parsing, and shouldn't use default from reference.conf.
         assertFailsWith<ConfigException.Missing> {
-            parseParameters("--keygen", "--keystorePath", testDummyPath, "--configFile", invalidConfigPath)
+            parseParameters("--configFile", invalidConfigPath)
         }
     }
 
