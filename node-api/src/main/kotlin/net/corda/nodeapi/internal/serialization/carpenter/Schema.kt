@@ -1,8 +1,11 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
-import kotlin.collections.LinkedHashMap
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes.*
+
+enum class SchemaFlags {
+    NoSimpleFieldAccess, NotCordaSerializable
+}
 
 /**
  * A Schema is the representation of an object the Carpenter can contsruct
@@ -17,7 +20,8 @@ abstract class Schema(
         var fields: Map<String, Field>,
         val superclass: Schema? = null,
         val interfaces: List<Class<*>> = emptyList(),
-        updater: (String, Field) -> Unit) {
+        updater: (String, Field) -> Unit,
+        var flags : MutableMap<SchemaFlags, Boolean> =  mutableMapOf()) {
     private fun Map<String, Field>.descriptors() = LinkedHashMap(this.mapValues { it.value.descriptor })
 
     init {
@@ -41,6 +45,20 @@ abstract class Schema(
 
     val asArray: String
         get() = "[L$jvmName;"
+
+    @Suppress("Unused")
+    fun setNoSimpleFieldAccess() {
+        flags.replace (SchemaFlags.NoSimpleFieldAccess, true)
+    }
+
+    fun setNotCordaSerializable() {
+        flags.replace (SchemaFlags.NotCordaSerializable, true)
+    }
+
+    @Suppress("Unused")
+    fun setCordaSerializable() {
+        flags.replace (SchemaFlags.NotCordaSerializable, false)
+    }
 }
 
 /**

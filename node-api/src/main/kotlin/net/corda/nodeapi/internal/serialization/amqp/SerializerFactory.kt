@@ -4,7 +4,6 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
@@ -243,10 +242,10 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
-                    whitelisted(clazz)
+                    whitelist.whitelisted(clazz)
                     SingletonSerializer(clazz, clazz.kotlin.objectInstance!!, this)
                 } else {
-                    whitelisted(type)
+                    whitelist.whitelisted(type)
                     ObjectSerializer(type, this)
                 }
             }
@@ -269,24 +268,6 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
             }
         }
         return null
-    }
-
-    private fun whitelisted(type: Type) {
-        val clazz = type.asClass()!!
-        if (isNotWhitelisted(clazz)) {
-            throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
-        }
-    }
-
-    // Ignore SimpleFieldAccess as we add it to anything we build in the carpenter.
-    internal fun isNotWhitelisted(clazz: Class<*>): Boolean = clazz == SimpleFieldAccess::class.java ||
-            (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
-
-    // Recursively check the class, interfaces and superclasses for our annotation.
-    private fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
-        return type.isAnnotationPresent(CordaSerializable::class.java) ||
-                type.interfaces.any { hasAnnotationInHierarchy(it) }
-                || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
     }
 
     private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<Any> {
