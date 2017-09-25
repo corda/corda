@@ -25,7 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class RaftNotaryServiceTests : NodeBasedTest() {
-    private val notaryName = CordaX500Name(commonName = RaftValidatingNotaryService.type.id, organisation = "RAFT Notary Service", locality = "London", country = "GB")
+    private val notaryName = CordaX500Name(RaftValidatingNotaryService.type.id, "RAFT Notary Service", "London", "GB")
 
     @Test
     fun `detect double spend`() {

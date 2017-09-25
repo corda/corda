@@ -37,8 +37,8 @@ import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
     companion object {
-        private val clusterName = CordaX500Name(commonName = BFTNonValidatingNotaryService.type.id, organisation = "BFT", locality = "Zurich", country = "CH")
         private val serviceType = BFTNonValidatingNotaryService.type
+        private val clusterName = CordaX500Name(serviceType.id, "BFT", "Zurich", "CH")
     }
 
     private val mockNet = MockNetwork()
@@ -51,9 +51,8 @@ class BFTNotaryServiceTests {
     private fun bftNotaryCluster(clusterSize: Int, exposeRaces: Boolean = false) {
         Files.deleteIfExists("config" / "currentView") // XXX: Make config object warn if this exists?
         val replicaIds = (0 until clusterSize)
-        val party = ServiceIdentityGenerator.generateToDisk(
+        ServiceIdentityGenerator.generateToDisk(
                 replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                serviceType.id,
                 clusterName)
         val bftNotaryService = ServiceInfo(serviceType, clusterName)
         val notaryClusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
