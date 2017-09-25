@@ -1,13 +1,32 @@
-API: Confidential Identities
-============================
+API: Identity
+=============
 
-.. note:: Before reading this page, you should be familiar with the core types from :doc:`api-core-types`, especially
-the ``Party`` and related types.
+.. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-identity`.
 
 .. contents::
 
-Using Confidential Identities
------------------------------
+Party
+-----
+Identities on the network are represented by ``AbstractParty``. There are two types of ``AbstractParty``:
+
+* ``Party``, identified by a ``PublicKey`` and a ``CordaX500Name``
+
+* ``AnonymousParty``, identified by a ``PublicKey``
+
+For example, in a transaction sent to your node as part of a chain of custody it is important you can convince yourself
+of the transaction's validity, but equally important that you don't learn anything about who was involved in that
+transaction. In these cases ``AnonymousParty`` should be used. In contrast, for internal processing where extended
+details of a party are required, the ``Party`` class should be used. The identity service provides functionality for
+resolving anonymous parties to full parties.
+
+Party names are held within the ``CordaX500Name`` data class, which enforces the structure of names within Corda, as
+well as ensuring a consistent rendering of the names in plain text.
+
+Where a party needs to be paired with proof of identity (generally only in directory information or for relaying
+confidential identities to counterparties), the ``PartyAndCertificate`` data class should be used.
+
+Confidential Identities
+-----------------------
 
 Confidential identities are key pairs where the corresponding X.509 certificate is not made public. Before constructing
 a new transaction the parties must generate and exchange new confidential identities, a process which is typically

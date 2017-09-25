@@ -12,8 +12,8 @@ This section describes the APIs that are available for the development of CorDap
    api-vault-query
    api-transactions
    api-flows
+   api-identity
    api-core-types
-   api-confidential-identities
 
 Before reading this page, you should be familiar with the :doc:`key concepts of Corda <key-concepts>`.
 
