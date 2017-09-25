@@ -334,7 +334,7 @@ endpoints are:
 * ``/api/example/me``
 * ``/api/example/peers``
 * ``/api/example/ious``
-* ``/api/example/{COUNTERPARTY}/create-iou``
+* ``/api/example/create-iou`` with parameters ``iouValue`` and ``partyName`` which is CN name of a node
 
 The web front-end is served from ``/web/example``.
 
