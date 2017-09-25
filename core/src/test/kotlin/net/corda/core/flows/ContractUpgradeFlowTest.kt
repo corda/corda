@@ -14,7 +14,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
 import net.corda.finance.`issued by`
-import net.corda.finance.contracts.asset.CASH_PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.CordaRPCOpsImpl
@@ -234,7 +233,7 @@ class ContractUpgradeFlowTest {
     }
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
-        override val legacyContract = CASH_PROGRAM_ID
+        override val legacyContract = Cash.PROGRAM_ID
 
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
             override val owner: AbstractParty = owners.first()

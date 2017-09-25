@@ -10,7 +10,7 @@ import net.corda.core.transactions.ComponentVisibilityException
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.*
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import org.junit.Test
 import java.time.Instant
@@ -19,7 +19,7 @@ import kotlin.test.*
 
 class CompatibleTransactionTests : TestDependencyInjectionBase() {
 
-    private val dummyOutState = TransactionState(DummyState(0), DUMMY_PROGRAM_ID, DUMMY_NOTARY)
+    private val dummyOutState = TransactionState(DummyState(0), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
     private val stateRef1 = StateRef(SecureHash.randomSHA256(), 0)
     private val stateRef2 = StateRef(SecureHash.randomSHA256(), 1)
     private val stateRef3 = StateRef(SecureHash.randomSHA256(), 0)

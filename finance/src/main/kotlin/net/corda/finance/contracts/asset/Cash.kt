@@ -37,8 +37,6 @@ import java.util.concurrent.atomic.AtomicReference
 // Cash
 //
 
-const val CASH_PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.asset.Cash"
-
 /**
  * Pluggable interface to allow for different cash selection provider implementations
  * Default implementation [CashSelectionH2Impl] uses H2 database and a custom function within H2 to perform aggregation.
@@ -190,7 +188,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: AbstractParty, notary: Party)
-            = generateIssue(tx, TransactionState(State(amount, owner), CASH_PROGRAM_ID, notary), Commands.Issue())
+            = generateIssue(tx, TransactionState(State(amount, owner), PROGRAM_ID, notary), Commands.Issue())
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
@@ -266,6 +264,8 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     }
 
     companion object {
+        const val PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.asset.Cash"
+
         /**
          * Generate a transaction that moves an amount of currency to the given party, and sends any change back to
          * sole identity of the calling node. Fails for nodes with multiple identities.

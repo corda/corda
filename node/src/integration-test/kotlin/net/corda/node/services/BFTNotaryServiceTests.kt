@@ -25,7 +25,6 @@ import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.chooseIdentity
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.getDefaultNotary
@@ -77,7 +76,7 @@ class BFTNotaryServiceTests {
         val notary = node.services.getDefaultNotary()
         val f = node.run {
             val trivialTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DUMMY_PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             // Create a new consensus while the redundant replica is sleeping:
             services.startFlow(NotaryFlow.Client(trivialTx)).resultFuture
@@ -102,7 +101,7 @@ class BFTNotaryServiceTests {
         val notary = node.services.getDefaultNotary()
         node.run {
             val issueTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DUMMY_PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             database.transaction {
                 services.recordTransactions(issueTx)
