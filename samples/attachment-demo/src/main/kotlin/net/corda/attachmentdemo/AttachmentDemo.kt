@@ -67,7 +67,7 @@ fun main(args: Array<String>) {
             val host = NetworkHostAndPort("localhost", 10009)
             println("Connecting to the recipient node ($host)")
             CordaRPCClient(host).start("demo", "demo").use {
-                recipient(it.proxy)
+                recipient(it.proxy, 10010)
             }
         }
     }
@@ -131,7 +131,7 @@ class AttachmentDemoFlow(private val otherSide: Party,
     }
 }
 
-fun recipient(rpc: CordaRPCOps) {
+fun recipient(rpc: CordaRPCOps, webPort: Int) {
     println("Waiting to receive transaction ...")
     val stx = rpc.internalVerifiedTransactionsFeed().updates.toBlocking().first()
     val wtx = stx.tx
@@ -141,11 +141,10 @@ fun recipient(rpc: CordaRPCOps) {
             require(rpc.attachmentExists(state.hash))
 
             // Download the attachment via the Web endpoint.
-            val connection = URL("http://localhost:10010/attachments/${state.hash}").openConnection() as HttpURLConnection
+            val connection = URL("http://localhost:$webPort/attachments/${state.hash}").openConnection() as HttpURLConnection
             try {
                 require(connection.responseCode == SC_OK) { "HTTP status code was ${connection.responseCode}" }
                 require(connection.contentType == APPLICATION_OCTET_STREAM) { "Content-Type header was ${connection.contentType}" }
-                require(connection.contentLength > 1024) { "Attachment contains only ${connection.contentLength} bytes" }
                 require(connection.getHeaderField(CONTENT_DISPOSITION) == "attachment; filename=\"${state.hash}.zip\"") {
                     "Content-Disposition header was ${connection.getHeaderField(CONTENT_DISPOSITION)}"
                 }
