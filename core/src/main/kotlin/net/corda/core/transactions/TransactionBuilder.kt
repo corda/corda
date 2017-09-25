@@ -122,6 +122,7 @@ open class TransactionBuilder(
         return this
     }
 
+    @JvmOverloads
     fun addOutputState(state: TransactionState<*>): TransactionBuilder {
         outputs.add(state)
         return this
@@ -133,6 +134,7 @@ open class TransactionBuilder(
     }
 
     /** A default notary must be specified during builder construction to use this method */
+    @JvmOverloads
     fun addOutputState(state: ContractState, contract: ContractClassName, constraint: AttachmentConstraint = AutomaticHashConstraint): TransactionBuilder {
         checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
         addOutputState(state, contract, notary!!, constraint = constraint)
