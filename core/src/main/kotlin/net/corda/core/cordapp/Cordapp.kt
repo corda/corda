@@ -21,7 +21,7 @@ import java.net.URL
  * @property customSchemas List of custom schemas
  * @property jarPath The path to the JAR for this CorDapp
  */
-data class Cordapp(
+data class Cordapp internal constructor(
         val contractClassNames: List<String>,
         val initiatedFlows: List<Class<out FlowLogic<*>>>,
         val rpcFlows: List<Class<out FlowLogic<*>>>,
