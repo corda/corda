@@ -21,14 +21,14 @@ class ServiceControllerTest {
     fun `test duplicates`() {
         val controller = ServiceController("/duplicate-services.conf")
         assertNotNull(controller.services)
-        assertEquals(listOf("corda.example"), controller.services)
+        assertEquals(listOf("corda.example"), controller.services.map { it.value })
     }
 
     @Test
     fun `test notaries`() {
         val controller = ServiceController("/notary-services.conf")
         assertNotNull(controller.notaries)
-        assertEquals(listOf("corda.notary.simple"), controller.notaries)
+        assertEquals(listOf("corda.notary.simple"), controller.notaries.map { it.value })
     }
 
     @Test

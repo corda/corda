@@ -5,6 +5,7 @@ import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import de.jensd.fx.glyphs.fontawesome.utils.FontAwesomeIconFactory
 import javafx.application.Platform
 import javafx.beans.InvalidationListener
+import javafx.collections.ListChangeListener
 import javafx.geometry.Pos
 import javafx.scene.control.ComboBox
 import javafx.scene.image.Image
@@ -61,7 +62,7 @@ class NodeTabView : Fragment() {
     private val chooser = FileChooser()
 
     private val model = NodeDataModel()
-    private val availableServices: List<String> = if (nodeController.hasNetworkMap()) serviceController.services else serviceController.notaries
+    private val availableServices: List<String> = if (nodeController.hasNetworkMap()) serviceController.issuers.keys.toList() else serviceController.notaries.keys.toList()
 
     private val nodeTerminalView = find<NodeTerminalView>()
     private val nodeConfigView = stackpane {
@@ -109,7 +110,7 @@ class NodeTabView : Fragment() {
                     }
                 }
 
-                fieldset("Services") {
+                fieldset("Additional configuration") {
                     styleClass.addAll("services-panel")
 
                     val servicesList = CheckListView(availableServices.observable()).apply {
@@ -117,6 +118,17 @@ class NodeTabView : Fragment() {
                         model.item.extraServices.set(checkModel.checkedItems)
                         if (!nodeController.hasNetworkMap()) {
                             checkModel.check(0)
+                            checkModel.checkedItems.addListener(ListChangeListener { change ->
+                                while (change.next()) {
+                                    if (change.wasAdded()) {
+                                        val item = change.addedSubList.last()
+                                        val idx = checkModel.getItemIndex(item)
+                                        checkModel.checkedIndices.forEach {
+                                            if (it != idx) checkModel.clearCheck(it)
+                                        }
+                                    }
+                                }
+                            })
                         }
                     }
                     add(servicesList)
