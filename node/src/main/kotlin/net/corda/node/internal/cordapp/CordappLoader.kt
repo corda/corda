@@ -10,6 +10,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.*
+import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
@@ -128,7 +129,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
     private fun loadCordapps(): List<Cordapp> {
         return cordappJarPaths.map {
             val scanResult = scanCordapp(it)
-            Cordapp(findContractClassNames(scanResult),
+            CordappImpl(findContractClassNames(scanResult),
                     findInitiatedFlows(scanResult),
                     findRPCFlows(scanResult),
                     findServices(scanResult),

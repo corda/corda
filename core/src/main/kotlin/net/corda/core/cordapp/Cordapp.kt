@@ -21,18 +21,13 @@ import java.net.URL
  * @property customSchemas List of custom schemas
  * @property jarPath The path to the JAR for this CorDapp
  */
-data class Cordapp internal constructor(
-        val contractClassNames: List<String>,
-        val initiatedFlows: List<Class<out FlowLogic<*>>>,
-        val rpcFlows: List<Class<out FlowLogic<*>>>,
-        val services: List<Class<out SerializeAsToken>>,
-        val plugins: List<CordaPluginRegistry>,
-        val customSchemas: Set<MappedSchema>,
-        val jarPath: URL) {
-    /**
-     * An exhaustive list of all classes relevant to the node within this CorDapp
-     *
-     * TODO: Also add [SchedulableFlow] as a Cordapp class
-     */
-    val cordappClasses = ((rpcFlows + initiatedFlows + services + plugins.map { javaClass }).map { it.name } + contractClassNames)
+interface Cordapp {
+    val contractClassNames: List<String>
+    val initiatedFlows: List<Class<out FlowLogic<*>>>
+    val rpcFlows: List<Class<out FlowLogic<*>>>
+    val services: List<Class<out SerializeAsToken>>
+    val plugins: List<CordaPluginRegistry>
+    val customSchemas: Set<MappedSchema>
+    val jarPath: URL
+    val cordappClasses: List<String>
 }

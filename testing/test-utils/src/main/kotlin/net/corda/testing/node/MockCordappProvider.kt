@@ -2,6 +2,7 @@ package net.corda.testing.node
 
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentId
 import net.corda.node.internal.cordapp.CordappLoader
@@ -13,7 +14,7 @@ class MockCordappProvider(cordappLoader: CordappLoader) : CordappProviderImpl(co
     val cordappRegistry = mutableListOf<Pair<Cordapp, AttachmentId>>()
 
     fun addMockCordapp(contractClassName: ContractClassName, services: ServiceHub) {
-        val cordapp = Cordapp(listOf(contractClassName), emptyList(), emptyList(), emptyList(), emptyList(), emptySet(), Paths.get(".").toUri().toURL())
+        val cordapp = CordappImpl(listOf(contractClassName), emptyList(), emptyList(), emptyList(), emptyList(), emptySet(), Paths.get(".").toUri().toURL())
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) }) {
             cordappRegistry.add(Pair(cordapp, findOrImportAttachment(contractClassName.toByteArray(), services)))
         }
