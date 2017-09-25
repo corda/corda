@@ -7,7 +7,7 @@ import net.corda.node.utilities.CordaPersistence
  */
 class ApprovingAllCertificateRequestStorage(private val database: CordaPersistence) : DBCertificateRequestStorage(database) {
     override fun saveRequest(certificationData: CertificationRequestData): String {
-        val requestId = saveRequest(certificationData)
+        val requestId = super.saveRequest(certificationData)
         approveRequest(requestId)
         return requestId
     }
