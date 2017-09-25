@@ -731,9 +731,9 @@ class DriverDSL(
             rpcUsers: List<User>,
             startInSameProcess: Boolean?
     ): CordaFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (0 until clusterSize).map { CordaX500Name(organisation = "Notary Service $it", locality = "Zurich", country = "CH") }
+        val nodeNames = (0 until clusterSize).map { CordaX500Name("Notary Service $it", "Zurich", "CH") }
         val paths = nodeNames.map { baseDirectory(it) }
-        ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
+        ServiceIdentityGenerator.generateToDisk(paths, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 
