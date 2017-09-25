@@ -22,7 +22,7 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
 
     @Before
     fun setup() {
-        services.mockCordappProvider.addMockCordapp(DUMMY_PROGRAM_ID, services)
+        services.mockCordappProvider.addMockCordapp(DUMMY_PROGRAM_ID, services.attachments)
     }
 
     interface Commands {

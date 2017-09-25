@@ -45,7 +45,7 @@ import java.util.*
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices @JvmOverloads constructor(
+open class MockServices(
         cordappPackages: List<String> = emptyList(),
         vararg val keys: KeyPair,
         override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage(),
@@ -133,7 +133,8 @@ open class MockServices @JvmOverloads constructor(
         }
     }
 
-    constructor() : this(emptyList(), generateKeyPair())
+    constructor() : this(generateKeyPair())
+    constructor(vararg keys: KeyPair) : this(emptyList(), *keys)
 
     val key: KeyPair get() = keys.first()
 
@@ -146,7 +147,7 @@ open class MockServices @JvmOverloads constructor(
         }
     }
 
-    final override val attachments: AttachmentStorage = MockAttachmentStorage()
+    final override val attachments = MockAttachmentStorage()
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
     override val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
