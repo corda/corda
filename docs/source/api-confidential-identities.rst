@@ -9,17 +9,18 @@ the ``Party`` and related types.
 Using Confidential Identities
 -----------------------------
 
-There are two key parts to using confidential identities:
+Confidential identities are key pairs where the corresponding X.509 certificate is not made public. Before constructing
+a new transaction the parties must generate and exchange new confidential identities, a process which is typically
+managed using ``SwapIdentitiesFlow``. These identities are then used when generating output states for the transaction,
+and for signing commands based on output keys.
 
-* Before constructing a new transaction the parties must generate and exchange confidential identities, which is typically
-  managed by ``SwapIdentitiesFlow``.
-* Where using outputs from a previous transaction in a new transaction, counterparties may need to know who the involved
-  parties are, for example proving that a well known identity owned some cash which it is using to pay a debt, where
-  the owning key belongs to a confidential identity. ``IdentitySyncFlow`` can be used to extract parties involved in a
-  transaction and allow a counterparty to request the certificates for any it does not recognise. Note that the
-  ``CollectSignaturesFlow`` requires that the initiating node has signed the transaction, and as such all nodes providing
-  signatures must recognise the signing key used by the initiating node as being either its well known identity or a
-  confidential identity they have the certificate for.
+Where using outputs from a previous transaction in a new transaction, counterparties may need to know who the involved
+parties are, for example proving that a well known identity owned some cash which it is using to pay a debt, where
+the owning key belongs to a confidential identity. ``IdentitySyncFlow`` can be used to extract parties involved in a
+transaction and allow a counterparty to request the certificates for any it does not recognise. Note that the
+``CollectSignaturesFlow`` requires that the initiating node has signed the transaction, and as such all nodes providing
+signatures must recognise the signing key used by the initiating node as being either its well known identity or a
+confidential identity they have the certificate for.
 
 Swap identities flow
 ~~~~~~~~~~~~~~~~~~~~

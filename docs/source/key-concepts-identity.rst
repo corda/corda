@@ -5,7 +5,7 @@ Identity
 
    * *Identities in Corda can represent legal identities or service identities*
    * *Identities are verified by X.509 certificate*
-   * *Well known identities are stored in the network map and public*
+   * *Well known identities are stored in the network map*
 
 Identities in Corda can represent a legal identity (almost always an organisation), or a service identity. Legal identities
 are used for parties in a transaction (such as owner of some cash), service identities are used for those providing
@@ -39,10 +39,23 @@ The organisation, locality and country attributes are required, while state, org
 optional. Attributes cannot be be present more than once in the name. The "country" code is strictly restricted to valid
 ISO 3166-1 two letter codes.
 
-Verification
+Certificates
 ------------
 
 Nodes must be able to verify the identity of the owner of a public key, which is achieved using X.509 certificates.
-Well known identity certificates are signed by the network Doorman service, having undertaken appropriate identity
-checks for signing requests sent to it. Confidential identities are signed by nodes (or other end-user services) using
-their well known identity certificate key.
+Organisations are issued a certificate for a node certificate authority (CA) by submitting a signing request to the network
+Doorman service. For the R3 test network this process is automatic, for the R3 production network an identity
+verification process will be undertaken before the request is signed. From this initial CA certificate the node creates
+and signs two further certificates, one for TLS use, one for identifying the node in transactions. These are submitted
+to the network map service for publication as part of the node information.
+
+From the signing certificate the organisation can create both well known and confidential identities. Use-cases for
+well known identities include clusters of nodes representing a single identity for redundancy purposes, or creating
+identities for organisational units.
+
+It is up to organisations to decide which identities they wish to publish in the network map service, making them
+well known. In some cases nodes may also use private network map services in addition to the main network map service,
+for operational reasons. Identities registered with such network maps must be considered well known, and it is never
+appropriate to store confidential identities in a central directory without controls applied at the record level to
+ensure only those who require access to an identity can retrieve its certificate.
+
