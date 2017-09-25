@@ -257,7 +257,8 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      * Convert a currency [Amount] to a decimal representation. For example, with an amount with a quantity
      * of "1234" GBP, returns "12.34". The precise representation is controlled by the display token size (
      * from [getDisplayTokenSize]), which determines the size of a single token and controls the trailing decimal
-     * places via its scale property.
+     * places via its scale property. *Note* that currencies such as the Bahraini Dinar use 3 decimal places,
+     * and it must not be presumed that this converts amounts to 2 decimal places.
      *
      * @see Amount.fromDecimal
      */
