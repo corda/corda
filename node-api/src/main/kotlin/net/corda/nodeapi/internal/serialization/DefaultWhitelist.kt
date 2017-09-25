@@ -56,9 +56,9 @@ class DefaultWhitelist : CordaPluginRegistry() {
                     java.time.DayOfWeek::class.java, // No custom serialiser but it's an enum.
                     java.time.Month::class.java, // No custom serialiser but it's an enum.
 
-                    java.util.Collections.emptyMap<Object, Object>().javaClass,
-                    java.util.Collections.emptySet<Object>().javaClass,
-                    java.util.Collections.emptyList<Object>().javaClass,
+                    java.util.Collections.emptyMap<Any, Any>().javaClass,
+                    java.util.Collections.emptySet<Any>().javaClass,
+                    java.util.Collections.emptyList<Any>().javaClass,
                     java.util.LinkedHashMap::class.java,
                     BitSet::class.java,
                     OnErrorNotImplementedException::class.java,
