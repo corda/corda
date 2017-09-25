@@ -5,6 +5,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
+import java.io.File
 import java.net.URL
 
 data class CordappImpl(
@@ -15,7 +16,7 @@ data class CordappImpl(
         override val plugins: List<CordaPluginRegistry>,
         override val customSchemas: Set<MappedSchema>,
         override val jarPath: URL) : Cordapp {
-    override val name: String = jarPath.file.removeSuffix(".jar")
+    override val name: String = File(jarPath.toURI()).name.removeSuffix(".jar")
 
     /**
      * An exhaustive list of all classes relevant to the node within this CorDapp
