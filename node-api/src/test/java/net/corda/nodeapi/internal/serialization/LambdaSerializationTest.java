@@ -22,7 +22,6 @@ public final class LambdaSerializationTest extends TestDependencyInjectionBase {
 
     @Before
     public void setup() {
-
         factory = SerializationDefaults.INSTANCE.getSERIALIZATION_FACTORY();
         context = new SerializationContextImpl(SerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.Checkpoint);
     }
@@ -30,7 +29,6 @@ public final class LambdaSerializationTest extends TestDependencyInjectionBase {
     @Test
     @SuppressWarnings("unchecked")
     public final void serialization_works_for_serializable_java_lambdas() throws Exception {
-
         String value = "Hey";
         Callable<String> target = (Callable<String> & Serializable) () -> value;
 
@@ -43,7 +41,6 @@ public final class LambdaSerializationTest extends TestDependencyInjectionBase {
     @Test
     @SuppressWarnings("unchecked")
     public final void serialization_fails_for_not_serializable_java_lambdas() throws Exception {
-
         String value = "Hey";
         Callable<String> target = () -> value;
 
@@ -55,12 +52,10 @@ public final class LambdaSerializationTest extends TestDependencyInjectionBase {
     }
 
     private <T> SerializedBytes<T> serialize(final T target) {
-
         return factory.serialize(target, context);
     }
 
     private <T> T deserialize(final SerializedBytes<? extends T> bytes, final Class<T> type) {
-
         return factory.deserialize(bytes, type, context);
     }
 }
