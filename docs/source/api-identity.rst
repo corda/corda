@@ -52,18 +52,10 @@ being used in ``TwoPartyDealFlow.kt``:
 
 .. container:: codeset
 
-    .. code-block:: kotlin
-
-        ...
-
-        @Suspendable
-        override fun call(): SignedTransaction {
-            progressTracker.currentStep = GENERATING_ID
-            val txIdentities = subFlow(SwapIdentitiesFlow(otherSideSession.counterparty))
-            val anonymousMe = txIdentities[ourIdentity] ?: ourIdentity.anonymise()
-            val anonymousCounterparty = txIdentities[otherSideSession.counterparty] ?: otherSideSession.counterparty.anonymise()
-
-        ...
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyDealFlow.kt
+        :language: kotlin
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
 
 Identity synchronization flow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,21 +66,7 @@ entities (counterparties) to require to know which well known identities those c
 
 .. container:: codeset
 
-    .. code-block:: kotlin
-
-        ...
-
-            // Now sign the transaction with whatever keys we need to move the cash.
-            val partSignedTx = serviceHub.signInitialTransaction(ptx, cashSigningPubKeys)
-
-            // Sync up confidential identities in the transaction with our counterparty
-            subFlow(IdentitySyncFlow.Send(sellerSession, ptx.toWireTransaction()))
-
-            // Send the signed transaction to the seller, who must then sign it themselves and commit
-            // it to the ledger by sending it to the notary.
-            progressTracker.currentStep = COLLECTING_SIGNATURES
-            val sellerSignature = subFlow(CollectSignatureFlow(partSignedTx, sellerSession, sellerSession.counterparty.owningKey))
-            val twiceSignedTx = partSignedTx + sellerSignature
-
-
-        ...
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
+        :language: kotlin
+        :start-after: DOCSTART 6
+        :end-before: DOCEND 6
