@@ -9,6 +9,8 @@ UNRELEASED
 
 * ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
 
+.. _changelog_v1:
+
 Release 1.0
 -----------
 
@@ -149,13 +151,6 @@ Release 1.0
 * A new `PrivacySalt` transaction component is introduced, which is now an attribute in ``TraversableTransaction`` and
   inherently in ``WireTransaction``.
 
-* A new ``nonces: List<SecureHash>`` feature has been added to ``FilteredLeaves``.
-
-* Due to the ``nonces`` and ``PrivacySalt`` introduction, new functions have been added to ``MerkleTransaction``:
-  ``fun <T : Any> serializedHash(x: T, privacySalt: PrivacySalt?, index: Int): SecureHash``
-  ``fun <T : Any> serializedHash(x: T, nonce: SecureHash): SecureHash``
-  ``fun computeNonce(privacySalt: PrivacySalt, index: Int)``.
-
 * A new ``SignatureMetadata`` data class is introduced with two attributes, ``platformVersion: Int`` and
   ``schemeNumberID: Int`` (the signature scheme used).
 
@@ -236,6 +231,8 @@ Release 1.0
 * ``ContractUpgradeFlow.Initiator`` has been renamed to ``ContractUpgradeFlow.Initiate``
 
 * ``@RPCSinceVersion``, ``RPCException`` and ``PermissionException`` have moved to ``net.corda.client.rpc``.
+
+.. _changelog_m14:
 
 Milestone 14
 ------------
@@ -330,6 +327,8 @@ Milestone 14
 * Added JPA ``AbstractPartyConverter`` to ensure identity schema attributes are persisted securely according to type
   (well known party, resolvable anonymous party, completely anonymous party).
 
+.. _changelog_m13:
+
 Milestone 13
 ------------
 
@@ -409,8 +408,10 @@ support for more currencies to the DemoBench and Explorer tools.
     * Upgraded BouncyCastle to v1.57.
     * Upgraded Requery to v1.3.1.
 
-Milestone 12
-------------
+.. _changelog_m12:
+
+Milestone 12 (First Public Beta)
+--------------------------------
 
 * Quite a few changes have been made to the flow API which should make things simpler when writing CorDapps:
 
