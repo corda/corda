@@ -146,4 +146,4 @@ The driver takes a parameter called ``extraCordappPackagesToScan`` which is a li
 Full Nodes
 **********
 
-When testing against full nodes simply place your CorDapp into the plugins directory of the node.
+When testing against full nodes simply place your CorDapp into the cordapps directory of the node.

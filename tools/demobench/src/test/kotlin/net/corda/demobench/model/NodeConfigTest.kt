@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.NetworkMapInfo
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs

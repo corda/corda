@@ -8,6 +8,8 @@ UNRELEASED
 ----------
 * ``FlowLogic`` now exposes a series of function called ``receiveAll(...)`` allowing to join ``receive(...)`` instructions.
 
+* Renamed "plugins" directory on nodes to "cordapps"
+
 * The ``Cordformation`` gradle plugin has been split into ``cordformation`` and ``cordapp``. The former builds and
   deploys nodes for development and testing, the latter turns a project into a cordapp project that generates JARs in
   the standard CorDapp format.
