@@ -1,5 +1,6 @@
 package net.corda.client.rpc.internal
 
+import net.corda.client.rpc.RPCException
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.logElapsedTime
 import net.corda.core.messaging.RPCOps
@@ -12,7 +13,6 @@ import net.corda.core.utilities.seconds
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration

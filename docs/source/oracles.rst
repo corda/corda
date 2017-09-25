@@ -219,7 +219,7 @@ a constructor with a single parameter of type ``ServiceHub``.
    :end-before: DOCEND 2
 
 These two flows leverage the oracle to provide the querying and signing operations. They get reference to the oracle,
-which will have already been initialised by the node, using ``ServiceHub.cordappService``. Both flows are annotated with
+which will have already been initialised by the node, using ``ServiceHub.cordappProvider``. Both flows are annotated with
 ``@InitiatedBy``. This tells the node which initiating flow (which are discussed in the next section) they are meant to
 be executed with.
 

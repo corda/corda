@@ -48,6 +48,7 @@ class TransactionEncumbranceTests {
     fun `state can be encumbered`() {
         ledger {
             transaction {
+                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
                 input(CASH_PROGRAM_ID) { state }
                 output(CASH_PROGRAM_ID, encumbrance = 1) { stateWithNewOwner }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
@@ -61,11 +62,13 @@ class TransactionEncumbranceTests {
     fun `state can transition if encumbrance rules are met`() {
         ledger {
             unverifiedTransaction {
+                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(CASH_PROGRAM_ID, "state encumbered by 5pm time-lock") { state }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
             }
             // Un-encumber the output if the time of the transaction is later than the timelock.
             transaction {
+                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
                 output(CASH_PROGRAM_ID) { stateWithNewOwner }
@@ -80,11 +83,13 @@ class TransactionEncumbranceTests {
     fun `state cannot transition if the encumbrance contract fails to verify`() {
         ledger {
             unverifiedTransaction {
+                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(CASH_PROGRAM_ID, "state encumbered by 5pm time-lock") { state }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
             }
             // The time of the transaction is earlier than the time specified in the encumbering timelock.
             transaction {
+                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
                 output(CASH_PROGRAM_ID) { state }
@@ -99,10 +104,12 @@ class TransactionEncumbranceTests {
     fun `state must be consumed along with its encumbrance`() {
         ledger {
             unverifiedTransaction {
+                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(CASH_PROGRAM_ID, "state encumbered by 5pm time-lock", encumbrance = 1) { state }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
             }
             transaction {
+                attachments(CASH_PROGRAM_ID)
                 input("state encumbered by 5pm time-lock")
                 output(CASH_PROGRAM_ID) { stateWithNewOwner }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
@@ -116,6 +123,7 @@ class TransactionEncumbranceTests {
     fun `state cannot be encumbered by itself`() {
         ledger {
             transaction {
+                attachments(CASH_PROGRAM_ID)
                 input(CASH_PROGRAM_ID) { state }
                 output(CASH_PROGRAM_ID, encumbrance = 0) { stateWithNewOwner }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
@@ -128,6 +136,7 @@ class TransactionEncumbranceTests {
     fun `encumbrance state index must be valid`() {
         ledger {
             transaction {
+                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
                 input(CASH_PROGRAM_ID) { state }
                 output(TEST_TIMELOCK_ID, encumbrance = 2) { stateWithNewOwner }
                 output(TEST_TIMELOCK_ID) { timeLock }
@@ -141,11 +150,13 @@ class TransactionEncumbranceTests {
     fun `correct encumbrance state must be provided`() {
         ledger {
             unverifiedTransaction {
+                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(CASH_PROGRAM_ID, "state encumbered by some other state", encumbrance = 1) { state }
                 output(CASH_PROGRAM_ID, "some other state") { state }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
             }
             transaction {
+                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
                 input("state encumbered by some other state")
                 input("5pm time-lock")
                 output(CASH_PROGRAM_ID) { stateWithNewOwner }

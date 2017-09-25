@@ -15,11 +15,9 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.*
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
-import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.dummyCommand
-import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -41,6 +39,7 @@ class NotaryChangeTests {
 
     @Before
     fun setUp() {
+        setCordappPackages("net.corda.testing.contracts")
         mockNet = MockNetwork()
         oldNotaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
@@ -58,6 +57,7 @@ class NotaryChangeTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        unsetCordappPackages()
     }
 
     @Test
@@ -151,7 +151,7 @@ class NotaryChangeTests {
         }
         val stx = node.services.signInitialTransaction(tx)
         node.services.recordTransactions(stx)
-        return tx.toWireTransaction()
+        return tx.toWireTransaction(node.services)
     }
 
     // TODO: Add more test cases once we have a general flow/service exception handling mechanism:
@@ -180,8 +180,7 @@ fun issueMultiPartyState(nodeA: StartedNode<*>, nodeB: StartedNode<*>, notaryNod
     val stx = notaryNode.services.addSignature(signedByAB, notaryIdentity.owningKey)
     nodeA.services.recordTransactions(stx)
     nodeB.services.recordTransactions(stx)
-    val stateAndRef = StateAndRef(state, StateRef(stx.id, 0))
-    return stateAndRef
+    return StateAndRef(state, StateRef(stx.id, 0))
 }
 
 fun issueInvalidState(node: StartedNode<*>, notary: Party): StateAndRef<*> {

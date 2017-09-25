@@ -4,14 +4,13 @@ import net.corda.client.mock.Generator
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.AbstractAttachment
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import java.math.BigInteger
 import java.security.PublicKey
@@ -32,21 +31,29 @@ data class GeneratedLedger(
     val hashTransactionMap: Map<SecureHash, WireTransaction> by lazy { transactions.associateBy(WireTransaction::id) }
     val attachmentMap: Map<SecureHash, Attachment> by lazy { attachments.associateBy(Attachment::id) }
     val identityMap: Map<PublicKey, Party> by lazy { identities.associateBy(Party::owningKey) }
+    val contractAttachmentMap: Map<String, ContractAttachment> by lazy {
+        attachments.mapNotNull { it as? ContractAttachment }.associateBy { it.contract }
+    }
 
     companion object {
         val empty = GeneratedLedger(emptyList(), emptyMap(), emptySet(), emptySet())
+        val contractAttachment = ContractAttachment(GeneratedAttachment(ByteArray(0) { 0 }), DUMMY_PROGRAM_ID)
     }
 
     fun resolveWireTransaction(transaction: WireTransaction): LedgerTransaction {
         return transaction.toLedgerTransaction(
                 resolveIdentity = { identityMap[it] },
                 resolveAttachment = { attachmentMap[it] },
-                resolveStateRef = { hashTransactionMap[it.txhash]?.outputs?.get(it.index) }
+                resolveStateRef = { hashTransactionMap[it.txhash]?.outputs?.get(it.index) },
+                resolveContractAttachment = { contractAttachmentMap[it.contract]?.id }
         )
     }
 
     val attachmentsGenerator: Generator<List<Attachment>> by lazy {
-        Generator.replicatePoisson(1.0, pickOneOrMaybeNew(attachments, attachmentGenerator))
+        // TODO generate contract attachments properly
+        val dummyAttachment = Generator.pure(contractAttachment)
+        val otherAttachments = Generator.replicatePoisson(1.0, pickOneOrMaybeNew(attachments, attachmentGenerator))
+        dummyAttachment.combine(otherAttachments) { dummy, other -> other + dummy }
     }
 
     val commandsGenerator: Generator<List<Pair<Command<*>, Party>>> by lazy {
@@ -62,7 +69,7 @@ data class GeneratedLedger(
             Generator.sequence(
                     outputs.map { output ->
                         pickOneOrMaybeNew(identities, partyGenerator).map { notary ->
-                            TransactionState(output, DUMMY_PROGRAM_ID, notary, null)
+                            TransactionState(output, DUMMY_PROGRAM_ID, notary, null, HashAttachmentConstraint(contractAttachment.id))
                         }
                     }
             )
@@ -127,7 +134,7 @@ data class GeneratedLedger(
     fun regularTransactionGenerator(inputNotary: Party, inputsToChooseFrom: List<StateAndRef<ContractState>>): Generator<Pair<WireTransaction, GeneratedLedger>> {
         val outputsGen = outputsGenerator.map { outputs ->
             outputs.map { output ->
-                TransactionState(output, DUMMY_PROGRAM_ID, inputNotary, null)
+                TransactionState(output, DUMMY_PROGRAM_ID, inputNotary, null, HashAttachmentConstraint(contractAttachment.id))
             }
         }
         val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
@@ -181,10 +188,6 @@ data class GeneratedState(
         val nonce: Long,
         override val participants: List<AbstractParty>
 ) : ContractState
-
-class GeneratedAttachment(bytes: ByteArray) : AbstractAttachment({ bytes }) {
-    override val id = bytes.sha256()
-}
 
 class GeneratedCommandData(
         val nonce: Long

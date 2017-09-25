@@ -15,7 +15,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import java.io.*
-import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Paths
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
@@ -166,15 +165,13 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
         criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), id.toString()))
         val count = session.createQuery(criteriaQuery).singleResult
-        if (count > 0) {
-            throw FileAlreadyExistsException(id.toString())
+        if (count == 0L) {
+            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
+            session.save(attachment)
+
+            attachmentCount.inc()
+            log.info("Stored new attachment $id")
         }
-
-        val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
-        session.save(attachment)
-
-        attachmentCount.inc()
-        log.info("Stored new attachment $id")
 
         return id
     }

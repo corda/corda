@@ -7,10 +7,27 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
-* Remove the web front end from the simm demo
-  The state of the code and the extermely old version of (a beta) angular JS makes it almost impossible to maintain at this point.
-  Whilst the demo code itself is a useful teaching tool, the mess we have here isn't, so remove it with the purpose of putting something
-  better in place
+Release 1.0
+-----------
+
+* String constants have been marked as ``const`` type in Kotlin, eliminating cases where functions of the form
+  ``get<constant name>()`` were created for the Java API. These can now be referenced by their name directly.
+
+* ``FlowLogic`` communication has been extensively rewritten to use functions on ``FlowSession`` as the base for communication
+  between nodes.
+  * Calls to ``send()``, ``receive()`` and ``sendAndReceive()`` on FlowLogic should be replaced with calls
+    to the function of the same name on ``FlowSession``. Note that the replacement functions do not take in a destination
+    parameter, as this is defined in the session.
+  * Initiated flows now take in a ``FlowSession`` instead of ``Party`` in their constructor. If you need to access the
+    counterparty identity, it is in the ``counterparty`` property of the flow session.
+
+* Added X509EdDSAEngine to intercept and rewrite EdDSA public keys wrapped in X509Key instances. This corrects an issue
+  with verifying certificate paths loaded from a Java Keystore where they contain EdDSA keys.
+
+* generateSpend() now creates a new confidential identity for the change address rather than using the identity of the
+  input state owner.
+
+* Remove the legacy web front end from the SIMM demo.
 
 * ``NodeInfo`` and ``NetworkMapCache`` changes:
    * Removed ``NodeInfo::legalIdentity`` in preparation for handling of multiple identities. We left list of ``NodeInfo::legalIdentitiesAndCerts``,
@@ -208,6 +225,8 @@ UNRELEASED
  ``COMMANDS_GROUP``, ``ATTACHMENTS_GROUP``, ``NOTARY_GROUP``, ``TIMEWINDOW_GROUP``.
 
 * ``ContractUpgradeFlow.Initiator`` has been renamed to ``ContractUpgradeFlow.Initiate``
+
+* ``@RPCSinceVersion``, ``RPCException`` and ``PermissionException`` have moved to ``net.corda.client.rpc``.
 
 Milestone 14
 ------------

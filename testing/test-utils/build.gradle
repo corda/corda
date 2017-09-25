@@ -6,12 +6,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Testing utilities for Corda'
 
-//noinspection GroovyAssignabilityCheck
-configurations {
-    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
-    runtime.exclude module: 'isolated'
-}
-
 dependencies {
     compile project(':test-common')
     compile project(':core')

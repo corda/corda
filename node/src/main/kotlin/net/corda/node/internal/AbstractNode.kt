@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -33,8 +34,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.internal.cordapp.CordappProvider
 import net.corda.node.services.ContractUpgradeHandler
+import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
@@ -147,7 +148,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected val runOnStop = ArrayList<() -> Any?>()
     protected lateinit var database: CordaPersistence
     protected var dbCloser: (() -> Any?)? = null
-    lateinit var cordappProvider: CordappProvider
+    lateinit var cordappProvider: CordappProviderImpl
 
     protected val _nodeReadyFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service
@@ -259,8 +260,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 check(myNotaryIdentity != null) { "Trying to install a notary service but no notary identity specified" }
                 val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
                 constructor.newInstance(services, myNotaryIdentity!!.owningKey)
-            }
-            else {
+            } else {
                 val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
                 constructor.newInstance(services)
             }
@@ -382,9 +382,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
+        cordappProvider = CordappProviderImpl(makeCordappLoader())
         _services = ServiceHubInternalImpl()
         attachments = NodeAttachmentService(services.monitoringService.metrics)
-        cordappProvider = CordappProvider(attachments, makeCordappLoader())
+        cordappProvider.start(attachments)
         legalIdentity = obtainIdentity()
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
@@ -393,16 +394,19 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 services.keyManagementService, services.identityService, platformClock, services.schedulerService,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
-                services, this)
+                services, cordappProvider, this)
         makeNetworkServices(tokenizableServices)
         return tokenizableServices
     }
 
     private fun makeCordappLoader(): CordappLoader {
         val scanPackages = System.getProperty("net.corda.node.cordapp.scan.packages")
-        return if (scanPackages != null) {
+        return if (CordappLoader.testPackages.isNotEmpty()) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createDevMode(scanPackages)
+            CordappLoader.createWithTestPackages(CordappLoader.testPackages)
+        } else if (scanPackages != null) {
+            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
+            CordappLoader.createWithTestPackages(scanPackages.split(","))
         } else {
             CordappLoader.createDefault(configuration.baseDirectory)
         }
@@ -433,8 +437,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun getNotaryIdentity(): PartyAndCertificate? {
         return advertisedServices.singleOrNull { it.type.isNotary() }?.let {
             it.name?.let {
-                require(it.commonName != null) {"Common name must not be null for notary service, use service type id as common name."}
-                require(ServiceType.parse(it.commonName!!).isNotary()) {"Common name for notary service must be the notary service type id."}
+                require(it.commonName != null) {"Common name in '$it' must not be null for notary service, use service type id as common name."}
+                require(ServiceType.parse(it.commonName!!).isNotary()) {"Common name for notary service in '$it' must be the notary service type id."}
             }
             obtainIdentity(it)
         }
@@ -646,8 +650,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         if (!keyStore.containsAlias(privateKeyAlias)) {
             // TODO: Remove use of [ServiceIdentityGenerator.generateToDisk].
-                log.info("$privateKeyAlias not found in key store ${configuration.nodeKeystore}, generating fresh key!")
-                keyStore.signAndSaveNewKeyPair(name, privateKeyAlias, generateKeyPair())
+            log.info("$privateKeyAlias not found in key store ${configuration.nodeKeystore}, generating fresh key!")
+            keyStore.signAndSaveNewKeyPair(name, privateKeyAlias, generateKeyPair())
         }
 
         val (x509Cert, keys) = keyStore.certificateAndKeyPair(privateKeyAlias)
@@ -671,7 +675,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val nodeCert = certificates[0] as? X509Certificate ?: throw ConfigurationException("Node certificate must be an X.509 certificate")
         val subject = CordaX500Name.build(nodeCert.subjectX500Principal)
         if (subject != name)
-            throw ConfigurationException("The name for $id doesn't match what's in the key store: $name vs $subject")
+            throw ConfigurationException("The name '$name' for $id doesn't match what's in the key store: $subject")
 
         partyKeys += keys
         return PartyAndCertificate(CertificateFactory.getInstance("X509").generateCertPath(certificates))
@@ -713,6 +717,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val myInfo: NodeInfo get() = info
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
+        override val cordappProvider: CordappProvider = this@AbstractNode.cordappProvider
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
@@ -732,6 +737,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 super.recordTransactions(notifyVault, txs)
             }
         }
+
         override fun jdbcSession(): Connection = database.createSession()
     }
 

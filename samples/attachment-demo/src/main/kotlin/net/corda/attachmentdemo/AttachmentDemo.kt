@@ -185,8 +185,8 @@ val ATTACHMENT_PROGRAM_ID = "net.corda.attachmentdemo.AttachmentContract"
 class AttachmentContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val state = tx.outputsOfType<AttachmentContract.State>().single()
-        val attachment = tx.attachments.single()
-        require(state.hash == attachment.id)
+        // we check that at least one has the matching hash, the other will be the contract
+        require(tx.attachments.any { it.id == state.hash })
     }
 
     object Command : TypeOnlyCommandData()

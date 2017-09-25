@@ -51,7 +51,7 @@ class ClassSchema(
         fields: Map<String, Field>,
         superclass: Schema? = null,
         interfaces: List<Class<*>> = emptyList()
-) : Schema(name, fields, superclass, interfaces, { name, field -> field.name = name }) {
+) : Schema(name, fields, superclass, interfaces, { newName, field -> field.name = newName }) {
     override fun generateFields(cw: ClassWriter) {
         cw.apply { fields.forEach { it.value.generateField(this) } }
     }
@@ -66,7 +66,7 @@ class InterfaceSchema(
         fields: Map<String, Field>,
         superclass: Schema? = null,
         interfaces: List<Class<*>> = emptyList()
-) : Schema(name, fields, superclass, interfaces, { name, field -> field.name = name }) {
+) : Schema(name, fields, superclass, interfaces, { newName, field -> field.name = newName }) {
     override fun generateFields(cw: ClassWriter) {
         cw.apply { fields.forEach { it.value.generateField(this) } }
     }

@@ -5,6 +5,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import kotlin.reflect.jvm.jvmName
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes, but has to be serializable
 

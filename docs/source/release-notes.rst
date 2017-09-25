@@ -5,10 +5,17 @@ Here are release notes for each snapshot release from M9 onwards.
 
 Unreleased
 ----------
+Release 1.0
+-----------
+
+* Flow communications API has been redesigned around session based communication.
 
 * Merged handling of well known and confidential identities in the identity service.
 
 * Remove `IssuerFlow` as it allowed nodes to request arbitrary amounts of cash to be issued from any remote node.
+
+* Remove the legacy web front end from the SIMM demo. This was a very early sample, and does not reflect the quality of
+  current Corda code. It may be replaced with a new front end based on a more recent version of AngularJS in a later release.
 
 Milestone 14
 ------------
