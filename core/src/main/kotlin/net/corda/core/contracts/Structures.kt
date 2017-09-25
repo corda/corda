@@ -15,10 +15,12 @@ import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.time.Instant
 
+// DOCSTART 1
 /** Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments). */
 interface NamedByHash {
     val id: SecureHash
 }
+// DOCEND 1
 
 /**
  * The [Issued] data class holds the details of an on ledger digital asset.
