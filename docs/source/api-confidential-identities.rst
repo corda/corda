@@ -1,28 +1,10 @@
 API: Confidential Identities
 ============================
 
-Corda includes a number of
+.. note:: Before reading this page, you should be familiar with the core types from :doc:`api-core-types`, especially
+the ``Party`` and related types.
 
-.. topic:: Summary
-
-   * *Identities in Corda can represent legal identities or service identities*
-   * *Identities are verified by X.509 certificate*
-   * *Well known identities are stored in the network map and public*
-   * *Confidential identities are shared only on a need to know basis*
-
-Overview
---------
-
-Identities in Corda can represent a legal identity (almost always an organisation), or a service identity. Service
-identities are distinct to legal identities so that distributed services can exist on nodes owned by different
-organisations (for example a distributed notary service).
-
-Well known identities are the publicly identifiable key of a legal entity or service, which makes them ill-suited
-to transactions where confidentiality of participants is required. Although there are several elements to the Corda
-transaction privacy model, such as ensuring transactions are only shared with those who need to see them, and use of
-Intel SGX, it is important to provide defense in depth against privacy breaches. As such, nodes can create confidential
-identities from their well known identity, which can only be used to identify the well known identity when provided along
-with their X.509 certificate.
+.. contents::
 
 Using Confidential Identities
 -----------------------------
@@ -46,7 +28,6 @@ Swap identities flow
 another flow. It returns a mapping from well known identities to confidential identities for the local and remote node;
 in future this will be extended to handle swapping identities with multiple counterparties. You can see an example of it
 being used in ``TwoPartyDealFlow.kt``:
-
 
 .. container:: codeset
 

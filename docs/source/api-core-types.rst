@@ -34,23 +34,8 @@ transaction. In these cases ``AnonymousParty`` should be used. In contrast, for 
 details of a party are required, the ``Party`` class should be used. The identity service provides functionality for
 resolving anonymous parties to full parties.
 
-CordaX500Name
-^^^^^^^^^^^^^
-
-Identity names are held within the ``CordaX500Name`` data class, which enforces the strict rules that Corda requires on
-naming. In order to be compatible with other implementations, we constrain the attributes to a subset of the minimum
-supported set for X.509 certificates (specified in RFC 3280), plus the locality attribute:
-
-* organization (O)
-* state (ST)
-* locality (L)
-* country (C)
-* organizational-unit (OU)
-* common name (CN) - used only for service identities
-
-The organisation, locality and country attributes are required, while state, organisational-unit and common name are
-optional. Attributes cannot be be present more than once in the name. The "country" code is strictly restricted to valid
-ISO 3166-1 two letter codes.
+Identity names are held within the ``CordaX500Name`` data class, which enforces the structure of names within Corda, as
+well as ensuring a consistent rendering of the names in plain text.
 
 CompositeKey
 ------------
