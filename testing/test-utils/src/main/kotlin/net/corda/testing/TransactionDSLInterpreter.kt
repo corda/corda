@@ -12,7 +12,7 @@ import java.time.Instant
 /**
  * This interface defines the bare bone functionality that a Transaction DSL interpreter should implement.
  * @param <R> The return type of [verifies]/[failsWith] and the like. It is generic so that we have control over whether
- * we want to enforce users to call these methods (@see [EnforceVerifyOrFail]) or not.
+ * we want to enforce users to call these methods (see [EnforceVerifyOrFail]) or not.
  */
 interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     /**
@@ -33,7 +33,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param encumbrance The position of the encumbrance state.
      * @param attachmentConstraint The attachment constraint
      * @param contractState The state itself.
-     * @params contractClassName The class name of the contract that verifies this state.
+     * @param contractClassName The class name of the contract that verifies this state.
      */
     fun _output(contractClassName: ContractClassName,
                 label: String?,
