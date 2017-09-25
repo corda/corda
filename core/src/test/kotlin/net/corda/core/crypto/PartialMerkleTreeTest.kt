@@ -32,6 +32,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
 
     private val testLedger = ledger {
         unverifiedTransaction {
+            attachments(CASH_PROGRAM_ID)
             output(CASH_PROGRAM_ID, "MEGA_CORP cash") {
                 Cash.State(
                         amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
@@ -47,6 +48,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
         }
 
         transaction {
+            attachments(CASH_PROGRAM_ID)
             input("MEGA_CORP cash")
             output(CASH_PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }

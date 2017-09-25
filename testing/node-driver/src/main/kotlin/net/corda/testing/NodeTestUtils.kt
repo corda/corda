@@ -9,6 +9,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
+import net.corda.testing.node.MockCordappProvider
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties

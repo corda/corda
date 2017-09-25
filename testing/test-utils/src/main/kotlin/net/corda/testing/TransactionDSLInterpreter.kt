@@ -1,7 +1,6 @@
 package net.corda.testing
 
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.utilities.seconds
@@ -9,7 +8,6 @@ import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.*
 
 /**
  * This interface defines the bare bone functionality that a Transaction DSL interpreter should implement.
@@ -33,10 +31,16 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param label An optional label that may be later used to retrieve the output probably in other transactions.
      * @param notary The associated notary.
      * @param encumbrance The position of the encumbrance state.
+     * @param attachmentConstraint The attachment constraint
      * @param contractState The state itself.
      * @params contractClassName The class name of the contract that verifies this state.
      */
-    fun _output(contractClassName: ContractClassName, label: String?, notary: Party, encumbrance: Int?, contractState: ContractState)
+    fun _output(contractClassName: ContractClassName,
+                label: String?,
+                notary: Party,
+                encumbrance: Int?,
+                attachmentConstraint: AttachmentConstraint,
+                contractState: ContractState)
 
     /**
      * Adds an [Attachment] reference to the transaction.
@@ -62,6 +66,12 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param dsl The transaction DSL to be interpreted using the copy.
      */
     fun tweak(dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail): EnforceVerifyOrFail
+
+    /**
+     * Attaches an attachment containing the named contract to the transaction
+     * @param contractClassName The contract class to attach
+     */
+    fun _attachment(contractClassName: ContractClassName)
 }
 
 class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : TransactionDSLInterpreter by interpreter {
@@ -78,7 +88,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      */
     fun input(contractClassName: ContractClassName, state: ContractState) {
         val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary = DUMMY_NOTARY)) {
-            output(contractClassName) { state }
+            output(contractClassName, attachmentConstraint = AlwaysAcceptAttachmentConstraint) { state }
         }
         input(transaction.outRef<ContractState>(0).ref)
     }
@@ -89,17 +99,24 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      * @see TransactionDSLInterpreter._output
      */
     @JvmOverloads
-    fun output(contractClassName: ContractClassName, label: String? = null, notary: Party = DUMMY_NOTARY, encumbrance: Int? = null, contractStateClosure: () -> ContractState) =
-            _output(contractClassName, label, notary, encumbrance, contractStateClosure())
+    fun output(contractClassName: ContractClassName,
+               label: String? = null,
+               notary: Party = DUMMY_NOTARY,
+               encumbrance: Int? = null,
+               attachmentConstraint: AttachmentConstraint = AutomaticHashConstraint,
+               contractStateClosure: () -> ContractState) =
+            _output(contractClassName, label, notary, encumbrance, attachmentConstraint, contractStateClosure())
 
     /**
      * @see TransactionDSLInterpreter._output
      */
-    fun output(contractClassName: ContractClassName, label: String, contractState: ContractState) =
-            _output(contractClassName, label, DUMMY_NOTARY, null, contractState)
+    @JvmOverloads
+    fun output(contractClassName: ContractClassName, label: String, contractState: ContractState, attachmentConstraint: AttachmentConstraint = AutomaticHashConstraint) =
+            _output(contractClassName, label, DUMMY_NOTARY, null, attachmentConstraint, contractState)
 
-    fun output(contractClassName: ContractClassName, contractState: ContractState) =
-            _output(contractClassName,null, DUMMY_NOTARY, null, contractState)
+    @JvmOverloads
+    fun output(contractClassName: ContractClassName, contractState: ContractState, attachmentConstraint: AttachmentConstraint = AutomaticHashConstraint) =
+            _output(contractClassName,null, DUMMY_NOTARY, null, attachmentConstraint, contractState)
 
     /**
      * @see TransactionDSLInterpreter._command
@@ -120,4 +137,11 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     @JvmOverloads
     fun timeWindow(time: Instant, tolerance: Duration = 30.seconds) =
             timeWindow(TimeWindow.withTolerance(time, tolerance))
+
+    /**
+     * @see TransactionDSLInterpreter._contractAttachment
+     */
+    fun attachment(contractClassName: ContractClassName) = _attachment(contractClassName)
+
+    fun attachments(vararg contractClassNames: ContractClassName) = contractClassNames.forEach { attachment(it)}
 }

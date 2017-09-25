@@ -25,6 +25,8 @@ import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
+import net.corda.testing.setCordappPackages
+import net.corda.testing.unsetCordappPackages
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -49,6 +51,7 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Before
     fun setUp() {
+        setCordappPackages("net.corda.finance.contracts")
         node = startNode(ALICE.name, rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
         node.internals.registerCustomSchemas(setOf(CashSchemaV1))
         client = CordaRPCClient(node.internals.configuration.rpcAddress!!, initialiseSerialization = false)
@@ -57,6 +60,7 @@ class CordaRPCClientTest : NodeBasedTest() {
     @After
     fun done() {
         connection?.close()
+        unsetCordappPackages()
     }
 
     @Test

@@ -58,7 +58,7 @@ class ContractUpgradeHandler(otherSide: FlowSession) : AbstractStateReplacementF
         val authorisedUpgrade = serviceHub.contractUpgradeService.getAuthorisedContractUpgrade(oldStateAndRef.ref) ?:
                 throw IllegalStateException("Contract state upgrade is unauthorised. State hash : ${oldStateAndRef.ref}")
         val proposedTx = stx.tx
-        val expectedTx = ContractUpgradeUtils.assembleBareTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt).toWireTransaction()
+        val expectedTx = ContractUpgradeUtils.assembleBareTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt).toWireTransaction(serviceHub)
         requireThat {
             "The instigator is one of the participants" using (initiatingSession.counterparty in oldStateAndRef.state.data.participants)
             "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" using (proposal.modification.name == authorisedUpgrade)

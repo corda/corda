@@ -61,7 +61,29 @@ data class LedgerTransaction(
      * @throws TransactionVerificationException if anything goes wrong.
      */
     @Throws(TransactionVerificationException::class)
-    fun verify() = verifyContracts()
+    fun verify() {
+        verifyConstraints()
+        verifyContracts()
+    }
+
+    /**
+     * Verify that all contract constraints are valid for each state before running any contract code
+     *
+     * @throws TransactionVerificationException if the constraints fail to verify
+     */
+    private fun verifyConstraints() {
+        val contractAttachments = attachments.filterIsInstance<ContractAttachment>()
+        (inputs.map { it.state } + outputs).forEach { state ->
+            // Ordering of attachments matters - if two attachments contain the same named contract then the second
+            // will be shadowed by the first.
+            val contractAttachment = contractAttachments.find { it.contract == state.contract }
+                    ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
+
+            if (!state.constraint.isSatisfiedBy(contractAttachment)) {
+                throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
+            }
+        }
+    }
 
     /**
      * Check the transaction is contract-valid by running the verify() for each input and output state contract.
@@ -71,14 +93,15 @@ data class LedgerTransaction(
         val contracts = (inputs.map { it.state.contract } + outputs.map { it.contract }).toSet()
         for (contractClassName in contracts) {
             val contract = try {
+                assert(javaClass.classLoader == ClassLoader.getSystemClassLoader())
                 javaClass.classLoader.loadClass(contractClassName).asSubclass(Contract::class.java).getConstructor().newInstance()
-            } catch(e: ClassNotFoundException) {
+            } catch (e: ClassNotFoundException) {
                 throw TransactionVerificationException.ContractCreationError(id, contractClassName, e)
             }
 
             try {
                 contract.verify(this)
-            } catch(e: Throwable) {
+            } catch (e: Throwable) {
                 throw TransactionVerificationException.ContractRejection(id, contract, e)
             }
         }
