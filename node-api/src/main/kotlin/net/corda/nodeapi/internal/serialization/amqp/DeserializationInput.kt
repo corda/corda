@@ -152,7 +152,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     private fun Type.materiallyEquivalentTo(that: Type): Boolean =
         when(that) {
             is ParameterizedType -> asClass() == that.asClass()
-            is TypeVariable<*> -> isSubClassOf(that.bounds.single())
+            is TypeVariable<*> -> isSubClassOf(that.bounds.first())
             else -> false
         }
 }
