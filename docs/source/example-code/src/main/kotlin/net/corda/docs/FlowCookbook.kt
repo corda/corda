@@ -297,7 +297,7 @@ object FlowCookbook {
             progressTracker.currentStep = TX_BUILDING
 
             // If our transaction has input states or a time-window, we must instantiate it with a
-            // notary:
+            // notary.
             // DOCSTART 19
             val txBuilder: TransactionBuilder = TransactionBuilder(specificNotary)
             // DOCEND 19
@@ -325,7 +325,7 @@ object FlowCookbook {
 
             // We can also add items using methods for the individual components.
 
-            // There are individual methods for adding input states and attachments.
+            // The individual methods for adding input states and attachments:
             // DOCSTART 28
             txBuilder.addInputState(ourStateAndRef)
             txBuilder.addAttachment(ourAttachment)

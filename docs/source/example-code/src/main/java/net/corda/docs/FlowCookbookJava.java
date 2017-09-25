@@ -317,7 +317,7 @@ public class FlowCookbookJava {
             progressTracker.setCurrentStep(TX_BUILDING);
 
             // If our transaction has input states or a time-window, we must instantiate it with a
-            // notary:
+            // notary.
             // DOCSTART 19
             TransactionBuilder txBuilder = new TransactionBuilder(specificNotary);
             // DOCEND 19
@@ -345,7 +345,7 @@ public class FlowCookbookJava {
 
             // We can also add items using methods for the individual components.
 
-            // There are individual methods for adding input states and attachments.
+            // The individual methods for adding input states and attachments:
             // DOCSTART 28
             txBuilder.addInputState(ourStateAndRef);
             txBuilder.addAttachment(ourAttachment);
