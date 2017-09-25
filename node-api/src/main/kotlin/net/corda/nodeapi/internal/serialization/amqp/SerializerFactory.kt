@@ -105,6 +105,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                     val declaredComponent = declaredType.genericComponentType
                     inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
                 }
+                is TypeVariable<*> -> actualClass
                 else -> null
             }
 

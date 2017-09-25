@@ -47,6 +47,24 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
         Assertions.assertThatThrownBy { wrongPayloadType.serialize() }
                 .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive collection type for declaredType")
     }
+
+    @CordaSerializable
+    interface Parent
+
+    data class Child(val value: Int) : Parent
+
+    @CordaSerializable
+    data class CovariantContainer<out T: Parent>(val payload: List<T>)
+
+    @Test
+    fun `check covariance`() {
+        val payload = ArrayList<Child>()
+        payload.add(Child(1))
+        payload.add(Child(2))
+        val container = CovariantContainer(payload)
+        assertEqualAfterRoundTripSerialization(container)
+    }
+
 }
 
 internal inline fun<reified T : Any> assertEqualAfterRoundTripSerialization(obj: T) {
