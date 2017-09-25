@@ -45,7 +45,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     private val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
     private val DUMMY_CASH_ISSUER = Party(CordaX500Name(organisation = "Cash issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public)
-    private val services = MockServices(DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
 
     private lateinit var oracle: NodeInterestRates.Oracle
     private lateinit var database: CordaPersistence
@@ -61,6 +61,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
+        setCordappPackages("net.corda.finance.contracts")
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         database.transaction {
             oracle = NodeInterestRates.Oracle(services).apply { knownFixes = TEST_DATA }
@@ -70,6 +71,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     @After
     fun tearDown() {
         database.close()
+        unsetCordappPackages()
     }
 
     @Test
@@ -123,7 +125,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     fun `refuse to sign with no relevant commands`() {
         database.transaction {
             val tx = makeFullTx()
-            val wtx1 = tx.toWireTransaction()
+            val wtx1 = tx.toWireTransaction(services)
             fun filterAllOutputs(elem: Any): Boolean {
                 return when (elem) {
                     is TransactionState<ContractState> -> true
@@ -134,7 +136,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
             val ftx1 = wtx1.buildFilteredTransaction(Predicate(::filterAllOutputs))
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1) }
             tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
-            val wtx2 = tx.toWireTransaction()
+            val wtx2 = tx.toWireTransaction(services)
             val ftx2 = wtx2.buildFilteredTransaction(Predicate { x -> filterCmds(x) })
             assertFalse(wtx1.id == wtx2.id)
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx2) }
@@ -148,7 +150,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
             tx.addCommand(fix, services.myInfo.chooseIdentity().owningKey)
             // Sign successfully.
-            val wtx = tx.toWireTransaction()
+            val wtx = tx.toWireTransaction(services)
             val ftx = wtx.buildFilteredTransaction(Predicate { fixCmdFilter(it) })
             val signature = oracle.sign(ftx)
             wtx.checkSignature(signature)
@@ -162,7 +164,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
             val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val badFix = Fix(fixOf, BigDecimal("0.6789"))
             tx.addCommand(badFix, services.myInfo.chooseIdentity().owningKey)
-            val wtx = tx.toWireTransaction()
+            val wtx = tx.toWireTransaction(services)
             val ftx = wtx.buildFilteredTransaction(Predicate { fixCmdFilter(it) })
             val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.sign(ftx) }
             assertEquals(fixOf, e1.fix)
@@ -182,7 +184,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
                 }
             }
             tx.addCommand(fix, services.myInfo.chooseIdentity().owningKey)
-            val wtx = tx.toWireTransaction()
+            val wtx = tx.toWireTransaction(services)
             val ftx = wtx.buildFilteredTransaction(Predicate(::filtering))
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx) }
         }
@@ -191,7 +193,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     @Test
     fun `empty partial transaction to sign`() {
         val tx = makeFullTx()
-        val wtx = tx.toWireTransaction()
+        val wtx = tx.toWireTransaction(services)
         val ftx = wtx.buildFilteredTransaction(Predicate { false })
         assertFailsWith<IllegalArgumentException> { oracle.sign(ftx) } // It throws failed requirement (as it is empty there is no command to check and sign).
     }
@@ -216,7 +218,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
         mockNet.runNetwork()
         future.getOrThrow()
         // We should now have a valid fix of our tx from the oracle.
-        val fix = tx.toWireTransaction().commands.map { it.value as Fix }.first()
+        val fix = tx.toWireTransaction(services).commands.map { it.value as Fix }.first()
         assertEquals(fixOf, fix.of)
         assertEquals(BigDecimal("0.678"), fix.value)
         mockNet.stopNodes()

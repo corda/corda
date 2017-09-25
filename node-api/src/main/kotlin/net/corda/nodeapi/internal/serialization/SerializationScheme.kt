@@ -60,7 +60,7 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
                     serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
                 }
                 missing.isNotEmpty() && throw MissingAttachmentsException(missing)
-                AttachmentsClassLoader(attachments)
+                AttachmentsClassLoader(attachments, parent = deserializationClassLoader)
             })
         } catch (e: ExecutionException) {
             // Caught from within the cache get, so unwrap.

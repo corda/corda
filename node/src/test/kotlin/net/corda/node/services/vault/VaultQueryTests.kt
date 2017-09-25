@@ -46,20 +46,22 @@ import java.util.*
 
 class VaultQueryTests : TestDependencyInjectionBase() {
 
-    lateinit var services: MockServices
-    lateinit var notaryServices: MockServices
-    val vaultSvc: VaultService get() = services.vaultService
-    val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
-    val identitySvc: IdentityService = makeTestIdentityService()
-    lateinit var database: CordaPersistence
+    private lateinit var services: MockServices
+    private lateinit var notaryServices: MockServices
+    private val vaultSvc: VaultService get() = services.vaultService
+    private val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
+    private val identitySvc: IdentityService = makeTestIdentityService()
+    private lateinit var database: CordaPersistence
 
     // test cash notary
-    val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(21)) }
-    val CASH_NOTARY: Party get() = Party(CordaX500Name(organisation = "Cash Notary Service", locality = "Zurich", country = "CH"), CASH_NOTARY_KEY.public)
-    val CASH_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CASH_NOTARY.nameOrNull(), CASH_NOTARY_KEY.public)
+    private val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(21)) }
+    private val CASH_NOTARY: Party get() = Party(CordaX500Name(organisation = "Cash Notary Service", locality = "Zurich", country = "CH"), CASH_NOTARY_KEY.public)
+    private val CASH_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CASH_NOTARY.nameOrNull(), CASH_NOTARY_KEY.public)
 
     @Before
     fun setUp() {
+        setCordappPackages("net.corda.testing.contracts", "net.corda.finance.contracts")
+
         // register additional identities
         identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
         identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
@@ -74,6 +76,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @After
     fun tearDown() {
         database.close()
+        unsetCordappPackages()
     }
 
     /**
@@ -1091,7 +1094,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
         database.transaction {
 
-            val sortCol1 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONTRACT_TYPE), Sort.Direction.DESC)
+            val sortCol1 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONTRACT_STATE_TYPE), Sort.Direction.DESC)
             val sortCol2 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.STATE_STATUS), Sort.Direction.ASC)
             val sortCol3 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONSUMED_TIME), Sort.Direction.DESC)
             val sorting = Sort(setOf(sortCol1, sortCol2, sortCol3))
@@ -1100,12 +1103,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val states = result.states
             val metadata = result.statesMetadata
 
-            for (i in 0..states.size - 1) {
+            for (i in 0 until states.size) {
                 println("${states[i].ref} : ${metadata[i].contractStateClassName}, ${metadata[i].status}, ${metadata[i].consumedTime}")
             }
 
             assertThat(states).hasSize(20)
-            assertThat(metadata.first().contractStateClassName).isEqualTo("net.corda.testing.contracts.DummyLinearContract\$State")
+            assertThat(metadata.first().contractStateClassName).isEqualTo("$DUMMY_LINEAR_CONTRACT_PROGRAM_ID\$State")
             assertThat(metadata.first().status).isEqualTo(Vault.StateStatus.UNCONSUMED) // 0 = UNCONSUMED
             assertThat(metadata.last().contractStateClassName).isEqualTo("net.corda.finance.contracts.asset.Cash\$State")
             assertThat(metadata.last().status).isEqualTo(Vault.StateStatus.CONSUMED)    // 1 = CONSUMED

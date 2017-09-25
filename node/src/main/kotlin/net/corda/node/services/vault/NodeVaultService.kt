@@ -11,11 +11,9 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.vault.IQueryCriteriaParser
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
-import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -34,7 +32,6 @@ import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
-import javax.persistence.criteria.Predicate
 
 /**
  * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
@@ -339,7 +336,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
                                                                                   eligibleStatesQuery: QueryCriteria,
                                                                                   amount: Amount<U>,
-                                                                                  contractType: Class<out T>): List<StateAndRef<T>> {
+                                                                                  contractStateType: Class<out T>): List<StateAndRef<T>> {
         if (amount.quantity == 0L) {
             return emptyList()
         }
@@ -348,9 +345,9 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
         val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
         val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
-                contractStateTypes = setOf(contractType),
+                contractStateTypes = setOf(contractStateType),
                 softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)))
-        val results = services.vaultQueryService.queryBy(contractType, enrichedCriteria.and(eligibleStatesQuery), sorter)
+        val results = services.vaultQueryService.queryBy(contractStateType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
         var claimedAmount = 0L
         val claimedStates = mutableListOf<StateAndRef<T>>()

@@ -73,6 +73,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
+        setCordappPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
         issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
@@ -105,6 +106,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     @After
     fun cleanUp() {
         database.close()
+        unsetCordappPackages()
     }
 
     private fun setUpDb() {

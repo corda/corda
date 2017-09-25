@@ -24,7 +24,6 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
 
         /** @see <https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Signed_JAR_File> */
         private val unsignableEntryName = "META-INF/(?:.*[.](?:SF|DSA|RSA)|SIG-.*)".toRegex()
-        private val shredder = ByteArray(1024)
     }
 
     protected val attachmentData: ByteArray by lazy(dataLoader)
@@ -33,6 +32,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
         // Can't start with empty set if we're doing intersections. Logically the null means "all possible signers":
         var attachmentSigners: MutableSet<CodeSigner>? = null
         openAsJAR().use { jar ->
+            val shredder = ByteArray(1024)
             while (true) {
                 val entry = jar.nextJarEntry ?: break
                 if (entry.isDirectory || unsignableEntryName.matches(entry.name)) continue

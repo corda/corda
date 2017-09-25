@@ -67,10 +67,11 @@ import kotlin.test.assertTrue
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
 class TwoPartyTradeFlowTests {
-    lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: MockNetwork
 
     @Before
     fun before() {
+        setCordappPackages("net.corda.finance.contracts")
         LogHelper.setLevel("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
@@ -78,6 +79,7 @@ class TwoPartyTradeFlowTests {
     fun after() {
         mockNet.stopNodes()
         LogHelper.reset("platform.trade", "core.contract.TransactionGroup", "recordingmap")
+        unsetCordappPackages()
     }
 
     @Test
@@ -351,8 +353,9 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val bobsFakeCash = fillUpForBuyer(false, issuer, AnonymousParty(bobNode.info.chooseIdentity().owningKey),
-                    notary).second
+            val bobsFakeCash = bobNode.database.transaction {
+                fillUpForBuyer(false, issuer, AnonymousParty(bobNode.info.chooseIdentity().owningKey), notary)
+            }.second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode, notaryNode, bankNode)
             val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, issuer, aliceNode.info.chooseIdentity(),
@@ -458,8 +461,9 @@ class TwoPartyTradeFlowTests {
             }
 
             val bobsKey = bobNode.services.keyManagementService.keys.single()
-            val bobsFakeCash = fillUpForBuyer(false, issuer, AnonymousParty(bobsKey),
-                    notary).second
+            val bobsFakeCash = bobNode.database.transaction {
+                fillUpForBuyer(false, issuer, AnonymousParty(bobsKey), notary)
+            }.second
             insertFakeTransactions(bobsFakeCash, bobNode, notaryNode, bankNode)
 
             val alicesFakePaper = aliceNode.database.transaction {

@@ -375,7 +375,7 @@ Behavioural notes
 -----------------
 1. **TrackBy** updates do not take into account the full criteria specification due to different and more restrictive syntax
    in `observables <https://github.com/ReactiveX/RxJava/wiki>`_ filtering (vs full SQL-92 JDBC filtering as used in snapshot views).
-   Specifically, dynamic updates are filtered by ``contractType`` and ``stateType`` (UNCONSUMED, CONSUMED, ALL) only.
+   Specifically, dynamic updates are filtered by ``contractStateType`` and ``stateType`` (UNCONSUMED, CONSUMED, ALL) only.
 2. **QueryBy** and **TrackBy snapshot views** using pagination may return different result sets as each paging request is a
    separate SQL query on the underlying database, and it is entirely conceivable that state modifications are taking
    place in between and/or in parallel to paging requests.
