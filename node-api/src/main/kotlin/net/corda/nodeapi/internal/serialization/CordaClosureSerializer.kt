@@ -22,7 +22,7 @@ object CordaClosureSerializer : ClosureSerializer() {
 
 object CordaClosureBlacklistSerializer : ClosureSerializer() {
 
-    val ERROR_MESSAGE = "Unable to serialize Java Lambda expression, unless explicitly declared e.g., Runnable r = (Runnable & Serializable) () -> System.out.println(\"Hello world!\");"
+    val ERROR_MESSAGE = "Java 8 Lambda expressions are not supported for serialization."
 
     override fun write(kryo: Kryo, output: Output, target: Any) {
 

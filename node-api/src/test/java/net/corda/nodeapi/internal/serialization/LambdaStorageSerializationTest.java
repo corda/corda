@@ -36,6 +36,7 @@ public final class LambdaStorageSerializationTest extends TestDependencyInjectio
 
         assertThat(throwable).isNotNull();
         assertThat(throwable).isInstanceOf(IllegalArgumentException.class);
+        assertThat(throwable).hasMessage(CordaClosureBlacklistSerializer.INSTANCE.getERROR_MESSAGE());
     }
 
     @Test
@@ -48,6 +49,7 @@ public final class LambdaStorageSerializationTest extends TestDependencyInjectio
 
         assertThat(throwable).isNotNull();
         assertThat(throwable).isInstanceOf(IllegalArgumentException.class);
+        assertThat(throwable).hasMessage(CordaClosureBlacklistSerializer.INSTANCE.getERROR_MESSAGE());
     }
 
     private <T> SerializedBytes<T> serialize(final T target) {

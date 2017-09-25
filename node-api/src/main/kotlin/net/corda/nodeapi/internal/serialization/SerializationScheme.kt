@@ -168,7 +168,6 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                             field.set(this, classResolver)
                             DefaultKryoCustomizer.customize(this)
                             addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
-                            register(java.lang.invoke.SerializedLambda::class.java)
                             register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
                             classLoader = it.second
                         }
